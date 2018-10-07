@@ -227,10 +227,12 @@ PROCEDURE TSynMnhSyn.next;
       result:=continuesWith(prefix,0);
     end;
 
-  PROCEDURE handleComment(endedBy:T_charSet);
+  PROCEDURE handleComment(endedBy:T_charSet; CONST isHashComment:boolean);
     begin
       case fLine[run] of
-        SPECIAL_COMMENT_BLOB_BEGIN_INFIX: begin
+        SPECIAL_COMMENT_BLOB_BEGIN_INFIX: if isHashComment
+        then fTokenId:=tkComment
+        else begin
           fTokenId:=tkString;
           blobEnder:=fLine[run+1];
           if blobEnder=#0 then begin
@@ -344,7 +346,7 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
         if fLine [run] = '/' then begin
           inc(run);
-          handleComment([#0]);
+          handleComment([#0],false);
         end
         else fTokenId := tkOperator;
       end;
@@ -383,7 +385,7 @@ PROCEDURE TSynMnhSyn.next;
         if fLine[run] in ['0'..'9'] then begin
           while (fLine[run] in ['0'..'9']) do inc(run);
           fTokenId:=tkString;
-        end else handleComment(['#',#0]);
+        end else handleComment(['#',#0],true);
       end
       else begin
         fTokenId := tkDefault;
