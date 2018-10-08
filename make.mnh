@@ -49,7 +49,6 @@ currentCodeHash:=begin
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('resources/examples.txt'                   ,'gui/res_examples.inc');
   templateToInc('resources/html_template.txt'              ,'gui/res_html_template.inc');
-  templateToInc('resources/ensureNotepad++Highlighting.mnh','gui/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'gui/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'gui/res_removeAssoc.inc');
   ensureDefaultFilesSource;

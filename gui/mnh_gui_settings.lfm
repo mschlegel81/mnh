@@ -1,13 +1,14 @@
 object SettingsForm: TSettingsForm
   Left = 706
-  Height = 240
+  Height = 139
   Top = 344
   Width = 320
+  AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 240
+  ClientHeight = 139
   ClientWidth = 320
-  DesignTimePPI = 144
+  Constraints.MinWidth = 320
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
   OnShow = FormShow
@@ -15,21 +16,21 @@ object SettingsForm: TSettingsForm
   LCLVersion = '1.8.4.0'
   object PageControl: TPageControl
     Left = 0
-    Height = 240
+    Height = 139
     Top = 0
     Width = 320
-    ActivePage = TabSheet_install
+    ActivePage = TabSheet_display
     Align = alClient
-    TabIndex = 2
+    TabIndex = 0
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 202
+      ClientHeight = 111
       ClientWidth = 312
       object AntialiasCheckbox: TCheckBox
         Left = 0
-        Height = 29
-        Top = 68
+        Height = 19
+        Top = 48
         Width = 312
         Align = alTop
         Caption = 'Antialiased Fonts'
@@ -38,29 +39,29 @@ object SettingsForm: TSettingsForm
       end
       object Panel4: TPanel
         Left = 0
-        Height = 35
+        Height = 25
         Top = 0
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 35
+        ClientHeight = 25
         ClientWidth = 312
         TabOrder = 1
         object Label2: TLabel
           Left = 0
-          Height = 35
+          Height = 25
           Top = 0
-          Width = 40
+          Width = 27
           Align = alLeft
           Caption = 'Font:'
           ParentColor = False
         end
         object FontButton: TButton
-          Left = 40
-          Height = 35
+          Left = 27
+          Height = 25
           Top = 0
-          Width = 272
+          Width = 285
           Align = alClient
           Caption = 'FontButton'
           OnClick = FontButtonClick
@@ -69,20 +70,20 @@ object SettingsForm: TSettingsForm
       end
       object Panel5: TPanel
         Left = 0
-        Height = 33
-        Top = 35
+        Height = 23
+        Top = 25
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 33
+        ClientHeight = 23
         ClientWidth = 312
         TabOrder = 2
         object FontSizeEdit: TEdit
-          Left = 74
-          Height = 33
+          Left = 49
+          Height = 23
           Top = 0
-          Width = 238
+          Width = 263
           Align = alClient
           NumbersOnly = True
           OnEditingDone = FontSizeEditEditingDone
@@ -91,9 +92,9 @@ object SettingsForm: TSettingsForm
         end
         object Label3: TLabel
           Left = 0
-          Height = 33
+          Height = 23
           Top = 0
-          Width = 74
+          Width = 49
           Align = alLeft
           Caption = 'Font size:'
           ParentColor = False
@@ -101,29 +102,29 @@ object SettingsForm: TSettingsForm
       end
       object Panel6: TPanel
         Left = 0
-        Height = 33
-        Top = 97
+        Height = 23
+        Top = 67
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 33
+        ClientHeight = 23
         ClientWidth = 312
         TabOrder = 3
         object Label7: TLabel
           Left = 0
-          Height = 33
+          Height = 23
           Top = 0
-          Width = 134
+          Width = 90
           Align = alLeft
           Caption = 'Output size limit:'
           ParentColor = False
         end
         object outputSizeLimit: TEdit
-          Left = 134
-          Height = 33
+          Left = 90
+          Height = 23
           Top = 0
-          Width = 178
+          Width = 222
           Align = alClient
           NumbersOnly = True
           OnEditingDone = outputSizeLimitEditingDone
@@ -134,33 +135,33 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 202
+      ClientHeight = 212
       ClientWidth = 312
       object Panel1: TPanel
         Left = 0
-        Height = 33
+        Height = 23
         Top = 0
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 33
+        ClientHeight = 23
         ClientWidth = 312
         TabOrder = 0
         object Label1: TLabel
           Left = 0
-          Height = 33
+          Height = 23
           Top = 0
-          Width = 45
+          Width = 31
           Align = alLeft
           Caption = 'CPUs:'
           ParentColor = False
         end
         object workerThreadCountEdit: TEdit
-          Left = 45
-          Height = 33
+          Left = 31
+          Height = 23
           Top = 0
-          Width = 267
+          Width = 281
           Align = alClient
           NumbersOnly = True
           OnEditingDone = workerThreadCountEditEditingDone
@@ -170,30 +171,30 @@ object SettingsForm: TSettingsForm
       end
       object Panel2: TPanel
         Left = 0
-        Height = 33
-        Top = 33
+        Height = 23
+        Top = 23
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 33
+        ClientHeight = 23
         ClientWidth = 312
         TabOrder = 1
         object Label6: TLabel
           Left = 0
-          Height = 33
+          Height = 23
           Top = 0
-          Width = 155
+          Width = 107
           Align = alLeft
           Caption = 'Memory Limit (MB):'
           ParentColor = False
         end
         object memLimitEdit: TEdit
-          Left = 155
-          Height = 33
+          Left = 107
+          Height = 23
           Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 157
+          Width = 205
           Align = alClient
           NumbersOnly = True
           OnEditingDone = memLimitEditEditingDone
@@ -205,31 +206,31 @@ object SettingsForm: TSettingsForm
       end
       object Panel3: TPanel
         Left = 0
-        Height = 33
-        Top = 66
+        Height = 23
+        Top = 46
         Width = 312
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 33
+        ClientHeight = 23
         ClientWidth = 312
         TabOrder = 2
         object Label4: TLabel
           Left = 0
-          Height = 33
+          Height = 23
           Top = 0
-          Width = 78
+          Width = 52
           Align = alLeft
           Caption = 'Autosave:'
           ParentColor = False
         end
         object autosaveComboBox: TComboBox
-          Left = 78
-          Height = 33
+          Left = 52
+          Height = 23
           Top = 0
-          Width = 234
+          Width = 260
           Align = alClient
-          ItemHeight = 25
+          ItemHeight = 15
           OnChange = autosaveComboBoxChange
           Style = csDropDownList
           TabOrder = 0
@@ -238,51 +239,40 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 202
+      ClientHeight = 212
       ClientWidth = 312
-      object Button1: TButton
-        Left = 0
-        Height = 35
-        Top = 0
-        Width = 312
-        Align = alTop
-        AutoSize = True
-        Caption = 'Install Notepad++ Highlighting'
-        OnClick = Button1Click
-        TabOrder = 0
-      end
       object installButton: TButton
         Left = 0
-        Height = 35
-        Top = 35
+        Height = 25
+        Top = 0
         Width = 312
         Align = alTop
         AutoSize = True
         Caption = 'Create file associations'
         OnClick = installButtonClick
-        TabOrder = 1
+        TabOrder = 0
       end
       object uninstallButton: TButton
         Left = 0
-        Height = 35
-        Top = 70
+        Height = 25
+        Top = 25
         Width = 312
         Align = alTop
         AutoSize = True
         Caption = 'Remove file associations and program folder'
         OnClick = uninstallButtonClick
-        TabOrder = 2
+        TabOrder = 1
       end
       object restorePacksAndDemosButton: TButton
         Left = 0
-        Height = 35
-        Top = 105
+        Height = 25
+        Top = 50
         Width = 312
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
         OnClick = restorePacksAndDemosButtonClick
-        TabOrder = 3
+        TabOrder = 2
       end
     end
   end
