@@ -270,7 +270,8 @@ FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
   VAR fileName:string;
   begin
     setLength(result,0);
-    for fileName in items do appendIfNew(result,ExtractFileDir(fileName));
+    for fileName in items do append(result,ExtractFileDir(fileName));
+    sortUnique(result);
   end;
 
 FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
