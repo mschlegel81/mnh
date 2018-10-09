@@ -66,7 +66,7 @@ FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
-
+FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
 IMPLEMENTATION
 VAR fileByIDCache:specialize G_stringKeyMap<string>;
     lastFileCacheWorkingDir:string='';
@@ -95,6 +95,25 @@ FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
 PROCEDURE ensurePath(CONST path:ansistring);
   begin
     ForceDirectories(extractFilePath(expandFileName(path)));
+  end;
+
+FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
+  VAR firstFileLine:ansistring;
+      handle:textFile;
+  begin
+    if FileExistsUTF8(scriptFileName) then begin
+      try
+        assign(handle,scriptFileName);
+        reset(handle);
+        readln(handle,firstFileLine);
+        close(handle);
+      except
+        firstFileLine:='';
+      end;
+      if (copy(firstFileLine,1,2)='#!')
+      then result:=split(copy(firstFileLine,3,length(firstFileLine)-2),' ')
+      else result:=C_EMPTY_STRING_ARRAY;
+    end else result:=C_EMPTY_STRING_ARRAY;
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;

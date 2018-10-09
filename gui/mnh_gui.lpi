@@ -120,7 +120,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="80">
+    <Units Count="81">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -500,6 +500,10 @@
         <Filename Value="..\core\mnh_settings.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit79>
+      <Unit80>
+        <Filename Value="..\core\mnh_funcs_types.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit80>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
