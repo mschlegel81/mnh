@@ -90,7 +90,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     dirComboBox.items.add(rootPath);
     dirComboBox.items.add(configDir+'packages');
     dirComboBox.items.add(configDir+'demos');
-    for s in fileHistory.recentFolders do dirComboBox.items.add(s);
+    for s in fileHistory.recentFolders do if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(s);
     dirComboBox.ItemIndex:=0;
     //sub dialog
     if uppercase(ext)='.MNH' then begin

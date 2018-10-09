@@ -37,7 +37,6 @@ TYPE
     PageControl: TPageControl;
     TabSheet_display: TTabSheet;
     TabSheet_install: TTabSheet;
-    Button1: TButton;
     TabSheet_global: TTabSheet;
     Label1: TLabel;
     workerThreadCountEdit: TEdit;
@@ -48,7 +47,6 @@ TYPE
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FontSizeEditEditingDone(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
-    PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
@@ -150,12 +148,6 @@ PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
     setFontSize(editorFont.size);
     FontButton.Font.size := getFontSize;
     FontButton.caption := settings.editorFontname;
-  end;
-
-PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
-  {$i res_ensureNppHighlighting.inc}
-  begin
-    sandbox^.execute(ensureNotepad__Highlighting_mnh);
   end;
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);

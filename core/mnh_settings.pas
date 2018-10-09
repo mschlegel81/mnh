@@ -65,6 +65,7 @@ T_settings=object(T_serializable)
 
   htmlDocGeneratedForCodeHash:string;
   doShowSplashScreen:boolean;
+  fullFlavourLocation:string;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -97,6 +98,7 @@ CONSTRUCTOR T_settings.create;
     cpuCount:=1;
     mainForm.create;
     wasLoaded:=false;
+    fullFlavourLocation:='';
   end;
 
 DESTRUCTOR T_settings.destroy;
@@ -129,6 +131,10 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     outputLinesLimit:=stream.readLongint;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     doShowSplashScreen:=stream.readBoolean or (CODE_HASH<>htmlDocGeneratedForCodeHash);
+    fullFlavourLocation:=stream.readAnsiString;
+    {$ifdef fullVersion}
+    if fullFlavourLocation='' then fullFlavourLocation:=paramStr(0);
+    {$endif}
     if not(stream.allOkay) then cleanExit else result:=true;
     savedAt:=now;
     wasLoaded:=result;
@@ -151,6 +157,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeLongint(outputLinesLimit);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(doShowSplashScreen);
+    stream.writeAnsiString(fullFlavourLocation);
     savedAt:=now;
   end;
 
@@ -185,6 +192,7 @@ PROCEDURE T_settings.initDefaults;
                  {$endif}
     outputLinesLimit:=maxLongint;
     doShowSplashScreen:=true;
+    fullFlavourLocation:={$ifdef fullVersion}paramStr(0){$else}''{$endif};
     htmlDocGeneratedForCodeHash:='';
   end;
 
@@ -262,7 +270,8 @@ FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
   VAR fileName:string;
   begin
     setLength(result,0);
-    for fileName in items do appendIfNew(result,ExtractFileDir(fileName));
+    for fileName in items do append(result,ExtractFileDir(fileName));
+    sortUnique(result);
   end;
 
 FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;

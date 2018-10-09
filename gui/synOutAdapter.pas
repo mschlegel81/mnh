@@ -51,6 +51,10 @@ TYPE
                                                                        mt_el1_userNote,
                                                                        mt_el2_warning,
                                                                        mt_el2_userWarning,
+                                                                       mt_echo_input,
+                                                                       mt_echo_output,
+                                                                       mt_echo_declaration,
+                                                                       mt_echo_continued,
                                                                        mt_endOfEvaluation]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
@@ -58,9 +62,13 @@ TYPE
       PROCEDURE flushClear;
   end;
 
+  T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
+    FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+  end;
+
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
-FUNCTION redirectedMessages:T_messageTypeSet;
 IMPLEMENTATION
 VAR lastSynOutId:longint=0;
     redirectors:array of P_synOutAdapter;
@@ -94,6 +102,18 @@ PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
 FUNCTION redirectedMessages:T_messageTypeSet;
   begin
     result:=redirected;
+  end;
+
+CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet);
+  begin
+    inherited create(messageTypesToInclude_);
+  end;
+
+FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessage): boolean;
+  begin
+    if message^.messageType in redirected
+    then result:=false
+    else result:=inherited append(message);
   end;
 
 PROCEDURE T_synOutAdapter.startOutput;

@@ -14,7 +14,7 @@ USES
   mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings,
   mnh_messages, mnh_out_adapters,
   mnh_debugging,
-  mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase;
+  mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase,synOutAdapter;
 
 TYPE
   ToutputOnlyForm = class(T_abstractMnhForm)
@@ -32,7 +32,7 @@ TYPE
     PROCEDURE triggerFastPolling;                             override;
     PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
     private
-      consoleAdapters:T_consoleOutAdapter;
+      consoleAdapters:T_redirectionAwareConsoleOutAdapter;
       outputHighlighter: TSynMnhSyn;
   end;
 

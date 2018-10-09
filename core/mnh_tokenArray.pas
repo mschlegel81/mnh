@@ -465,7 +465,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR threadLocalMessages:T_thre
       end else if copy(commentText,1,length(DOC_COMMENT_INFIX))=DOC_COMMENT_INFIX then begin
         result^.txt:=trimRight(copy(commentText,length(DOC_COMMENT_INFIX)+1,length(commentText)));
         result^.tokType:=tt_docComment;
-      end else if copy(commentText,1,length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX))=SPECIAL_COMMENT_BLOB_BEGIN_INFIX then begin
+      end else if (commentOpener<>'#') and (copy(commentText,1,length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX))=SPECIAL_COMMENT_BLOB_BEGIN_INFIX) then begin
         result^.txt:=SPECIAL_COMMENT_BLOB_BEGIN_INFIX;
         blob.start:=inputLocation;
         if length(commentText)>=1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)

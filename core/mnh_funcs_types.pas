@@ -8,7 +8,6 @@ USES sysutils,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_patterns,
      mnh_funcs,
      mnh_contexts;
 VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
