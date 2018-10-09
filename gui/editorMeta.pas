@@ -67,7 +67,7 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
-    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST newId:string; CONST renameInOtherEditors:boolean=false);
+    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
 
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
@@ -593,11 +593,12 @@ FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_to
     result   :=underCursor.canRename;
     orignalId:=underCursor.idWithoutIsPrefix;
     tokTyp   :=underCursor.tokenType;
+    if tokTyp in [tt_each,tt_parallelEach] then tokTyp:=tt_eachParameter;
     ref      :=underCursor.location;
     mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
   end;
 
-PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST newId:string; CONST renameInOtherEditors:boolean=false);
+PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
@@ -618,11 +619,11 @@ PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST newId:str
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to lines.count-1 do begin
       lineTxt:=lines[lineIndex];
-      if latestAssistanceReponse^.renameIdentifierInLine(ref,newId,lineTxt,lineIndex+1) then updateLine;
+      if latestAssistanceReponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
     end;
     editor.EndUpdate;
 
-    if renameInOtherEditors then for meta in editorMetaData do if meta<>@self then meta^.doRename(ref,newId);
+    if renameInOtherEditors then for meta in editorMetaData do if meta<>@self then meta^.doRename(ref,oldId,newId);
   end;
 
 PROCEDURE T_editorMeta.setWorkingDir;

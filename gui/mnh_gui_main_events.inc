@@ -324,7 +324,7 @@ PROCEDURE TMnhForm.miRenameClick(Sender: TObject);
     if (meta<>nil) and
        meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk) then begin
-      meta^.doRename(renameLocation,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
     end;
   end;
 
@@ -362,8 +362,12 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miRestoreDefaultFileClick(Sender: TObject);
+  VAR editor:P_editorMeta;
   begin
-    restoreDefaultFile(getEditor^.getPath);
+    editor:=getEditor;
+    if editor=nil then exit;
+    restoreDefaultFile(editor^.getPath);
+    editor^.reloadFile(editor^.getPath);
   end;
 
 PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
@@ -486,7 +490,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     flushedMessages:=guiOutAdapter.flushToGui;
     flushedMessages+=guiEventsAdapter.flushToGui;
-    if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
+    if ((flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages)) and autoShowOutputCheckbox.checked then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;

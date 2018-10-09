@@ -78,7 +78,6 @@ TYPE
       anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
 
-      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
@@ -256,14 +255,38 @@ FUNCTION postEvalThread(p:pointer):ptrint;
         currInput  :T_arrayOfString;
     begin
       currInput  :=P_postEvaluationData(p)^.editor^.getLines;
-      currPackage:=P_postEvaluationData(p)^.packageForPostEval^.getPath+'#'+
-          IntToHex(P_postEvaluationData(p)^.packageForPostEval^.getCodeState,8);
+      if P_postEvaluationData(p)^.packageForPostEval=nil
+      then currPackage:=''
+      else currPackage:=P_postEvaluationData(p)^.packageForPostEval^.getPath+'#'+
+               IntToHex(P_postEvaluationData(p)^.packageForPostEval^.getCodeState,8);
       if arrEquals(currInput,lastInput) and (currPackage=lastEvaluatedPackage)
       then result:=false
       else begin
         result:=true;
         lastInput:=currInput;
         lastEvaluatedPackage:=currPackage;
+      end;
+    end;
+
+  PROCEDURE interpretInPackage(CONST packageOrNil:P_package; CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
+    VAR lexer:T_lexer;
+        stmt :T_enhancedStatement;
+        tempPackage:P_package;
+    begin
+      if packageOrNil<>nil then begin;
+        if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
+          packageOrNil^.load(lu_forImport,globals,C_EMPTY_STRING_ARRAY);
+        lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
+        while (globals.primaryContext.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
+          packageOrNil^.interpret(stmt,lu_forDirectExecution,globals);
+          stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
+        end;
+        lexer.destroy;
+      end else begin
+        tempPackage:=packageFromCode(input,'<quick>');
+        tempPackage^.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
+        dispose(tempPackage,destroy);
       end;
     end;
 
@@ -287,7 +310,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
           evaluationContext.resetForEvaluation(packageForPostEval,ect_silent,C_EMPTY_STRING_ARRAY);
           connector^.clear(false);
           connector^.postSingal(mt_clearConsole,C_nilTokenLocation);
-          packageForPostEval^.interpretInPackage(lastInput,evaluationContext);
+          interpretInPackage(packageForPostEval,lastInput,evaluationContext);
           evaluationContext.afterEvaluation;
           enterCriticalSection(cs);
         end;
@@ -1598,22 +1621,6 @@ FUNCTION T_package.declaredRules: T_ruleList;
     if result[i]^.getId<result[j]^.getId then begin
       tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
     end;
-  end;
-
-PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
-  VAR lexer:T_lexer;
-      stmt :T_enhancedStatement;
-  begin
-    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then
-      load(lu_forImport,globals,C_EMPTY_STRING_ARRAY);
-
-    lexer.create(input,packageTokenLocation(@self),@self);
-    stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
-    while (globals.primaryContext.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
-      interpret(stmt,lu_forDirectExecution,globals);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
-    end;
-    lexer.destroy;
   end;
 
 FUNCTION T_package.getImport(CONST idOrPath:string):P_abstractPackage;

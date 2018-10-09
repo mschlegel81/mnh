@@ -41,7 +41,7 @@ TYPE
       FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
-      FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
+      FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST oldId,newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
       FUNCTION  getImportablePackages:T_arrayOfString;
       FUNCTION  resolveImport(CONST id:string):string;
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
@@ -296,9 +296,7 @@ PROCEDURE T_codeAssistanceResponse.explainIdentifier(
     lexer.destroy;
   end;
 
-FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(
-  CONST location: T_searchTokenLocation; CONST newId: string;
-  VAR lineText: ansistring; CONST CaretY: longint): boolean;
+FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId,newId: string; VAR lineText: ansistring; CONST CaretY: longint): boolean;
   VAR lexer:T_lexer;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
@@ -308,7 +306,7 @@ FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(
     loc.package:=package;
     lexer.create(lineText,loc,package);
     enhanced:=lexer.getEnhancedTokens(localIdInfos);
-    result:=enhanced.renameInLine(lineText,location,newId);
+    result:=enhanced.renameInLine(lineText,location,oldId,newId);
     enhanced.destroy;
     lexer.destroy;
   end;

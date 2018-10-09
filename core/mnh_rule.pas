@@ -87,6 +87,7 @@ TYPE
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
+      FUNCTION getRootId:T_idString; virtual;
       {$ifdef fullVersion}
       PROCEDURE setIdResolved; virtual;
       {$endif}
@@ -101,6 +102,7 @@ TYPE
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
+      FUNCTION getRootId:T_idString; virtual;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       DESTRUCTOR destroy; virtual;
@@ -319,6 +321,9 @@ DESTRUCTOR T_datastoreRule.destroy;
     dataStoreMeta.destroy;
     inherited destroy;
   end;
+
+FUNCTION T_typeCastRule .getRootId:T_idString; begin result:=typedef^.getName; end;
+FUNCTION T_typecheckRule.getRootId:T_idString; begin result:=typedef^.getName; end;
 
 PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression; VAR context: T_threadContext);
   VAR i,j:longint;

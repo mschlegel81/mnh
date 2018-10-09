@@ -74,7 +74,6 @@ TYPE
   T_tokenInfo=record
     infoText:ansistring;
     location,startLoc,endLoc:T_searchTokenLocation;
-
     canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
     idWithoutIsPrefix:string;
@@ -86,9 +85,8 @@ TYPE
       originalType:T_tokenType;
       references:T_tokenLocation;
       linksTo:(nothing,packageUse,packageInclude);
-      hasIsPrefix:boolean;
       endsAtColumn:longint;
-      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName:string; newName:string):boolean;
     public
       CONSTRUCTOR create(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
@@ -104,7 +102,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION getTokenAtIndex(CONST rowIndex:longint):T_enhancedToken;
-      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName,newName:string):boolean;
   end;
   {$endif}
 
@@ -135,6 +133,8 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
       {$endif}
+      PROCEDURE rawTokenize(CONST inputTxt:string;   CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; VAR threadLocalMessages:T_threadLocalMessages);
+      PROCEDURE rawTokenize(CONST literal:P_literal; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token);
   end;
 
 PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
@@ -252,12 +252,12 @@ FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedTo
     result:=dat[length(dat)-1];
   end;
 
-FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName,newName:string):boolean;
   VAR i:longint;
   begin
     result:=false;
     for i:=length(dat)-1 downto 0 do if dat[i].token<>nil then begin
-      if dat[i].renameInLine(line,referencedLocation,newName) then result:=true;
+      if dat[i].renameInLine(line,referencedLocation,oldName,newName) then result:=true;
     end;
   end;
 
@@ -265,7 +265,6 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
   VAR tokenText:string;
   begin
     linksTo:=nothing;
-    hasIsPrefix:=false;
     endsAtColumn:=maxLongint;
     if tok=nil then begin
       token:=nil;
@@ -282,6 +281,14 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     tokenText:=safeTokenToString(token);
     if (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
     case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
+      tt_eachParameter: begin
+        token^.tokType:=tt_eachParameter;
+        references.package:=package;
+      end;
+      tt_eachIndex: begin
+        token^.tokType:=tt_eachIndex;
+        references.package:=package;
+      end;
       tt_blockLocalVariable: begin
         token^.tokType:=tt_blockLocalVariable;
         references.package:=package;
@@ -314,8 +321,6 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     if (linksTo=nothing) and (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck]) then begin
       references:=P_abstractRule(token^.data)^.getLocation;
     end;
-    if (token^.tokType=tt_customTypeRule) then
-      hasIsPrefix:='is'+token^.txt=P_abstractRule(token^.data)^.getId;
   end;
 
 DESTRUCTOR T_enhancedToken.destroy;
@@ -323,8 +328,7 @@ DESTRUCTOR T_enhancedToken.destroy;
     if token<>nil then dispose(token,destroy);
   end;
 
-FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST newName: string): boolean;
-  VAR is_:string[2]='';
+FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName:string; newName: string): boolean;
   begin
     case token^.tokType of
       tt_identifier         ,
@@ -333,12 +337,17 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       tt_importedUserRule   ,
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
-      tt_customTypeRule     : if references<>referencedLocation then exit(false);
+      tt_customTypeRule     ,
+      tt_eachParameter,
+      tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
       else exit(false);
     end;
-    if hasIsPrefix then is_:='is';
+    case token^.tokType of
+      tt_each,tt_parallelEach: newName:=C_tokenInfo[token^.tokType].defaultId+'('+newName+',';
+      else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
+    end;
     result:=true;
-    line:=copy(line,1,token^.location.column-1)+is_+newName+copy(line,endsAtColumn+1,length(line));
+    line:=copy(line,1,token^.location.column-1)+newName+copy(line,endsAtColumn+1,length(line));
   end;
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
@@ -369,14 +378,17 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    //tt_importedUserRule ?!?
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule,tt_eachParameter,tt_each,tt_parallelEach];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
-      if hasIsPrefix then result.idWithoutIsPrefix:=copy(tokenText,3,length(tokenText)-2)
-                     else result.idWithoutIsPrefix:=                        tokenText;
+      case token^.tokType of
+        tt_each,tt_parallelEach: result.idWithoutIsPrefix:=token^.txt;
+        tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule:
+                                 result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
+        else                     result.idWithoutIsPrefix:=tokenText;
+      end;
       result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
-                                         (token^.tokType in [tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
+                                         (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of
@@ -398,7 +410,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     case token^.tokType of
       tt_intrinsicRule:
         result.infoText+=C_lineBreakChar+getBuiltinRuleInfo;
-      tt_blockLocalVariable, tt_parameterIdentifier:
+      tt_blockLocalVariable, tt_parameterIdentifier, tt_eachParameter, tt_eachIndex:
         result.infoText+=C_lineBreakChar+'Declared '+ansistring(references);
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
@@ -815,86 +827,117 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
   VAR t:P_token;
       localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
+      idType:T_tokenType;
       lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
-    while (t<>nil) do case t^.tokType of
-      tt_beginBlock: begin
-        localIdStack.clear;
-        localIdStack.scopePush;
-        lastWasLocalModifier:=false;
-        t:=t^.next;
-        while (t<>nil) and not((t^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
-          lastLocation:=t^.location;
-          case t^.tokType of
-            tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop(threadLocalMessages,t^.location);
-            tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
-              if lastWasLocalModifier then begin
-                t^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(t^.txt,t^.location)) then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
-              end else if (localIdStack.hasId(t^.txt)) then
-                t^.tokType:=tt_blockLocalVariable;
-          end;
-          lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
-          t:=t^.next;
+    while (t<>nil) do begin
+      lastLocation:=t^.location;
+      case t^.tokType of
+        tt_beginBlock:
+          localIdStack.scopePush(sc_block);
+        tt_endBlock:
+          localIdStack.scopePop(threadLocalMessages,t^.location,false);
+        tt_braceOpen:
+          localIdStack.scopePush(sc_bracketOnly);
+        tt_braceClose:
+          localIdStack.scopePop(threadLocalMessages,t^.location,true);
+        tt_each,tt_parallelEach:begin
+          localIdStack.scopePush(sc_each);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,t^.location,tt_eachIndex);
+          localIdStack.addId(t^.txt               ,t^.location,tt_eachParameter);
         end;
-
-        if t<>nil then begin
-          localIdStack.scopePop(threadLocalMessages,t^.location);
-          t:=t^.next;
-        end else localIdStack.scopePop(threadLocalMessages,lastLocation);
+        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+          if lastWasLocalModifier then begin
+            t^.tokType:=tt_blockLocalVariable;
+            if not(localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable)) then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+          end else if (localIdStack.hasId(t^.txt,idType)) then
+            t^.tokType:=idType;
       end;
-      else t:=t^.next;
+      lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
+      t:=t^.next;
     end;
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
     localIdStack.destroy;
   end;
 
 FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
+      idType:T_tokenType;
       lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
-    while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do case lastTokenized^.tokType of
-      tt_beginBlock: begin
-        localIdStack.clear;
-        localIdStack.scopePush;
-        lastWasLocalModifier:=false;
-        while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
-          lastLocation:=lastTokenized^.location;
-          case lastTokenized^.tokType of
-            tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop(threadLocalMessages,lastLocation);
-            tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
-              if lastWasLocalModifier then begin
-                lastTokenized^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location)) then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
-              end else if (localIdStack.hasId(lastTokenized^.txt)) then
-                lastTokenized^.tokType:=tt_blockLocalVariable;
+    while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
+      lastLocation:=lastTokenized^.location;
+      case lastTokenized^.tokType of
+        tt_beginBlock:
+          localIdStack.scopePush(sc_block);
+        tt_endBlock:
+          localIdStack.scopePop(threadLocalMessages,lastTokenized^.location,false);
+        tt_braceOpen:
+          localIdStack.scopePush(sc_bracketOnly);
+        tt_braceClose:
+          localIdStack.scopePop(threadLocalMessages,lastTokenized^.location,true);
+        tt_each,tt_parallelEach:begin
+          localIdStack.scopePush(sc_each);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastTokenized^.location,tt_eachIndex);
+          localIdStack.addId(lastTokenized^.txt   ,lastTokenized^.location,tt_eachParameter);
+        end;
+        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+          if lastWasLocalModifier then begin
+            lastTokenized^.tokType:=tt_blockLocalVariable;
+            if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable))
+            then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+          end else if (localIdStack.hasId(lastTokenized^.txt,idType)) then
+            lastTokenized^.tokType:=idType;
+        tt_semicolon: if localIdStack.scopeBottom then begin
+          if beforeLastTokenized<>nil then begin;
+            beforeLastTokenized^.next:=nil;
+            disposeToken(lastTokenized);
           end;
-          lastWasLocalModifier:=(lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
+          result:=nextStatement;
+          if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
+          resetTemp;
+          localIdStack.destroy;
+          exit;
         end;
-        if (lastTokenized<>nil) then localIdStack.scopePop(threadLocalMessages,lastTokenized^.location)
-                                else localIdStack.scopePop(threadLocalMessages,lastLocation);
       end;
-      tt_semicolon: begin
-        if beforeLastTokenized<>nil then begin;
-          beforeLastTokenized^.next:=nil;
-          disposeToken(lastTokenized);
-        end;
-        result:=nextStatement;
-        if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
-        resetTemp;
-        localIdStack.destroy;
-        exit;
-      end;
+      lastWasLocalModifier:=(lastTokenized<>nil) and (lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
     end;
     result:=nextStatement;
     if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
     resetTemp;
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
     localIdStack.destroy;
+  end;
+
+PROCEDURE safeAppend(VAR first,last:P_token; CONST appendix:P_token);
+  begin
+    if first=nil
+    then first     :=appendix
+    else last^.next:=appendix;
+    last :=appendix^.last;
+  end;
+
+PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; VAR threadLocalMessages:T_threadLocalMessages);
+  begin
+    input:=inputTxt;
+    inputIndex:=0;
+    inputLocation:=location;
+    inputLocation.column:=1;
+    inputColumnOffset:=location.column-inputLocation.column;
+    blob.text:='';
+    blob.closer:=#0;
+    while fetchNext(threadLocalMessages{$ifdef fullVersion},nil{$endif}) do begin end;
+    safeAppend(firstToken,lastToken,nextStatement.firstToken);
+    resetTemp;
+  end;
+
+PROCEDURE T_lexer.rawTokenize(CONST literal:P_literal; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token);
+  begin
+    safeAppend(firstToken,lastToken,newToken(location,'',tt_literal,literal^.rereferenced));
   end;
 
 {$ifdef fullVersion}

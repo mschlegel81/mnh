@@ -9,7 +9,6 @@ USES //basic classes
      mnh_out_adapters,
      mnh_litVar,
      mnh_tokens,
-     tokenStack,
      mnh_contexts,
      mnh_tokenArray,
      valueStore,
@@ -261,15 +260,19 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
-          tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
+          tt_identifier, tt_eachParameter, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
               then token.tokType:=tt_parameterIdentifier
-              else token.tokType:=tt_identifier;
-            end else if (typ=et_eachBody) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
-            else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
+              else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
+            end
+            else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
           end;
+          tt_eachIndex: begin
+            parIdx:=pattern.indexOfId(token.txt);
+            if (typ=et_eachBody) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable;
+          end
           else parIdx:=-1;
         end;
       end;
@@ -1206,59 +1209,28 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST threadLocalMessages:P_threadLocalMessages);
-  VAR bracketStack:T_TokenStack;
-  FUNCTION isEachIdentifier(CONST id:string):boolean;
-    VAR k:longint;
-    begin
-      result:=false;
-      for k:=0 to bracketStack.topIndex do
-      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach]) and
-         (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
-    end;
-
   VAR t:P_token;
   begin
     t:=first;
-    bracketStack.create;
     while t<>nil do begin
-      with t^ do begin
-        case tokType of
-          tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(t);
-          tt_braceClose:bracketStack.quietPop;
-        end;
-        if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
+      with t^ do
+        if (tokType=tt_identifier) then
           BLANK_ABSTRACT_PACKAGE.resolveId(t^,threadLocalMessages);
-      end;
       t:=t^.next;
     end;
-    bracketStack.destroy;
-
   end;
 
 PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalMessages);
   VAR i:longint;
-      bracketStack:T_TokenStack;
       inlineValue:P_literal;
-
-  FUNCTION isEachIdentifier(CONST id:string):boolean;
-    VAR k:longint;
-    begin
-      result:=false;
-      for k:=0 to bracketStack.topIndex do
-      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach]) and
-         (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
-    end;
 
   begin
     enterCriticalSection(subruleCallCs);
     if not(functionIdsReady) then begin
-      bracketStack.create;
       functionIdsReady:=true;
       for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
         case token.tokType of
-          tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
-          tt_braceClose: bracketStack.quietPop;
-          tt_identifier: if (parIdx<0) and not(isEachIdentifier(token.txt)) then begin
+          tt_identifier: if (parIdx<0) then begin
             P_abstractPackage(token.location.package)^.resolveId(token,threadLocalMessages);
             functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
           end;
@@ -1277,7 +1249,6 @@ PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalM
           end;
         end;
       end;
-      bracketStack.destroy;
     end;
     leaveCriticalSection(subruleCallCs);
   end;
@@ -1549,25 +1520,16 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
   end;
 
 FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_threadContext):P_token;
-  VAR last:P_token=nil;
+  VAR last :P_token=nil;
       i:longint;
-      subTokens:P_token;
+      lexer:T_lexer;
   begin
     result:=nil;
+    lexer.create(C_EMPTY_STRING_ARRAY,location,package);
     for i:=0 to L^.size-1 do begin
       if L^.value[i]^.literalType=lt_string
-      then subTokens:=stringToTokens(P_stringLiteral(L^.value[i])^.value,location,package,context)
-      else begin
-        subTokens:=newToken(location,'',tt_literal,L^.value[i]);
-        L^.value[i]^.rereference;
-      end;
-      if subTokens=nil then begin
-        if result<>nil then cascadeDisposeToken(result);
-        exit(nil);
-      end;
-      if result=nil then result:=subTokens
-                    else last^.next:=subTokens;
-      last:=subTokens^.last;
+      then lexer.rawTokenize(P_stringLiteral(L^.value[i])^.value,location,result,last,context.messages)
+      else lexer.rawTokenize(L^.value[i]                        ,location,result,last);
     end;
     preprocessStatement(result,context.messages{$ifdef fullVersion},nil{$endif});
   end;
@@ -1582,7 +1544,6 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
     if first=nil then exit(nil);
-
     if not(first^.areBracketsPlausible(context.messages)) then begin
       cascadeDisposeToken(first);
       exit(nil);
@@ -1593,7 +1554,6 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
       temp:=first^.last;
       temp^.next:=newToken(location,'',tt_expBraceClose);
     end;
-
     digestInlineExpression(first,context);
     if (context.messages.continueEvaluation) and (first^.next<>nil) then context.messages.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.messages.continueEvaluation) then begin
