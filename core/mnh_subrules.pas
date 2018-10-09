@@ -9,7 +9,6 @@ USES //basic classes
      mnh_out_adapters,
      mnh_litVar,
      mnh_tokens,
-     tokenStack,
      mnh_contexts,
      mnh_tokenArray,
      valueStore,
