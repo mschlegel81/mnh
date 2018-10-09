@@ -362,8 +362,12 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miRestoreDefaultFileClick(Sender: TObject);
+  VAR editor:P_editorMeta;
   begin
-    restoreDefaultFile(getEditor^.getPath);
+    editor:=getEditor;
+    if editor=nil then exit;
+    restoreDefaultFile(editor^.getPath);
+    editor^.reloadFile(editor^.getPath);
   end;
 
 PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
