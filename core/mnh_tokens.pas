@@ -30,6 +30,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy; virtual;
       FUNCTION getId:T_idString; virtual;
+      FUNCTION getRootId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       PROPERTY getRuleType:T_ruleType read ruleType;
 
@@ -182,7 +183,8 @@ CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
   end;
 
 DESTRUCTOR T_abstractRule.destroy;                    begin id:='';                   end;
-FUNCTION T_abstractRule.getId: T_idString;            begin result:=id;               end;
+FUNCTION T_abstractRule.getId: T_idString;            begin result:=id; end;
+FUNCTION T_abstractRule.getRootId:T_idString;         begin result:=id; end;
 FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
 
 FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;

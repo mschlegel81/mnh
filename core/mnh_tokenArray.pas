@@ -74,7 +74,6 @@ TYPE
   T_tokenInfo=record
     infoText:ansistring;
     location,startLoc,endLoc:T_searchTokenLocation;
-
     canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
     idWithoutIsPrefix:string;
@@ -86,9 +85,8 @@ TYPE
       originalType:T_tokenType;
       references:T_tokenLocation;
       linksTo:(nothing,packageUse,packageInclude);
-      hasIsPrefix:boolean;
       endsAtColumn:longint;
-      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; newName:string):boolean;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName:string; newName:string):boolean;
     public
       CONSTRUCTOR create(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
@@ -104,7 +102,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION getTokenAtIndex(CONST rowIndex:longint):T_enhancedToken;
-      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName,newName:string):boolean;
   end;
   {$endif}
 
@@ -254,12 +252,12 @@ FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedTo
     result:=dat[length(dat)-1];
   end;
 
-FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName,newName:string):boolean;
   VAR i:longint;
   begin
     result:=false;
     for i:=length(dat)-1 downto 0 do if dat[i].token<>nil then begin
-      if dat[i].renameInLine(line,referencedLocation,newName) then result:=true;
+      if dat[i].renameInLine(line,referencedLocation,oldName,newName) then result:=true;
     end;
   end;
 
@@ -267,7 +265,6 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
   VAR tokenText:string;
   begin
     linksTo:=nothing;
-    hasIsPrefix:=false;
     endsAtColumn:=maxLongint;
     if tok=nil then begin
       token:=nil;
@@ -324,8 +321,6 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     if (linksTo=nothing) and (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck]) then begin
       references:=P_abstractRule(token^.data)^.getLocation;
     end;
-    if (token^.tokType=tt_customTypeRule) then
-      hasIsPrefix:='is'+token^.txt=P_abstractRule(token^.data)^.getId;
   end;
 
 DESTRUCTOR T_enhancedToken.destroy;
@@ -333,7 +328,7 @@ DESTRUCTOR T_enhancedToken.destroy;
     if token<>nil then dispose(token,destroy);
   end;
 
-FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; newName: string): boolean;
+FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName:string; newName: string): boolean;
   begin
     case token^.tokType of
       tt_identifier         ,
@@ -349,7 +344,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     end;
     case token^.tokType of
       tt_each,tt_parallelEach: newName:=C_tokenInfo[token^.tokType].defaultId+'('+newName+',';
-      else if hasIsPrefix then newName:='is'+newName;
+      else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
     end;
     result:=true;
     line:=copy(line,1,token^.location.column-1)+newName+copy(line,endsAtColumn+1,length(line));
@@ -386,10 +381,12 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule,tt_eachParameter,tt_each,tt_parallelEach];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
-      if token^.tokType in [tt_each,tt_parallelEach]
-                           then result.idWithoutIsPrefix:=token^.txt
-      else  if hasIsPrefix then result.idWithoutIsPrefix:=copy(tokenText,3,length(tokenText)-2)
-                           else result.idWithoutIsPrefix:=                        tokenText;
+      case token^.tokType of
+        tt_each,tt_parallelEach: result.idWithoutIsPrefix:=token^.txt;
+        tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule:
+                                 result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
+        else                     result.idWithoutIsPrefix:=tokenText;
+      end;
       result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
                                          (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
     end;
@@ -831,10 +828,12 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
       localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
       idType:T_tokenType;
+      lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
     while (t<>nil) do begin
+      lastLocation:=t^.location;
       case t^.tokType of
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
@@ -859,6 +858,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;
     end;
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
     localIdStack.destroy;
   end;
 
@@ -866,9 +866,11 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
       idType:T_tokenType;
+      lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
+      lastLocation:=lastTokenized^.location;
       case lastTokenized^.tokType of
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
@@ -907,6 +909,7 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
     result:=nextStatement;
     if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
     resetTemp;
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
     localIdStack.destroy;
   end;
 

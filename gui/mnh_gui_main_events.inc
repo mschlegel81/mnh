@@ -324,7 +324,7 @@ PROCEDURE TMnhForm.miRenameClick(Sender: TObject);
     if (meta<>nil) and
        meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk) then begin
-      meta^.doRename(renameLocation,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
     end;
   end;
 
