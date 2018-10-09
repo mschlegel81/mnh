@@ -486,7 +486,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     flushedMessages:=guiOutAdapter.flushToGui;
     flushedMessages+=guiEventsAdapter.flushToGui;
-    if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
+    if ((flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages)) and autoShowOutputCheckbox.checked then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;

@@ -1153,11 +1153,11 @@ object MnhForm: TMnhForm
       end
       object outputTabSheet: TTabSheet
         Caption = 'Output (Shift+F2)'
-        ClientHeight = 149
+        ClientHeight = 291
         ClientWidth = 709
         inline OutputEdit: TSynEdit
           Left = 0
-          Height = 149
+          Height = 291
           Top = 0
           Width = 709
           Align = alClient
@@ -1635,6 +1635,21 @@ object MnhForm: TMnhForm
               MarkupInfo.Foreground = clGray
             end
           end
+        end
+        object autoShowOutputCheckbox: TCheckBox
+          AnchorSideTop.Control = outputTabSheet
+          AnchorSideRight.Control = outputTabSheet
+          AnchorSideRight.Side = asrBottom
+          Left = 430
+          Height = 29
+          Top = 0
+          Width = 279
+          Align = alCustom
+          Anchors = [akTop, akRight]
+          Caption = 'show tab when output changes'
+          Checked = True
+          State = cbChecked
+          TabOrder = 1
         end
       end
       object debugTabSheet: TTabSheet
@@ -2740,6 +2755,19 @@ object MnhForm: TMnhForm
           Width = 709
           Align = alTop
           ResizeAnchor = akTop
+        end
+        object evaluateQuickInCurrentPackageCheckbox: TCheckBox
+          AnchorSideTop.Control = Splitter5
+          AnchorSideRight.Control = Splitter5
+          AnchorSideRight.Side = asrBottom
+          Left = 464
+          Height = 29
+          Top = 0
+          Width = 245
+          Align = alCustom
+          Anchors = [akTop, akRight]
+          Caption = 'evaluate in current package'
+          TabOrder = 2
         end
       end
     end

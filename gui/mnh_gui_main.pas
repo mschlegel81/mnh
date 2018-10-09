@@ -57,6 +57,8 @@ TYPE
   TMnhForm = class(T_abstractMnhForm)
     cbOutlineShowPrivate,
     cbOutlineShowImported:     TCheckBox;
+    autoShowOutputCheckbox: TCheckBox;
+    evaluateQuickInCurrentPackageCheckbox: TCheckBox;
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
@@ -438,13 +440,18 @@ PROCEDURE TMnhForm.updateFileHistory;
 PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   VAR edit:P_editorMeta;
   begin
-    edit:=getEditor;
-    quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData);
-    if runnerModel.canRun(true) then begin
-      if edit<>nil then edit^.setWorkingDir;
-      quick.evaluationDeferred:=false;
-      quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit,runnerModel.firstCallAfterActivation));
-    end else quick.evaluationDeferred:=true;
+    if evaluateQuickInCurrentPackageCheckbox.checked then begin
+      edit:=getEditor;
+      quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData);
+      if runnerModel.canRun(true) then begin
+        if edit<>nil then edit^.setWorkingDir;
+        quick.evaluationDeferred:=false;
+        quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit,runnerModel.firstCallAfterActivation));
+      end else quick.evaluationDeferred:=true;
+    end else begin
+      quick.completion.assignEditor(quick.meta.editor,nil);
+      quick.task.triggerUpdate(nil);
+    end;
   end;
 
 PROCEDURE TMnhForm.updateExpressionMemo;
