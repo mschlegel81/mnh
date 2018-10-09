@@ -927,7 +927,7 @@ PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocat
     inputColumnOffset:=location.column-inputLocation.column;
     blob.text:='';
     blob.closer:=#0;
-    while fetchNext(threadLocalMessages,nil) do begin end;
+    while fetchNext(threadLocalMessages{$ifdef fullVersion},nil{$endif}) do begin end;
     safeAppend(firstToken,lastToken,nextStatement.firstToken);
     resetTemp;
   end;
