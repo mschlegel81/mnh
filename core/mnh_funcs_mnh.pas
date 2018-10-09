@@ -8,6 +8,7 @@ USES sysutils,
      mnh_out_adapters,
      mnh_litVar,
      mnh_contexts,
+     mnh_settings,
      mnh_funcs;
 FUNCTION getMnhInfo:string;
 {$i mnh_func_defines.inc}
@@ -173,7 +174,8 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('codeVersion'    ,CODE_HASH                  )^
       .put('build'          ,BUILD_NUMBER               )^
       .put('flavour'        ,FLAVOUR_STRING             )^
-      .put('configDir'      ,configDir                  )
+      .put('configDir'      ,configDir                  )^
+      .put('fullVersionPath',settings.fullFlavourLocation)
     else result:=nil;
   end;
 
