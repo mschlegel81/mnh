@@ -593,6 +593,7 @@ FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_to
     result   :=underCursor.canRename;
     orignalId:=underCursor.idWithoutIsPrefix;
     tokTyp   :=underCursor.tokenType;
+    if tokTyp in [tt_each,tt_parallelEach] then tokTyp:=tt_eachParameter;
     ref      :=underCursor.location;
     mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
   end;

@@ -339,6 +339,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_customTypeRule,
       tt_parameterIdentifier,
       tt_blockLocalVariable,
+      tt_eachIndex,
+      tt_eachParameter,
       tt_blank: result:=txt;
       else result:=C_tokenInfo[tokType].defaultId;
     end;

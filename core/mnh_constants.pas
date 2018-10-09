@@ -109,6 +109,8 @@ TYPE
     tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
     tt_customTypeRule,
     tt_blockLocalVariable,
+    tt_eachParameter,
+    tt_eachIndex,
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
@@ -237,6 +239,8 @@ CONST
 {tt_rulePutCacheValue}          (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'A put-cache-value call'),
 {tt_customTypeRule}             (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A custom type rule'),
 {tt_blockLocalVariable}         (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A block-local variable'),
+{tt_eachParameter}              (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'each parameter'),
+{tt_eachIndex}                  (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'each index'),
 {tt_ponFlipper}                 (defaultId:'.';             defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A pseudo-object-notation flipper'),
 {tt_aggregatorConstructor}      (defaultId:'aggregator';    defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
 {tt_each}                       (defaultId:'.each';         defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.#Syntax: <input>.each(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),

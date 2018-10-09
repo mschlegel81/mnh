@@ -22,8 +22,6 @@ TYPE
     Panel2: TPanel;
     PROCEDURE NewNameEditChange(Sender: TObject);
     PROCEDURE NewNameEditKeyPress(Sender: TObject; VAR key: char);
-  private
-
   public
     FUNCTION showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
     FUNCTION newId:string;

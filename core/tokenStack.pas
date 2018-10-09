@@ -93,8 +93,14 @@ TYPE
   end;
   {$endif}
 
+  T_scopeType=(sc_block,sc_each,sc_bracketOnly);
+
   T_idStack=object
-    ids:array of array of record name:T_idString; used:boolean; location:T_tokenLocation end;
+    scope:array of record
+      scopeType:T_scopeType;
+      ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
+    end;
+    bracketLevel:longint;
     {$ifdef fullVersion}
     localIdInfos:P_localIdInfos;
     {$endif}
@@ -102,12 +108,12 @@ TYPE
     CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
     DESTRUCTOR destroy;
     PROCEDURE clear;
-    PROCEDURE scopePush;
-    PROCEDURE scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation);
+    PROCEDURE scopePush(CONST scopeType:T_scopeType);
+    PROCEDURE scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation):boolean;
-    FUNCTION hasId(CONST id:T_idString):boolean;
+    FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
+    FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType):boolean;
   end;
 
 IMPLEMENTATION
@@ -415,7 +421,7 @@ FUNCTION T_TokenStack.toDebuggerString(CONST first:P_token; CONST lengthLimit:lo
 
 CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
   begin
-    setLength(ids,0);
+    setLength(scope,0);
     {$ifdef fullVersion}
     localIdInfos:=info;
     {$endif}
@@ -429,58 +435,81 @@ DESTRUCTOR T_idStack.destroy;
 PROCEDURE T_idStack.clear;
   VAR i:longint;
   begin
-    for i:=0 to length(ids)-1 do setLength(ids[i],0);
-    setLength(ids,0);
+    for i:=0 to length(scope)-1 do setLength(scope[i].ids,0);
+    setLength(scope,0);
+    bracketLevel:=0;
   end;
 
-PROCEDURE T_idStack.scopePush;
+PROCEDURE T_idStack.scopePush(CONST scopeType:T_scopeType);
+  VAR newTopIdx:longint;
   begin
-    setLength(ids,length(ids)+1);
+    newTopIdx:=length(scope);
+    setLength(scope,newTopIdx+1);
+    setLength(scope[newTopIdx].ids,0);
+    scope[newTopIdx].scopeType:=scopeType;
   end;
 
-PROCEDURE T_idStack.scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation);
+PROCEDURE T_idStack.scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
   VAR topIdx:longint;
       i:longint;
   begin
-    topIdx:=length(ids)-1;
-    for i:=0 to length(ids[topIdx])-1 do begin
-      if not(ids[topIdx,i].used) then adapters.globalMessages^.postTextMessage(mt_el2_warning,ids[topIdx,i].location,'Unused local variable '+ids[topIdx,i].name);
+    topIdx:=length(scope)-1;
+    if topIdx<0 then begin
+      adapters.raiseError('Missing opening bracket for closing bracket',location);
+      exit;
+    end;
+    if closeByBracket then begin
+      if scope[topIdx].scopeType=sc_block then adapters.raiseError('Mismatch; begin closed by )',location);
+    end else begin
+      if scope[topIdx].scopeType<>sc_block then adapters.raiseError('Mismatch; ( closed by end',location);
+    end;
+    with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+      if not(ids[i].used) then adapters.globalMessages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
       {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
+      if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,location,ids[i].idType);
       {$endif}
     end;
-    setLength(ids,topIdx);
+    setLength(scope[topIdx].ids,0);
+    setLength(scope,topIdx);
   end;
 
 FUNCTION T_idStack.oneAboveBottom:boolean;
   begin
-    result:=length(ids)=1;
+    result:=length(scope)=1;
   end;
 
 FUNCTION T_idStack.scopeBottom:boolean;
   begin
-    result:=length(ids)=0;
+    result:=length(scope)=0;
   end;
 
-FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation):boolean;
+FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
   VAR i,j:longint;
   begin
-    i:=length(ids)-1;
-    for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then exit(false);
-    j:=length(ids[i]);
-    setLength(ids[i],j+1);
-    ids[i,j].name:=id;
-    ids[i,j].used:=false;
-    ids[i,j].location:=location;
-    result:=true;
+    i:=length(scope)-1;
+    if idType=tt_blockLocalVariable
+    then while (i>=0) and (scope[i].scopeType<>sc_block) do dec(i);
+    if i<0 then exit(false);
+    with scope[i] do begin
+      for j:=0 to length(ids)-1 do if ids[j].name=id then exit(false);
+      j:=length(ids);
+      setLength(ids,j+1);
+      ids[j].name:=id;
+      ids[j].used:=idType<>tt_blockLocalVariable;
+      ids[j].location:=location;
+      ids[j].idType:=idType;
+      result:=true;
+    end;
   end;
 
-FUNCTION T_idStack.hasId(CONST id:T_idString):boolean;
+FUNCTION T_idStack.hasId(CONST id:T_idString; OUT idType:T_tokenType):boolean;
   VAR i,j:longint;
   begin
     result:=false;
-    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then begin
-      ids[i,j].used:=true;
+    for i:=length(scope)-1 downto 0 do with scope[i] do
+    for j:=0 to length(ids)-1 do if ids[j].name=id then begin
+      ids[j].used:=true;
+      idType:=ids[j].idType;
       exit(true);
     end;
   end;
