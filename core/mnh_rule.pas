@@ -11,7 +11,7 @@ USES sysutils,math,
      mnh_messages,
      mnh_contexts,
      mnh_patterns,
-     mnh_datastores, mnh_caches, mnh_subrules;
+     mnh_datastores, mnh_caches, mnh_subrules,mnh_operators;
 TYPE
   T_subruleArray=array of P_subruleExpression;
 
@@ -330,7 +330,11 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
   begin
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.messages.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
     if (getRuleType=rt_customOperator) then begin
-      if not(rule^.canApplyToNumberOfParameters(2)) then context.messages.raiseError('Overloaded operators must accept two parameters',rule^.getLocation);
+      if isUnaryOperatorId(getId) then begin
+        if not(rule^.canApplyToNumberOfParameters(1)) then context.messages.raiseError('Overloaded operator must accept one parameter',rule^.getLocation);
+      end else begin
+        if not(rule^.canApplyToNumberOfParameters(2)) then context.messages.raiseError('Overloaded operator must accept two parameter',rule^.getLocation);
+      end;
       if not(rule^.getPattern.usesStrictCustomTyping) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
     end;
     i:=0;
