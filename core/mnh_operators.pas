@@ -68,30 +68,7 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
        'OPERATOR_UNARY_PLUS',
        'OPERATOR_NEGATE_ARITHMETIC');
 
-//FUNCTION comparator_eq      intFuncSignature;
-//FUNCTION comparator_Neq     intFuncSignature;
-//FUNCTION comparator_Leq     intFuncSignature;
-//FUNCTION comparator_Geq     intFuncSignature;
-//FUNCTION comparator_Lss     intFuncSignature;
-//FUNCTION comparator_Grt     intFuncSignature;
-//FUNCTION comparator_ListEq  intFuncSignature;
-//FUNCTION operator_And       intFuncSignature;
-//FUNCTION operator_Or        intFuncSignature;
-//FUNCTION operator_Xor       intFuncSignature;
-//FUNCTION operator_And       intFuncSignature;
-//FUNCTION operator_Or        intFuncSignature;
-//FUNCTION operator_Plus      intFuncSignature;
-//FUNCTION operator_Minus     intFuncSignature;
-//FUNCTION operator_Mult      intFuncSignature;
-//FUNCTION operator_DivReal   intFuncSignature;
-//FUNCTION operator_DivInt    intFuncSignature;
-//FUNCTION operator_Mod       intFuncSignature;
-//FUNCTION operator_Pot       intFuncSignature;
 FUNCTION operator_StrConcat intFuncSignature;
-//FUNCTION operator_OrElse    intFuncSignature;
-//FUNCTION operator_Concat    intFuncSignature;
-//FUNCTION operator_ConcatAlt intFuncSignature;
-//FUNCTION operator_In        intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
 IMPLEMENTATION
@@ -189,7 +166,6 @@ FUNCTION arithmeticNegationOf_impl intFuncSignature;
                       else result:=nil;
   end;
 
-
 FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
   VAR parList:P_listLiteral;
       rule   :P_abstractRule =nil;
@@ -217,12 +193,6 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
       disposeLiteral(parList);
     end;
     result:=UN_IMPL[op](operand,tokenLocation,context);
-    //case op of
-    //  tt_unaryOpMinus : result:=arithmeticNegationOf(operand,tokenLocation,context);
-    //  tt_unaryOpNegate: result:=logicalNegationOf   (operand,tokenLocation,context);
-    //  tt_unaryOpPlus  : result:=operand^.rereferenced;
-    //  else              result:=nil;
-    //end;
     if result=nil then begin
       context.messages.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       result:=newVoidLiteral;
@@ -1131,6 +1101,5 @@ INITIALIZATION
   registerUnary(tt_unaryOpNegate,@logicalNegationOf_impl   ,@logicalNegationOf   );
   registerUnary(tt_unaryOpPlus  ,@unaryNoOp_impl           ,@unaryNoOp           );
   registerUnary(tt_unaryOpMinus ,@arithmeticNegationOf_impl,@arithmeticNegationOf);
-
 
 end.
