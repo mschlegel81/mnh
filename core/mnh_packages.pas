@@ -81,7 +81,7 @@ TYPE
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
@@ -750,8 +750,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         rulePattern:T_pattern;
         ruleBody:P_token;
         subRule:P_subruleExpression;
-        ruleGroup:P_rule;
+        ruleGroup:P_rule=nil;
         inlineValue:P_literal;
+        newRuleCreated:boolean=false;
     PROCEDURE addRuleToRunAfter(CONST ex:P_subruleExpression);
       begin
         if not(ex^.canApplyToNumberOfParameters(0)) then begin
@@ -846,7 +847,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData.create;
         metaData.setComment(join(statement.comments,C_lineBreakChar));
         metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
-        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData);
+        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData,newRuleCreated);
 
         if (globals.primaryContext.messages.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
         then globals.primaryContext.messages.raiseError('Mutable rules are quasi variables and must therefore not accept any arguments',ruleDeclarationStart);
@@ -890,12 +891,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         cascadeDisposeToken(statement.firstToken);
         cascadeDisposeToken(ruleBody);
       end;
+      if newRuleCreated and not(globals.primaryContext.messages.continueEvaluation) then packageRules.dropKey(ruleId);
     end;
 
   PROCEDURE parseDataStore;
     VAR ruleModifiers:T_modifierSet=[];
         loc:T_tokenLocation;
         metaData:T_ruleMetaData;
+        newRuleCreated:boolean;
     begin
       if (getCodeProvider^.isPseudoFile) then begin
         globals.primaryContext.messages.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
@@ -919,20 +922,34 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       metaData.setAttributes(statement.attributes,statement.firstToken^.location,globals.primaryContext.messages);
       ensureRuleId(statement.firstToken^.txt,
                    ruleModifiers,
-                   statement.firstToken^.location,globals.primaryContext.messages,metaData);
+                   statement.firstToken^.location,globals.primaryContext.messages,metaData,newRuleCreated);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
     VAR level:longint=0;
         t,newNext:P_token;
+        hasDeclareToken:boolean=false;
+        hasAssignToken :boolean=false;
+        nonTypes:array of record
+          id:T_idString;
+          location:T_tokenLocation;
+        end;
+        k:longint;
+    PROCEDURE addNonType(CONST token:P_token);
+      VAR k:longint;
+      begin
+        k:=length(nonTypes);
+        setLength(nonTypes,k+1);
+        nonTypes[k].id:=token^.txt;
+        nonTypes[k].location:=token^.location;
+      end;
+
     begin
+      setLength(nonTypes,0);
       t:=statement.firstToken;
       while (t<>nil) do begin
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then begin
-          resolveId(t^.next^,nil);
-          {$ifdef fullVersion} if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved; {$endif}
-        end;
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType in [tt_customTypeRule,tt_type]) then begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,@globals.primaryContext.messages);
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) then case t^.next^.tokType of tt_customTypeRule,tt_type: begin
           newNext:=t^.next^.next;
           if t^.next^.tokType=tt_customTypeRule
           then t^.tokType:=tt_customTypeCheck
@@ -942,10 +959,22 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           disposeToken(t^.next);
           t^.next:=newNext;
         end;
+        tt_identifier, tt_parameterIdentifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_blockLocalVariable:
+          addNonType(t^.next);
+        end;
         if t^.tokType      in C_openingBrackets then inc(level)
-        else if t^.tokType in C_closingBrackets then dec(level);
-        if (level=0) and (t^.tokType in [tt_assign,tt_declare]) then exit(t);
+        else if t^.tokType in C_closingBrackets then dec(level)
+        else if t^.tokType in [tt_assign,tt_declare] then begin
+          if (level=0) then exit(t);
+          hasDeclareToken:=hasDeclareToken or (t^.tokType=tt_declare);
+          hasAssignToken :=hasAssignToken  or (t^.tokType=tt_assign );
+        end;
         t:=t^.next;
+      end;
+      if hasAssignToken and (length(nonTypes)>0) then begin
+        for k:=0 to length(nonTypes)-1 do globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el2_warning,nonTypes[k].location,nonTypes[k].id+' is not a type');
+      end else if hasDeclareToken and (length(nonTypes)>0) then begin
+        for k:=0 to length(nonTypes)-1 do globals.primaryContext.messages.                     raiseError(               nonTypes[k].id+' is not a type',nonTypes[k].location);
       end;
       result:=nil;
     end;
@@ -1310,7 +1339,7 @@ DESTRUCTOR T_package.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_threadLocalMessages; VAR metaData:T_ruleMetaData): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_threadLocalMessages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean): P_rule;
   PROCEDURE raiseModifierComplaint;
     VAR m:T_modifier;
         s:string='';
@@ -1325,6 +1354,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       hidden:P_intFuncCallback=nil;
       m:T_modifier;
   begin
+    newRuleCreated:=false;
     i:=0;
     while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_curry]) do inc(i);
     if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
@@ -1369,6 +1399,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
+      newRuleCreated:=true;
       if modifier_curry in modifiers then result^.allowCurrying:=true;
       packageRules.put(ruleId,result);
       if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
