@@ -127,6 +127,7 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
   begin
     sandbox^.runInstallScript;
+    settings.fixLocations;
   end;
 
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);

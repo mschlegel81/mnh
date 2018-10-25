@@ -203,12 +203,12 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
     begin
       syn.readonly:=false;
       for c in s do case c of
-        #8 : syn.ExecuteCommand(ecDeleteLastChar,c,nil);
+        #8 : syn.executeCommand(ecDeleteLastChar,c,nil);
         #13: begin
-               syn.ExecuteCommand(ecLineStart,c,nil);
-               syn.ExecuteCommand(ecOverwriteMode,c,nil);
+               syn.executeCommand(ecLineStart,c,nil);
+               syn.executeCommand(ecOverwriteMode,c,nil);
              end
-        else syn.ExecuteCommand(ecChar,c,nil);
+        else syn.executeCommand(ecChar,c,nil);
       end;
       syn.readonly:=true;
       hadDirectPrint:=true;
@@ -237,13 +237,13 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
           if wroteToSyn then begin
             flushBuffer;
             wroteToSyn:=false;
-            syn.ExecuteCommand(ecEditorBottom,' ',nil);
-            syn.ExecuteCommand(ecLineStart,' ',nil);
+            syn.executeCommand(ecEditorBottom,' ',nil);
+            syn.executeCommand(ecLineStart,' ',nil);
           end;
           if not(lastWasDirectPrint) then begin
             syn.append('');
-            syn.ExecuteCommand(ecEditorBottom,' ',nil);
-            syn.ExecuteCommand(ecLineStart,' ',nil);
+            syn.executeCommand(ecEditorBottom,' ',nil);
+            syn.executeCommand(ecLineStart,' ',nil);
           end;
           for s in m^.messageText do processDirectPrint(s);
         end;
@@ -274,8 +274,8 @@ PROCEDURE T_synOutAdapter.doneOutput;
         synOwnerForm.visible:=true;
       end;
       syn.EndUpdate;
-      syn.ExecuteCommand(ecEditorBottom,' ',nil);
-      syn.ExecuteCommand(ecLineStart,' ',nil);
+      syn.executeCommand(ecEditorBottom,' ',nil);
+      syn.executeCommand(ecLineStart,' ',nil);
     end else begin
       if hadDirectPrint and (not(synOwnerForm.showing) or not(synOwnerForm.visible)) then begin
         synOwnerForm.Show;

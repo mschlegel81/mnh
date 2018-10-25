@@ -27,6 +27,8 @@ VAR mainParameters:T_arrayOfString;
     profilingRun:boolean=false;
     reEvaluationWithGUIrequired:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
+    {$else}
+    delegateToFullVersionRequired:boolean=false;
     {$endif}
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -46,14 +48,17 @@ PROCEDURE addFileToOpen(CONST pathOrPattern:string);
     end else append(filesToOpenInEditor,pathOrPattern);
   end;
 
-FUNCTION getFileToInterpretFromCommandLine   :ansistring; begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
 FUNCTION getCommandToInterpretFromCommandLine:ansistring; begin if     directExecutionMode  then result:=fileOrCommandToInterpret else result:=''; end;
 {$endif}
+FUNCTION getFileToInterpretFromCommandLine   :ansistring; begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
 
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
   VAR i:longint;
+      scriptFileName:string;
   begin
-    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(nameAndOption,appending);
+    scriptFileName:=getFileToInterpretFromCommandLine;
+    if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
+    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
     if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior{$ifdef fullVersion}+C_messagesAlwaysProcessedInGuiMode{$endif};
   end;
 
@@ -85,19 +90,15 @@ PROCEDURE displayHelp;
     writeln('                       u/U  : user defined notes, warnings and errors');
     writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
-    {$ifdef fullVersion}
     writeln('  -GUI              force evaluation with GUI');
-    {$endif}
     writeln('  -h                display this help or help on the input file if present and quit');
     writeln('  -headless         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
-    {$ifdef fullVersion}
     writeln('  -install          update packes and demos, ensure installation directory and file associations');
     writeln('  -uninstall        remove packes and demos, remove installation directory and file associations and the called executable itself');
     writeln('  -profile          do a profiling run - implies -vt');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
-    {$endif}
     writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     writeln('     if no options are given, the global output settings will be used');
     writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
@@ -106,56 +107,168 @@ PROCEDURE displayHelp;
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
+CONST DEF_VERBOSITY_STRING='';
   VAR consoleAdapters:T_messageConnector;
-      mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       headless:boolean=false;
+      parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
+      verbosityString:string=DEF_VERBOSITY_STRING;
+      quitImmediate:boolean=false;
+      {$ifdef UNIX}
+      hasAnyMnhParameter:boolean=false;
+      {$endif}
+
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
-  PROCEDURE doDirect;
-    VAR globals:T_evaluationGlobals;
-        package:P_package;
+
+  {Return true when parsed successfully}
+  FUNCTION parseSingleMnhParameter(CONST param:string):boolean;
     begin
-      memoryComfortThreshold:=settings.memoryLimit;
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
-      globals.create(@consoleAdapters);
-      if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package:=packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME);
-      globals.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
-      package^.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
-      globals.afterEvaluation;
-      dispose(package,destroy);
-      globals.destroy;
-      consoleAdapters.setExitCode;
+      result:=false;
+      case parsingState of
+        pst_initial: begin
+          if startsWith(param,'-v') then begin
+            verbosityString+=copy(param,3,length(param)-2);
+            exit(true);
+          end;
+          if (param='-profile') then begin
+            {$ifdef fullVersion}
+              profilingRun:=true;
+            {$else}
+              delegateToFullVersionRequired:=true;
+            {$endif}
+            exit(true);
+          end;
+          if (param='-GUI') then begin
+            {$ifdef fullVersion}
+              reEvaluationWithGUIrequired:=true;
+            {$else}
+              delegateToFullVersionRequired:=true;
+            {$endif}
+            exit(true);
+          end;
+          if param='-quiet'    then begin wantConsoleAdapter:=false;               exit(true); end;
+          if param='-silent'   then begin suppressBeep      :=true ;               exit(true); end;
+          if param='-headless' then begin headless          :=true ;               exit(true); end;
+          if param='-out'      then begin parsingState:=pst_parsingOutFileRewrite; exit(true); end;
+          if param='+out'      then begin parsingState:=pst_parsingOutFileAppend;  exit(true); end;
+        end;
+        pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
+          setLength(deferredAdapterCreations,length(deferredAdapterCreations)+1);
+          with deferredAdapterCreations[length(deferredAdapterCreations)-1] do begin
+            appending:=(parsingState=pst_parsingOutFileAppend);
+            nameAndOption:=param;
+          end;
+          parsingState:=pst_initial;
+          exit(true);
+        end;
+      end;
     end;
 
-  PROCEDURE fileMode;
+  FUNCTION parseShebangParameters:boolean;
+    VAR parameters:T_arrayOfString;
+        k:longint;
+    begin
+     {$ifdef UNIX}
+     //To prevent repeated parsing of the same shebang under Linux/UNIX systems
+     if hasAnyMnhParameter then exit(true);
+     {$endif}
+      parameters:=parseShebang(fileOrCommandToInterpret);
+      for k:=1 to length(parameters)-1 do
+      if not(parseSingleMnhParameter(parameters[k])) then begin
+        writeln('Invalid parameter/switch given by shebang: "',parameters[k],'"');
+        exit(false);
+      end;
+      result:=true;
+    end;
+
+  FUNCTION parseMnhCommand(CONST param:string):boolean;
+    begin
+      result:=false;
+      if directExecutionMode then begin
+        fileOrCommandToInterpret+=' '+param;
+        exit(true);
+      end;
+      case parsingState of
+        pst_initial: begin
+
+          if (param='-install') then begin
+            {$ifdef fullVersion}
+              writeln('Updating scripts and demos');
+              ensureDemosAndPackages;
+              {$ifdef Windows}
+              writeln('Updating file associations');
+              sandbox^.runInstallScript;
+              {$endif}
+              writeln('Saving settings');
+              settings.fixLocations;
+              saveSettings;
+              halt(0);
+            {$else}
+              delegateToFullVersionRequired:=true;
+            {$endif}
+          end;
+          if (param='-uninstall') then begin
+            {$ifdef fullVersion}
+              {$ifdef Windows}
+              writeln('Removing file associations');
+              sandbox^.runUninstallScript;
+              mySys.deleteMyselfOnExit;
+              {$endif}
+              writeln('Removing configuration directory');
+              RemoveDir(configDir);
+              halt(0);
+            {$else}
+              delegateToFullVersionRequired:=true;
+            {$endif}
+          end;
+          if (param='-edit') then begin
+            parsingState:=pst_parsingFileToEdit;
+            exit(true);
+          end;
+          {$ifdef fullVersion} {$ifdef debugMode}
+          if (param='-doc') then begin
+            makeHtmlFromTemplate();
+            writeln(expandFileName(getHtmlRoot+'/index.html'   ));
+            halt(0);
+          end;
+          {$endif} {$endif}
+          if param='-cmd'           then begin directExecutionMode:=true;                exit(true); end;
+          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                    exit(true); end;
+          if param='-info'          then begin writeln(getMnhInfo); quitImmediate:=true; exit(true); end;
+        end;
+        pst_parsingFileToEdit: begin
+          {$ifdef fullVersion}
+            addFileToOpen(param);
+          {$else}
+            delegateToFullVersionRequired:=true;
+          {$endif}
+          exit(true);
+        end;
+      end;
+    end;
+
+  PROCEDURE executePackage(package:P_package; CONST loadMode:T_packageLoadUsecase);
     VAR globals:T_evaluationGlobals;
-        package:T_package;
     begin
       memoryComfortThreshold:=settings.memoryLimit;
-      fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
-      package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       globals.create(@consoleAdapters);
-      {$ifdef fullVersion}
-      consoleAdapters.addOutAdapter(plotAdapters,false);
-      {$endif}
+      {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false); {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
-        package.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
-        writeln(package.getHelpOnMain);
-        package.destroy;
+        package^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
+        writeln(package^.getHelpOnMain);
+        dispose(package,destroy);
         wantHelpDisplay:=false;
         globals.destroy;
         exit;
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package.load(lu_forCallingMain,globals,mainParameters);
+      package^.load(loadMode,globals,mainParameters);
       {$ifdef fullVersion} if not(FlagGUINeeded in globals.primaryContext.messages.getFlags) then {$endif}
       globals.afterEvaluation;
-      package.destroy;
+      dispose(package,destroy);
       {$ifdef fullVersion}
       if (FlagGUINeeded in globals.primaryContext.messages.getFlags) then begin
         reEvaluationWithGUIrequired:=true;
@@ -167,101 +280,60 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.setExitCode;
     end;
 
+  PROCEDURE executeCommand;
+    begin
+      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
+      executePackage(packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME),lu_forDirectExecution);
+    end;
+
+  PROCEDURE executeScript;
+    VAR package:P_package;
+    begin
+      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
+      fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
+      new(package,create(newFileCodeProvider(fileOrCommandToInterpret),nil));
+      executePackage(package,lu_forCallingMain);
+    end;
+
   PROCEDURE addParameter(VAR list:T_arrayOfString; CONST index:longint);
     begin
       setLength(list,length(list)+1);
       list[length(list)-1]:=paramStr(index);
     end;
 
-  CONST DEF_VERBOSITY_STRING='&^\';
   VAR i:longint;
-      quitImmediate:boolean=false;
-      nextAppendMode:boolean;
-      verbosityString:string=DEF_VERBOSITY_STRING;
-
   begin
     consoleAdapters.create;
     setLength(mainParameters,0);
-    setLength(mnhParameters,0);
     setLength(deferredAdapterCreations,0);
     i:=1;
-    while i<=paramCount do begin
-      if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
-        {$ifdef fullVersion}
-        else if (paramStr(i)='-install') then begin
-          writeln('Updating scripts and demos');
-          ensureDemosAndPackages;
-          {$ifdef Windows}
-          writeln('Updating file associations');
-          sandbox^.runInstallScript;
-          {$endif}
-          writeln('Saving settings');
-          saveSettings;
-          halt(0);
-        end
-        else if (paramStr(i)='-uninstall') then begin
-          {$ifdef Windows}
-          writeln('Removing file associations');
-          sandbox^.runUninstallScript;
-          mySys.deleteMyselfOnExit;
-          {$endif}
-          writeln('Removing configuration directory');
-          RemoveDir(configDir);
-          halt(0);
-        end else if (paramStr(i)='-edit') then while i<paramCount do begin
-          inc(i);
-          addFileToOpen(paramStr(i));
-        end
-        else if (paramStr(i)='-profile') then profilingRun:=true
-        {$ifdef debugMode}
-        else if (paramStr(i)='-doc') then begin
-          while i<paramCount do begin
-            inc(i);
-            append(filesToOpenInEditor,paramStr(i));
-          end;
-          if length(filesToOpenInEditor)>0
-          then makeHtmlFromTemplate(filesToOpenInEditor[0])
-          else makeHtmlFromTemplate();
-          writeln(expandFileName(getHtmlRoot+'/index.html'   ));
-          exit(false);
-        end
+    while (i<=paramCount) {$ifndef fullVersion} and not(delegateToFullVersionRequired) {$endif} do begin
+      if parseMnhCommand        (paramStr(i)) then inc(i) else
+      if parseSingleMnhParameter(paramStr(i)) then begin
+        inc(i);
+        {$ifdef UNIX}
+        hasAnyMnhParameter:=true;
         {$endif}
-        else if (paramStr(i)='-GUI') then reEvaluationWithGUIrequired:=true
-        {$endif}
-        else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
-        else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
-          nextAppendMode:=paramStr(i)='+out';
-          addParameter(mnhParameters,i);
-          inc(i);
-          setLength(deferredAdapterCreations,length(deferredAdapterCreations)+1);
-          with deferredAdapterCreations[length(deferredAdapterCreations)-1] do begin
-            appending:=nextAppendMode;
-            nameAndOption:=paramStr(i);
-          end;
-          addParameter(mnhParameters,i);
-        end
-        else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
-        else if startsWith(paramStr(i),'-silent') then suppressBeep:=true
-        else if startsWith(paramStr(i),'-headless') then headless:=true
-        else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
-        else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
-        else if directExecutionMode then begin
-          fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
-        end else begin
-          if fileExists(paramStr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
-            if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
-            then writeln('Invalid parameter/switch given!')
-            else begin
-              writeln('Invalid filename given!');
-              writeln('File does not exist.');
+      end else begin
+        if (fileOrCommandToInterpret='') then begin
+          begin
+            if fileExists(paramStr(i)) then begin
+              fileOrCommandToInterpret:=paramStr(i);
+              if not(parseShebangParameters) then exit(false);
+            end else begin
+              if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
+              then writeln('Invalid parameter/switch given!')
+              else begin
+                writeln('Invalid filename given!');
+                writeln('File does not exist.');
+              end;
+              writeln('Parameter: ',paramStr(i));
+              exit(false);
             end;
-            writeln('Parameter: ',paramStr(i));
-            exit(false);
           end;
-        end;
-      end else addParameter(mainParameters,i);
-      inc(i);
+        end else addParameter(mainParameters,i);
+        inc(i);
+      end;
     end;
 
     if fileOrCommandToInterpret=''
@@ -279,15 +351,17 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(consoleAdapters,nil);
     if fileOrCommandToInterpret<>'' then begin
-       if directExecutionMode then doDirect
-                              else fileMode;
+       if directExecutionMode then executeCommand
+                              else executeScript;
        quitImmediate:=true;
     end;
     if wantHelpDisplay then begin
       displayHelp;
       quitImmediate:=true;
     end;
-    {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0) and not(reEvaluationWithGUIrequired);{$endif}
+    {$ifdef fullVersion}
+    quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0) and not(reEvaluationWithGUIrequired);
+    {$endif}
     result:=not(quitImmediate);
     consoleAdapters.destroy;
   end;

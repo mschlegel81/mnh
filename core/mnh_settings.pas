@@ -73,6 +73,7 @@ T_settings=object(T_serializable)
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   PROCEDURE initDefaults;
+  PROCEDURE fixLocations;
 
   FUNCTION savingRequested:boolean;
   PROPERTY loaded:boolean read wasLoaded;
@@ -194,6 +195,11 @@ PROCEDURE T_settings.initDefaults;
     doShowSplashScreen:=true;
     fullFlavourLocation:={$ifdef fullVersion}paramStr(0){$else}''{$endif};
     htmlDocGeneratedForCodeHash:='';
+  end;
+
+PROCEDURE T_settings.fixLocations;
+  begin
+    {$ifdef fullVersion}fullFlavourLocation:=paramStr(0);{$endif}
   end;
 
 FUNCTION T_settings.savingRequested: boolean;

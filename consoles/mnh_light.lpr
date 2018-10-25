@@ -1,11 +1,24 @@
 {$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cthreads,{$endif}
-     mnh_cmdLineInterpretation;
+     sysutils,
+     mySys,
+     mnh_cmdLineInterpretation,
+     mnh_settings;
 
 {$R *.res}
 
 begin
-  if wantMainLoopAfterParseCmdLine then displayHelp;
+  if wantMainLoopAfterParseCmdLine then begin
+    if delegateToFullVersionRequired
+    then begin
+      if fileExists(settings.fullFlavourLocation)
+      then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
+      else begin
+        writeln('Delegate to full version is required but file "',settings.fullFlavourLocation,'" is invalid');
+        writeln('Reinstall to fix this problem');
+      end;
+    end else displayHelp;
+  end;
 end.
 
