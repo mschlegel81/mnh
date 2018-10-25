@@ -24,7 +24,7 @@ TYPE
     PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
   end;
 
-PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
+PROCEDURE makeHtmlFromTemplate();
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
@@ -308,7 +308,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST html,txt:T_arrayOfSt
     append(htmlExample,html);
   end;
 
-PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
+PROCEDURE makeHtmlFromTemplate();
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
@@ -427,7 +427,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         with outFile do begin
           if isOpen then close(handle);
           cmdParam:=htmlRoot+DirectorySeparator+cmdParam;
-          if (templateFileName<>'') or not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
+          if not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
             assign(handle,cmdParam);
             rewrite(handle);
             isOpen:=true;
@@ -461,7 +461,6 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
     end;
   {$include res_html_template.inc}
   VAR templateLine:string;
-      templateFileHandle:textFile;
       templateLineCount:longint=0;
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
@@ -469,22 +468,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: processing documentation template ',templateFileName);{$endif}
-    if templateFileName<>'' then begin
-      assign(templateFileHandle,templateFileName);
-      reset(templateFileHandle);
-      while not(eof(templateFileHandle)) do begin
-        readln(templateFileHandle,templateLine);
-        case context.mode of
-          none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
-          beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
-          definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
-        end;
-        inc(templateLineCount);
-      end;
-      close(templateFileHandle);
-      settings.htmlDocGeneratedForCodeHash:='';
-    end else for templateLine in html_template_txt do begin
+    for templateLine in html_template_txt do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
         beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));

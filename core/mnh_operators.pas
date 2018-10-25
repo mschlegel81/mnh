@@ -15,7 +15,9 @@ USES sysutils,
 
 {$i mnh_func_defines.inc}
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
-CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
+CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_unaryOpMinus];
+      unaryOperators:T_tokenTypeSet=[tt_unaryOpNegate..tt_unaryOpMinus];
       overridableOperators:T_tokenTypeSet=[
       tt_comparatorEq     ,
       tt_comparatorNeq    ,
@@ -33,9 +35,11 @@ CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
       tt_operatorDivInt   ,
       tt_operatorMod      ,
       tt_operatorPot      ,
-      tt_operatorStrConcat];
+      tt_operatorStrConcat,
+      tt_unaryOpNegate,
+      tt_unaryOpMinus];
 
-CONST operatorName:array[tt_comparatorEq..tt_operatorConcatAlt] of string=
+CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
       ('COMPARATOR_EQ',
        'COMPARATOR_NEQ',
        'COMPARATOR_LEQ',
@@ -59,36 +63,145 @@ CONST operatorName:array[tt_comparatorEq..tt_operatorConcatAlt] of string=
        'OPERATOR_STRCONCAT',
        'OPERATOR_ORELSE',
        'OPERATOR_CONCAT',
-       'OPERATOR_CONCATALT');
+       'OPERATOR_CONCATALT',
+       'OPERATOR_NEGATE_LOGICAL',
+       'OPERATOR_UNARY_PLUS',
+       'OPERATOR_NEGATE_ARITHMETIC');
 
-//FUNCTION comparator_eq      intFuncSignature;
-//FUNCTION comparator_Neq     intFuncSignature;
-//FUNCTION comparator_Leq     intFuncSignature;
-//FUNCTION comparator_Geq     intFuncSignature;
-//FUNCTION comparator_Lss     intFuncSignature;
-//FUNCTION comparator_Grt     intFuncSignature;
-//FUNCTION comparator_ListEq  intFuncSignature;
-//FUNCTION operator_And       intFuncSignature;
-//FUNCTION operator_Or        intFuncSignature;
-//FUNCTION operator_Xor       intFuncSignature;
-//FUNCTION operator_And       intFuncSignature;
-//FUNCTION operator_Or        intFuncSignature;
-//FUNCTION operator_Plus      intFuncSignature;
-//FUNCTION operator_Minus     intFuncSignature;
-//FUNCTION operator_Mult      intFuncSignature;
-//FUNCTION operator_DivReal   intFuncSignature;
-//FUNCTION operator_DivInt    intFuncSignature;
-//FUNCTION operator_Mod       intFuncSignature;
-//FUNCTION operator_Pot       intFuncSignature;
 FUNCTION operator_StrConcat intFuncSignature;
-//FUNCTION operator_OrElse    intFuncSignature;
-//FUNCTION operator_Concat    intFuncSignature;
-//FUNCTION operator_ConcatAlt intFuncSignature;
-//FUNCTION operator_In        intFuncSignature;
+FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
 IMPLEMENTATION
-TYPE P_op=FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+     P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;
+    UN_IMPL:array[tt_unaryOpNegate..tt_unaryOpMinus] of P_unary;
+FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
+  VAR o:T_tokenType;
+  begin
+    for o in unaryOperators do if operatorName[o]=id then exit(true);
+    result:=false;
+  end;
+
+FUNCTION unaryNoOp(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  begin
+    result:=x^.rereferenced;
+  end;
+
+FUNCTION unaryNoOp_impl intFuncSignature;
+  begin
+    if params^.size=1 then result:=unaryNoOp(arg0,tokenLocation,context)
+                      else result:=nil;
+  end;
+
+FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  VAR y,yNeg:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context);
+      lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
+      lt_list,lt_booleanList,lt_emptyList,
+      lt_set ,lt_booleanSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        iter:=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do begin
+          yNeg:=logicalNegationOf(y,opLocation,context);
+          if yNeg=nil
+          then P_collectionLiteral(result)^.containsError:=true
+          else P_collectionLiteral(result)^.append(yNeg,false);
+        end;
+        disposeLiteral(iter);
+        if P_collectionLiteral(result)^.containsError then begin
+          raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
+    end;
+    if result=nil then result:=newVoidLiteral;
+  end;
+
+FUNCTION logicalNegationOf_impl intFuncSignature;
+  begin
+    if params^.size=1 then result:=logicalNegationOf(arg0,tokenLocation,context)
+                      else result:=nil;
+  end;
+
+FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  VAR y,yNeg:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context);
+      lt_bigint    : result:=newIntLiteral (P_bigIntLiteral (x)^.value.negated);
+      lt_smallint  : result:=newIntLiteral(-P_smallIntLiteral(x)^.value);
+      lt_real      : result:=newRealLiteral(-P_realLiteral(x)^.value);
+      lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
+      lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        iter:=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do begin
+          yNeg:=arithmeticNegationOf(y,opLocation,context);
+          if yNeg=nil
+          then P_collectionLiteral(result)^.containsError:=true
+          else P_collectionLiteral(result)^.append(yNeg,false);
+        end;
+        disposeLiteral(iter);
+        if P_collectionLiteral(result)^.containsError then begin
+          raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
+    end;
+    if result=nil then result:=newVoidLiteral;
+  end;
+
+FUNCTION arithmeticNegationOf_impl intFuncSignature;
+  begin
+    if params^.size=1 then result:=arithmeticNegationOf(arg0,tokenLocation,context)
+                      else result:=nil;
+  end;
+
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
+  VAR parList:P_listLiteral;
+      rule   :P_abstractRule =nil;
+      ruleOut:P_token=nil;
+      dummy  :P_token=nil;
+  begin
+    rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
+    if (rule<>nil) then begin
+      if context.callDepth>=STACK_DEPTH_LIMIT then begin
+        context.messages.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
+        exit(newVoidLiteral);
+      end;
+      parList:=newListLiteral(1);
+      parList^.append(operand,true);
+      inc(context.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,@context) then begin
+        result:=context.reduceToLiteral(ruleOut).literal;
+        dec(context.callDepth);
+        disposeLiteral(parList);
+        if result=nil
+        then exit(newVoidLiteral)
+        else exit(result);
+      end;
+      dec(context.callDepth);
+      disposeLiteral(parList);
+    end;
+    result:=UN_IMPL[op](operand,tokenLocation,context);
+    if result=nil then begin
+      context.messages.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      result:=newVoidLiteral;
+    end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
+      context.messages.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      disposeLiteral(result);
+      result:=newVoidLiteral;
+    end;
+  end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
   VAR parList:P_listLiteral;
@@ -118,10 +231,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end;
     result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_threadContext(context)^);
     if result=nil then begin
-      P_threadContext(context)^.messages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_threadContext(context)^.messages.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       result:=newVoidLiteral;
     end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_threadContext(context)^.messages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_threadContext(context)^.messages.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       disposeLiteral(result);
       result:=newVoidLiteral;
     end;
@@ -352,7 +465,7 @@ FUNCTION outerFunc_id intFuncSignature;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -399,7 +512,7 @@ boolIntOperator;
     end;
     if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -857,7 +970,7 @@ genericOuter;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -952,6 +1065,13 @@ PROCEDURE registerOperator(CONST op:T_tokenType; CONST func:P_intFuncCallback; C
       operatorName[op]+'(x,y);//Function wrapper for operator '+C_tokenInfo[op].defaultId);
   end;
 
+PROCEDURE registerUnary(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_unary);
+  begin
+    UN_IMPL[op]:=internal;
+    registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_unary,
+      operatorName[op]+'(x,y);//Function wrapper for '+C_tokenInfo[op].helpText);
+  end;
+
 INITIALIZATION
   mnh_litVar.resolveOperatorCallback:=@resolveOperator;
   registerOperator(tt_comparatorEq     ,@comparator_eq     ,@perform_eq);
@@ -978,5 +1098,8 @@ INITIALIZATION
   registerOperator(tt_operatorConcat   ,@operator_Concat   ,@perform_concat   );
   registerOperator(tt_operatorConcatAlt,@operator_ConcatAlt,@perform_concatAlt);
   registerOperator(tt_operatorIn       ,@operator_In       ,@perform_In       );
+  registerUnary(tt_unaryOpNegate,@logicalNegationOf_impl   ,@logicalNegationOf   );
+  registerUnary(tt_unaryOpPlus  ,@unaryNoOp_impl           ,@unaryNoOp           );
+  registerUnary(tt_unaryOpMinus ,@arithmeticNegationOf_impl,@arithmeticNegationOf);
 
 end.

@@ -30,65 +30,6 @@ USES sysutils,
      listProcessing;
 
 IMPLEMENTATION
-FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  VAR y,yNeg:P_literal;
-      iter:T_arrayOfLiteral;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context);
-      lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-      lt_list,lt_booleanList,lt_emptyList,
-      lt_set ,lt_booleanSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
-        iter:=P_collectionLiteral(x)^.iteratableList;
-        for y in iter do begin
-          yNeg:=logicalNegationOf(y,opLocation,context);
-          if yNeg=nil
-          then P_collectionLiteral(result)^.containsError:=true
-          else P_collectionLiteral(result)^.append(yNeg,false);
-        end;
-        disposeLiteral(iter);
-        if P_collectionLiteral(result)^.containsError then begin
-          raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
-          disposeLiteral(result);
-        end;
-      end;
-      else raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
-    end;
-    if result=nil then result:=newVoidLiteral;
-  end;
-
-FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  VAR y,yNeg:P_literal;
-      iter:T_arrayOfLiteral;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context);
-      lt_bigint    : result:=newIntLiteral (P_bigIntLiteral (x)^.value.negated);
-      lt_smallint  : result:=newIntLiteral(-P_smallIntLiteral(x)^.value);
-      lt_real      : result:=newRealLiteral(-P_realLiteral(x)^.value);
-      lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
-      lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
-        iter:=P_collectionLiteral(x)^.iteratableList;
-        for y in iter do begin
-          yNeg:=arithmeticNegationOf(y,opLocation,context);
-          if yNeg=nil
-          then P_collectionLiteral(result)^.containsError:=true
-          else P_collectionLiteral(result)^.append(yNeg,false);
-        end;
-        disposeLiteral(iter);
-        if P_collectionLiteral(result)^.containsError then begin
-          raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
-          disposeLiteral(result);
-        end;
-      end;
-      else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
-    end;
-    if result=nil then result:=newVoidLiteral;
-  end;
 
 FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
   VAR stack:T_TokenStack;
@@ -660,9 +601,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         tt_comparatorEq..tt_operatorConcatAlt:
           if C_opPrecedence[cTokType[1],0]>=C_opPrecedence[cTokType[-1],1] then begin
             case cTokType[-1] of
-              tt_unaryOpMinus : newLit:=arithmeticNegationOf(first^.data,stack.dat[stack.topIndex]^.location,context);
-              tt_unaryOpNegate: newLit:=logicalNegationOf   (first^.data,stack.dat[stack.topIndex]^.location,context);
-              tt_unaryOpPlus  : newLit:=P_literal(first^.data)^.rereferenced;
+              tt_unaryOpMinus ,
+              tt_unaryOpNegate,
+              tt_unaryOpPlus  : newLit:=resolveUnaryOperator(cTokType[-1],first^.data,stack.dat[stack.topIndex]^.location,context)
               else newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
                                            cTokType[-1],
                                            first^.data,
@@ -683,9 +624,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
           begin
             case cTokType[-1] of
-              tt_unaryOpMinus : newLit:=arithmeticNegationOf(first^.data,stack.dat[stack.topIndex]^.location,context);
-              tt_unaryOpNegate: newLit:=logicalNegationOf   (first^.data,stack.dat[stack.topIndex]^.location,context);
-              tt_unaryOpPlus  : newLit:=P_literal(first^.data)^.rereferenced;
+              tt_unaryOpMinus ,
+              tt_unaryOpNegate,
+              tt_unaryOpPlus  : newLit:=resolveUnaryOperator(cTokType[-1],first^.data,stack.dat[stack.topIndex]^.location,context)
               else newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
                                            cTokType[-1],
                                            first^.data,

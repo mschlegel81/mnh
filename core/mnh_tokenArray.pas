@@ -16,7 +16,7 @@ USES sysutils,math,
      mnh_messages,
      mnh_out_adapters;
 TYPE
-  T_customOperatorArray=array[tt_comparatorEq..tt_operatorConcatAlt] of P_abstractRule;
+  T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
     private

@@ -1,3 +1,4 @@
+#!/usr/bin/mnh_light
 USE mnhInfo,formattingUtils,make_config,distroLog,testExpectation;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
