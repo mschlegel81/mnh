@@ -442,14 +442,14 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   begin
     if evaluateQuickInCurrentPackageCheckbox.checked then begin
       edit:=getEditor;
-      quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData);
+      quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData,true);
       if runnerModel.canRun(true) then begin
         if edit<>nil then edit^.setWorkingDir;
         quick.evaluationDeferred:=false;
         quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit,runnerModel.firstCallAfterActivation));
       end else quick.evaluationDeferred:=true;
     end else begin
-      quick.completion.assignEditor(quick.meta.editor,nil);
+      quick.completion.assignEditor(quick.meta.editor,nil,true);
       quick.task.triggerUpdate(nil);
     end;
   end;

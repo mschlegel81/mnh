@@ -18,11 +18,12 @@ T_completionLogic=object
     SynCompletion:TSynCompletion;
     completionStart:longint;
     assistanceResponse:P_codeAssistanceResponse;
+    quickEdit:boolean;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse);
+    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
@@ -100,6 +101,9 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         if not(assistanceResponse^.updateCompletionList(wordsInEditor,caret.y,caret.x))
         then collectAllIdentifiers;
       end;
+    end else if quickEdit then begin
+      initIntrinsicRuleList;
+      wordsInEditor.put(intrinsicRulesForCompletion);
     end else collectAllIdentifiers;
   end;
 
@@ -107,6 +111,7 @@ CONSTRUCTOR T_completionLogic.create;
   begin
     editor:=nil;
     assistanceResponse:=nil;
+    quickEdit:=false;
     wordsInEditor.create;
     SynCompletion:=TSynCompletion.create(nil);
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
@@ -121,12 +126,13 @@ DESTRUCTOR T_completionLogic.destroy;
     SynCompletion.destroy;
   end;
 
-PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse);
+PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
   begin
     editor:=edit;
     assistanceResponse:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
+    quickEdit:=isQuickEdit;
   end;
 
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
