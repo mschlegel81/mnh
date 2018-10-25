@@ -437,7 +437,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     //one-way-link to propagate stop-signal:
     callerContext^.messages.addChild(@globals.primaryContext.messages);
     //filtered link for messages
-    if connectLevel>0 then c:=adapters.connectToOther(callerContext^.messages.globalMessages,connectLevel>=1,connectLevel>=2,connectLevel>=3);
+    if connectLevel>0 then c:=callerContext^.messages.globalMessages^.connectToOther(@adapters,connectLevel>=1,connectLevel>=2,connectLevel>=3);
     if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
@@ -446,7 +446,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       globals.afterEvaluation;
     finally
       result:=messagesToLiteralForSandbox(collector.storedMessages,C_textMessages);
-      if c<>nil then callerContext^.messages.globalMessages^.removeOutAdapter(c);
+      if c<>nil then adapters.removeOutAdapter(c);
       globals.afterEvaluation;
       globals.primaryContext.finalizeTaskAndDetachFromParent;
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
