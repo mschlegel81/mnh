@@ -768,6 +768,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       VAR castRule:P_typeCastRule;
           otherRule:P_rule;
       begin
+        if not(P_typecheckRule(ruleGroup)^.castRuleIsValid) then exit;
         new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
           globals.primaryContext.messages.raiseError(

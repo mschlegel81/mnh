@@ -105,6 +105,7 @@ TYPE
       FUNCTION getRootId:T_idString; virtual;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
+      FUNCTION castRuleIsValid:boolean;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -398,6 +399,11 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
                          getRuleType=rt_duckTypeCheck,
                          alwaysTrue));
     end;
+  end;
+
+FUNCTION T_typecheckRule.castRuleIsValid:boolean;
+  begin
+    result:=(getRuleType=rt_customTypeCheck) or subrules[0]^.hasValidValidCustomTypeCheckPattern(false);
   end;
 
 PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_threadLocalMessages);
