@@ -12,9 +12,7 @@ TYPE
                  {$ifdef fullVersion}
                  at_gui,
                  at_plot,
-                 {$ifdef imig}
                  at_imig,
-                 {$endif}
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -26,9 +24,7 @@ CONST
     {$ifdef fullVersion}
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
-    {$ifdef imig}
     {at_imig}     [mt_image_postDisplay..mt_image_obtainDimensions],
-    {$endif}
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);

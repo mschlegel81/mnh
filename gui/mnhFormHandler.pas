@@ -8,9 +8,7 @@ USES
   mnh_litVar,
   mnh_contexts;
 TYPE
-  T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog
-              {$ifdef imig},ft_imageForm{$endif}
-              );
+  T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog,ft_imageForm);
 
   P_formMeta=^T_formMeta;
   T_formMeta=object

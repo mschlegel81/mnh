@@ -21,7 +21,7 @@ TYPE
                   mc_fatal
                   {$ifdef fullVersion},
                   mc_plot   ,
-                  {$ifdef imig} mc_image, {$endif}
+                  mc_image,
                   mc_gui
                   {$endif});
 CONST
@@ -43,7 +43,7 @@ CONST
     {mc_fatal  } (htmlSpan:'error'; includeLocation:false; triggeredFlags:[FlagFatalError,FlagQuietHalt])
     {$ifdef fullVersion},
     {mc_plot   } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {$ifdef imig}(htmlSpan:''     ; includeLocation:false; triggeredFlags:[]), {$endif}
+                 (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
     {mc_gui}     (htmlSpan:''     ; includeLocation:false; triggeredFlags:[])
     {$endif});
 
@@ -81,13 +81,11 @@ TYPE
     mt_plot_addAnimationFrame,
     mt_plot_postDisplay,
     mt_guiEdit_done,
-    {$ifdef imig}
     mt_image_postDisplay,     //signal
     mt_image_replaceImage,    //dedicated type
     mt_image_close,           //signal
     mt_image_obtainImageData, //dedicated type
     mt_image_obtainDimensions,//dedicated type
-    {$endif}
     mt_displayVariableTree,
     mt_displayCustomForm
     {$endif});
@@ -142,13 +140,11 @@ CONST
 {mt_plot_addAnimation...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_postDisplay}    (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_guiEdit_done}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{$ifdef imig}
 {mt_image_postDisplay}   (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_load}          (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_close}         (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_obtainImage...}(guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_obtainDim...}  (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{$endif}
 {mt_displayVariableTree} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayCustomForm}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});

@@ -5,7 +5,7 @@ CONST
   STACK_DEPTH_LIMIT={$ifdef Windows}43000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
   {$i build_number.inc}
-  FLAVOUR_STRING={$ifdef fullVersion}{$ifdef imig}'I'{$else}'F'{$endif}{$else}'L'{$endif}+
+  FLAVOUR_STRING={$ifdef fullVersion}'F'{$else}'L'{$endif}+
                  {$ifdef profilingFlavour}'P'{$else}
                    {$ifdef debugMode}'D'{$else}'O'{$endif}
                  {$endif}+{$I %FPCTargetOS%};
@@ -33,7 +33,7 @@ CONST
   '  Lazarus Component Library (LCL) ');
 
   APP_NAME             ='MNH';
-  APP_TITLE            ='MNH5'{$ifdef imig}+'+IMIG'{$endif};
+  APP_TITLE            ='MNH5';
   SCRIPT_EXTENSION     ='.mnh';
   SETTINGS_FILE_NAME   ='mnh.settings';
   {$ifdef Windows}
@@ -90,8 +90,7 @@ TYPE
                TYPECAST_NAMESPACE       ,
                HTTP_NAMESPACE           ,
                IPC_NAMESPACE
-               {$ifdef fullVersion},PLOT_NAMESPACE,GUI_NAMESPACE{$endif}
-               {$ifdef imig},IMIG_NAMESPACE{$endif}
+               {$ifdef fullVersion},PLOT_NAMESPACE,GUI_NAMESPACE,IMIG_NAMESPACE{$endif}
                );
 
 CONST
@@ -106,8 +105,7 @@ CONST
     'typecast',
     'http',
     'ipc'
-    {$ifdef fullVersion},'plot','gui'{$endif}
-    {$ifdef imig},'imig'{$endif}
+    {$ifdef fullVersion},'plot','gui','imig'{$endif}
     );
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,

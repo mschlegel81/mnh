@@ -32,11 +32,7 @@ TARGET_FLAVOUR :=[['debug'   ,[['flags',['-B','--bm=Default']],
                                ['outSuffix','_debug']].toMap],
                   ['normal'  ,[['flags',['-B','--bm=deployment']],
                                ['part','O'],
-                               ['doTest',true]].toMap],
-                  ['profile' ,[['flags',['-B','--bm=profiling']],
-                               ['doTest',false],
-                               ['part','P'],
-                               ['outSuffix','_prof']].toMap]].toMap;
+                               ['doTest',true]].toMap]].toMap;
 private
 buildConfig(platformKey in (TARGET_PLATFORM.getInner(0)),
             projectKey  in (TARGET_PROJECT.getInner(0)),
@@ -51,7 +47,7 @@ begin
   result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
   result['compilate'   ]:=project['out']&flavor['outSuffix']&platform['outExt'];
   result['targetDest'  ]:='target/'&platformKey&(flavourKey=='portable' ? '_portable' : '') &'/'&result['compilate'].extractFileName;
-  result['distro'      ]:=flavourKey in ['normal','portable'];
+  result['distro'      ]:=flavourKey=='normal' AND platformKey=='Win64';
   result['doTest'      ]:=flavor['doTest'];
   result['canBuild'    ]:=(platformKey=='Linux')==isLinux;
   result;

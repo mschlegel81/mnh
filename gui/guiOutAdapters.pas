@@ -4,7 +4,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_debugging,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
      mnh_plotForm, mnh_tables,
-     {$ifdef imig}mnh_imig_form,{$endif}
+     mnh_imig_form,
      mnh_messages,
      mnh_evalThread,
      synOutAdapter,
@@ -42,9 +42,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TS
     guiOutAdapter.create(parent,outputEdit);
     guiEventsAdapter.create(parent);
     guiAdapters.create;
-    {$ifdef imig}
     guiAdapters.addOutAdapter(@imigSystem,false);
-    {$endif}
     if outputEdit<>nil then begin
       new(logoMessage,create(mt_printline,C_nilTokenLocation,LOGO));
       guiOutAdapter.append(logoMessage);
@@ -109,9 +107,7 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
     end;
     if plotSystem.processPendingMessages then include(result,mt_plot_addRow);
     if plotSystem.requiresFastPolling    then form.triggerFastPolling;
-    {$ifdef imig}
     imigSystem.processPendingMessages;
-    {$endif}
   end;
 
 FINALIZATION

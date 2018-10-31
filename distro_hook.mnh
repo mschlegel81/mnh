@@ -1,7 +1,6 @@
 main->begin
-  ['mnh.exe',
-   'mnh_light.exe',
-   'mnhi.exe',
+  ['target\Win64\mnh.exe',
+   'target\Win64\mnh_light.exe',
    '..\art.bin\workflowScriptTemplate.mnh']
    .filter(::fileExists)
    .map({[$f,'C:\bin\'&extractFileName($f)]})

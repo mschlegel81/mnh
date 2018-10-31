@@ -26,7 +26,7 @@
       <UseVersionInfo Value="True"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE + interpreter" InternalName="mnh5" LegalCopyright="LGPL" OriginalFilename="mnh5" ProductName="MNH5"/>
     </VersionInfo>
-    <BuildModes Count="4">
+    <BuildModes Count="2">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="deployment">
         <CompilerOptions>
@@ -36,8 +36,8 @@
             <Filename Value="mnh"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-            <OtherUnitFiles Value="..\core;..\common;..\3rd_party"/>
+            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -70,94 +70,6 @@
           </Other>
         </CompilerOptions>
       </Item2>
-      <Item3 Name="imig">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <PathDelim Value="\"/>
-          <Target>
-            <Filename Value="mnhi"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
-            <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
-            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
-          </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <CStyleOperator Value="False"/>
-              <AllowLabel Value="False"/>
-              <CPPInline Value="False"/>
-            </SyntaxOptions>
-          </Parsing>
-          <CodeGeneration>
-            <SmartLinkUnit Value="True"/>
-            <RelocatableUnit Value="True"/>
-            <Optimizations>
-              <OptimizationLevel Value="4"/>
-            </Optimizations>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="False"/>
-            </Debugging>
-            <LinkSmart Value="True"/>
-          </Linking>
-          <Other>
-            <Verbosity>
-              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
-            </Verbosity>
-            <CustomOptions Value="-dfullVersion
--dimig"/>
-          </Other>
-        </CompilerOptions>
-      </Item3>
-      <Item4 Name="imig_debug">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <PathDelim Value="\"/>
-          <Target>
-            <Filename Value="mnhi_debug"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
-            <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
-            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
-          </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <CStyleOperator Value="False"/>
-              <IncludeAssertionCode Value="True"/>
-              <AllowLabel Value="False"/>
-              <CPPInline Value="False"/>
-            </SyntaxOptions>
-          </Parsing>
-          <CodeGeneration>
-            <Checks>
-              <IOChecks Value="True"/>
-              <RangeChecks Value="True"/>
-              <OverflowChecks Value="True"/>
-              <StackChecks Value="True"/>
-            </Checks>
-            <Optimizations>
-              <OptimizationLevel Value="0"/>
-            </Optimizations>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <UseHeaptrc Value="True"/>
-            </Debugging>
-          </Linking>
-          <Other>
-            <Verbosity>
-              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
-            </Verbosity>
-            <CustomOptions Value="-ddebugMode
--ddebug
--dfullVersion
--dimig"/>
-          </Other>
-        </CompilerOptions>
-      </Item4>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -176,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="82">
+    <Units Count="83">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -571,6 +483,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="saveFile"/>
       </Unit81>
+      <Unit82>
+        <Filename Value="..\core\mnh_messages.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit82>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -580,8 +496,8 @@
       <Filename Value="mnh_debug"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-      <OtherUnitFiles Value="..\core;..\common;..\3rd_party"/>
+      <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
+      <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

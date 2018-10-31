@@ -20,8 +20,6 @@ regTest/testLog.datastore0
 buildLogDigest.datastore0
 versions/*.zip
 core/build_number.inc
-mnhi
-mnhi_debug
 /regTest/testExpectation.datastore1
 /mnh_light_prof
 /callgrind.out.*
