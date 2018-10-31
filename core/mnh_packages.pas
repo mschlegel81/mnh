@@ -422,6 +422,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
       c:P_connectorAdapter=nil;
+      callContextType:T_evaluationContextType;
   begin
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
@@ -430,6 +431,8 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       callerContext^.messages.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
       exit(nil);
     end;
+    if connectLevel=0 then callContextType:=ect_silent
+                      else callContextType:=ect_normal;
     adapters.clear;
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
@@ -439,9 +442,9 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     //filtered link for messages
     if connectLevel>0 then c:=callerContext^.messages.globalMessages^.connectToOther(@adapters,connectLevel>=1,connectLevel>=2,connectLevel>=3);
     if enforceDeterminism then globals.prng.resetSeed(0);
-    package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
+    package.replaceCodeProvider(newFileCodeProvider(filename));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters);
       package.load(lu_forCallingMain,globals,mainParameters);
       globals.afterEvaluation;
     finally
