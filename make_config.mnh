@@ -3,6 +3,9 @@ Lazarus64Path:='..\lazarus64';
 Lazarus32Path:='..\lazarus32';
 @SuppressUnusedWarning
 DelpPath     :='..\lazarus64\fpc\3.0.4\bin\x86_64-win64\delp.exe';
+SSL32   :=files('..\3rd_party\openSsl32\*').expandedFileName;
+SSL64   :=files('..\3rd_party\openSsl64\*').expandedFileName;
+SSL(w)->copy(w,0,5)=='Win32' ? SSL32 : SSL64;
 @SuppressUnusedWarning
 projectSLOC->hashFiles
              .filter({!($file.matches('3rd_party'))})
@@ -11,56 +14,95 @@ projectSLOC->hashFiles
 
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
-type BuildConfig(L:List(7))->L[0].isBoolean AND
-                             L[1].isString AND
-                             L[2].isString AND
-                             L[3].isString AND
-                             L[4].isStringList AND
-                             L[5].isString AND
-                             L[6].isBoolean;
-
-//BUILTS  linux, flavour , binary                    , compiler                  , compilerOptions                                 , compilerOutput
-BUILDS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
-         [false,'FOWin64','./mnh.exe'                ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
-         [false,'IOWin64','./mnhi.exe'               ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnhi.exe'                ,false],
-         [false,'FOWin32','bin32/mnh.exe'            ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
-         [false,'LOWin32','bin32/mnh_light.exe'      ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
-         [true ,'LOLinux','./mnh_light'              ,               'lazbuild'    ,['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light'          ,false],
-         [true ,'FOLinux','./mnh'                    ,               'lazbuild'    ,['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh'                     ,false],
-         [true ,'IOLinux','./mnhi'                   ,               'lazbuild'    ,['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnhi'                    ,false],
-         [false,'LDWin64','./mnh_light_debug.exe'    ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
-         [false,'FDWin64','./mnh_debug.exe'          ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
-         [false,'IDWin64','./mnhi_debug.exe'         ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=imig_debug','gui/mnh_gui.lpi']       ,'gui/mnhi_debug.exe'          ,true],
-         [false,'LDWin32','bin32/mnh_light_debug.exe',Lazarus32Path&'\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
-         [false,'FDWin32','bin32/mnh_debug.exe'      ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
-         [true ,'LDLinux','./mnh_light_debug'        ,               'lazbuild'    ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
-         [true ,'LPLinux','./mnh_light_prof'         ,               'lazbuild'    ,['-B','--bm=profiling' ,'consoles/mnh_light.lpi'],'consoles/mnh_light_prof'     ,true],
-         [true ,'FDLinux','./mnh_debug'              ,               'lazbuild'    ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true],
-         [true ,'IDLinux','./mnhi_debug'             ,               'lazbuild'    ,['-B','--bm=imig_debug','gui/mnh_gui.lpi']       ,'gui/mnhi_debug'              ,true]]
-         .map(::toBuildConfig);
+private
+TARGET_PLATFORM:=[['Linux',[['compiler','lazbuild'                   ]                  ].toMap],
+                  ['Win32',[['compiler',Lazarus32Path&'\lazbuild.exe'],['outExt','.exe']].toMap],
+                  ['Win64',[['compiler',Lazarus64Path&'\lazbuild.exe'],['outExt','.exe']].toMap]].toMap;
+private
+TARGET_PROJECT :=[['light',[['lpi','consoles/mnh_light.lpi'],
+                            ['out','consoles/mnh_light'],
+                            ['part','L']].toMap],
+                  ['full' ,[['lpi','gui/mnh_gui.lpi'],
+                            ['out','gui/mnh'],
+                            ['part','F']].toMap]].toMap;
+private
+TARGET_FLAVOUR :=[['debug'   ,[['flags',['-B','--bm=Default']],
+                               ['doTest',true],
+                               ['part','D'],
+                               ['outSuffix','_debug']].toMap],
+                  ['normal'  ,[['flags',['-B','--bm=deployment']],
+                               ['part','O'],
+                               ['doTest',true]].toMap],
+                  ['profile' ,[['flags',['-B','--bm=profiling']],
+                               ['doTest',false],
+                               ['part','P'],
+                               ['outSuffix','_prof']].toMap]].toMap;
+private
+buildConfig(platformKey in (TARGET_PLATFORM.getInner(0)),
+            projectKey  in (TARGET_PROJECT.getInner(0)),
+            flavourKey  in (TARGET_FLAVOUR.getInner(0)))->
+begin
+  local result:=[].toMap;
+  local platform:=TARGET_PLATFORM[platformKey];
+  local project :=TARGET_PROJECT [projectKey ];
+  local flavor  :=TARGET_FLAVOUR [flavourKey ];
+  result['platform'    ]:=platformKey;
+  result['flavour'     ]:=project['part']&flavor['part']&platformKey;
+  result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
+  result['compilate'   ]:=project['out']&flavor['outSuffix']&platform['outExt'];
+  result['targetDest'  ]:='target/'&platformKey&(flavourKey=='portable' ? '_portable' : '') &'/'&result['compilate'].extractFileName;
+  result['distro'      ]:=flavourKey in ['normal','portable'];
+  result['doTest'      ]:=flavor['doTest'];
+  result['canBuild'    ]:=(platformKey=='Linux')==isLinux;
+  result;
+end;
 
 @SuppressUnusedWarning
-DISTRO_BUILDS:=BUILDS.head(3);
-@SuppressUnusedWarning
-LINUX_BUILDS:=DISTRO_BUILDS.filter({$b[0]});
-
-canBuild(B:BuildConfig)->B[0]=isLinux;
-
-@SuppressUnusedWarning
-buildBlindly(B:BuildConfig)->B[1]=='LPLinux';
-
-@SuppressUnusedWarning
-VALID_TARGETS:=BUILDS.each(B,B.canBuild ? B[2] : void);
-@SuppressUnusedWarning
-binName(B:BuildConfig)->B[2];
+BUILDS:=cross(TARGET_PLATFORM.getInner(0),
+              TARGET_PROJECT .getInner(0),
+              TARGET_FLAVOUR .getInner(0))
+        .filter({$x[0]!='Linux' OR $x[2]!='portable'})
+        .filter({$x[0]=='Linux' OR $x[2]!='profile' })
+        .map({buildConfig@$x});
 
 //*Prints out code size (excluding 3rd party code)
-main->printf@("Code Size:\v%s\tkLOC\n\v%s\tkB"|round(
+main->
+hashFiles.pMap({$f|$f.fileStats.tail(2)})
+         .map({format("%s\t%5.1f\vkb\t%8.8x",$x[0],$x[1]/1024,$x[2])}).join("\n").print orElse
+printf@("Code Size:\v%s\tkLOC\n\v%s\tkB"|round(
 hashFiles
 .filter({!($x.matches('3rd_party'))})
 .fileStats
 .agg(+)
 .get([0,2])/1024));
+
+@SuppressUnusedWarning
+packSets(builtNo:Int)->
+  BUILDS.filter({$B['distro']})
+        .map({[$B['targetDest'].extractFileDirectory.extractFileNameOnly,$B['platform']!='Linux',$B['targetDest']]})
+        .group(0)
+        .map({[$x[0,0],$x[0,1],$x.getInner(2)]})
+        .each(B,B[1] ? [B[2] | SSL(B[0]),B[0]&'_ssl'] : void ,
+                       [B[2]            ,B[0]       ])
+        .each(B,[B[0].expandedFileName,builtNo,B[1]]);
+
+memoized sevenZipExe->
+  ["c:/Program Files/7-Zip/7z.exe",
+   "c:/Program Files (x86)/7-Zip/7z.exe"]
+  .each(file,file.fileExists ? file : void,head)
+  orElse fail('7-Zip could not be located!');
+
+@SuppressUnusedWarning
+call7z(fileList:StringList,builtNo,suffix)->begin
+  local zipFileName:=format('target/mnh5_%s_%s.zip',builtNo,suffix);
+  fileExists(zipFileName)
+  ? return print('Not creating ',zipFileName,' because the file already exists')
+  : void;
+  sevenZipExe.exec(['a','-mx=9','-bd',zipFileName]|fileList)
+             .trailing==0
+             ? print(zipFileName,' created')
+             : fail('Failed creating ',zipFileName);
+end;
 
 hashFiles:=['3rd_party/blcksock.pas',
             '3rd_party/epiktimer.pas',
@@ -73,34 +115,14 @@ hashFiles:=['3rd_party/blcksock.pas',
             '3rd_party/synaip.pas',
             '3rd_party/synautil.pas',
             '3rd_party/synsock.pas',
-            '../art.source/igSrc/complex.pas',
-            '../art.source/igSrc/darts.pas',
-            '../art.source/igSrc/ig_bifurcation.pas',
-            '../art.source/igSrc/ig_epicycles.pas',
-            '../art.source/igSrc/ig_expoClouds.pas',
-            '../art.source/igSrc/ig_fractals.pas',
-            '../art.source/igSrc/ig_funcTrees.pas',
-            '../art.source/igSrc/ig_gradient.pas',
-            '../art.source/igSrc/ig_ifs.pas',
-            '../art.source/igSrc/ig_ifs2.pas',
-            '../art.source/igSrc/ig_perlin.pas',
-            '../art.source/igSrc/ig_simples.pas',
-            '../art.source/igSrc/imagegeneration.pas',
-            '../art.source/igSrc/linAlg3d.pas',
-            '../art.source/igSrc/myParams.pas',
-            '../art.source/igSrc/mypics.pas',
-            '../art.source/igSrc/workflows.pas',
             'common/bigint.pas',
             'common/diff.pas',
             'common/httpUtil.pas',
             'common/huffman.pas',
-            'common/myColors.pas',
             'common/myCrypto.pas',
             'common/myGenerics.pas',
             'common/myStringUtil.pas',
             'common/mySys.pas',
-            'common/myTools.pas',
-            'common/pixMaps.pas',
             'common/serializationUtil.pas',
             'consoles/mnh_light.lpr',
             'core/consoleAsk.pas',
@@ -179,8 +201,6 @@ hashFiles:=['3rd_party/blcksock.pas',
             'gui/mnh_gui_outputonly.pas',
             'gui/mnh_gui_settings.pas',
             'gui/mnh_html.pas',
-            'gui/mnh_imig.pas',
-            'gui/mnh_imig_form.pas',
             'gui/mnh_plotData.pas',
             'gui/mnh_plotform.pas',
             'gui/mnh_splash.pas',

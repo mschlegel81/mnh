@@ -19,6 +19,7 @@ private flavourDependentScripts:=
    'opTest',
    'numDiff',
    'montyHall',
+   'grep',
    'rk4',
    'relevantDigitsTest',
    'root',
@@ -28,6 +29,8 @@ private flavourDependentScripts:=
    'test_rationals',
    EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
+
+private memoized allFlavours->BUILDS.filter({$B['doTest']}).map({$B['flavour']});
 
 @SuppressUnusedWarning
 private plausibilizeExpectationsOnStartup:=
@@ -39,7 +42,7 @@ private plausibilizeExpectationsOnStartup:=
       ? expect.isMap
         ? begin
             local changed:=false;
-            expect:=expect.each(e,e[0] in BUILDS.getInner(1) ? e : begin changed:=true; void; end).toMap;
+            expect:=expect.each(e,e[0] in allFlavours ? e : begin changed:=true; void; end).toMap;
             changed
             ? expectations[script]:=expect
             : void;
@@ -170,7 +173,6 @@ timeForFullTest(flavour:String,codeHash:String)->begin
 end;
 
 private allScripts->expectations.getInner(0);
-private allFlavours->BUILDS.filter({!buildBlindly($B)}).getInner(1);
 
 matching(L:StringCollection,pattern)->
   pattern.matches('\*|\|')
@@ -203,7 +205,6 @@ main('remove',Script)->
 
 //*List information on all test expectations
 main->begin
-  local allFlavours:=BUILDS.filter({!buildBlindly($B)}).getInner(1);
   local testsByFlavour:=allFlavours.each(flavour,
     [flavour,
      flavour.expectationNamesForFlavour

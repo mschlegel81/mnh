@@ -60,7 +60,7 @@ FUNCTION try_imp intFuncSignature;
 FUNCTION runScript_imp intFuncSignature;
   VAR scriptParams:T_arrayOfString;
       i:longint;
-      connect:int64=0;
+      connect:longint=0;
       enforceDeterminism:boolean=false;
   begin
     result:=nil;

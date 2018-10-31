@@ -35,6 +35,10 @@ CONST
   APP_NAME             ='MNH';
   APP_TITLE            ='MNH5'{$ifdef imig}+'+IMIG'{$endif};
   SCRIPT_EXTENSION     ='.mnh';
+  SETTINGS_FILE_NAME   ='mnh.settings';
+  {$ifdef Windows}
+  APP_STYLE:(APP_STYLE_BLANK,APP_STYLE_PORTABLE,APP_STYLE_NORMAL)=APP_STYLE_BLANK;
+  {$endif}
 
   LITERAL_TEXT_VOID    = 'void';
   LITERAL_NAN_TEXT     = 'Nan';
@@ -641,11 +645,20 @@ FUNCTION getAppName: string;
     result:=APP_NAME;
   end;
 
+{$ifdef Windows}
+PROCEDURE detectAppStyle;
+  begin
+    if fileExists(ExtractFileDir(paramStr(0))+DirectorySeparator+SETTINGS_FILE_NAME) then APP_STYLE:=APP_STYLE_PORTABLE
+    else if                     fileExists(GetAppConfigDir(true)+SETTINGS_FILE_NAME) then APP_STYLE:=APP_STYLE_NORMAL
+  end;
+{$endif}
+
 FUNCTION configDir:string;
   begin
-    OnGetApplicationName:=@getAppName;
     {$ifdef Windows}
-    result:=GetAppConfigDir(true);
+    if APP_STYLE=APP_STYLE_NORMAL
+    then result:=GetAppConfigDir(true)
+    else result:=ExtractFileDir(paramStr(0))+DirectorySeparator;
     {$else}
     result:=GetAppConfigDir(false);
     {$endif}
@@ -683,6 +696,9 @@ PROCEDURE cleanupTemp;
 
 INITIALIZATION
   OnGetApplicationName:=@getAppName;
+  {$ifdef Windows}
+  detectAppStyle;
+  {$endif}
   ForceDirectories(configDir);
   initialize(tempFilesCs);
   initCriticalSection(tempFilesCs);

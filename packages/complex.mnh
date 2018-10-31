@@ -72,3 +72,9 @@ sin(x:Complex)->begin
   local result:=exp(i*x);
   (1/result-result)*0.5*i;
 end;
+
+@Override
+sqrt(x:Complex)->begin
+  local z:=[0.25*(x.toBuiltin.sqr.agg(+)).ln,0.5*arg(x)];
+  exp(z[0])*[cos(z[1]),sin(z[1])].toComplex;
+end;

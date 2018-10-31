@@ -653,7 +653,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               rulePatternElement.customTypeCheck:=P_abstractRule(parts[i].first^.data)^.getTypedef;
               rulePatternElement.builtinTypeCheck:=rulePatternElement.customTypeCheck^.builtinTypeCheck;
               rulePatternElement.restrictionIdx  :=rulePatternElement.customTypeCheck^.builtinSuperParameter;
-              rulePatternElement.skipCustomCheck:=rulePatternElement.customTypeCheck^.isAlwaysTrue;
+              rulePatternElement.skipCustomCheck :=rulePatternElement.customTypeCheck^.isDucktyping and
+                                                   rulePatternElement.customTypeCheck^.isAlwaysTrue;
               {$ifdef debugMode}
               if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule '+P_abstractRule(parts[i].first^.data)^.getId+' did not return a type definition');
               {$endif}

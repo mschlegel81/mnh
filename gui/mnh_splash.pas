@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls,
+  StdCtrls, ComCtrls,
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_settings,
@@ -14,20 +14,26 @@ USES
 
 TYPE
   TSplashForm = class(TForm)
+    buttonInitNormal: TButton;
+    buttonInitPortable: TButton;
     CheckBox1: TCheckBox;
     Image1: TImage;
     Label1: TLabel;
     Label2: TLabel;
     Panel1: TPanel;
+    ProgressBar: TProgressBar;
+    PROCEDURE buttonInitNormalClick(Sender: TObject);
+    PROCEDURE buttonInitPortableClick(Sender: TObject);
     PROCEDURE CheckBox1Change(Sender: TObject);
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE prepareDoc;
   private
   public
   end;
 
 FUNCTION splashForm:TSplashForm;
 PROCEDURE splashOnStartup;
-FUNCTION isDocThreadRunning:boolean;
 IMPLEMENTATION
 VAR mySplashForm: TSplashForm=nil;
 FUNCTION splashForm:TSplashForm;
@@ -48,17 +54,46 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
     settings.doShowSplashScreen:=CheckBox1.checked;
   end;
 
-VAR docThreadsRunning:longint=0;
-FUNCTION isDocThreadRunning:boolean;
+PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    result:=docThreadsRunning>0;
+    {$ifdef Windows}
+    if APP_STYLE=APP_STYLE_BLANK then CloseAction:=caNone;
+    {$endif}
   end;
 
-FUNCTION prepareDoc(p:pointer):ptrint;
+PROCEDURE TSplashForm.prepareDoc;
   begin
+    {$ifdef Windows}
+    buttonInitNormal  .enabled:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitNormal  .visible:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitPortable.enabled:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitPortable.visible:=APP_STYLE=APP_STYLE_BLANK;
+    {$endif}
+    ProgressBar.visible:=true;
+    ProgressBar.caption:='Initializing';
+    Application.ProcessMessages;
+    ensureDemosAndPackages();
+    Application.ProcessMessages;
     makeHtmlFromTemplate();
-    result:=0;
-    interlockedDecrement(docThreadsRunning);
+    ProgressBar.visible:=false;
+  end;
+
+PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
+  begin
+    {$ifdef Windows}
+    APP_STYLE:=APP_STYLE_NORMAL;
+    prepareDoc;
+    close;
+    {$endif}
+  end;
+
+PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
+  begin
+    {$ifdef Windows}
+    APP_STYLE:=APP_STYLE_PORTABLE;
+    prepareDoc;
+    close;
+    {$endif}
   end;
 
 PROCEDURE TSplashForm.FormShow(Sender: TObject);
@@ -71,17 +106,19 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
     Label2.caption:='build '+intToStr(BUILD_NUMBER)+' ['+CODE_HASH+']';
-    interLockedIncrement(docThreadsRunning);
     {$ifdef UNIX}
-    prepareDoc(nil);
+    prepareDoc;
     {$else}
-    beginThread(@prepareDoc);
+    buttonInitNormal  .enabled:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitNormal  .visible:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitPortable.enabled:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitPortable.visible:=APP_STYLE=APP_STYLE_BLANK;
+    if APP_STYLE<>APP_STYLE_BLANK then prepareDoc;
     {$endif}
   end;
 
 FINALIZATION
   if Assigned(mySplashForm) then FreeAndNil(mySplashForm);
-  while (docThreadsRunning>0) do sleep(1);
 
 end.
 

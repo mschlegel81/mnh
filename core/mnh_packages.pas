@@ -74,10 +74,11 @@ TYPE
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
+      packageCS:TRTLCriticalSection;
+
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
-
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
@@ -85,6 +86,13 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
+
+      FUNCTION isMain:boolean;
+      {$ifdef fullVersion}
+      PROCEDURE complainAboutUnused(VAR adapters:T_threadLocalMessages);
+      {$endif}
+    protected
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
       packageRules,importedRules:T_ruleMap;
       PROCEDURE clear(CONST includeSecondaries:boolean);
@@ -92,20 +100,18 @@ TYPE
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
+
       FUNCTION getHelpOnMain:ansistring;
-      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
-      FUNCTION isMain:boolean;
-      FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
-      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       {$ifdef fullVersion}
-      FUNCTION usedPackages:T_packageList;
-      FUNCTION declaredRules:T_ruleList;
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
-      PROCEDURE complainAboutUnused(VAR adapters:T_threadLocalMessages);
+      FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
+      FUNCTION declaredRules:T_ruleList;
+      FUNCTION usedPackages:T_packageList;
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
@@ -276,12 +282,14 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       if packageOrNil<>nil then begin;
         if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
           packageOrNil^.load(lu_forImport,globals,C_EMPTY_STRING_ARRAY);
+        enterCriticalSection(packageOrNil^.packageCS);
         lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
         while (globals.primaryContext.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
           packageOrNil^.interpret(stmt,lu_forDirectExecution,globals);
           stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
         end;
+        leaveCriticalSection(packageOrNil^.packageCS);
         lexer.destroy;
       end else begin
         tempPackage:=packageFromCode(input,'<quick>');
@@ -422,6 +430,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
       c:P_connectorAdapter=nil;
+      callContextType:T_evaluationContextType;
   begin
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
@@ -430,6 +439,8 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       callerContext^.messages.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
       exit(nil);
     end;
+    if connectLevel=0 then callContextType:=ect_silent
+                      else callContextType:=ect_normal;
     adapters.clear;
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
@@ -437,16 +448,16 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     //one-way-link to propagate stop-signal:
     callerContext^.messages.addChild(@globals.primaryContext.messages);
     //filtered link for messages
-    if connectLevel>0 then c:=adapters.connectToOther(callerContext^.messages.globalMessages,connectLevel>=1,connectLevel>=2,connectLevel>=3);
+    if connectLevel>0 then c:=callerContext^.messages.globalMessages^.connectToOther(@adapters,connectLevel>=1,connectLevel>=2,connectLevel>=3);
     if enforceDeterminism then globals.prng.resetSeed(0);
-    package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
+    package.replaceCodeProvider(newFileCodeProvider(fileName));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters);
       package.load(lu_forCallingMain,globals,mainParameters);
       globals.afterEvaluation;
     finally
       result:=messagesToLiteralForSandbox(collector.storedMessages,C_textMessages);
-      if c<>nil then callerContext^.messages.globalMessages^.removeOutAdapter(c);
+      if c<>nil then adapters.removeOutAdapter(c);
       globals.afterEvaluation;
       globals.primaryContext.finalizeTaskAndDetachFromParent;
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
@@ -768,6 +779,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       VAR castRule:P_typeCastRule;
           otherRule:P_rule;
       begin
+        if not(P_typecheckRule(ruleGroup)^.castRuleIsValid) then exit;
         new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
           globals.primaryContext.messages.raiseError(
@@ -1166,6 +1178,9 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     end;
 
   begin
+    {$ifdef fullVersion}
+    enterCriticalSection(packageCS);
+    {$endif}
     commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
@@ -1207,6 +1222,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
+      leaveCriticalSection(packageCS);
       {$endif}
       exit;
     end;
@@ -1217,6 +1233,9 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then finalize(globals.primaryContext);
+    {$ifdef fullVersion}
+    leaveCriticalSection(packageCS)
+    {$endif}
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1227,6 +1246,9 @@ PROCEDURE disposeRule(VAR rule:P_rule);
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_: P_package);
   begin
     inherited create(provider);
+    {$ifdef fullVersion}
+    initCriticalSection(packageCS);
+    {$endif}
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
@@ -1335,6 +1357,7 @@ DESTRUCTOR T_package.destroy;
     importedRules.destroy;
     {$ifdef fullVersion}
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
+    doneCriticalSection(packageCS);
     {$endif}
     inherited destroy;
   end;
@@ -1559,6 +1582,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threa
                           .put('declares',rulesList,false);
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
   VAR rule:P_rule;
       subRule:P_subruleExpression;
@@ -1576,6 +1600,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       end;
     end;
   end;
+{$endif}
 
 PROCEDURE T_package.resolveId(VAR token: T_token;
   CONST adaptersOrNil: P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
