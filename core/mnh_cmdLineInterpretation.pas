@@ -95,8 +95,6 @@ PROCEDURE displayHelp;
     writeln('  -headless         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
-    writeln('  -install          update packes and demos, ensure installation directory and file associations');
-    writeln('  -uninstall        remove packes and demos, remove installation directory and file associations and the called executable itself');
     writeln('  -profile          do a profiling run - implies -vt');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
     writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
@@ -192,37 +190,6 @@ CONST DEF_VERBOSITY_STRING='';
       end;
       case parsingState of
         pst_initial: begin
-
-          if (param='-install') then begin
-            {$ifdef fullVersion}
-              writeln('Updating scripts and demos');
-              ensureDemosAndPackages;
-              {$ifdef Windows}
-              writeln('Updating file associations');
-              sandbox^.runInstallScript;
-              {$endif}
-              writeln('Saving settings');
-              settings.fixLocations;
-              saveSettings;
-              halt(0);
-            {$else}
-              delegateToFullVersionRequired:=true;
-            {$endif}
-          end;
-          if (param='-uninstall') then begin
-            {$ifdef fullVersion}
-              {$ifdef Windows}
-              writeln('Removing file associations');
-              sandbox^.runUninstallScript;
-              mySys.deleteMyselfOnExit;
-              {$endif}
-              writeln('Removing configuration directory');
-              RemoveDir(configDir);
-              halt(0);
-            {$else}
-              delegateToFullVersionRequired:=true;
-            {$endif}
-          end;
           if (param='-edit') then begin
             parsingState:=pst_parsingFileToEdit;
             exit(true);
@@ -230,7 +197,7 @@ CONST DEF_VERBOSITY_STRING='';
           {$ifdef fullVersion} {$ifdef debugMode}
           if (param='-doc') then begin
             makeHtmlFromTemplate();
-            writeln(expandFileName(getHtmlRoot+'/index.html'   ));
+            writeln(expandFileName(getHtmlRoot+'/index.html'));
             halt(0);
           end;
           {$endif} {$endif}

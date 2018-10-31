@@ -1,29 +1,30 @@
 object SplashForm: TSplashForm
-  Left = 994
-  Height = 381
-  Top = 251
+  Left = 629
+  Height = 463
+  Top = 188
   Width = 768
   AutoSize = True
   BorderStyle = bsToolWindow
   Caption = 'MNH5 - Splash'
-  ClientHeight = 381
+  ClientHeight = 463
   ClientWidth = 768
   Color = clWhite
   DefaultMonitor = dmPrimary
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
+  OnClose = FormClose
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object Panel1: TPanel
     Left = 0
-    Height = 381
+    Height = 463
     Top = 0
     Width = 768
     Align = alClient
     AutoSize = True
     BevelWidth = 3
-    ClientHeight = 381
+    ClientHeight = 463
     ClientWidth = 768
     TabOrder = 0
     object Image1: TImage
@@ -1134,7 +1135,7 @@ object SplashForm: TSplashForm
     end
     object Label1: TLabel
       Left = 3
-      Height = 58
+      Height = 34
       Top = 266
       Width = 762
       Align = alClient
@@ -1151,7 +1152,7 @@ object SplashForm: TSplashForm
     object CheckBox1: TCheckBox
       Left = 3
       Height = 29
-      Top = 349
+      Top = 325
       Width = 762
       Align = alBottom
       Caption = 'Show this annoying screen every time you start mnh'
@@ -1163,12 +1164,47 @@ object SplashForm: TSplashForm
     object Label2: TLabel
       Left = 3
       Height = 25
-      Top = 324
+      Top = 300
       Width = 762
       Align = alBottom
       Alignment = taRightJustify
       Caption = 'Label2'
       ParentColor = False
+    end
+    object buttonInitNormal: TButton
+      Left = 3
+      Height = 38
+      Top = 354
+      Width = 762
+      Align = alBottom
+      Caption = 'Initialize as normal application'
+      Enabled = False
+      OnClick = buttonInitNormalClick
+      TabOrder = 1
+      Visible = False
+    end
+    object buttonInitPortable: TButton
+      Left = 3
+      Height = 38
+      Top = 392
+      Width = 762
+      Align = alBottom
+      Caption = 'Initialize as portable version'
+      Enabled = False
+      OnClick = buttonInitPortableClick
+      TabOrder = 2
+      Visible = False
+    end
+    object ProgressBar: TProgressBar
+      Left = 3
+      Height = 30
+      Top = 430
+      Width = 762
+      Align = alBottom
+      Style = pbstMarquee
+      TabOrder = 3
+      Visible = False
+      BarShowText = True
     end
   end
 end
