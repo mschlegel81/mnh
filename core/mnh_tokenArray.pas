@@ -27,11 +27,10 @@ TYPE
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
       PROCEDURE clearCustomOperators;
       FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messageConnector):boolean;
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
-      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
       FUNCTION codeChanged:boolean;
       FUNCTION getId:T_idString; virtual;
@@ -39,8 +38,9 @@ TYPE
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
-      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       {$ifdef fullVersion}
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
