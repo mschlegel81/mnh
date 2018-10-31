@@ -1,5 +1,4 @@
 
-*.exe
 *.log
 *.o
 *.ppu
@@ -18,15 +17,11 @@ regTest/testLog.datastore0
 *.png
 *.or
 */backup/*
-mnh
-mnh_debug
-mnh_light
-mnh_light_debug
-versions/*.7z
 buildLogDigest.datastore0
-mnh_prof
 versions/*.zip
 core/build_number.inc
 /regTest/testExpectation.datastore1
 /mnh_light_prof
 /callgrind.out.*
+/target/*
+*.exe

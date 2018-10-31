@@ -2,8 +2,8 @@ USE make_config, distroLog;
 
 DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
 DEFAULT_TARGET_FOLDER:=DEV_ROOT&'\temp\';
-PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
-ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
+PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\target\mnh5_'&maxLoggedBuildNumber&'_code.zip';
+ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\target\mnh5_'&maxLoggedBuildNumber&'*.zip';
 WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
 EDITOR_CALL          :='C:\Program Files (x86)\Notepad++\notepad++.exe';
 
@@ -80,10 +80,10 @@ Die Aktuelle Version ist Build Nr. %{$0}s
 end;
 
 main('copy')->begin
-  print('Cleaning output folder');
+  print('Cleaning output folder ',DEFAULT_TARGET_FOLDER);
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 
-  print('Copying MNH sources');
+  print('Copying MNH sources to ',DEFAULT_TARGET_FOLDER);
   allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected','testExpectation.datastore0','distroLog.datastore0'])
     .filter({!($0.matches('/lib/|core/res_.*inc$|core/build_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
@@ -95,20 +95,31 @@ main('copy')->begin
 end;
 
 main('pack')->begin
+  fileExists(PACKED_CODE_FILE)
+  ? return print('Not creating ',PACKED_CODE_FILE,' because the file already exists')
+  : void;
+  print('Packing files from ',DEFAULT_TARGET_FOLDER,' to ',PACKED_CODE_FILE);
   changeDirectory(DEFAULT_TARGET_FOLDER);
 
-  sevenZipExe.execPipeless(['a','-r','-bd',PACKED_CODE_FILE,'*']);
-  print('File ',PACKED_CODE_FILE,' created');
+  sevenZipExe.exec(['a','-r','-bd',PACKED_CODE_FILE,'*']).trailing==0
+  ? print('File ',PACKED_CODE_FILE,' created')
+  : fail('Creation of ',PACKED_CODE_FILE,' failed');
 end;
 
 main('clean')->begin
-  print('Cleaning output folder');
+  print('Cleaning output folder ',DEFAULT_TARGET_FOLDER);
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 end;
 
 main->begin
-  main('copy');
-  main('pack');
-  main('clean');
+  fileExists(PACKED_CODE_FILE)
+  ? ask(PACKED_CODE_FILE&' already exists - do you want to contine ?',['Y','N'])=='N'
+    ? return void
+    : void;
+  : begin
+      main('copy');
+      main('pack');
+      main('clean');
+    end;
   ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;
