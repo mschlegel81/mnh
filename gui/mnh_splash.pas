@@ -56,6 +56,7 @@ FUNCTION isDocThreadRunning:boolean;
 
 FUNCTION prepareDoc(p:pointer):ptrint;
   begin
+    ensureDemosAndPackages();
     makeHtmlFromTemplate();
     result:=0;
     interlockedDecrement(docThreadsRunning);
