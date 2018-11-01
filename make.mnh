@@ -193,7 +193,7 @@ main('clean')->tprint('Cleaning') orElse cleanup;
 main('CLEAN')->begin
   tprint('Deep cleaning');
   cleanup;
-  files('versions/*').|(files(BUILDS.getInner(2))).map(::verboseDelete);
+  files('target/*').|(BUILDS.each(b,b['compilate'],b['targetDest'],toSet)).map(::verboseDelete);
   files('3rd_party/*').minus(hashFiles).map(::verboseDelete);
 end;
 //*Beep - just for notification purposes
