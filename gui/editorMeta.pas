@@ -69,6 +69,9 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
     PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
 
+    PROCEDURE onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
+    PROCEDURE onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
+    PROCEDURE clearBookmark(markIndex:longint);
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
     PROCEDURE closeEditorWithDialogs;
@@ -133,6 +136,7 @@ T_runnerModel=object
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
+                    CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
@@ -161,6 +165,7 @@ PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 PROCEDURE saveWorkspace;
+PROCEDURE gotoMarker(markerIndex:longint);
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
@@ -170,6 +175,7 @@ IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
     breakpointsImagesList :TImageList;
+    bookmarkImagesList    :TImageList;
     EditKeyUp             :TKeyEvent;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
@@ -178,6 +184,9 @@ VAR mainForm              :T_abstractMnhForm;
     restoreMenuItem       :TMenuItem;
     outlineModel          :P_outlineTreeModel=nil;
     outlineGroupBox       :TGroupBox;
+    globalBookmarks       :array[0..9] of record
+                             editorIndex,lineIndex,columnIndex:longint;
+                           end;
 
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
@@ -186,6 +195,7 @@ CONST workspaceSerialVersion=2661226501;
 FUNCTION loadWorkspace:boolean;
   VAR stream:T_bufferedInputStreamWrapper;
       i:longint;
+      validMetaCount:longint=0;
   begin
     stream.createToReadFromFile(configDir+'workspace.0');
     fileHistory.create;
@@ -204,19 +214,31 @@ FUNCTION loadWorkspace:boolean;
     for i:=0 to length(editorMetaData)-1 do begin
       new(editorMetaData[i],create(i,stream));
       result:=result and stream.allOkay;
+      if result then validMetaCount:=i+1;
     end;
     result:=result and stream.allOkay;
-    if length(filesToOpenInEditor)=0
-    then inputPageControl.activePageIndex:=stream.readLongint
-    else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
+    if not(result) then setLength(editorMetaData,validMetaCount) else begin
+      if length(filesToOpenInEditor)=0
+      then inputPageControl.activePageIndex:=stream.readLongint
+      else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
+    end;
+    for i:=0 to 9 do begin
+      globalBookmarks[i].editorIndex:=stream.readInteger;
+      globalBookmarks[i].lineIndex  :=stream.readInteger;
+      globalBookmarks[i].columnIndex:=stream.readInteger;
+      if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) then begin
+        editorMetaData[globalBookmarks[i].editorIndex]^.editor.SetBookMark(i,globalBookmarks[i].columnIndex,globalBookmarks[i].lineIndex);
+      end else globalBookmarks[i].editorIndex:=-1;
+    end;
     stream.destroy;
   end;
 
 PROCEDURE saveWorkspace;
   VAR stream:T_bufferedOutputStreamWrapper;
-      i:longint;
+      i,k:longint;
       visibleEditorCount:longint=0;
       pageIndex:longint=0;
+      virtualEditorIndex:T_arrayOfLongint;
   begin
     stream.createToWriteToFile(configDir+'workspace.0');
     stream.writeDWord(workspaceSerialVersion);
@@ -226,8 +248,22 @@ PROCEDURE saveWorkspace;
     then inc(visibleEditorCount)
     else if i<inputPageControl.activePageIndex then dec(pageIndex);
     stream.writeNaturalNumber(visibleEditorCount);
-    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then editorMetaData[i]^.saveToStream(stream);
+    setLength(virtualEditorIndex,length(editorMetaData));
+    k:=0;
+    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then begin
+      virtualEditorIndex[i]:=k; inc(k);
+      editorMetaData[i]^.saveToStream(stream);
+    end else virtualEditorIndex[i]:=-1;
     stream.writeLongint(pageIndex);
+    for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
+      stream.writeInteger(-1);
+      stream.writeInteger(0);
+      stream.writeInteger(0);
+    end else begin
+      stream.writeInteger(virtualEditorIndex[globalBookmarks[i].editorIndex]);
+      stream.writeInteger(globalBookmarks[i].lineIndex  );
+      stream.writeInteger(globalBookmarks[i].columnIndex);
+    end;
     stream.destroy;
   end;
 
@@ -239,11 +275,13 @@ PROCEDURE initNewWorkspace;
     new(editorMetaData[0],create(0));
     inputPageControl.activePageIndex:=0;
     setLength(fileHistory.items,0);
+    for i:=0 to 9 do globalBookmarks[i].editorIndex:=-1;
   end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
+                    CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
@@ -257,13 +295,16 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
                     CONST p_openlocation          :T_openLocationCallback);
 
+  VAR i:longint;
   begin
+    for i:=0 to 9 do globalBookmarks[i].editorIndex:=-1;
     editorFont:=p_assistanceSynEdit.Font;
     setupEditorMetaBase(outputHighlighter,languageMenuRoot);
 
     mainForm              :=p_mainForm              ;
     inputPageControl      :=p_inputPageControl      ;
     breakpointsImagesList :=p_breakpointsImagesList ;
+    bookmarkImagesList    :=p_bookmarkImagesList    ;
     EditKeyUp             :=p_EditKeyUp             ;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
@@ -276,6 +317,22 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     if not(loadWorkspace) then initNewWorkspace;
   end;
 
+PROCEDURE gotoMarker(markerIndex:longint);
+  VAR currentEdit:P_editorMeta;
+      i:longint;
+  begin
+    if (markerIndex<0) or (markerIndex>=length(globalBookmarks)) then exit;
+    if globalBookmarks[markerIndex].editorIndex<0 then exit;
+    currentEdit:=getEditor;
+    if currentEdit^.index=globalBookmarks[markerIndex].editorIndex then exit;
+    for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.enabled) and (editorMetaData[i]^.index=globalBookmarks[markerIndex].editorIndex) then begin
+      inputPageControl.activePageIndex:=i;
+      editorMetaData[i]^.editor.CaretY:=globalBookmarks[markerIndex].lineIndex;
+      editorMetaData[i]^.editor.CaretX:=globalBookmarks[markerIndex].columnIndex;
+      mainForm.ActiveControl:=editorMetaData[i]^.editor;
+    end;
+  end;
+
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   begin
     latestAssistanceReponse:=nil;
@@ -283,16 +340,18 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     index:=idx;
     tabsheet:=TTabSheet.create(inputPageControl);
     tabsheet.PageControl:=inputPageControl;
-    createWithParent(tabsheet);
+    createWithParent(tabsheet,bookmarkImagesList);
     paintedWithStateHash:=0;
     index:=idx;
-    editor_.Gutter.MarksPart.width:=breakpointsImagesList.width;
+    editor_.Gutter.MarksPart.width:=breakpointsImagesList.width+bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnKeyUp             :=EditKeyUp;
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
     editor_.OnProcessUserCommand:=EditProcessUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
+    editor_.OnPlaceBookmark     :=@onPlaceBookmark;
+    editor_.OnClearBookmark     :=@onClearBookmark;
     initForNewFile;
   end;
 
@@ -300,7 +359,7 @@ CONST editorMetaSerial=1417366168;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
   VAR lineCount,markCount:longint;
-      i:longint;
+      i,k,x,y:longint;
   begin
     create(idx);
     if not(stream.readDWord=editorMetaSerial) then begin //#0
@@ -323,7 +382,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputSt
       for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
     end else setFile(fileInfo.filePath);
     markCount:=stream.readNaturalNumber; //#7
-    for i:=1 to markCount do  _add_breakpoint_(stream.readNaturalNumber); //#8
+    for i:=1 to markCount do _add_breakpoint_(stream.readNaturalNumber); //#8
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
     language_:=T_language(stream.readByte);  //#11
@@ -335,6 +394,8 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   VAR i:longint;
       editorLine:string;
       saveChanged:boolean;
+      k:longint;
+      x,y:longint;
   begin
     stream.writeDWord(editorMetaSerial); //#0
     if fileInfo.filePath=''
@@ -348,8 +409,11 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       stream.writeNaturalNumber(editor.lines.count); //#5
       for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
     end;
-    stream.writeNaturalNumber(editor.Marks.count); //#7
-    for i:=0 to editor.Marks.count-1 do stream.writeNaturalNumber(editor.Marks[i].line); //#8
+    k:=0;
+    for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then inc(k);
+    stream.writeNaturalNumber(k); //#7
+    for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then stream.writeNaturalNumber(editor.Marks[i].line); //#8
+
     stream.writeNaturalNumber(editor.CaretX); //#9
     stream.writeNaturalNumber(editor.CaretY); //#10
     stream.writeByte(ord(language));          //#11
@@ -402,7 +466,7 @@ PROCEDURE T_editorMeta.activate;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
         completionLogic.assignEditor(editor_,nil);
       end;
-      editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+      editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
       mainForm.onDebuggerEvent;
     except end; //catch and ignore all exceptions
@@ -632,10 +696,31 @@ PROCEDURE T_editorMeta.setWorkingDir;
                             else SetCurrentDir(ExtractFileDir(fileInfo.filePath));
   end;
 
+PROCEDURE T_editorMeta.onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
+  begin
+    globalBookmarks[mark.BookmarkNumber].editorIndex:=-1;
+  end;
+
+PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
+  VAR other:P_editorMeta;
+  begin
+    if not(Assigned(mark)) then exit;
+    for other in editorMetaData do if (other<>@self) and (other^.enabled) then other^.clearBookmark(mark.BookmarkNumber);
+    globalBookmarks[mark.BookmarkNumber].editorIndex:=index;
+    globalBookmarks[mark.BookmarkNumber].lineIndex  :=mark.line;
+    globalBookmarks[mark.BookmarkNumber].columnIndex:=mark.column;
+  end;
+
+PROCEDURE T_editorMeta.clearBookmark(markIndex:longint);
+  VAR x,y:longint;
+  begin
+    if editor_.GetBookMark(markIndex,x,y) then editor_.ClearBookMark(markIndex);
+  end;
+
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
   begin
-    for i:=0 to editor_.Marks.count-1 do if editor_.Marks[i].line=editor_.CaretY then begin
+    for i:=0 to editor_.Marks.count-1 do if (editor_.Marks[i].line=editor_.CaretY) and not(editor_.Marks[i].IsBookmark) then begin
       editor_.Marks.remove(editor.Marks[i]);
       runEvaluator.globals.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
@@ -665,7 +750,9 @@ FUNCTION T_editorMeta.defaultExtensionByLanguage: ansistring;
 PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
-    for i:=0 to editor.Marks.count-1 do runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
+    for i:=0 to editor.Marks.count-1 do
+      if not(editor.Marks[i].IsBookmark)
+      then runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
   end;
 
 PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
@@ -836,7 +923,7 @@ FUNCTION addEditorMetaForNewFile:longint;
     editorMetaData[i]^.editor.Font:=editorFont;
 
     result:=i;
-    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
+    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=true;
     editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked or editorMetaData[i]^.strictlyReadOnly;
     editorMetaData[i]^.activate;
   end;
@@ -932,7 +1019,7 @@ PROCEDURE updateEditorsByGuiStatus;
   VAR m:P_editorMeta;
   begin
     for m in editorMetaData do begin
-      m^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (m^.language=LANG_MNH);
+      m^.editor.Gutter.MarksPart.visible:=true;
       m^.editor.readonly                :=runnerModel.areEditorsLocked or m^.strictlyReadOnly;
     end;
   end;
@@ -1093,7 +1180,7 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
     runEvaluator.globals.stepper^.setState(newState);
     mainForm.onDebuggerEvent;
     if hasEditor then with getEditor^ do begin
-      editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
+      editor.Gutter.MarksPart.visible:=true;
       editor.readonly:=areEditorsLocked or strictlyReadOnly;
     end;
   end;

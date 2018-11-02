@@ -61,6 +61,7 @@ FUNCTION addPlot intFuncSignature;
   FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
     begin
       new(result,create(options,dataRow));
+      options:='';
     end;
 
   begin
@@ -276,8 +277,9 @@ FUNCTION renderToString_impl intFuncSignature;
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       new(renderRequest,createRenderToStringRequest(width,height,quality));
-      context.messages.globalMessages^.postCustomMessage(renderRequest^.rereferenced);
+      context.messages.globalMessages^.postCustomMessage(renderRequest^.rereferenced,true);
       result:=newStringLiteral(renderRequest^.getStringWaiting(context.messages));
+      renderRequest^.setString('');
       disposeMessage(renderRequest);
     end;
   end;

@@ -52,7 +52,7 @@ TYPE T_language=(LANG_MNH   = 0,
       FUNCTION currentBlockOrLine:T_lineRange;
     public
       PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
-      CONSTRUCTOR createWithParent(CONST parent:TWinControl);
+      CONSTRUCTOR createWithParent(CONST parent:TWinControl; CONST bookmarkImages:TImageList);
       DESTRUCTOR destroy; virtual;
       //T_codeProvider:
       FUNCTION getLines: T_arrayOfString; virtual;
@@ -259,7 +259,7 @@ PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
     activate;
   end;
 
-CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
+CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST bookmarkImages:TImageList);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
@@ -276,7 +276,8 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     editor_.Align:=alClient;
     editor_.ScrollBars:=ssAutoBoth;
     editor_.WantTabs:=false;
-    editor_.Gutter.MarksPart.visible:=false;
+    editor_.Gutter.MarksPart.visible:=Assigned(bookmarkImages);
+    editor_.Gutter.MarksPart.width:=45;
     editor_.Gutter.CodeFoldPart.visible:=false;
     editor_.Gutter.ChangesPart.visible:=false;
     plugin:=TSynPluginMultiCaret.create(editor_);
@@ -286,6 +287,8 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     style.background:=clLime;
     editor_.RightEdge:=-1;
     editor_.Keystrokes.clear;
+    editor_.BookMarkOptions.GlyphsVisible:=Assigned(bookmarkImages);
+    editor_.BookMarkOptions.BookmarkImages:=bookmarkImages;
     addKeystroke(ecUp,38);
     addKeystroke(ecSelUp,8230);
     addKeystroke(ecScrollUp,16422);
@@ -327,7 +330,6 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     addKeystroke(ecLineBreak,13);
     addKeystroke(ecSelectAll,16449);
     addKeystroke(ecCopy,16451);
-    addKeystroke(ecLineBreak,16461);
     addKeystroke(ecBlockUnindent,16469);
     addKeystroke(ecPaste,16470);
     addKeystroke(ecCut,16472);
@@ -347,6 +349,18 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     addKeystroke(ecColSelPageTop,57377);
     addKeystroke(ecColSelEditorTop,57380);
     addKeystroke(ecColSelEditorBottom,57379);
+    if Assigned(bookmarkImages) then begin
+      addKeystroke(ecToggleMarker0,scCtrl+scShift+ord('0'));  addKeystroke(ecGotoMarker0,scCtrl+ord('0'));
+      addKeystroke(ecToggleMarker1,scCtrl+scShift+ord('1'));  addKeystroke(ecGotoMarker1,scCtrl+ord('1'));
+      addKeystroke(ecToggleMarker2,scCtrl+scShift+ord('2'));  addKeystroke(ecGotoMarker2,scCtrl+ord('2'));
+      addKeystroke(ecToggleMarker3,scCtrl+scShift+ord('3'));  addKeystroke(ecGotoMarker3,scCtrl+ord('3'));
+      addKeystroke(ecToggleMarker4,scCtrl+scShift+ord('4'));  addKeystroke(ecGotoMarker4,scCtrl+ord('4'));
+      addKeystroke(ecToggleMarker5,scCtrl+scShift+ord('5'));  addKeystroke(ecGotoMarker5,scCtrl+ord('5'));
+      addKeystroke(ecToggleMarker6,scCtrl+scShift+ord('6'));  addKeystroke(ecGotoMarker6,scCtrl+ord('6'));
+      addKeystroke(ecToggleMarker7,scCtrl+scShift+ord('7'));  addKeystroke(ecGotoMarker7,scCtrl+ord('7'));
+      addKeystroke(ecToggleMarker8,scCtrl+scShift+ord('8'));  addKeystroke(ecGotoMarker8,scCtrl+ord('8'));
+      addKeystroke(ecToggleMarker9,scCtrl+scShift+ord('9'));  addKeystroke(ecGotoMarker9,scCtrl+ord('9'));
+    end;
     addKeystroke(ecBlockIndent,16457);
     addKeystroke(ecUpperCaseBlock,scCtrl+scShift+ord('U'));
     addKeystroke(ecLowerCaseBlock,scCtrl+scShift+ord('L'));

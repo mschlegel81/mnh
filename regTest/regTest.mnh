@@ -122,7 +122,7 @@ main('only',case)->begin
   local toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({includeTest($script)});
-  toRun.matches('oeis\.mnh').agg(or) ? ensureServer : void;
+  toRun.matches('oeis\.mnh').agg(or) orElse false ? ensureServer : void;
   local allPassed:=
   (toRun.map({testFile($script,false)})|((local runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
   printCase("");
@@ -145,9 +145,9 @@ main('makebat',exeName)->begin
           .map(::extractFileNameOnly)
           .|(EXAMPLES_LOG_NAME)
           .each(d,exeName&' regTest\regTest.mnh only '&d)
-          .each(cmd,cmd.matches('only oeis') ? '@start demos\oeis_server.mnh' : void,
-                    '@echo '&cmd,
-                    '@'&cmd);
+          .each(cmd,'@echo '&cmd&' >> test.log',
+                    '@'&cmd&' 2>> test.log',
+                    cmd.matches('only oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
   void;

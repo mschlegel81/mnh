@@ -44,7 +44,7 @@ begin
   local X:=[0..minIntervals]/minIntervals*(x1-x0)+x0;
   local Y:=X.map(f);
   [0..minIntervals-1].each(i,
-    integrate(f,X[i],Y[i],X[i+1],Y[i+1],tolerance*100),+);
+    integrate1d(f,X[i],Y[i],X[i+1],Y[i+1],tolerance*100),+);
 end;
 
 @demo_for=math, numerics/integration

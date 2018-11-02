@@ -30,7 +30,6 @@ TYPE
       PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
       PROCEDURE thinOutWhitelist;
       FUNCTION hides(CONST e:T_patternElement):boolean;
-      PROPERTY getId:T_idString read id;
     public
       CONSTRUCTOR createAnonymous(CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST parameterId:T_idString; CONST loc:T_tokenLocation);
@@ -532,7 +531,7 @@ FUNCTION T_pattern.getParameterNames:P_listLiteral;
   VAR el:T_patternElement;
   begin
     result:=newListLiteral(length(sig));
-    for el in sig do result^.appendString(el.getId);
+    for el in sig do result^.appendString(el.id);
   end;
 
 FUNCTION T_pattern.getNamedParameters:T_patternElementLocations;
@@ -667,6 +666,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             end else fail(parts[i].first);
           end;
           append(rulePatternElement);
+          rulePatternElement.id:='';
+          rulePatternElement.restrictionId:='';
         end else begin
           //Anonymous equals: f(1)->
           context.reduceExpression(parts[i].first);
@@ -678,6 +679,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             parts[i].first:=disposeToken(parts[i].first);
             assertNil(parts[i].first);
             append(rulePatternElement);
+            rulePatternElement.id:='';
+            rulePatternElement.restrictionId:='';
           end else fail(parts[i].first);
         end;
       end;

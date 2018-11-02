@@ -147,7 +147,8 @@ showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
     averageRunTimes
     .getAll(timesOfThisRun.getInner(0))
     .map({[$x[myFlavour],$x[myFlavourGroup]]})
-    .agg(+);
+    .agg(+) orElse [thisRunTotalTime,thisRunTotalTime];
+  while(timesByFlavour.size<2,timesByFlavour|=thisRunTotalTime);
   print('Test time : ',thisRunTotalTime);
   printf('  compared to average (flavour): %6.2f%%',thisRunTotalTime/timesByFlavour[0]*100);
   printf('  compared to average (group  ): %6.2f%%',thisRunTotalTime/timesByFlavour[1]*100);

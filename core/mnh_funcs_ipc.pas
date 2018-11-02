@@ -219,6 +219,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //respond:------------------------------------------------
         try
           sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash);
+          if response.payload<>nil then disposeLiteral(response.payload);
         finally
         end;
         //------------------------------------------------:respond

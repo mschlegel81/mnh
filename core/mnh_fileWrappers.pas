@@ -271,16 +271,20 @@ FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfStri
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   VAR stream:TFileStream;
   begin
-    ensurePath(name);
-    stream:=TFileStream.create(name,fmCreate);
     try
-      stream.Seek(0,soFromBeginning);
-      stream.WriteBuffer(textToWrite[1],length(textToWrite));
-      result:=true;
+      ensurePath(name);
+      stream:=TFileStream.create(name,fmCreate);
+      try
+        stream.Seek(0,soFromBeginning);
+        stream.WriteBuffer(textToWrite[1],length(textToWrite));
+        result:=true;
+      except
+        result:=false;
+      end;
+      stream.destroy;
     except
       result:=false;
     end;
-    stream.destroy;
   end;
 
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
@@ -359,7 +363,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     except
       on e:Exception do begin
         result := false;
-        writeln(stdErr,'Erron in writeFile Lines: ',e.message,'; ',e.ClassName);
+        writeln(stdErr,'Error in writeFile Lines: ',e.message,'; ',e.ClassName);
       end;
     end;
   end;
