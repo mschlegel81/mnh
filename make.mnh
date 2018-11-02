@@ -128,16 +128,19 @@ end;
 private showStatus->
   print orElse
   tprint('Current code hash: ',ensureCodeHash,"\n") orElse
-  ([['Flavour','Binary','CodeVersion','Compile time','Time for test']]|
-  (BUILDS.each(B,[B['flavour'],
-                 B['targetDest'],
-                 B['canBuild'] ? needBuild(B) ? B['targetDest'].codeVersion : 'o.k.' : '?' ,
-                 B['canBuild'] ? B['targetDest'].compileTime : '?',
-                 B['doTest'] ? timeForFullTest(B['flavour'],B['canBuild']
-                                                            ? B['targetDest'].codeVersion
-                                                            : ensureCodeHash)
-                               .roundToRelevantDigits(4) orElse '.'
-                             : '. (n/a)']))).formatTable.join("\n").print
+  BUILDS.each(B,begin
+    local exe  :=B['targetDest'];
+    local exist:=fileExists(exe);
+    local canBuild:=B['canBuild'];
+    local version :=exist ? canBuild ? exe.codeVersion : '?' : '';
+    local cmpTime :=exist ? canBuild ? exe.compileTime : '?' : '';
+    [B['flavour'],
+     exe,
+     version==ensureCodeHash ? 'o.k.' : version,
+     cmpTime,
+     B['doTest'] ? timeForFullTest(B['flavour'],version).roundToRelevantDigits(4) : '(n/a)'
+     ];
+  end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print
   orElse print;
 
 private verboseDelete(file)->
