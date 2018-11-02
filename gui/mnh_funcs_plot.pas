@@ -61,6 +61,7 @@ FUNCTION addPlot intFuncSignature;
   FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
     begin
       new(result,create(options,dataRow));
+      options:='';
     end;
 
   begin

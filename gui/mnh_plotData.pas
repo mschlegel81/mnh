@@ -1280,14 +1280,18 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
     case message^.messageType of
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);
-      mt_plot_addRow :
+      mt_plot_addRow : begin
         currentPlot.addRow(P_addRowMessage(message)^.styleOptions,P_addRowMessage(message)^.rowData);
+        P_addRowMessage(message)^.styleOptions:='';
+      end;
       mt_plot_dropRow:
         currentPlot.removeRows(P_plotDropRowRequest(message)^.count);
-      mt_plot_renderRequest:
+      mt_plot_renderRequest: begin
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
         then setString(currentPlot.renderToString(width,height,quality))
         else currentPlot.renderToFile(fileName,   width,height,quality);
+        P_plotRenderRequest(message)^.fileName:='';
+      end;
       mt_plot_retrieveOptions:
         P_plotOptionsMessage(message)^.setOptions(currentPlot.scalingOptions);
       mt_plot_setOptions:

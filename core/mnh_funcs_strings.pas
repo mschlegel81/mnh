@@ -329,6 +329,7 @@ FUNCTION join_impl intFuncSignature;
   VAR i:longint;
       iter:T_arrayOfLiteral;
       resultParts:T_arrayOfString;
+      resultString:ansistring;
   begin
     result:=nil;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
@@ -340,8 +341,9 @@ FUNCTION join_impl intFuncSignature;
         disposeLiteral(iter);
 
         if params^.size=2
-        then result:=newStringLiteral(join(resultParts,str1^.value))
-        else result:=newStringLiteral(join(resultParts,''         ));
+        then resultString:=join(resultParts,str1^.value)
+        else resultString:=join(resultParts,''         );
+        result:=newStringLiteral(resultString);
         setLength(resultParts,0);
       end else if (arg0^.literalType in C_scalarTypes) then
         result:=newStringLiteral(stringOfLit(arg0));

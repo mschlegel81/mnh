@@ -707,8 +707,8 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
     if not(Assigned(mark)) then exit;
     for other in editorMetaData do if (other<>@self) and (other^.enabled) then other^.clearBookmark(mark.BookmarkNumber);
     globalBookmarks[mark.BookmarkNumber].editorIndex:=index;
-    globalBookmarks[mark.BookmarkNumber].lineIndex  :=mark.Line;
-    globalBookmarks[mark.BookmarkNumber].columnIndex:=mark.Column;
+    globalBookmarks[mark.BookmarkNumber].lineIndex  :=mark.line;
+    globalBookmarks[mark.BookmarkNumber].columnIndex:=mark.column;
   end;
 
 PROCEDURE T_editorMeta.clearBookmark(markIndex:longint);
