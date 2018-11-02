@@ -21,6 +21,8 @@ timedExecute(exe:String,params)->begin
 end;
 
 main(...)->begin
-  local timedExes:=VALID_TARGETS.each(target,fileExists(target) ? [target,timedExecute(target,...)]  : void);
+  local timedExes:=BUILDS.map({$B['canBuild'] ? $B['targetDest'] : void})
+                         .filter({$t.fileExists})
+                         .each(target,[target,timedExecute(target,...)]);
   barPlot(timedExes.getInner(0),timedExes.getInner(1),100).print;
 end;

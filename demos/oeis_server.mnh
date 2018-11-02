@@ -256,9 +256,3 @@ main('scan')->begin
   while(time<timeout,sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;
-
-
-async({names.size});
-async({sequences.size});
-async({foundImplementations.size});
-serve_('name','Friedman').map(::print);
