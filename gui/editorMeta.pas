@@ -133,6 +133,7 @@ T_runnerModel=object
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
+                    CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
@@ -170,6 +171,7 @@ IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
     breakpointsImagesList :TImageList;
+    bookmarkImagesList    :TImageList;
     EditKeyUp             :TKeyEvent;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
@@ -244,6 +246,7 @@ PROCEDURE initNewWorkspace;
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
+                    CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
@@ -264,6 +267,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     mainForm              :=p_mainForm              ;
     inputPageControl      :=p_inputPageControl      ;
     breakpointsImagesList :=p_breakpointsImagesList ;
+    bookmarkImagesList    :=p_bookmarkImagesList    ;
     EditKeyUp             :=p_EditKeyUp             ;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
@@ -283,10 +287,10 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     index:=idx;
     tabsheet:=TTabSheet.create(inputPageControl);
     tabsheet.PageControl:=inputPageControl;
-    createWithParent(tabsheet);
+    createWithParent(tabsheet,bookmarkImagesList);
     paintedWithStateHash:=0;
     index:=idx;
-    editor_.Gutter.MarksPart.width:=breakpointsImagesList.width;
+    editor_.Gutter.MarksPart.width:=breakpointsImagesList.width+bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnKeyUp             :=EditKeyUp;
     editor_.OnMouseDown         :=EditMouseDown;
@@ -300,7 +304,7 @@ CONST editorMetaSerial=1417366168;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
   VAR lineCount,markCount:longint;
-      i:longint;
+      i,k,x,y:longint;
   begin
     create(idx);
     if not(stream.readDWord=editorMetaSerial) then begin //#0
@@ -323,7 +327,16 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputSt
       for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
     end else setFile(fileInfo.filePath);
     markCount:=stream.readNaturalNumber; //#7
-    for i:=1 to markCount do  _add_breakpoint_(stream.readNaturalNumber); //#8
+    for i:=1 to markCount do _add_breakpoint_(stream.readNaturalNumber); //#8
+
+    markCount:=stream.readNaturalNumber; //#12
+    for k:=0 to markCount-1 do begin
+      i:=stream.readNaturalNumber;
+      x:=stream.readNaturalNumber;
+      y:=stream.readNaturalNumber;
+      editor.SetBookMark(i,x,y);
+    end;
+
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
     language_:=T_language(stream.readByte);  //#11
@@ -335,6 +348,8 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   VAR i:longint;
       editorLine:string;
       saveChanged:boolean;
+      k:longint;
+      x,y:longint;
   begin
     stream.writeDWord(editorMetaSerial); //#0
     if fileInfo.filePath=''
@@ -348,8 +363,19 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       stream.writeNaturalNumber(editor.lines.count); //#5
       for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
     end;
-    stream.writeNaturalNumber(editor.Marks.count); //#7
-    for i:=0 to editor.Marks.count-1 do stream.writeNaturalNumber(editor.Marks[i].line); //#8
+    k:=0;
+    for i:=0 to editor.Marks.Count-1 do if not(editor.Marks[i].IsBookmark) then inc(k);
+    stream.writeNaturalNumber(k); //#7
+    for i:=0 to editor.Marks.Count-1 do if not(editor.Marks[i].IsBookmark) then stream.writeNaturalNumber(editor.Marks[i].line); //#8
+
+    k:=0;
+    for i:=0 to 9 do if editor.GetBookMark(i,x,y) then inc(k);
+    stream.writeNaturalNumber(k); //#12
+    for i:=0 to 9 do if editor.GetBookMark(i,x,y) then begin
+      stream.writeNaturalNumber(i);
+      stream.writeNaturalNumber(x);
+      stream.writeNaturalNumber(y);
+    end;
     stream.writeNaturalNumber(editor.CaretX); //#9
     stream.writeNaturalNumber(editor.CaretY); //#10
     stream.writeByte(ord(language));          //#11
@@ -402,7 +428,7 @@ PROCEDURE T_editorMeta.activate;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
         completionLogic.assignEditor(editor_,nil);
       end;
-      editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+      editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
       mainForm.onDebuggerEvent;
     except end; //catch and ignore all exceptions
@@ -635,7 +661,7 @@ PROCEDURE T_editorMeta.setWorkingDir;
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
   begin
-    for i:=0 to editor_.Marks.count-1 do if editor_.Marks[i].line=editor_.CaretY then begin
+    for i:=0 to editor_.Marks.count-1 do if (editor_.Marks[i].line=editor_.CaretY) and not(editor_.Marks[i].IsBookmark) then begin
       editor_.Marks.remove(editor.Marks[i]);
       runEvaluator.globals.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
@@ -665,7 +691,9 @@ FUNCTION T_editorMeta.defaultExtensionByLanguage: ansistring;
 PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
-    for i:=0 to editor.Marks.count-1 do runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
+    for i:=0 to editor.Marks.count-1 do
+      if not(editor.Marks[i].IsBookmark)
+      then runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
   end;
 
 PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
@@ -836,7 +864,7 @@ FUNCTION addEditorMetaForNewFile:longint;
     editorMetaData[i]^.editor.Font:=editorFont;
 
     result:=i;
-    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
+    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=true;
     editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked or editorMetaData[i]^.strictlyReadOnly;
     editorMetaData[i]^.activate;
   end;
@@ -932,7 +960,7 @@ PROCEDURE updateEditorsByGuiStatus;
   VAR m:P_editorMeta;
   begin
     for m in editorMetaData do begin
-      m^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (m^.language=LANG_MNH);
+      m^.editor.Gutter.MarksPart.visible:=true;
       m^.editor.readonly                :=runnerModel.areEditorsLocked or m^.strictlyReadOnly;
     end;
   end;
@@ -1093,7 +1121,7 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
     runEvaluator.globals.stepper^.setState(newState);
     mainForm.onDebuggerEvent;
     if hasEditor then with getEditor^ do begin
-      editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
+      editor.Gutter.MarksPart.visible:=true;
       editor.readonly:=areEditorsLocked or strictlyReadOnly;
     end;
   end;

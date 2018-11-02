@@ -208,6 +208,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       editorMeta.setupUnit(self,
                            inputPageControl,
                            breakpointsImagesList,
+                           markerImageList,
                            assistanceSynEdit,
                            assistanceTabSheet,
                            outputHighlighter,
@@ -222,7 +223,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            cbOutlineShowImported,
                            @openLocation);
 
-      quick.meta.createWithParent(QuickTabSheet);
+      quick.meta.createWithParent(QuickTabSheet,nil);
       quick.meta.editor.Align:=alTop;
       quick.meta.editor.height:=80;
       quick.meta.editor.OnChange:=@QuickEditChange;

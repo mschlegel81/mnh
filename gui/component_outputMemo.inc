@@ -19,7 +19,7 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
   VAR langLit:P_literal;
   begin
     inherited create(def,location,context,consideredKeys);
-    synMeta.createWithParent(parent^.winControl);
+    synMeta.createWithParent(parent^.winControl,nil);
     synMeta.editor.Align:=alTop;
     synMeta.editor.readonly:=true;
     synMeta.editor.OnKeyUp:=@OnKeyUp;
