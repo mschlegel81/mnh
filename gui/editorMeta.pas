@@ -364,9 +364,9 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
     end;
     k:=0;
-    for i:=0 to editor.Marks.Count-1 do if not(editor.Marks[i].IsBookmark) then inc(k);
+    for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then inc(k);
     stream.writeNaturalNumber(k); //#7
-    for i:=0 to editor.Marks.Count-1 do if not(editor.Marks[i].IsBookmark) then stream.writeNaturalNumber(editor.Marks[i].line); //#8
+    for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then stream.writeNaturalNumber(editor.Marks[i].line); //#8
 
     k:=0;
     for i:=0 to 9 do if editor.GetBookMark(i,x,y) then inc(k);
