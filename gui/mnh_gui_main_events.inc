@@ -307,7 +307,9 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
       miDebug.checked:=true;
       runnerModel.debugMode:=true;
       onDebuggerEvent;
-    end else getEditor^.processUserCommand(Sender,command,AChar,data);
+    end else if (command>=ecGotoMarker0) and (command<=ecGotoMarker9)
+    then gotoMarker(command-ecGotoMarker0)
+    else getEditor^.processUserCommand(Sender,command,AChar,data);
   end;
 
 PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
