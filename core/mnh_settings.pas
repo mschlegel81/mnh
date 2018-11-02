@@ -15,7 +15,7 @@ CONST
    (text:'10 minutes'; interval:10/(24*60)),
    (text:'30 minutes'; interval:30/(24*60)),
    (text:'1 hour';     interval: 1/24));
-  FILE_HISTORY_MAX_SIZE=1000;
+  FILE_HISTORY_MAX_SIZE=100;
 TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
@@ -291,9 +291,7 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
     listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
       list:=FindAllFiles(pathToScan+DirectorySeparator,'',false);
-      for fileName in list do begin
-        append(result,fileName);
-      end;
+      for fileName in list do append(result,fileName);
       list.free;
     end;
     sortUnique(result);
