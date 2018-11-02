@@ -49,12 +49,14 @@ exp(x:Complex)->(exp(x[0])*[cos(x[1]),sin(x[1])]).toComplex;
 //*Returns the natural logarithm of complex x
 @Override
 ln(x:Complex)->[0.5*(x.toBuiltin.sqr.agg(+)).ln,arg(x)].toComplex;
+ln(x<0.0)->[0.5*x.sqr.ln,pi].toComplex;
 
 @Override
 OPERATOR_POT(x:Complex,y=0)->[1,0].toComplex;
 OPERATOR_POT(x:Complex,y<0)->1/(x^(-y));
 OPERATOR_POT(x:Complex,y>0)->(y and 1)=1 ? x^(y-1)*x : sqr(x)^(y div 2);
 OPERATOR_POT(x:Complex,y:Real)->y=0 ? [1,0].toComplex :exp(ln(x)*y);
+OPERATOR_POT(x:Numeric,y:Complex)->exp(ln(x)*y);
 OPERATOR_POT(x:Complex,y:Complex)->exp(ln(x)*y);
 
 @Override
