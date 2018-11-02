@@ -2767,6 +2767,8 @@ object MnhForm: TMnhForm
           Align = alCustom
           Anchors = [akTop, akRight]
           Caption = 'evaluate in current package'
+          Checked = True
+          State = cbChecked
           TabOrder = 2
         end
       end
