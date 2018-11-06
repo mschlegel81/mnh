@@ -47,7 +47,7 @@ begin
   result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
   result['compilate'   ]:=project['out']&flavor['outSuffix']&platform['outExt'];
   result['targetDest'  ]:='target/'&platformKey&(flavourKey=='portable' ? '_portable' : '') &'/'&result['compilate'].extractFileName;
-  result['distro'      ]:=flavourKey=='normal' AND platformKey=='Win64';
+  result['distro'      ]:=flavourKey=='normal' AND platformKey!='Win32';
   result['doTest'      ]:=flavor['doTest'];
   result['canBuild'    ]:=(platformKey=='Linux')==isLinux;
   result;
@@ -94,7 +94,24 @@ call7z(fileList:StringList,builtNo,suffix)->begin
              : fail('Failed creating ',zipFileName);
 end;
 
-hashFiles:=['3rd_party/blcksock.pas',
+hashFiles:=['../art.source/igSrc/complex.pas',
+            '../art.source/igSrc/darts.pas',
+            '../art.source/igSrc/ig_bifurcation.pas',
+            '../art.source/igSrc/ig_epicycles.pas',
+            '../art.source/igSrc/ig_expoClouds.pas',
+            '../art.source/igSrc/ig_fractals.pas',
+            '../art.source/igSrc/ig_funcTrees.pas',
+            '../art.source/igSrc/ig_gradient.pas',
+            '../art.source/igSrc/ig_ifs.pas',
+            '../art.source/igSrc/ig_ifs2.pas',
+            '../art.source/igSrc/ig_perlin.pas',
+            '../art.source/igSrc/ig_simples.pas',
+            '../art.source/igSrc/imagegeneration.pas',
+            '../art.source/igSrc/linAlg3d.pas',
+            '../art.source/igSrc/myParams.pas',
+            '../art.source/igSrc/mypics.pas',
+            '../art.source/igSrc/workflows.pas',
+            '3rd_party/blcksock.pas',
             '3rd_party/epiktimer.pas',
             '3rd_party/jedi.inc',
             '3rd_party/ssfpc.inc',
@@ -109,10 +126,13 @@ hashFiles:=['3rd_party/blcksock.pas',
             'common/diff.pas',
             'common/httpUtil.pas',
             'common/huffman.pas',
+            'common/myColors.pas',
             'common/myCrypto.pas',
             'common/myGenerics.pas',
             'common/myStringUtil.pas',
             'common/mySys.pas',
+            'common/myTools.pas',
+            'common/pixMaps.pas',
             'common/serializationUtil.pas',
             'consoles/mnh_light.lpr',
             'core/consoleAsk.pas',
@@ -191,6 +211,8 @@ hashFiles:=['3rd_party/blcksock.pas',
             'gui/mnh_gui_outputonly.pas',
             'gui/mnh_gui_settings.pas',
             'gui/mnh_html.pas',
+            'gui/mnh_imig.pas',
+            'gui/mnh_imig_form.pas',
             'gui/mnh_plotData.pas',
             'gui/mnh_plotform.pas',
             'gui/mnh_splash.pas',
