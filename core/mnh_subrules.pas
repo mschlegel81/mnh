@@ -904,7 +904,6 @@ CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_
 
 DESTRUCTOR T_builtinExpression.destroy;
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: destroying T_builtinExpression "',id,'"'); {$endif}
     inherited destroy;
     id:='';
     func:=nil;
