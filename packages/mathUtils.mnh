@@ -26,11 +26,14 @@ binomCoeff(n>=1)->begin
 end;
 binomCoeff(n>=0,k)->binomCoeff(n)[k];
 
+sinh(x:Numeric)->(exp(x)-exp(-x))/2;
+
 //*An approximation to the (real valued) Gamma function
-Gamma(x>50.0)->exp(0.5*ln(2*pi)+(x-0.5)*(ln(x-0.5)-1)-1/(24*(x-1/2)));
-Gamma(x>0.0)->Gamma(x+1)/x;
-Gamma(x:Int)->Gamma(x.toReal);
-Gamma(X:NumericList)->X.pMap(::Gamma);
+Gamma(i>=1)->factorial(i-1);
+Gamma(x<36.5)->Gamma(x+1)/x;
+Gamma(x>37.5)->Gamma(x-1)*(x-1);
+//*Approximation of the Gamma-Function; see http://www.ebyte.it/library/docs/math07/GammaApproximation.html
+Gamma(x)->exp(0.5*ln(2*pi)+(x-1/2)*ln(x)-x+x/2*ln(x*sinh(1/x)+1/(810*x^6)));
 
 memoized
 Bernoulli(n=0)->1;

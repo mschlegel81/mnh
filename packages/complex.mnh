@@ -60,6 +60,9 @@ OPERATOR_POT(x:Numeric,y:Complex)->exp(ln(x)*y);
 OPERATOR_POT(x:Complex,y:Complex)->exp(ln(x)*y);
 
 @Override
+OPERATOR_NEGATE_ARITHMETIC(x:Complex)->[-x[0],-x[1]].toComplex;
+
+@Override
 //*Returns cosinus of complex x
 cos(x:Complex)->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
