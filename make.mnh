@@ -207,11 +207,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   BUILDS.each(B,B['canBuild'] AND B['distro'] ? B.testExe : void,AND)
   ? void
   : fail('Cannot make distro because there are failed tests');
-  local linuxBuiltReady:=BUILDS.filter({$B['platform']=='Linux' AND $B['distro']})
-                               .each(linuxConfig,allTestsPassed(linuxConfig['flavour'],ensureCodeHash),AND);
-  linuxBuiltReady
-  ? void
-  : return print('Linux builts are not ready; cannot create distro');
+
   packSets(getBuildNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
   {fileExists($0)
