@@ -682,18 +682,21 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
 
   FUNCTION subrulesList:P_listLiteral;
     VAR value:P_literal;
+        commentText:string;
     begin
       value:=namedValue.getValue;
       result:=newListLiteral(1);
+      commentText:=meta.comment;
       result^.append(newMapLiteral^
-        .put(newStringLiteral('pattern'   ),newStringLiteral('()')           ,false)^
-        .put(newStringLiteral('location'  ),newStringLiteral(getLocation)      ,false    )^
-        .put(newStringLiteral('type'      ),newStringLiteral(privateOrPublic),false)^
-        .put(newStringLiteral('comment'   ),newStringLiteral('')               ,false)^
-        .put(newStringLiteral('body'      ),newStringLiteral(value^.toString)  ,false)^
-        .put(newStringLiteral('comment'   ),newStringLiteral(meta.comment)     ,false)^
-        .put(newStringLiteral('attributes'),meta.getAttributesLiteral,false)   ,false);
+        .put('pattern'   ,'()'           )^
+        .put('location'  ,getLocation    )^
+        .put('type'      ,privateOrPublic)^
+        .put('comment'   ,''             )^
+        .put('body'      ,value^.toString)^
+        .put('comment'   ,commentText    )^
+        .put('attributes',meta.getAttributesLiteral,false),false);
       value^.unreference;
+      commentText:='';
     end;
 
   begin
