@@ -287,8 +287,7 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
       list:TStringList;
   begin
     allPathsToScan:=recentFolders;
-    result:=C_EMPTY_STRING_ARRAY;
-    listScriptFileNames(rootPath);
+    result:=listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
       list:=FindAllFiles(pathToScan+DirectorySeparator,'',false);
       for fileName in list do append(result,fileName);
