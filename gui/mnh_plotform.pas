@@ -504,11 +504,17 @@ PROCEDURE TplotForm.doPlot;
   end;
 
 FUNCTION TplotForm.timerTick:boolean;
+  FUNCTION frameInterval:longint;
+    CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
+    begin
+      result:=intendedMsPerFrame[animationSpeedTrackbar.position];
+    end;
+
   begin
     result:=false;
     plotSystem.startGuiInteraction;
     if gui_started and (showing) and (plotSystem.animation.frameCount>0) then begin
-      if animateCheckBox.checked and (eTimer.elapsed*1000>wantTimerInterval) and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
+      if animateCheckBox.checked and (round(eTimer.elapsed*1000)>=frameInterval) and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
         eTimer.clear;
         eTimer.start;
         plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
@@ -523,16 +529,16 @@ FUNCTION TplotForm.timerTick:boolean;
       frameTrackBar.max:=plotSystem.animation.frameCount-1;
       frameTrackBar.position:=animationFrameIndex;
       frameIndexLabel.caption:=intToStr(animationFrameIndex);
-      if frameTrackBar.max>20 then frameTrackBar.frequency:=5
-                              else frameTrackBar.frequency:=1;
+      if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
+      if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
+                              else frameTrackBar.frequency:= 1;
     end else result:=false;
     plotSystem.doneGuiInteraction;
   end;
 
 FUNCTION TplotForm.wantTimerInterval: longint;
-  CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
   begin
-    if animateCheckBox.checked then result:=intendedMsPerFrame[animationSpeedTrackbar.position]
+    if animateCheckBox.checked then result:=1
                                else result:=50;
   end;
 
