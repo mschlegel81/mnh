@@ -15,7 +15,8 @@ TYPE
                ps_plus,
                ps_cross,
                ps_impulse,
-               ps_polygon);
+               ps_polygon,
+               ps_ellipse);
   T_plotStyles=set of T_plotStyle;
   T_colorChannel = (cc_red, cc_green, cc_blue);
   T_color = array[T_colorChannel] of byte;
@@ -36,7 +37,8 @@ CONST
      {ps_plus      }   ('plus'     , '+'),
      {ps_cross     }   ('cross'    , 'x'),
      {ps_impulse   }   ('impulse'  , 'i'),
-     {ps_polygon   }   ('polygon'  , 'p'));
+     {ps_polygon   }   ('polygon'  , 'p'),
+     {ps_ellipse   }   ('ellipse'  , 'e'));
   SINGLE_SAMPLE_INDEX=4;
 
 TYPE

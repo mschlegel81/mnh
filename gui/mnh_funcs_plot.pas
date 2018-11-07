@@ -370,6 +370,7 @@ INITIALIZATION
     '#  fillSolid; fs;'+
     '#  bar;'+
     '#  box;'+
+    '#  ellipse; e;'+
     '#  tube;'+
     '#  dot; .;'+
     '#  plus; +;'+
