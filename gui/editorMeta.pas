@@ -166,6 +166,7 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 PROCEDURE saveWorkspace;
 PROCEDURE gotoMarker(markerIndex:longint);
+FUNCTION currentlyOpenFiles:T_arrayOfString;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
@@ -190,6 +191,14 @@ VAR mainForm              :T_abstractMnhForm;
 
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
+
+FUNCTION currentlyOpenFiles:T_arrayOfString;
+  VAR meta:P_editorMeta;
+  begin
+    result:='';
+    for meta in editorMetaData do
+    if meta^.enabled and meta^.isFile then append(result,meta^.fileInfo.filePath);
+  end;
 
 CONST workspaceSerialVersion=2661226501;
 FUNCTION loadWorkspace:boolean;
