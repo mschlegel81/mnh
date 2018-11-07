@@ -1,17 +1,39 @@
 private printSquare(S)->print(S.each(row,row.join("\t")).join("\n")) and
                         print("The magic number is ",S.get(0).agg(+));
-private set(S:List,I,J,k)->[0..size(S)-1].each(i,i=I ? [0..size(S)-1].each(j,j=J ? k : S.get(i).get(j)) : S.get(i));
+//*Siamese method
+private makeSquare(n:Int)->
+(n and 1)==0 ?
+(n and 2)==2 ? LUXSquare((n-2) div 4) :
+fail('makeSquare must be called with an odd integer; ',n,' is even') :
+begin
+  local S:=[1..n].map({[1..n]*0});
+  S[0,n div 2]:=1;
+  local i:=n-1;
+  local j:=n div 2+1;
+  [2..n^2].each(k,begin
+    S[i,j]:=k;
+    i:=k mod n=0 ? (i+1) mod n : (i+n-1) mod n;
+    j:=k mod n=0 ? j           : (j+1) mod n;
+  end);
+  S;
+end;
 
-private makeSquare(n:Int)->makeSquare_(n<1 ? 1 : (n and 1)=0 ? n+1 : n);
-private makeSquare_(n:Int)->makeSquare_(n,[0..n-1].each(i,[0..n-1].each(j,i=0 and j=n div 2 ? 1 : 'x')),n-1,(n div 2)+1,2);
-private makeSquare_(n,S:List,i,j,k)->k<n*n ? makeSquare_(n,set(S,i,j,k),
-                                                         k mod n=0 ? (i+1) mod n : (i+n-1) mod n,
-                                                         k mod n=0 ? j           : (j+1)   mod n,
-                                                         k+1)
-                                           : set(S,i,j,k);
-
-//*Print out an 21x21 magic square for regression testing
-main->printSquare(makeSquare(21));
+//*Conway's LUX method
+private LUXSquare(n:Int)->begin
+  local tab:=[[['L',[4,1]],['U',[1,4]],['X',[1,4]]].toMap,
+              [['L',[2,3]],['U',[2,3]],['X',[3,2]]].toMap];
+  [0..2*n]
+    .each(i,i<n   ? [0..2*n].each(j,       'L'      ) :
+            i=n   ? [0..2*n].each(j,j==n ? 'U' : 'L') :
+            i=n+1 ? [0..2*n].each(j,j==n ? 'L' : 'U') :
+                    [0..2*n].each(j,       'X'      ))
+    .each(line,
+      line.each(c,tab[0,c],|),
+      line.each(c,tab[1,c],|))+
+  (makeSquare(2*n+1)*4-4).each(line,
+    line.each(x,x,x),
+    line.each(x,x,x));
+end;
 
 @demo_for=math/puzzle
 //*Print out an n x n magic square; See http://rosettacode.org/wiki/Magic_squares_of_odd_order

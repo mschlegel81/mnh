@@ -33,6 +33,7 @@ testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];
 testParameters((demosRoot&'happyNumbers.mnh'   ))->['10'];
 testParameters((demosRoot&'josephus.mnh'       ))->['41','3','1'];
 testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
+testParameters((demosRoot&'magicSquare.mnh'    ))->['21'];
 testParameters((demosRoot&'oeis.mnh'           ))->['gen','A061358','100'];
 testParameters((demosRoot&'pascal.mnh'         ))->['12'];
 testParameters((demosRoot&'pangrams.mnh'       ))->['check','The quick brown fox jumps over the lazy dog.'];
