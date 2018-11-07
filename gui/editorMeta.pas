@@ -780,7 +780,7 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     if changed then result:=' *'
                else result:='';
     tabsheet.caption:=pseudoName(true)+result;
-    result:=APP_TITLE+' '+pseudoName(false)+result;
+    result:=APP_TITLE+' '+pseudoName(false)+result{$ifdef debugMode}+' [debug]'{$endif};
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
