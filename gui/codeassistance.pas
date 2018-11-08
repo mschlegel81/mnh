@@ -235,7 +235,7 @@ FUNCTION T_highlightingData.isErrorLocation(CONST lineIndex, tokenStart, tokenEn
     result:=0;
     for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
     if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
-      if isError then result:=2
+      if isError then exit(2)
       else if result<1 then result:=1;
     end;
   end;
