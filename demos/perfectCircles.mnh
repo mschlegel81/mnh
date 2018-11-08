@@ -42,12 +42,10 @@ plotCircles(k,circleStyle:String,gridStyle:String,zoom,rotate)->begin
   par[0]<1 ? par[0]:=1/par[0] : void;
   local i0:=floor(ln(1E-3/zoom)/ln(par[0]));
   local i1:=ceil (ln(3)/ln(par[0]));
-  local unitCircle:=map([0..100]/100*2*pi,{[sin($t),cos($t)]});
   plot();
   circleStyle=='' ? void :
   [i0..i1].pEach(i,[center(par,i).zoomRotate(zoom,rotate),radius(par,i)*zoom])
-          .pEach(x,[map(unitCircle,{x[0]+x[1]*$p}),circleStyle])
-          .map({addPlot@$p});
+          .pEach(x,x[0]-x[1],x[0]+x[1]).addPlot(circleStyle);
   gridStyle=='' ? void :
   [i0..i1].each(i,center(par,i).zoomRotate(zoom,rotate),center(par,i+1  ).zoomRotate(zoom,rotate),[Nan,Nan],
                   center(par,i).zoomRotate(zoom,rotate),center(par,i+k  ).zoomRotate(zoom,rotate),[Nan,Nan],
@@ -71,7 +69,7 @@ begin
   local z:=      findSolution(k)[0]^((2*k+1) /50);
   local p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
   (anim=='zoomin' ? [0..49] : [49..0])
-  .each(i,plotCircles(k,'orange polygon 0 fs','black',z^i,p*i),
+  .each(i,plotCircles(k,'orange ellipse 0 fs','black',z^i,p*i),
                  addAnimationFrame,
                  index=0 ? display : void);
 end;

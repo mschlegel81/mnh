@@ -814,6 +814,17 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
       if not(withBorder) then target.Pen.style:=psSolid;
     end;
 
+  PROCEDURE drawEllipse(CONST x0,y0,x1,y1:longint; CONST solid,withBorder:boolean);
+    begin
+      target.Brush.color:=scaleAndColor.solidColor;
+      if solid then target.Brush.style:=bsSolid
+               else target.Brush.style:=scaleAndColor.solidStyle;
+      if (target.Brush.style=bsClear) and not(withBorder) then exit;
+      if not(withBorder) then target.Pen.style:=psClear;
+      target.Ellipse(x0,y0,x1,y1);
+      if not(withBorder) then target.Pen.style:=psSolid;
+    end;
+
   PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid,withBorder:boolean);
     begin
       drawCustomQuad(x0,y0,
@@ -956,16 +967,36 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           end;
         end;
       end else if ps_box in row[rowId].style.style then begin
-        target.Pen.style:=psClear;
-        target.Brush.style:=bsSolid;
-        target.Brush.color:=scaleAndColor.solidColor;
+        target.Pen.style:=psSolid;
+        target.Pen.color:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
         lastWasValid:=false;
         i:=0;
         while i+1<length(screenRow) do begin
           if screenRow[i].valid and
              screenRow[i+1].valid then begin
-            target.FillRect(screenRow[i  ].x, screenRow[i  ].y,
-                            screenRow[i+1].x, screenRow[i+1].y);
+            drawCustomQuad(screenRow[i  ].x, screenRow[i  ].y,
+                           screenRow[i  ].x, screenRow[i+1].y,
+                           screenRow[i+1].x, screenRow[i+1].y,
+                           screenRow[i+1].x, screenRow[i  ].y,
+                           ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>0);
+          end;
+          inc(i, 2);
+        end;
+      end else if ps_ellipse in row[rowId].style.style then begin
+        target.Pen.style:=psSolid;
+        target.Pen.color:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+        lastWasValid:=false;
+        i:=0;
+        while i+1<length(screenRow) do begin
+          if screenRow[i].valid and
+             screenRow[i+1].valid then begin
+            drawEllipse(screenRow[i  ].x, screenRow[i  ].y,
+                        screenRow[i+1].x, screenRow[i+1].y,
+                        ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>0);
           end;
           inc(i, 2);
         end;

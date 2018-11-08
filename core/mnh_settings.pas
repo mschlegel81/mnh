@@ -39,7 +39,7 @@ T_fileHistory=object(T_serializable)
   PROCEDURE fileClosed(CONST fileName:ansistring);
   FUNCTION recentFolders:T_arrayOfString;
   FUNCTION historyItem(CONST index:longint):ansistring;
-  FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
+  FUNCTION findFiles(CONST rootPath:string; CONST additionalPaths:T_arrayOfString):T_arrayOfString;
 end;
 
 P_Settings=^T_settings;
@@ -280,13 +280,14 @@ FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
     sortUnique(result);
   end;
 
-FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
+FUNCTION T_fileHistory.findFiles(CONST rootPath:string; CONST additionalPaths:T_arrayOfString):T_arrayOfString;
   VAR allPathsToScan:T_arrayOfString;
       fileName:string;
       pathToScan:string;
       list:TStringList;
   begin
     allPathsToScan:=recentFolders;
+    for pathToScan in additionalPaths do appendIfNew(allPathsToScan,pathToScan);
     result:=listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
       list:=FindAllFiles(pathToScan+DirectorySeparator,'',false);

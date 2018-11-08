@@ -103,27 +103,17 @@ TYPE
       PROCEDURE clearFlagsForCodeAssistance;
   end;
 
-  T_abstractFileOutAdapter = object(T_collectingOutAdapter)
+  P_textFileOutAdapter = ^T_textFileOutAdapter;
+  T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
       outputFileName:ansistring;
       forceRewrite:boolean;
       lastOutput:double;
-      FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
-      PROCEDURE flush; virtual; abstract;
-    public
-      CONSTRUCTOR create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
-      DESTRUCTOR destroy; virtual;
-      FUNCTION append(CONST message: P_storedMessage):boolean; virtual;
-  end;
-
-  P_textFileOutAdapter = ^T_textFileOutAdapter;
-  T_textFileOutAdapter = object(T_abstractFileOutAdapter)
-    protected
-      FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
-      PROCEDURE flush; virtual;
+      FUNCTION flush:boolean;
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
+      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
 
   P_connectorAdapter=^T_connectorAdapter;
@@ -150,6 +140,7 @@ TYPE
       {$ifdef fullVersion}
       flags:T_stateFlags;
       {$endif}
+      FUNCTION flushAllFiles:boolean;
     public
       preferredEchoLineLength:longint;
       CONSTRUCTOR create;
@@ -202,6 +193,36 @@ VAR
 {$endif}
 OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
+VAR globalAdaptersCs:TRTLCriticalSection;
+    allConnectors:array of P_messageConnector;
+    finalizing:longint=0;
+    flushThreadsRunning:longint=0;
+
+FUNCTION fileFlushThread(p:pointer):ptrint;
+  VAR messageConnector:P_messageConnector;
+      k   :longint=0;
+  begin
+    while finalizing=0 do begin
+      if k>=10 then begin
+        enterCriticalSection(globalAdaptersCs);
+        for messageConnector in allConnectors do messageConnector^.flushAllFiles;
+        leaveCriticalSection(globalAdaptersCs);
+        k:=0;
+      end else inc(k);
+      sleep(100);
+    end;
+    result:=interlockedDecrement(flushThreadsRunning);
+  end;
+
+PROCEDURE ensureFileFlushThread;
+  begin
+    enterCriticalSection(globalAdaptersCs);
+    if flushThreadsRunning=0 then begin;
+      interLockedIncrement(flushThreadsRunning);
+      beginThread(@fileFlushThread);
+    end;
+    leaveCriticalSection(globalAdaptersCs);
+  end;
 
 OPERATOR :=(s:string):T_messageTypeSet;
   VAR i,level:longint;
@@ -240,14 +261,43 @@ OPERATOR :=(s:string):T_messageTypeSet;
   end;
 
 CONSTRUCTOR T_messageConnector.create;
+  PROCEDURE registerConnector(CONST c:P_messageConnector);
+    VAR i:longint;
+    begin
+      enterCriticalSection(globalAdaptersCs);
+      for i:=0 to length(allConnectors)-1 do if allConnectors[i]=c then begin
+        leaveCriticalSection(globalAdaptersCs);
+        exit;
+      end;
+      i:=length(allConnectors);
+      setLength(allConnectors,i+1);
+      allConnectors[i]:=c;
+      leaveCriticalSection(globalAdaptersCs);
+    end;
+
   begin
     initCriticalSection(connectorCS);
     setLength(adapters,0);
+    registerConnector(@self);
   end;
 
 DESTRUCTOR T_messageConnector.destroy;
+  PROCEDURE unregisterConnector(CONST c:P_messageConnector);
+    VAR i:longint;
+    begin
+      enterCriticalSection(globalAdaptersCs);
+      for i:=0 to length(allConnectors)-1 do if allConnectors[i]=c then begin
+        allConnectors[i]:=allConnectors[length(allConnectors)-1];
+        setLength(allConnectors,length(allConnectors)-1);
+        leaveCriticalSection(globalAdaptersCs);
+        exit;
+      end;
+      leaveCriticalSection(globalAdaptersCs);
+    end;
+
   VAR a:T_flaggedAdapter;
   begin
+    unregisterConnector(@self);
     enterCriticalSection(connectorCS);
     for a in adapters do if a.doDispose then dispose(a.adapter,destroy);
     setLength(adapters,0);
@@ -629,60 +679,15 @@ PROCEDURE T_collectingOutAdapter.clear;
     system.leaveCriticalSection(cs);
   end;
 //=======================================================:T_collectingOutAdapter
-//T_abstractFileOutAdapter:=====================================================
-CONSTRUCTOR T_abstractFileOutAdapter.create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
-  begin
-    inherited create(typ,messageTypesToInclude_);
-    outputFileName:=expandFileName(fileName);
-    forceRewrite:=forceNewFile;
-    lastOutput:=now;
-  end;
-
-DESTRUCTOR T_abstractFileOutAdapter.destroy;
-  begin
-    flush();
-    inherited destroy;
-  end;
-
-FUNCTION T_abstractFileOutAdapter.append(CONST message: P_storedMessage):boolean;
-  {$ifndef debugMode} CONST flushAt=10/(24*60*60); {$endif}//=10 seconds
-  begin
-    result:=inherited append(message);
-    if result {$ifndef debugMode} and ((now>lastOutput+flushAt) or (length(storedMessages)>=100)) {$endif} then begin
-      lastOutput:=now;
-      flush();
-    end;
-  end;
-
-FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
-  VAR newFullFileName:string;
-  begin
-    enterCriticalSection(cs);
-    newFullFileName:=expandFileName(newFileName);
-    if newFileName=outputFileName then begin
-      leaveCriticalSection(cs);
-      exit(false);
-    end;
-    lastOutput:=now;
-    flush();
-    outputFileName:=newFullFileName;
-    result:=true;
-    leaveCriticalSection(cs);
-  end;
-//=====================================================:T_abstractFileOutAdapter
 //T_textFileOutAdapter:=========================================================
-FUNCTION T_textFileOutAdapter.switchFile(CONST newFileName: string):boolean;
-  begin
-    result:=inherited switchFile(newFileName);
-  end;
-
-PROCEDURE T_textFileOutAdapter.flush;
+FUNCTION T_textFileOutAdapter.flush:boolean;
   VAR handle:text;
       s:string;
       m:P_storedMessage;
   begin
     enterCriticalSection(cs);
     if length(storedMessages)>0 then begin
+      result:=true;
       try
         assign(handle,outputFileName);
         if fileExists(outputFileName) and not(forceRewrite)
@@ -700,17 +705,29 @@ PROCEDURE T_textFileOutAdapter.flush;
         close(handle);
       except
       end;
-    end;
+    end else result:=false;
     leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
   begin
-    inherited create(at_textFile,fileName,messageTypesToInclude_,forceNewFile);
+    inherited create(at_textFile,messageTypesToInclude_);
+    outputFileName:=expandFileName(fileName);
+    forceRewrite:=forceNewFile;
+    lastOutput:=now;
+  end;
+
+FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
+  begin
+    result:=inherited append(message);
+    enterCriticalSection(cs);
+    if length(storedMessages)>100 then flush;
+    leaveCriticalSection(cs);
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin
+    flush;
     inherited destroy;
   end;
 //=========================================================:T_textFileOutAdapter
@@ -728,6 +745,22 @@ FUNCTION T_messageConnector.addOutfile(CONST fileNameAndOptions:ansistring; CONS
     addOutAdapter(result,true);
   end;
 
+FUNCTION T_messageConnector.flushAllFiles:boolean;
+  VAR a:T_flaggedAdapter;
+  begin
+    enterCriticalSection(connectorCS);
+    result:=false;
+    for a in adapters do try
+      if a.adapter^.adapterType=at_textFile
+      then begin
+        if P_textFileOutAdapter(a.adapter)^.flush
+        then result:=true;
+      end;
+    except
+    end;
+    leaveCriticalSection(connectorCS);
+  end;
+
 PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   begin
     enterCriticalSection(connectorCS);
@@ -735,6 +768,7 @@ PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST 
     adapters[length(adapters)-1].adapter:=p;
     adapters[length(adapters)-1].doDispose:=destroyIt;
     collecting:=collecting+p^.messageTypesToInclude;
+    if p^.adapterType=at_textFile then ensureFileFlushThread;
     leaveCriticalSection(connectorCS);
   end;
 
@@ -793,4 +827,10 @@ FUNCTION T_messageConnector.triggersBeep:boolean;
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  initCriticalSection(globalAdaptersCs);
+  setLength(allConnectors,0);
+FINALIZATION
+  interLockedIncrement(finalizing);
+  while flushThreadsRunning>0 do sleep(1);
+  doneCriticalSection(globalAdaptersCs);
 end.
