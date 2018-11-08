@@ -146,3 +146,22 @@ checkForUpdates(editorFile:String)->begin
     end;
   void;
 end;
+
+@utility=Show Cheat Sheet
+@SuppressUnusedParameterWarning
+showCheatSheet(editorFile:String)->print(
+"Strg + C\tcopy\tStrg + F\tfind",
+"\nStrg + V\tpaste\tStrg + R\treplace",
+"\nStrg + X\tcut\tF3\tfind next",
+"\nStrg + Y\tdelete line\tShift + F3\tfind previous",
+"\nStrg + Z\tundo",
+"\nStrg + Shift + Z\tredo\tStrg + Shift + B\ttoggle breakpoint",
+"\n\t\tStrg + Shift + [number]\ttoggle bookmark",
+"\nStrg + Shift + R\trename under cursor\tStrg + [number]\tjump to bookmark",
+"\nAlt + Up\tmove line/selection up\tStrg + G\tgoto line",
+"\nAlt + Down\tmove line/selection down\tStrg + Enter\tjump to declaration",
+"\nAlt + Shift + ...\tblock selection\tAlt + Enter\thighlight word under cursor",
+"\nStrg + I\tindent",
+"\nStrg + U\tunindent\tStrg + Shift + L\tconvert selection to lowercase",
+"\nStrg + Shift + C\ttoggle comment\tStrg + Shift + U\tcovert selection to uppercase",
+"\nStrg + Space\tcomplete");
