@@ -357,7 +357,6 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.OnKeyUp             :=EditKeyUp;
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
-    editor_.OnProcessUserCommand:=EditProcessUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
     editor_.OnPlaceBookmark     :=@onPlaceBookmark;
     editor_.OnClearBookmark     :=@onClearBookmark;
@@ -368,7 +367,7 @@ CONST editorMetaSerial=1417366168;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
   VAR lineCount,markCount:longint;
-      i,k,x,y:longint;
+      i:longint;
   begin
     create(idx);
     if not(stream.readDWord=editorMetaSerial) then begin //#0
@@ -404,7 +403,6 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       editorLine:string;
       saveChanged:boolean;
       k:longint;
-      x,y:longint;
   begin
     stream.writeDWord(editorMetaSerial); //#0
     if fileInfo.filePath=''

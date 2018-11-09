@@ -7,7 +7,7 @@ USES  //basic classes
   //GUI: LCL components
   Controls, Graphics, Menus, StdCtrls, Forms,
   //GUI: SynEdit
-  SynEdit, SynPluginMultiCaret, SynEditMiscClasses, SynEditKeyCmds,
+  SynEdit, SynPluginMultiCaret, SynEditMiscClasses, SynEditKeyCmds, SynEditTypes,
   //GUI: highlighters
   SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
@@ -370,7 +370,6 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
-    editor_.OnProcessUserCommand:=@processUserCommand;
   end;
 
 DESTRUCTOR T_basicEditorMeta.destroy;
@@ -568,17 +567,40 @@ PROCEDURE T_basicEditorMeta.setMarkedWord(CONST wordText: string);
 PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
   VAR txt:string;
       oldBegin,oldEnd,oldCaret:TPoint;
+      oldMode:TSynSelectionMode;
+      y:longint;
+      p0,p1:TPoint;
+
   begin
+    if editor.readonly then exit;
     oldBegin:=editor.BlockBegin;
     oldEnd  :=editor.BlockEnd;
     oldCaret:=editor.CaretXY;
-    txt:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
-    if upper then txt:=uppercase(txt)
-             else txt:=lowercase(txt);
-    editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,txt);
-    editor.BlockBegin:=oldBegin;
-    editor.BlockEnd  :=oldEnd  ;
-    editor.CaretXY   :=oldCaret;
+    oldMode :=editor.SelectionMode;
+
+    if oldMode=smColumn then begin
+      editor.BeginUndoBlock;
+      p0.x:=oldBegin.x;
+      p1.x:=oldEnd  .x;
+      for y:=oldBegin.y to oldEnd.y do begin
+        p0.y:=y;
+        p1.y:=y;
+        txt:=editor.TextBetweenPoints[p0,p1];
+        if upper then txt:=uppercase(txt)
+                 else txt:=lowercase(txt);
+        editor.SetTextBetweenPoints(p0,p1,txt);
+      end;
+      editor.EndUndoBlock;
+    end else begin
+      txt:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+      if upper then txt:=uppercase(txt)
+               else txt:=lowercase(txt);
+      editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,txt);
+    end;
+    editor.CaretXY      :=oldCaret;
+    editor.BlockBegin   :=oldBegin;
+    editor.BlockEnd     :=oldEnd  ;
+    editor.SelectionMode:=oldMode;
   end;
 
 FINALIZATION
