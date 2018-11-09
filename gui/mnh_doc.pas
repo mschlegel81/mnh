@@ -28,13 +28,14 @@ PROCEDURE makeHtmlFromTemplate();
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
+FUNCTION getDemosRoot:ansistring;
+FUNCTION getPackagesRoot:ansistring;
 PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
 FUNCTION isRestorable(CONST fileName:string):longint;
 PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
-    htmlRoot:ansistring;
 
 {$i res_defaultFiles.inc}
 PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
@@ -77,7 +78,9 @@ PROCEDURE restoreDefaultFile(CONST fileName:string);
     writeFile(fileName,fileContent);
   end;
 
-FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
+FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
+FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
+FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
 
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
   VAR newDoc:P_intrinsicFunctionDocumentation;
@@ -171,7 +174,7 @@ PROCEDURE ensureBuiltinDocExamples;
       end;
 
     begin
-      wrapper.createToWriteToFile(htmlRoot+EXAMPLES_CACHE_FILE);
+      wrapper.createToWriteToFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
       wrapper.writeAnsiString(CODE_HASH);
       wrapper.writeNaturalNumber(length(examplesToStore));
       for i:=0 to length(examplesToStore)-1 do for j:=0 to 3 do writeArrayOfString(examplesToStore[i,j]);
@@ -191,8 +194,8 @@ PROCEDURE ensureBuiltinDocExamples;
 
     VAR code,txt,html,ids:T_arrayOfString;
     begin
-      if not(fileExists(htmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
-      wrapper.createToReadFromFile(htmlRoot+EXAMPLES_CACHE_FILE);
+      if not(fileExists(getHtmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
+      wrapper.createToReadFromFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
       if not(wrapper.allOkay) then begin
         wrapper.destroy;
         exit(false);
@@ -426,7 +429,7 @@ PROCEDURE makeHtmlFromTemplate();
       if startsWith(tCmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
-          cmdParam:=htmlRoot+DirectorySeparator+cmdParam;
+          cmdParam:=getHtmlRoot+DirectorySeparator+cmdParam;
           if not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
             assign(handle,cmdParam);
             rewrite(handle);
@@ -494,8 +497,7 @@ PROCEDURE finalizeFunctionDocMap;
   end;
 
 INITIALIZATION
-  htmlRoot:=configDir+'doc';
-  if not(DirectoryExists(htmlRoot)) then CreateDir(htmlRoot);
+  if not(DirectoryExists(getHtmlRoot)) then CreateDir(getHtmlRoot);
   functionDocMap.create();
 FINALIZATION
   finalizeFunctionDocMap;

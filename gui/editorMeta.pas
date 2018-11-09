@@ -167,6 +167,7 @@ PROCEDURE finalizeEditorMeta;
 PROCEDURE saveWorkspace;
 PROCEDURE gotoMarker(markerIndex:longint);
 FUNCTION currentlyOpenFiles:T_arrayOfString;
+FUNCTION workspaceFilename:string;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
@@ -200,13 +201,18 @@ FUNCTION currentlyOpenFiles:T_arrayOfString;
     if meta^.enabled and meta^.isFile then append(result,meta^.fileInfo.filePath);
   end;
 
+FUNCTION workspaceFilename:string;
+  begin
+    result:=configDir+'workspace.0';
+  end;
+
 CONST workspaceSerialVersion=2661226501;
 FUNCTION loadWorkspace:boolean;
   VAR stream:T_bufferedInputStreamWrapper;
       i:longint;
       validMetaCount:longint=0;
   begin
-    stream.createToReadFromFile(configDir+'workspace.0');
+    stream.createToReadFromFile(workspaceFilename);
     fileHistory.create;
     if not(stream.readDWord=workspaceSerialVersion) then begin
       stream.destroy;
@@ -249,7 +255,7 @@ PROCEDURE saveWorkspace;
       pageIndex:longint=0;
       virtualEditorIndex:T_arrayOfLongint;
   begin
-    stream.createToWriteToFile(configDir+'workspace.0');
+    stream.createToWriteToFile(workspaceFilename);
     stream.writeDWord(workspaceSerialVersion);
     fileHistory.saveToStream(stream);
     pageIndex:=inputPageControl.activePageIndex;

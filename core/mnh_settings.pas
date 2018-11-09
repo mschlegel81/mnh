@@ -79,6 +79,7 @@ T_settings=object(T_serializable)
   PROPERTY loaded:boolean read wasLoaded;
 end;
 
+FUNCTION settingsFileName: string;
 PROCEDURE saveSettings;
 VAR settings:T_settings;
 IMPLEMENTATION

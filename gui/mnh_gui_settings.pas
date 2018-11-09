@@ -7,14 +7,18 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, ExtCtrls, mySys,mnh_funcs, mnh_out_adapters, mnh_constants,
-  mnh_packages,mnh_settings,mnh_doc;
+  mnh_packages,mnh_settings,mnh_doc,editorMeta;
 
 CONST MINIMUM_OUTPUT_LINES=16;
+      PORTABLE_BUTTON_CAPTION:array[false..true] of string=
+        ('Convert to normal (non-portable) version (removes file associations)',
+         'Convert to portable version (removes file associations)');
 TYPE
 
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    togglePortableButton: TButton;
     restorePacksAndDemosButton: TButton;
     installButton: TButton;
     Panel1: TPanel;
@@ -50,6 +54,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
+    PROCEDURE togglePortableButtonClick(Sender: TObject);
     PROCEDURE uninstallButtonClick(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
@@ -157,6 +162,8 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
     TabSheet_install.visible:=false;
     TabSheet_install.enabled:=false;
     TabSheet_install.tabVisible:=false;
+    {$else}
+    togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
     {$endif}
   end;
 
@@ -171,6 +178,49 @@ PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
   begin
     setOutputLimit(getOutputLimit);
   end;
+
+PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
+  {$ifdef Windows}
+  VAR sourceFolder:string;
+      oldWasNormal:boolean=false;
+      foldersToMove:array[0..2,0..1] of string;
+      filesToDelete:array[0..1] of string;
+      k:longint;
+      allOkay:boolean=true;
+  begin
+    sandbox^.runUninstallScript;
+    sourceFolder:=configDir;
+    foldersToMove[0,0]:=getHtmlRoot;
+    foldersToMove[1,0]:=getDemosRoot;
+    foldersToMove[2,0]:=getPackagesRoot;
+    filesToDelete[0]:=settingsFileName;
+    filesToDelete[1]:=workspaceFilename;
+    if APP_STYLE=APP_STYLE_NORMAL then begin
+      oldWasNormal:=true;
+      APP_STYLE:=APP_STYLE_PORTABLE;
+    end else begin
+      APP_STYLE:=APP_STYLE_NORMAL;
+    end;
+    foldersToMove[0,1]:=getHtmlRoot;
+    foldersToMove[1,1]:=getDemosRoot;
+    foldersToMove[2,1]:=getPackagesRoot;
+    try
+      for k:=0 to 2 do allOkay:=allOkay and CopyDirTree(foldersToMove[k,0],foldersToMove[k,1]);
+      for k:=0 to 1 do allOkay:=allOkay and DeleteFile(filesToDelete[k]);
+      if oldWasNormal then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
+      else for k:=0 to 2 do allOkay:=allOkay and DeleteDirectory(foldersToMove[k,0],false);
+    except
+      allOkay:=false;
+      if oldWasNormal
+      then APP_STYLE:=APP_STYLE_NORMAL
+      else APP_STYLE:=APP_STYLE_PORTABLE;
+    end;
+    saveSettings;
+    saveWorkspace;
+    ensureDemosAndPackages(false);
+    togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
+  end;
+  {$else}begin end;{$endif}
 
 PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
   VAR newValue:longint;
