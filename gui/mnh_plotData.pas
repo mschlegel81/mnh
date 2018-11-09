@@ -1007,10 +1007,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
-          if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
-                                                                            screenRow[i+2].x,screenRow[i+2].y);
-          if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
-                                                                            screenRow[i+3].x,screenRow[i+3].y);
+          if scaleAndColor.lineWidth>0 then begin
+            if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
+                                                                              screenRow[i+2].x,screenRow[i+2].y);
+            if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
+                                                                              screenRow[i+3].x,screenRow[i+3].y);
+          end;
           if screenRow[i  ].valid and screenRow[i+2].valid and
              screenRow[i+1].valid and screenRow[i+3].valid then
           drawCustomQuad(screenRow[i  ].x,screenRow[i  ].y,

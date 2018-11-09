@@ -324,6 +324,7 @@ PROCEDURE T_synOutAdapter.flushClear;
     clear;
     new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
     append(clearMessage);
+    disposeMessage(clearMessage);
     system.leaveCriticalSection(cs);
   end;
 
