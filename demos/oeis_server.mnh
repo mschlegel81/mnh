@@ -220,7 +220,7 @@ private synchronized resetTimeout(x)->begin
 end;
 
 private serve_(...)->'Unkown command: '&toString(...);
-serve(['stop'])->timeout:=time;
+serve(['stop'])->print('Stop signal received') orElse timeout:=time;
 serve(['download'])->resetTimeout(serve_('download'));
 serve(parameters)->begin
   local t0:=time;
