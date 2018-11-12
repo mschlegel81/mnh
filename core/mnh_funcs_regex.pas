@@ -281,6 +281,6 @@ INITIALIZATION
   regexCache.create(@disposeRegex)
 FINALIZATION
   regexCache.overrideDisposer(@hardDisposeRegex);
-  regexCache.destroy;
+  try regexCache.destroy; except end;
   doneCriticalSection(regexCacheCs);
 end.
