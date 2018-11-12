@@ -460,6 +460,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       if c<>nil then adapters.removeOutAdapter(c);
       globals.afterEvaluation;
       globals.primaryContext.finalizeTaskAndDetachFromParent;
+      callerContext^.messages.dropChild(@globals.primaryContext.messages);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;

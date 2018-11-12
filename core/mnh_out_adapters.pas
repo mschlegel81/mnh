@@ -411,26 +411,35 @@ PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
   end;
 
 PROCEDURE T_threadLocalMessages.dropChild(CONST child: P_threadLocalMessages);
-  VAR i:longint=0;
+  VAR i,j:longint;
   begin
     enterCriticalSection(cs);
-    while i<length(childMessages) do
-    if childMessages[i]=child then begin
-      childMessages[i]:=childMessages[length(childMessages)-1];
+    for i:=length(childMessages)-1 downto 0 do if pointer(childMessages[i])=pointer(child) then begin
+      for j:=i to length(childMessages)-2 do childMessages[j]:=childMessages[j+1];
       setLength(childMessages,length(childMessages)-1);
-    end else inc(i);
+      leaveCriticalSection(cs);
+      exit;
+    end;
     leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_threadLocalMessages.addChild(CONST child: P_threadLocalMessages);
-  VAR i:longint=0;
+  VAR {$ifdef debugMode}i:longint=0;{$endif}
+      k:longint;
   begin
     enterCriticalSection(cs);
-    while (i<length(childMessages)) and (childMessages[i]<>child) do inc(i);
-    if i=length(childMessages) then begin
+    {$ifdef debugMode}
+    k:=length(childMessages);
+    while (i<k) and (childMessages[i]<>child) do inc(i);
+    if i=k then begin
       setLength(childMessages,i+1);
       childMessages[i]:=child;
-    end;
+    end else raise Exception.create('Added child a second time in T_threadLocalMessages.addChild');
+    {$else}
+    k:=length(childMessages);
+    setLength(childMessages,k+1);
+    childMessages[k]:=child;
+    {$endif}
     leaveCriticalSection(cs);
   end;
 

@@ -706,15 +706,18 @@ PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext; CON
 
 PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
   VAR k:longint=0;
+      j:longint;
   begin
     enterCriticalSection(contextCS);
     with related do
-    while k<length(children) do
+    for k:=length(children)-1 downto 0 do
     if children[k]=context then begin
-      children[k]:=children[length(children)-1];
+      for j:=k to length(children)-2 do children[j]:=children[j+1];
       setLength(children,length(children)-1);
       context^.messages.setParent(nil);
-    end else inc(k);
+      leaveCriticalSection(contextCS);
+      exit;
+    end;
     leaveCriticalSection(contextCS);
   end;
 
@@ -723,10 +726,13 @@ PROCEDURE T_threadContext.addChildContext(CONST context: P_threadContext);
   begin
     enterCriticalSection(contextCS);
     with related do begin
+      {$ifdef debugMode}
       for k:=0 to length(children)-1 do if children[k]=context then begin
         leaveCriticalSection(contextCS);
+        raise Exception.create('adding duplicate child context in T_threadContext.addChildContext');
         exit;
       end;
+      {$endif}
       k:=length(children);
       setLength(children,k+1);
       children[k]:=context;
