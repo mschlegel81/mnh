@@ -596,6 +596,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     end;
 
   PROCEDURE process_op_lit; {$ifndef debugMode} inline;{$endif}
+    VAR trueLit:boolean;
     begin
       case cTokType[1] of
         tt_comparatorEq..tt_operatorConcatAlt:
@@ -622,7 +623,11 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             didSubstitution:=true;
           end;
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
-          begin
+          if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
+            trueLit:=P_literal(first^.data)=@boolLit[true];
+            stack.push(first);
+            resolveInlineIf(trueLit);
+          end else begin
             case cTokType[-1] of
               tt_unaryOpMinus ,
               tt_unaryOpNegate,
