@@ -44,7 +44,7 @@ TYPE
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
-      PROCEDURE resolveIds(CONST adapters:P_threadLocalMessages); virtual;
+      PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_threadLocalMessages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer):boolean;

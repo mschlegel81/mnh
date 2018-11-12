@@ -196,7 +196,7 @@ VAR globalAdaptersCs:TRTLCriticalSection;
     finalizing:longint=0;
     flushThreadsRunning:longint=0;
 
-FUNCTION fileFlushThread(p:pointer):ptrint;
+FUNCTION fileFlushThread({$WARN 5024 OFF}p:pointer):ptrint;
   VAR messageConnector:P_messageConnector;
       k   :longint=0;
   begin

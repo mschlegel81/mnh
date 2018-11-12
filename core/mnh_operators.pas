@@ -83,7 +83,7 @@ FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-FUNCTION unaryNoOp(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     result:=x^.rereferenced;
   end;

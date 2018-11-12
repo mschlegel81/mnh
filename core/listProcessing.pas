@@ -21,7 +21,7 @@ TYPE
       CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE executeInContext(CONST context:P_threadContext);
   end;
 

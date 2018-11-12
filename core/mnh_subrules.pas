@@ -38,7 +38,7 @@ TYPE
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST threadLocalMessages:P_threadLocalMessages); virtual;
-      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+      FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
   end;

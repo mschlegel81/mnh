@@ -725,7 +725,8 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
   end;
 
 PROCEDURE T_editorMeta.clearBookmark(markIndex:longint);
-  VAR x,y:longint;
+  VAR x:longint=0;
+      y:longint=0;
   begin
     if editor_.GetBookMark(markIndex,x,y) then editor_.ClearBookMark(markIndex);
   end;
