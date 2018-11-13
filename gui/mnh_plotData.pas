@@ -35,8 +35,8 @@ TYPE
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      customText:T_customText;
-      CONSTRUCTOR create(CONST cText:T_customText);
+      customText:P_customText;
+      CONSTRUCTOR create(CONST cText:P_customText);
   end;
 
   P_plotOptionsMessage=^T_plotOptionsMessage;
@@ -100,7 +100,7 @@ TYPE
       cs: TRTLCriticalSection;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
-      customText:array of T_customText;
+      customText:array of P_customText;
       transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
@@ -111,7 +111,7 @@ TYPE
 
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
-      PROCEDURE addCustomText(CONST text:T_customText);
+      PROCEDURE addCustomText(CONST text:P_customText);
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -376,7 +376,7 @@ FUNCTION T_addTextMessage.internalType: shortstring;
     result:='T_addTextMessage';
   end;
 
-CONSTRUCTOR T_addTextMessage.create(CONST cText: T_customText);
+CONSTRUCTOR T_addTextMessage.create(CONST cText: P_customText);
   begin
     inherited create(mt_plot_addText);
     customText:=cText;
@@ -672,6 +672,7 @@ PROCEDURE T_plot.clear;
     system.enterCriticalSection(cs);
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row, 0);
+    for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
     setLength(customText,0);
     transparentCount:=0;
     system.leaveCriticalSection(cs);
@@ -699,7 +700,7 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.addCustomText(CONST text: T_customText);
+PROCEDURE T_plot.addCustomText(CONST text: P_customText);
   begin
     system.enterCriticalSection(cs);
     setLength(customText,length(customText)+1);
@@ -843,7 +844,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
     target.FillRect(0, 0, intendedWidth*scalingFactor-1, intendedHeight*scalingFactor-1);
-    target.clear;
+
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
     target.Pen.style:=psSolid;
@@ -1101,52 +1102,56 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
     target.UnlockCanvas;
   end;
 
-PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,
-  intendedHeight: longint);
-  VAR txt:T_customText;
+PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint);
+  VAR txt:P_customText;
   begin
-    for txt in customText do txt.renderText(intendedWidth,intendedHeight,scalingOptions,target);
+    for txt in customText do txt^.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
 PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
-    target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
-    target.Font.color:=clBlack;
-    cSysX:=scalingOptions.axisTrafo['x'].screenMin;
-    cSysY:=scalingOptions.axisTrafo['y'].screenMin;
-    //clear border:-----------------------------------------------------------
-    target.Brush.style:=bsSolid;
-    target.Brush.color:=clWhite;
-    target.Pen.style:=psClear;
-    target.Pen.width:=1;
-    target.Pen.EndCap:=pecSquare;
-    if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
-    if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
-    //-----------------------------------------------------------:clear border
-    //coordinate system:======================================================
-    //axis:-------------------------------------------------------------------
-    target.Pen.style:=psSolid;
-    target.Pen.color:=clBlack;
-    target.Pen.width:=1;
-    if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
-    if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
-    //-------------------------------------------------------------------:axis
-    //tics:-------------------------------------------------------------------
-    if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
-      y:=round(pos);
-      target.line(cSysX-5, y, cSysX, y);
-      target.textOut(cSysX-5-target.TextWidth(txt),
-                          y-target.TextHeight(txt) shr 1, txt);
+    enterCriticalSection(globalTextRenderingCs);
+    try
+      target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
+      target.Font.color:=clBlack;
+      cSysX:=scalingOptions.axisTrafo['x'].screenMin;
+      cSysY:=scalingOptions.axisTrafo['y'].screenMin;
+      //clear border:-----------------------------------------------------------
+      target.Brush.style:=bsSolid;
+      target.Brush.color:=clWhite;
+      target.Pen.style:=psClear;
+      target.Pen.width:=1;
+      target.Pen.EndCap:=pecSquare;
+      if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
+      if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
+      //-----------------------------------------------------------:clear border
+      //coordinate system:======================================================
+      //axis:-------------------------------------------------------------------
+      target.Pen.style:=psSolid;
+      target.Pen.color:=clBlack;
+      target.Pen.width:=1;
+      if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
+      if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
+      //-------------------------------------------------------------------:axis
+      //tics:-------------------------------------------------------------------
+      if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
+        y:=round(pos);
+        target.line(cSysX-5, y, cSysX, y);
+        target.textOut(cSysX-5-target.TextWidth(txt),
+                            y-target.TextHeight(txt) shr 1, txt);
+      end;
+      if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
+        x:=round(pos);
+        target.line(x, cSysY+5, x, cSysY);
+        target.textOut(x-target.TextWidth(txt) shr 1, cSysY+5, txt);
+      end;
+      //-------------------------------------------------------------------:tics
+      //======================================================:coordinate system
+    finally
+      leaveCriticalSection(globalTextRenderingCs);
     end;
-    if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
-      x:=round(pos);
-      target.line(x, cSysY+5, x, cSysY);
-      target.textOut(x-target.TextWidth(txt) shr 1, cSysY+5, txt);
-    end;
-    //-------------------------------------------------------------------:tics
-    //======================================================:coordinate system
   end;
 
 PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
@@ -1299,9 +1304,9 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
       row[i].style:=p.row[i].style;
     end;
     //:copy rows | copy custom text:
-    for i:=0 to length(customText)-1 do customText[i].destroy;
+    for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
     setLength(customText,length(p.customText));
-    for i:=0 to length(customText)-1 do customText[i]:=p.customText[i].clone;
+    for i:=0 to length(customText)-1 do customText[i]:=p.customText[i]^.clone;
     //:copy custom text
     system.leaveCriticalSection(p.cs);
     system.leaveCriticalSection(cs);
