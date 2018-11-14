@@ -291,7 +291,9 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quali
         tempIntfImage.free;
       end;
     end else begin
+      enterCriticalSection(globalTextRenderingCs);
       if image<>nil then FreeAndNil(image);
+      leaveCriticalSection(globalTextRenderingCs);
       image:=plotData.obtainPlot(width,height,quality);
       dumpIsUpToDate:=false;
       renderedQuality:=quality;
@@ -599,7 +601,9 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     storeImage.SetInitialBounds(0,0,width,height);
     frame[index]^.obtainImage(storeImage,quality);
     storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+    enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
+    leaveCriticalSection(globalTextRenderingCs);
     frame[index]^.clearImage(false);
     leaveCriticalSection(seriesCs);
   end;
@@ -1114,6 +1118,9 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
+      {$ifdef debugMode}
+      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
+      {$endif}
       target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
       target.Font.color:=clBlack;
       cSysX:=scalingOptions.axisTrafo['x'].screenMin;
@@ -1139,17 +1146,18 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
       if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
         y:=round(pos);
         target.line(cSysX-5, y, cSysX, y);
-        target.textOut(cSysX-5-target.TextWidth(txt),
-                            y-target.TextHeight(txt) shr 1, txt);
+        target.textOut(cSysX-5-target.textWidth(txt),
+                            y-target.textHeight(txt) shr 1, txt);
       end;
       if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
         x:=round(pos);
         target.line(x, cSysY+5, x, cSysY);
-        target.textOut(x-target.TextWidth(txt) shr 1, cSysY+5, txt);
+        target.textOut(x-target.textWidth(txt) shr 1, cSysY+5, txt);
       end;
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system
     finally
+      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
       leaveCriticalSection(globalTextRenderingCs);
     end;
   end;
@@ -1212,7 +1220,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
             drawCoordSys(renderImage[0].Canvas,plotImage.width,plotImage.height,gridTics);
             drawCustomText(renderImage[0].Canvas,plotImage.width,plotImage.height);
             scale(renderImage[0],plotImage,1);
+            enterCriticalSection(globalTextRenderingCs);
             renderImage[0].destroy;
+            leaveCriticalSection(globalTextRenderingCs);
           end;
         PLOT_QUALITY_MEDIUM_1:
           begin
@@ -1220,7 +1230,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
             renderImage[0].SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
             drawGridAndRows(renderImage[0].Canvas,plotImage.width,plotImage.height,2,gridTics,SINGLE_SAMPLE_INDEX);
             scale(renderImage[0],plotImage,0.5);
+            enterCriticalSection(globalTextRenderingCs);
             renderImage[0].destroy;
+            leaveCriticalSection(globalTextRenderingCs);
             drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
             drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
@@ -1232,7 +1244,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
               drawGridAndRows(renderImage[k].Canvas,plotImage.width,plotImage.height,1,gridTics,k);
             end;
             avgRenderImages;
+            enterCriticalSection(globalTextRenderingCs);
             for k:=0 to 3 do renderImage[k].destroy;
+            leaveCriticalSection(globalTextRenderingCs);
             drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
             drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
@@ -1246,9 +1260,13 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
               renderImage[k].SetInitialBounds(0,0,plotImage.width,plotImage.height);
               scale(temp,renderImage[k],0.5);
             end;
+            enterCriticalSection(globalTextRenderingCs);
             temp.destroy;
+            leaveCriticalSection(globalTextRenderingCs);
             avgRenderImages;
+            enterCriticalSection(globalTextRenderingCs);
             for k:=0 to 3 do renderImage[k].destroy;
+            leaveCriticalSection(globalTextRenderingCs);
             drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
             drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
@@ -1271,7 +1289,9 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height,
   begin
     storeImage:=obtainPlot(width,height,supersampling);
     storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+    enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
+    leaveCriticalSection(globalTextRenderingCs);
   end;
 
 FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
@@ -1284,7 +1304,9 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     memStream.position:=0;
     result:=memStream.DataString;
     memStream.free;
+    enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
+    leaveCriticalSection(globalTextRenderingCs);
   end;
 
 PROCEDURE T_plot.copyFrom(VAR p: T_plot);

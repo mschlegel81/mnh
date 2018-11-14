@@ -40,7 +40,7 @@ FUNCTION sleepUntil_imp intFuncSignature;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleepUntil',tokenLocation,[se_sleep]) then begin
       result:=newVoidLiteral;
       case arg0^.literalType of
         lt_smallint: sleepUntil:=P_smallIntLiteral(arg0)^.value;

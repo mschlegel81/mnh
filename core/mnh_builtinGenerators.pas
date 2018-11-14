@@ -495,7 +495,7 @@ TYPE
   T_primeGenerator=object(T_builtinGeneratorExpression)
     private
       CONST
-        CHUNK_SIZE_LOG2=12;
+        CHUNK_SIZE_LOG2=16;
         CHUNK_SIZE=1 shl CHUNK_SIZE_LOG2;
       VAR table:array of bitpacked array[0..CHUNK_SIZE-1] of boolean;
       index:int64;

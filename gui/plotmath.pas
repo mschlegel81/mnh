@@ -125,6 +125,9 @@ TYPE
   end;
 
 VAR globalTextRenderingCs:TRTLCriticalSection;
+    {$ifdef debugMode}
+    activeTextRenderers:longint=0;
+    {$endif}
 IMPLEMENTATION
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
@@ -217,10 +220,8 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       toPaint:T_rowToPaint;
       x,y,
       i,k,
-      TextWidth,TextHeight:longint;
-      oldFont:string;
-      oldFontSize:longint;
-      oldFontColor:longint;
+      textWidth,textHeight:longint;
+      oldFont:TFont;
   begin
     if length(text)=0 then exit;
 
@@ -242,11 +243,12 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
     end;
     enterCriticalSection(globalTextRenderingCs);
     try
-      oldFont     :=target.Font.name ;
-      oldFontColor:=target.Font.color;
-      oldFontSize :=target.Font.size ;
+      {$ifdef debugMode}
+      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
+      {$endif}
+      oldFont     :=target.Font;
 
-      if fontName<>'' then target.Font.name:=fontName;
+      if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
       if isNan(fontSize) then target.Font.size:=absFontSize(xRes,yRes,opt.relativeFontSize)
                          else target.Font.size:=absFontSize(xRes,yRes,            fontSize);
       target.Font.color:=foreground;
@@ -256,41 +258,42 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
         target.Brush.color:=background;
       end;
 
-      TextWidth :=0;
-      TextHeight:=0;
+      textWidth :=0;
+      textHeight:=0;
       for k:=0 to length(text)-1 do begin
         try
-          i:=target.TextWidth(text[k]);
+          i:=target.textWidth(text[k]);
         except
           i:=0;
         end;
-        if i>TextWidth then TextWidth:=i;
+        if i>textWidth then textWidth:=i;
         try
-          inc(TextHeight,target.TextHeight(text[k]));
+          inc(textHeight,target.textHeight(text[k]));
         except
         end;
       end;
 
       case anchor of
-        cta_bottomLeft,cta_bottom,cta_bottomRight:dec(y,TextHeight      );
-        cta_centerLeft,cta_center,cta_centerRight:dec(y,TextHeight shr 1);
+        cta_bottomLeft,cta_bottom,cta_bottomRight:dec(y,textHeight      );
+        cta_centerLeft,cta_center,cta_centerRight:dec(y,textHeight shr 1);
       end;
       case anchor of
-        cta_topRight,cta_centerRight,cta_bottomRight:dec(x,TextWidth      );
-        cta_top     ,cta_center     ,cta_bottom     :dec(x,TextWidth shr 1);
+        cta_topRight,cta_centerRight,cta_bottomRight:dec(x,textWidth      );
+        cta_top     ,cta_center     ,cta_bottom     :dec(x,textWidth shr 1);
       end;
       target.Pen.style:=psClear;
-      if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+TextWidth,y+TextHeight);
-      for k:=0 to length(text)-1 do begin
-        target.textOut(x,
-                       y,
-                       text[k]);
-        inc(y,target.TextHeight(text[k]));
+      if (x<=xRes) and (x+textWidth>=0) and (y<=yRes) and (y+textHeight>=0) then begin
+        if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+textWidth,y+textHeight);
+        for k:=0 to length(text)-1 do begin
+          target.textOut(x,
+                         y,
+                         text[k]);
+          inc(y,target.textHeight(text[k]));
+        end;
       end;
-      target.Font.name :=oldFont     ;
-      target.Font.color:=oldFontColor;
-      target.Font.size :=oldFontSize ;
+      target.Font:=oldFont;
     finally
+      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
       leaveCriticalSection(globalTextRenderingCs);
     end;
   end;
@@ -626,12 +629,21 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
   FUNCTION updateBorders:boolean;
     VAR newX0,newY0:longint;
     begin
-      if gse_tics in axisStyle['y']
-      then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
-      else newX0:=0;
-      if gse_tics in axisStyle['x']
-      then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
-      else newY0:=aimHeight;
+      enterCriticalSection(globalTextRenderingCs);
+      try
+        {$ifdef debugMode}
+        if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
+        {$endif}
+        if gse_tics in axisStyle['y']
+        then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
+        else newX0:=0;
+        if gse_tics in axisStyle['x']
+        then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
+        else newY0:=aimHeight;
+      finally
+        {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
+        leaveCriticalSection(globalTextRenderingCs);
+      end;
 
       result:=(axisTrafo['x'].screenRange[0]<newX0-20) or
               (axisTrafo['x'].screenRange[0]>newX0   ) or
@@ -666,7 +678,16 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
 
   VAR axis:char;
   begin
-    Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
+    enterCriticalSection(globalTextRenderingCs);
+    try
+      {$ifdef debugMode}
+      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
+      {$endif}
+      Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
+    finally
+      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
+      leaveCriticalSection(globalTextRenderingCs);
+    end;
     ticSampleText:='.0E12';
     updateBorders;
     prepareRanges;
@@ -783,10 +804,10 @@ PROCEDURE T_axisTrafo.setWorldRange(CONST x0, x1: double);
         rangeByAutosize[1]:=x1;
       end;
     end else begin
-      xc:=(x0+x1)*0.5;
-      if x1<x0+abs(xc)*0.00001 then begin
-        rangeByAutosize[0]:=xc-abs(xc)*0.000005;
-        rangeByAutosize[1]:=xc+abs(xc)*0.000005;
+      if x1<=x0 then begin
+        xc:=(x0+x1)*0.5;
+        rangeByAutosize[0]:=xc-5E-8;
+        rangeByAutosize[1]:=xc+5E-8;
       end else begin
         rangeByAutosize[0]:=x0;
         rangeByAutosize[1]:=x1;

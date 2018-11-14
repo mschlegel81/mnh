@@ -288,7 +288,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
     editor_.RightEdge:=-1;
     editor_.Keystrokes.clear;
     editor_.BookMarkOptions.GlyphsVisible:=Assigned(bookmarkImages);
-    editor_.BookMarkOptions.BookmarkImages:=bookmarkImages;
+    editor_.BookMarkOptions.bookmarkImages:=bookmarkImages;
     addKeystroke(ecUp,38);
     addKeystroke(ecSelUp,8230);
     addKeystroke(ecScrollUp,16422);
