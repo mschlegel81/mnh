@@ -142,7 +142,7 @@ FUNCTION sqr_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context);
         lt_error: begin result:=x; result^.rereference; end;
-        lt_smallint : result:=newIntLiteral(sqr(P_smallIntLiteral (x)^.value));
+        lt_smallint : result:=newIntLiteral(sqr(int64(P_smallIntLiteral (x)^.value)));
         lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(x)^.value.mult(
                                             P_bigIntLiteral(x)^.value));
         lt_real: result:=newRealLiteral(sqr(P_realLiteral(x)^.value));
