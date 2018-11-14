@@ -103,6 +103,7 @@ TYPE
                       cta_centerLeft,cta_center,cta_centerRight,
                       cta_bottomLeft,cta_bottom,cta_bottomRight);
 
+  P_customText=^T_customText;
   T_customText=object
     text      :T_arrayOfString;
     fontName  :string;
@@ -115,7 +116,7 @@ TYPE
     absolutePosition:boolean;
 
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
-    FUNCTION clone:T_customText;
+    FUNCTION clone:P_customText;
     DESTRUCTOR destroy;
     PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TCanvas);
     PROCEDURE setAnchor(CONST s:string);
@@ -123,6 +124,7 @@ TYPE
     PROCEDURE setBackground(CONST r,g,b:double);
   end;
 
+VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
@@ -181,19 +183,29 @@ CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
     absolutePosition:=false;
   end;
 
-FUNCTION T_customText.clone:T_customText;
+FUNCTION T_customText.clone:P_customText;
+  VAR clonedText:T_arrayOfString;
+      i:longint;
   begin
-    result.create(p[0],p[1],text);
-    result.fontName             :=fontName;
-    result.anchor               :=anchor;
-    result.fontSize             :=fontSize;
-    result.foreground           :=foreground;
-    result.background           :=background;
-    result.transparentBackground:=transparentBackground;
-    result.absolutePosition     :=absolutePosition;
+    setLength(clonedText,length(text));
+    for i:=0 to length(clonedText)-1 do clonedText[i]:=text[i];
+    new(result,create(p[0],p[1],clonedText));
+    result^.fontName             :=fontName;
+    result^.anchor               :=anchor;
+    result^.fontSize             :=fontSize;
+    result^.foreground           :=foreground;
+    result^.background           :=background;
+    result^.transparentBackground:=transparentBackground;
+    result^.absolutePosition     :=absolutePosition;
   end;
 
-DESTRUCTOR T_customText.destroy; begin end;
+DESTRUCTOR T_customText.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(text)-1 do text[i]:='';
+    setLength(text,0);
+    fontName:='';
+  end;
 
 FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint;
   begin
@@ -226,48 +238,61 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       x:=toPaint[0].x;
       y:=toPaint[0].y;
       if not(toPaint[0].valid) then exit;
+      tempRow.free;
     end;
+    enterCriticalSection(globalTextRenderingCs);
+    try
+      oldFont     :=target.Font.name ;
+      oldFontColor:=target.Font.color;
+      oldFontSize :=target.Font.size ;
 
-    oldFont     :=target.Font.name ;
-    oldFontColor:=target.Font.color;
-    oldFontSize :=target.Font.size ;
+      if fontName<>'' then target.Font.name:=fontName;
+      if isNan(fontSize) then target.Font.size:=absFontSize(xRes,yRes,opt.relativeFontSize)
+                         else target.Font.size:=absFontSize(xRes,yRes,            fontSize);
+      target.Font.color:=foreground;
+      if transparentBackground then target.Brush.style:=bsClear
+      else begin
+        target.Brush.style:=bsSolid;
+        target.Brush.color:=background;
+      end;
 
-    if fontName<>'' then target.Font.name:=fontName;
-    if isNan(fontSize) then target.Font.size:=absFontSize(xRes,yRes,opt.relativeFontSize)
-                       else target.Font.size:=absFontSize(xRes,yRes,            fontSize);
-    target.Font.color:=foreground;
-    if transparentBackground then target.Brush.style:=bsClear
-    else begin
-      target.Brush.style:=bsSolid;
-      target.Brush.color:=background;
-    end;
+      TextWidth :=0;
+      TextHeight:=0;
+      for k:=0 to length(text)-1 do begin
+        try
+          i:=target.TextWidth(text[k]);
+        except
+          i:=0;
+        end;
+        if i>TextWidth then TextWidth:=i;
+        try
+          inc(TextHeight,target.TextHeight(text[k]));
+        except
+        end;
+      end;
 
-    TextWidth :=0;
-    TextHeight:=0;
-    for k:=0 to length(text)-1 do begin
-      i:=target.TextWidth (text[k]); if i>TextWidth then TextWidth:=i;
-      inc(TextHeight,target.TextHeight(text[k]));
+      case anchor of
+        cta_bottomLeft,cta_bottom,cta_bottomRight:dec(y,TextHeight      );
+        cta_centerLeft,cta_center,cta_centerRight:dec(y,TextHeight shr 1);
+      end;
+      case anchor of
+        cta_topRight,cta_centerRight,cta_bottomRight:dec(x,TextWidth      );
+        cta_top     ,cta_center     ,cta_bottom     :dec(x,TextWidth shr 1);
+      end;
+      target.Pen.style:=psClear;
+      if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+TextWidth,y+TextHeight);
+      for k:=0 to length(text)-1 do begin
+        target.textOut(x,
+                       y,
+                       text[k]);
+        inc(y,target.TextHeight(text[k]));
+      end;
+      target.Font.name :=oldFont     ;
+      target.Font.color:=oldFontColor;
+      target.Font.size :=oldFontSize ;
+    finally
+      leaveCriticalSection(globalTextRenderingCs);
     end;
-
-    case anchor of
-      cta_bottomLeft,cta_bottom,cta_bottomRight:dec(y,TextHeight      );
-      cta_centerLeft,cta_center,cta_centerRight:dec(y,TextHeight shr 1);
-    end;
-    case anchor of
-      cta_topRight,cta_centerRight,cta_bottomRight:dec(x,TextWidth      );
-      cta_top     ,cta_center     ,cta_bottom     :dec(x,TextWidth shr 1);
-    end;
-    target.Pen.style:=psClear;
-    if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+TextWidth,y+TextHeight);
-    for k:=0 to length(text)-1 do begin
-      target.textOut(x,
-                     y,
-                     text[k]);
-      inc(y,target.TextHeight(text[k]));
-    end;
-    target.Font.name :=oldFont     ;
-    target.Font.color:=oldFontColor;
-    target.Font.size :=oldFontSize ;
   end;
 
 PROCEDURE T_customText.setAnchor(CONST s: string);
@@ -871,5 +896,11 @@ FUNCTION T_axisTrafo.sampleIsInRange(CONST x: double): boolean;
   begin
     result:=not(isNan(x)) and (x>=rangeByAutosize[0]) and (x<=rangeByAutosize[1]);
   end;
+
+INITIALIZATION
+  initCriticalSection(globalTextRenderingCs);
+FINALIZATION
+  doneCriticalSection(globalTextRenderingCs);
+
 end.
 

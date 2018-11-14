@@ -167,7 +167,7 @@ TYPE
     public
       FUNCTION prefix:shortstring;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
-      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
+      FUNCTION toString({$WARN 5024 OFF}{$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
 

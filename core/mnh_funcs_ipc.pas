@@ -199,6 +199,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
           messageHash:T_hashInt;
         end;
     begin with P_myIpcServer(p)^ do begin
+      request.payload:=nil;
       //Even unique-instance-marker-servers should fetch messages from time to time
       if (servingContextOrNil<>nil) and
          readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages) and
@@ -224,7 +225,10 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         end;
         //------------------------------------------------:respond
         result:=true;
-      end else result:=false;
+      end else begin
+        if request.payload<>nil then disposeLiteral(request.payload);
+        result:=false;
+      end;
     end; end;
 
   begin

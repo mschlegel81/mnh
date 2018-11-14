@@ -42,7 +42,7 @@ TYPE
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       {$ifdef fullVersion}
-      FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
+      FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
   end;

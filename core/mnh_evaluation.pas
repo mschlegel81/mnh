@@ -596,6 +596,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     end;
 
   PROCEDURE process_op_lit; {$ifndef debugMode} inline;{$endif}
+    VAR trueLit:boolean;
     begin
       case cTokType[1] of
         tt_comparatorEq..tt_operatorConcatAlt:
@@ -622,7 +623,11 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             didSubstitution:=true;
           end;
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
-          begin
+          if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
+            trueLit:=P_literal(first^.data)=@boolLit[true];
+            stack.push(first);
+            resolveInlineIf(trueLit);
+          end else begin
             case cTokType[-1] of
               tt_unaryOpMinus ,
               tt_unaryOpNegate,
@@ -853,8 +858,8 @@ end}
       debugRun:=debugRun and context.stepping(first,@stack);
       {$endif}
       case cTokType[0] of
-        tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
-          tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
+{cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+ {cT[-1]=}tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
             and (stack.topIndex>0) and (stack.dat[stack.topIndex-1]^.tokType=tt_literal) then begin
             // <Lit> . # {$x}
             stack.popLink(first);
@@ -863,7 +868,7 @@ end}
             initTokTypes;
             pon_flip;
           end;
-          tt_listToParameterList: if P_literal(first^.data)^.literalType in C_listTypes then begin
+ {cT[-1]=}tt_listToParameterList: if P_literal(first^.data)^.literalType in C_listTypes then begin
             stack.popDestroy;
             first^.tokType:=tt_parList;
             stack.popLink(first);
@@ -874,7 +879,7 @@ end}
             end;
             didSubstitution:=true;
           end;
-          tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
+ {cT[-1]=}tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
               newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
@@ -891,9 +896,9 @@ end}
               didSubstitution:=true;
             end else process_op_lit;
           end;
-          tt_operatorIn..tt_operatorConcatAlt,
+ {cT[-1]=}tt_operatorIn..tt_operatorConcatAlt,
           tt_unaryOpPlus,tt_unaryOpMinus,tt_unaryOpNegate: process_op_lit;
-          tt_braceOpen : case cTokType[1] of // ( | <Lit>
+ {cT[-1]=}tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack.popDestroy;
               first^.next:=disposeToken(first^.next);
@@ -904,7 +909,7 @@ end}
             FORBIDDEN_SEPARATORS;
             else context.messages.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
           end;
-          tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
+ {cT[-1]=}tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
                 P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context.messages,
@@ -982,7 +987,7 @@ end}
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
           end;
-          tt_parList_constructor: case cTokType[1] of
+ {cT[-1]=}tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.append(first^.data,true);
               stack.dat[stack.topIndex]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
@@ -1002,7 +1007,7 @@ end}
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
           end;
-          tt_mutate: case cTokType[1] of
+ {cT[-1]=}tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then begin
                 {$ifdef fullVersion}
@@ -1025,7 +1030,7 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: case cTokType[1] of
+ {cT[-1]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=disposeToken(first);
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then begin
@@ -1048,7 +1053,7 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_return: case cTokType[1] of
+ {cT[-1]=}tt_return: case cTokType[1] of
             tt_semicolon: begin
               stack.popDestroy; //pop "return" from stack
               processReturnStatement;
@@ -1180,7 +1185,7 @@ end}
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
-        tt_pseudoFuncPointer: case cTokType[1] of
+{cT[0]=}tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
             first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);

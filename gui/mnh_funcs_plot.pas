@@ -299,7 +299,7 @@ FUNCTION removePlot_imp intFuncSignature;
   end;
 
 FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST abspos:boolean):P_literal;
-  VAR txt:T_customText;
+  VAR txt:P_customText;
       lines:T_arrayOfString;
       i:longint;
 
@@ -322,28 +322,31 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
         end;
       end;
 
-      txt.create(fReal(arg0),fReal(arg1),lines);
-      txt.absolutePosition:=abspos;
+      new(txt,create(fReal(arg0),fReal(arg1),lines));
+      txt^.absolutePosition:=abspos;
       for i:=3 to params^.size-1 do begin
         case params^.value[i]^.literalType of
-          lt_real,lt_smallint,lt_bigint: txt.fontSize:=fReal(params^.value[i]);
-          lt_string: if hasAnchor then txt.fontName:=P_stringLiteral(params^.value[i])^.value
+          lt_real,lt_smallint,lt_bigint: txt^.fontSize:=fReal(params^.value[i]);
+          lt_string: if hasAnchor then txt^.fontName:=P_stringLiteral(params^.value[i])^.value
                                   else begin
-                                    txt.setAnchor(P_stringLiteral(params^.value[i])^.value);
+                                    txt^.setAnchor(P_stringLiteral(params^.value[i])^.value);
                                     hasAnchor:=true;
                                   end;
           lt_intList,lt_realList,
           lt_numList: if P_listLiteral(params^.value[i])^.size=3 then begin
-            if hasCol then txt.setBackground(fReal(P_listLiteral(params^.value[i])^.value[0]),
-                                             fReal(P_listLiteral(params^.value[i])^.value[1]),
-                                             fReal(P_listLiteral(params^.value[i])^.value[2]))
+            if hasCol then txt^.setBackground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[2]))
                       else begin
-                        txt.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                        txt^.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
                                           fReal(P_listLiteral(params^.value[i])^.value[1]),
                                           fReal(P_listLiteral(params^.value[i])^.value[2]));
                         hasCol:=true;
                       end;
-          end else exit(nil);
+          end else begin
+            dispose(txt,destroy);
+            exit(nil);
+          end;
         end;
       end;
       new(postRequest,create(txt));

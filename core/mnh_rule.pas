@@ -21,7 +21,7 @@ TYPE
     hiddenRule:P_intFuncCallback;
     allowCurrying:boolean;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
-    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
+    FUNCTION inspect({$WARN 5024 OFF}CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
     {$endif}
