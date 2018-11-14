@@ -843,7 +843,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
-    target.FillRect(0, 0, intendedWidth*scalingFactor-1, intendedHeight*scalingFactor-1);
+    target.FillRect(0, 0, intendedWidth*scalingFactor, intendedHeight*scalingFactor);
 
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
