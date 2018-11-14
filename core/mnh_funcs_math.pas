@@ -142,7 +142,7 @@ FUNCTION sqr_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context);
         lt_error: begin result:=x; result^.rereference; end;
-        lt_smallint : result:=newIntLiteral(sqr(P_smallIntLiteral (x)^.value));
+        lt_smallint : result:=newIntLiteral(sqr(int64(P_smallIntLiteral (x)^.value)));
         lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(x)^.value.mult(
                                             P_bigIntLiteral(x)^.value));
         lt_real: result:=newRealLiteral(sqr(P_realLiteral(x)^.value));
@@ -630,16 +630,11 @@ FUNCTION factorize_impl intFuncSignature;
   end;
 
 FUNCTION isPrime_impl intFuncSignature;
-  VAR temp:T_bigInt;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint: result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral(arg0)^.value));
-      lt_smallint: begin
-        temp.fromInt(P_smallIntLiteral(arg0)^.value);
-        result:=newBoolLiteral(millerRabinTest(temp));
-        temp.destroy;
-      end;
+      lt_bigint  : result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral  (arg0)^.value));
+      lt_smallint: result:=newBoolLiteral(millerRabinTest(P_smallIntLiteral(arg0)^.value));
     end;
   end;
 

@@ -364,8 +364,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
-    editor_.OnPlaceBookmark     :=@onPlaceBookmark;
-    editor_.OnClearBookmark     :=@onClearBookmark;
+    editor_.onPlaceBookmark     :=@onPlaceBookmark;
+    editor_.onClearBookmark     :=@onClearBookmark;
     initForNewFile;
   end;
 
@@ -728,7 +728,7 @@ PROCEDURE T_editorMeta.clearBookmark(markIndex:longint);
   VAR x:longint=0;
       y:longint=0;
   begin
-    if editor_.GetBookMark(markIndex,x,y) then editor_.ClearBookMark(markIndex);
+    if editor_.GetBookMark(markIndex,x,y) then editor_.clearBookmark(markIndex);
   end;
 
 PROCEDURE T_editorMeta.toggleBreakpoint;
