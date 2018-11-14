@@ -630,16 +630,11 @@ FUNCTION factorize_impl intFuncSignature;
   end;
 
 FUNCTION isPrime_impl intFuncSignature;
-  VAR temp:T_bigInt;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint: result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral(arg0)^.value));
-      lt_smallint: begin
-        temp.fromInt(P_smallIntLiteral(arg0)^.value);
-        result:=newBoolLiteral(millerRabinTest(temp));
-        temp.destroy;
-      end;
+      lt_bigint  : result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral  (arg0)^.value));
+      lt_smallint: result:=newBoolLiteral(millerRabinTest(P_smallIntLiteral(arg0)^.value));
     end;
   end;
 
