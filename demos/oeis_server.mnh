@@ -219,9 +219,19 @@ private synchronized resetTimeout(x)->begin
   x;
 end;
 
+private serve_('scan')->begin
+  foundImplementations:=
+  sequences.pEach(seq,implemented[index].isVoid ? begin
+    local imp:=try({guessImplementation(seq)},{fail('guessImplementation failed for ',index)});
+    imp.isVoid
+    ? void
+    : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
+    end : void).toMap;
+  resetTimeout(foundImplementations.size&' Implementations found');
+end;
+
 private serve_(...)->'Unkown command: '&toString(...);
 serve(['stop'])->print('Stop signal received') orElse timeout:=time;
-serve(['download'])->resetTimeout(serve_('download'));
 serve(parameters)->begin
   local t0:=time;
   print("Last request: ",parameters);
@@ -237,22 +247,6 @@ end;
 main()->begin
   startIpcServer(ipcId,::serve);
   print('IPC Server started. ',ipcId);
-  while(time<timeout,sleep(1));
-  print("\nIPC Server stopped. ",ipcId);
-end;
-
-main('scan')->begin
-  startIpcServer(ipcId,::serve);
-  print('IPC Server started. ',ipcId);
-  foundImplementations:=
-  sequences.pEach(seq,implemented[index].isVoid ? begin
-    local imp:=try({guessImplementation(seq)},{fail('guessImplementation failed for ',index)});
-    imp.isVoid
-    ? void
-    : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
-    end : void).toMap;
-  print(foundImplementations.size,' Implementations found');
-  resetTimeout;
   while(time<timeout,sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;

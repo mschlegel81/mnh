@@ -27,6 +27,8 @@ main('statistics')->getData($params).print;
 main('validate')->getData($params).join("\n").print;
 //*Return info on a series by class (or list classes)
 main('class',...)->getData($params).join("\n").print;
+//*Scan for reproducible series
+main('scan')->getData($params).join("\n").print;
 //*Stops the IPC server (if running)
 main('stopServer')->begin
   isIpcServerRunning(ipcId) AND sendIpcRequest(ipcId,['stop']);

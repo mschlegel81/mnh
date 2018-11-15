@@ -283,6 +283,9 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       end;
       target.Pen.style:=psClear;
       if (x<=xRes) and (x+textWidth>=0) and (y<=yRes) and (y+textHeight>=0) then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'        PLOT: Rendering text "',text[0],'" @ size ',target.Font.size);
+        {$endif}
         if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+textWidth,y+textHeight);
         for k:=0 to length(text)-1 do begin
           target.textOut(x,
@@ -773,22 +776,12 @@ PROCEDURE T_axisTrafo.setWorldMin(CONST value: double);
   begin
     if not(isValidMinimum(value)) then exit;
     rangeByUser[0]:=value;
-    if logscale then begin
-      if rangeByUser[1]<rangeByUser[0]*10 then rangeByUser[1]:=rangeByUser[0]*10;
-    end else begin
-      if rangeByUser[1]<rangeByUser[0]+abs(rangeByUser[0])*0.00001 then rangeByUser[1]:=rangeByUser[0]+abs(rangeByUser[0])*0.00001;
-    end;
   end;
 
 PROCEDURE T_axisTrafo.setWorldMax(CONST value: double);
   begin
     if not(isValidMaximum(value)) then exit;
     rangeByUser[1]:=value;
-    if logscale then begin
-      if rangeByUser[1]<rangeByUser[0]*10 then rangeByUser[0]:=rangeByUser[1]/10;
-    end else begin
-      if rangeByUser[1]<rangeByUser[0]+abs(rangeByUser[0])*0.00001 then rangeByUser[0]:=rangeByUser[1]-abs(rangeByUser[0])*0.00001;
-    end;
   end;
 
 PROCEDURE T_axisTrafo.setWorldRange(CONST x0, x1: double);
@@ -806,8 +799,8 @@ PROCEDURE T_axisTrafo.setWorldRange(CONST x0, x1: double);
     end else begin
       if x1<=x0 then begin
         xc:=(x0+x1)*0.5;
-        rangeByAutosize[0]:=xc-5E-8;
-        rangeByAutosize[1]:=xc+5E-8;
+        rangeByAutosize[0]:=xc-5E-9;
+        rangeByAutosize[1]:=xc+5E-9;
       end else begin
         rangeByAutosize[0]:=x0;
         rangeByAutosize[1]:=x1;
