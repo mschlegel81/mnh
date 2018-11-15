@@ -283,16 +283,20 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
   VAR scalingFactor,ideal:double;
   begin
     result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
-    if sampleIndex=SINGLE_SAMPLE_INDEX then case transparentIndex and 3 of
-      0: result.solidStyle:=bsFDiagonal ;
-      1: result.solidStyle:=bsBDiagonal ;
-      2: result.solidStyle:=bsHorizontal;
-      3: result.solidStyle:=bsVertical  ;
-    end else begin
-      if (sampleIndex-transparentIndex) and 3=0
-      then result.solidStyle:=bsSolid
-      else result.solidStyle:=bsClear;
+    result.solidStyle:=bsClear;
+    if ps_filled in style then begin
+      if sampleIndex=SINGLE_SAMPLE_INDEX then case transparentIndex and 3 of
+        0: result.solidStyle:=bsFDiagonal ;
+        1: result.solidStyle:=bsBDiagonal ;
+        2: result.solidStyle:=bsHorizontal;
+        3: result.solidStyle:=bsVertical  ;
+      end else begin
+        if (sampleIndex-transparentIndex) and 3=0
+        then result.solidStyle:=bsSolid
+        else result.solidStyle:=bsClear;
+      end;
     end;
+    if ps_fillSolid in style then result.solidStyle:=bsSolid;
     scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
     result.lineColor:=result.solidColor;
     ideal:=styleModifier*scalingFactor;

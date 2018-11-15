@@ -15,6 +15,7 @@ object SplashForm: TSplashForm
   OnClose = FormClose
   OnShow = FormShow
   Position = poScreenCenter
+  ShowInTaskBar = stAlways
   LCLVersion = '1.8.4.0'
   object Panel1: TPanel
     Left = 0
