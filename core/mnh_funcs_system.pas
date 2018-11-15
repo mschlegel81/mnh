@@ -187,14 +187,14 @@ FUNCTION time_imp intFuncSignature;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral=nil):P_literal;
     begin
-      t:=context.wallclockTime(true);
+      t:=context.wallclockTime;
       result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters).literal;
-      t:=context.wallclockTime(true)-t;
+      t:=context.wallclockTime-t;
     end;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime(true)))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}

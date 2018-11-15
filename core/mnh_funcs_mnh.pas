@@ -14,44 +14,38 @@ FUNCTION getMnhInfo:string;
 {$i mnh_func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
-FUNCTION sleep_imp intFuncSignature;
+PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_threadContext); inline;
   VAR sleepUntil:double=0;
       sleepInt:longint;
   begin
+    if argIsEndTime then sleepUntil:=0 else sleepUntil:=context.wallclockTime;
+    case argument^.literalType of
+      lt_smallint: sleepUntil:=sleepUntil+P_smallIntLiteral(argument)^.value;
+      lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (argument)^.value.toFloat;
+      lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (argument)^.value;
+    end;
+    while (context.wallclockTime<sleepUntil) and (context.messages.continueEvaluation) do begin
+      sleepInt:=round(900*(sleepUntil-context.wallclockTime));
+      if sleepInt>1000 then sleepInt:=1000;
+      if (sleepInt>0) then sleep(sleepInt);
+    end;
+  end;
+
+FUNCTION sleep_imp intFuncSignature;
+  begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
-      sleepUntil:=context.wallclockTime(true);
+      mySleep(P_numericLiteral(arg0),false,context);
       result:=newVoidLiteral;
-      case arg0^.literalType of
-        lt_smallint: sleepUntil:=sleepUntil+P_smallIntLiteral(arg0)^.value;
-        lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (arg0)^.value.toFloat;
-        lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (arg0)^.value;
-      end;
-      while (context.wallclockTime(true)<sleepUntil) and (context.messages.continueEvaluation) do begin
-        sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
-        if sleepInt>1000 then sleepInt:=1000;
-        if (sleepInt>0) then sleep(sleepInt);
-      end;
     end;
   end;
 
 FUNCTION sleepUntil_imp intFuncSignature;
-  VAR sleepUntil:double=0;
-      sleepInt:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleepUntil',tokenLocation,[se_sleep]) then begin
+      mySleep(P_numericLiteral(arg0),true,context);
       result:=newVoidLiteral;
-      case arg0^.literalType of
-        lt_smallint: sleepUntil:=P_smallIntLiteral(arg0)^.value;
-        lt_bigint  : sleepUntil:=P_bigIntLiteral  (arg0)^.value.toFloat;
-        lt_real    : sleepUntil:=P_realLiteral    (arg0)^.value;
-      end;
-      while (context.wallclockTime(true)<sleepUntil) and (context.messages.continueEvaluation) do begin
-        sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
-        if sleepInt>1000 then sleepInt:=1000;
-        if (sleepInt>0) then sleep(sleepInt);
-      end;
     end;
   end;
 
