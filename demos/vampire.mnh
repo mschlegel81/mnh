@@ -7,7 +7,7 @@ private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
   local toTest:=testRange(iDigits.size div 2,round(sqrt(i)));
   toTest:=toTest[i mod toTest=0];
-  [i div toTest,toTest].transpose.filter({$f.areFangs(iDigits)});
+  [i div toTest,toTest].transpose.pFilter({$f.areFangs(iDigits)});
 end;
 
 @SuppressUnusedWarning
