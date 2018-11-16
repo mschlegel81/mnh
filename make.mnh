@@ -20,7 +20,7 @@ private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=fileLines(inFile);
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
-  inLines.each(line,line='' ? "''" : join('#'&(line.bytes.ord))).join(",\n")&');';
+  inLines.each(line,line.escapePascal).join(",\n")&');';
   outFile.fileContents==outText
   ? void
   : writeFile(outFile,outText);
