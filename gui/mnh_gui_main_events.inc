@@ -576,7 +576,8 @@ PROCEDURE TMnhForm.miUserErrorsClick(Sender: TObject);
 PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .checked,mt_echo_declaration); end;
 PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .checked,mt_echo_input);       end;
 PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.checked,mt_echo_output);      end;
-PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info); setSpecificMessageType(miTimingInfo.checked,mt_profile_call_info);         end;
+PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info);
+                                                                   setSpecificMessageType(miTimingInfo      .checked,mt_profile_call_info);         end;
 PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
   begin
     settings.wordWrapEcho:=miWrapEcho.checked;

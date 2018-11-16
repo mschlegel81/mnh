@@ -37,7 +37,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
 
-  PROCEDURE initTokTypes; {$ifndef debugMode}inline;{$endif}
+  PROCEDURE initTokTypes; {$ifndef profilingFlavour}{$ifndef debugMode}inline;{$endif}{$endif}
     begin
       if stack.topIndex>=0 then cTokType[-1]:=stack.topType
                            else cTokType[-1]:=tt_EOL;
@@ -296,7 +296,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
 
     VAR whileLocation:T_tokenLocation;
         returnValue:T_evaluationResult;
-    PROCEDURE evaluateBody; inline;
+    PROCEDURE evaluateBody; {$ifndef profilingFlavour}inline;{$endif}
       VAR toReduce,dummy:P_token;
       begin
         if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context) then begin
@@ -427,7 +427,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveInlineIf(CONST conditionLit:boolean); inline;
+  PROCEDURE resolveInlineIf(CONST conditionLit:boolean); {$ifndef profilingFlavour}inline;{$endif}
     VAR p,prev,tokenBeforeElse,lastThen:P_token;
         bracketLevel:longint=0;
     begin
@@ -474,7 +474,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       didSubstitution:=true;
     end;
 
-  PROCEDURE startOrPushParameterList; {$ifndef debugMode}inline;{$endif}
+  PROCEDURE startOrPushParameterList; {$ifndef profilingFlavour}{$ifndef debugMode}inline;{$endif}{$endif}
     begin
       stack.push(first);
       if first^.tokType=tt_braceOpen then begin
@@ -595,7 +595,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       end;
     end;
 
-  PROCEDURE process_op_lit; {$ifndef debugMode} inline;{$endif}
+  PROCEDURE process_op_lit; {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
     VAR trueLit:boolean;
     begin
       case cTokType[1] of
