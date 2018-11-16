@@ -589,7 +589,6 @@ DESTRUCTOR T_packageReference.destroy;
 
 PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
   VAR extendsLevel:byte=0;
-      profile:boolean=false;
 
   PROCEDURE interpretIncludeClause;
     VAR locationForErrorFeedback:T_tokenLocation;
@@ -666,9 +665,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_importing,pseudoCallees);
         {$endif}
-        if profile then globals.timeBaseComponent(pc_importing);
+        globals.timeBaseComponent(pc_importing);
         for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,usecase=lu_forCodeAssistance);
-        if profile then globals.timeBaseComponent(pc_importing);
+        globals.timeBaseComponent(pc_importing);
         {$ifdef fullVersion}
         globals.primaryContext.callStackPop(nil);
         {$endif}
@@ -993,7 +992,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end;
 
   begin
-    profile:=globals.primaryContext.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.firstToken=nil then exit;
     if usecase=lu_forCodeAssistance then globals.primaryContext.messages.clearFlagsForCodeAssistance;
 
@@ -1022,7 +1020,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$ifdef fullVersion}
       globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
       {$endif}
-      if profile then globals.timeBaseComponent(pc_declaration);
+      globals.timeBaseComponent(pc_declaration);
       if assignmentToken^.next=nil then begin
         globals.primaryContext.messages.raiseError('Missing rule body',assignmentToken^.location);
         cascadeDisposeToken(statement.firstToken);
@@ -1039,7 +1037,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       predigest(assignmentToken,@self,globals.primaryContext.messages);
       if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
       parseRule;
-      if profile then globals.timeBaseComponent(pc_declaration);
+      globals.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
       globals.primaryContext.callStackPop(nil);
       {$endif}
@@ -1052,10 +1050,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$ifdef fullVersion}
       globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
       {$endif}
-      if profile then globals.timeBaseComponent(pc_declaration);
+      globals.timeBaseComponent(pc_declaration);
       if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
       parseDataStore;
-      if profile then globals.timeBaseComponent(pc_declaration);
+      globals.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
       globals.primaryContext.callStackPop(nil);
       {$endif}
@@ -1065,7 +1063,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           {$ifdef fullVersion}
           globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
           {$endif}
-          if profile then globals.timeBaseComponent(pc_interpretation);
+          globals.timeBaseComponent(pc_interpretation);
           if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(globals.primaryContext.messages)) then begin
             cascadeDisposeToken(statement.firstToken);
             exit;
@@ -1073,7 +1071,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           predigest(statement.firstToken,@self,globals.primaryContext.messages);
           if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_input) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
           globals.primaryContext.reduceExpression(statement.firstToken);
-          if profile then globals.timeBaseComponent(pc_interpretation);
+          globals.timeBaseComponent(pc_interpretation);
           {$ifdef fullVersion}
           globals.primaryContext.callStackPop(nil);
           {$endif}
@@ -1124,7 +1122,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
         {$endif}
-        if profile then globals.timeBaseComponent(pc_interpretation);
+        globals.timeBaseComponent(pc_interpretation);
 
         if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext)
         then globals.primaryContext.reduceExpression(t)
@@ -1138,7 +1136,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
                                         C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
           if (length(mainParameters)=1) and (mainParameters[0]='-h') then writeln(getHelpOnMain);
         end;
-        if profile then globals.timeBaseComponent(pc_interpretation);
+        globals.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
         globals.primaryContext.callStackPop(nil);
         {$endif}
@@ -1190,10 +1188,10 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     clear(false);
     readyForUsecase:=lu_beingLoaded;
 
-    if profile then globals.timeBaseComponent(pc_tokenizing);
+    globals.timeBaseComponent(pc_tokenizing);
     lexer.create(@self);
     newCodeHash:=getCodeProvider^.stateHash;
-    if profile then globals.timeBaseComponent(pc_tokenizing);
+    globals.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
@@ -1205,13 +1203,13 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       cascadeDisposeToken(stmt.firstToken);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
     end;
-    if profile then globals.timeBaseComponent(pc_tokenizing);
+    globals.timeBaseComponent(pc_tokenizing);
 
     while ((usecase=lu_forCodeAssistance) or (globals.primaryContext.messages.continueEvaluation)) and (stmt.firstToken<>nil) do begin
       interpret(stmt,usecase,globals{$ifdef fullVersion},localIdInfos{$endif});
-      if profile then globals.timeBaseComponent(pc_tokenizing);
+      globals.timeBaseComponent(pc_tokenizing);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
-      if profile then globals.timeBaseComponent(pc_tokenizing);
+      globals.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
     if usecase=lu_forCodeAssistance then begin

@@ -1,7 +1,7 @@
 <!--file style.css-->
 *{margin: 0; padding: 0;}
 html, body, .Container {
-  font-family: Verdana, Geneva, sans-serif;
+  font-family: "Century Gothic", CenturyGothic, AppleGothic, sans-serif;
   color: black;
   background-color: #F2F2F2;
   height: 100%;}
@@ -39,15 +39,15 @@ h3{margin-before: 5em; margin-after: 5em;}
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>  
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>  
   </ul>
 </div>
 <div class="docContent">
@@ -79,30 +79,26 @@ f(x)->sin(x);
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li> 
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li> 
 <ul>
-<li><h4><a href="#usage">Usage</a></h4></li>
-<ul>
-  <li><h5><a href="#defining">Defining a package</a></h5></li>
-  <li><h5><a href="#importing">Importing a package</a></h5></li>
-  <li><h5><a href="#including">Including a package</a></h5></li>
-  <li><h5><a href="#executables">Executable packages</a></h5></li>
-  <li><h5><a href="#comments">Comments</a></h5></li>
-  <li><h5><a href="#attributes">Attributes</a></h5></li>
+  <li><h4><a href="#defining">Defining a package</a></h4></li>
+  <li><h4><a href="#importing">Importing a package</a></h4></li>
+  <li><h4><a href="#including">Including a package</a></h4></li>
+  <li><h4><a href="#executables">Executable packages</a></h4></li>
+  <li><h4><a href="#comments">Comments</a></h4></li>
+  <li><h4><a href="#attributes">Attributes</a></h4></li>
 </ul>
-</ul>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>  
+  <li><h3><a href="gui.html">GUI features</a></h3></li>  
   </ul>
 </div>
 <div class="docContent">
-<h3><a name="usage">Usage</a></h3>
 Packages form the major means to structure your implementation so that parts of it can be reused.<br>
 Each package is a collection of functions and expressions; each input to MNH is a package.<br>
 Expressions in a package will only be executed in interactive mode.<br>
@@ -114,7 +110,20 @@ To define a package, just create a file with the extension <code>.mnh</code> (or
   <br>Packages violating this convention cannot be imported by other packages.</li>
   <li>The package must be in the search paths of importing packages (see <a href="#importing">Importing a package</a>).
   <li>The filename must not be any of the built-in pseudo packages' identifiers.</li>
-</ul><br>
+</ul><br><br>
+A package may start with a Shebang. Under Linux this is interpreted by the operating system, under windows the shebangs are interpreted by MNH when interpreting 
+a script from the command line.<br>
+For instance a script that automatically creates a log with the same name as the script (placeholder "?") but with extension <code>.log</code> can start with 
+the shebang <code>#!/usr/bin/mnh +out ?.log(1)</code>.<br><br>
+If the first line (after skipping the optional shebang) is <code>plain script</code> the script is executed as is, without the need to define a main function.
+Plain scripts can not be used or included in other scripts however. The following script would print out "Hello world" as well as all verbose output.<code>
+<!--mnh-->
+  #!/usr/bin/mnh -v
+  plain script;
+  print('Hello world');
+<!--end-->
+</code>
+
 <h4><a name="importing">Importing a package</a></h4>
 To import a package, employ the <i>use clause</i>, e.g.:<code>
 <!--mnh-->
@@ -126,7 +135,11 @@ This will import the first package with a filename <code>basic.mnh</code> in the
   <li> The current executable's folders, or its subfolders </li>
   <li> The current working directory, or its subfolders </li>
 </ul>
-Instead of using an identifier to specify a package, you may use a string literal denoting it's path - either absolute or relative to the importing package.
+Instead of using an identifier to specify a package, you may use a string literal denoting it's path - either absolute or relative to the importing package, e.g.:<code>
+<!--mnh-->
+  USE 'util/basic.mnh';
+<!--end-->
+</code>
 <br>
 Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.<code>
 <!--mnh-->
@@ -162,15 +175,15 @@ All input parameters will be passed as strings; consequently they must be conver
 Alternatively a package can be made executable if its first statement reads <code>plain script;</code>. In this case the parameters can be accessed using
 parameter identifiers (e.g. <code>$0</code> for the script name, <code>$1</code> for the first command line argument etc.).<br>
 Plain scripts can not be imported by other scripts.
-<br>
-<h4><a name="comments">Comments</a></h4>
+
+<h4><br><a name="comments">Comments</a></h4>
 A comment is any string starting with <code>//</code> and ending with the following line break.<br>
 A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment.
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
 <code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
-<br>
-<h4><a name="attributes">Attributes</a></h4>
+
+<h4><br><a name="attributes">Attributes</a></h4>
 An attribute is a comment starting with <code>//@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
 Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
 <!--mnh-->
@@ -227,9 +240,9 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
 <ul>
 <li><h4><a href="#overview"> Overview</a></h4></li>
 <li><h4><a href="#scalarOps"> Scalar operators</a></h4></li>
@@ -247,12 +260,12 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
 <li><h4><a href="#funcToExp"> Function-to-Expression</a></h4></li>
 <li><h4><a href="#opOverloading"> Operator overloading</a></h4></li>
 </ul>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>    
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>    
 </ul>
 </div>
 <div class="docContent">
@@ -278,8 +291,9 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
 <tr><td><code>></code></td><td>6</td><td> greater</td><td><code><span class="builtin">mnh.COMPARATOR_GRT</span></code></td><td>yes</td></tr>
 <tr><td><code>==</code></td><td>6</td><td> equals (technical)</td><td><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></td><td>no</td></tr>
 <tr><td><code>in</code></td><td>7</td><td> in</td><td><code><span class="builtin">mnh.OPERATOR_IN</span></code></td><td>no</td></tr>
-<tr><td><code>+</code></td><td>8</td><td> unary plus</td><td>-</td><td>no</td></tr>
-<tr><td><code>-</code></td><td>8</td><td> unary minus</td><td>-</td><td>no</td></tr>
+<tr><td><code>+</code></td><td>8</td><td> unary plus</td><td><code><span class="builtin">mnh.OPERATOR_UNARY_PLUS</span></code></td><td>no</td></tr>
+<tr><td><code>-</code></td><td>8</td><td> unary minus</td><td><code><span class="builtin">mnh.OPERATOR_NEGATE_ARITHMETIC</span></code></td><td>yes</td></tr>
+<tr><td><code>!</code></td><td>8</td><td> logical negation</td><td><code><span class="builtin">mnh.OPERATOR_NEGATE_LOGICAL</span></code></td><td>yes</td></tr>
 <tr><td><code>and</code></td><td>8</td><td> bitwise and</td><td><code><span class="builtin">mnh.OPERATOR_AND</span></code></td><td>yes</td></tr>
 <tr><td><code>AND</code></td><td>8</td><td> lazy and</td><td><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></td><td>no</td></tr>
 <tr><td><code>orElse </code></td><td>9</td><td> orElse</td><td><code><span class="builtin">mnh.OPERATOR_ORELSE</span></code></td><td>no</td></tr>
@@ -767,10 +781,10 @@ used as a fallback.
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li><ul>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li><ul>
     <li><h4><a href="#calls">Calls</a></h4></li>
     <li><h4><a href="#declarations">Declarations</a></h4></li>
     <li><h4><a href="#assignments">Assignments</a></h4></li>
@@ -788,12 +802,12 @@ used as a fallback.
       <li><h5><a href="#plainMod">plain</a></h5></li>
       <li><h5><a href="#localMod">local</a></h5></li>
       <li><h5><a href="#typeMod">(duck)type</a></h5></li>
-	  <li><h5><a href="#nocurryMod">nocurry</a></h5></li></ul></li></ul>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>    
+	  <li><h5><a href="#curryMod">curry</a></h5></li></ul></li></ul>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -822,31 +836,6 @@ If <code>someFunction</code> returns an expression, consider the following:<code
   out> 7
 <!--end-->
 </code>
-<li><b>Currying and Uncurrying</b><br>
-Calling a user defined function with a parameter list of the wrong length leads to Currying or Uncurrying.
-This is only applies if the parameter list is not empty and for rules which <ul><li>are user defined</li><li>have no optional parameters</li><li>have only one subrule or subrules of the same arity</li></ul>
-Examples:<code>
-<!--mnh-->
-       //Unary function returning an unary expression: 
-   in> f(x)->{3*x+$y};
-   in> f(1); 
-  out> {3*1+$y}
-   in> f(1)(2); 
-  out> 5
-   in> f(1,2); //uncurrying
-  out> 5
-       //Binary function returning a numeric:
-   in> g(x,y)->3*x+y;
-   in> g(1); //currying
-  out> {g(1,$0)}
-   in> g(1)(2);
-  out> 5
-   in> g(1, 2); 
-  out> 5
-<!--end-->
-</code>
-Currying and Uncurrying can be suppressed using the <a href="#nocurryMod">nocurry modifier</a>.
-</li>
 </li><li><b>Visibility</b><br>
 Visibility is handled as in Pascal, i.e. a local function definition hides all imported functions with the same name. <br>
 If a function of the same name is defined in more than one used package, the definition in the last imported package hides previous definitions.<br>
@@ -1071,7 +1060,7 @@ You can override builtin functions by declaring a function of the same name. If 
 <ul>
 <li>Try to apply the user defined function as is</li>
 <li>Try to apply the builtin function</li>
-<li>Try to curry/uncurry the user defined function</li>
+<li>Try to curry/uncurry the user defined function (if enabled)</li>
 </ul>
 If the overridden function is a wrapper for an operator, the operator is overridden (see <a href="operators.html#opOverloading">Operator overloading</a>).
 
@@ -1163,26 +1152,49 @@ casting with ducktypes as well. After explicit casting, <code><span class="built
 Finally you may also define a type hierarchy. 
 <code>
 <!--mnh-->
-​   in> type Complex(x:NumericList(2))->true;
-​   in> type Imaginary(y:Complex)->y[0]=0;
-​   in> y :=[0,1].toImaginary;
-​   in> y.isComplex;
-​  out> true
-​   in> y.isImaginary;
-​  out> true
+   in> type Complex(x:NumericList(2)) -> true;
+   in> type Imaginary(y:Complex) -> y[0]=0; 
+   in> y := [0,1].toImaginary; 
+   in> y.isComplex; 
+  out> true 
+   in> y.isImaginary; 
+  out> true
 <!--end-->
 </code>
 The previous example would also work if any (or both) types were defines as <code><span class="modifier">ducktype</span></code>.
-<h4><br><a name="nocurryMod">nocurry</a></h4>
-The <i>nocurry</i> modifier can be used to suppress currying on rule level.
+<h4><br><a name="curryMod">curry</a></h4>
+The <i>curry</i> modifier can be used to enable currying on rule level. <br>
+Calling a user defined function with a parameter list of the wrong length leads to Currying or Uncurrying.
+This is only applies if the parameter list is not empty and for rules which <ul><li>are user defined</li><li>have no optional parameters</li><li>have only one subrule or subrules of the same arity</li></ul>
+Examples:<code>
+<!--mnh-->
+       //Unary function returning an unary expression: 
+   in> curry f(x)->{3*x+$y};
+   in> f(1); 
+  out> {3*1+$y}
+   in> f(1)(2); 
+  out> 5
+   in> f(1,2); //uncurrying
+  out> 5
+       //Binary function returning a numeric:
+   in> curry g(x,y)->3*x+y;
+   in> g(1); //currying
+  out> {g(1,$0)}
+   in> g(1)(2);
+  out> 5
+   in> g(1, 2); 
+  out> 5
+<!--end-->
+</code>
+
 </div>
 <!--commonFoot-->
 <!--file types.html-->
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
 <ul>
 <li><h4><a href="#intro">Introduction</a></h4></li>
 <li><h4><a href="#scalars">Scalar types</a></h4><ul>
@@ -1198,13 +1210,13 @@ The <i>nocurry</i> modifier can be used to suppress currying on rule level.
 <li><h4><a href="#sets">Set</a></h4></li>
 <li><h4><a href="#maps">Map</a></h4></li>
 </ul>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>    
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -1395,11 +1407,11 @@ For compound accesses there also is the getAll method, whose behavior is like th
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
 <ul>
 <li><h4><a href="#each">each and pEach</a></h4></li>
 <ul>
@@ -1412,10 +1424,10 @@ For compound accesses there also is the getAll method, whose behavior is like th
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
 </ul>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>    
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -1591,19 +1603,19 @@ out> 6
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
 <ul>
 <li><h4><a href="#generalFmt">General formatting</a></h4></li>
 <li><h4><a href="#timeFmt">Time formatting</a></h4></li>
 </ul>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>    
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -1700,15 +1712,15 @@ There are additional routines for formatting and parsing dates and times. Some o
 <!--commonHead-->
 <div class="navContent">
   <ul>
-  <li><h3><a href="index.html">Quick start</a></h4></li>
-  <li><h3><a href="types.html">Types</a></h4></li>
-  <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-  <li><h3><a href="specials.html">Special constructs</a></h4></li>
-  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
-  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
-  <li><h3><a href="gui.html">GUI features</a></h4></li>
+  <li><h3><a href="index.html">Quick start</a></h3></li>
+  <li><h3><a href="types.html">Types</a></h3></li>
+  <li><h3><a href="operators.html">Operators</a></h3></li>
+  <li><h3><a href="functions.html">Functions</a></h3></li>
+  <li><h3><a href="specials.html">Special constructs</a></h3></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
+  <li><h3><a href="packages.html">User packages</a></h3></li>
+  <li><h3><a href="gui.html">GUI features</a></h3></li>
   <ul>
     <li><h4><a href="#shortcuts">Shortcuts</a></h4></li>
     <li><h4><a href="#debugging">Debugging</a></h4></li>
@@ -1720,7 +1732,7 @@ There are additional routines for formatting and parsing dates and times. Some o
   </ul>
 </div>
 <div class="docContent">
-<h3><a name="shortcuts">Shortcuts</a></h4>
+<h3><a name="shortcuts">Shortcuts</a></h3>
 Most shortcuts are accessible via the menu. The exceptions are...<br>
 <table><tr class="ruleHead">
   <td>Shortcut</td><td>Meaning</td></tr>
@@ -1741,13 +1753,13 @@ Most shortcuts are accessible via the menu. The exceptions are...<br>
 </table>
 <br>
 Apart from that there are of course the usual shortcuts for copy (Strg+C), paste (Strg+V), etc.
-<h3><br><a name="debugging">Debugging</a></h4>
+<h3><br><a name="debugging">Debugging</a></h3>
 Debugging is enabled via the Evaluation/Debug menu item or by toggling a breakpoint.<br>
 When debugging, parallelization is disabled. Note that debugging implies profiling if Appearance/Show timing info is checked.
-<h3><br><a name="profiling">Profiling</a></h4>
+<h3><br><a name="profiling">Profiling</a></h3>
 Profiling is enabled via the Evaluation/Profiling menu item.<br>
 The profiling result is displayed as a table.
-<h3><br><a name="editScripts">Edit scripts</a></h4>
+<h3><br><a name="editScripts">Edit scripts</a></h3>
 User defined scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
 <ul>
 <li>It accepts stringList (the editor content) as single parameter</li>
@@ -1761,7 +1773,7 @@ Additional attributes to modify the edit script behavior are:<br>
 <li><code>@newEdit</code> to create a new editor for the result</li>
 <li><code>@language=<u>ext</u></code> with a language specified by the characteristic file extension, e.g. <code>@language=java</code></li>
 </ul><br>
-<h3><br><a name="insertScripts">Insert scripts</a></h4>
+<h3><br><a name="insertScripts">Insert scripts</a></h3>
 Insert scripts are similar to edit scripts but they must return a string which is then inserted at the current caret position.
 User defined scripts are defined in a central utility package. A rule defined in this package can be an insert script if: <br>
 <ul>
@@ -1769,7 +1781,7 @@ User defined scripts are defined in a central utility package. A rule defined in
 <li>It returns a string</li>
 <li>It has the attribute <code>@insertScript</code>
 </ul><br>
-<h3><br><a name="utilityScripts">Utility scripts</a></h4>
+<h3><br><a name="utilityScripts">Utility scripts</a></h3>
 User defined utility scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
 <ul>
 <li>It accepts string (the editor filename or pseudo-name) as single parameter</li>

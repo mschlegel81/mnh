@@ -1,3 +1,80 @@
+private PLOT_STYLE_KEYS:=['scale','color','ti','style'];
+type PlotStyle(m:Map)->m.getInner(0).minus(PLOT_STYLE_KEYS).size=0;
+private modifyStyle(S:PlotStyle,key=='style',value)->begin
+  local R:=S;
+  R[key]:=isVoid(S[key])
+          ? value
+          : S[key]&' '&value;
+  R.toPlotStyle;
+end;
+private modifyStyle(S:PlotStyle,key in PLOT_STYLE_KEYS,value)->begin
+  local R:=S;
+  R[key]:=value;
+  R.toPlotStyle;
+end;
+
+@SuppressUnusedWarning=all
+toString(style:PlotStyle)->style.getInner(1).join(" ");
+
+LINE     :=[['style','line'     ]].toMap.toPlotStyle;
+STEPLEFT :=[['style','stepLeft' ]].toMap.toPlotStyle;
+STEPRIGHT:=[['style','stepRight']].toMap.toPlotStyle;
+BAR      :=[['style','bar'      ]].toMap.toPlotStyle;
+BOX      :=[['style','box'      ]].toMap.toPlotStyle;
+ELLIPSE  :=[['style','ellipse'  ]].toMap.toPlotStyle;
+TUBE     :=[['style','tube'     ]].toMap.toPlotStyle;
+POLYGON  :=[['style','polygon'  ]].toMap.toPlotStyle;
+DOT      :=[['style','.']].toMap.toPlotStyle;
+PLUS     :=[['style','+']].toMap.toPlotStyle;
+CROSS    :=[['style','x']].toMap.toPlotStyle;
+IMPULSE  :=[['style','i']].toMap.toPlotStyle;
+withDot    (S:PlotStyle)->modifyStyle(S,'style','.');
+withPlus   (S:PlotStyle)->modifyStyle(S,'style','+');
+withCross  (S:PlotStyle)->modifyStyle(S,'style','x');
+withImpulse(S:PlotStyle)->modifyStyle(S,'style','i');
+filled     (S:PlotStyle)->modifyStyle(S,'style','f');
+fillSolid  (S:PlotStyle)->modifyStyle(S,'style','s');
+withScale(S:PlotStyle,scaleModifier>0.0)->modifyStyle(S,'scale',scaleModifier);
+coloredBlack (S:PlotStyle)->modifyStyle(S,'color','black');
+coloredRed   (S:PlotStyle)->modifyStyle(S,'color','red');
+coloredBlue  (S:PlotStyle)->modifyStyle(S,'color','blue');
+coloredGreen (S:PlotStyle)->modifyStyle(S,'color','green');
+coloredPurple(S:PlotStyle)->modifyStyle(S,'color','purple');
+coloredOrange(S:PlotStyle)->modifyStyle(S,'color','orange');
+coloredRGB   (S:PlotStyle,r:Numeric,g:Numeric,b:Numeric)->modifyStyle(S,'color',format('RGB%s,%s,%s',r,g,b));
+coloredHSV   (S:PlotStyle,h:Numeric,s:Numeric,v:Numeric)->modifyStyle(S,'color',format('HSV%s,%s,%s',h,s,v));
+coloredHUE   (S:PlotStyle,hue:Numeric)->modifyStyle(S,'color',format('HUE%s',hue));
+coloredGREY  (S:PlotStyle,brightness:Numeric)->modifyStyle(S,'color',format('GREY%s',brightness));
+
+
+setPlotAutoscaleFactor(factor) ->
+  setOptions('autoscaleFactor',factor);
+setPlotAutoscale(axis in ['x','y'],enableAutoscale:Boolean) ->
+  setOptions('autoscale'&upper(axis),enableAutoscale);
+setPlotAxisStyle(axis in ['x','y'],tics:Boolean,majorGrid:Boolean,minorGrid<=majorGrid) ->
+  setOptions('axisStyle'&upper(axis),(tics ? 1 : 0) or (majorGrid ? 2 : 0 ) or (minorGrid ? 4: 0));
+setPlotLogscale(axis in ['x','y'],useLoscale:Boolean) ->
+  setOptions('logscale'&upper(axis),useLoscale);
+setPlotPreserveAspect(preserve:Boolean) ->
+  setOptions('preserveAspect',preserve);
+setPlotFontsize(relativeSize>=0.1) ->
+  setOptions('fontsize',relativeSize);
+setPlotRangeManually(x0:Numeric,x1>x0,y0:Numeric,y1>y0) ->
+  setOptions([['autoscaleX',false],
+              ['autoscaleY',false],
+              ['x0'        ,x0],
+              ['x1'        ,x1],
+              ['y0'        ,y0],
+              ['y1'        ,y1]]);
+setPlotRangeManually(centerX:Numeric,centerY:Numeric,range:Numeric) ->
+  setOptions([['autoscaleX',false],
+              ['autoscaleY',false],
+              ['preserveAspect',true],
+              ['x0'        ,centerX-range],
+              ['x1'        ,centerX+range],
+              ['y0'        ,centerY-range],
+              ['y1'        ,centerY+range]]);
+
 private prepareGeometry(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2)->begin
   local stretch:=0.5*sqrt(3);
   local kx:=sqrt((x1-x0)/(y1-y0)*triangleCount/2*stretch).round.max(1);

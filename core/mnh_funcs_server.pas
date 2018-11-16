@@ -168,7 +168,7 @@ PROCEDURE T_microserver.serve;
     up:=true;
     lastActivity:=now;
     repeat
-      start:=context^.wallclockTime(true);
+      start:=context^.wallclockTime;
       request:=socket.getRequest(sleepTime);
       if request.method<>htrm_no_request then begin
         statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);

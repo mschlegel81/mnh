@@ -89,7 +89,7 @@ TYPE
       {$endif}
       //Globals
       PROPERTY getGlobals:P_evaluationGlobals read related.evaluation;
-      FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
+      FUNCTION wallclockTime:double;
       //Side effects
       FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
@@ -178,7 +178,7 @@ TYPE
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_messageConnector);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString);
       PROCEDURE stopWorkers;
       PROCEDURE afterEvaluation;
 
@@ -277,7 +277,7 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     primaryContext.destroy;
   end;
 
-PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString);
   VAR pc:T_profileCategory;
       i:longint;
   begin
@@ -306,13 +306,11 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     {$endif}
     //timing:
-    if (eco_timing in globalOptions) or (eco_profiling in globalOptions) or enforceWallClock then begin
-      if wallClock=nil then wallClock:=TEpikTimer.create(nil);
-      with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
-      wallClock.clear;
-      wallClock.start;
-      timingInfo.startOfProfiling:=wallClock.elapsed;
-    end;
+    if wallClock=nil then wallClock:=TEpikTimer.create(nil);
+    with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
+    wallClock.clear;
+    wallClock.start;
+    timingInfo.startOfProfiling:=wallClock.elapsed;
     //evaluation state
     if evaluationContextType=ect_silent
     then primaryContext.allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
@@ -418,19 +416,8 @@ FUNCTION T_evaluationGlobals.isPaused:boolean;
   end;
 {$endif}
 
-FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
+FUNCTION T_threadContext.wallclockTime: double;
   begin
-    if related.evaluation^.wallClock=nil then begin
-      if forceInit then begin
-        enterCriticalSection(related.evaluation^.primaryContext.contextCS);
-        if related.evaluation^.wallClock=nil then begin
-          related.evaluation^.wallClock:=TEpikTimer.create(nil);
-          related.evaluation^.wallClock.clear;
-          related.evaluation^.wallClock.start;
-        end;
-        leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
-      end else exit(0);
-    end;
     result:=related.evaluation^.wallClock.elapsed;
   end;
 

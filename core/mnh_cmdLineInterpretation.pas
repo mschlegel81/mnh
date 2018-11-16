@@ -123,12 +123,15 @@ CONST DEF_VERBOSITY_STRING='';
 
   {Return true when parsed successfully}
   FUNCTION parseSingleMnhParameter(CONST param:string):boolean;
+    VAR app:string;
     begin
       result:=false;
       case parsingState of
         pst_initial: begin
           if startsWith(param,'-v') then begin
-            verbosityString+=copy(param,3,length(param)-2);
+            app:=copy(param,3,length(param)-2);
+            if app='' then app:='v';
+            verbosityString+=app;
             exit(true);
           end;
           if (param='-profile') then begin

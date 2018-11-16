@@ -20,7 +20,7 @@ private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=fileLines(inFile);
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
-  inLines.each(line,line='' ? "''" : join('#'&(line.bytes.ord))).join(",\n")&');';
+  inLines.each(line,line.escapePascal).join(",\n")&');';
   outFile.fileContents==outText
   ? void
   : writeFile(outFile,outText);
@@ -81,12 +81,14 @@ end;
 
 USE oeis_server;
 
+private stopOeisServer->while(isIpcServerRunning(oeis_server.ipcId),sendIpcRequest(oeis_server.ipcId,['stop']));
+
 private myMove(source,dest:String)->fileExists(source) ? begin
   local tries:=3;
   while(fileExists(dest) AND tries>0,
     deleteFile(dest) ? void : begin
     tries-=1;
-    isIpcServerRunning(oeis_server.ipcId) AND sendIpcRequest(oeis_server.ipcId,['stop']);
+    stopOeisServer;
     sleep(0.5);
   end);
   fileExists(dest) ? fail('Failed deleting '+dest) : void;
@@ -195,6 +197,7 @@ main('clean')->tprint('Cleaning') orElse cleanup;
 //*Deep cleaning, including deleting all executables
 main('CLEAN')->begin
   tprint('Deep cleaning');
+  stopOeisServer;
   cleanup;
   allFiles('target').map(::verboseDelete);
   files('3rd_party/*').minus(hashFiles).map(::verboseDelete);
