@@ -2,9 +2,10 @@ UNIT listProcessing;
 INTERFACE
 USES sysutils,
      mnh_constants, mnh_basicTypes,
-     {$ifdef fullVersion}mnh_settings,{$else}mySys,{$endif}
+     mnh_settings,
      mnh_litVar,valueStore,mnh_subrules,
      mnh_aggregators,mnh_contexts;
+CONST FUTURE_RECYCLER_MAX_SIZE=64;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 
@@ -134,7 +135,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
     end;
   VAR recycling:record
-        dat:array[0..31] of P_eachTask;
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_eachTask;
         fill:longint;
       end;
 
@@ -165,21 +166,17 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
 
   VAR rule:P_expressionLiteral;
       eachIndex:longint=0;
-      aimEnqueueCount:longint;
       x:P_literal;
       proceed:boolean=true;
   begin
     recycling.fill:=0;
-    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(eachLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
 
       for rule in rulesList do if proceed then begin
         enqueueForAggregation(createTask(rule,eachIndex,x));
-        if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
+        if context.getGlobals^.taskQueue.getQueuedCount>=length(recycling.dat) then begin
           if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
-          //if there is not enough pending after dequeuing, increase aimEnqueueCount
-          if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
         end;
         proceed:=context.messages.continueEvaluation and not(aggregator^.earlyAbort);
       end;
@@ -237,7 +234,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       end;
     end;
   VAR recycling:record
-        dat:array[0..31] of P_mapTask;
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
         fill:longint;
       end;
 
@@ -267,22 +264,18 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     end;
 
   VAR x:P_literal;
-      aimEnqueueCount:longint;
       isExpressionNullary:boolean;
   begin
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
-    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
       if isExpressionNullary
       then enqueueForAggregation(createTask(nil))
       else enqueueForAggregation(createTask(x  ));
-      if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
+      if context.getGlobals^.taskQueue.getQueuedCount>=length(recycling.dat) then begin
         if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
-        //if there is not enough pending after dequeuing, increase aimEnqueueCount
-        if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
       end;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
@@ -315,7 +308,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       end;
     end;
   VAR recycling:record
-        dat:array[0..31] of P_filterTask;
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_filterTask;
         fill:longint;
       end;
 
@@ -353,17 +346,13 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     end;
 
   VAR x:P_literal;
-      aimEnqueueCount:longint;
   begin
     recycling.fill:=0;
-    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
       enqueueForAggregation(createTask(x));
-      if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
+      if context.getGlobals^.taskQueue.getQueuedCount>=length(recycling.dat) then begin
         if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
-        //if there is not enough pending after dequeuing, increase aimEnqueueCount
-        if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
       end;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
