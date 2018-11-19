@@ -575,10 +575,11 @@ PROCEDURE cascadeDisposeToken(VAR p: P_token);
 
 FUNCTION newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
   begin
-    with tokenRecycler do
-    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
+    with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+      end else new(result,create);
       leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
@@ -587,10 +588,11 @@ FUNCTION newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistr
 
 FUNCTION newToken(CONST original: T_token): P_token;
   begin
-    with tokenRecycler do
-    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
+    with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+      end else new(result,create);
       leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(original);
@@ -599,10 +601,11 @@ FUNCTION newToken(CONST original: T_token): P_token;
 
 FUNCTION newToken(CONST original: P_token): P_token;
   begin
-    with tokenRecycler do
-    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
+    with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+      end else new(result,create);
       leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(original^);
