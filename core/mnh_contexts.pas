@@ -8,7 +8,7 @@ USES //FPC/LCL libraries
      myGenerics,mySys,myStringUtil,
      //MNH:
      mnh_constants, mnh_basicTypes,
-     {$ifdef fullVersion}mnh_settings,{$endif}
+     mnh_settings,
      mnh_messages,
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
@@ -73,14 +73,13 @@ TYPE
         parent         :P_threadContext;
         children       :array of P_threadContext;
       end;
-      state:T_taskState;
       CONSTRUCTOR create();
-      PROCEDURE initAsChildOf(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel);
       DESTRUCTOR destroy;
       PROCEDURE dropChildContext(CONST context:P_threadContext);
       PROCEDURE addChildContext(CONST context:P_threadContext);
       PROCEDURE setThreadOptions(CONST globalOptions:T_evaluationContextOptions);
     public
+      state:T_taskState;
       callDepth:longint;
       messages:T_threadLocalMessages;
       valueScope:P_valueScope;
@@ -121,9 +120,7 @@ TYPE
   P_queueTask=^T_queueTask;
   T_queueTask=object
     protected
-      taskCs:TRTLCriticalSection;
-      env   :P_threadContext;
-      evaluationResult:T_evaluationResult;
+      context:P_threadContext;
     private
       nextToEvaluate:P_queueTask;
       isVolatile    :boolean;
@@ -131,8 +128,6 @@ TYPE
       PROCEDURE   evaluate; virtual; abstract;
       CONSTRUCTOR create(CONST volatile:boolean);
       PROCEDURE   defineAndEnqueue(CONST newEnvironment:P_threadContext);
-      FUNCTION    canGetResult:boolean;
-      FUNCTION    getResult:T_evaluationResult;
       DESTRUCTOR  destroy; virtual;
   end;
 
@@ -237,7 +232,33 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST 
       new(result,create());
     end;
     leaveCriticalSection(recyclerCS);
-    result^.initAsChildOf(parentThread,parentScopeAccess);
+    with result^ do begin
+      options           :=parentThread^.options;
+      allowedSideEffects:=parentThread^.allowedSideEffects;
+      {$ifdef fullVersion}
+      callStack.clear;
+      {$endif}
+
+      related.evaluation:=parentThread^.related.evaluation;
+      related.parent    :=parentThread;
+      setLength(related.children,0);
+      parentThread^.addChildContext(result);
+
+      callDepth:=parentThread^.callDepth+2;
+      messages.clear;
+      messages.setParent(@parentThread^.messages);
+
+      { recycler  : nothing to do}
+      if parentScopeAccess=ACCESS_BLOCKED
+      then valueScope:=nil
+      else valueScope:=newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
+
+      {$ifdef fullVersion}
+      parentCustomForm:=nil;
+      {$endif}
+      state:=fts_pending;
+    end;
+
   end;
 
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
@@ -245,7 +266,9 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
     primaryContext.create();
     prng.create;
     prng.randomize;
-    wallClock:=nil;
+    wallClock:=TEpikTimer.create(nil);
+    wallClock.clear;
+    wallClock.start;
     {$ifdef fullVersion}
     profiler:=nil;
     debuggingStepper:=nil;
@@ -265,7 +288,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
 DESTRUCTOR T_evaluationGlobals.destroy;
   begin
     prng.destroy;
-    if wallClock<>nil then FreeAndNil(wallClock);
+    FreeAndNil(wallClock);
     {$ifdef fullVersion}
     if profiler<>nil then dispose(profiler,destroy);
     profiler:=nil;
@@ -306,7 +329,6 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     {$endif}
     //timing:
-    if wallClock=nil then wallClock:=TEpikTimer.create(nil);
     with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
     wallClock.clear;
     wallClock.start;
@@ -547,7 +569,6 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     messages.escalateErrors;
     messages.setParent(nil);
 
-    related.evaluation:=nil;
     if related.parent<>nil then related.parent^.dropChildContext(@self);
     {$ifdef fullVersion}
     callStack.clear;
@@ -661,36 +682,6 @@ CONSTRUCTOR T_threadContext.create();
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext; CONST parentScopeAccess:AccessLevel);
-  begin
-    enterCriticalSection(contextCS);
-    options           :=parentThread^.options;
-    allowedSideEffects:=parentThread^.allowedSideEffects;
-    {$ifdef fullVersion}
-    callStack.clear;
-    {$endif}
-
-    related.evaluation:=parentThread^.related.evaluation;
-    related.parent    :=parentThread;
-    setLength(related.children,0);
-    parentThread^.addChildContext(@self);
-
-    callDepth:=parentThread^.callDepth+2;
-    messages.clear;
-    messages.setParent(@parentThread^.messages);
-
-    { recycler  : nothing to do}
-    if parentScopeAccess=ACCESS_BLOCKED
-    then valueScope:=nil
-    else valueScope:=newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
-
-    {$ifdef fullVersion}
-    parentCustomForm:=nil;
-    {$endif}
-    state:=fts_pending;
-    leaveCriticalSection(contextCS);
-  end;
-
 PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
   VAR k:longint=0;
       j:longint;
@@ -751,9 +742,8 @@ DESTRUCTOR T_threadContext.destroy;
 
 CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
   begin;
-    initCriticalSection(taskCs);
     isVolatile:=volatile;
-    env:=nil;
+    context:=nil;
   end;
 
 PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
@@ -761,41 +751,15 @@ PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
     {$ifdef debugMode}
     if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
     {$endif}
-    evaluationResult:=NIL_EVAL_RESULT;
     nextToEvaluate  :=nil;
-    if env<>nil then contextPool.disposeContext(env);
-    env:=newEnvironment;
-    env^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
-  end;
-
-FUNCTION T_queueTask.canGetResult:boolean;
-  begin
-    enterCriticalSection(taskCs);
-    result:=env^.state=fts_finished;
-    leaveCriticalSection(taskCs);
-  end;
-
-FUNCTION T_queueTask.getResult:T_evaluationResult;
-  VAR sleepTime:longint=0;
-  begin
-    enterCriticalSection(taskCs);
-    while env^.state in [fts_pending,fts_evaluating] do begin
-      leaveCriticalSection(taskCs);
-      ThreadSwitch;
-      sleep(sleepTime);
-      if sleepTime<100 then inc(sleepTime);
-      enterCriticalSection(taskCs);
-    end;
-    result:=evaluationResult;
-    leaveCriticalSection(taskCs);
+    if context<>nil then contextPool.disposeContext(context);
+    context:=newEnvironment;
+    context^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
   end;
 
 DESTRUCTOR T_queueTask.destroy;
   begin
-    enterCriticalSection(taskCs);
-    if env<>nil then contextPool.disposeContext(env);
-    leaveCriticalSection(taskCs);
-    doneCriticalSection(taskCs);
+    if context<>nil then contextPool.disposeContext(context);
   end;
 
 CONSTRUCTOR T_taskQueue.create;
@@ -821,7 +785,7 @@ DESTRUCTOR T_taskQueue.destroy;
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   PROCEDURE ensurePoolThreads();
     begin
-      if (poolThreadsRunning<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}-1) then begin
+      if (poolThreadsRunning<settings.cpuCount-1) then begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
@@ -829,11 +793,6 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadCont
 
   VAR subQueueIndex:longint=0;
   begin
-    enterCriticalSection(task^.taskCs);
-    task^.nextToEvaluate:=nil;
-    task^.evaluationResult:=NIL_EVAL_RESULT;
-    leaveCriticalSection(task^.taskCs);
-
     system.enterCriticalSection(cs);
     if length(subQueues)=0 then begin
       setLength(subQueues,1);

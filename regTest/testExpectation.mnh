@@ -1,3 +1,4 @@
+#!/usr/bin/mnh_light
 USE guiScripts,test_config,'..\make_config.mnh',formattingUtils;
 private plain datastore expectations:=[].toMap;
 private datastore runTimes:=[].toMap;

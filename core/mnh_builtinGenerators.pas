@@ -340,14 +340,14 @@ FUNCTION parallelFilter_imp intFuncSignature;
         lt_map:begin
           result:=newMapLiteral;
           iterator:=newIterator(map0);
-          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_mapLiteral(result));
+          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_mapLiteral(result),arg0);
           disposeLiteral(iterator);
         end;
         lt_list..lt_stringList,
         lt_set ..lt_stringSet: begin
           result:=collection0^.newOfSameType(false);
           iterator:=newIterator(collection0);
-          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_collectionLiteral(result));
+          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_collectionLiteral(result),arg0);
           disposeLiteral(iterator);
         end;
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin

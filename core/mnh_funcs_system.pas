@@ -153,24 +153,6 @@ FUNCTION getEnv_impl intFuncSignature;
     end;
   end;
 
-//FUNCTION logTo_impl intFuncSignature;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
-//      context.adapters^.addOutfile(str0^.value,bool1^.value);
-//      result:=newVoidLiteral;
-//    end;
-//  end;
-//
-//FUNCTION printTo_impl intFuncSignature;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)  then begin
-//      context.adapters^.setPrintTextFileAdapter(str0^.value);
-//      result:=newVoidLiteral;
-//    end;
-//  end;
-//
 FUNCTION setExitCode_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
@@ -207,7 +189,7 @@ FUNCTION time_imp intFuncSignature;
       {$endif}
       if res<>nil then begin
         result:=newMapLiteral
-          ^.put('expression',arg0^.toString)
+          ^.put('expression',arg0^.toString(100))
           ^.put('time',t );
         if res^.literalType<>lt_void then P_mapLiteral(result)^.put('result',res,false)
                                      else disposeLiteral(res);

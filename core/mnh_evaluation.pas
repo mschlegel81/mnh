@@ -242,14 +242,15 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       end;
       if not(parseBodyOk) then exit;
       iterator:=newIterator(P_literal(first^.data));
-      disposeLiteral(first^.data);
       first^.next:=disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context)
+        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,P_literal(first^.data))
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context);
+        disposeLiteral(first^.data);
       end else begin
+        disposeLiteral(first^.data);
         if eachType = tt_parallelEach then context.messages.globalMessages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
         aggregate(iterator,aggregator,eachLocation,context);
       end;
