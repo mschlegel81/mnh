@@ -451,6 +451,7 @@ CONSTRUCTOR T_filterTask.createFilterTask(CONST expr: P_expressionLiteral);
 
 PROCEDURE T_filterTask.evaluate;
   VAR k:longint;
+      j:longint=0;
   begin
     context^.beginEvaluation;
     try
@@ -458,9 +459,12 @@ PROCEDURE T_filterTask.evaluate;
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do begin
           if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,true,mapParameter[k])
-          then mapResult[k]:=mapParameter[k]
-          else mapResult[k]:=nil;
+          then begin
+            mapResult[j]:=mapParameter[k];
+            inc(j);
+          end;
         end;
+        setLength(mapResult,j);
       end;
     finally
       context^.finalizeTaskAndDetachFromParent;
@@ -486,13 +490,24 @@ PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_threadContext; CONST x:T_ar
 
 PROCEDURE T_mapTask.evaluate;
   VAR k:longint;
+      j:longint=0;
+      lit:P_literal;
   begin
     context^.beginEvaluation;
     try
       if context^.messages.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
-        for k:=0 to length(mapParameter)-1 do
-        mapResult[k]:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,mapParameter[k]).literal;
+        for k:=0 to length(mapParameter)-1 do begin
+          lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,mapParameter[k]).literal;
+          if (lit<>nil) then begin
+            if lit^.literalType=lt_void then disposeLiteral(lit)
+            else begin
+              mapResult[j]:=lit;
+              inc(j);
+            end;
+          end;
+        end;
+        setLength(mapResult,j);
       end;
     finally
       context^.finalizeTaskAndDetachFromParent;
