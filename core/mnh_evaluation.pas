@@ -202,7 +202,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         //process other body parts (if any)---------------------------------------------
         setLength(bodyRule,length(bodyParts));
         for i:=0 to length(bodyParts)-1 do
-          new(P_inlineExpression(bodyRule[i]),createForEachBody(eachToken^.txt,bodyParts[i].first,context));
+          new(P_inlineExpression(bodyRule[i]),createForEachBody(eachToken^.txt,bodyParts[i].first,eachToken^.location,context));
         //---------------------------------------------process other body parts (if any)
       end;
 

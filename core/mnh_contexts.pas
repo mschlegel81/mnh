@@ -44,7 +44,7 @@ TYPE
   T_contextRecycler=object
     private
       recyclerCS:TRTLCriticalSection;
-      contexts:array[0..63] of P_threadContext;
+      contexts:array[0..127] of P_threadContext;
       fill:longint;
     public
       CONSTRUCTOR create;
@@ -121,6 +121,7 @@ TYPE
   T_queueTask=object
     protected
       context:P_threadContext;
+      taskCs:TRTLCriticalSection;
     private
       nextToEvaluate:P_queueTask;
       isVolatile    :boolean;
@@ -214,24 +215,29 @@ DESTRUCTOR T_contextRecycler.destroy;
 
 PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
   begin
-    enterCriticalSection(recyclerCS);
-    if (fill<length(contexts)) and isMemoryInComfortZone then begin
-      contexts[fill]:=context;
-      inc(fill);
-    end else dispose(context,destroy);
-    leaveCriticalSection(recyclerCS);
+    if (tryEnterCriticalsection(recyclerCS)=0)
+    then dispose(context,destroy)
+    else begin
+      if (fill>=length(contexts))
+      then dispose(context,destroy)
+      else begin
+        contexts[fill]:=context;
+        inc(fill);
+      end;
+      leaveCriticalSection(recyclerCS);
+    end;
+    context:=nil;
   end;
 
 FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel):P_threadContext;
   begin
-    enterCriticalSection(recyclerCS);
-    if fill>0 then begin
-      dec(fill);
-      result:=contexts[fill];
-    end else begin
-      new(result,create());
-    end;
-    leaveCriticalSection(recyclerCS);
+    if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=contexts[fill];
+      end else new(result,create);
+      leaveCriticalSection(recyclerCS);
+    end else new(result,create);
     with result^ do begin
       options           :=parentThread^.options;
       allowedSideEffects:=parentThread^.allowedSideEffects;
@@ -248,7 +254,6 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST 
       messages.clear;
       messages.setParent(@parentThread^.messages);
 
-      { recycler  : nothing to do}
       if parentScopeAccess=ACCESS_BLOCKED
       then valueScope:=nil
       else valueScope:=newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
@@ -258,7 +263,6 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST 
       {$endif}
       state:=fts_pending;
     end;
-
   end;
 
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
@@ -574,7 +578,6 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     callStack.clear;
     parentCustomForm:=nil;
     {$endif}
-    { recycler  : nothing to do}
     disposeScope(valueScope);
     leaveCriticalSection(contextCS);
   end;
@@ -744,10 +747,12 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
   begin;
     isVolatile:=volatile;
     context:=nil;
+    initCriticalSection(taskCs);
   end;
 
 PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
   begin
+    enterCriticalSection(taskCs);
     {$ifdef debugMode}
     if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
     {$endif}
@@ -755,11 +760,15 @@ PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
     if context<>nil then contextPool.disposeContext(context);
     context:=newEnvironment;
     context^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
+    leaveCriticalSection(taskCs);
   end;
 
 DESTRUCTOR T_queueTask.destroy;
   begin
+    enterCriticalSection(taskCs);
     if context<>nil then contextPool.disposeContext(context);
+    leaveCriticalSection(taskCs);
+    doneCriticalSection(taskCs);
   end;
 
 CONSTRUCTOR T_taskQueue.create;
