@@ -829,6 +829,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
       lastWasLocalModifier:boolean=false;
       idType:T_tokenType;
       lastLocation:T_tokenLocation;
+      idLoc:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
@@ -852,8 +853,10 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             if not(localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable)) then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
-          end else if (localIdStack.hasId(t^.txt,idType)) then
+          end else if (localIdStack.hasId(t^.txt,idType,idLoc)) then begin
             t^.tokType:=idType;
+            if idType=tt_eachIndex then t^.location:=idLoc;
+          end;
       end;
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;
@@ -867,6 +870,7 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
       lastWasLocalModifier:boolean=false;
       idType:T_tokenType;
       lastLocation:T_tokenLocation;
+      idLoc:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
@@ -890,8 +894,10 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
             lastTokenized^.tokType:=tt_blockLocalVariable;
             if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable))
             then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
-          end else if (localIdStack.hasId(lastTokenized^.txt,idType)) then
+          end else if (localIdStack.hasId(lastTokenized^.txt,idType,idLoc)) then begin
             lastTokenized^.tokType:=idType;
+            if idType=tt_eachIndex then lastTokenized^.location:=idLoc;
+          end;
         tt_semicolon: if localIdStack.scopeBottom then begin
           if beforeLastTokenized<>nil then begin;
             beforeLastTokenized^.next:=nil;
