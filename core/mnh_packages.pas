@@ -1103,7 +1103,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   end;
 
 PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
-  VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
@@ -1184,7 +1183,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     if isMain then globals.primaryContext.messages.clear;
-    profile:=globals.primaryContext.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
     readyForUsecase:=lu_beingLoaded;
 

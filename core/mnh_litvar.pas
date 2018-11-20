@@ -343,7 +343,7 @@ TYPE
     private
       dat:PP_literal;
       alloc,fill:longint;
-      PROCEDURE modifyType(CONST L:P_literal); inline;
+      PROCEDURE modifyType(CONST L:P_literal); {$ifndef profilingFlavour}inline;{$endif}
     public
       PROPERTY value:PP_literal read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
@@ -384,7 +384,7 @@ TYPE
       dat:T_literalKeyBooleanValueMap;
       CONSTRUCTOR create;
       CONSTRUCTOR createClone(VAR original:T_setLiteral);
-      PROCEDURE modifyType(CONST L:P_literal); inline;
+      PROCEDURE modifyType(CONST L:P_literal); {$ifndef profilingFlavour}inline;{$endif}
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
@@ -441,19 +441,19 @@ VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:pointer): P_literal;
 FUNCTION exp(CONST x:double):double; inline;
 
-PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef debugMode} inline; {$endif}
-PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
+PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef profilingFlavour}{$ifndef debugMode} inline; {$endif}{$endif}
+PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); {$ifndef profilingFlavour}inline;{$endif}
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; inline;
 FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; inline;
-FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
-FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;       inline;
+FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; inline;
+FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
-FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;        inline;
-FUNCTION newMapLiteral                                : P_mapLiteral;        inline;
+FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;  inline;
+FUNCTION newMapLiteral                                : P_mapLiteral;  inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal; inline;

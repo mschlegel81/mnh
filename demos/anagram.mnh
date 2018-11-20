@@ -1,8 +1,10 @@
 USE inputs;
 @demo_for=file processing, string processing, list processing
 @AllowOnly=read file, http
-readDict(filename)->fileLineIterator(filename).pEach(word,begin
-  local l:=word.lower; [join(l.chars.sort),l]; end).unique;
+readDict(filename)->fileLines(filename)
+                    .lower
+                    .unique
+                    .pMap({[join($word.chars.sort),$word]});
 
 private anagramsInDict(list)->list
                      .group(0)

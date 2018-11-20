@@ -283,9 +283,6 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       end;
       target.Pen.style:=psClear;
       if (x<=xRes) and (x+textWidth>=0) and (y<=yRes) and (y+textHeight>=0) then begin
-        {$ifdef debugMode}
-        writeln(stdErr,'        PLOT: Rendering text "',text[0],'" @ size ',target.Font.size);
-        {$endif}
         if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+textWidth,y+textHeight);
         for k:=0 to length(text)-1 do begin
           target.textOut(x,
@@ -418,14 +415,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
       or axisTrafo['y'].autoscale
       then boundingBox:=getSamplesBoundingBox
       else for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
-      {$ifdef debugMode}
-      writeln(stdErr,'        PLOT: Sample range initialized to ',
-                     boundingBox['x',0],'..',
-                     boundingBox['x',1],' x ',
-                     boundingBox['y',0],'..',
-                     boundingBox['y',1]);
-      {$endif}
-
       //Stretch bounding box, potentially transform to logscale:----------------------------------
       for axis:='x' to 'y' do begin
         if (validSampleCount>=1) then for i:=0 to 1 do begin
@@ -436,11 +425,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         tmp:=(boundingBox[axis,1]-boundingBox[axis,0])*(1-autoscaleFactor);
         boundingBox[axis,0]:=boundingBox[axis,0]-tmp;
         boundingBox[axis,1]:=boundingBox[axis,1]+tmp;
-        {$ifdef debugMode}
-        writeln(stdErr,'        PLOT: Virtual sample range (logscale=',axisTrafo[axis].logs,') for axis ',axis,': ',
-                       boundingBox[axis,0],'..',
-                       boundingBox[axis,1]);
-        {$endif}
       end;
       //----------------------------------:Stretch bounding box, potentially transform to logscale
       //Adapt bounding box to respect preservation of aspect ratio:-------------------------------
@@ -466,13 +450,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         if axisTrafo[axis].logscale then for i:=0 to 1 do boundingBox[axis,i]:=exp(boundingBox[axis,i]);
         axisTrafo[axis].setWorldRange(boundingBox[axis,0],boundingBox[axis,1]);
       end;
-      {$ifdef debugMode}
-      writeln(stdErr,'        PLOT: Final sample range is ',
-                     axisTrafo['x'].rangeByAutosize[0],'..',
-                     axisTrafo['x'].rangeByAutosize[1],' x ',
-                     axisTrafo['y'].rangeByAutosize[0],'..',
-                     axisTrafo['y'].rangeByAutosize[1]);
-      {$endif}
     end;
 
   PROCEDURE initTics(CONST axis: char);
@@ -533,9 +510,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
       VAR i:longint;
           j:byte;
       begin
-        {$ifdef debugMode}
-        writeln(stdErr,'        PLOT: init ',axis,'-tics initLogTics ',ppot);
-        {$endif}
         setLength(grid[axis], 0);
         if ppot=-1 then begin
           for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
@@ -568,14 +542,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         k:longint;
         logRange:double;
     begin
-      {$ifdef debugMode}
-      writeln(stdErr,'        PLOT: init ',axis,'-tics (logscale=',axisTrafo[axis].logscale,')');
-      {$endif}
-
       if axisTrafo[axis].logscale then begin
-        {$ifdef debugMode}
-        writeln(stdErr,'        PLOT: init ',axis,'-tics scanning level [-1]');
-        {$endif}
         //Tics: ... 0.5 0.6 0.7 0.8 0.9 1 2 3 4 5 ...
         k:=0;
         for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
@@ -585,9 +552,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
           initLogTics(-1);
           exit;
         end;
-        {$ifdef debugMode}
-        writeln(stdErr,'        PLOT: init ',axis,'-tics scanning level [0]');
-        {$endif}
         //Tics: ... 0.5 1 2 5 10 20 50 ...
         k:=0;
         for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
@@ -599,9 +563,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         end;
         //Tics: ... 0.01 0.1 1 10 100 ...
         for j:=1 to 60 do begin
-          {$ifdef debugMode}
-          writeln(stdErr,'        PLOT: init ',axis,'-tics scanning level [',j,']');
-          {$endif}
           k:=0;
           for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
                   ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do
@@ -659,13 +620,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
       axisTrafo['y'].screenRange[1]:=0;
       axisTrafo['x'].prepare;
       axisTrafo['y'].prepare;
-      {$ifdef debugMode}
-      writeln(stdErr,'        PLOT: Borders updated to ',
-                     axisTrafo['x'].screenRange[0],'..',
-                     axisTrafo['x'].screenRange[1],' x ',
-                     axisTrafo['y'].screenRange[0],'..',
-                     axisTrafo['y'].screenRange[1]);
-      {$endif}
     end;
 
   FUNCTION longestTic:string;

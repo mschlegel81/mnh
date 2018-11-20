@@ -56,7 +56,7 @@ findInAll(editorFile:String)->begin
   void;
 end;
 
-@utility=dependencies/open all imported files
+@utility=dependencies/find all imported files
 openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::printFileLink);
 
 private plain datastore scriptFolders:=void;
@@ -69,19 +69,21 @@ findAllMnhScripts->
   scriptFolders.isVoid
   ? begin
       local result:=(mnhInfo['targetOs']=='Linux'
-                     ? driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':'
-                     : ['/'])
-                    .pEach(root,allFiles(root,'*.mnh'),|);
+                     ? ['/']
+                     : driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':')
+                    .union([mnhInfo['configDir'].extractFileDirectory])
+                    .pEach(root,note('Scanning ',root),allFiles(root,'*.mnh'),|)
+                    .unique;
       scriptFolders:=result.extractFileDirectory.unique;
       result;
     end
-  : scriptFolders.pEach(root,allFiles(root,'*.mnh',false),|);
+  : scriptFolders.pEach(root,note('Scanning ',root),allFiles(root,'*.mnh',false),|);
 
 private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
 
-@utility=dependencies/open all importing files
+@utility=dependencies/find all importing files
 openImporting(editorFile:String)->begin
-  print(editorFile);
+  print('Look for: ',editorFile);
   findAllMnhScripts.minus([editorFile]).pEach(script,note(script),editorFile in inspect(script).useAndIncPaths ? script.printFileLink : void);
   void;
 end;

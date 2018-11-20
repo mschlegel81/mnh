@@ -3,7 +3,7 @@ USE GUI, testExpectation;
 private avg([])->Nan;
 private avg(L:NumericList)->L.agg(+)/L.size;
 private sigma(L:NumericList)->sqrt(avg(sqr(L-L.avg)));
-private quartiles([])->[Nan,Nan,Nan];
+private quartiles([])->[0,0,0];
 private quartiles(L:NumericList)->L.sort[(L.size*[1..3] div 4)];
 private quartiles(x:Numeric)->[x,x,x];
 

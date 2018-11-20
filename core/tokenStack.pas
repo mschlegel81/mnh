@@ -113,7 +113,7 @@ TYPE
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
     FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
-    FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType):boolean;
+    FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
   end;
 
 IMPLEMENTATION
@@ -502,7 +502,7 @@ FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CO
     end;
   end;
 
-FUNCTION T_idStack.hasId(CONST id:T_idString; OUT idType:T_tokenType):boolean;
+FUNCTION T_idStack.hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
   VAR i,j:longint;
   begin
     result:=false;
@@ -510,6 +510,7 @@ FUNCTION T_idStack.hasId(CONST id:T_idString; OUT idType:T_tokenType):boolean;
     for j:=0 to length(ids)-1 do if ids[j].name=id then begin
       ids[j].used:=true;
       idType:=ids[j].idType;
+      idLoc:=ids[j].location;
       exit(true);
     end;
   end;

@@ -78,7 +78,7 @@ TYPE
       currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
       {Calling with intrinsicTuleId='' means the original is cloned}
@@ -87,7 +87,7 @@ TYPE
     public
       PROCEDURE resolveIds(CONST threadLocalMessages:P_threadLocalMessages);
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_threadContext);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_threadContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext; CONST customId_:T_idString='');
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
@@ -222,7 +222,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
     end;
   end;
 
-PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:T_threadContext);
+PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST eachLocation:T_tokenLocation);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
@@ -270,8 +270,9 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
           end;
           tt_eachIndex: begin
-            parIdx:=pattern.indexOfId(token.txt);
-            if (typ=et_eachBody) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable;
+            if (token.location=eachLocation)
+            then parIdx:=pattern.indexOfId(token.txt)
+            else parIdx:=-1;
           end
           else parIdx:=-1;
         end;
@@ -299,7 +300,7 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
   begin
     init(et_whileBody,declAt);
     pattern.create;
-    constructExpression(rep,context);
+    constructExpression(rep,context,declAt);
   end;
 
 CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_abstractRule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
@@ -309,16 +310,17 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_abstractRule; CONST pat:T
     meta:=meta_;
     publicSubrule:=not(isPrivate);
     pattern:=pat;
-    constructExpression(rep,context);
+    constructExpression(rep,context,declAt);
     parent:=parent_;
   end;
 
-CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_threadContext);
+CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation:T_tokenLocation; VAR context: T_threadContext);
   begin
     init(et_eachBody,rep^.location);
     pattern.create;
     pattern.appendFreeId(parameterId,rep^.location);
-    constructExpression(rep,context);
+    pattern.appendFreeId(EACH_INDEX_IDENTIFIER,rep^.location);
+    constructExpression(rep,context,eachLocation);
   end;
 
 FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint): boolean;
