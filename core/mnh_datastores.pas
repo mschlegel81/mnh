@@ -20,7 +20,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
       FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
-      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_threadLocalMessages; CONST writePlainText:boolean);
+      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   end;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
@@ -157,7 +157,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
     fileAge(fileName,fileReadAt);
   end;
 
-PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_threadLocalMessages; CONST writePlainText:boolean);
+PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
   begin

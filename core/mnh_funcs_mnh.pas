@@ -24,7 +24,7 @@ PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; V
       lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (argument)^.value.toFloat;
       lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (argument)^.value;
     end;
-    while (context.wallclockTime<sleepUntil) and (context.messages.continueEvaluation) do begin
+    while (context.wallclockTime<sleepUntil) and (context.messages^.continueEvaluation) do begin
       sleepInt:=round(900*(sleepUntil-context.wallclockTime));
       if sleepInt>1000 then sleepInt:=1000;
       if (sleepInt>0) then sleep(sleepInt);
@@ -134,14 +134,14 @@ FUNCTION ord_imp intFuncSignature;
                     else exit(newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context);
         lt_error,lt_void, lt_real: begin
-          context.messages.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
+          context.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
           then result:=newListLiteral(P_compoundLiteral(x)^.size)
           else result:=newSetLiteral;
           iter:=P_compoundLiteral(x)^.iteratableList;
-          for sub in iter do if context.messages.continueEvaluation then
+          for sub in iter do if context.messages^.continueEvaluation then
             collResult^.append(recurse(sub),false);
           disposeLiteral(iter);
         end;

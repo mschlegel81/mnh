@@ -68,7 +68,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
     if not(gui_started) then begin
-      context.messages.logGuiNeeded;
+      context.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and
@@ -80,7 +80,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       end;
       enterCriticalSection(treeFormCs);
       newTreeForm.initWithLiteral(P_listLiteral(params^.value[0]),caption);
-      context.messages.globalMessages^.postSingal(mt_displayVariableTree,C_nilTokenLocation);
+      context.messages^.postSingal(mt_displayVariableTree,C_nilTokenLocation);
       leaveCriticalSection(treeFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;

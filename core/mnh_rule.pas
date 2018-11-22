@@ -36,7 +36,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType=rt_normal);
       DESTRUCTOR destroy; virtual;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
-      PROCEDURE resolveIds(CONST adapters:P_threadLocalMessages); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_messages); virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
@@ -146,7 +146,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST datastorePackage:P_objectWithPath; VAR meta_:T_ruleMetaData; CONST isPrivate,usePlainTextEncoding:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
-      PROCEDURE writeBack(VAR adapters:T_threadLocalMessages);
+      PROCEDURE writeBack(CONST adapters:P_messages);
       FUNCTION isInitialized:boolean;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
@@ -329,27 +329,27 @@ FUNCTION T_typecheckRule.getRootId:T_idString; begin result:=typedef^.getName; e
 PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression; VAR context: T_threadContext);
   VAR i,j:longint;
   begin
-    if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.messages.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
+    if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.messages^.raiseSimpleError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
     if (getRuleType=rt_customOperator) then begin
       if isUnaryOperatorId(getId) then begin
-        if not(rule^.canApplyToNumberOfParameters(1)) then context.messages.raiseError('Overloaded operator must accept one parameter',rule^.getLocation);
+        if not(rule^.canApplyToNumberOfParameters(1)) then context.messages^.raiseSimpleError('Overloaded operator must accept one parameter',rule^.getLocation);
       end else begin
-        if not(rule^.canApplyToNumberOfParameters(2)) then context.messages.raiseError('Overloaded operator must accept two parameter',rule^.getLocation);
+        if not(rule^.canApplyToNumberOfParameters(2)) then context.messages^.raiseSimpleError('Overloaded operator must accept two parameter',rule^.getLocation);
       end;
-      if not(rule^.getPattern.usesStrictCustomTyping) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
+      if not(rule^.getPattern.usesStrictCustomTyping) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
     end;
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
     if i>=length(subrules) then begin
       setLength(subrules,i+1);
-      for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
+      for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
     end else begin
       disposeLiteral(subrules[i]);
       if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
-      then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
+      then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
     end;
     subrules[i]:=rule;
-    if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.messages.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
+    if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.messages^.raiseSimpleError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
     {$ifdef fullVersion}
     if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) or
        rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
@@ -360,7 +360,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
 PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
   begin
     inherited addOrReplaceSubRule(rule,context);
-    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
+    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
   end;
 
 PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
@@ -370,12 +370,12 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
   begin
     if not(rule^.hasValidValidCustomTypeCheckPattern(getRuleType=rt_duckTypeCheck)) then begin
      if (getRuleType=rt_customTypeCheck)
-     then context.messages.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one List, Set, Map or Expression parameter.',rule^.getLocation)
-     else context.messages.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one parameter.',rule^.getLocation);
+     then context.messages^.raiseSimpleError('Invalid pattern/signature for custom type check! Must accept exactly one List, Set, Map or Expression parameter.',rule^.getLocation)
+     else context.messages^.raiseSimpleError('Invalid pattern/signature for custom type check! Must accept exactly one parameter.',rule^.getLocation);
      exit;
     end;
     if length(subrules)>0 then begin
-      context.messages.raiseError('Type definitions must have only one subrule and may not be overridden',rule^.getLocation);
+      context.messages^.raiseSimpleError('Type definitions must have only one subrule and may not be overridden',rule^.getLocation);
       exit;
     end;
     setLength(subrules,1);
@@ -406,7 +406,7 @@ FUNCTION T_typecheckRule.castRuleIsValid:boolean;
     result:=(getRuleType=rt_customTypeCheck) or subrules[0]^.hasValidValidCustomTypeCheckPattern(false);
   end;
 
-PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_threadLocalMessages);
+PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages);
   VAR s:P_subruleExpression;
   begin
     for s in subrules do s^.resolveIds(adapters);
@@ -473,7 +473,7 @@ FUNCTION T_ruleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST call
 FUNCTION T_protectedRuleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
   begin
     result:=false;
-    if P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT then P_threadContext(threadContextPointer)^.messages.raiseError('Stack depth limit exceeded calling '+getId+'.',getLocation,mt_el4_systemError)
+    if P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT then P_threadContext(threadContextPointer)^.raiseError('Stack depth limit exceeded calling '+getId+'.',getLocation,mt_el4_systemError)
     else if inherited replaces(ruleTokenType,callLocation,param,firstRep,lastRep,threadContextPointer) then begin
       system.enterCriticalSection(rule_cs);
       result:=true;
@@ -510,7 +510,7 @@ exit}
     CONST millesecondsBeforeRetry=10;
     begin
       while (tryEnterCriticalsection(rule_cs)=0) do begin
-        if not(P_threadContext(threadContextPointer)^.messages.continueEvaluation) then exit(false);
+        if not(P_threadContext(threadContextPointer)^.messages^.continueEvaluation) then exit(false);
         ThreadSwitch;
         sleep(millesecondsBeforeRetry);
       end;
@@ -523,7 +523,7 @@ exit}
                  else useParam:=param;
 
     if not(enterCriticalSectionWithDeadlockDetection) then begin
-      P_threadContext(threadContextPointer)^.messages.raiseError('Deadlock detected, trying to access memoized rule '+getId,callLocation);
+      P_threadContext(threadContextPointer)^.raiseError('Deadlock detected, trying to access memoized rule '+getId,callLocation);
       exit(false);
     end;
     lit:=cache.get(useParam);
@@ -534,8 +534,8 @@ exit}
       CLEAN_EXIT(true);
     end else for sub in subrules do if ((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or (sub^.isPublic)) and sub^.replaces(useParam,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
       if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
-      if (P_threadContext(threadContextPointer)^.messages.continueEvaluation) then P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
-      if (P_threadContext(threadContextPointer)^.messages.continueEvaluation) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
+      if (P_threadContext(threadContextPointer)^.messages^.continueEvaluation) then P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
+      if (P_threadContext(threadContextPointer)^.messages^.continueEvaluation) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
         lit:=firstRep^.data;
         cache.put(useParam,lit);
         lastRep:=firstRep;
@@ -557,13 +557,13 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
   begin
     if inherited replaces(ruleTokenType,callLocation,param,firstRep,lastRep,threadContextPointer) then begin
       if P_threadContext(threadContextPointer)^.callDepth>STACK_DEPTH_LIMIT then begin
-        P_threadContext(threadContextPointer)^.messages.raiseError('Stack overflow in typecast rule',callLocation,mt_el4_systemError);
+        P_threadContext(threadContextPointer)^.raiseError('Stack overflow in typecast rule',callLocation,mt_el4_systemError);
         exit(false);
       end;
       inc(P_threadContext(threadContextPointer)^.callDepth);
       raw:=P_threadContext(threadContextPointer)^.reduceToLiteral(firstRep).literal;
       dec(P_threadContext(threadContextPointer)^.callDepth);
-      if not(P_threadContext(threadContextPointer)^.messages.continueEvaluation) then begin
+      if not(P_threadContext(threadContextPointer)^.messages^.continueEvaluation) then begin
         if raw<>nil then disposeLiteral(raw);
         exit(false);
       end;
@@ -571,7 +571,7 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
     then raw:=param^.value[0]^.rereferenced
     else exit(false);
 
-    cast:=typedef^.cast(raw,callLocation,threadContextPointer,@P_threadContext(threadContextPointer)^.messages);
+    cast:=typedef^.cast(raw,callLocation,threadContextPointer);
     disposeLiteral(raw);
     if cast=nil then exit(false)
     else begin
@@ -816,7 +816,7 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
 FUNCTION T_mutableRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    result:=namedValue.mutate(mutation,RHS,location,context.messages,@context);
+    result:=namedValue.mutate(mutation,RHS,location,@context);
     valueChangedAfterDeclaration:=true;
     called:=true;
     system.leaveCriticalSection(rule_cs);
@@ -830,12 +830,12 @@ FUNCTION T_datastoreRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_
     system.leaveCriticalSection(rule_cs);
   end;
 
-PROCEDURE T_datastoreRule.writeBack(VAR adapters: T_threadLocalMessages);
+PROCEDURE T_datastoreRule.writeBack(CONST adapters:P_messages);
   VAR L:P_literal;
   begin
-    if adapters.continueEvaluation and valueChangedAfterDeclaration then begin
+    if adapters^.continueEvaluation and valueChangedAfterDeclaration then begin
       L:=namedValue.getValue;
-      dataStoreMeta.writeValue(L,getLocation,@adapters,encodeAsText);
+      dataStoreMeta.writeValue(L,getLocation,adapters,encodeAsText);
       disposeLiteral(L);
     end;
   end;

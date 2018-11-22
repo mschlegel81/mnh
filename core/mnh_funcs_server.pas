@@ -99,11 +99,11 @@ FUNCTION startServer_impl intFuncSignature;
           beginThread(@microserverThread,microserver);
           repeat ThreadSwitch; sleep(1); until microserver^.up;
         end else begin
-          context.messages.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
+          context.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
           dispose(microserver,destroy);
         end;
         result:=newVoidLiteral;
-      end else context.messages.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
+      end else context.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
 
@@ -164,7 +164,7 @@ PROCEDURE T_microserver.serve;
       serveTime:=0;
       socketTime:=0;
     end;
-    context^.messages.globalMessages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+socket.toString);
+    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+socket.toString);
     up:=true;
     lastActivity:=now;
     repeat
@@ -191,7 +191,7 @@ PROCEDURE T_microserver.serve;
           else socket.SendString(response^.toString);
           disposeLiteral(response);
         end else begin
-          context^.messages.globalMessages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
+          context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
           socket.SendString(HTTP_404_RESPONSE);
         end;
         statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
@@ -199,12 +199,12 @@ PROCEDURE T_microserver.serve;
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
-    until timedOut or hasKillRequest or not(context^.messages.continueEvaluation);
+    until timedOut or hasKillRequest or not(context^.messages^.continueEvaluation);
     finalMessage:='http Microserver stopped. '+socket.toString;
     append(finalMessage,'  served '+intToStr(statistics.serveCount)+' requests');
     append(finalMessage,'  evaluation time '+floatToStr(statistics.serveTime)+' seconds');
     append(finalMessage,'  socket time '+floatToStr(statistics.socketTime)+' seconds');
-    context^.messages.globalMessages^.postTextMessage(mt_el1_note,feedbackLocation,finalMessage);
+    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,finalMessage);
     up:=false;
   end;
 
@@ -346,7 +346,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     except
       on E : Exception do begin
         resultText:='';
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
+        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
       end;
     end;
     result:=newStringLiteral(resultText);

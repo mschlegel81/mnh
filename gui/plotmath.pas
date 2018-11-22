@@ -125,9 +125,6 @@ TYPE
   end;
 
 VAR globalTextRenderingCs:TRTLCriticalSection;
-    {$ifdef debugMode}
-    activeTextRenderers:longint=0;
-    {$endif}
 IMPLEMENTATION
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
@@ -243,9 +240,6 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
     end;
     enterCriticalSection(globalTextRenderingCs);
     try
-      {$ifdef debugMode}
-      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
-      {$endif}
       oldFont     :=target.Font;
 
       if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
@@ -293,7 +287,6 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       end;
       target.Font:=oldFont;
     finally
-      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
       leaveCriticalSection(globalTextRenderingCs);
     end;
   end;
@@ -595,9 +588,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
     begin
       enterCriticalSection(globalTextRenderingCs);
       try
-        {$ifdef debugMode}
-        if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
-        {$endif}
         if gse_tics in axisStyle['y']
         then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
         else newX0:=0;
@@ -605,7 +595,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
         else newY0:=aimHeight;
       finally
-        {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
         leaveCriticalSection(globalTextRenderingCs);
       end;
 
@@ -637,12 +626,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      {$ifdef debugMode}
-      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
-      {$endif}
       Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
     finally
-      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
       leaveCriticalSection(globalTextRenderingCs);
     end;
     ticSampleText:='.0E12';

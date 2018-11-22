@@ -287,7 +287,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
         then begin result.triggeredByReturn:=false; result.literal:=newVoidLiteral; exit(result); end
         else exit(nextUnfiltered);
       end;
-    until (result.literal<>nil) or not(P_threadContext(context)^.messages.continueEvaluation);
+    until (result.literal<>nil) or not(P_threadContext(context)^.messages^.continueEvaluation);
   end;
 
 DESTRUCTOR T_filterGenerator.destroy;
@@ -402,7 +402,7 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
         if nextUnmapped=nil then begin result.literal:=newVoidLiteral; result.triggeredByReturn:=false; exit(result); end
                             else begin result.literal:=nextUnmapped;   result.triggeredByReturn:=false; exit(result); end;
       end;
-    until (result.literal<>nil) or not(P_threadContext(context)^.messages.continueEvaluation);
+    until (result.literal<>nil) or not(P_threadContext(context)^.messages^.continueEvaluation);
   end;
 
 DESTRUCTOR T_mapGenerator.destroy;
@@ -448,7 +448,7 @@ CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST loc: T_token
       reset(fileHandle);
       initialized:=true;
     except
-      context.messages.raiseError('Error when trying to open file: '+fileName,loc);
+      context.raiseError('Error when trying to open file: '+fileName,loc);
       initialized:=false;
     end;
   end;
@@ -681,12 +681,12 @@ FUNCTION stringIterator intFuncSignature;
         then include(charSet,s[1])
         else begin
           err:=true;
-          context.messages.raiseError('Charset must only contain strings of 1 byte.',tokenLocation);
+          context.raiseError('Charset must only contain strings of 1 byte.',tokenLocation);
         end;
       end;
       if length(iter)=0 then begin
         err:=true;
-        context.messages.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
+        context.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
       end;
       disposeLiteral(iter);
       if err then result:=nil
@@ -764,7 +764,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CON
       else range.create (P_bigIntLiteral  (parameters^.value[0])^.value);
       result.literal:=newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
     end else begin
-      P_threadContext(context)^.messages.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
+      P_threadContext(context)^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
       result.literal:=newVoidLiteral;
     end;
   end;

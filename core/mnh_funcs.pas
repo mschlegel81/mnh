@@ -51,8 +51,8 @@ VAR
 FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST messageTail:ansistring='');
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 
 IMPLEMENTATION
@@ -100,18 +100,18 @@ FUNCTION T_builtinFunctionMetaData.qualifiedId:string;
     result:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_threadLocalMessages; CONST messageTail: ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext; CONST messageTail: ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+L^.typeString+messageTail;
-    adapters.raiseError(complaintText,tokenLocation);
+    context.raiseError(complaintText,tokenLocation);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;
-    adapters.raiseError(complaintText,tokenLocation);
+    context.raiseError(complaintText,tokenLocation);
   end;
 
 {$undef INNER_FORMATTING}
@@ -119,7 +119,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
 FUNCTION clearPrint_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
-    context.messages.globalMessages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+    context.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -158,7 +158,7 @@ FUNCTION print_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.messages.globalMessages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
+    context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -167,7 +167,7 @@ FUNCTION printDirect_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.messages.globalMessages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
+    context.messages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -175,22 +175,22 @@ FUNCTION printDirect_imp intFuncSignature;
 FUNCTION note_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('note',tokenLocation,[se_output])) then exit(nil);
-    context.messages.globalMessages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
+    context.messages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('warn',tokenLocation,[se_output])) then exit(nil);
-    context.messages.globalMessages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
+    context.messages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
 FUNCTION fail_impl intFuncSignature;
   begin
-    if (params=nil) or (params^.size=0) then context.messages.raiseError('Fail',tokenLocation,mt_el3_userDefined)
+    if (params=nil) or (params^.size=0) then context.raiseError('Fail',tokenLocation,mt_el3_userDefined)
     else begin
-      context.messages.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
+      context.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
       result:=newVoidLiteral;
     end;
     result:=nil;

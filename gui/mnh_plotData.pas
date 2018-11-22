@@ -51,7 +51,7 @@ TYPE
       CONSTRUCTOR createRetrieveRequest;
       CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions);
       PROCEDURE setOptions(CONST o:T_scalingOptions);
-      FUNCTION getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+      FUNCTION getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   end;
 
   P_plotRenderRequest=^T_plotRenderRequest;
@@ -69,7 +69,7 @@ TYPE
       CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_,quality_:longint);
       CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
       PROCEDURE setString(CONST s:string);
-      FUNCTION getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages):string;
+      FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
       PROPERTY isRenderToStringRequest:boolean read targetIsString;
   end;
 
@@ -91,7 +91,7 @@ TYPE
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR create();
-      PROCEDURE waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+      PROCEDURE waitForExecution(CONST errorFlagProvider:P_messages);
       PROCEDURE markExecuted;
   end;
 
@@ -200,7 +200,7 @@ TYPE
       PROCEDURE doneGuiInteraction;
   end;
 
-FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
@@ -217,12 +217,12 @@ FUNCTION intersect(CONST b1,b2:T_boundingBox):boolean;
             (max(b1['y',0],b2['y',0])<=min(b1['y',1],b2['y',1]));
   end;
 
-FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
   VAR request:P_plotOptionsMessage;
   begin
     new(request,createRetrieveRequest);
-    threadLocalMessages.globalMessages^.postCustomMessage(request);
-    result:=request^.getOptionsWaiting(threadLocalMessages);
+    messages^.postCustomMessage(request);
+    result:=request^.getOptionsWaiting(messages);
     disposeMessage(request);
   end;
 
@@ -370,10 +370,10 @@ CONSTRUCTOR T_plotDisplayRequest.create();
     displayExecuted:=false;
   end;
 
-PROCEDURE T_plotDisplayRequest.waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+PROCEDURE T_plotDisplayRequest.waitForExecution(CONST errorFlagProvider:P_messages);
   begin
     enterCriticalSection(messageCs);
-    while not(displayExecuted) and (errorFlagProvider.continueEvaluation) do begin
+    while not(displayExecuted) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
@@ -447,10 +447,10 @@ PROCEDURE T_plotRenderRequest.setString(CONST s: string);
     leaveCriticalSection(messageCs);
   end;
 
-FUNCTION T_plotRenderRequest.getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages): string;
+FUNCTION T_plotRenderRequest.getStringWaiting(CONST errorFlagProvider:P_messages): string;
   begin
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
@@ -486,12 +486,12 @@ PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
     leaveCriticalSection(messageCs);
   end;
 
-FUNCTION T_plotOptionsMessage.getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+FUNCTION T_plotOptionsMessage.getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   VAR timeout:double;
   begin
     timeout:=now+5/(24*60*60);
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider.continueEvaluation) and (now<timeout) do begin
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) and (now<timeout) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
@@ -1125,9 +1125,6 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      {$ifdef debugMode}
-      if interLockedIncrement(activeTextRenderers)>1 then raise Exception.create('More than one text renderer active');
-      {$endif}
       target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
       target.Font.color:=clBlack;
       cSysX:=scalingOptions.axisTrafo['x'].screenMin;
@@ -1164,7 +1161,6 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system
     finally
-      {$ifdef debugMode} interlockedDecrement(activeTextRenderers); {$endif}
       leaveCriticalSection(globalTextRenderingCs);
     end;
   end;

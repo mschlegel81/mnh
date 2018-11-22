@@ -55,7 +55,7 @@ FUNCTION pos_imp intFuncSignature;
             for i:=0 to list0^.size-1 do
               listResult^.append(posInt(list0^.value[i],
                                         list1^.value[i]),false);
-          end else context.messages.raiseError('Incompatible list lengths for function pos.',tokenLocation)
+          end else context.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
     end;
@@ -185,7 +185,7 @@ FUNCTION byteToChar_imp intFuncSignature;
         ib:=P_bigIntLiteral(i)^.intValue;
         if (ib>=0) and (ib<=255) then exit(charLit[chr(ib)].rereferenced);
       end;
-      context.messages.raiseError('Value '+i^.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
+      context.raiseError('Value '+i^.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
     end;
 
   VAR k:longint;
@@ -297,7 +297,7 @@ FUNCTION split_imp intFuncSignature;
           for sub in iter do collResult^.append(splitRecurse(sub),false);
           disposeLiteral(iter);
         end;
-        else raiseNotApplicableError('split',p,tokenLocation,context.messages);
+        else raiseNotApplicableError('split',p,tokenLocation,context);
       end;
     end;
 
@@ -365,7 +365,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
         for sub in iter do collResult^.append(recurse(sub),false);
         disposeLiteral(iter);
       end;
-      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.messages);
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context);
     end;
   end;
 
@@ -827,7 +827,7 @@ FUNCTION decompress_impl intFuncSignature;
       try
         resultString:=decompressString(str0^.value);
       except
-        context.messages.raiseError('Internal error on decompression. The string may not be a cleanly compressed string.',tokenLocation);
+        context.raiseError('Internal error on decompression. The string may not be a cleanly compressed string.',tokenLocation);
         exit(nil);
       end;
       result:=newStringLiteral(resultString);
@@ -865,7 +865,7 @@ FUNCTION formatTabs_impl intFuncSignature;
           for sub in iter do P_collectionLiteral(result)^.append(innerRec(sub),false);
           disposeLiteral(iter);
         end;
-        else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context.messages);
+        else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context);
       end;
     end;
 

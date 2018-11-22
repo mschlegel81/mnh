@@ -40,7 +40,7 @@ TYPE
       outputLanguage:string;
       createNewEditor:boolean;
       scriptType:T_scriptType;
-      CONSTRUCTOR create(CONST rule:P_subruleExpression; OUT isValid:boolean; VAR adapters:T_threadLocalMessages);
+      CONSTRUCTOR create(CONST rule:P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);
       DESTRUCTOR destroy;
     public
       PROPERTY getName:string read name;
@@ -76,7 +76,7 @@ TYPE
       //"final" properties
       cs:TRTLCriticalSection;
       thread:TThreadFunc;
-      adapter:P_messageConnector;
+      messages:P_messages;
       //request variables
       request:T_evalRequest;
 
@@ -93,7 +93,7 @@ TYPE
       FUNCTION pendingRequest:T_evalRequest;
     public
       globals:T_evaluationGlobals;
-      CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
+      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE haltEvaluation; virtual;
 
@@ -115,13 +115,13 @@ TYPE
       utilityScriptPackage:P_package;
       utilityScriptList:T_scriptMetaArray;
       currentEdit:P_editScriptTask;
-      editAdapters:P_messageConnector;
+      editAdapters:P_messagesErrorHolder;
 
       FUNCTION parametersForMainCall:T_arrayOfString;
       PROCEDURE preEval; virtual;
       PROCEDURE postEval; virtual;
     public
-      CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
+      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI;
       PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
@@ -138,7 +138,7 @@ TYPE
 
 VAR runEvaluator:T_runEvaluator;
 
-PROCEDURE initUnit(CONST guiAdapters:P_messageConnector);
+PROCEDURE initUnit(CONST guiAdapters:P_messages);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
 
@@ -176,10 +176,11 @@ FUNCTION main(p:pointer):ptrint;
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
       P_runEvaluator(p)^.utilityScriptPackage^.finalize(globals.primaryContext);
       globals.afterEvaluation;
-      if globals.primaryContext.messages.globalMessages^.hasCollected(mt_printline) or
-         globals.primaryContext.messages.globalMessages^.hasCollected(mt_printdirect) or
-         (([FlagError,FlagFatalError]*globals.primaryContext.messages.getFlags)<>[]) then begin
-        collector:=P_collectingOutAdapter(globals.primaryContext.messages.globalMessages^.getAdapter(0));
+      if globals.primaryContext.messages^.hasCollected(mt_printline) or
+         globals.primaryContext.messages^.hasCollected(mt_printdirect) or
+         (([FlagError,FlagFatalError]*globals.primaryContext.messages^.getFlags)<>[]) then begin
+
+        collector:=P_collectingOutAdapter(globals.primaryContext.messages^.get);
         P_runEvaluator(p)^.adapter^.postSingal(mt_clearConsole,C_nilTokenLocation);
         P_runEvaluator(p)^.adapter^.postCustomMessages(collector^.storedMessages);
         successful:=false;
@@ -261,7 +262,7 @@ FUNCTION main(p:pointer):ptrint;
     threadStopped;
   end; end;
 
-CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; VAR adapters:T_threadLocalMessages);
+CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);
   VAR t:T_scriptType;
   begin
     editRule:=rule;
@@ -358,18 +359,18 @@ PROCEDURE T_evaluator.ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-CONSTRUCTOR T_evaluator.create(CONST adapters: P_messageConnector; threadFunc: TThreadFunc);
+CONSTRUCTOR T_evaluator.create(CONST messages_:P_messages; threadFunc: TThreadFunc);
   begin
     system.initCriticalSection(cs);
     request:=er_none;
     state:=es_dead;
     thread:=threadFunc;
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
-    adapter:=adapters;
+    messages:=messages_;
     globals.create(adapter);
   end;
 
-CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
+CONSTRUCTOR T_runEvaluator.create(CONST messages_:P_messages; threadFunc:TThreadFunc);
   VAR collector:P_collectingOutAdapter;
   begin
     inherited create(adapters,threadFunc);
@@ -650,7 +651,7 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE initUnit(CONST guiAdapters:P_messageConnector);
+PROCEDURE initUnit(CONST guiAdapters:P_messages);
   begin
     runEvaluator.create(guiAdapters,@main);
     unitIsInitialized:=true;
