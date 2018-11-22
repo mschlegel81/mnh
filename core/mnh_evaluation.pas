@@ -103,7 +103,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             if stack.topType=C_compatibleBegin[first^.     tokType]
             then begin
               {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
-              context.setSideEffectsByEndToken(first);
               scopePop(context.valueScope);
               stack.popDestroy;
               first:=disposeToken(first);
@@ -820,7 +819,6 @@ if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
       {$ifdef fullVersion}
       context.callStackPop(first);
       {$endif}
-      context.setSideEffectsByEndToken(first^.next^.next);
     end;
     stack.popDestroy;
     first^.next:=disposeToken(first^.next);
@@ -1013,7 +1011,6 @@ end}
                 {$ifdef fullVersion}
                 context.callStackPop(first);
                 {$endif}
-                context.setSideEffectsByEndToken(first^.next^.next);
               end;
               stack.popDestroy;
               first^.next:=disposeToken(first^.next);
@@ -1037,7 +1034,6 @@ end}
                 {$ifdef fullVersion}
                 context.callStackPop(first);
                 {$endif}
-                context.setSideEffectsByEndToken(first^.next^.next);
               end;
               first^.next:=disposeToken(first^.next);
               first^.next:=disposeToken(first^.next);

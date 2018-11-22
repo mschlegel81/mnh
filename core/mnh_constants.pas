@@ -68,8 +68,6 @@ CONST
   SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE='SuppressUnusedParameterWarning';
   {$endif}
   OVERRIDE_ATTRIBUTE='Override';
-  ALLOW_SIDE_EFFECT_ATTRIBUTE='AllowOnly';
-  ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE='pure';
   EXECUTE_AFTER_ATTRIBUTE='after';
 
 TYPE
@@ -597,32 +595,11 @@ CONST
                 'ipc',
                 'executing external');
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
-FUNCTION ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE:string;
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
-FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
 FUNCTION getTempFileName:string;
 IMPLEMENTATION
-FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
-  VAR se:T_sideEffect;
-  begin
-    result:=false;
-    for se in C_allSideEffects do if s=C_sideEffectName[se] then begin
-      sideEffect:=se;
-      exit(true);
-    end;
-  end;
-
-FUNCTION ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE:string;
-  VAR se:T_sideEffect;
-  begin
-    result:='';
-    for se in C_allSideEffects do begin
-      if result<>'' then result:=result+', ';
-      result+=C_sideEffectName[se];
-    end;
-  end;
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin

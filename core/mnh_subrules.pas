@@ -46,7 +46,6 @@ TYPE
   T_ruleMetaData=object
     private
       attributes:array of T_subruleAttribute;
-      sideEffectWhitelist:T_sideEffects;
     public
       comment:ansistring;
       CONSTRUCTOR create;
@@ -454,6 +453,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
 
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
+          endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule);
     VAR i:longint;
         firstRelevantToken,lastRelevantToken:longint;
         blocking:boolean;
@@ -461,7 +461,6 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
         previousValueScope:P_valueScope;
-        previousSideEffectWhitelist:T_sideEffects;
         firstCallOfResumable:boolean=false;
         {$ifdef fullVersion}
         parametersNode:P_variableTreeEntryCategoryNode=nil;
@@ -545,9 +544,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         previousValueScope:=context.valueScope;
         context.valueScope:=saveValueStore;
 
-        previousSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
         firstRep:=disposeToken(firstRep);
-        context.setAllowedSideEffectsReturningPrevious(previousSideEffectWhitelist);
 
         context.reduceExpression(firstRep);
         if firstRep=nil
@@ -564,8 +561,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       end else begin
         lastRep^.next:=newToken(getLocation,'',tt_semicolon);
         lastRep:=lastRep^.next;
-        lastRep^.next:=context.getNewEndToken(blocking,getLocation);
-        context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
+        lastRep^.next:=newToken(getLocation,'',endToken[blocking]);
         lastRep:=lastRep^.next;
       end;
       currentlyEvaluating:=false;
@@ -1073,8 +1069,8 @@ FUNCTION T_subruleExpression.inspect: P_mapLiteral;
 
 FUNCTION T_inlineExpression.patternString:string; begin result:=pattern.toString; end;
 
-CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); sideEffectWhitelist:=C_allSideEffects; end;
-DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); sideEffectWhitelist:=C_allSideEffects; end;
+CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
+DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
     comment:=commentText;
@@ -1125,34 +1121,6 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
       attributes[result].key:=key;
     end;
 
-  PROCEDURE parseSideEffects(CONST s:string);
-    VAR sideEffectName:string;
-        sideEffect:T_sideEffect;
-        requirePure:boolean=false;
-        hasUnknownSideEffects:boolean=false;
-        compoundMessage:T_arrayOfString;
-    begin
-      sideEffectWhitelist:=[];
-      for sideEffectName in split(s,',') do begin
-        if trim(sideEffectName)=ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE
-        then requirePure:=true
-        else begin
-          if isSideEffectName(trim(sideEffectName),sideEffect)
-          then include(sideEffectWhitelist,sideEffect)
-          else begin
-            messages^.postTextMessage(mt_el2_warning,location,'Unknown side effect: '+trim(sideEffectName));
-            hasUnknownSideEffects:=true;
-          end;
-        end;
-      end;
-      if requirePure and (sideEffectWhitelist<>[]) then messages^.raiseSimpleError('Conflicting side effect restrictions: pure cannot be combined',location);
-      if hasUnknownSideEffects then begin
-        compoundMessage:='The following side effects are defined:';
-        for sideEffect in C_allSideEffects do append(compoundMessage,C_sideEffectName[sideEffect]);
-        messages^.postTextMessage(mt_el2_warning,location, compoundMessage);
-      end;
-    end;
-
   begin
     setLength(attributes,0);
     for line in attributeLines do begin
@@ -1161,7 +1129,6 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
         newAttriuteIndex:=addAttribute(trim(parts[0]));
         dropFirst(parts,1);
         attributes[newAttriuteIndex].value:=trim(join(parts,'='));
-        if attributes[newAttriuteIndex].key=ALLOW_SIDE_EFFECT_ATTRIBUTE then parseSideEffects(attributes[newAttriuteIndex].value);
       end;
     end;
   end;

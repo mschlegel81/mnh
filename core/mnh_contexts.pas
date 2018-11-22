@@ -93,8 +93,6 @@ TYPE
       FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-      PROCEDURE setSideEffectsByEndToken(CONST token:P_token);
-      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
       //Messaging
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
       //Evaluation:
@@ -526,23 +524,6 @@ FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;
-  end;
-
-PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token: P_token);
-  begin
-    {$ifdef debugMode}
-    if (not(token^.tokType in [tt_endRule,tt_endExpression])) then raise Exception.create('Invalid parameter for setSideEffectsByEndToken; not an end-token but '+safeTokenToString(token));
-    {$endif}
-    move(token^.data,allowedSideEffects,sizeOf(allowedSideEffects));
-  end;
-
-FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
-  CONST location: T_tokenLocation): P_token;
-  VAR data:pointer=nil;
-  begin
-    move(allowedSideEffects,data,sizeOf(data));
-    if blocking then result:=newToken(location,'',tt_endRule,data)
-                else result:=newToken(location,'',tt_endExpression,data);
   end;
 
 FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
