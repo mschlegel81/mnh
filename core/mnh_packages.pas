@@ -622,10 +622,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       first:=disposeToken(first);
       if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
-        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,@globals.primaryContext.messages);
+        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
         newId:=P_stringLiteral(first^.data)^.value;
-        helperUse.createWithSpecifiedPath(newId,first^.location,@globals.primaryContext.messages);
+        helperUse.createWithSpecifiedPath(newId,first^.location,globals.primaryContext.messages);
       end else begin
         globals.primaryContext.raiseError('Invalid include clause ',locationForErrorFeedback);
         exit;
@@ -717,7 +717,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end else begin
             j:=length(packageUses);
             setLength(packageUses,j+1);
-            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,@globals.primaryContext.messages);
+            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
           {$ifdef fullVersion}
@@ -726,7 +726,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
           setLength(packageUses,j+1);
-          packageUses[j].createWithSpecifiedPath(newId,first^.location,@globals.primaryContext.messages);
+          packageUses[j].createWithSpecifiedPath(newId,first^.location,globals.primaryContext.messages);
         end else if first^.tokType<>tt_separatorComma then
           globals.primaryContext.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
         if (j>0) then for i:=0 to j-1 do
@@ -958,7 +958,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       setLength(nonTypes,0);
       t:=statement.firstToken;
       while (t<>nil) do begin
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,@globals.primaryContext.messages);
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,globals.primaryContext.messages);
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) then case t^.next^.tokType of tt_customTypeRule,tt_type: begin
           newNext:=t^.next^.next;
           if t^.next^.tokType=tt_customTypeRule
@@ -1088,7 +1088,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         end;
         lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(globals.primaryContext.messages) then begin
           predigest(statement.firstToken,@self,globals.primaryContext.messages);
-          resolveBuiltinIDs(statement.firstToken,@globals.primaryContext.messages);
+          resolveBuiltinIDs(statement.firstToken,globals.primaryContext.messages);
         end
         else globals.primaryContext.messages^.postTextMessage(mt_el1_note,statement.firstToken^.location,'Skipping expression '+tokensToString(statement.firstToken,50));
       end;
@@ -1211,7 +1211,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       logReady(newCodeHash);
       {$ifdef fullVersion}
       if gui_started then begin
-        resolveRuleIds(@globals.primaryContext.messages);
+        resolveRuleIds(globals.primaryContext.messages);
         complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
@@ -1594,8 +1594,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 {$endif}
 
-PROCEDURE T_package.resolveId(VAR token: T_token;
-  CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
+PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;

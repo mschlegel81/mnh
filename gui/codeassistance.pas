@@ -65,7 +65,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenG
   begin
     if givenGlobals=nil then begin
       new(globals,create(@adapters));
-      adapters.create(nil,C_errorsAndWarnings);
+      adapters.createErrorHolder(nil,C_errorsAndWarnings);
     end else begin
       globals:=givenGlobals;
       givenAdapters^.clear;
@@ -75,8 +75,8 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenG
     globals^.resetForEvaluation(package,ect_silent,C_EMPTY_STRING_ARRAY);
     new(localIdInfos,create);
     package^.load(lu_forCodeAssistance,globals^,C_EMPTY_STRING_ARRAY,localIdInfos);
-    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages
-                         else loadMessages:=adapters      .storedMessages;
+    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(false)
+                         else loadMessages:=adapters      .storedMessages(false);
     new(result,create(package,loadMessages,initialStateHash,localIdInfos));
 
     if givenGlobals=nil then begin
@@ -120,7 +120,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 
   begin
     //setup:
-    adapters.create(nil,C_errorsAndWarnings);
+    adapters.createErrorHolder(nil,C_errorsAndWarnings);
     new(globals,create(@adapters));
     //:setup
     repeat

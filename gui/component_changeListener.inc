@@ -22,7 +22,7 @@ CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then config_onChange:=P_expressionLiteral(tmp)
-      else context.messages.raiseError('onChange is: '+tmp^.typeString+'; must be expression',location);
+      else context.raiseError('onChange is: '+tmp^.typeString+'; must be expression',location);
     end;
   end;
 

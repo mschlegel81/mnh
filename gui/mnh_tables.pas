@@ -242,7 +242,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
       byColumn:=index;
       ascending:=true;
 
-      tempAdapters.create;
+      tempAdapters.createDummy;
       literal^.sortBySubIndex(index,dummyLocation,@tempAdapters);
       tempAdapters.destroy;
     end;

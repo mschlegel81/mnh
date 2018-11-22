@@ -1290,7 +1290,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
               (firstRep^.tokType=tt_literal) and
               (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(firstRep^.data)^.size = TList^.size);
-      collector.appendAll(holder^.storedMessages);
+      collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
       if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
       cascadeDisposeToken(firstRep);
@@ -1310,7 +1310,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
       else if temp<>nil then disposeLiteral(temp);
-      collector.appendAll(holder^.storedMessages);
+      collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
     end;
 
@@ -1426,7 +1426,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   begin
     oldMessages:=context.messages;
-    new(holder,create(oldMessages,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]));
+    new(holder,createErrorHolder(oldMessages,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]));
     context.messages:=holder;
 
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);

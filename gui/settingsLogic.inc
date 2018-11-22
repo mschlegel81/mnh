@@ -18,8 +18,8 @@ PROCEDURE initializeOutputSettings;
                             and (mt_el3_userDefined in settings.outputBehaviour);
     end;
     guiOutAdapter.outputBehavior:=settings.outputBehaviour+C_messagesAlwaysProcessedInGuiMode;
-    MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
-    setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
+    P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
+    setupOutputBehaviourFromCommandLineOptions(@guiAdapters,nil);
   end;
 
 PROCEDURE setVerbosity(level:byte);
@@ -80,7 +80,7 @@ PROCEDURE processFontSettings;
       assistanceSynEdit.Font:=outputEdit.Font;
       updateWordWrap;
     end;
-    conditionalShowCustomForms(guiAdapters);
+    conditionalShowCustomForms(@guiAdapters);
   end;
 
 PROCEDURE initializeSettings;

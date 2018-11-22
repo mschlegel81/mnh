@@ -92,11 +92,11 @@ TYPE
     PROCEDURE hideAndDisconnectAll;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
-    PROCEDURE conditionalShow(VAR adapters: T_messageConnector);
+    PROCEDURE conditionalShow(CONST messages:P_messages);
   end;
 
 PROCEDURE freeScriptedForms;
-PROCEDURE conditionalShowCustomForms(VAR adapters:T_messageConnector);
+PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
 IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
     scriptedForms: array of TscriptedForm;
@@ -146,7 +146,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
     {$I component_outputRedirect.inc}
 {$I component_plotConnector.inc}
 {$I component_worker.inc}
-PROCEDURE conditionalShowCustomForms(VAR adapters:T_messageConnector);
+PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
   VAR index:longint=0;
       k:longint;
   begin
@@ -158,7 +158,7 @@ PROCEDURE conditionalShowCustomForms(VAR adapters:T_messageConnector);
         for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
         setLength(scriptedForms,length(scriptedForms)-1);
       end else begin
-        scriptedForms[index].conditionalShow(adapters);
+        scriptedForms[index].conditionalShow(messages);
         inc(index);
       end;
     end;
@@ -208,10 +208,10 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     VAR keys:T_arrayOfLiteral;
         k:P_literal;
     begin
-      if not(context.messages.continueEvaluation) then exit;
+      if not(context.messages^.continueEvaluation) then exit;
       keys:=def^.keyIteratableList;
       for k in keys do if not(isConsidered(k)) then begin
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
+        context.messages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
       end;
       disposeLiteral(keys);
     end;
@@ -238,7 +238,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then config.action:=P_expressionLiteral(tmp)
-      else context.messages.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
+      else context.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
     end;
 
     tmp:=mapGet(def,key[dmk_caption]);
@@ -246,7 +246,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       case tmp^.literalType of
         lt_expression: config.caption:=P_expressionLiteral(tmp);
         lt_string    : state .caption:=P_stringLiteral(tmp)^.value;
-        else context.messages.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
+        else context.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
       end;
     end;
 
@@ -255,7 +255,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       case tmp^.literalType of
         lt_expression: config.enabled:=P_expressionLiteral(tmp);
         lt_boolean   : state .enabled:=P_boolLiteral(tmp)^.value;
-        else context.messages.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
+        else context.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
       end;
     end;
 
@@ -264,7 +264,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       if tmp^.literalType=lt_string then begin
         config.bindingTo:=P_stringLiteral(tmp)^.value;
         state.bindingValue:=context.valueScope^.getVariableValue(config.bindingTo);
-      end else context.messages.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
+      end else context.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
       disposeLiteral(tmp);
     end;
 
@@ -297,7 +297,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
           writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
           {$endif}
           result:=true;
-          context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
+          context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
         end else begin
           if tmp^.equals(state.bindingValue) then begin
             disposeLiteral(tmp);
@@ -307,7 +307,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             {$endif}
             result:=true;
             disposeLiteral(tmp);
-            context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
+            context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
           end;
         end;
       end else if not(state.isFocused) then begin
@@ -456,14 +456,14 @@ PROCEDURE TscriptedForm.initialize();
     begin
       componentTypeLiteral:=mapGet(def,key[dmk_type]);
       if (componentTypeLiteral=nil) or (componentTypeLiteral^.literalType<>lt_string) then begin
-        setupContext^.messages.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
+        setupContext^.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
         if componentTypeLiteral<>nil then disposeLiteral(componentTypeLiteral);
         exit(tc_error);
       end;
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
-        setupContext^.messages.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel","grid"]',setupLocation);
+        setupContext^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel","grid"]',setupLocation);
       disposeLiteral(componentTypeLiteral);
     end;
 
@@ -494,10 +494,10 @@ PROCEDURE TscriptedForm.initialize();
         else if panelContents^.literalType=lt_list then begin
           iter:=P_listLiteral(panelContents)^.iteratableList;
           disposeLiteral(panelContents);
-          for panelContents in iter do if setupContext^.messages.continueEvaluation then initComponent(targetPanel,panelContents);
+          for panelContents in iter do if setupContext^.messages^.continueEvaluation then initComponent(targetPanel,panelContents);
           disposeLiteral(iter);
         end else begin
-          setupContext^.messages.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
+          setupContext^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
           disposeLiteral(panelContents);
         end;
       end;
@@ -516,7 +516,7 @@ PROCEDURE TscriptedForm.initialize();
         tc_plot:         if plotLink=nil then begin;
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(plotLink);
-        end else setupContext^.messages.raiseError('Only one plot link is allowed per custom form',setupLocation);
+        end else setupContext^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_panel:begin
           new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
           addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts]));
@@ -536,7 +536,7 @@ PROCEDURE TscriptedForm.initialize();
           gridMeta^.doneAdding;
           addMeta(gridMeta);
         end;
-      end else setupContext^.messages.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
+      end else setupContext^.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
     end;
 
   VAR formMeta:P_panelMeta;
@@ -589,21 +589,20 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     customFormBefore:=context.parentCustomForm;
     context.parentCustomForm:=self;
     processingEvents:=true;
-    for m in meta do if context.messages.continueEvaluation then begin
+    for m in meta do if context.messages^.continueEvaluation then begin
       if m^.evaluate(location,context) then result:=true;
     end;
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
-    if result then context.messages.globalMessages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
+    if result then context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
     {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
   end;
 
-PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_messageConnector);
+PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
   PROCEDURE updateComponents;
     VAR m:P_guiElementMeta;
     begin
-      {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: update components; busy=',processingEvents); {$endif}
       if processingEvents
       then propagateCursor(self,crHourGlass)
       else propagateCursor(self,crDefault);
@@ -612,17 +611,14 @@ PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_messageConnector);
 
   begin
     if tryEnterCriticalsection(lock)=0 then begin
-      {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: Cannot obtain lock in TscriptedForm.conditionalShow'); {$endif}
-      adapters.postSingal(mt_displayCustomForm,C_nilTokenLocation);
+      messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
       exit;
     end;
-    if displayPending and adapters.continueEvaluation then begin
+    if displayPending and messages^.continueEvaluation then begin
       if (setupParam<>nil) and (setupContext<>nil) then begin
-        {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: initializing scripted form...'); {$endif}
         initialize();
         disposeLiteral(setupParam);
         setupContext:=nil;
-        {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done initializing scripted form'); {$endif}
       end;
       Show;
       displayPending:=false;
@@ -637,7 +633,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
   begin
     result:=nil;
     if not(gui_started) then begin
-      context.messages.logGuiNeeded;
+      context.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
@@ -646,11 +642,11 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
                          P_mapLiteral(params^.value[1]),
                          @context,
                          location);
-      context.messages.globalMessages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);;
-      while (form.setupContext<>nil) and (context.messages.continueEvaluation) do sleep(10);
+      context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);;
+      while (form.setupContext<>nil) and (context.messages^.continueEvaluation) do sleep(10);
 
       if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
-      while not(form.markedForCleanup) and (context.messages.continueEvaluation) do begin
+      while not(form.markedForCleanup) and (context.messages^.continueEvaluation) do begin
         if form.processPendingEvents(location,context)
         then sleepTime:=0
         else begin

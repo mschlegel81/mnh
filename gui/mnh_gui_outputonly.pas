@@ -76,7 +76,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     initGuiOutAdapters(outputOnlyForm,nil);
     consoleAdapters.create(C_defaultOutputBehavior_fileMode);
-    setupOutputBehaviourFromCommandLineOptions(guiAdapters,@consoleAdapters);
+    setupOutputBehaviourFromCommandLineOptions(@guiAdapters,@consoleAdapters);
     if wantConsoleAdapter then guiAdapters.addOutAdapter(@consoleAdapters,false);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;

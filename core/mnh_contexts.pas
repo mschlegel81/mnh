@@ -69,9 +69,9 @@ TYPE
       callStack :T_callStack;
       {$endif}
       related:record
-        evaluation     :P_evaluationGlobals;
-        parent         :P_threadContext;
-        children       :array of P_threadContext;
+        evaluation :P_evaluationGlobals;
+        parent     :P_threadContext;
+        childCount :longint;
       end;
       CONSTRUCTOR create();
       DESTRUCTOR destroy;
@@ -249,7 +249,7 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST 
 
       related.evaluation:=parentThread^.related.evaluation;
       related.parent    :=parentThread;
-      setLength(related.children,0);
+      related.childCount:=0;
       parentThread^.addChildContext(result);
 
       callDepth:=parentThread^.callDepth+2;
@@ -282,7 +282,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
 
     primaryContext.related.evaluation:=@self;
     primaryContext.related.parent:=nil;
-    setLength(primaryContext.related.children,0);
+    primaryContext.related.childCount:=0;
 
     primaryContext.messages:=outAdapters;
     disposeAdaptersOnDestruction:=false;
@@ -350,7 +350,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     with primaryContext.related do begin
       evaluation:=@self;
       parent:=nil;
-      setLength(children,0);
+      childCount:=0;
     end;
     {$ifdef fullVersion}
     primaryContext.callStack.clear;
@@ -365,7 +365,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers;
   begin
     timeout:=now+TIME_OUT_AFTER;
     primaryContext.messages^.setStopFlag;
-    while (now<timeout) and ((length(primaryContext.related.children)>0) or (taskQueue.queuedCount>0)) do begin
+    while (now<timeout) and ((primaryContext.related.childCount>0) or (taskQueue.queuedCount>0)) do begin
       while taskQueue.activeDeqeue() do begin end;
       ThreadSwitch;
       sleep(1);
@@ -563,16 +563,10 @@ PROCEDURE T_threadContext.beginEvaluation;
   end;
 
 PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
-  VAR child:P_threadContext;
   begin
     enterCriticalSection(contextCS);
-    with related do if length(children)>0 then begin
-      for child in children do if child^.state=fts_pending
-      then begin
-        leaveCriticalSection(contextCS);
-        raise Exception.create('T_threadContext has pending children on finalizeTaskAndDetachFromParent');
-      end;
-      while length(children)>0 do begin
+    with related do if childCount>0 then begin
+      while childCount>0 do begin
         leaveCriticalSection(contextCS);
         ThreadSwitch; sleep(1);
         enterCriticalSection(contextCS);
@@ -703,7 +697,7 @@ CONSTRUCTOR T_threadContext.create();
     callStack.create;
     {$endif}
     valueScope:=nil;
-    setLength(related.children,0);
+    related.childCount:=0;
     related.parent:=nil;
     related.evaluation:=nil;
     messages:=nil;
@@ -711,37 +705,16 @@ CONSTRUCTOR T_threadContext.create();
   end;
 
 PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
-  VAR k:longint=0;
-      j:longint;
   begin
     enterCriticalSection(contextCS);
-    with related do
-    for k:=length(children)-1 downto 0 do
-    if children[k]=context then begin
-      for j:=k to length(children)-2 do children[j]:=children[j+1];
-      setLength(children,length(children)-1);
-      leaveCriticalSection(contextCS);
-      exit;
-    end;
+    with related do dec(childCount);
     leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_threadContext.addChildContext(CONST context: P_threadContext);
-  VAR k:longint=0;
   begin
     enterCriticalSection(contextCS);
-    with related do begin
-      {$ifdef debugMode}
-      for k:=0 to length(children)-1 do if children[k]=context then begin
-        leaveCriticalSection(contextCS);
-        raise Exception.create('adding duplicate child context in T_threadContext.addChildContext');
-        exit;
-      end;
-      {$endif}
-      k:=length(children);
-      setLength(children,k+1);
-      children[k]:=context;
-    end;
+    with related do inc(childCount);
     leaveCriticalSection(contextCS);
   end;
 
@@ -759,7 +732,7 @@ DESTRUCTOR T_threadContext.destroy;
     callStack.destroy;
     {$endif}
     disposeScope(valueScope);
-    setLength(related.children,0);
+    related.childCount:=0;
     related.parent:=nil;
     related.evaluation:=nil;
     leaveCriticalSection(contextCS);

@@ -953,7 +953,7 @@ FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhanced
   begin
     blob.closer:=localIdInfos^.getBlobCloserOrZero(inputLocation.line);
 
-    adapters.create;
+    adapters.createDummy;
     while fetchNext(@adapters,nil,false) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(input[length(input)-1]);
@@ -1087,7 +1087,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.line:=0;
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
-    adapters.create;
+    adapters.createDummy;
     repeat until not(lexer.fetchNext(@adapters{$ifdef fullVersion},nil{$endif},true));
     adapters.destroy;
     t:=lexer.nextStatement.firstToken;
