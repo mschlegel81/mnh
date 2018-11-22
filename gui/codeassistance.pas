@@ -47,17 +47,16 @@ TYPE
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
   end;
 
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenCollector:P_collectingOutAdapter=nil):P_codeAssistanceResponse;
+FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
 PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 IMPLEMENTATION
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenCollector:P_collectingOutAdapter=nil):P_codeAssistanceResponse;
+FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
-      adapters:T_messageConnector;
-      collector:T_collectingOutAdapter;
+      adapters:T_messagesErrorHolder;
       //output
       initialStateHash:T_hashInt;
       package:P_package;
@@ -65,28 +64,24 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenG
       loadMessages:T_storedMessages;
   begin
     if givenGlobals=nil then begin
-      collector.create(at_sandboxAdapter,C_errorsAndWarnings);
-      adapters.create;
-      adapters.addOutAdapter(@collector,false);
       new(globals,create(@adapters));
+      adapters.createErrorHolder(nil,C_errorsAndWarnings);
     end else begin
       globals:=givenGlobals;
-      givenCollector^.clear;
+      givenAdapters^.clear;
     end;
     new(package,create(source,nil));
     initialStateHash:=source^.stateHash;
     globals^.resetForEvaluation(package,ect_silent,C_EMPTY_STRING_ARRAY);
     new(localIdInfos,create);
     package^.load(lu_forCodeAssistance,globals^,C_EMPTY_STRING_ARRAY,localIdInfos);
-    globals^.primaryContext.messages.escalateErrors;
-    if givenGlobals<>nil then loadMessages:=givenCollector^.storedMessages
-                         else loadMessages:=collector.storedMessages;
+    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(false)
+                         else loadMessages:=adapters      .storedMessages(false);
     new(result,create(package,loadMessages,initialStateHash,localIdInfos));
 
     if givenGlobals=nil then begin
       dispose(globals,destroy);
       adapters.destroy;
-      collector.destroy;
     end;
   end;
 
@@ -98,8 +93,7 @@ VAR codeAssistanceResponse:P_codeAssistanceResponse=nil;
 
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
   VAR globals:P_evaluationGlobals;
-      adapters:T_messageConnector;
-      collector:T_collectingOutAdapter;
+      adapters:T_messagesErrorHolder;
 
       provider:P_codeProvider;
       response:P_codeAssistanceResponse;
@@ -126,9 +120,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 
   begin
     //setup:
-    collector.create(at_sandboxAdapter,C_textMessages);
-    adapters.create;
-    adapters.addOutAdapter(@collector,false);
+    adapters.createErrorHolder(nil,C_errorsAndWarnings);
     new(globals,create(@adapters));
     //:setup
     repeat
@@ -138,7 +130,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       leaveCriticalSection(codeAssistanceCs);
       if provider<>nil then begin;
         lastEvaluationStart:=now;
-        response:=doCodeAssistanceSynchronously(provider,globals,@collector);
+        response:=doCodeAssistanceSynchronously(provider,globals,@adapters);
         enterCriticalSection(codeAssistanceCs);
         disposeCodeAssistanceResponse(codeAssistanceResponse);
         codeAssistanceResponse:=response;
@@ -149,7 +141,6 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     //shutdown:
     dispose(globals,destroy);
     adapters.destroy;
-    collector.destroy;
     enterCriticalSection(codeAssistanceCs);
     codeAssistantIsRunning:=false;
     leaveCriticalSection(codeAssistanceCs);

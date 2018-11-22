@@ -105,7 +105,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
     if not(gui_started) then begin
-      context.messages.logGuiNeeded;
+      context.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and
@@ -120,7 +120,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       enterCriticalSection(tableFormCs);
       newTableForm.initWithLiteral(P_listLiteral(params^.value[0]),caption,header);
-      context.messages.globalMessages^.postSingal(mt_displayTable,C_nilTokenLocation);
+      context.messages^.postSingal(mt_displayTable,C_nilTokenLocation);
       leaveCriticalSection(tableFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
@@ -221,7 +221,7 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
 
 PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
   VAR dummyLocation:T_tokenLocation;
-      tempAdapters:T_threadLocalMessages;
+      tempAdapters:T_messagesDummy;
       newLiteral:P_listLiteral;
       i:longint;
   begin
@@ -242,8 +242,8 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
       byColumn:=index;
       ascending:=true;
 
-      tempAdapters.create(nil);
-      literal^.sortBySubIndex(index,dummyLocation,tempAdapters);
+      tempAdapters.createDummy;
+      literal^.sortBySubIndex(index,dummyLocation,@tempAdapters);
       tempAdapters.destroy;
     end;
     fillTable;

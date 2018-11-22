@@ -88,7 +88,7 @@ FUNCTION sort_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(sortLoc),nil);
       {$endif}
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.messages);
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context);
       {$ifdef fullVersion}
       context.callStackPop(nil);
       {$endif}
@@ -98,7 +98,7 @@ FUNCTION sort_imp intFuncSignature;
       if arg0^.literalType in C_listTypes
       then cloneOrCopyList0
       else result:=compound0^.toList;
-      P_listLiteral(result)^.sortBySubIndex(int1^.intValue,tokenLocation,context.messages);
+      P_listLiteral(result)^.sortBySubIndex(int1^.intValue,tokenLocation,@context);
     end
   end;
 
@@ -128,7 +128,7 @@ FUNCTION transpose_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
     then begin
       result:=list0^.transpose(nil);
-      if result=nil then context.messages.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
+      if result=nil then context.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
     end;
   end;
 
@@ -159,7 +159,7 @@ FUNCTION getElementFreqency intFuncSignature;
       then freqMap.put(list^.value[i],1)
       else inc(freqEntry^.value);
     end;
-    if not(context.messages.continueEvaluation) then begin
+    if not(context.messages^.continueEvaluation) then begin
       freqMap.destroy;
       exit(nil);
     end;
@@ -402,8 +402,8 @@ FUNCTION group_imp intFuncSignature;
         else begin
           keyList[i]:=dummy^.rereferenced;
           if not(hasError) then
-          context.messages.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
-                                       listToGroup^.value[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
+          context.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
+                             listToGroup^.value[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
           hasError:=true;
         end;
       end;
@@ -431,7 +431,7 @@ FUNCTION group_imp intFuncSignature;
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
           end else begin
-            context.messages.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            context.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
             exit;
           end;
         end;
@@ -461,7 +461,7 @@ FUNCTION group_imp intFuncSignature;
       if (aggregator<>nil) then context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(groupLoc),nil);
       {$endif}
       groupMap.create();
-      for inputIndex:=0 to length(keyList)-1 do if context.messages.continueEvaluation then
+      for inputIndex:=0 to length(keyList)-1 do if context.messages^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       disposeLiteral(keyList);
 

@@ -40,11 +40,11 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE setIdResolved; virtual;
       PROPERTY isIdResolved:boolean read idResolved;
-      FUNCTION complainAboutUnused(VAR adapters:T_threadLocalMessages):boolean;
+      FUNCTION complainAboutUnused(CONST adapters:P_messages):boolean;
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
-      PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_threadLocalMessages); virtual;
+      PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_messages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer):boolean;
@@ -70,7 +70,7 @@ TYPE
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
     FUNCTION singleTokenToString:ansistring;
-    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_threadLocalMessages):boolean;
+    FUNCTION areBracketsPlausible(CONST adaptersForComplaints:P_messages):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
@@ -88,7 +88,7 @@ TYPE
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractThreadContext; OUT closingBracket:P_token):T_bodyParts;
 
 FUNCTION disposeToken(p:P_token):P_token; inline;
 PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -126,7 +126,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractThreadContext; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -138,7 +138,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
       setLength(result,1);
       result[0].first:=first^.next;
     end else begin
-      adapters.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      context^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
       setLength(result,0);
       exit;
     end;
@@ -146,22 +146,22 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
       if t^.tokType in C_openingBrackets then inc(bracketLevel)
       else if t^.tokType in C_closingBrackets then dec(bracketLevel)
       else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-        if partLength=0 then adapters.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        if partLength=0 then context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
         result[length(result)-1].last:=p; //end of body part is token before comma
         setLength(result,length(result)+1);
         result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-        if (t^.next^.tokType in C_closingBrackets) and (bracketLevel=1) then adapters.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        if (t^.next^.tokType in C_closingBrackets) and (bracketLevel=1) then context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
         partLength:=-1; //excluding delimiting separators
       end;
       p:=t; t:=t^.next; inc(partLength);
     end;
-    if not(adapters.continueEvaluation) then begin
+    if not(context^.continueEvaluation) then begin
       setLength(result,0);
       exit;
     end;
     result[length(result)-1].last:=p; //end of body part is token before comma
     if (p=nil) or (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-      adapters.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      context^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
       setLength(result,0);
       exit;
     end;
@@ -198,10 +198,10 @@ PROCEDURE T_abstractRule.setIdResolved;
     idResolved:=true;
   end;
 
-FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages): boolean;
+FUNCTION T_abstractRule.complainAboutUnused(CONST adapters: P_messages): boolean;
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
-    if result then adapters.globalMessages^.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
+    if result then adapters^.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
     'Unused rule '+id+
     '; you can suppress this warning with '+
     ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
@@ -209,7 +209,7 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages)
 {$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
-PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_threadLocalMessages); begin end;
+PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_messages); begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;
@@ -399,7 +399,7 @@ FUNCTION T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMessages): boolean;
+FUNCTION T_token.areBracketsPlausible(CONST adaptersForComplaints: P_messages): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
     begin
@@ -410,12 +410,12 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMe
   FUNCTION popPlausible(CONST token:P_token):boolean;
     begin
       if length(bracketStack)<=0 then begin
-        adaptersForComplaints.raiseError('Missing opening bracket for closing '+safeTokenToString(token),token^.location);
+        adaptersForComplaints^.raiseSimpleError('Missing opening bracket for closing '+safeTokenToString(token),token^.location);
         exit(false);
       end;
       if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints.raiseError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
-        adaptersForComplaints.raiseError('Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
+        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
         exit(false);
       end;
       setLength(bracketStack,length(bracketStack)-1);
@@ -425,7 +425,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMe
   FUNCTION stackIsEmpty:boolean;
     begin
       if length(bracketStack)<=0 then exit(true);
-      adaptersForComplaints.raiseError('Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
+      adaptersForComplaints^.raiseSimpleError('Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
       result:=false;
     end;
 
@@ -436,28 +436,28 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMe
     result:=true;
     while result and (t<>nil) do begin
       if t^.tokType in C_forbiddenTokenTypes then begin
-        adaptersForComplaints.raiseError('Invalid symbol '+safeTokenToString(t),t^.location);
+        adaptersForComplaints^.raiseSimpleError('Invalid symbol '+safeTokenToString(t),t^.location);
         result:=false;
       end;
       if      t^.tokType in C_openingBrackets then push(t)
       else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
       if t^.next<>nil then begin
         if (t^.tokType=tt_iifCheck) and (t^.next^.tokType=tt_iifElse) then begin
-          adaptersForComplaints.raiseError('Inline-if with empty then-clause',t^.location);
+          adaptersForComplaints^.raiseSimpleError('Inline-if with empty then-clause',t^.location);
           result:=false;
         end;
         if (t^.tokType=tt_iifElse) and (t^.next^.tokType in [tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_semicolon,
                                                              tt_separatorComma ..tt_operatorLazyOr,tt_operatorMult..tt_operatorConcatAlt,tt_listToParameterList]) then begin
-          adaptersForComplaints.raiseError('Inline-if with empty else-clause',t^.location);
+          adaptersForComplaints^.raiseSimpleError('Inline-if with empty else-clause',t^.location);
           result:=false;
         end;
         if (t^.tokType       in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
            (t^.next^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression  ,tt_expBraceClose,tt_iifElse]) then begin
-          adaptersForComplaints.raiseError('Empty '+t^.singleTokenToString+'-'+t^.next^.singleTokenToString+' block',t^.location);
+          adaptersForComplaints^.raiseSimpleError('Empty '+t^.singleTokenToString+'-'+t^.next^.singleTokenToString+' block',t^.location);
           result:=false;
         end;
         if (t^.tokType in [tt_separatorCnt,tt_separatorComma]) and (t^.next^.tokType in C_closingBrackets) then begin
-          adaptersForComplaints.raiseError('Missing element in '+t^.singleTokenToString+'-separated list',t^.location);
+          adaptersForComplaints^.raiseSimpleError('Missing element in '+t^.singleTokenToString+'-separated list',t^.location);
           result:=false;
         end;
       end;

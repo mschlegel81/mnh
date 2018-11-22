@@ -16,7 +16,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileToInterpretFromCommandLine:ansistring;
 FUNCTION getCommandToInterpretFromCommandLine:ansistring;
 {$endif}
-PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(CONST adapters:P_messagesDistributor; CONST guiAdapterOrNil:P_abstractOutAdapter);
 PROCEDURE displayHelp;
 
 CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
@@ -53,13 +53,13 @@ FUNCTION getCommandToInterpretFromCommandLine:ansistring; begin if     directExe
 {$endif}
 FUNCTION getFileToInterpretFromCommandLine   :ansistring; begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
 
-PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(CONST adapters:P_messagesDistributor; CONST guiAdapterOrNil:P_abstractOutAdapter);
   VAR i:longint;
       scriptFileName:string;
   begin
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
-    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
+    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters^.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
     if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior{$ifdef fullVersion}+C_messagesAlwaysProcessedInGuiMode{$endif};
   end;
 
@@ -107,7 +107,7 @@ PROCEDURE displayHelp;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 CONST DEF_VERBOSITY_STRING='';
-  VAR consoleAdapters:T_messageConnector;
+  VAR consoleAdapters:T_messagesDistributor;
       wantHelpDisplay:boolean=false;
       headless:boolean=false;
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
@@ -239,16 +239,17 @@ CONST DEF_VERBOSITY_STRING='';
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package^.load(loadMode,globals,mainParameters);
-      {$ifdef fullVersion} if not(FlagGUINeeded in globals.primaryContext.messages.getFlags) then {$endif}
-      globals.afterEvaluation;
+      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation;
       dispose(package,destroy);
-      {$ifdef fullVersion}
-      if (FlagGUINeeded in globals.primaryContext.messages.getFlags) then begin
-        reEvaluationWithGUIrequired:=true;
+      if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
+        {$ifdef fullVersion}
+          reEvaluationWithGUIrequired:=true;
+        {$else}
+          delegateToFullVersionRequired:=true;
+        {$endif}
         globals.destroy;
         exit;
       end;
-      {$endif}
       globals.destroy;
       consoleAdapters.setExitCode;
     end;
@@ -276,7 +277,7 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
-    consoleAdapters.create;
+    consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
     i:=1;
@@ -322,7 +323,7 @@ CONST DEF_VERBOSITY_STRING='';
     //-----------------------------------------------------
     wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay;
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
-    setupOutputBehaviourFromCommandLineOptions(consoleAdapters,nil);
+    setupOutputBehaviourFromCommandLineOptions(@consoleAdapters,nil);
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then executeCommand
                               else executeScript;

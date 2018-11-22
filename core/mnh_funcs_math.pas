@@ -31,11 +31,11 @@ IMPLEMENTATION
         for y in iter do collResult^.append(recurse(y),false);
         disposeLiteral(iter);
         if collResult^.containsError then begin
-          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.messages);
+          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context);
           disposeLiteral(result);
         end;
       end;
-      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.messages);
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context);
     end;
   end;
 
@@ -119,11 +119,11 @@ FUNCTION abs_imp intFuncSignature;
           for sub in iter do collResult^.append(recurse(sub),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
-            raiseNotApplicableError('abs',x,tokenLocation,context.messages);
+            raiseNotApplicableError('abs',x,tokenLocation,context);
             disposeLiteral(result);
           end;
         end;
-        else raiseNotApplicableError('abs',x,tokenLocation,context.messages);
+        else raiseNotApplicableError('abs',x,tokenLocation,context);
       end;
     end;
 
@@ -153,11 +153,11 @@ FUNCTION sqr_imp intFuncSignature;
           for sub in iter do collResult^.append(recurse(sub),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
-            raiseNotApplicableError('sqr',x,tokenLocation,context.messages);
+            raiseNotApplicableError('sqr',x,tokenLocation,context);
             disposeLiteral(result);
           end;
         end;
-        else raiseNotApplicableError('sqr',x,tokenLocation,context.messages);
+        else raiseNotApplicableError('sqr',x,tokenLocation,context);
       end;
     end;
 
@@ -196,7 +196,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       if y>=0 then exit(x^.rereferenced);
       while (i>y) and (i>-19) do begin pot:=pot*10; dec(i); end;
       if not((x^.literalType=lt_smallint) or P_bigIntLiteral(x)^.value.canBeRepresentedAsInt64()) then begin
-        raiseNotApplicableError(funcName[roundingMode],x,location,context.messages,' because it is a big integer');
+        raiseNotApplicableError(funcName[roundingMode],x,location,context,' because it is a big integer');
         exit(newVoidLiteral);
       end;
       xv:=x^.intValue;
@@ -225,11 +225,11 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
           for sub in iter do collResult^.append(customRound(sub,0,roundingMode,location,context),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
-            raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+            raiseNotApplicableError(funcName[roundingMode],x,location,context);
             disposeLiteral(result);
           end;
         end;
-        else raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+        else raiseNotApplicableError(funcName[roundingMode],x,location,context);
       end;
     end else begin
       result:=nil;
@@ -238,7 +238,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         lt_smallint,lt_bigint : result:=myRound(P_abstractIntLiteral(x),relevantDigits);
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then result:=myRound(P_realLiteral(x)^.value,relevantDigits)
-                 else raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+                 else raiseNotApplicableError(funcName[roundingMode],x,location,context);
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList:
           begin
             result:=newListLiteral;
@@ -247,7 +247,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
             disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
-              raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+              raiseNotApplicableError(funcName[roundingMode],x,location,context);
             end;
           end;
 
@@ -258,11 +258,11 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
             disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
-              raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+              raiseNotApplicableError(funcName[roundingMode],x,location,context);
             end;
           end;
 
-        else raiseNotApplicableError(funcName[roundingMode],x,location,context.messages);
+        else raiseNotApplicableError(funcName[roundingMode],x,location,context);
       end;
     end;
   end;
@@ -319,10 +319,10 @@ FUNCTION sign_imp intFuncSignature;
           disposeLiteral(iter);
           if collResult^.containsError then begin
             disposeLiteral(result);
-            raiseNotApplicableError('sign',x,tokenLocation,context.messages);
+            raiseNotApplicableError('sign',x,tokenLocation,context);
           end;
         end;
-        else raiseNotApplicableError('sign',x,tokenLocation,context.messages);
+        else raiseNotApplicableError('sign',x,tokenLocation,context);
       end;
     end;
 
@@ -650,7 +650,7 @@ FUNCTION primes_impl intFuncSignature;
       for i:=2 to length(isPrime)-1 do
         isPrime[i]:=true;
       p:=2;
-      while (p*p<length(isPrime)) and context.messages.continueEvaluation do begin
+      while (p*p<length(isPrime)) and context.messages^.continueEvaluation do begin
         i:=p*p;
         while i<length(isPrime) do begin
           isPrime[i]:=false;
@@ -725,7 +725,7 @@ FUNCTION digits_impl intFuncSignature;
         if arg1^.literalType=lt_bigint then begin
           bigBase:=P_bigIntLiteral(arg1)^.value;
           if (bigBase.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
-            context.messages.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
+            context.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
             exit(nil);
           end;
           if bigBase.canBeRepresentedAsInt32()
@@ -734,7 +734,7 @@ FUNCTION digits_impl intFuncSignature;
         end else begin
           smallBase:=P_smallIntLiteral(arg1)^.value;
           if (smallBase<=1) then begin
-            context.messages.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
+            context.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
             exit(nil);
           end;
         end;
@@ -826,7 +826,7 @@ FUNCTION composeDigits_imp intFuncSignature;
         if (arg2^.literalType in [lt_smallint,lt_bigint]) and (int2^.isBetween(-maxLongint,maxLongint))
         then Shift:=int2^.intValue
         else begin
-          context.messages.raiseError('Shift argument is out of bounds',tokenLocation);
+          context.raiseError('Shift argument is out of bounds',tokenLocation);
           clearGarbage;
           exit(nil);
         end;

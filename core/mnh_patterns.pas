@@ -201,7 +201,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
         restrictionValue:=P_literal(tok^.data)^.rereferenced;
-      end else context.messages.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
+      end else context.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
       cascadeDisposeToken(tok);
     end;
   end;
@@ -558,8 +558,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
   PROCEDURE fail(VAR firstOfPart:P_token);
     begin
       if firstOfPart=nil
-      then context.messages.raiseError('Invalid declaration pattern element.',partLocation)
-      else context.messages.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
+      then context.raiseError('Invalid declaration pattern element.',partLocation)
+      else context.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
       cascadeDisposeToken(firstOfPart);
     end;
 
@@ -573,20 +573,20 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      parts:=getBodyParts(first,0,context.messages,closingBracket);
+      parts:=getBodyParts(first,0,@context,closingBracket);
       if closingBracket=nil then begin
         cascadeDisposeToken(first);
         exit;
       end;
       if (closingBracket^.next<>nil) and not(closingBracket^.next^.tokType in [tt_assign,tt_declare]) then begin
-        context.messages.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
+        context.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
         cascadeDisposeToken(closingBracket^.next);
       end;
 
       for i:=0 to length(parts)-1 do begin
         partLocation:=parts[i].first^.location;
         if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
-          if i<>length(parts)-1 then context.messages.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
+          if i<>length(parts)-1 then context.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
           //Optionals: f(...)->
           appendOptional;
           parts[i].first:=disposeToken(parts[i].first);
@@ -615,7 +615,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                       cascadeDisposeToken(parts[i].first);
                   end else begin
                     context.reduceExpression(parts[i].first);
-                    if (context.messages.continueEvaluation) and
+                    if (context.messages^.continueEvaluation) and
                        (parts[i].first<>nil) and
                        (parts[i].first^.tokType=tt_literal) and
                        (P_literal   (parts[i].first^.data)^.literalType in [lt_smallint,lt_bigint]) and
@@ -717,8 +717,8 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
 
     if allUsed then exit;
     for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
-      context.messages.globalMessages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,warnText('Parameter '+sig[i].toString+' not used'));
-    if hasOptionals and not(optUsed) then context.messages.globalMessages^.postTextMessage(mt_el1_note,subruleLocation,warnText('Optional ... not used'));
+      context.messages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,warnText('Parameter '+sig[i].toString+' not used'));
+    if hasOptionals and not(optUsed) then context.messages^.postTextMessage(mt_el1_note,subruleLocation,warnText('Optional ... not used'));
   end;
 {$endif}
 

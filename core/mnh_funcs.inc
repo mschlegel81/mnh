@@ -19,31 +19,45 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 FUNCTION try_imp intFuncSignature;
   FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
     VAR messagesLiteral:P_literal;
+        tryMessages:T_messagesErrorHolder;
+        oldMessages:P_messages;
     begin
+      oldMessages:=context.messages;
+      tryMessages.createErrorHolder(context.messages,[mt_el3_evalError..mt_el3_userDefined]);
+      context.messages:=@tryMessages;
+
       result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
-      if (result=nil) or (context.messages.getFlags<>[]) then begin
+      if (result=nil) or (tryMessages.getFlags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin
-          context.messages.clear;
+          tryMessages.clear;
           result:=newVoidLiteral
         end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(context.messages.storedMessages,C_errorMessageTypes[4]+C_errorMessageTypes[3]);
-            context.messages.clear;
+            messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3]);
+            tryMessages.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
-            if result=nil then context.messages.raiseError('Error in catch block',tokenLocation);
+            if result=nil then begin
+              context.messages:=oldMessages;
+              context.raiseError('Error in catch block',tokenLocation);
+            end;
             disposeLiteral(messagesLiteral);
           end else begin
-            context.messages.clear;
+            tryMessages.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
-            if result=nil then context.messages.raiseError('Error in catch block',tokenLocation);
+            if result=nil then begin
+              context.messages:=oldMessages;
+              context.raiseError('Error in catch block',tokenLocation);
+            end;
           end;
         end else begin
-          context.messages.clear;
+          tryMessages.clear;
           result:=inCaseOfFailure^.rereferenced;
         end;
       end;
+      tryMessages.destroy;
+      context.messages:=oldMessages;
     end;
 
   begin
@@ -99,7 +113,7 @@ FUNCTION inspect_imp intFuncSignature;
       else id      :=filenameOrId;
       if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
       if (fileName='') or not(fileExists(fileName)) then begin
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
+        context.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
         tempPackage:=nil;
         exit;
       end;

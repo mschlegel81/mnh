@@ -35,7 +35,7 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
           synMeta.setLanguage(state_hlLang,LANG_TXT);
         end;
         lt_expression: config_hlLang:=P_expressionLiteral(langLit^.rereferenced);
-        else context.messages.raiseError('highlighter is: '+langLit^.typeString+'; must be string or expression',location);
+        else context.raiseError('highlighter is: '+langLit^.typeString+'; must be string or expression',location);
       end;
       disposeLiteral(langLit);
     end else synMeta.language:=LANG_TXT;
@@ -80,7 +80,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
           oldLang:=state_hlLang;
           state_hlLang:=P_stringLiteral(tmp)^.value;
           result:=result or (oldLang<>state_hlLang);
-        end else context.messages.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
+        end else context.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
         disposeLiteral(tmp);
       end;
     end;

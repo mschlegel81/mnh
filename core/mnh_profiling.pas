@@ -61,7 +61,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
-      PROCEDURE logInfo(CONST adapters:P_messageConnector);
+      PROCEDURE logInfo(CONST adapters:P_messages);
   end;
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
@@ -207,7 +207,7 @@ PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerLocation,calleeLocati
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_profiler.logInfo(CONST adapters:P_messageConnector);
+PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
   VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
       temp:P_calleeEntry;
       lines:T_arrayOfString;

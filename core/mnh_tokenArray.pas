@@ -26,7 +26,7 @@ TYPE
       customOperatorRules:T_customOperatorArray;
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
       PROCEDURE clearCustomOperators;
-      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messageConnector):boolean;
+      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
@@ -38,7 +38,7 @@ TYPE
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       {$ifdef fullVersion}
@@ -54,7 +54,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -121,28 +121,28 @@ TYPE
       nextStatement:T_enhancedStatement;
       beforeLastTokenized,
       lastTokenized:P_token;
-      FUNCTION getToken(CONST line:ansistring; VAR threadLocalMessages:T_threadLocalMessages; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):P_token;
-      FUNCTION fetchNext(                      VAR threadLocalMessages:T_threadLocalMessages; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):boolean;
+      FUNCTION getToken(CONST line:ansistring; CONST messages:P_messages; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):P_token;
+      FUNCTION fetchNext(                      CONST messages:P_messages; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):boolean;
       PROCEDURE resetTemp;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage);
       CONSTRUCTOR create(CONST sourcePackage:P_abstractPackage; CONST inPackage:P_abstractPackage);
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
-      FUNCTION getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
+      FUNCTION getNextStatement(CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
       {$ifdef fullVersion}
       FUNCTION getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
       {$endif}
-      PROCEDURE rawTokenize(CONST inputTxt:string;   CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; VAR threadLocalMessages:T_threadLocalMessages);
+      PROCEDURE rawTokenize(CONST inputTxt:string;   CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; CONST messages:P_messages);
       PROCEDURE rawTokenize(CONST literal:P_literal; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token);
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
+PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages);
   VAR t:P_token;
       rule:P_abstractRule;
   begin
@@ -166,13 +166,13 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR th
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                   t^.txt:=t^.txt;
                   t^.next:=disposeToken(t^.next);
-                end else threadLocalMessages.raiseError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
-              end else threadLocalMessages.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
-            end else threadLocalMessages.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
+                end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
+              end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+            end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
         tt_modifier:
-        if t^.getModifier<>modifier_local then threadLocalMessages.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
         else
         if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
@@ -426,13 +426,13 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   end;
 {$endif}
 
-FUNCTION T_lexer.getToken(CONST line: ansistring; VAR threadLocalMessages:T_threadLocalMessages;
+FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages;
   {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): P_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(message:ansistring);
     begin
-      threadLocalMessages.raiseError(message,inputLocation);
+      messages^.raiseSimpleError(message,inputLocation);
     end;
 
   FUNCTION leadingId:T_idString;
@@ -485,7 +485,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR threadLocalMessages:T_thre
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
-      end else if pos('TODO',commentText)>0 then threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,inputLocation,commentText);
+      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el2_warning,inputLocation,commentText);
     end;
 
   VAR id:ansistring='';
@@ -666,13 +666,13 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR threadLocalMessages:T_thre
     if parsedLength>0 then inc(inputLocation.column,parsedLength);
   end;
 
-FUNCTION T_lexer.fetchNext(VAR threadLocalMessages:T_threadLocalMessages;
+FUNCTION T_lexer.fetchNext(CONST messages:P_messages;
   {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): boolean;
   FUNCTION fetch:P_token;
     begin
       result:=nil;
-      while (result=nil) and (threadLocalMessages.continueEvaluation) and (inputIndex<length(input)) do begin
-        result:=getToken(input[inputIndex],threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif},retainBlanks);
+      while (result=nil) and (messages^.continueEvaluation) and (inputIndex<length(input)) do begin
+        result:=getToken(input[inputIndex],messages{$ifdef fullVersion},localIdInfos{$endif},retainBlanks);
         if (result=nil) then begin
           inc(inputIndex);
           inc(inputLocation.line);
@@ -753,7 +753,7 @@ FUNCTION T_lexer.fetchNext(VAR threadLocalMessages:T_threadLocalMessages;
            (n[3]<>nil) and (n[3]^.tokType=tt_separatorComma) then begin
           nextToken^.txt:=n[2]^.txt;
           nextToken^.data:=nil;
-        end else threadLocalMessages.raiseError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
+        end else messages^.raiseSimpleError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
         disposeToken(n[1]);
         disposeToken(n[2]);
         disposeToken(n[3]);
@@ -764,7 +764,7 @@ FUNCTION T_lexer.fetchNext(VAR threadLocalMessages:T_threadLocalMessages;
           nextToken^.tokType:=tt_each;
           nextToken^.txt:='';
           nextToken^.data:=nil;
-        end else threadLocalMessages.raiseError('Invalid agg construct.',nextToken^.location);
+        end else messages^.raiseSimpleError('Invalid agg construct.',nextToken^.location);
         disposeToken(n[1]);
       end;
     end;
@@ -823,7 +823,7 @@ DESTRUCTOR T_lexer.destroy;
     end;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
+PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR t:P_token;
       localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
@@ -839,11 +839,11 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
         tt_endBlock:
-          localIdStack.scopePop(threadLocalMessages,t^.location,false);
+          localIdStack.scopePop(messages,t^.location,false);
         tt_braceOpen:
           localIdStack.scopePush(sc_bracketOnly);
         tt_braceClose:
-          localIdStack.scopePop(threadLocalMessages,t^.location,true);
+          localIdStack.scopePop(messages,t^.location,true);
         tt_each,tt_parallelEach:begin
           localIdStack.scopePush(sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,t^.location,tt_eachIndex);
@@ -852,7 +852,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
         tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
-            if not(localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable)) then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+            if not(localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable)) then messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
           end else if (localIdStack.hasId(t^.txt,idType,idLoc)) then begin
             t^.tokType:=idType;
             if idType=tt_eachIndex then t^.location:=idLoc;
@@ -861,11 +861,11 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_th
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;
     end;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false);
     localIdStack.destroy;
   end;
 
-FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
+FUNCTION T_lexer.getNextStatement(CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
       idType:T_tokenType;
@@ -873,17 +873,17 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
       idLoc:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
-    while fetchNext(threadLocalMessages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
+    while fetchNext(messages{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
       lastLocation:=lastTokenized^.location;
       case lastTokenized^.tokType of
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
         tt_endBlock:
-          localIdStack.scopePop(threadLocalMessages,lastTokenized^.location,false);
+          localIdStack.scopePop(messages,lastTokenized^.location,false);
         tt_braceOpen:
           localIdStack.scopePush(sc_bracketOnly);
         tt_braceClose:
-          localIdStack.scopePop(threadLocalMessages,lastTokenized^.location,true);
+          localIdStack.scopePop(messages,lastTokenized^.location,true);
         tt_each,tt_parallelEach:begin
           localIdStack.scopePush(sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastTokenized^.location,tt_eachIndex);
@@ -893,7 +893,7 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
             if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable))
-            then threadLocalMessages.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+            then messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
           end else if (localIdStack.hasId(lastTokenized^.txt,idType,idLoc)) then begin
             lastTokenized^.tokType:=idType;
             if idType=tt_eachIndex then lastTokenized^.location:=idLoc;
@@ -904,7 +904,7 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
             disposeToken(lastTokenized);
           end;
           result:=nextStatement;
-          if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
+          if not(messages^.continueEvaluation) then cascadeDisposeToken(result.firstToken);
           resetTemp;
           localIdStack.destroy;
           exit;
@@ -913,9 +913,9 @@ FUNCTION T_lexer.getNextStatement(VAR threadLocalMessages:T_threadLocalMessages{
       lastWasLocalModifier:=(lastTokenized<>nil) and (lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
     end;
     result:=nextStatement;
-    if not(threadLocalMessages.continueEvaluation) then cascadeDisposeToken(result.firstToken);
+    if not(messages^.continueEvaluation) then cascadeDisposeToken(result.firstToken);
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(threadLocalMessages,lastLocation,false);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false);
     localIdStack.destroy;
   end;
 
@@ -927,7 +927,7 @@ PROCEDURE safeAppend(VAR first,last:P_token; CONST appendix:P_token);
     last :=appendix^.last;
   end;
 
-PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; VAR threadLocalMessages:T_threadLocalMessages);
+PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocation; VAR firstToken,lastToken:P_token; CONST messages:P_messages);
   begin
     input:=inputTxt;
     inputIndex:=0;
@@ -936,7 +936,7 @@ PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocat
     inputColumnOffset:=location.column-inputLocation.column;
     blob.text:='';
     blob.closer:=#0;
-    while fetchNext(threadLocalMessages{$ifdef fullVersion},nil{$endif}) do begin end;
+    while fetchNext(messages{$ifdef fullVersion},nil{$endif}) do begin end;
     safeAppend(firstToken,lastToken,nextStatement.firstToken);
     resetTemp;
   end;
@@ -948,13 +948,13 @@ PROCEDURE T_lexer.rawTokenize(CONST literal:P_literal; CONST location:T_tokenLoc
 
 {$ifdef fullVersion}
 FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
-  VAR adapters:T_threadLocalMessages;
+  VAR adapters:T_messagesDummy;
       t:P_token;
   begin
     blob.closer:=localIdInfos^.getBlobCloserOrZero(inputLocation.line);
 
-    adapters.create(nil);
-    while fetchNext(adapters,nil,false) do begin end;
+    adapters.createDummy;
+    while fetchNext(@adapters,nil,false) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(input[length(input)-1]);
 
@@ -979,7 +979,7 @@ PROCEDURE T_abstractPackage.clearCustomOperators;
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do customOperatorRules[op]:=nil;
   end;
 
-FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messageConnector):boolean;
+FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
   VAR op:T_tokenType;
   begin
     result:=false;
@@ -1027,7 +1027,7 @@ FUNCTION T_extendedPackage.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=extender^.isImportedOrBuiltinPackage(id);
   end;
 
-PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
+PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   VAR intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
   begin
@@ -1037,10 +1037,10 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
       token.data:=intrinsicFuncPtr;
       exit;
     end;
-    if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
+    if adaptersOrNil<>nil then adaptersOrNil^.raiseSimpleError('Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
+PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   begin
     extender^.resolveId(token,adaptersOrNil{$ifdef fullVersion},markAsUsed{$endif});
   end;
@@ -1080,15 +1080,15 @@ FUNCTION T_abstractPackage.getExtended(CONST idOrPath:string):P_abstractPackage;
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR lexer:T_lexer;
       location:T_tokenLocation;
-      adapters:T_threadLocalMessages;
+      adapters:T_messagesDummy;
       t:P_token;
   begin
     location.package:=@BLANK_ABSTRACT_PACKAGE;
     location.line:=0;
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
-    adapters.create(nil);
-    repeat until not(lexer.fetchNext(adapters{$ifdef fullVersion},nil{$endif},true));
+    adapters.createDummy;
+    repeat until not(lexer.fetchNext(@adapters{$ifdef fullVersion},nil{$endif},true));
     adapters.destroy;
     t:=lexer.nextStatement.firstToken;
     lexer.resetTemp;

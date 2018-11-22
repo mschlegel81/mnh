@@ -473,7 +473,7 @@
         <IsPartOfProject Value="True"/>
       </Unit80>
       <Unit81>
-        <Filename Value="..\core\mnh_messages.pas"/>
+        <Filename Value="..\common\myGenerics.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit81>
     </Units>

@@ -43,7 +43,7 @@ TYPE
     public
       CONSTRUCTOR createReplaceImageRequest(CONST img:P_rawImage);
       CONSTRUCTOR createGetImageRequest;
-      FUNCTION getImageWaiting(VAR errorFlagProvider:T_threadLocalMessages):P_rawImage;
+      FUNCTION getImageWaiting(CONST errorFlagProvider:P_messages):P_rawImage;
       PROCEDURE setImage(CONST image:P_rawImage);
   end;
 
@@ -54,33 +54,33 @@ TYPE
       retrieved:boolean;
     public
       CONSTRUCTOR createGetSizeRequest;
-      FUNCTION getSizeWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_imageDimensions;
+      FUNCTION getSizeWaiting(CONST errorFlagProvider:P_messages):T_imageDimensions;
       PROCEDURE setSize(CONST width,height:longint);
   end;
 
 {$i mnh_func_defines.inc}
 IMPLEMENTATION
-FUNCTION obtainCurrentImageViaAdapters(VAR messages:T_threadLocalMessages):P_rawImage;
+FUNCTION obtainCurrentImageViaAdapters(CONST messages:P_messages):P_rawImage;
   VAR m:P_replaceImageMessage;
   begin
     new(m,createGetImageRequest);
-    messages.globalMessages^.postCustomMessage(m);
+    messages^.postCustomMessage(m);
     result:=m^.getImageWaiting(messages);
     disposeMessage(m);
   end;
 
-PROCEDURE postNewImage(VAR messages:T_threadLocalMessages; CONST image:P_rawImage);
+PROCEDURE postNewImage(CONST messages:P_messages; CONST image:P_rawImage);
   VAR m:P_replaceImageMessage;
   begin
     new(m,createReplaceImageRequest(image));
-    messages.globalMessages^.postCustomMessage(m,true);
+    messages^.postCustomMessage(m,true);
   end;
 
-FUNCTION obtainDimensionsViaAdapters(VAR messages:T_threadLocalMessages):T_imageDimensions;
+FUNCTION obtainDimensionsViaAdapters(CONST messages:P_messages):T_imageDimensions;
   VAR m:P_imageDimensionsMessage;
   begin
     new(m,createGetSizeRequest);
-    messages.globalMessages^.postCustomMessage(m);
+    messages^.postCustomMessage(m);
     result:=m^.getSizeWaiting(messages);
     disposeMessage(m);
   end;
@@ -89,8 +89,8 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
   PROCEDURE warn(CONST message:string);
     begin
       isValid:=false;
-      if validating then context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,message)
-                    else context.messages.raiseError(message,tokenLocation);
+      if validating then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,message)
+                    else context.raiseError(message,tokenLocation);
     end;
 
   VAR i:longint;
@@ -159,7 +159,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,sLit).literal;
         disposeLiteral(sLit);
         if outputLit<>nil then disposeLiteral(outputLit);
-      end else context.messages.globalMessages^.postTextMessage(mt_el1_note,tokenLocation,s);
+      end else context.messages^.postTextMessage(mt_el1_note,tokenLocation,s);
     end;
 
   begin
@@ -186,18 +186,18 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       if (dest='') and (source<>'') then begin dest:=source; source:=''; end;
 
       if (source='') and ((xRes=0) or (yRes=0)) then begin
-        context.messages.raiseError('Either target resolution or input image must be provided',tokenLocation);
+        context.raiseError('Either target resolution or input image must be provided',tokenLocation);
         isValid:=false;
       end;
       if (dest='') then begin
-        context.messages.raiseError('No output file given',tokenLocation);
+        context.raiseError('No output file given',tokenLocation);
         isValid:=false;
       end;
       thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context);
       if isValid and (source=C_nullSourceOrTargetFileName) then begin
         obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
         if obtainedImage=nil then begin
-          context.messages.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
+          context.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
           isValid:=false;
         end else begin
           thisWorkflow.workflowImage.copyFromPixMap(obtainedImage^);
@@ -211,7 +211,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           leaveCriticalSection(workflowCs);
           if not(hasDelayMessage) then begin
             hasDelayMessage:=true;
-            context.messages.globalMessages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
+            context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
           end;
           sleep(random(5000));
           ThreadSwitch;
@@ -230,7 +230,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
                              thisWorkflow.executeForTarget(xRes,yRes,sizeLimit,dest);
                            end;
         lastOutput:=now;
-        while thisWorkflow.progressQueue.calculating and (context.messages.continueEvaluation) do begin
+        while thisWorkflow.progressQueue.calculating and (context.messages^.continueEvaluation) do begin
           progressLog:=thisWorkflow.progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do if progressLog[i].message<>'' then begin
             doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
@@ -250,13 +250,13 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
           logLinesDisplayed:=i+1;
         end;
-        if not(context.messages.continueEvaluation) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
+        if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
         thisWorkflow.progressQueue.ensureStop;
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
         leaveCriticalSection(workflowCs);
       end;
-      if (context.messages.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
+      if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
         postNewImage(context.messages,newFromWorkflowImage);
         doOutput('Output of workflow copied to current image');
       end;
@@ -276,7 +276,7 @@ FUNCTION loadImage_imp intFuncSignature;
         loadedImage^.loadFromFile(P_stringLiteral(arg0)^.value);
       except
         ok:=false;
-        context.messages.raiseError('Error loading image '+arg0^.toString(),tokenLocation);
+        context.raiseError('Error loading image '+arg0^.toString(),tokenLocation);
       end;
       if ok then begin
         postNewImage(context.messages,loadedImage);
@@ -294,14 +294,14 @@ FUNCTION saveImage_imp intFuncSignature;
                      and ((params^.size =1) or (params^.size=2) and (arg1^.literalType=lt_smallint)) then begin
       obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
       if obtainedImage=nil then begin
-        context.messages.globalMessages^.postTextMessage(mt_el1_note,tokenLocation,'Cannot save image because no image is loaded.');
+        context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Cannot save image because no image is loaded.');
         exit(nil);
       end;
       try
       if params^.size=2 then obtainedImage^.saveJpgWithSizeLimit(str0^.value,int1^.intValue)
                         else obtainedImage^.saveToFile(str0^.value);
       except
-        on e:Exception do context.messages.raiseError(e.message,tokenLocation);
+        on e:Exception do context.raiseError(e.message,tokenLocation);
       end;
       dispose(obtainedImage,destroy);
       result:=newVoidLiteral;
@@ -312,7 +312,7 @@ FUNCTION closeImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages.globalMessages^.postSingal(mt_image_close,C_nilTokenLocation);
+      context.messages^.postSingal(mt_image_close,C_nilTokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -327,7 +327,7 @@ FUNCTION imageSize_imp intFuncSignature;
       result:=newListLiteral(2)^.appendInt(size.width)^.appendInt(size.height);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       if not(fileExists(str0^.value)) then begin
-        context.messages.raiseError('File '+str0^.value+' does not exist',tokenLocation);
+        context.raiseError('File '+str0^.value+' does not exist',tokenLocation);
         exit(nil);
       end;
       try
@@ -359,7 +359,7 @@ FUNCTION resizeImage_imp intFuncSignature;
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
       if (r=res_dataResize) or (xRes<=0) or (yRes<=0) then exit(nil);
       obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.messages.raiseError('Cannot resize image because no image is loaded',tokenLocation)
+      if obtainedImage=nil then context.raiseError('Cannot resize image because no image is loaded',tokenLocation)
       else begin
         obtainedImage^.resize(xRes,yRes,r);
         postNewImage(context.messages,obtainedImage);
@@ -372,7 +372,7 @@ FUNCTION displayImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages.globalMessages^.postSingal(mt_image_postDisplay,C_nilTokenLocation);
+      context.messages^.postSingal(mt_image_postDisplay,C_nilTokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -383,14 +383,14 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.messages.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      if obtainedImage=nil then context.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
         result:=newStringLiteral(obtainedImage^.getJpgFileData());
         dispose(obtainedImage,destroy);
       end;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
       obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.messages.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      if obtainedImage=nil then context.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
         result:=newStringLiteral(obtainedImage^.getJpgFileData(int0^.intValue));
         dispose(obtainedImage,destroy);
@@ -417,7 +417,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
        (arg1^.literalType in [lt_smallint,lt_bigint]) and
        (arg2^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('getThumbnail',tokenLocation,[se_readFile]) then begin
       if not(fileExists(str0^.value)) then begin
-        context.messages.raiseError('File '+str0^.value+' does not exist',tokenLocation);
+        context.raiseError('File '+str0^.value+' does not exist',tokenLocation);
         exit(nil);
       end;
       img.create(str0^.value);
@@ -448,7 +448,7 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
 
       new(renderRequest,createRenderToStringRequest(width,height,quality));
-      context.messages.globalMessages^.postCustomMessage(renderRequest^.rereferenced);
+      context.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
       imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context.messages));
@@ -480,10 +480,10 @@ CONSTRUCTOR T_imageDimensionsMessage.createGetSizeRequest;
     retrieved:=false;
   end;
 
-FUNCTION T_imageDimensionsMessage.getSizeWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_imageDimensions;
+FUNCTION T_imageDimensionsMessage.getSizeWaiting(CONST errorFlagProvider:P_messages):T_imageDimensions;
   begin
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
@@ -516,10 +516,10 @@ CONSTRUCTOR T_replaceImageMessage.createGetImageRequest;
     retrieved:=false;
   end;
 
-FUNCTION T_replaceImageMessage.getImageWaiting(VAR errorFlagProvider: T_threadLocalMessages): P_rawImage;
+FUNCTION T_replaceImageMessage.getImageWaiting(CONST errorFlagProvider:P_messages): P_rawImage;
   begin
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);

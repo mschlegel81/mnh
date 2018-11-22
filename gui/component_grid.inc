@@ -23,7 +23,7 @@ CONSTRUCTOR T_gridMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
     colCount:=-1;
     tmp:=mapGet(def,key[dmk_colCount]);
     if (tmp<>nil) and (tmp^.literalType in [lt_smallint,lt_bigint]) and (P_abstractIntLiteral(tmp)^.isBetween(1,100)) then colCount:=P_abstractIntLiteral(tmp)^.intValue;
-    if colCount<0 then context.messages.raiseError('grids must have a specified colCount in [1..100]',location);
+    if colCount<0 then context.raiseError('grids must have a specified colCount in [1..100]',location);
     winControl.OnResize:=@OnResize;
   end;
 

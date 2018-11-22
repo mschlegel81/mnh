@@ -31,10 +31,10 @@ TYPE
       state:T_debuggerState;
       lastBreakLine:T_tokenLocation;
       lastBreakLevel:longint;
-      adapters:P_messageConnector;
+      adapters:P_messages;
       cs:TRTLCriticalSection;
     public
-      CONSTRUCTOR create(CONST parentAdapters:P_messageConnector);
+      CONSTRUCTOR create(CONST parentAdapters:P_messages);
       DESTRUCTOR destroy;
       PROCEDURE resetForDebugging(CONST inPackage:P_objectWithPath);
       PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack);
@@ -62,7 +62,7 @@ CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_
     end else location:=first^.location;
   end;
 
-CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messageConnector);
+CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messages);
   begin
     initCriticalSection(cs);
     adapters:=parentAdapters;

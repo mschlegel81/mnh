@@ -29,10 +29,10 @@ TYPE
 
 VAR guiOutAdapter:    T_synOutAdapter;
     guiEventsAdapter: T_guiEventsAdapter;
-    guiAdapters:      T_messageConnector;
+    guiAdapters:      T_messagesDistributor;
 
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit);
-FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messageConnector;
+FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributor;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit);
@@ -41,7 +41,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TS
     if unitIsInitialized then exit;
     guiOutAdapter.create(parent,outputEdit);
     guiEventsAdapter.create(parent);
-    guiAdapters.create;
+    guiAdapters.createDistributor();
     guiAdapters.addOutAdapter(@imigSystem,false);
     if outputEdit<>nil then begin
       new(logoMessage,create(mt_printline,C_nilTokenLocation,LOGO));
@@ -56,13 +56,13 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TS
     initializePlotForm;
   end;
 
-FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messageConnector;
+FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributor;
   VAR guiAd:P_synOutAdapter;
   begin
     result:=nil;
     if not(unitIsInitialized) then exit;
     new(guiAd,create(guiOutAdapter.ownerForm,outputEdit));
-    new(result,create);
+    new(result,createDistributor);
     result^.addOutAdapter(guiAd,true);
   end;
 
@@ -99,7 +99,7 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
       if length(storedMessages)>0 then clear;
     finally
       system.leaveCriticalSection(cs);
-      if showFormsAfter then conditionalShowCustomForms(guiAdapters);
+      if showFormsAfter then conditionalShowCustomForms(@guiAdapters);
       if evaluationEnded then begin
         freeScriptedForms;
         form.onEndOfEvaluation;

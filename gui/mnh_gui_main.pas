@@ -186,7 +186,7 @@ TYPE
     end;
     quick:record
       meta:T_basicEditorMeta;
-      adapters:P_messageConnector;
+      adapters:P_messagesDistributor;
       task:T_postEvaluationData;
       completion:T_completionLogic;
       evaluationDeferred:boolean;

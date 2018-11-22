@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,
      math,
      mnh_constants, mnh_basicTypes,
+     mnh_out_adapters,
      mnh_settings,
      mnh_litVar,valueStore,mnh_subrules,
      mnh_aggregators,mnh_contexts;
@@ -23,7 +24,7 @@ TYPE
       CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE executeInContext(CONST context:P_threadContext);
   end;
 
@@ -110,7 +111,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
           true,
           eachLocation,
           @context);
-        proceed:=context.messages.continueEvaluation and not(aggregator^.earlyAbort);
+        proceed:=context.messages^.continueEvaluation and not(aggregator^.earlyAbort);
       end;
       inc(eachIndex);
       disposeLiteral(indexLiteral);
@@ -178,7 +179,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
           if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
           proceed:=proceed and not(aggregator^.earlyAbort);
         end;
-        proceed:=proceed and context.messages.continueEvaluation;
+        proceed:=proceed and context.messages^.continueEvaluation;
       end;
       inc(eachIndex);
       disposeLiteral(x);
@@ -204,7 +205,7 @@ FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     result:=newListLiteral();
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if isExpressionNullary
       then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context  ).literal,false)
       else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,x).literal,false);
@@ -292,7 +293,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if isExpressionNullary
       then begin if enqueueValue(nil) then canAggregate; end
       else begin if enqueueValue(x  ) then canAggregate; end;
@@ -389,7 +390,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if enqueueValue(x) then canAggregate;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
@@ -408,7 +409,7 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
   VAR x:T_evaluationResult;
   begin
     x:=inputIterator^.evaluateToLiteral(location,@context);
-    while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.messages.continueEvaluation and not(aggregator^.earlyAbort) do begin
+    while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) do begin
       aggregator^.addToAggregation(
         x,
         false,
@@ -455,7 +456,7 @@ PROCEDURE T_filterTask.evaluate;
   begin
     context^.beginEvaluation;
     try
-      if context^.messages.continueEvaluation then with mapPayload do begin
+      if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do begin
           if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,true,mapParameter[k])
@@ -495,7 +496,7 @@ PROCEDURE T_mapTask.evaluate;
   begin
     context^.beginEvaluation;
     try
-      if context^.messages.continueEvaluation then with mapPayload do begin
+      if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do begin
           lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,mapParameter[k]).literal;
@@ -555,7 +556,7 @@ PROCEDURE T_eachTask.evaluate;
     context^.beginEvaluation;
     leaveCriticalSection(taskCs);
     try
-      if context^.messages.continueEvaluation then with eachPayload do begin
+      if context^.messages^.continueEvaluation then with eachPayload do begin
         indexLiteral:=newIntLiteral(eachIndex);
         evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,context,eachParameter,indexLiteral);
         disposeLiteral(indexLiteral);
@@ -623,11 +624,11 @@ FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
     result:=result+toParameterListString(param,true,remaining)+')';
   end;
 
-FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     enterCriticalSection(criticalSection);
     if isBlocking then begin
-      if state=fls_pending then executeInContext(context)
+      if state=fls_pending then executeInContext(P_threadContext(context))
       else while state<>fls_done do begin
         leaveCriticalSection(criticalSection);
         ThreadSwitch;
@@ -653,7 +654,7 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_threadContext);
     end;
 
     resultValue:=func^.evaluate(getLocation,context,param).literal;
-    if (resultValue=nil) and (context^.messages.continueEvaluation)
+    if (resultValue=nil) and (context^.messages^.continueEvaluation)
     then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation);
 
     enterCriticalSection(criticalSection);

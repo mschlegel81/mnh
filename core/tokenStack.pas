@@ -109,7 +109,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE clear;
     PROCEDURE scopePush(CONST scopeType:T_scopeType);
-    PROCEDURE scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
+    PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
     FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
@@ -449,22 +449,22 @@ PROCEDURE T_idStack.scopePush(CONST scopeType:T_scopeType);
     scope[newTopIdx].scopeType:=scopeType;
   end;
 
-PROCEDURE T_idStack.scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
+PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket:boolean);
   VAR topIdx:longint;
       i:longint;
   begin
     topIdx:=length(scope)-1;
     if topIdx<0 then begin
-      adapters.raiseError('Missing opening bracket for closing bracket',location);
+      adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
       exit;
     end;
     if closeByBracket then begin
-      if scope[topIdx].scopeType=sc_block then adapters.raiseError('Mismatch; begin closed by )',location);
+      if scope[topIdx].scopeType=sc_block then adapters^.raiseSimpleError('Mismatch; begin closed by )',location);
     end else begin
-      if scope[topIdx].scopeType<>sc_block then adapters.raiseError('Mismatch; ( closed by end',location);
+      if scope[topIdx].scopeType<>sc_block then adapters^.raiseSimpleError('Mismatch; ( closed by end',location);
     end;
     with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-      if not(ids[i].used) then adapters.globalMessages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
+      if not(ids[i].used) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
       {$ifdef fullVersion}
       if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,location,ids[i].idType);
       {$endif}

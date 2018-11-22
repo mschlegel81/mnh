@@ -60,15 +60,15 @@ FUNCTION readXmlFile_impl intFuncSignature;
         ReadXMLFile(FDoc, str0^.value)
       except
         on e:Exception do begin
-          context.messages.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
+          context.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
         end;
       end else begin
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
+        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
         exit(newVoidLiteral);
       end;
       result:=obtainXmlData(FDoc);
       if result=nil then begin
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
+        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
         result:=newVoidLiteral;
       end;
     end;
@@ -86,13 +86,13 @@ FUNCTION readXml_impl intFuncSignature;
         ReadXMLFile(FDoc,input);
       except
         on e:Exception do begin
-          context.messages.raiseError('Error parsing XML input: '+e.message,tokenLocation);
+          context.raiseError('Error parsing XML input: '+e.message,tokenLocation);
         end;
       end;
       FreeAndNil(input);
       result:=obtainXmlData(FDoc);
       if result=nil then begin
-        context.messages.raiseError('Error parsing XML input.',tokenLocation);
+        context.raiseError('Error parsing XML input.',tokenLocation);
         result:=newVoidLiteral;
       end;
     end;

@@ -52,7 +52,7 @@ TYPE
     PROCEDURE initWithQuestion(CONST question: ansistring);
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
     PROCEDURE lock;
-    FUNCTION getLastAnswerReleasing(CONST adapters:P_threadLocalMessages): ansistring;
+    FUNCTION getLastAnswerReleasing(CONST adapters:P_messages): ansistring;
     PROCEDURE setButtons(CONST enable:boolean; CONST options: T_arrayOfString);
   end;
 
@@ -163,7 +163,7 @@ PROCEDURE TaskForm.lock;
     ownerThread := ThreadID;
   end;
 
-FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_threadLocalMessages): ansistring;
+FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_messages): ansistring;
   VAR i:longint;
   begin
     while displayPending or showing do begin

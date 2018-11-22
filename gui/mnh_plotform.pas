@@ -551,20 +551,20 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
-    context.messages.globalMessages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
+    context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
-    context.messages.globalMessages^.postSingal(mt_plot_addAnimationFrame,C_nilTokenLocation);
+    context.messages^.postSingal(mt_plot_addAnimationFrame,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
     new(displayRequest,create());
-    context.messages.globalMessages^.postCustomMessage(displayRequest);
+    context.messages^.postCustomMessage(displayRequest);
     displayRequest^.waitForExecution(context.messages);
     disposeMessage(displayRequest);
     result:=newVoidLiteral;
@@ -574,13 +574,13 @@ FUNCTION postdisplay_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
     new(displayRequest,create());
-    context.messages.globalMessages^.postCustomMessage(displayRequest,true);
+    context.messages^.postCustomMessage(displayRequest,true);
     result:=newVoidLiteral;
   end else result:=nil; end;
 
 FUNCTION uninitialized_fallback intFuncSignature;
   begin
-    context.messages.logGuiNeeded;
+    context.messages^.logGuiNeeded;
     result:=nil;
   end;
 

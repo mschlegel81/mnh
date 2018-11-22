@@ -29,7 +29,7 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
         lt_expression: config_items:=P_expressionLiteral(tmp);
         lt_stringList,
         lt_emptyList: state_items :=P_listLiteral(tmp)^;
-        else context.messages.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
+        else context.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
       end;
     end;
 
@@ -121,7 +121,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       if (tmp<>nil) then begin
         if tmp^.literalType in [lt_stringList,lt_emptyList]
         then state_items:=P_listLiteral(tmp)^
-        else context.messages.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+        else context.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
         disposeLiteral(tmp);
       end;
       result:=result or not(arrEquals(oldItems,state_items));

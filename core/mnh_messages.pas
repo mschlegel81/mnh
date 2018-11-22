@@ -7,9 +7,8 @@ USES sysutils,
 TYPE
   T_stateFlag=(FlagQuietHalt,
                FlagError,
-               FlagFatalError{$ifdef fullVersion},
-               FlagGUINeeded
-               {$endif});
+               FlagFatalError,
+               FlagGUINeeded);
   T_stateFlags=set of T_stateFlag;
 
   T_messageClass=(mc_echo   ,
