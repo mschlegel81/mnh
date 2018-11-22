@@ -14,7 +14,7 @@ USES sysutils,
      mnh_funcs;
 
 {$i mnh_func_defines.inc}
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractThreadContext): P_literal;
 FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
 CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_unaryOpMinus];
       unaryOperators:T_tokenTypeSet=[tt_unaryOpNegate..tt_unaryOpMinus];
@@ -203,7 +203,7 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
     end;
   end;
 
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractThreadContext): P_literal;
   VAR parList:P_listLiteral;
       rule   :P_abstractRule =nil;
       ruleOut:P_token=nil;

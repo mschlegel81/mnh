@@ -35,12 +35,12 @@ TYPE
     private
       FUNCTION getParameterNames:P_listLiteral; virtual; abstract;
     public
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_expressionLiteral; virtual;
   end;
 
   T_ruleMetaData=object
@@ -91,7 +91,7 @@ TYPE
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext; CONST customId_:T_idString='');
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
-      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_expressionLiteral; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       //Pattern related:
       FUNCTION arity:longint; virtual;
@@ -101,11 +101,11 @@ TYPE
       //Literal routines:
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_expressionLiteral; virtual;
 
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
 
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
@@ -148,8 +148,8 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
-      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_expressionLiteral; virtual;
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
@@ -161,7 +161,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
-FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
+FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
 IMPLEMENTATION
 TYPE
@@ -175,8 +175,8 @@ T_builtinExpression=object(T_expression)
   public
     CONSTRUCTOR create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
     DESTRUCTOR destroy; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
-    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
+    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_expressionLiteral; virtual;
     FUNCTION arity:longint; virtual;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
     FUNCTION getId:T_idString; virtual;
@@ -700,7 +700,7 @@ FUNCTION newIdentityRule(VAR context:T_threadContext; CONST location:T_tokenLoca
                          context)); //={$x}
   end;
 
-FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
+FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_literal;
   VAR newRule:P_subruleExpression;
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
@@ -745,12 +745,12 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     disposeLiteral(RHSinstead);
   end;
 
-FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:pointer): P_expressionLiteral;
+FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractThreadContext): P_expressionLiteral;
   begin
     new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation));
   end;
 
-FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:pointer): P_expressionLiteral;
+FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractThreadContext): P_expressionLiteral;
   VAR temp:P_inlineExpression;
   begin
     temp:=getEquivalentInlineExpression(P_threadContext(threadContext)^);
@@ -758,7 +758,7 @@ FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string;
     disposeLiteral(temp);
   end;
 
-FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:pointer): P_expressionLiteral;
+FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractThreadContext): P_expressionLiteral;
   VAR identity:P_subruleExpression;
       mapper  :P_expressionLiteral;
   begin
@@ -940,7 +940,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
     else                         result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
+FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
   begin
     resultLiteral:=evaluateToLiteral(location,context,a,b).literal;
@@ -952,7 +952,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
     end;
   end;
 
-FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext; CONST parameters: P_listLiteral): T_evaluationResult;
   VAR toReduce,dummy:P_token;
   begin
     if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^)
@@ -961,7 +961,7 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
     end else result.literal:=nil;
   end;
 
-FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
     result.literal:=func(parameters,location,P_threadContext(context)^);
@@ -969,7 +969,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(NIL_EVAL_RESULT);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
@@ -977,7 +977,7 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
@@ -998,13 +998,13 @@ FUNCTION T_subruleExpression.getInlineValue: P_literal;
 
 FUNCTION T_expression.getParentId: T_idString; begin result:=''; end;
 
-FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: pointer): P_expressionLiteral;
+FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: P_abstractThreadContext): P_expressionLiteral;
   begin
     raise Exception.create('Clone is not implemented for expressions of type '+C_expressionTypeString[typ]);
     result:=nil;
   end;
 
-FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral;
+FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_expressionLiteral;
   begin
     new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location));
   end;

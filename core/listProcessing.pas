@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,
      math,
      mnh_constants, mnh_basicTypes,
+     mnh_out_adapters,
      mnh_settings,
      mnh_litVar,valueStore,mnh_subrules,
      mnh_aggregators,mnh_contexts;
@@ -23,7 +24,7 @@ TYPE
       CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE executeInContext(CONST context:P_threadContext);
   end;
 
@@ -623,11 +624,11 @@ FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
     result:=result+toParameterListString(param,true,remaining)+')';
   end;
 
-FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     enterCriticalSection(criticalSection);
     if isBlocking then begin
-      if state=fls_pending then executeInContext(context)
+      if state=fls_pending then executeInContext(P_threadContext(context))
       else while state<>fls_done do begin
         leaveCriticalSection(criticalSection);
         ThreadSwitch;
