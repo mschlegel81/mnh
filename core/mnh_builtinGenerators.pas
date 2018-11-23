@@ -20,7 +20,7 @@ TYPE
     values:T_arrayOfLiteral;
     CONSTRUCTOR create(CONST v:P_compoundLiteral);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -37,7 +37,7 @@ FUNCTION T_listIterator.toString(CONST lengthLimit:longint=maxLongint):string;
     result:='listIterator('+underlying^.toString(lengthLimit-14)+')';
   end;
 
-FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     if index>=length(values)
@@ -59,7 +59,7 @@ T_singleValueIterator=object(T_builtinGeneratorExpression)
   value:P_literal;
   CONSTRUCTOR create(CONST v:P_literal);
   FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-  FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+  FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
   DESTRUCTOR destroy; virtual;
 end;
 
@@ -75,7 +75,7 @@ FUNCTION T_singleValueIterator.toString(CONST lengthLimit:longint=maxLongint):st
     result:='singleValueIterator('+value^.toString(20)+')';
   end;
 
-FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     if didDeliver then exit(NIL_EVAL_RESULT);
     result.literal:=value^.rereferenced;
@@ -104,7 +104,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST first,last:int64; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: int64; CONST loc: T_tokenLocation);
@@ -127,7 +127,7 @@ FUNCTION T_rangeGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
     result:='rangeGenerator('+intToStr(minVal)+','+intToStr(maxVal)+')';
   end;
 
-FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     if (minVal<=nextVal) and (nextVal<=maxVal) then begin
@@ -155,7 +155,7 @@ TYPE
       CONSTRUCTOR create(CONST i:int64; CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST arr:P_compoundLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -187,7 +187,7 @@ FUNCTION T_permutationIterator.toString(CONST lengthLimit:longint=maxLongint):st
     result:='permutationIterator('+underlying^.toString(lengthLimit-21)+')';
   end;
 
-FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR i,k,l:longint;
       swapTmp:P_literal;
   begin
@@ -254,7 +254,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST source,filter:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -272,7 +272,7 @@ FUNCTION T_filterGenerator.toString(CONST lengthLimit:longint=maxLongint):string
     result:=sourceGenerator^.toString(30)+'.filter('+filterExpression^.toString(20)+')';
   end;
 
-FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR nextUnfiltered:T_evaluationResult;
   begin
     result:=NIL_EVAL_RESULT;
@@ -287,7 +287,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
         then begin result.triggeredByReturn:=false; result.literal:=newVoidLiteral; exit(result); end
         else exit(nextUnfiltered);
       end;
-    until (result.literal<>nil) or not(P_threadContext(context)^.messages^.continueEvaluation);
+    until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
 DESTRUCTOR T_filterGenerator.destroy;
@@ -367,7 +367,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -385,7 +385,7 @@ FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
     result:=sourceGenerator^.toString(30)+'.lazyMap('+mapExpression^.toString(20)+')';
   end;
 
-FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR nextUnmapped:P_literal;
   begin
     result:=NIL_EVAL_RESULT;
@@ -402,7 +402,7 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
         if nextUnmapped=nil then begin result.literal:=newVoidLiteral; result.triggeredByReturn:=false; exit(result); end
                             else begin result.literal:=nextUnmapped;   result.triggeredByReturn:=false; exit(result); end;
       end;
-    until (result.literal<>nil) or not(P_threadContext(context)^.messages^.continueEvaluation);
+    until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
 DESTRUCTOR T_mapGenerator.destroy;
@@ -433,13 +433,13 @@ TYPE
       fname:string;
       fileHandle:textFile;
     public
-      CONSTRUCTOR create(CONST fileName:string; CONST loc:T_tokenLocation; VAR context:T_threadContext);
+      CONSTRUCTOR create(CONST fileName:string; CONST loc:T_tokenLocation; VAR context:T_context);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST loc: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST loc: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(loc);
     try
@@ -458,7 +458,7 @@ FUNCTION T_fileLineIterator.toString(CONST lengthLimit:longint=maxLongint):strin
     result:='fileLineIterator('''+fname+''')';
   end;
 
-FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR l:string;
   begin
     result.triggeredByReturn:=false;
@@ -502,7 +502,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -530,7 +530,7 @@ FUNCTION T_primeGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
     result:='primeGenerator';
   end;
 
-FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   PROCEDURE extendTable;
     VAR offset,newMax:int64;
         k0,k:longint;
@@ -590,7 +590,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST loc:T_tokenLocation; CONST chars:T_charSet; CONST minLength,maxLength:longint);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -621,7 +621,7 @@ FUNCTION T_stringIterator.toString(CONST lengthLimit:longint=maxLongint):string;
     result+='],'+intToStr(minL)+','+intToStr(maxL)+')';
   end;
 
-FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR s:string;
       i:longint=0;
       carry:boolean=true;
@@ -702,7 +702,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST seed:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -712,7 +712,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -723,7 +723,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST seed,maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -734,7 +734,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST seed,maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -751,7 +751,7 @@ FUNCTION T_abstractRandomGenerator.canApplyToNumberOfParameters(CONST parCount: 
     result:=(parCount=0) or (parCount=1);
   end;
 
-FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     result.literal:=nil;
@@ -764,7 +764,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CON
       else range.create (P_bigIntLiteral  (parameters^.value[0])^.value);
       result.literal:=newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
     end else begin
-      P_threadContext(context)^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
+      P_context(context)^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
       result.literal:=newVoidLiteral;
     end;
   end;
@@ -833,19 +833,19 @@ FUNCTION T_isaacRandomGenerator.toString(CONST lengthLimit: longint): string;
     result:='isaacRandomGenerator('+range.toString+')';
   end;
 
-FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractThreadContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     result.literal:=newRealLiteral(XOS.realRandom);
   end;
 
-FUNCTION T_intRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractThreadContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_intRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     result.literal:=newIntLiteral(bigint.randomInt(@XOS.dwordRandom,range));
   end;
 
-FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractThreadContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   begin
     result.triggeredByReturn:=false;
     result.literal:=newIntLiteral(bigint.randomInt(@isaac.iRandom,range));
@@ -887,7 +887,7 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
   public
     CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
 end;
 
 CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
@@ -908,7 +908,7 @@ FUNCTION T_vanDerCorputGenerator.toString(CONST lengthLimit: longint): string;
     result:='vanDerCorputGenerator('+intToStr(base)+')';
   end;
 
-FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractThreadContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR k,rest:longint;
       i:longint=0;
       x:double=0;

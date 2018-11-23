@@ -847,7 +847,7 @@ FUNCTION formatTabs_impl intFuncSignature;
     end;
   end;
 
-{$define LENGTH_MACRO:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+{$define LENGTH_MACRO:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   FUNCTION innerRec(l:P_literal):P_literal;
     VAR iter:T_arrayOfLiteral;
         sub :P_literal;

@@ -84,7 +84,7 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
-      FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+      FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_context):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
 
       FUNCTION isMain:boolean;
@@ -102,7 +102,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
 
       FUNCTION getHelpOnMain:ansistring;
-      PROCEDURE finalize(VAR context:T_threadContext);
+      PROCEDURE finalize(VAR context:T_context);
       PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
@@ -154,7 +154,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
-      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -425,7 +425,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   CONST TYPES_BY_LEVEL:array[0..3] of T_messageTypeSet=
         ([],
          [mt_clearConsole,mt_printline,mt_printdirect],
@@ -1288,7 +1288,7 @@ PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boo
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(messages,recurse);
   end;
 
-PROCEDURE T_package.finalize(VAR context:T_threadContext);
+PROCEDURE T_package.finalize(VAR context:T_context);
   VAR rule:P_rule;
       i:longint;
   begin
@@ -1314,7 +1314,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
     then begin
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
       if toStringRule^.replaces(tt_localUserRule,location,parameters,toReduce,dummy,context)
-      then stringOut:=P_threadContext(context)^.reduceToLiteral(toReduce).literal;
+      then stringOut:=P_context(context)^.reduceToLiteral(toReduce).literal;
       disposeLiteral(parameters);
     end;
 
@@ -1537,7 +1537,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCateg
   end;
 {$endif}
 
-FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_context):P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin

@@ -88,7 +88,7 @@ TYPE
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractThreadContext; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
 
 FUNCTION disposeToken(p:P_token):P_token; inline;
 PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -126,7 +126,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractThreadContext; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;

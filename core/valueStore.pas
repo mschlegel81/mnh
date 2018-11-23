@@ -20,7 +20,7 @@ TYPE
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
-      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_literal;
+      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_literal;
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -51,8 +51,8 @@ TYPE
       PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
       PROCEDURE createVariable(CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
       FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
-      FUNCTION  setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):boolean;
-      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_literal;
+      FUNCTION  setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
+      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):P_literal;
       {$ifdef fullVersion}
       //For debugging:
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
@@ -160,7 +160,7 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     value^.rereference;
   end;
 
-FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_literal;
+FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_literal;
   begin
     if readonly then begin
       threadContext^.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
@@ -274,7 +274,7 @@ FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;
     if (parentAccess>=ACCESS_READONLY) then result:=parentScope^.getVariableValue(id);
   end;
 
-FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):boolean;
+FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
   VAR k:longint;
   begin
     system.enterCriticalSection(cs);
@@ -290,7 +290,7 @@ FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_litera
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
   end;
 
-FUNCTION T_valueScope.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_literal;
+FUNCTION T_valueScope.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):P_literal;
   VAR k:longint;
   begin
     system.enterCriticalSection(cs);

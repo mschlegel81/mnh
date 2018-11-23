@@ -18,10 +18,10 @@ TYPE
     serverId:string;
     feedbackLocation:T_tokenLocation;
     servingExpressionOrNil:P_expressionLiteral;
-    servingContextOrNil   :P_threadContext;
+    servingContextOrNil   :P_context;
     ipcMessageConnector   :P_messages;
     hasKillRequest:boolean;
-    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext; CONST ipcMessageConnect:P_messages);
+    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages);
     DESTRUCTOR destroy;
   end;
 
@@ -258,7 +258,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     result:=0;
   end;
 
-CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext; CONST ipcMessageConnect:P_messages);
+CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages);
   begin
     serverId:=serverId_;
     feedbackLocation:=location;
@@ -306,7 +306,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
 
 FUNCTION startIpcServer_impl intFuncSignature;
   VAR ipcServer:P_myIpcServer;
-      childContext:P_threadContext;
+      childContext:P_context;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and

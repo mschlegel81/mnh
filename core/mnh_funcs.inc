@@ -103,7 +103,7 @@ FUNCTION inspect_imp intFuncSignature;
       source:T_arrayOfString;
       loadMessages:P_collectionLiteral=nil;
 
-  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext);
+  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_context);
     VAR fileName:string='';
         id      :string='';
 

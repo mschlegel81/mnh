@@ -24,28 +24,28 @@ TYPE
       CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-      PROCEDURE executeInContext(CONST context:P_threadContext);
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE executeInContext(CONST context:P_context);
   end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                             CONST eachLocation:T_tokenLocation;
-                            VAR context:T_threadContext);
+                            VAR context:T_context);
 PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                               CONST eachLocation:T_tokenLocation;
-                              VAR context:T_threadContext);
+                              VAR context:T_context);
 FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
                           CONST mapLocation:T_tokenLocation;
-                          VAR context:T_threadContext):P_listLiteral;
+                          VAR context:T_context):P_listLiteral;
 FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
-                            VAR context:T_threadContext; CONST iteratorSource:P_literal):P_listLiteral;
+                            VAR context:T_context; CONST iteratorSource:P_literal):P_listLiteral;
 PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressionLiteral;
                                 CONST filterLocation:T_tokenLocation;
-                                VAR context:T_threadContext;
+                                VAR context:T_context;
                                 CONST output:P_compoundLiteral; CONST iteratorSource:P_literal);
-PROCEDURE aggregate(CONST inputIterator:P_expressionLiteral; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_threadContext);
-PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_threadContext);
+PROCEDURE aggregate(CONST inputIterator:P_expressionLiteral; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_context);
+PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context);
 
 VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
 IMPLEMENTATION
@@ -61,7 +61,7 @@ TYPE
     evaluationResult:T_evaluationResult;
     CONSTRUCTOR createEachTask();
     PROCEDURE dropEachParameter;
-    PROCEDURE defineAndEnqueue(CONST taskEnv:P_threadContext; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
+    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
     PROCEDURE evaluate; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -76,7 +76,7 @@ TYPE
     mapResult:T_arrayOfLiteral;
     nextToAggregate:P_mapTask;
     CONSTRUCTOR createMapTask(CONST expr:P_expressionLiteral);
-    PROCEDURE defineAndEnqueue(CONST taskEnv:P_threadContext; CONST x:T_arrayOfLiteral);
+    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral);
     PROCEDURE evaluate; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -95,7 +95,7 @@ TYPE
     PROCEDURE   evaluate; virtual;
   end;
 
-PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
+PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; VAR context: T_context);
   VAR rule:P_expressionLiteral;
       eachIndex:longint=0;
       indexLiteral:P_abstractIntLiteral;
@@ -123,7 +123,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
 
 PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
-  CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
+  CONST eachLocation: T_tokenLocation; VAR context: T_context);
 
   VAR firstToAggregate:P_eachTask=nil;
       lastToAggregate:P_eachTask=nil;
@@ -198,7 +198,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
 
 FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
                           CONST mapLocation:T_tokenLocation;
-                          VAR context:T_threadContext):P_listLiteral;
+                          VAR context:T_context):P_listLiteral;
   VAR x:P_literal;
       isExpressionNullary:boolean;
   begin
@@ -217,7 +217,7 @@ FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
 
 FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
-                            VAR context:T_threadContext; CONST iteratorSource:P_literal):P_listLiteral;
+                            VAR context:T_context; CONST iteratorSource:P_literal):P_listLiteral;
 
   VAR firstToAggregate:P_mapTask=nil;
       lastToAggregate:P_mapTask=nil;
@@ -314,7 +314,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
 
 PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressionLiteral;
                                 CONST filterLocation:T_tokenLocation;
-                                VAR context:T_threadContext;
+                                VAR context:T_context;
                                 CONST output:P_compoundLiteral; CONST iteratorSource:P_literal);
   VAR firstToAggregate:P_filterTask=nil;
       lastToAggregate:P_filterTask=nil;
@@ -405,7 +405,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     end;
   end;
 
-PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext);
+PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_context);
   VAR x:T_evaluationResult;
   begin
     x:=inputIterator^.evaluateToLiteral(location,@context);
@@ -421,7 +421,7 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
     if x.literal<>nil then disposeLiteral(x.literal);
   end;
 
-PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_threadContext);
+PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context);
   VAR task:P_futureTask;
   begin
     new(task,create(future));
@@ -479,7 +479,7 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST expr: P_expressionLiteral);
     mapPayload.mapParameter:=nil;
   end;
 
-PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_threadContext; CONST x:T_arrayOfLiteral);
+PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral);
   VAR k:longint;
   begin
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
@@ -533,7 +533,7 @@ PROCEDURE T_eachTask.dropEachParameter;
     leaveCriticalSection(taskCs);
   end;
 
-PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_threadContext; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
+PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
   begin
     enterCriticalSection(taskCs);
     with eachPayload do begin
@@ -624,11 +624,11 @@ FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
     result:=result+toParameterListString(param,true,remaining)+')';
   end;
 
-FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     enterCriticalSection(criticalSection);
     if isBlocking then begin
-      if state=fls_pending then executeInContext(P_threadContext(context))
+      if state=fls_pending then executeInContext(P_context(context))
       else while state<>fls_done do begin
         leaveCriticalSection(criticalSection);
         ThreadSwitch;
@@ -642,7 +642,7 @@ FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST
     leaveCriticalSection(criticalSection);
   end;
 
-PROCEDURE T_futureLiteral.executeInContext(CONST context:P_threadContext);
+PROCEDURE T_futureLiteral.executeInContext(CONST context:P_context);
   begin
     enterCriticalSection(criticalSection);
     if state=fls_pending then begin

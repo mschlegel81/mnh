@@ -38,26 +38,26 @@ CONST
 
 TYPE
   P_evaluationGlobals=^T_evaluationGlobals;
-  P_threadContext=^T_threadContext;
+  P_context=^T_context;
   P_taskQueue=^T_taskQueue;
 
   T_contextRecycler=object
     private
       recyclerCS:TRTLCriticalSection;
-      contexts:array[0..127] of P_threadContext;
+      contexts:array[0..127] of P_context;
       fill:longint;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      PROCEDURE disposeContext(VAR context:P_threadContext);
-      FUNCTION newContext(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel):P_threadContext;
+      PROCEDURE disposeContext(VAR context:P_context);
+      FUNCTION newContext(CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   end;
 
   T_taskState=(fts_pending, //set on construction
                fts_evaluating, //set on dequeue
                fts_finished); //set after evaluation
 
-  T_threadContext=object(T_abstractThreadContext)
+  T_context=object(T_abstractContext)
     private
       //helper:
       contextCS:TRTLCriticalSection;
@@ -70,13 +70,13 @@ TYPE
       {$endif}
       related:record
         evaluation :P_evaluationGlobals;
-        parent     :P_threadContext;
+        parent     :P_context;
         childCount :longint;
       end;
       CONSTRUCTOR create();
       DESTRUCTOR destroy;
-      PROCEDURE dropChildContext(CONST context:P_threadContext);
-      PROCEDURE addChildContext(CONST context:P_threadContext);
+      PROCEDURE dropChildContext(CONST context:P_context);
+      PROCEDURE addChildContext(CONST context:P_context);
       PROCEDURE setThreadOptions(CONST globalOptions:T_evaluationContextOptions);
     public
       state:T_taskState;
@@ -99,8 +99,8 @@ TYPE
       FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
       FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
       //Multithreading:
-      FUNCTION getFutureEnvironment:P_threadContext;
-      FUNCTION getNewAsyncContext(CONST local:boolean):P_threadContext;
+      FUNCTION getFutureEnvironment:P_context;
+      FUNCTION getNewAsyncContext(CONST local:boolean):P_context;
       PROCEDURE beginEvaluation;
       PROCEDURE finalizeTaskAndDetachFromParent;
 
@@ -120,7 +120,7 @@ TYPE
   P_queueTask=^T_queueTask;
   T_queueTask=object
     protected
-      context:P_threadContext;
+      context:P_context;
       taskCs:TRTLCriticalSection;
     private
       nextToEvaluate:P_queueTask;
@@ -128,7 +128,7 @@ TYPE
     public
       PROCEDURE   evaluate; virtual; abstract;
       CONSTRUCTOR create(CONST volatile:boolean);
-      PROCEDURE   defineAndEnqueue(CONST newEnvironment:P_threadContext);
+      PROCEDURE   defineAndEnqueue(CONST newEnvironment:P_context);
       DESTRUCTOR  destroy; virtual;
   end;
 
@@ -151,7 +151,7 @@ TYPE
     FUNCTION  dequeue:P_queueTask;
     FUNCTION  activeDeqeue:boolean;
     PROPERTY getQueuedCount:longint read queuedCount;
-    PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
+    PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
   T_evaluationGlobals=object
@@ -169,7 +169,7 @@ TYPE
       end;
       disposeAdaptersOnDestruction:boolean;
     public
-      primaryContext:T_threadContext;
+      primaryContext:T_context;
       taskQueue:T_taskQueue;
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_messages);
@@ -190,8 +190,8 @@ TYPE
       {$endif}
   end;
 
-VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
-    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
+VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context):T_reduceResult;
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_context):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
 IMPLEMENTATION
@@ -213,7 +213,7 @@ DESTRUCTOR T_contextRecycler.destroy;
     doneCriticalSection(recyclerCS);
   end;
 
-PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
+PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
   begin
     if (tryEnterCriticalsection(recyclerCS)=0)
     then dispose(context,destroy)
@@ -229,7 +229,7 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
     context:=nil;
   end;
 
-FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel):P_threadContext;
+FUNCTION T_contextRecycler.newContext(CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   begin
     if (tryEnterCriticalsection(recyclerCS)<>0) then begin
       if (fill>0) then begin
@@ -440,7 +440,7 @@ FUNCTION T_evaluationGlobals.isPaused:boolean;
   end;
 {$endif}
 
-FUNCTION T_threadContext.wallclockTime: double;
+FUNCTION T_context.wallclockTime: double;
   begin
     result:=related.evaluation^.wallClock.elapsed;
   end;
@@ -450,8 +450,8 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
     with timingInfo do timeSpent[component]:=primaryContext.wallclockTime-timeSpent[component];
   end;
 
-FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean
-  ): P_threadContext;
+FUNCTION T_context.getNewAsyncContext(CONST local: boolean
+  ): P_context;
   VAR parentAccess:AccessLevel;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
@@ -461,14 +461,14 @@ FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
+PROCEDURE T_context.callStackPush(CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation;
   CONST callParameters: P_variableTreeEntryCategoryNode);
   begin
     if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,callee);
   end;
 
-PROCEDURE T_threadContext.callStackPushCategory(
+PROCEDURE T_context.callStackPushCategory(
   CONST package: P_objectWithPath; CONST category: T_profileCategory;
   VAR calls: T_packageProfilingCalls);
   begin
@@ -478,7 +478,7 @@ PROCEDURE T_threadContext.callStackPushCategory(
     end;
   end;
 
-PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
+PROCEDURE T_context.callStackPop(CONST first: P_token);
   VAR loc:T_tokenLocation;
   begin
     if (tco_stackTrace in options) then begin
@@ -487,7 +487,7 @@ PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
     end;
   end;
 
-FUNCTION T_threadContext.stepping(CONST first: P_token;
+FUNCTION T_context.stepping(CONST first: P_token;
   CONST stack: P_tokenStack): boolean;
   begin
     if (related.evaluation=nil) or (related.evaluation^.debuggingStepper=nil) then exit(false);
@@ -495,7 +495,7 @@ FUNCTION T_threadContext.stepping(CONST first: P_token;
     result:=true;
   end;
 
-PROCEDURE T_threadContext.reportVariables(
+PROCEDURE T_context.reportVariables(
   VAR variableReport: T_variableTreeEntryCategoryNode);
   begin
     if related.parent<>nil then related.parent^.reportVariables(variableReport);
@@ -503,10 +503,10 @@ PROCEDURE T_threadContext.reportVariables(
   end;
 {$endif}
 
-FUNCTION T_threadContext.reduceExpression(VAR first: P_token): T_reduceResult;
+FUNCTION T_context.reduceExpression(VAR first: P_token): T_reduceResult;
   begin result:=reduceExpressionCallback(first,self); end;
 
-FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token
+FUNCTION T_context.reduceToLiteral(VAR first: P_token
   ): T_evaluationResult;
   begin
     result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
@@ -519,21 +519,21 @@ FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token
     end;
   end;
 
-FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(
+FUNCTION T_context.setAllowedSideEffectsReturningPrevious(
   CONST se: T_sideEffects): T_sideEffects;
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;
   end;
 
-FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
+FUNCTION T_context.getFutureEnvironment: P_context;
   begin
     enterCriticalSection(contextCS);
     result:=contextPool.newContext(@self,ACCESS_READONLY);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.beginEvaluation;
+PROCEDURE T_context.beginEvaluation;
   begin
     {$ifdef debugMode}
     if state<>fts_pending then raise Exception.create('Wrong state before calling T_threadContext.beginEvaluation');
@@ -543,7 +543,7 @@ PROCEDURE T_threadContext.beginEvaluation;
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
+PROCEDURE T_context.finalizeTaskAndDetachFromParent;
   begin
     enterCriticalSection(contextCS);
     with related do if childCount>0 then begin
@@ -563,7 +563,7 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
+PROCEDURE T_context.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
   {$ifdef fullVersion}
   VAR message:P_errorMessage;
   begin
@@ -575,7 +575,7 @@ PROCEDURE T_threadContext.raiseError(CONST text: string; CONST location: T_searc
   begin messages^.raiseSimpleError(text,location,kind); end;
   {$endif}
 
-FUNCTION T_threadContext.continueEvaluation: boolean;
+FUNCTION T_context.continueEvaluation: boolean;
   begin
     result:=messages^.continueEvaluation;
   end;
@@ -612,7 +612,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
 FUNCTION T_evaluationGlobals.queuedFuturesCount:longint;
   begin result:=taskQueue.queuedCount; end;
 
-PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType: string;
+PROCEDURE T_context.raiseCannotApplyError(CONST ruleWithType: string;
   CONST parameters: P_listLiteral; CONST location: T_tokenLocation;
   CONST suffix: string; CONST missingMain: boolean);
   VAR message:string;
@@ -624,7 +624,7 @@ PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType: string;
     else raiseError(message,location);
   end;
 
-FUNCTION T_threadContext.checkSideEffects(CONST id: string;
+FUNCTION T_context.checkSideEffects(CONST id: string;
   CONST location: T_tokenLocation; CONST functionSideEffects: T_sideEffects
   ): boolean;
   VAR messageText:string='';
@@ -669,7 +669,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-CONSTRUCTOR T_threadContext.create();
+CONSTRUCTOR T_context.create();
   begin
     initCriticalSection(contextCS);
     enterCriticalSection(contextCS);
@@ -685,28 +685,28 @@ CONSTRUCTOR T_threadContext.create();
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
+PROCEDURE T_context.dropChildContext(CONST context: P_context);
   begin
     enterCriticalSection(contextCS);
     with related do dec(childCount);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.addChildContext(CONST context: P_threadContext);
+PROCEDURE T_context.addChildContext(CONST context: P_context);
   begin
     enterCriticalSection(contextCS);
     with related do inc(childCount);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.setThreadOptions(
+PROCEDURE T_context.setThreadOptions(
   CONST globalOptions: T_evaluationContextOptions);
   VAR threadOption :T_threadContextOption;
   begin
     for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in globalOptions then include(options,threadOption);
   end;
 
-DESTRUCTOR T_threadContext.destroy;
+DESTRUCTOR T_context.destroy;
   begin
     enterCriticalSection(contextCS);
     {$ifdef fullVersion}
@@ -727,7 +727,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
     initCriticalSection(taskCs);
   end;
 
-PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
+PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_context);
   begin
     enterCriticalSection(taskCs);
     {$ifdef debugMode}
@@ -768,7 +768,7 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
+PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   PROCEDURE ensurePoolThreads();
     begin
       if (poolThreadsRunning<settings.cpuCount-1) then begin

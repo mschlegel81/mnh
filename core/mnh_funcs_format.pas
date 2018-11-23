@@ -23,7 +23,7 @@ TYPE
     realFmt,strFmt:string;
     lengthPar1,lengthPar2:longint;
     CONSTRUCTOR create(CONST formatString:ansistring);
-    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_context);
     DESTRUCTOR destroy;
   end;
 
@@ -34,9 +34,9 @@ TYPE
     formats:array of T_format;
     formatSubrule:P_literal;
     isTemporary:boolean;
-    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST temp:boolean=false);
     DESTRUCTOR destroy;
-    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):T_arrayOfString;
   end;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -128,7 +128,7 @@ CONSTRUCTOR T_format.create(CONST formatString: ansistring);
     end;
   end;
 
-PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_context);
   FUNCTION pad(CONST s:string; CONST numberFormat:boolean):string;
     VAR leadingMinus:byte=0;
     begin
@@ -161,7 +161,7 @@ DESTRUCTOR T_format.destroy;
     strFmt:='';
   end;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_preparedFormatStatement;
   begin;
     if not(context.messages^.continueEvaluation) then exit(nil);
     if tryEnterCriticalsection(cachedFormatCS)=0 then begin
@@ -181,7 +181,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     system.leaveCriticalSection(cachedFormatCS);
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST temp:boolean=false);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
@@ -318,7 +318,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
     setLength(formats,0);
   end;
 
-FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):T_arrayOfString;
   VAR iter:array of T_arrayOfLiteral;
 
   FUNCTION getFormattedString(CONST index:longint):ansistring;

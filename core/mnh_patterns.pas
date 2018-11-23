@@ -23,11 +23,11 @@ TYPE
       builtinTypeCheck :T_typeCheck;
       customTypeCheck  :P_typedef;
       skipCustomCheck  :boolean;
-      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_context):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
-      PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
+      PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_context);
       PROCEDURE thinOutWhitelist;
       FUNCTION hides(CONST e:T_patternElement):boolean;
     public
@@ -52,7 +52,7 @@ TYPE
       sig:array of T_patternElement;
       hasOptionals:boolean;
       PROCEDURE append(CONST el:T_patternElement);
-      PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
+      PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_context);
     public
       CONSTRUCTOR create;
       CONSTRUCTOR clone(original:T_pattern);
@@ -75,15 +75,15 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral;
       FUNCTION getNamedParameters:T_patternElementLocations;
       FUNCTION matchesNilPattern:boolean;
-      FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
-      FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+      FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context):boolean;
+      FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
+      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context);
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
       {$ifdef fullVersion}
-      PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
+      PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_context; CONST subruleLocation:T_tokenLocation);
       {$endif}
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
       FUNCTION getFirst:T_patternElement;
@@ -111,7 +111,7 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString; CONST loc:T_t
     id:=parameterId;
   end;
 
-FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_context):boolean;
   VAR L:P_literal;
   begin
     L:=parameterList.value[ownIndex];
@@ -192,7 +192,7 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
   end;
 
-PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
+PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_context);
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
@@ -404,7 +404,7 @@ FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
     if result='' then result:='$'+intToStr(index);
   end;
 
-PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
+PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_context);
   VAR i,j:longint;
 
   begin
@@ -436,12 +436,12 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext): boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context): boolean;
   begin
     result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,location,context);
   end;
 
-FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context):boolean;
   VAR i:longint;
   begin
     if (par.size<length(sig)) then exit(false);
@@ -547,7 +547,7 @@ FUNCTION T_pattern.getNamedParameters:T_patternElementLocations;
     setLength(result,i);
   end;
 
-PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
+PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context);
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -692,7 +692,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
+PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_context; CONST subruleLocation:T_tokenLocation);
   VAR i:longint;
       unusedIds:T_arrayOfLongint;
       allUsed:boolean=false;

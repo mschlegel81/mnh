@@ -12,7 +12,7 @@ USES sysutils,math,
      mnh_funcs,
      mnh_messages,
      mnh_plotData,plotstyles,plotMath;
-TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
+TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_context):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
@@ -298,7 +298,7 @@ FUNCTION removePlot_imp intFuncSignature;
     end else result:=nil;
   end;
 
-FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST abspos:boolean):P_literal;
+FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST abspos:boolean):P_literal;
   VAR txt:P_customText;
       lines:T_arrayOfString;
       i:longint;

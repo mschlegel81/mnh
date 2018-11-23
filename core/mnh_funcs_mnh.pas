@@ -14,7 +14,7 @@ FUNCTION getMnhInfo:string;
 {$i mnh_func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
-PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_threadContext); inline;
+PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;
   VAR sleepUntil:double=0;
       sleepInt:longint;
   begin
@@ -176,7 +176,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
 FUNCTION getMnhInfo:string;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
-      dummyContext:T_threadContext;
+      dummyContext:T_context;
   begin
     initialize(dummyContext);
     L:=mnhInfo_imp(nil,pseudoLoc,dummyContext);

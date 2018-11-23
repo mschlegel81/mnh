@@ -4,13 +4,13 @@ TYPE
     state_changeTriggered:boolean;
     state_onChangeParam:P_literal;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE triggerChange(CONST changeValue:string);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
+CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
   VAR tmp:P_literal;
   begin
     inherited create(def,location,context,consideredKeys+[dmk_onChange]);
@@ -52,7 +52,7 @@ DESTRUCTOR T_changeListeningMeta.destroy;
     if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
   end;
 
-FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean;
   VAR tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);

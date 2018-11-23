@@ -56,9 +56,9 @@ TYPE
     end;
     elementCs:TRTLCriticalSection;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION leftLabelOrNil:TLabel; virtual;
@@ -81,7 +81,7 @@ TYPE
     markedForCleanup:boolean;
     setupParam:P_literal;
     setupLocation:T_tokenLocation;
-    setupContext:P_threadContext;
+    setupContext:P_context;
     meta:array of P_guiElementMeta;
     plotLink:P_guiElementMeta;
     displayPending:boolean;
@@ -91,7 +91,7 @@ TYPE
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
-    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
+    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_context):boolean;
     PROCEDURE conditionalShow(CONST messages:P_messages);
   end;
 
@@ -165,7 +165,7 @@ PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
     leaveCriticalSection(scriptedFormCs);
   end;
 
-FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_threadContext; CONST errorLocation:T_tokenLocation):TscriptedForm;
+FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation):TscriptedForm;
   begin
     enterCriticalSection(scriptedFormCs);
     result:=TscriptedForm.create(nil);
@@ -194,7 +194,7 @@ PROCEDURE freeScriptedForms;
   end;
 
 CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
-                                    CONST location: T_tokenLocation; VAR context: T_threadContext;
+                                    CONST location: T_tokenLocation; VAR context: T_context;
                                     CONST consideredKeys: T_definingMapKeys);
   PROCEDURE raiseUnusedKeyWarning;
     FUNCTION isConsidered(CONST k:P_literal):boolean;
@@ -282,7 +282,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     leaveCriticalSection(elementCs);
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -576,7 +576,7 @@ PROCEDURE TscriptedForm.hideAndDisconnectAll;
     for m in meta do m^.disconnect;
   end;
 
-FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
+FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_context):boolean;
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
@@ -627,7 +627,7 @@ PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
     leaveCriticalSection(lock);
   end;
 
-FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context):P_literal;
   VAR form:TscriptedForm;
       sleepTime:longint=0;
   begin

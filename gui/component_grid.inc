@@ -4,7 +4,7 @@ TYPE
     private
       colCount:longint;
     public
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     PROCEDURE doneAdding;
     PROCEDURE update; virtual;
@@ -16,7 +16,7 @@ TYPE
   end;
 
 CONSTRUCTOR T_gridMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                              CONST location: T_tokenLocation; VAR context: T_threadContext);
+                              CONST location: T_tokenLocation; VAR context: T_context);
   VAR tmp:P_literal;
   begin
     inherited create(parent,def,location,context,[dmk_type,dmk_parts,dmk_colCount]);

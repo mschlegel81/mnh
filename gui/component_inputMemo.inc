@@ -1,14 +1,14 @@
 TYPE
   P_inputEditorMeta=^T_inputEditorMeta;
   T_inputEditorMeta=object(T_outputMemoMeta)
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
     PROCEDURE OnChange(Sender: TObject);
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(parent,def,location,context,[dmk_type,dmk_highlight,dmk_bind,dmk_action]);
     synMeta.editor.readonly:=false;

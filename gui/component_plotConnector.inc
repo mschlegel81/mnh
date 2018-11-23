@@ -10,9 +10,9 @@ TYPE
       mouseClickedParam:P_listLiteral;
     end;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE plotMouseMoved(CONST realPoint:T_point);
     PROCEDURE plotMouseClicked(CONST realPoint:T_point);
@@ -23,7 +23,7 @@ TYPE
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
   VAR tmp:P_literal;
   begin
     inherited create(def,location,context,[dmk_type,dmk_action,dmk_mouseClicked,dmk_mouseMoved]);
@@ -58,7 +58,7 @@ PROCEDURE T_plotConnectorMeta.update;
 
   end;
 
-FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean;
   VAR tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);

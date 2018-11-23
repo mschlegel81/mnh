@@ -192,7 +192,7 @@ FUNCTION writeFile_impl intFuncSignature;
     end;
   end;
 
-FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST doAppend:boolean):P_literal;
+FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST doAppend:boolean):P_literal;
   VAR ok:boolean;
       L:T_arrayOfString;
       i:longint;

@@ -86,8 +86,8 @@ TYPE
     doDispose:boolean;
   end;
 
-  P_abstractThreadContext=^T_abstractThreadContext;
-  T_abstractThreadContext=object
+  P_abstractContext=^T_abstractContext;
+  T_abstractContext=object
     PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual; abstract;
     FUNCTION continueEvaluation:boolean; virtual; abstract;
   end;

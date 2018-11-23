@@ -3,14 +3,14 @@ TYPE
   T_workerMeta=object(T_guiElementMeta)
     nextInvocation:double;
     interval:double;
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
-    FUNCTION evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean; virtual;
+    FUNCTION evaluate(CONST location: T_tokenLocation; VAR context: T_context): boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context);
   VAR tmp:P_literal;
   begin
     inherited create(def,location,context,[dmk_type,dmk_action,dmk_interval]);
@@ -29,7 +29,7 @@ PROCEDURE T_workerMeta.update;
   begin
   end;
 
-FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context): boolean;
   VAR tmp:P_literal;
   begin
     if (config.action<>nil) and (now>=nextInvocation) then begin

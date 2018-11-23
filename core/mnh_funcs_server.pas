@@ -21,10 +21,10 @@ TYPE
     feedbackLocation:T_tokenLocation;
     hasKillRequest:boolean;
     up:boolean;
-    context:P_threadContext;
+    context:P_context;
     socket:T_socketPair;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_threadContext);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
     DESTRUCTOR destroy;
     PROCEDURE serve;
     PROCEDURE killQuickly;
@@ -79,7 +79,7 @@ FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
-      childContext:P_threadContext;
+      childContext:P_context;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -112,7 +112,7 @@ PROCEDURE killServerWithIp(s:P_microserver; ip:pointer);
     if s^.ip=PAnsiString(ip)^ then s^.killQuickly;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_threadContext);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
     ip:=cleanIp(ip_);
     registry.forEach(@killServerWithIp,@ip);
@@ -321,7 +321,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
-FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
       requestText:ansistring='';

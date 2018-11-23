@@ -1,5 +1,5 @@
 {$MACRO ON}
-{$define intFuncSignature:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal}
+{$define intFuncSignature:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal}
 {$define arg0:=params^.value[0]}
 {$define arg1:=params^.value[1]}
 {$define arg2:=params^.value[2]}

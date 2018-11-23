@@ -168,7 +168,7 @@ begin
 end;
 
 FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roundingMode:T_roundingMode;
-                     CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+                     CONST location:T_tokenLocation; VAR context:T_context):P_literal;
   CONST funcName:array[T_roundingMode] of string=('round',  //RM_DEFAULT,
                                                   'ceil',   //RM_UP,
                                                   'floor'); //RM_DOWN

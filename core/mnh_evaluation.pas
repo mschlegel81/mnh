@@ -31,7 +31,7 @@ USES sysutils,
 
 IMPLEMENTATION
 
-FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
+FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context):T_reduceResult;
   VAR stack:T_TokenStack;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -1232,7 +1232,7 @@ TYPE
   P_asyncTask=^T_asyncTask;
   T_asyncTask=record
     payload:P_futureLiteral;
-    myContext:P_threadContext;
+    myContext:P_context;
   end;
 
 FUNCTION doAsync(p:pointer):ptrint;
@@ -1250,10 +1250,10 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;
-      childContext:P_threadContext;
+      childContext:P_context;
       parameters:P_listLiteral=nil;
   begin
     result:=nil;

@@ -5,10 +5,10 @@ TYPE
     lastControl:TControl;
     winControl:TWinControl;
     containedInForm:TForm;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE alignContents; virtual;
@@ -17,7 +17,7 @@ TYPE
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                               CONST location: T_tokenLocation; VAR context: T_threadContext;
+                               CONST location: T_tokenLocation; VAR context: T_context;
                                CONST consideredKeys:T_definingMapKeys);
   VAR newPanel:TPanel;
   begin
@@ -57,7 +57,7 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     lastControl:=meta^.getControl;
   end;
 
-FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; begin result:=false; end;
+FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; begin result:=false; end;
 
 PROCEDURE T_panelMeta.update;
   VAR k:longint;
