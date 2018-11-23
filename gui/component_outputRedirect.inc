@@ -4,7 +4,7 @@ TYPE
     adaptersHoldingCollector:P_messagesDistributor;
     collector:P_synOutAdapter;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     PROCEDURE update; virtual;
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
@@ -23,7 +23,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     connect;
   end;
 
-FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean;
+FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   begin
     result:=length(collector^.storedMessages)>0;
   end;

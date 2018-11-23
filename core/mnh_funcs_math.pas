@@ -10,6 +10,7 @@ USES sysutils,
      mnh_funcs,
      mnh_messages,
      mnh_out_adapters,
+     recyclers,
      mnh_contexts;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
@@ -21,7 +22,7 @@ IMPLEMENTATION
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
+      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context,@recycler);
       lt_smallint,lt_bigint: try result:=newRealLiteral(CALL_MACRO(P_abstractIntLiteral (x)^.floatValue)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value        )); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
@@ -101,7 +102,7 @@ FUNCTION abs_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('abs',tokenLocation,@context);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('abs',tokenLocation,@context,@recycler);
         lt_error: begin result:=x; result^.rereference; end;
         lt_smallint: if P_smallIntLiteral(x)^.value<0
                      then result:=newIntLiteral(-P_smallIntLiteral(x)^.value)
@@ -140,7 +141,7 @@ FUNCTION sqr_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context,@recycler);
         lt_error: begin result:=x; result^.rereference; end;
         lt_smallint : result:=newIntLiteral(sqr(int64(P_smallIntLiteral (x)^.value)));
         lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(x)^.value.mult(
@@ -168,7 +169,7 @@ begin
 end;
 
 FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roundingMode:T_roundingMode;
-                     CONST location:T_tokenLocation; VAR context:T_context):P_literal;
+                     CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   CONST funcName:array[T_roundingMode] of string=('round',  //RM_DEFAULT,
                                                   'ceil',   //RM_UP,
                                                   'floor'); //RM_DOWN
@@ -211,7 +212,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
     if relevantDigits=0 then begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(funcName[roundingMode],location,@context);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(funcName[roundingMode],location,@context,@recycler);
         lt_error,lt_smallint,lt_bigint: result:=x^.rereferenced;
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then begin
@@ -222,7 +223,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter  :=P_collectionLiteral(x)^.iteratableList;
-          for sub in iter do collResult^.append(customRound(sub,0,roundingMode,location,context),false);
+          for sub in iter do collResult^.append(customRound(sub,0,roundingMode,location,context,recycler),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
             raiseNotApplicableError(funcName[roundingMode],x,location,context);
@@ -243,7 +244,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
           begin
             result:=newListLiteral;
             iter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in iter do P_listLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context),false);
+            for sub in iter do P_listLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context,recycler),false);
             disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
@@ -254,7 +255,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet:  begin
             result:=newSetLiteral;
             iter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in iter do P_setLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context),false);
+            for sub in iter do P_setLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context,recycler),false);
             disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
@@ -271,9 +272,9 @@ FUNCTION round_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=customRound(arg0,0             ,RM_DEFAULT,tokenLocation,context) else
+    then result:=customRound(arg0,0             ,RM_DEFAULT,tokenLocation,context,recycler) else
     if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
-    then result:=customRound(arg0,int1^.intValue,RM_DEFAULT,tokenLocation,context);
+    then result:=customRound(arg0,int1^.intValue,RM_DEFAULT,tokenLocation,context,recycler);
   end;
 
 FUNCTION floor64(CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)<0 then dec(result); end;
@@ -283,18 +284,18 @@ FUNCTION ceil_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=customRound(arg0,0             ,RM_UP,tokenLocation,context) else
+    then result:=customRound(arg0,0             ,RM_UP,tokenLocation,context,recycler) else
     if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
-    then result:=customRound(arg0,int1^.intValue,RM_UP,tokenLocation,context);
+    then result:=customRound(arg0,int1^.intValue,RM_UP,tokenLocation,context,recycler);
   end;
 
 FUNCTION floor_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=customRound(arg0,0             ,RM_DOWN,tokenLocation,context) else
+    then result:=customRound(arg0,0             ,RM_DOWN,tokenLocation,context,recycler) else
     if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
-    then result:=customRound(arg0,int1^.intValue,RM_DOWN,tokenLocation,context);
+    then result:=customRound(arg0,int1^.intValue,RM_DOWN,tokenLocation,context,recycler);
   end;
 
 FUNCTION sign_imp intFuncSignature;
@@ -304,7 +305,7 @@ FUNCTION sign_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation,@context);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation,@context,@recycler);
         lt_error: result:=x^.rereferenced;
         lt_bigint: result:=newIntLiteral(P_bigIntLiteral (x)^.value.sign);
         lt_smallint: if P_smallIntLiteral(x)^.value=0 then result:=x^.rereferenced

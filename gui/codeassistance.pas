@@ -13,6 +13,7 @@ USES
   mnh_messages,
   mnh_out_adapters,
   mnh_contexts,
+  recyclers,
   mnh_packages;
 TYPE
   T_highlightingData=object
@@ -47,13 +48,13 @@ TYPE
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
   end;
 
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
 PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 IMPLEMENTATION
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -72,13 +73,13 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenG
     end;
     new(package,create(source,nil));
     initialStateHash:=source^.stateHash;
-    globals^.resetForEvaluation(package,ect_silent,C_EMPTY_STRING_ARRAY);
+    globals^.resetForEvaluation(package,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     new(localIdInfos,create);
-    package^.load(lu_forCodeAssistance,globals^,C_EMPTY_STRING_ARRAY,localIdInfos);
+    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(false)
                          else loadMessages:=adapters      .storedMessages(false);
     new(result,create(package,loadMessages,initialStateHash,localIdInfos));
-
+    globals^.afterEvaluation(recycler);
     if givenGlobals=nil then begin
       dispose(globals,destroy);
       adapters.destroy;
@@ -117,11 +118,12 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
                (codeAssistanceResponse^.stateHash<>codeAssistanceRequest^.stateHash));
       leaveCriticalSection(codeAssistanceCs);
     end;
-
+  VAR recycler:T_recycler;
   begin
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings);
     new(globals,create(@adapters));
+    recycler.initRecycler;
     //:setup
     repeat
       enterCriticalSection(codeAssistanceCs);
@@ -130,7 +132,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       leaveCriticalSection(codeAssistanceCs);
       if provider<>nil then begin;
         lastEvaluationStart:=now;
-        response:=doCodeAssistanceSynchronously(provider,globals,@adapters);
+        response:=doCodeAssistanceSynchronously(provider,recycler,globals,@adapters);
         enterCriticalSection(codeAssistanceCs);
         disposeCodeAssistanceResponse(codeAssistanceResponse);
         codeAssistanceResponse:=response;
@@ -145,6 +147,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     codeAssistantIsRunning:=false;
     leaveCriticalSection(codeAssistanceCs);
     result:=0;
+    recycler.cleanup;
     //:shutdown
   end;
 

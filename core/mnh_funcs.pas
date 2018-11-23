@@ -7,6 +7,7 @@ USES sysutils,Classes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
+     recyclers,
      mnh_contexts
      {$ifdef fullVersion},
      mnh_doc{$endif};

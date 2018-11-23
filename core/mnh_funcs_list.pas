@@ -8,6 +8,7 @@ USES sysutils,
      mnh_litVar,
      mnh_contexts,
      listProcessing,
+     recyclers,
      mnh_funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 
@@ -41,7 +42,7 @@ begin
      iterator:=P_expressionLiteral(arg0);
      result:=newListLiteral(int1^.intValue);
      for i:=1 to int1^.intValue do begin
-       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context).literal;
+       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
        if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
        then break
        else listResult^.append(valueToAppend,false);
@@ -87,7 +88,7 @@ FUNCTION sort_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(sortLoc),nil);
       {$endif}
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context);
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,@recycler);
       {$ifdef fullVersion}
       context.callStackPop(nil);
       {$endif}
@@ -235,7 +236,7 @@ FUNCTION reverseList_impl intFuncSignature;
 FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion    (params); end;
 FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
 FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus    (params); end;
-FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (params,tokenLocation,@context); end;
+FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (params,tokenLocation,@context,@recycler); end;
 
 FUNCTION get_imp intFuncSignature;
   VAR tmpPar:T_listLiteral;
@@ -247,13 +248,13 @@ FUNCTION get_imp intFuncSignature;
       tmpPar.create(2);
       tmpPar.append(arg0,true)^
             .append(arg1,true);
-      result:=get_imp(@tmpPar,tokenLocation,context);
+      result:=get_imp(@tmpPar,tokenLocation,context,recycler);
       tmpPar.destroy;
       if (result=nil) or (result^.literalType=lt_void) then exit(result);
       tmpPar.create(params^.size-1);
       tmpPar.append(result,false);
       for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
-      result:=get_imp(@tmpPar,tokenLocation,context);
+      result:=get_imp(@tmpPar,tokenLocation,context,recycler);
       tmpPar.destroy;
     end
     else result:=nil;
@@ -306,13 +307,13 @@ FUNCTION getInner_imp intFuncSignature;
       tmpPar.create(2);
       tmpPar.append(arg0,true)^
             .append(arg1,true);
-      result:=getInner_imp(@tmpPar,tokenLocation,context);
+      result:=getInner_imp(@tmpPar,tokenLocation,context,recycler);
       tmpPar.destroy;
       if result<>nil then begin
         tmpPar.create(params^.size-1);
         tmpPar.append(result,false);
         for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
-        result:=getInner_imp(@tmpPar,tokenLocation,context);
+        result:=getInner_imp(@tmpPar,tokenLocation,context,recycler);
         tmpPar.destroy;
       end;
     end
@@ -425,7 +426,7 @@ FUNCTION group_imp intFuncSignature;
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,resultLiteral,L).literal;
+          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,@recycler,resultLiteral,L).literal;
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
@@ -482,7 +483,7 @@ FUNCTION map_imp intFuncSignature;
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
-      result:=processMapSerial(iterator,P_expressionLiteral(arg1),tokenLocation,context);
+      result:=processMapSerial(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler);
       disposeLiteral(iterator);
     end;
   end;
@@ -496,8 +497,8 @@ FUNCTION pMap_imp intFuncSignature;
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
       if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16)
-      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,arg0)
-      else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),tokenLocation,context);
+      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler,arg0)
+      else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler);
       disposeLiteral(iterator);
     end;
   end;

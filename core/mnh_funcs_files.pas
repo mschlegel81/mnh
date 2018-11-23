@@ -6,6 +6,7 @@ USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$end
      mnh_constants,mnh_basicTypes,mnh_litVar,
      mnh_messages,
      mnh_funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
+     recyclers,
      mnh_contexts,mnh_datastores;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -133,7 +134,7 @@ FUNCTION readDatastore_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
       meta.create(str0^.value,str1^.value);
-      result:=meta.readValue(tokenLocation,context);
+      result:=meta.readValue(tokenLocation,context,recycler);
       meta.destroy;
       if (result=nil) and (context.messages^.continueEvaluation) then begin
         result:=newVoidLiteral;

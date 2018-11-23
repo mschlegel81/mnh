@@ -31,6 +31,7 @@ USES  //basic classes
   guiOutAdapters,
   mnh_datastores,
   editorMetaBase,
+  recyclers,
   codeAssistance;
 
 TYPE
@@ -679,6 +680,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST oldId,new
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
+      recycler:T_recycler;
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
     begin
@@ -689,9 +691,10 @@ PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST oldId,new
 
   begin
     if not(enabled) or (language<>LANG_MNH) then exit;
-
     if renameInOtherEditors then saveFile();
-    updateAssistanceResponse(doCodeAssistanceSynchronously(@self));
+    recycler.initRecycler;
+    updateAssistanceResponse(doCodeAssistanceSynchronously(@self,recycler));
+    recycler.cleanup;
 
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to lines.count-1 do begin

@@ -8,6 +8,7 @@ USES sysutils, Classes, simpleipc, //RTL
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
      mnh_tokenArray,
+     recyclers,
      mnh_funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -181,6 +182,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       server:TSimpleIPCServer;
       recentRequests:array[0..63] of T_hashInt;
       recentRequestOffset:byte;
+      recycler:T_recycler;
 
   FUNCTION processThisRequest(CONST hash:T_hashInt):boolean;
     VAR i:longint;
@@ -208,7 +210,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,request.payload).literal;
+          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload).literal;
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
@@ -232,6 +234,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     end; end;
 
   begin
+    recycler.initRecycler;
     with P_myIpcServer(p)^ do begin
       for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
       recentRequestOffset:=0;
@@ -256,6 +259,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     end;
     dispose(P_myIpcServer(p),destroy);
     result:=0;
+    recycler.cleanup;
   end;
 
 CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages);
@@ -270,13 +274,16 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_token
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
+  VAR recycler:T_recycler;
   begin
+    recycler.initRecycler;
     if servingContextOrNil<>nil then begin
-      servingContextOrNil^.finalizeTaskAndDetachFromParent;
-      contextPool.disposeContext(servingContextOrNil);
+      servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
+      contextPool.disposeContext(servingContextOrNil,recycler);
     end;
     if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
     registry.onDestruction(@self);
+    recycler.cleanup;
   end;
 
 {$i mnh_func_defines.inc}
@@ -316,7 +323,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       if isServerRunning(str0^.value) then begin
         context.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
       end else begin
-        childContext:=context.getNewAsyncContext(false);
+        childContext:=context.getNewAsyncContext(false,recycler);
         if childContext<>nil then begin
           new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages));
           beginThread(@ipcServerThread,ipcServer);

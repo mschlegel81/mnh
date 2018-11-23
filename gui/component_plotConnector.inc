@@ -12,7 +12,7 @@ TYPE
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE plotMouseMoved(CONST realPoint:T_point);
     PROCEDURE plotMouseClicked(CONST realPoint:T_point);
@@ -58,15 +58,15 @@ PROCEDURE T_plotConnectorMeta.update;
 
   end;
 
-FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean;
+FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   VAR tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context);
+    result:=inherited evaluate(location,context,recycler);
     if plotState.mouseMovedParam<>nil then begin
       if plotConfig.mouseMoved^.canApplyToNumberOfParameters(2)
-      then tmp:=plotConfig.mouseMoved^.evaluate         (location,@context,plotState.mouseMovedParam).literal
-      else tmp:=plotConfig.mouseMoved^.evaluateToLiteral(location,@context).literal;
+      then tmp:=plotConfig.mouseMoved^.evaluate         (location,@context,@recycler,plotState.mouseMovedParam).literal
+      else tmp:=plotConfig.mouseMoved^.evaluateToLiteral(location,@context,@recycler).literal;
       if tmp<>nil then disposeLiteral(tmp);
       disposeLiteral(plotState.mouseMovedParam);
       result:=true;
@@ -74,8 +74,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
 
     if plotState.mouseClickedParam<>nil then begin
       if plotConfig.mouseClicked^.canApplyToNumberOfParameters(2)
-      then tmp:=plotConfig.mouseClicked^.evaluate         (location,@context,plotState.mouseClickedParam).literal
-      else tmp:=plotConfig.mouseClicked^.evaluateToLiteral(location,@context).literal;
+      then tmp:=plotConfig.mouseClicked^.evaluate         (location,@context,@recycler,plotState.mouseClickedParam).literal
+      else tmp:=plotConfig.mouseClicked^.evaluateToLiteral(location,@context,@recycler).literal;
       if tmp<>nil then disposeLiteral(tmp);
       disposeLiteral(plotState.mouseClickedParam);
       result:=true;

@@ -36,6 +36,7 @@ USES
   mnh_debuggingVar,
   mnh_debugging,
   mnh_contexts,
+  recyclers,
   mnh_packages,
   mnh_doc,
   mnh_cmdLineInterpretation,

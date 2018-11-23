@@ -8,6 +8,7 @@ USES sysutils,Classes,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
+     recyclers,
      mnh_contexts, mnh_tokens;
 
 IMPLEMENTATION

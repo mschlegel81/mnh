@@ -12,7 +12,7 @@ TYPE
     PROCEDURE OnSelect(Sender: TObject);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -109,15 +109,15 @@ FUNCTION T_comboboxMeta.getControl: TControl;
     result:=comboboxPanel;
   end;
 
-FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context): boolean;
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context);
+    result:=inherited evaluate(location,context,recycler);
     if config_items<>nil then begin
       oldItems:=state_items;
-      tmp:=config_items^.evaluateToLiteral(location,@context).literal;
+      tmp:=config_items^.evaluateToLiteral(location,@context,@recycler).literal;
       if (tmp<>nil) then begin
         if tmp^.literalType in [lt_stringList,lt_emptyList]
         then state_items:=P_listLiteral(tmp)^

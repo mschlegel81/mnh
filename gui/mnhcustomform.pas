@@ -12,6 +12,7 @@ USES
   ExtCtrls, StdCtrls,
   mnh_constants, mnh_basicTypes, mnh_contexts,
   mnh_messages,
+  recyclers,
   mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath,synOutAdapter;
 
 TYPE
@@ -58,7 +59,7 @@ TYPE
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION leftLabelOrNil:TLabel; virtual;
@@ -91,7 +92,7 @@ TYPE
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
-    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_context):boolean;
+    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
     PROCEDURE conditionalShow(CONST messages:P_messages);
   end;
 
@@ -282,7 +283,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     leaveCriticalSection(elementCs);
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context): boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -333,7 +334,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       {$endif}
       if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
       then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter).literal
-      else tmp:=config.action^.evaluateToLiteral(location,@context).literal;
+      else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler).literal;
       if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
       if tmp                  <>nil then disposeLiteral(tmp);
       state.actionTriggered:=false;
@@ -345,7 +346,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
       {$endif}
       oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,true);
+      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true);
       result:=result or (oldEnabled<>state.enabled);
     end;
 
@@ -354,7 +355,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
       {$endif}
       oldCaption:=state.caption;
-      tmp:=config.caption^.evaluateToLiteral(location,@context).literal;
+      tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler).literal;
       if tmp<>nil then begin
         if tmp^.literalType=lt_string
         then state.caption:=P_stringLiteral(tmp)^.value
@@ -576,7 +577,7 @@ PROCEDURE TscriptedForm.hideAndDisconnectAll;
     for m in meta do m^.disconnect;
   end;
 
-FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_context):boolean;
+FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
@@ -590,7 +591,7 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     context.parentCustomForm:=self;
     processingEvents:=true;
     for m in meta do if context.messages^.continueEvaluation then begin
-      if m^.evaluate(location,context) then result:=true;
+      if m^.evaluate(location,context,recycler) then result:=true;
     end;
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
@@ -627,7 +628,7 @@ PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
     leaveCriticalSection(lock);
   end;
 
-FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context):P_literal;
+FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR form:TscriptedForm;
       sleepTime:longint=0;
   begin
@@ -647,7 +648,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
 
       if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
       while not(form.markedForCleanup) and (context.messages^.continueEvaluation) do begin
-        if form.processPendingEvents(location,context)
+        if form.processPendingEvents(location,context,recycler)
         then sleepTime:=0
         else begin
           if sleepTime<100 then sleepTime:=100;

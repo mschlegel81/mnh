@@ -7,6 +7,7 @@ USES sysutils,
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
+     recyclers,
      mnh_contexts,
      mnh_settings,
      mnh_funcs;
@@ -132,7 +133,7 @@ FUNCTION ord_imp intFuncSignature;
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context,@recycler);
         lt_error,lt_void, lt_real: begin
           context.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
@@ -177,11 +178,14 @@ FUNCTION getMnhInfo:string;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
       dummyContext:T_context;
+      recycler:T_recycler;
   begin
+    recycler.initRecycler;
     initialize(dummyContext);
-    L:=mnhInfo_imp(nil,pseudoLoc,dummyContext);
+    L:=mnhInfo_imp(nil,pseudoLoc,dummyContext,recycler);
     result:=L^.toString();
     disposeLiteral(L);
+    recycler.cleanup;
   end;
 
 INITIALIZATION

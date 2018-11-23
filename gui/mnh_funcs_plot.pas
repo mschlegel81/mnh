@@ -11,8 +11,9 @@ USES sysutils,math,
      mnh_contexts,
      mnh_funcs,
      mnh_messages,
+     recyclers,
      mnh_plotData,plotstyles,plotMath;
-TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_context):T_dataRow;
+TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
@@ -96,7 +97,7 @@ FUNCTION addPlot intFuncSignature;
                                                                 fReal(arg2),
                                                                 int3^.intValue,
                                                                 tokenLocation,
-                                                                context)),true);
+                                                                context,recycler)),true);
         exit(newVoidLiteral);
       end;
     end;
@@ -108,7 +109,7 @@ FUNCTION plot intFuncSignature;
     context.messages^.postSingal(mt_plot_clear,C_nilTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
-    else result:=addPlot(params, tokenLocation,context);
+    else result:=addPlot(params, tokenLocation,context,recycler);
   end;
 
 FUNCTION getOptions intFuncSignature;

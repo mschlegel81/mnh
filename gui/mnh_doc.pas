@@ -5,10 +5,10 @@ USES sysutils,base64,
      mnh_fileWrappers,
      mnh_messages,
      mnh_settings,
-     mnh_basicTypes, mnh_constants,
+     mnh_basicTypes, mnh_constants,recyclers,
      mnh_litVar, mnh_html;
 TYPE
-  T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
+  T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
 TYPE
   P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
@@ -148,12 +148,13 @@ PROCEDURE ensureBuiltinDocExamples;
 
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
   VAR examplesToStore:array of array[0..3] of T_arrayOfString;
+      recycler:T_recycler;
 
   PROCEDURE processExample;
     VAR html,txt,ids:T_arrayOfString;
     begin
       if (length(code)<=0) then exit;
-      demoCodeToHtmlCallback(code,txt,html,ids);
+      demoCodeToHtmlCallback(code,txt,html,ids,recycler);
       addExample(code,html,txt,ids);
       setLength(examplesToStore,length(examplesToStore)+1);
       examplesToStore[length(examplesToStore)-1,0]:=code;
@@ -215,6 +216,7 @@ PROCEDURE ensureBuiltinDocExamples;
 
   begin
     if functionDocExamplesReady then exit;
+    recycler.initRecycler;
     keys:=functionDocMap.keySet;
     setLength(allDocs,0);
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
@@ -234,6 +236,7 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(examplesToStore,0);
     end;
     functionDocExamplesReady:=true;
+    recycler.cleanup;
   end;
 
 FUNCTION shortName(CONST id:T_idString):T_idString;

@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   mnh_constants,mnh_basicTypes,
-  mnh_messages,
+  mnh_messages,recyclers,
   mnh_debuggingVar,treeUtil, mnh_litVar,mnh_contexts,mnh_funcs,mnh_out_adapters,mnhFormHandler;
 
 TYPE
@@ -63,7 +63,7 @@ FUNCTION newTreeForm:TVarTreeViewForm;
 
 {$R *.lfm}
 
-FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context): P_literal;
+FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR caption:string='MNH variable';
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);

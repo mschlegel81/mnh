@@ -29,7 +29,7 @@ main->begin
       ? cross([0..9],[0..9]).pEach(ef,
           begin
             local abcdef:=abcd|ef;
-            isPartialSolution@abcdef and (0<=(findG@abcdef)<=9);
+            isPartialSolution@abcdef AND (0<=(findG@abcdef)<=9);
           end).trueCount
       : void;
     end,+));

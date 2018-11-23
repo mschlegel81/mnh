@@ -6,6 +6,7 @@ USES sysutils,XMLRead,dom,Classes,LazUTF8,
      mnh_litVar,
      mnh_funcs,
      mnh_messages,
+     recyclers,
      mnh_contexts;
 
 IMPLEMENTATION

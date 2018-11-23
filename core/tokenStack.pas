@@ -8,7 +8,8 @@ USES sysutils,
      mnh_litVar,
      mnh_tokens,
      mnh_out_adapters,
-     mnh_messages
+     mnh_messages,
+     recyclers
      {$ifdef fullVersion},
      mnh_profiling,
      mnh_debuggingVar
@@ -21,7 +22,7 @@ TYPE
     dat:PP_token;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE popDestroy();
+    PROCEDURE popDestroy(VAR recycler:T_recycler);
     PROCEDURE popLink(VAR first:P_token);
     PROCEDURE push(VAR first:P_token);
     PROCEDURE quietPush(CONST first:P_token);
@@ -289,9 +290,9 @@ DESTRUCTOR T_TokenStack.destroy;
     freeMem(dat,alloc*sizeOf(P_token));
   end;
 
-PROCEDURE T_TokenStack.popDestroy();
+PROCEDURE T_TokenStack.popDestroy(VAR recycler:T_recycler);
   begin
-    disposeToken(dat[topIndex]);
+    recycler.disposeToken(dat[topIndex]);
     dec(topIndex);
   end;
 

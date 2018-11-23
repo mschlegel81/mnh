@@ -120,7 +120,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="84">
+    <Units Count="85">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -516,6 +516,10 @@
         <Filename Value="..\core\mnh_aggregators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit83>
+      <Unit84>
+        <Filename Value="..\core\recyclers.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit84>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

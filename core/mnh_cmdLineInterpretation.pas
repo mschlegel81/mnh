@@ -9,6 +9,7 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_funcs_mnh,
      mnh_contexts,
      mnh_packages,
+     recyclers,
      mnh_evaluation;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
@@ -221,22 +222,25 @@ CONST DEF_VERBOSITY_STRING='';
 
   PROCEDURE executePackage(package:P_package; CONST loadMode:T_packageLoadUsecase);
     VAR globals:T_evaluationGlobals;
+        recycler:T_recycler;
     begin
+      recycler.initRecycler;
       memoryComfortThreshold:=settings.memoryLimit;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false); {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
       if wantHelpDisplay then begin
-        package^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
+        package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
         writeln(package^.getHelpOnMain);
         dispose(package,destroy);
         wantHelpDisplay:=false;
         globals.destroy;
+        recycler.cleanup;
         exit;
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package^.load(loadMode,globals,mainParameters);
-      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation;
+      package^.load(loadMode,globals,recycler,mainParameters);
+      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
         {$ifdef fullVersion}
@@ -245,9 +249,11 @@ CONST DEF_VERBOSITY_STRING='';
           delegateToFullVersionRequired:=true;
         {$endif}
         globals.destroy;
+        recycler.cleanup;
         exit;
       end;
       globals.destroy;
+      recycler.cleanup;
       consoleAdapters.setExitCode;
     end;
 
