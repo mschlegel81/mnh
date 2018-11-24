@@ -1,6 +1,5 @@
 USE inputs;
 @demo_for=file processing, string processing, list processing
-@AllowOnly=read file, http
 readDict(filename)->fileLines(filename)
                     .lower
                     .unique

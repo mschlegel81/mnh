@@ -210,29 +210,6 @@ Some attributes currently used are:
 </li>
  <li><code>@SuppressUnusedWarning         </code>: suppresses warnings about unused rules</li>
  <li><code>@SuppressUnusedParameterWarning</code>: suppresses warnings about unused parameters</li>
- <li><code>@AllowOnly                     </code>: restricts the side effects allowed during execution of this subrule. <br>All side effects are given as a whitelist. 
- A side effect is allowed if it is allowed in the calling context and is listed in the <code>@AllowOnly</code> attribute (or no such attribute exists).
-<br>The following side effect categories are defined:
-<ul>
-<li><code>input              </code> allows usage of input functions, e.g. <code><span class="builtin">ask</span></code> </li>
-<li><code>output             </code> allows usage of output functions, e.g. <code><span class="builtin">print</span></code> </li>
-<li><code>sound              </code> allows usage of <code><span class="builtin">beep</span></code></li>
-<li><code>sleep              </code> allows usage of delay functions, e.g. <code><span class="builtin">sleep</span></code> </li>
-<li><code>detaching          </code> allows creation of <i>detached</i> tasks. This includes <code><span class="builtin">async</span></code> but also <code><span class="builtin">startHttpServer</span></code></li>
-<li><code>server             </code> allows starting of a new IPC server or HTTP server</li>
-<li><code>read package state </code> allows reading of package state (e.g. fetching the value of mutable variables)</li>
-<li><code>alter package state</code> allows modification of the package state (e.g. writing of mutable variables)</li>
-<li><code>alter context state</code> allows the modification of the context state, e.g. <code><span class="builtin">random</span></code> </li>
-<li><code>alter plot state   </code> allows the modification of the plot state, e.g. <code><span class="builtin">addPlot</span></code> </li>
-<li><code>read file          </code> allows reading file access</li>
-<li><code>write file         </code> allows writing file access</li>
-<li><code>http               </code> allows usage of communication via HTTP (server and client)</li>
-<li><code>ipc                </code> allows usage of communication cia IPC (server and client)</li>
-<li><code>executing external </code> allows execution of external programs, e.g. <code><span class="builtin">exec</span></code></li>
-<li><code>pure               </code> allows only pure functions, i.e. functions which have no side effect falling in the categories above</li>
-</ul>
-A list of allowed side effects can given in a comma separated manner, e.g. <code>@AllowOnly=read package state, output</code>
- </li>
  </ul>
 </div>
 <!--commonFoot-->

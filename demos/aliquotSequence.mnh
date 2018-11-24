@@ -1,10 +1,8 @@
 USE formattingUtils;
 
 @demo_for=math, formatting
-@AllowOnly=pure
 private dividerSum(n:Int)->n<=1 ? 0 : factorize(n).subSets.each(s,s.agg(*) orElse 1,+)-n;
 
-@AllowOnly=pure
 private classify(n:Int)->
   begin
     local seq:=[n];
