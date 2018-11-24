@@ -88,8 +88,8 @@ TYPE
     doDispose:boolean;
   end;
 
-  P_abstractThreadContext=^T_abstractThreadContext;
-  T_abstractThreadContext=object
+  P_abstractContext=^T_abstractContext;
+  T_abstractContext=object
     PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual; abstract;
     FUNCTION continueEvaluation:boolean; virtual; abstract;
   end;
@@ -412,7 +412,7 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
     if message^.messageType in heldTypes then begin
       collector.append(message);
       if disposeAfterPosting then disposeMessage(message);
-    end else parentMessages^.postCustomMessage(message,disposeAfterPosting);
+    end else if parentMessages<>nil then parentMessages^.postCustomMessage(message,disposeAfterPosting);
     leaveCriticalSection(messagesCs);
   end;
 
@@ -435,6 +435,7 @@ PROCEDURE T_messagesDistributor.clear(CONST clearAllAdapters: boolean);
   VAR a:T_flaggedAdapter;
   begin
     inherited clear(clearAllAdapters);
+    collected:=[];
     if clearAllAdapters then for a in adapters do a.adapter^.clear;
     updateCollecting;
   end;

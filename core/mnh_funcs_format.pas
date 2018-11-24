@@ -7,6 +7,7 @@ USES sysutils,
      mnh_litVar,
      mnh_subrules,
      mnh_messages,
+     recyclers,
      mnh_contexts,
      mnh_funcs;
 CONST MAX_FORMATS_TO_CACHE=4096;
@@ -23,7 +24,7 @@ TYPE
     realFmt,strFmt:string;
     lengthPar1,lengthPar2:longint;
     CONSTRUCTOR create(CONST formatString:ansistring);
-    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
     DESTRUCTOR destroy;
   end;
 
@@ -34,9 +35,9 @@ TYPE
     formats:array of T_format;
     formatSubrule:P_literal;
     isTemporary:boolean;
-    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
     DESTRUCTOR destroy;
-    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_arrayOfString;
   end;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -128,7 +129,7 @@ CONSTRUCTOR T_format.create(CONST formatString: ansistring);
     end;
   end;
 
-PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   FUNCTION pad(CONST s:string; CONST numberFormat:boolean):string;
     VAR leadingMinus:byte=0;
     begin
@@ -152,7 +153,7 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST loc
       fmtCat_decimal: if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toString   ,true); exit; end;
       fmtCat_hex    : if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toHexString,true); exit; end;
     end;
-    txt+=sysutils.format(strFmt,[P_abstractPackage(location.package)^.literalToString(L,location,context)]);
+    txt+=sysutils.format(strFmt,[P_abstractPackage(location.package)^.literalToString(L,location,context,recycler)]);
   end;
 
 DESTRUCTOR T_format.destroy;
@@ -161,18 +162,18 @@ DESTRUCTOR T_format.destroy;
     strFmt:='';
   end;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_preparedFormatStatement;
   begin;
     if not(context.messages^.continueEvaluation) then exit(nil);
     if tryEnterCriticalsection(cachedFormatCS)=0 then begin
-      new(result,create(formatString,tokenLocation,context,true));
+      new(result,create(formatString,tokenLocation,context,recycler,true));
       exit(result);
     end;
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
     end;
-    new(result,create(formatString,tokenLocation,context));
+    new(result,create(formatString,tokenLocation,context,recycler));
     if context.messages^.continueEvaluation then cachedFormats.put(formatString,result)
     else begin
       dispose(result,destroy);
@@ -181,7 +182,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     system.leaveCriticalSection(cachedFormatCS);
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
@@ -287,7 +288,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         tempStringLiteral:=newStringLiteral('{'+expressionString+']}');
         result:=stringOrListToExpression(tempStringLiteral,
                                          tokenLocation,
-                                         context);
+                                         context,recycler);
         disposeLiteral(tempStringLiteral);
       end
       else result:=nil;
@@ -318,7 +319,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
     setLength(formats,0);
   end;
 
-FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_arrayOfString;
   VAR iter:array of T_arrayOfLiteral;
 
   FUNCTION getFormattedString(CONST index:longint):ansistring;
@@ -330,7 +331,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then formats[i].formatAppend(result,p.value[k],tokenLocation,@context)
+            then formats[i].formatAppend(result,p.value[k],tokenLocation,@context,recycler)
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
@@ -358,7 +359,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           se_accessHttp,
           se_accessIpc,
           se_executingExternal]*context.sideEffectWhitelist);
-        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,fpar).literal;
+        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,@recycler,fpar).literal;
         context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)
@@ -418,12 +419,12 @@ FUNCTION format_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(formatLoc),nil);
       {$endif}
-      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       {$ifdef fullVersion}
       context.callStackPop(nil);
       {$endif}
       if not(context.messages^.continueEvaluation) then exit(nil);
-      txt:=preparedStatement^.format(params,tokenLocation,context);
+      txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
       if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
       else begin
@@ -443,13 +444,13 @@ FUNCTION printf_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(printfLoc),nil);
       {$endif}
-      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context.messages^.continueEvaluation) then begin
         {$ifdef fullVersion}context.callStackPop(nil);{$endif}
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
-      context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
+      context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
       system.leaveCriticalSection(print_cs);
       if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
       result:=newVoidLiteral;

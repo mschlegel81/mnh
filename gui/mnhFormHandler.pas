@@ -6,6 +6,7 @@ USES
   mnh_basicTypes,
   mnh_funcs,
   mnh_litVar,
+  recyclers,
   mnh_contexts;
 TYPE
   T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog,ft_imageForm);

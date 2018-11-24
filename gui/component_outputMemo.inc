@@ -4,9 +4,9 @@ TYPE
     synMeta:T_basicEditorMeta;
     config_hlLang:P_expressionLiteral;
     state_hlLang :string;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
     PROCEDURE update; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION preferClientAlignment:boolean; virtual;
     FUNCTION getName:string; virtual;
@@ -14,7 +14,7 @@ TYPE
   end;
 
 CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                    CONST location: T_tokenLocation; VAR context: T_threadContext;
+                                    CONST location: T_tokenLocation; VAR context: T_context;
                                     CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
   VAR langLit:P_literal;
   begin
@@ -67,14 +67,14 @@ FUNCTION T_outputMemoMeta.getName:string;
     result:='T_outputMemoMeta';
   end;
 
-FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR tmp:P_literal;
       oldLang:string;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context);
+    result:=inherited evaluate(location,context,recycler);
     if config_hlLang<>nil then begin
-      tmp:=config_hlLang^.evaluateToLiteral(location,@context).literal;
+      tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler).literal;
       if tmp<>nil then begin
         if tmp^.literalType=lt_string then begin
           oldLang:=state_hlLang;

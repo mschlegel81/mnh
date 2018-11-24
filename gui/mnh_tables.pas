@@ -10,7 +10,7 @@ USES
   myGenerics,myStringUtil,
   mnh_constants,mnh_basicTypes,
   mnh_messages,
-  mnh_litVar, mnh_funcs,mnh_contexts,mnh_out_adapters,
+  mnh_litVar, mnh_funcs,mnh_contexts,mnh_out_adapters,recyclers,
   mnh_fileWrappers,mnh_profiling;
 
 TYPE
@@ -98,7 +98,7 @@ PROCEDURE conditionalShowTables;
     leaveCriticalSection(tableFormCs);
   end;
 
-FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
+FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR caption:string='MNH table';
       header:boolean=false;
       i:longint;
@@ -221,7 +221,6 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
 
 PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
   VAR dummyLocation:T_tokenLocation;
-      tempAdapters:T_messagesDummy;
       newLiteral:P_listLiteral;
       i:longint;
   begin
@@ -242,9 +241,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
       byColumn:=index;
       ascending:=true;
 
-      tempAdapters.createDummy;
-      literal^.sortBySubIndex(index,dummyLocation,@tempAdapters);
-      tempAdapters.destroy;
+      literal^.sortBySubIndex(index,dummyLocation,nil);
     end;
     fillTable;
   end;

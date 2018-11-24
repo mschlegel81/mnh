@@ -144,10 +144,8 @@ main('makebat',exeName)->begin
   allDemos.filter({!skipFile($f)})
           .map(::extractFileNameOnly)
           .|(EXAMPLES_LOG_NAME)
-          .each(d,exeName&' regTest\regTest.mnh only '&d)
-          .each(cmd,'@echo '&cmd&' >> test.log',
-                    '@'&cmd&' 2>> test.log',
-                    cmd.matches('only oeis') ? '@demos\oeis.mnh stopServer' : void);
+          .each(d,exeName&' regTest\regTest.mnh only '&d&' 2> test_'&index&'_'&d&'.log',
+                  d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
   void;

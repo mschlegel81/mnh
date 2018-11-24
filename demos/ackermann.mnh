@@ -1,5 +1,4 @@
 @demo_for=memoization
-@AllowOnly=pure
 memoized
 private ackermann(  0,n>0)->n+1;
 //Possible extensions (instead of memoization)

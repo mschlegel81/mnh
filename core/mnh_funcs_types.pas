@@ -9,6 +9,7 @@ USES sysutils,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
+     recyclers,
      mnh_contexts;
 VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
 
@@ -142,10 +143,10 @@ FUNCTION toList_imp intFuncSignature;
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=newListLiteral();
-        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context).literal;
+        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
           listResult^.append(valueToAppend,false);
-          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context).literal;
+          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
         end;
       end else if arg0^.literalType in C_scalarTypes
       then result:=newListLiteral(1)^.append(arg0,true)

@@ -8,6 +8,7 @@ USES sysutils, Classes, simpleipc, //RTL
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
      mnh_tokenArray,
+     recyclers,
      mnh_funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -18,10 +19,10 @@ TYPE
     serverId:string;
     feedbackLocation:T_tokenLocation;
     servingExpressionOrNil:P_expressionLiteral;
-    servingContextOrNil   :P_threadContext;
+    servingContextOrNil   :P_context;
     ipcMessageConnector   :P_messages;
     hasKillRequest:boolean;
-    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext; CONST ipcMessageConnect:P_messages);
+    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages);
     DESTRUCTOR destroy;
   end;
 
@@ -181,6 +182,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       server:TSimpleIPCServer;
       recentRequests:array[0..63] of T_hashInt;
       recentRequestOffset:byte;
+      recycler:T_recycler;
 
   FUNCTION processThisRequest(CONST hash:T_hashInt):boolean;
     VAR i:longint;
@@ -208,7 +210,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,request.payload).literal;
+          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload).literal;
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
@@ -232,6 +234,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     end; end;
 
   begin
+    recycler.initRecycler;
     with P_myIpcServer(p)^ do begin
       for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
       recentRequestOffset:=0;
@@ -256,9 +259,10 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     end;
     dispose(P_myIpcServer(p),destroy);
     result:=0;
+    recycler.cleanup;
   end;
 
-CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext; CONST ipcMessageConnect:P_messages);
+CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages);
   begin
     serverId:=serverId_;
     feedbackLocation:=location;
@@ -270,13 +274,16 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_token
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
+  VAR recycler:T_recycler;
   begin
+    recycler.initRecycler;
     if servingContextOrNil<>nil then begin
       servingContextOrNil^.finalizeTaskAndDetachFromParent;
       contextPool.disposeContext(servingContextOrNil);
     end;
     if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
     registry.onDestruction(@self);
+    recycler.cleanup;
   end;
 
 {$i mnh_func_defines.inc}
@@ -306,7 +313,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
 
 FUNCTION startIpcServer_impl intFuncSignature;
   VAR ipcServer:P_myIpcServer;
-      childContext:P_threadContext;
+      childContext:P_context;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and

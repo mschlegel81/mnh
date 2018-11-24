@@ -12,7 +12,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,recycler,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
     end;
   end;
 
@@ -26,7 +26,7 @@ FUNCTION try_imp intFuncSignature;
       tryMessages.createErrorHolder(context.messages,[mt_el3_evalError..mt_el3_userDefined]);
       context.messages:=@tryMessages;
 
-      result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
+      result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
       if (result=nil) or (tryMessages.getFlags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
@@ -37,7 +37,7 @@ FUNCTION try_imp intFuncSignature;
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3]);
             tryMessages.clear;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral).literal;
             if result=nil then begin
               context.messages:=oldMessages;
               context.raiseError('Error in catch block',tokenLocation);
@@ -45,7 +45,7 @@ FUNCTION try_imp intFuncSignature;
             disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
             if result=nil then begin
               context.messages:=oldMessages;
               context.raiseError('Error in catch block',tokenLocation);
@@ -92,7 +92,7 @@ FUNCTION runScript_imp intFuncSignature;
       end;
       setLength(scriptParams,list1^.size);
       for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
-      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,@context,byte(connect),enforceDeterminism);
+      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,@context,recycler,byte(connect),enforceDeterminism);
     end;
   end;
 
@@ -103,7 +103,7 @@ FUNCTION inspect_imp intFuncSignature;
       source:T_arrayOfString;
       loadMessages:P_collectionLiteral=nil;
 
-  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext);
+  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_context);
     VAR fileName:string='';
         id      :string='';
 
@@ -122,19 +122,19 @@ FUNCTION inspect_imp intFuncSignature;
 
   PROCEDURE loadTemporaryPackage;
     begin
-      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^),C_errorsAndWarnings);
+      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^,recycler),C_errorsAndWarnings);
     end;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect(true,context)
+    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect(true,context,recycler)
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
         loadTemporaryPackage;
-        result:=tempPackage^.inspect(false,context);
+        result:=tempPackage^.inspect(false,context,recycler);
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         dispose(tempPackage,destroy);
         exit(result);
@@ -145,7 +145,7 @@ FUNCTION inspect_imp intFuncSignature;
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage;
-      result:=tempPackage^.inspect(false,context)^.put('messages',loadMessages,false);
+      result:=tempPackage^.inspect(false,context,recycler)^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;

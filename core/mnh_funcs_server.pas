@@ -8,6 +8,7 @@ USES sysutils,math,fphttpclient,lclintf,
      mnh_out_adapters,
      mnh_litVar,
      mnh_contexts,
+     recyclers,
      mnh_funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -21,10 +22,10 @@ TYPE
     feedbackLocation:T_tokenLocation;
     hasKillRequest:boolean;
     up:boolean;
-    context:P_threadContext;
+    context:P_context;
     socket:T_socketPair;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_threadContext);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
     DESTRUCTOR destroy;
     PROCEDURE serve;
     PROCEDURE killQuickly;
@@ -79,7 +80,7 @@ FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
-      childContext:P_threadContext;
+      childContext:P_context;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -112,7 +113,7 @@ PROCEDURE killServerWithIp(s:P_microserver; ip:pointer);
     if s^.ip=PAnsiString(ip)^ then s^.killQuickly;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_threadContext);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
     ip:=cleanIp(ip_);
     registry.forEach(@killServerWithIp,@ip);
@@ -128,12 +129,15 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
   end;
 
 DESTRUCTOR T_microserver.destroy;
+  VAR recycler:T_recycler;
   begin
+    recycler.initRecycler;
     disposeLiteral(servingExpression);
     context^.finalizeTaskAndDetachFromParent;
     contextPool.disposeContext(context);
     socket.destroy;
     registry.onDestruction(@self);
+    recycler.cleanup;
   end;
 
 PROCEDURE T_microserver.serve;
@@ -158,7 +162,9 @@ PROCEDURE T_microserver.serve;
         socketTime:double;
       end;
       finalMessage:T_arrayOfString;
+      recycler:T_recycler;
   begin
+    recycler.initRecycler;
     with statistics do begin
       serveCount:=0;
       serveTime:=0;
@@ -181,7 +187,7 @@ PROCEDURE T_microserver.serve;
         requestLiteral.appendString(C_httpRequestMethodName[request.method])^
                       .appendString(request.request)^
                       .appendString(request.protocol);
-        response:=servingExpression^.evaluate(feedbackLocation,context,@requestLiteral).literal;
+        response:=servingExpression^.evaluate(feedbackLocation,context,@recycler,@requestLiteral).literal;
         requestLiteral.destroy;
         statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
         start:=context^.wallclockTime;
@@ -206,6 +212,7 @@ PROCEDURE T_microserver.serve;
     append(finalMessage,'  socket time '+floatToStr(statistics.socketTime)+' seconds');
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,finalMessage);
     up:=false;
+    recycler.cleanup;
   end;
 
 PROCEDURE T_microserver.killQuickly;
@@ -321,7 +328,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
-FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
       requestText:ansistring='';
@@ -332,7 +339,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       requestText:=str0^.value;
     end else begin
-      encodedRequest:=encodeRequest_impl(params,tokenLocation,context);
+      encodedRequest:=encodeRequest_impl(params,tokenLocation,context,recycler);
       if encodedRequest=nil then exit(nil)
                             else requestText:=P_stringLiteral(encodedRequest)^.value;
     end;
@@ -352,10 +359,10 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     result:=newStringLiteral(resultText);
   end;
 
-FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpPut_imp    intFuncSignature; begin if context.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpPost_imp   intFuncSignature; begin if context.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpDelete_imp intFuncSignature; begin if context.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context) else result:=nil; end;
+FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context,recycler) else result:=nil; end;
+FUNCTION httpPut_imp    intFuncSignature; begin if context.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context,recycler) else result:=nil; end;
+FUNCTION httpPost_imp   intFuncSignature; begin if context.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context,recycler) else result:=nil; end;
+FUNCTION httpDelete_imp intFuncSignature; begin if context.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context,recycler) else result:=nil; end;
 
 FUNCTION openUrl_imp intFuncSignature;
   begin

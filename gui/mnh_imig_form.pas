@@ -9,6 +9,7 @@ USES
   mnh_funcs,
   mypics,
   mnhFormHandler,
+  recyclers,
   mnh_out_adapters, mnh_imig;
 
 TYPE

@@ -5,6 +5,7 @@ USES mnh_funcs,
      mnh_out_adapters,
      mnh_contexts,
      mnh_litVar,
+     recyclers,
      mnh_operators;
 TYPE
   T_aggregator=object
@@ -14,7 +15,7 @@ TYPE
   public
     CONSTRUCTOR create(CONST initialValue:P_literal);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual; abstract;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual; abstract;
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult:P_literal; virtual;
     PROPERTY hasReturn:boolean read hasReturnLiteral;
@@ -22,39 +23,39 @@ TYPE
 
   T_listAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_concatAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_concatAltAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_headAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult:P_literal; virtual;
   end;
 
   T_minAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_maxAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_stringConcatAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_andAggregator=object(T_aggregator)
@@ -62,7 +63,7 @@ TYPE
       boolResult:boolean;
     public
       CONSTRUCTOR create;
-      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
   end;
@@ -72,7 +73,7 @@ TYPE
       boolResult:boolean;
     public
       CONSTRUCTOR create;
-      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
   end;
@@ -83,7 +84,7 @@ TYPE
       opPointer:P_intFuncCallback;
     public
       CONSTRUCTOR create(CONST operatorToken:T_tokenType);
-      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_expressionAggregator=object(T_aggregator)
@@ -92,17 +93,17 @@ TYPE
     public
       CONSTRUCTOR create(CONST ex:P_expressionLiteral);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_trailingAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_setAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   P_aggregator            =^T_aggregator;
@@ -193,19 +194,19 @@ if er.triggeredByReturn then begin
   exit;
 end}
 
-PROCEDURE T_listAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_listAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     P_listLiteral(resultLiteral)^.append(er.literal,not(doDispose));
   end;
 
-PROCEDURE T_setAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_setAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     P_setLiteral(resultLiteral)^.append(er.literal,not(doDispose));
   end;
 
-PROCEDURE T_concatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_concatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType in C_compoundTypes
@@ -214,14 +215,14 @@ PROCEDURE T_concatAggregator.addToAggregation(er:T_evaluationResult; CONST doDis
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_concatAltAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_concatAltAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     P_listLiteral(resultLiteral)^.append(er.literal,true);
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_headAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_headAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if not(earlyAbort) then begin
@@ -231,7 +232,7 @@ PROCEDURE T_headAggregator.addToAggregation(er:T_evaluationResult; CONST doDispo
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_trailingAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_trailingAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType=lt_void then begin
@@ -243,7 +244,7 @@ PROCEDURE T_trailingAggregator.addToAggregation(er:T_evaluationResult; CONST doD
     if not(doDispose) then er.literal^.rereference;
   end;
 
-PROCEDURE T_minAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_minAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if (er.literal^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or er.literal^.leqForSorting(resultLiteral)) then begin
@@ -253,7 +254,7 @@ PROCEDURE T_minAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_maxAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_maxAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if (er.literal^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or not(er.literal^.leqForSorting(resultLiteral))) then begin
@@ -263,7 +264,7 @@ PROCEDURE T_maxAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   VAR newResult:P_literal;
       param:P_listLiteral;
   begin
@@ -275,7 +276,7 @@ PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST
         else P_stringLiteral(resultLiteral)^.append(er.literal^.toString());
       end else begin
         param:=P_listLiteral(newListLiteral(2)^.append(resultLiteral,true)^.append(er.literal,true));
-        newResult:=operator_StrConcat(param,location,P_threadContext(context)^);
+        newResult:=operator_StrConcat(param,location,P_context(context)^,recycler);
         disposeLiteral(param);
         disposeLiteral(resultLiteral);
         resultLiteral:=newResult;
@@ -284,7 +285,7 @@ PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_andAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_andAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType=lt_boolean then begin
@@ -295,7 +296,7 @@ PROCEDURE T_andAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType=lt_boolean then begin
@@ -306,7 +307,7 @@ PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   VAR newResult:P_literal;
       param:P_listLiteral;
   begin
@@ -315,7 +316,7 @@ PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin
       param:=P_listLiteral(newListLiteral(2)^.append(resultLiteral,true)^.append(er.literal,true));
-      newResult:=opPointer(param,location,P_threadContext(context)^);
+      newResult:=opPointer(param,location,P_context(context)^,recycler);
       disposeLiteral(param);
       disposeLiteral(resultLiteral);
       resultLiteral:=newResult;
@@ -323,14 +324,14 @@ PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   VAR newValue:P_literal;
   begin
     aggregationDefaultHandling;
     if resultLiteral=nil
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin
-      newValue:=aggregator^.evaluateToLiteral(location,context,resultLiteral,er.literal).literal;
+      newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,resultLiteral,er.literal).literal;
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
       if resultLiteral=nil then begin

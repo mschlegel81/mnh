@@ -220,15 +220,15 @@ TYPE
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;            virtual; abstract;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual; abstract;
-      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
-      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_expressionLiteral; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual; abstract;
+      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION arity:longint; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
 
-      PROCEDURE makeStateful  (CONST context:P_abstractThreadContext; CONST location:T_tokenLocation);
-      PROCEDURE makeIteratable(CONST context:P_abstractThreadContext; CONST location:T_tokenLocation);
+      PROCEDURE makeStateful  (CONST context:P_abstractContext; CONST location:T_tokenLocation);
+      PROCEDURE makeIteratable(CONST context:P_abstractContext; CONST location:T_tokenLocation);
 
       FUNCTION getParentId:T_idString; virtual; abstract;
       PROCEDURE validateSerializability(CONST adapters:P_messages); virtual; abstract;
@@ -237,7 +237,7 @@ TYPE
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_expressionLiteral; virtual; abstract;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual; abstract;
   end;
 
   T_typedef=object
@@ -249,13 +249,13 @@ TYPE
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
       alwaysTrue:boolean;
-      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_typableLiteral;
+      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_typableLiteral;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
       DESTRUCTOR destroy;
-      FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):boolean;
-      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_typableLiteral;
-      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext; CONST adapters:P_messages):P_literal;
+      FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):boolean;
+      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
+      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
       PROPERTY builtinTypeCheck:T_typeCheck read builtinsuper;
@@ -313,7 +313,7 @@ TYPE
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
     FUNCTION toList:P_listLiteral;
-    FUNCTION toMap(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_mapLiteral;
+    FUNCTION toMap(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_mapLiteral;
     FUNCTION get     (CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION typeString:string; virtual;
@@ -360,14 +360,14 @@ TYPE
       FUNCTION listConstructorToString(CONST lengthLimit:longint=maxLongint):string;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST doRangeAppend:boolean):P_compoundLiteral;
+      FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
       FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
 
       PROCEDURE sort;
-      PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext);
-      PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractThreadContext);
+      PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; CONST context:P_abstractContext);
+      PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
       FUNCTION  sortPerm: P_listLiteral;
       PROCEDURE unique;
 
@@ -438,7 +438,7 @@ CONST
   NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
 
 VAR
-  resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractThreadContext): P_literal;
+  resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
 FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef profilingFlavour}{$ifndef debugMode} inline; {$endif}{$endif}
@@ -472,8 +472,8 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
-FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractThreadContext):P_mapLiteral;
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_literal;
+FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
 FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
 
@@ -808,7 +808,7 @@ DESTRUCTOR T_typedef.destroy;
     disposeLiteral(ducktyperule);
   end;
 
-FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):boolean;
+FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):boolean;
   VAR T:P_typedef;
   begin
     result:=false;
@@ -820,10 +820,10 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
         else T:=T^.super;
       end;
     end;
-    if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L));
+    if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L));
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
@@ -840,7 +840,7 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext):P_typableLiteral;
+FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
   begin
     result:=nil;
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
@@ -848,13 +848,13 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if P_typableLiteral(L)^.customType=@self then begin
       exit(P_typableLiteral(L^.rereferenced));
     end;
-    if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
+    if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L) then begin
       result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
-      result:=super^.cast(L,location,threadContext);
+      result:=super^.cast(L,location,threadContext,recycler);
       if (result<>nil) then begin
-        if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,result)
+        if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,result)
         then result^.customType:=@self
         else disposeLiteral(result);
       end;
@@ -862,7 +862,7 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if (result=nil) then threadContext^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
-FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractThreadContext; CONST adapters:P_messages):P_literal;
+FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages):P_literal;
   begin
     if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
     result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
@@ -1785,7 +1785,7 @@ FUNCTION T_mapLiteral.hash: T_hashInt;
   end;
 
 //=======================================================================:?.hash
-PROCEDURE T_expressionLiteral.makeStateful  (CONST context:P_abstractThreadContext; CONST location:T_tokenLocation);
+PROCEDURE T_expressionLiteral.makeStateful  (CONST context:P_abstractContext; CONST location:T_tokenLocation);
   begin
     if expressionType in C_statefulExpressionTypes then exit;
     case expressionType of
@@ -1795,7 +1795,7 @@ PROCEDURE T_expressionLiteral.makeStateful  (CONST context:P_abstractThreadConte
     end;
   end;
 
-PROCEDURE T_expressionLiteral.makeIteratable(CONST context:P_abstractThreadContext;  CONST location:T_tokenLocation);
+PROCEDURE T_expressionLiteral.makeIteratable(CONST context:P_abstractContext;  CONST location:T_tokenLocation);
   begin
     if expressionType in C_iteratableExpressionTypes then exit;
     if not(canApplyToNumberOfParameters(0)) or not(expressionType in C_statefulExpressionTypes) then begin
@@ -2343,7 +2343,7 @@ FUNCTION T_compoundLiteral.toList: P_listLiteral;
     result:=P_listLiteral(newListLiteral^.appendAll(@self));
   end;
 
-FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P_abstractThreadContext): P_mapLiteral;
+FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P_abstractContext): P_mapLiteral;
   VAR iter:T_arrayOfLiteral;
       pair:P_literal;
   begin
@@ -2360,7 +2360,7 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P
     disposeLiteral(iter);
   end;
 
-FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext; CONST doRangeAppend:boolean):P_compoundLiteral;
+FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
   VAR last: P_literal;
       i0, i1: int64;
       c0, c1: char;
@@ -2571,7 +2571,7 @@ PROCEDURE T_listLiteral.sort;
     setLength(temp, 0);
   end;
 
-PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location: T_tokenLocation; CONST context:P_abstractThreadContext);
+PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location: T_tokenLocation; CONST context:P_abstractContext);
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
@@ -2589,7 +2589,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location
         end;
       end else begin
         result:=false;
-        context^.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(50)+' and '+b^.toString(50),location);
+        if context<>nil then context^.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(50)+' and '+b^.toString(50),location);
       end;
     end;
 
@@ -2598,10 +2598,10 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location
     myHash:=0;
     scale:=1;
     setLength(temp, fill);
-    while (scale<fill) and context^.continueEvaluation do begin
+    while (scale<fill) and ((context=nil) or (context^.continueEvaluation)) do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while (i<fill) and context^.continueEvaluation do begin
+      while (i<fill) and ((context=nil) or (context^.continueEvaluation)) do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
           if isLeq(dat[j0],dat[j1])          then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
@@ -2610,15 +2610,15 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location
         while (j1<i+scale+scale) and (j1<fill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
-      if not(context^.continueEvaluation) then exit;
+      if not(((context=nil) or (context^.continueEvaluation))) then exit;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<fill) and context^.continueEvaluation then begin
+      if (scale<fill) and ((context=nil) or (context^.continueEvaluation)) then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while (i<fill) and context^.continueEvaluation do begin
+        while (i<fill) and ((context=nil) or (context^.continueEvaluation)) do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
             if isLeq(temp[j0],temp[j1])        then begin dat[k]:=temp[j0]; inc(k); inc(j0); end
@@ -2634,11 +2634,11 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location
     setLength(temp, 0);
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractThreadContext);
+PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
-  FUNCTION isLeq(CONST a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(location,context,true,a,b); end;
+  FUNCTION isLeq(CONST a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(location,context,recycler,true,a,b); end;
 
   begin
     if fill<=1 then exit;
@@ -2890,7 +2890,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     end;
   end;
 
-FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractThreadContext):P_mapLiteral;
+FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
   VAR map1,map2:P_mapLiteral;
       merger:P_expressionLiteral;
       entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
@@ -2916,7 +2916,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
         entry.key  ^.rereference;
         entry.value^.rereference;
       end else begin
-        M:=merger^.evaluateToLiteral(location,contextPointer,pTargetEntry^.value,entry.value).literal;
+        M:=merger^.evaluateToLiteral(location,contextPointer,recycler,pTargetEntry^.value,entry.value).literal;
         if M=nil then begin
           disposeLiteral(result);
           exit(nil);
@@ -2929,7 +2929,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
                           else result^.literalType:=lt_emptyMap;
   end;
 
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractThreadContext):P_literal;
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
   VAR returnValue:P_literal=nil;
   PROCEDURE return(CONST L:P_literal); inline;
     begin
@@ -2940,7 +2940,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
   FUNCTION simpleMutate(VAR toMutate:P_literal; CONST op:T_tokenType; CONST RHS:P_literal):boolean;
     VAR newValue:P_literal;
     begin
-      newValue:=resolveOperatorCallback(toMutate,op,RHS,location,context);
+      newValue:=resolveOperatorCallback(toMutate,op,RHS,location,context,recycler);
       if newValue<>nil then begin
         result:=newValue^.literalType<>toMutate^.literalType;
         disposeLiteral(toMutate);

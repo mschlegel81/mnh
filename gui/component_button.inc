@@ -2,7 +2,7 @@ TYPE
   P_buttonMeta=^T_buttonMeta;
   T_buttonMeta=object(T_guiElementMeta)
     button:TButton;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
@@ -10,7 +10,7 @@ TYPE
   end;
 
 CONSTRUCTOR T_buttonMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                CONST location: T_tokenLocation; VAR context: T_threadContext);
+                                CONST location: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled]);
     button:=TButton.create(parent^.winControl);

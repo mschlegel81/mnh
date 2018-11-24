@@ -11,11 +11,12 @@ USES sysutils,
      mnh_litVar,
      mnh_tokens,
      mnh_subrules,
+     recyclers,
      mnh_funcs;
 
 {$i mnh_func_defines.inc}
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractThreadContext): P_literal;
-FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer): P_literal;
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
 CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_unaryOpMinus];
       unaryOperators:T_tokenTypeSet=[tt_unaryOpNegate..tt_unaryOpMinus];
       overridableOperators:T_tokenTypeSet=[
@@ -72,8 +73,8 @@ FUNCTION operator_StrConcat intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
 IMPLEMENTATION
-TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-     P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+     P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;
     UN_IMPL:array[tt_unaryOpNegate..tt_unaryOpMinus] of P_unary;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
@@ -83,31 +84,31 @@ FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     result:=x^.rereferenced;
   end;
 
 FUNCTION unaryNoOp_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=unaryNoOp(arg0,tokenLocation,context)
+    if params^.size=1 then result:=arg0^.rereferenced
                       else result:=nil;
   end;
 
-FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context);
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context,recycler);
       lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
       lt_list,lt_booleanList,lt_emptyList,
       lt_set ,lt_booleanSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
-          yNeg:=logicalNegationOf(y,opLocation,context);
+          yNeg:=logicalNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then P_collectionLiteral(result)^.containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
@@ -125,17 +126,17 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
 
 FUNCTION logicalNegationOf_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=logicalNegationOf(arg0,tokenLocation,context)
+    if params^.size=1 then result:=logicalNegationOf(arg0,tokenLocation,context,recycler)
                       else result:=nil;
   end;
 
-FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context);
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context,recycler);
       lt_bigint    : result:=newIntLiteral (P_bigIntLiteral (x)^.value.negated);
       lt_smallint  : result:=newIntLiteral(-P_smallIntLiteral(x)^.value);
       lt_real      : result:=newRealLiteral(-P_realLiteral(x)^.value);
@@ -144,7 +145,7 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
         result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
-          yNeg:=arithmeticNegationOf(y,opLocation,context);
+          yNeg:=arithmeticNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then P_collectionLiteral(result)^.containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
@@ -162,11 +163,11 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
 
 FUNCTION arithmeticNegationOf_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=arithmeticNegationOf(arg0,tokenLocation,context)
+    if params^.size=1 then result:=arithmeticNegationOf(arg0,tokenLocation,context,recycler)
                       else result:=nil;
   end;
 
-FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR parList:P_listLiteral;
       rule   :P_abstractRule =nil;
       ruleOut:P_token=nil;
@@ -181,8 +182,8 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
       parList:=newListLiteral(1);
       parList^.append(operand,true);
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,@context) then begin
-        result:=context.reduceToLiteral(ruleOut).literal;
+      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,@context,recycler) then begin
+        result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         disposeLiteral(parList);
         if result=nil
@@ -192,7 +193,7 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
       dec(context.callDepth);
       disposeLiteral(parList);
     end;
-    result:=UN_IMPL[op](operand,tokenLocation,context);
+    result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
     if result=nil then begin
       context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       result:=newVoidLiteral;
@@ -203,7 +204,7 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
     end;
   end;
 
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractThreadContext): P_literal;
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer): P_literal;
   VAR parList:P_listLiteral;
       rule   :P_abstractRule =nil;
       ruleOut:P_token=nil;
@@ -211,36 +212,36 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
   begin
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
-      if P_threadContext(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
-        P_threadContext(context)^.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
+      if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
+        P_context(context)^.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
         exit(newVoidLiteral);
       end;
       parList:=newListLiteral(2);
       parList^.append(LHS,true)^.append(RHS,true);
-      inc(P_threadContext(context)^.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context) then begin
-        result:=P_threadContext(context)^.reduceToLiteral(ruleOut).literal;
-        dec(P_threadContext(context)^.callDepth);
+      inc(P_context(context)^.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context,P_recycler(recycler)^) then begin
+        result:=P_context(context)^.reduceToLiteral(ruleOut,P_recycler(recycler)^).literal;
+        dec(P_context(context)^.callDepth);
         disposeLiteral(parList);
         if result=nil
         then exit(newVoidLiteral)
         else exit(result);
       end;
-      dec(P_threadContext(context)^.callDepth);
+      dec(P_context(context)^.callDepth);
       disposeLiteral(parList);
     end;
-    result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_threadContext(context)^);
+    result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
     if result=nil then begin
-      P_threadContext(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       result:=newVoidLiteral;
     end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_threadContext(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       disposeLiteral(result);
       result:=newVoidLiteral;
     end;
   end;
 
-FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     result:=newBoolLiteral(LHS^.isInRelationTo(tt_comparatorListEq,RHS));
   end;
@@ -252,7 +253,7 @@ FUNCTION comparator_ListEq intFuncSignature;
                       else exit(newBoolLiteral(false));
   end;
 
-FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     if LHS^.literalType=lt_void then exit(RHS^.rereferenced) else exit(LHS^.rereferenced);
   end;
@@ -264,7 +265,7 @@ FUNCTION operator_OrElse   intFuncSignature;
     else exit(arg0^.rereferenced);
   end;
 
-FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     exit(newBoolLiteral(LHS^.isInRelationTo(tt_operatorIn,RHS)));
   end;
@@ -277,11 +278,11 @@ FUNCTION operator_In       intFuncSignature;
   end;
 
 {$define defaultLHScases:=
-  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
   lt_void:       exit(RHS^.rereferenced);
   lt_error:      exit(LHS^.rereferenced)}
 {$define defaultRHSCases:=
-  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
   lt_void:       exit(LHS^.rereferenced);
   lt_error:      exit(RHS^.rereferenced)}
 {$define generic_recursions:=
@@ -291,7 +292,7 @@ FUNCTION operator_In       intFuncSignature;
     begin
       result:=P_collectionLiteral(RHS)^.newOfSameType(true);
       rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
-      for rhsX in rhsIt do P_collectionLiteral(result)^.append(function_id(LHS,rhsX,tokenLocation,context),false);
+      for rhsX in rhsIt do P_collectionLiteral(result)^.append(function_id(LHS,rhsX,tokenLocation,context,recycler),false);
       disposeLiteral(rhsIt);
     end;
 
@@ -301,7 +302,7 @@ FUNCTION operator_In       intFuncSignature;
     begin
       result:=P_collectionLiteral(LHS)^.newOfSameType(true);
       lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
-      for lhsX in lhsIt do P_collectionLiteral(result)^.append(function_id(lhsX,RHS,tokenLocation,context),false);
+      for lhsX in lhsIt do P_collectionLiteral(result)^.append(function_id(lhsX,RHS,tokenLocation,context,recycler),false);
       disposeLiteral(lhsIt);
     end;
 
@@ -314,19 +315,19 @@ FUNCTION operator_In       intFuncSignature;
         result:=newListLiteral(P_listLiteral(LHS)^.size);
         for i:=0 to P_listLiteral(LHS)^.size-1 do P_listLiteral(result)^.append(
           function_id(P_listLiteral(LHS)^.value[i],
-                      P_listLiteral(RHS)^.value[i],tokenLocation,context),false);
+                      P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler),false);
       end else if (LHS^.literalType in C_setTypes) and (RHS^.literalType in C_setTypes) then begin
         result:=newSetLiteral;
         lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
         rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
-        for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(function_id(lhsX,rhsX,tokenLocation,context),false);
+        for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
         disposeLiteral(lhsIt);
         disposeLiteral(rhsIt);
       end else result:=nil;
     end}
 
 {$define comparator_implementation:=
-FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then
@@ -359,15 +360,15 @@ FUNCTION outerFunc_id intFuncSignature;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
-        result:=context.reduceToLiteral(ruleOut).literal;
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+        result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);
       end else dec(context.callDepth);
     end;
     if (params<>nil) and (params^.size=2)
     then begin
-      result:=function_id(arg0,arg1,tokenLocation,context);
+      result:=function_id(arg0,arg1,tokenLocation,context,recycler);
       if result=nil then context.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
@@ -401,7 +402,7 @@ comparator_implementation;
 comparator_implementation;
 {$undef comparator_implementation}
 
-{$define boolIntOperator:=FUNCTION function_id(CONST LHS:P_literal; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+{$define boolIntOperator:=FUNCTION function_id(CONST LHS:P_literal; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -456,15 +457,15 @@ FUNCTION outerFunc_id intFuncSignature;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
-        result:=context.reduceToLiteral(ruleOut).literal;
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+        result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);
       end else dec(context.callDepth);
     end;
     if (params<>nil) and (params^.size=2)
     then begin
-      result:=function_id(arg0,arg1,tokenLocation,context);
+      result:=function_id(arg0,arg1,tokenLocation,context,recycler);
       if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
@@ -504,14 +505,14 @@ boolIntOperator;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
-        result:=context.reduceToLiteral(ruleOut).literal;
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+        result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);
       end else dec(context.callDepth);
     end;
     if (params<>nil) and (params^.size=2) then begin
-      result:=function_id(arg0,arg1,tokenLocation,context);
+      result:=function_id(arg0,arg1,tokenLocation,context,recycler);
       if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
@@ -520,7 +521,7 @@ boolIntOperator;
 {$define function_id:=perform_plus}
 {$define outerFunc_id:=operator_plus}
 {$define op:=tt_operatorPlus}
-FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -582,7 +583,7 @@ genericOuter;
 {$define function_id:=perform_minus}
 {$define outerFunc_id:=operator_minus}
 {$define op:=tt_operatorMinus}
-FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -632,7 +633,7 @@ genericOuter;
 {$define function_id:=perform_mult}
 {$define outerFunc_id:=operator_mult}
 {$define op:=tt_operatorMult}
-FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -681,7 +682,7 @@ genericOuter;
 {$define function_id:=perform_divReal}
 {$define outerFunc_id:=operator_divReal}
 {$define op:=tt_operatorDivReal}
-FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -721,7 +722,7 @@ genericOuter;
 {$define function_id:=perform_divInt}
 {$define outerFunc_id:=operator_divInt}
 {$define op:=tt_operatorDivInt}
-FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -769,7 +770,7 @@ genericOuter;
 {$define function_id:=perform_mod}
 {$define outerFunc_id:=operator_mod}
 {$define op:=tt_operatorMod}
-FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -818,7 +819,7 @@ genericOuter;
 {$define function_id:=perform_pot}
 {$define outerFunc_id:=operator_pot}
 {$define op:=tt_operatorPot}
-FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   FUNCTION pot_int_int(CONST x:T_bigInt; exponent: longint): P_literal;
     VAR tx, rx: T_myFloat;
     begin
@@ -938,7 +939,7 @@ genericOuter;
 {$define function_id:=perform_strConcat}
 {$define outerFunc_id:=operator_strConcat}
 {$define OP:=tt_operatorStrConcat}
-FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -969,7 +970,7 @@ genericOuter;
   begin
     if (params<>nil) and (params^.size=2)
     then begin
-      result:=function_id(arg0,arg1,tokenLocation,context);
+      result:=function_id(arg0,arg1,tokenLocation,context,recycler);
       if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
@@ -979,7 +980,7 @@ genericOuter;
 {$define function_id:=perform_concat}
 {$define outerFunc_id:=operator_concat}
 {$define op:=tt_operatorConcat}
-FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     case LHS^.literalType of
       defaultLHScases;
@@ -1033,12 +1034,12 @@ genericOuter;
 {$define function_id:=perform_concatAlt}
 {$define outerFunc_id:=operator_concatAlt}
 {$define op:=tt_operatorConcatAlt}
-FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_list..lt_emptyList: case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
+        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
         lt_error:      exit(RHS^.rereferenced)
         else
         exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
@@ -1046,7 +1047,7 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
              .append(RHS,true,true));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
+        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
         lt_error:      exit(RHS^.rereferenced)
         else exit(newSetLiteral^
              .appendAll(P_setLiteral(LHS))^

@@ -6,19 +6,19 @@ TYPE
     combobox:TComboBox;
     config_items:P_expressionLiteral;
     state_items :T_arrayOfString;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE update; virtual;
     PROCEDURE OnSelect(Sender: TObject);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
 CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                  CONST location: T_tokenLocation; VAR context: T_threadContext);
+                                  CONST location: T_tokenLocation; VAR context: T_context);
   VAR tmp:P_literal;
   begin
     inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items]);
@@ -109,15 +109,15 @@ FUNCTION T_comboboxMeta.getControl: TControl;
     result:=comboboxPanel;
   end;
 
-FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context);
+    result:=inherited evaluate(location,context,recycler);
     if config_items<>nil then begin
       oldItems:=state_items;
-      tmp:=config_items^.evaluateToLiteral(location,@context).literal;
+      tmp:=config_items^.evaluateToLiteral(location,@context,@recycler).literal;
       if (tmp<>nil) then begin
         if tmp^.literalType in [lt_stringList,lt_emptyList]
         then state_items:=P_listLiteral(tmp)^

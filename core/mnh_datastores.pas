@@ -4,6 +4,7 @@ USES sysutils,
      serializationUtil, myGenerics, myStringUtil,
      mnh_basicTypes,
      mnh_out_adapters, mnh_fileWrappers,
+     recyclers,
      mnh_litVar,
      mnh_tokenArray,mnh_contexts;
 TYPE
@@ -19,7 +20,7 @@ TYPE
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
-      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   end;
 
@@ -121,7 +122,7 @@ FUNCTION T_datastoreMeta.fileChangedSinceRead: boolean;
     result:=currentAge<>fileReadAt;
   end;
 
-FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_threadContext): P_literal;
+FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
       lexer:T_lexer;
       fileLines:T_arrayOfString;
@@ -149,10 +150,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       if not(accessed) then exit(newVoidLiteral);
       dropFirst(fileLines,1);
       lexer.create(fileLines,location,P_abstractPackage(location.package));
-      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
+      stmt:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
       stmt.firstToken^.setSingleLocationForExpression(location);
       lexer.destroy;
-      result:=context.reduceToLiteral(stmt.firstToken).literal;
+      result:=context.reduceToLiteral(stmt.firstToken,recycler).literal;
     end;
     fileAge(fileName,fileReadAt);
   end;

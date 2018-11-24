@@ -8,6 +8,7 @@ USES sysutils,   //system
      mnh_constants, mnh_basicTypes,
      mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,
      mnh_out_adapters,mnh_messages,
+     recyclers,
      //imig:
      workflows, imageGeneration,mypics,pixMaps,
      ig_gradient,
@@ -85,7 +86,7 @@ FUNCTION obtainDimensionsViaAdapters(CONST messages:P_messages):T_imageDimension
     disposeMessage(m);
   end;
 
-FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_imageManipulationWorkflow;
+FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_imageManipulationWorkflow;
   PROCEDURE warn(CONST message:string);
     begin
       isValid:=false;
@@ -100,7 +101,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     result.create;
     if steps^.literalType=lt_stringList
     then tmpSteps:=steps
-    else tmpSteps:=P_listLiteral(flatten_imp(steps,tokenLocation,context));
+    else tmpSteps:=P_listLiteral(flatten_imp(steps,tokenLocation,context,recycler));
     isValid:=(tmpSteps^.literalType=lt_stringList) and (tmpSteps^.size>=1);
     if isValid then begin
       for i:=0 to tmpSteps^.size-1 do begin
@@ -117,7 +118,7 @@ FUNCTION validateWorkflow_imp intFuncSignature;
       isValid:boolean;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_list]) then begin
-      wf:=createWorkflow(list0,true,isValid,tokenLocation,context);
+      wf:=createWorkflow(list0,true,isValid,tokenLocation,context,recycler);
       wf.destroy;
       result:=newBoolLiteral(isValid);
     end else result:=nil;
@@ -193,7 +194,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         context.raiseError('No output file given',tokenLocation);
         isValid:=false;
       end;
-      thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context);
+      thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context,recycler);
       if isValid and (source=C_nullSourceOrTargetFileName) then begin
         obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
         if obtainedImage=nil then begin

@@ -7,6 +7,7 @@ USES sysutils,Classes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
+     recyclers,
      mnh_contexts
      {$ifdef fullVersion},
      mnh_doc{$endif};
@@ -51,8 +52,8 @@ VAR
 FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 
 IMPLEMENTATION
@@ -100,14 +101,14 @@ FUNCTION T_builtinFunctionMetaData.qualifiedId:string;
     result:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext; CONST messageTail: ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; CONST messageTail: ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+L^.typeString+messageTail;
     context.raiseError(complaintText,tokenLocation);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;

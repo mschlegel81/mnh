@@ -10,6 +10,7 @@ USES
   mnh_constants, mnh_basicTypes,
   mnhFormHandler,
   mnh_messages,
+  recyclers,
   mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
   mnh_contexts, mnh_evalThread, plotstyles, plotMath, EpikTimer,
   plotExport;

@@ -9,6 +9,7 @@ USES sysutils,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
+     recyclers,
      mnh_contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -170,7 +171,7 @@ FUNCTION time_imp intFuncSignature;
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral=nil):P_literal;
     begin
       t:=context.wallclockTime;
-      result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters).literal;
+      result:=subruleLiteral^.evaluate(tokenLocation,@context,@recycler,parameters).literal;
       t:=context.wallclockTime-t;
     end;
 

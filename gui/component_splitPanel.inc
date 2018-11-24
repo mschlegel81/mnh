@@ -2,7 +2,7 @@ TYPE
 P_splitPanelMeta=^T_splitPanelMeta;
 T_splitPanelMeta=object(T_panelMeta)
   Left,Right:T_panelMeta;
-  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
   PROCEDURE update; virtual;
   PROCEDURE alignContents; virtual;
   DESTRUCTOR destroy; virtual;
@@ -11,7 +11,7 @@ T_splitPanelMeta=object(T_panelMeta)
 end;
 
 CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
-  VAR context: T_threadContext);
+  VAR context: T_context);
   begin
     inherited create(parent,def,location,context,[dmk_type,dmk_left,dmk_right]);
     Left .create(@self,def,location,context,[dmk_type,dmk_left,dmk_right]); Left.winControl.Align:=alLeft;

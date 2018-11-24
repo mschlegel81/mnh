@@ -2,14 +2,14 @@ TYPE
   P_labelMeta=^T_labelMeta;
   T_labelMeta=object(T_guiElementMeta)
     mylabel:TLabel;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_labelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                               CONST location: T_tokenLocation; VAR context: T_threadContext);
+                               CONST location: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(def,location,context,[dmk_type,dmk_caption]);
     mylabel:=TLabel.create(parent^.winControl);

@@ -4,7 +4,7 @@ TYPE
     editPanel:TPanel;
     editLabel:TLabel;
     edit:TEdit;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     PROCEDURE update; virtual;
     FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -14,7 +14,7 @@ TYPE
   end;
 
 CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                              CONST location: T_tokenLocation; VAR context: T_threadContext);
+                              CONST location: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
     editPanel:=TPanel.create(parent^.winControl);

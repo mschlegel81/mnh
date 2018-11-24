@@ -4,13 +4,13 @@ TYPE
     state_changeTriggered:boolean;
     state_onChangeParam:P_literal;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE triggerChange(CONST changeValue:string);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
+CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
   VAR tmp:P_literal;
   begin
     inherited create(def,location,context,consideredKeys+[dmk_onChange]);
@@ -52,16 +52,16 @@ DESTRUCTOR T_changeListeningMeta.destroy;
     if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
   end;
 
-FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   VAR tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context);
+    result:=inherited evaluate(location,context,recycler);
 
     if state_changeTriggered then begin
       if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
-      then tmp:=config_onChange^.evaluateToLiteral(location,@context,state_onChangeParam).literal
-      else tmp:=config_onChange^.evaluateToLiteral(location,@context).literal;
+      then tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,state_onChangeParam).literal
+      else tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler).literal;
       if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
       if tmp<>nil then disposeLiteral(tmp);
       state_changeTriggered:=false;
