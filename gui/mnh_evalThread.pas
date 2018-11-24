@@ -168,7 +168,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       P_runEvaluator(p)^.editAdapters^.clear;
       globals.create(P_runEvaluator(p)^.editAdapters);
-      globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+      globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
     end;
 
   PROCEDURE doneEdit(VAR globals:T_evaluationGlobals);
@@ -618,7 +618,7 @@ PROCEDURE T_runEvaluator.preEval(VAR recycler:T_recycler);
     system.enterCriticalSection(cs);
     inherited preEval(recycler);
     startOfEvaluation:=now;
-    globals.resetForEvaluation(@package,requestedContextType,mainParameters,recycler);
+    globals.resetForEvaluation(@package,requestedContextType,mainParameters);
     system.leaveCriticalSection(cs);
   end;
 

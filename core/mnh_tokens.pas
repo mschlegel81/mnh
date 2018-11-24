@@ -3,7 +3,7 @@ INTERFACE
 USES //basic classes
      sysutils,
      //my utilities
-     myGenerics, myStringUtil,
+     myGenerics,
      //MNH:
      mnh_basicTypes,mnh_constants,
      mnh_messages,
@@ -57,12 +57,6 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
 
 IMPLEMENTATION
-VAR tokenRecycler:record
-      dat:array[0..2047] of P_token;
-      fill:longint;
-      recyclerCS:TRTLCriticalSection;
-    end;
-
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;

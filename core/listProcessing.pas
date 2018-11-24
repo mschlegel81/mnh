@@ -62,7 +62,7 @@ TYPE
     evaluationResult:T_evaluationResult;
     CONSTRUCTOR createEachTask();
     PROCEDURE dropEachParameter;
-    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal; VAR recycler:T_recycler);
+    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -77,7 +77,7 @@ TYPE
     mapResult:T_arrayOfLiteral;
     nextToAggregate:P_mapTask;
     CONSTRUCTOR createMapTask(CONST expr:P_expressionLiteral);
-    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
+    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral);
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -155,7 +155,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       with recycling do if fill>0 then begin
         dec(fill);
         task:=dat[fill];
-        task^.clearContext(recycler);
+        task^.clearContext;
       end else new(task,createEachTask());
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -164,7 +164,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         lastToAggregate^.nextToAggregate:=task;
         lastToAggregate:=task;
       end;
-      task^.defineAndEnqueue(context.getFutureEnvironment(recycler),expr,idx,x,recycler);
+      task^.defineAndEnqueue(context.getFutureEnvironment,expr,idx,x);
     end;
 
   VAR rule:P_expressionLiteral;
@@ -194,7 +194,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     then context.getGlobals^.taskQueue.activeDeqeue(recycler);
     with recycling do while fill>0 do begin
       dec(fill);
-      dat[fill]^.clearContext(recycler);
+      dat[fill]^.clearContext;
       dispose(dat[fill],destroy);
     end;
   end;
@@ -254,9 +254,9 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       with recycling do if fill>0 then begin
         dec(fill);
         task:=dat[fill];
-        task^.clearContext(recycler);
+        task^.clearContext;
       end else new(task,createMapTask(expr));
-      task^.defineAndEnqueue(context.getFutureEnvironment(recycler),x,recycler);
+      task^.defineAndEnqueue(context.getFutureEnvironment,x);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -311,7 +311,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     while firstToAggregate<>nil do if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue(recycler);
     with recycling do while fill>0 do begin
       dec(fill);
-      dat[fill]^.clearContext(recycler);
+      dat[fill]^.clearContext;
       dispose(dat[fill],destroy);
     end;
     result:=resultLiteral;
@@ -357,9 +357,9 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       with recycling do if fill>0 then begin
         dec(fill);
         task:=dat[fill];
-        task^.clearContext(recycler);
+        task^.clearContext;
       end else new(task,createFilterTask(filterExpression));
-      task^.defineAndEnqueue(context.getFutureEnvironment(recycler),x,recycler);
+      task^.defineAndEnqueue(context.getFutureEnvironment,x);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -407,7 +407,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     while firstToAggregate<>nil do if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue(recycler);
     with recycling do while fill>0 do begin
       dec(fill);
-      dat[fill]^.clearContext(recycler);
+      dat[fill]^.clearContext;
       dispose(dat[fill],destroy);
     end;
   end;
@@ -432,7 +432,7 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
   VAR task:P_futureTask;
   begin
     new(task,create(future));
-    task^.defineAndEnqueue(context.getFutureEnvironment(recycler),recycler);
+    task^.defineAndEnqueue(context.getFutureEnvironment);
   end;
 
 CONSTRUCTOR T_futureTask.create(CONST future: P_futureLiteral);
@@ -448,7 +448,7 @@ PROCEDURE T_futureTask.evaluate(VAR recycler:T_recycler);
       payload^.executeInContext(context,recycler);
       disposeLiteral(payload);
     finally
-      context^.finalizeTaskAndDetachFromParent(recycler);
+      context^.finalizeTaskAndDetachFromParent;
     end;
   end;
 
@@ -465,7 +465,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
     try
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
-        for k:=0 to length(mapParameter)-1 do begin
+        for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
           if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,@recycler,true,mapParameter[k])
           then begin
             mapResult[j]:=mapParameter[k];
@@ -475,7 +475,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
-      context^.finalizeTaskAndDetachFromParent(recycler);
+      context^.finalizeTaskAndDetachFromParent;
     end;
   end;
 
@@ -486,14 +486,14 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST expr: P_expressionLiteral);
     mapPayload.mapParameter:=nil;
   end;
 
-PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
+PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral);
   VAR k:longint;
   begin
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
     mapPayload.mapParameter:=x;
     for k:=0 to length(mapPayload.mapParameter)-1 do if mapPayload.mapParameter[k]<>nil then mapPayload.mapParameter[k]^.rereference;
     nextToAggregate:=nil;
-    inherited defineAndEnqueue(taskEnv, recycler);
+    inherited defineAndEnqueue(taskEnv);
   end;
 
 PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
@@ -505,7 +505,7 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
     try
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
-        for k:=0 to length(mapParameter)-1 do begin
+        for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
           lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,@recycler,mapParameter[k]).literal;
           if (lit<>nil) then begin
             if lit^.literalType=lt_void then disposeLiteral(lit)
@@ -518,7 +518,7 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
-      context^.finalizeTaskAndDetachFromParent(recycler);
+      context^.finalizeTaskAndDetachFromParent;
     end;
   end;
 
@@ -540,7 +540,7 @@ PROCEDURE T_eachTask.dropEachParameter;
     leaveCriticalSection(taskCs);
   end;
 
-PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal; VAR recycler:T_recycler);
+PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
   begin
     enterCriticalSection(taskCs);
     with eachPayload do begin
@@ -552,7 +552,7 @@ PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expr
       evaluationResult:=NIL_EVAL_RESULT;
     end;
     nextToAggregate:=nil;
-    inherited defineAndEnqueue(taskEnv,recycler);
+    inherited defineAndEnqueue(taskEnv);
     leaveCriticalSection(taskCs);
   end;
 
@@ -571,7 +571,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
     finally
       enterCriticalSection(taskCs);
       dropEachParameter;
-      context^.finalizeTaskAndDetachFromParent(recycler);
+      context^.finalizeTaskAndDetachFromParent;
       leaveCriticalSection(taskCs);
     end;
   end;

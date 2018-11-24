@@ -12,10 +12,6 @@ TYPE
   P_recycler=^T_recycler;
   T_recycler=object
     private
-      scopes:record
-        dat:array[0..63] of P_valueScope;
-        fill:longint;
-      end;
       tokens:record
         dat:array[0..1023] of P_token;
         fill:longint;
@@ -23,11 +19,6 @@ TYPE
     public
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
-
-      PROCEDURE disposeScope(VAR scope:P_valueScope); inline;
-      FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope; inline;
-      PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel); inline;
-      PROCEDURE scopePop(VAR scope:P_valueScope); inline;
 
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -74,70 +65,12 @@ TYPE
 IMPLEMENTATION
 PROCEDURE T_recycler.initRecycler;
 begin
-  scopes.fill:=0;
   tokens.fill:=0;
 end;
 
 PROCEDURE T_recycler.cleanup;
   begin
     with tokens do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
-    with scopes do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
-  end;
-
-PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
-  VAR parent:P_valueScope;
-  begin
-    if scope=nil then exit;
-    if interlockedDecrement(scope^.refCount)<=0 then with scopes do begin
-      parent:=scope^.getParent;
-      if (fill>=length(dat))
-      then dispose(scope,destroy)
-      else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
-      end;
-      disposeScope(parent);
-    end;
-    scope:=nil;
-  end;
-
-FUNCTION T_recycler.newValueScopeAsChildOf(CONST scope: P_valueScope; CONST parentAccess: AccessLevel): P_valueScope;
-  begin
-    with scopes do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.insteadOfCreate(scope,parentAccess);
-    end else new(result,create(scope,parentAccess));
-  end;
-
-PROCEDURE T_recycler.scopePush(VAR scope: P_valueScope; CONST parentAccess: AccessLevel);
-  VAR newScope:P_valueScope;
-  begin
-    with scopes do if (fill>0) then begin
-      dec(fill);
-      newScope:=dat[fill];
-      newScope^.insteadOfCreate(scope,parentAccess);
-    end else new(newScope,create(scope,parentAccess));
-    scope:=newScope;
-  end;
-
-PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
-  VAR newScope:P_valueScope;
-  begin
-    if scope=nil then exit;
-    newScope:=scope^.getParent;
-    if interlockedDecrement(scope^.refCount)<=0 then begin
-      with scopes do if (fill>=length(dat))
-      then dispose(scope,destroy)
-      else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
-      end;
-    end;
-    if newScope<>nil then interlockedDecrement(newScope^.refCount);
-    scope:=newScope;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;

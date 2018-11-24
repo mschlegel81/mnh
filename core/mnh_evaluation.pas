@@ -90,13 +90,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           then level:=0
           else context.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
         end else case first^.tokType of
-          tt_beginBlock:            begin stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginBlock:            begin stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_beginExpression,
-          tt_beginRule: begin inc(level); stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginRule: begin inc(level); stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
-              recycler.scopePop(context.valueScope);
+              scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
             end else context.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
@@ -104,7 +104,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             if stack.topType=C_compatibleBegin[first^.     tokType]
             then begin
               {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
-              recycler.scopePop(context.valueScope);
+              scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
               dec(level);
@@ -763,7 +763,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
   VAR initialScope:P_valueScope;
   PROCEDURE cleanupStackAndExpression;
     begin
-      while context.valueScope<>initialScope do recycler.scopePop(context.valueScope);
+      while context.valueScope<>initialScope do scopePop(context.valueScope);
       while stack.topIndex>=0 do stack.popDestroy(recycler);
       recycler.cascadeDisposeToken(first);
     end;
@@ -824,7 +824,7 @@ if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
     stack.popDestroy(recycler);
     first^.next:=recycler.disposeToken(first^.next);
     first^.next:=recycler.disposeToken(first^.next);
-    recycler.scopePop(context.valueScope);
+    scopePop(context.valueScope);
     didSubstitution:=true;
   end else begin
     first:=recycler.disposeToken(first);
@@ -1016,7 +1016,7 @@ end}
               stack.popDestroy(recycler);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
-              recycler.scopePop(context.valueScope);
+              scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1038,7 +1038,7 @@ end}
               end;
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
-              recycler.scopePop(context.valueScope);
+              scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1066,12 +1066,12 @@ end}
           end;
         end;
 {cT[0]=}tt_beginRule: begin
-          recycler.scopePush(context.valueScope,ACCESS_READWRITE);
+          scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
         end;
 {cT[0]=}tt_beginBlock,tt_beginExpression: begin
-          recycler.scopePush(context.valueScope,ACCESS_READWRITE);
+          scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1243,10 +1243,10 @@ FUNCTION doAsync(p:pointer):ptrint;
     result:=0;
     with P_asyncTask(p)^ do begin
       payload^.executeInContext(myContext,recycler);
-      myContext^.finalizeTaskAndDetachFromParent(recycler);
+      myContext^.finalizeTaskAndDetachFromParent;
 
       disposeLiteral(payload);
-      contextPool.disposeContext(myContext,recycler);
+      contextPool.disposeContext(myContext);
       myContext:=nil;
     end;
     recycler.cleanup;
@@ -1265,7 +1265,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
        context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
       try
-        childContext:=context.getNewAsyncContext(local,recycler);
+        childContext:=context.getNewAsyncContext(local);
         if childContext<>nil then begin
           if params^.size=2 then parameters:=list1;
           new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));

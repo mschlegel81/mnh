@@ -278,8 +278,8 @@ DESTRUCTOR T_myIpcServer.destroy;
   begin
     recycler.initRecycler;
     if servingContextOrNil<>nil then begin
-      servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
-      contextPool.disposeContext(servingContextOrNil,recycler);
+      servingContextOrNil^.finalizeTaskAndDetachFromParent;
+      contextPool.disposeContext(servingContextOrNil);
     end;
     if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
     registry.onDestruction(@self);
@@ -323,7 +323,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       if isServerRunning(str0^.value) then begin
         context.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
       end else begin
-        childContext:=context.getNewAsyncContext(false,recycler);
+        childContext:=context.getNewAsyncContext(false);
         if childContext<>nil then begin
           new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages));
           beginThread(@ipcServerThread,ipcServer);

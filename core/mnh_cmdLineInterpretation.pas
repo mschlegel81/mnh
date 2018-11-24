@@ -228,7 +228,7 @@ CONST DEF_VERBOSITY_STRING='';
       memoryComfortThreshold:=settings.memoryLimit;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false); {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
         writeln(package^.getHelpOnMain);

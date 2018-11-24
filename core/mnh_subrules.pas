@@ -396,7 +396,7 @@ DESTRUCTOR T_inlineExpression.destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
-    disposeScopeWithoutRecycler(saveValueStore);
+    disposeScope(saveValueStore);
     meta.destroy;
     doneCriticalSection(subruleCallCs);
   end;
@@ -538,7 +538,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
-          saveValueStore:=recycler.newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+          saveValueStore:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
           firstCallOfResumable:=true;
         end;
         previousValueScope:=context.valueScope;
@@ -555,7 +555,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
           if context.messages^.continueEvaluation then begin
             updateBody;
           end else begin
-            recycler.disposeScope(saveValueStore);
+            disposeScope(saveValueStore);
           end;
         end;
       end else begin
