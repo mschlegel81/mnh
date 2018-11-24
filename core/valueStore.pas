@@ -192,9 +192,7 @@ CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope; CONST accessToPare
     enterCriticalSection(cs);
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
-      enterCriticalSection(parentScope^.cs);
-      inc(                 parentScope^.refCount);
-      leaveCriticalSection(parentScope^.cs);
+      interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
     if parentScope=nil
     then parentAccess:=ACCESS_BLOCKED
@@ -210,9 +208,7 @@ PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope; CONST acces
     enterCriticalSection(cs);
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
-      enterCriticalSection(parentScope^.cs);
-      inc(                 parentScope^.refCount);
-      leaveCriticalSection(parentScope^.cs);
+      interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
     if parentScope=nil
     then parentAccess:=ACCESS_BLOCKED
