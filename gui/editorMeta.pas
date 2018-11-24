@@ -836,14 +836,18 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
   VAR arr:T_arrayOfString;
       i:longint;
       previousName:string;
+      lineEndingSetting:byte;
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
     if (previousName<>'') and (previousName<>fileInfo.filePath) then fileHistory.fileClosed(previousName);
+    if previousName<>fileInfo.filePath
+    then lineEndingSetting:=settings.newFileLineEnding
+    else lineEndingSetting:=settings.overwriteLineEnding;
     setLength(arr,editor.lines.count);
     for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
     with fileInfo do begin
-      writeFileLines(filePath,arr,'',false);
+      writeFileLines(filePath,arr,LINE_ENDING[lineEndingSetting],false);
       fileAge(filePath,fileAccessAge);
       isChanged:=false;
       editor.modified:=false;

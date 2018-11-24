@@ -18,6 +18,16 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    rb_saveNoChange: TRadioButton;
+    rb_saveNewDefault: TRadioButton;
+    rb_saveDefault: TRadioButton;
+    rb_saveNewLinux: TRadioButton;
+    rb_saveLinux: TRadioButton;
+    rb_saveNewWindows: TRadioButton;
+    rb_saveWindows: TRadioButton;
+    TabSheet_lineEnding: TTabSheet;
     togglePortableButton: TButton;
     restorePacksAndDemosButton: TButton;
     installButton: TButton;
@@ -46,6 +56,8 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE rb_saveDefaultChange(Sender: TObject);
+    PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
     PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
     PROCEDURE installButtonClick(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
@@ -109,6 +121,17 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     end;
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
+    case settings.overwriteLineEnding of
+      LINE_ENDING_UNCHANGED: rb_saveNoChange.checked:=true;
+      LINE_ENDING_DEFAULT  : rb_saveDefault .checked:=true;
+      LINE_ENDING_LINUX    : rb_saveLinux   .checked:=true;
+      LINE_ENDING_WINDOWS  : rb_saveWindows .checked:=true;
+    end;
+    case settings.newFileLineEnding of
+      LINE_ENDING_DEFAULT  : rb_saveNewDefault.checked:=true;
+      LINE_ENDING_LINUX    : rb_saveNewLinux  .checked:=true;
+      LINE_ENDING_WINDOWS  : rb_saveNewWindows.checked:=true;
+    end;
     autosaveComboBox.ItemIndex:=settings.saveIntervalIdx;
   end;
 
@@ -138,6 +161,21 @@ PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
   begin
     ensureDemosAndPackages(true);
+  end;
+
+PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
+  begin
+    if rb_saveNewDefault.checked then settings.newFileLineEnding:=LINE_ENDING_DEFAULT;
+    if rb_saveNewLinux  .checked then settings.newFileLineEnding:=LINE_ENDING_LINUX  ;
+    if rb_saveNewWindows.checked then settings.newFileLineEnding:=LINE_ENDING_WINDOWS;
+  end;
+
+PROCEDURE TSettingsForm.rb_saveDefaultChange(Sender: TObject);
+  begin
+    if rb_saveNoChange.checked then settings.overwriteLineEnding:= LINE_ENDING_UNCHANGED;
+    if rb_saveDefault .checked then settings.overwriteLineEnding:= LINE_ENDING_DEFAULT  ;
+    if rb_saveLinux   .checked then settings.overwriteLineEnding:= LINE_ENDING_LINUX    ;
+    if rb_saveWindows .checked then settings.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
