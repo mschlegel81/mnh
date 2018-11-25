@@ -128,7 +128,6 @@ TYPE
       packageForPostEval  :P_package;
       messages            :P_messages;
       currentlyProcessing :boolean;
-      currentThreadLocals :P_messages;
       cs                  :TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters: P_messages);
@@ -239,7 +238,6 @@ CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST q
     editor:=quickEdit;
     messages:=quickAdapters;
     packageForPostEval:=nil;
-    currentThreadLocals:=nil;
     currentlyProcessing:=false;
     initCriticalSection(cs);
   end;
@@ -283,6 +281,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       if packageOrNil<>nil then begin;
         if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
           packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+        P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
         enterCriticalSection(packageOrNil^.packageCS);
         lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
@@ -306,13 +305,13 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       enterCriticalSection(cs);
       currentlyProcessing:=true;
       evaluationContext.create(messages);
+      messages^.clear();
       evaluationContext.primaryContext.setAllowedSideEffectsReturningPrevious([
                 se_output,
                 se_sleep,
                 se_detaching,
                 se_readPackageState,
                 se_readFile]);
-      currentThreadLocals:=@evaluationContext.primaryContext.messages;
       while (sleepCount<100) and evaluationContext.primaryContext.messages^.continueEvaluation do begin
         while inputChanged do begin
           sleepCount:=0;
@@ -329,7 +328,6 @@ FUNCTION postEvalThread(p:pointer):ptrint;
         inc(sleepCount);
         enterCriticalSection(cs);
       end;
-      currentThreadLocals:=nil;
       evaluationContext.destroy;
       currentlyProcessing:=false;
       leaveCriticalSection(cs);
@@ -354,7 +352,7 @@ PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
 PROCEDURE T_postEvaluationData.ensureStop;
   begin
     enterCriticalSection(cs);
-    if currentThreadLocals<>nil then currentThreadLocals^.setStopFlag;
+    messages^.setStopFlag;
     while currentlyProcessing do begin
       leaveCriticalSection(cs);
       ThreadSwitch;

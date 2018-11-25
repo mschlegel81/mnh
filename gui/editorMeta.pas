@@ -1136,6 +1136,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
     guiAdapters.clear;
     guiOutAdapter.flushClear;
     plotSystem.resetOnEvaluationStart(false);
+    guiOutAdapter.flushToGui;
     //dynamic forms reset
     resetPlot(mainCall);
     resetTableForms;
