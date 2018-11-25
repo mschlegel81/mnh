@@ -289,6 +289,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
           packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
           stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
         end;
+        if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
         leaveCriticalSection(packageOrNil^.packageCS);
         lexer.destroy;
       end else begin
@@ -646,6 +647,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         interpret(stmt,usecase,globals,recycler);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},localIdInfos{$endif});
       end;
+      if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
       dec(extendsLevel);
       lexer.destroy;
     end;
@@ -1208,6 +1210,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},localIdInfos{$endif});
       globals.timeBaseComponent(pc_tokenizing);
     end;
+    if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
     lexer.destroy;
     if usecase=lu_forCodeAssistance then begin
       readyForUsecase:=usecase;
