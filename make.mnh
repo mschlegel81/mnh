@@ -131,7 +131,7 @@ private showStatus->
   print orElse
   tprint('Current code hash: ',ensureCodeHash,"\n") orElse
   BUILDS.each(B,begin
-    local exe  :=B['targetDest'];
+    local exe  :=B['targetDest'].systemSpecificFilename;
     local exist:=fileExists(exe);
     local canBuild:=B['canBuild'];
     local version :=exist ? canBuild ? exe.codeVersion : '?' : '';
