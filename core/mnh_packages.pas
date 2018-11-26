@@ -415,16 +415,21 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
   end;
 
 FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler):T_storedMessages;
+  VAR errorHolder:T_messagesErrorHolder;
+      m:P_storedMessage;
   begin
-    messages.clear;
+    errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
+    globals.primaryContext.messages:=@errorHolder;
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
-    messages.setupMessageRedirection(nil,[]);
     globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
-    result:=messages.storedMessages(true);
+    result:=errorHolder.storedMessages(true);
+    for m in result do m^.rereferenced;
+    errorHolder.destroy;
+    globals.primaryContext.messages:=@messages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
