@@ -58,7 +58,7 @@ TYPE
       done  :boolean;
       succeeded:boolean;
       CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
-      PROCEDURE execute(VAR globals:T_evaluationGlobals);
+      PROCEDURE execute(VAR globals:T_evaluationGlobals; VAR recycler:T_recycler);
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION getOutput:P_literal;
@@ -224,7 +224,7 @@ FUNCTION main(p:pointer):ptrint;
     VAR editContext:T_evaluationGlobals;
     begin
       setupEdit(editContext);
-      P_runEvaluator(p)^.currentEdit^.execute(editContext);
+      P_runEvaluator(p)^.currentEdit^.execute(editContext,recycler);
       doneEdit(editContext);
     end;
 
@@ -326,9 +326,9 @@ DESTRUCTOR T_editScriptTask.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals);
+PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; VAR recycler:T_recycler);
   begin
-    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,input).literal;
+    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,@recycler,input,nil).literal;
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       globals.primaryContext.messages^.raiseSimpleError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);

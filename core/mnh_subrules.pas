@@ -937,8 +937,13 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
+     parameterList:T_listLiteral;
   begin
-    resultLiteral:=evaluateToLiteral(location,context,recycler,a,b).literal;
+    parameterList.create(2);
+    if a<>nil then parameterList.append(a,true);
+    if b<>nil then parameterList.append(b,true);
+    resultLiteral:=evaluate(location,context,recycler,@parameterList).literal;
+    parameterList.destroy;
     if (resultLiteral<>nil) and (resultLiteral^.literalType=lt_boolean) then begin
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
