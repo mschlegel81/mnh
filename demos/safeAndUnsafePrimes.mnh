@@ -1,8 +1,9 @@
+@SuppressUnusedWarning=used in format
 safePrimesBelow(threshold)->begin
   local P:=primes(threshold);
   intersect(P,(P-1) div 2).size;
 end;
-
+@SuppressUnusedWarning=used in format
 unsafePrimesBelow(threshold)->begin
   local P:=primes(threshold);
   P.minus(intersect(P,(P-1) div 2)).size;
