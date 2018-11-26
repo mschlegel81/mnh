@@ -163,6 +163,7 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    BUILTIN_PMAP:P_intFuncCallback;
 IMPLEMENTATION
 TYPE
 P_builtinExpression=^T_builtinExpression;
@@ -1242,18 +1243,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluatePEachExpressionOk:boolean;
     VAR firstRep:P_token=nil;
-        lastRep:P_token=nil;
     begin
-      firstRep:=recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
-      firstRep^.next:=recycler.newToken(location,'t',tt_parallelEach);
-      lastRep:=firstRep^.next;
-      lastRep^.next:=recycler.newToken(location,'t',tt_identifier);
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_ponFlipper);
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_literal,f); f^.rereference;
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_braceClose);
+      firstRep:=recycler.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
+      firstRep^.next:=recycler.newToken(location,'',tt_parList,newListLiteral(2)^.append(TList,true)^.append(f,true));
       context.reduceExpression(firstRep,recycler);
       result:=context.messages^.continueEvaluation and
               (firstRep<>nil) and
