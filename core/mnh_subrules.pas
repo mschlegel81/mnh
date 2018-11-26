@@ -42,6 +42,7 @@ TYPE
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual;
+      FUNCTION containsReturnToken:boolean; virtual;
   end;
 
   T_ruleMetaData=object
@@ -112,6 +113,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION patternString:string;
+      FUNCTION containsReturnToken:boolean; virtual;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -1057,6 +1059,14 @@ FUNCTION T_inlineExpression .arity: longint; begin result:=pattern.arity; end;
 FUNCTION T_builtinExpression.arity: longint; begin result:=C_arityKind[getMeta(func).arityKind].fixedParameters; end;
 FUNCTION T_builtinGeneratorExpression.arity: longint; begin result:=0; end;
 
+FUNCTION T_expression.containsReturnToken:boolean; begin result:=false; end;
+FUNCTION T_inlineExpression.containsReturnToken:boolean;
+  VAR p:T_preparedToken;
+  begin
+    result:=false;
+    for p in preparedBody do if p.token.tokType=tt_return then exit(true);
+  end;
+
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   begin
     result:=newMapLiteral;
@@ -1078,7 +1088,7 @@ CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); e
 DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
-    comment:=commentText;
+    if commentText<>'' then comment:=commentText;
   end;
 {$ifdef fullVersion}
 PROCEDURE T_ruleMetaData.addSuppressUnusedWarningAttribute;

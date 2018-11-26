@@ -420,9 +420,9 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     for a in adapters do if a.adapter^.append(message) then include(collected,message^.messageType);
-    if message^.messageType in messagesToRedirect
-    then messageReceiver^.postCustomMessage(message,disposeAfterPosting)
-    else if disposeAfterPosting then disposeMessage(message);
+    if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
+    then messageReceiver^.postCustomMessage(message,false);
+    if disposeAfterPosting then disposeMessage(message);
     leaveCriticalSection(messagesCs);
   end;
 
@@ -496,8 +496,7 @@ FUNCTION T_messagesDistributor.addOutfile(CONST fileNameAndOptions: ansistring;
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST verbosity: string
-  ): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST verbosity: string): P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
     new(consoleOutAdapter,create(verbosity));

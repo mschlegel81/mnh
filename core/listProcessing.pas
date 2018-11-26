@@ -51,18 +51,22 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
 VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
 IMPLEMENTATION
 TYPE
+  T_eachPayload=record
+    eachIndex:longint;
+    eachRule:P_expressionLiteral;
+    eachParameter:P_literal;
+  end;
+  T_eachPayloads=array of T_eachPayload;
+  T_evaluationResults=array of T_evaluationResult;
+
   P_eachTask=^T_eachTask;
   T_eachTask=object(T_queueTask)
-    eachPayload:record
-      eachIndex:longint;
-      eachRule:P_expressionLiteral;
-      eachParameter:P_literal;
-    end;
+    payloads:T_eachPayloads;
     nextToAggregate:P_eachTask;
-    evaluationResult:T_evaluationResult;
+    results:T_evaluationResults;
     CONSTRUCTOR createEachTask();
     PROCEDURE dropEachParameter;
-    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
+    PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads);
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -135,13 +139,14 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
 
   FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_eachTask;
+        r:T_evaluationResult;
     begin
       result:=false;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
-        aggregator^.addToAggregation(toAggregate^.evaluationResult,true,eachLocation,@context,recycler);
+        for r in toAggregate^.results do aggregator^.addToAggregation(r,true,eachLocation,@context,recycler);
         with recycling do if fill<length(dat) then begin
           dat[fill]:=toAggregate;
           inc(fill);
@@ -149,22 +154,57 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
     end;
 
-  PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
-    VAR task:P_eachTask;
+  VAR nextToEnqueue:T_eachPayloads;
+      enqueueFill:longint=0;
+      processed:longint;
+      earlyAborting:boolean=false;
+
+  FUNCTION defineAndEnqueueTask:P_eachTask;
     begin
       with recycling do if fill>0 then begin
         dec(fill);
-        task:=dat[fill];
-        task^.clearContext;
-      end else new(task,createEachTask());
+        result:=dat[fill];
+        result^.clearContext;
+      end else new(result,createEachTask());
       if firstToAggregate=nil then begin
-        firstToAggregate:=task;
-        lastToAggregate:=task;
+        firstToAggregate:=result;
+        lastToAggregate:=result;
       end else begin
-        lastToAggregate^.nextToAggregate:=task;
-        lastToAggregate:=task;
+        lastToAggregate^.nextToAggregate:=result;
+        lastToAggregate:=result;
       end;
-      task^.defineAndEnqueue(context.getFutureEnvironment,expr,idx,x);
+      result^.defineAndEnqueue(context.getFutureEnvironment,nextToEnqueue);
+    end;
+
+  PROCEDURE finalizePending(CONST enqueue:boolean);
+    VAR k:longint;
+    begin
+      setLength(nextToEnqueue,enqueueFill);
+      if enqueueFill=0 then exit;
+      if enqueue then begin
+        defineAndEnqueueTask;
+      end else begin
+        for k:=0 to length(nextToEnqueue)-1 do disposeLiteral(nextToEnqueue[k].eachParameter);
+      end;
+      setLength(nextToEnqueue,0);
+    end;
+
+  PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
+    begin
+      with nextToEnqueue[enqueueFill] do begin
+        eachIndex    :=idx;
+        eachRule     :=expr;
+        eachParameter:=x^.rereferenced;
+      end;
+      inc(enqueueFill);
+      if enqueueFill>=length(nextToEnqueue) then begin
+        inc(processed,enqueueFill);
+        defineAndEnqueueTask;
+        if earlyAborting
+        then setLength(nextToEnqueue,min(8,max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount)))))
+        else setLength(nextToEnqueue,      max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount))) );
+        enqueueFill:=0;
+      end;
     end;
 
   VAR rule:P_expressionLiteral;
@@ -174,10 +214,16 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   begin
     recycling.fill:=0;
     x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
+    earlyAborting:=aggregator^.isEarlyAbortingAggregator;
+    for rule in rulesList do earlyAborting:=earlyAborting or P_inlineExpression(rule)^.containsReturnToken;
+
+    processed:=0;
+    setLength(nextToEnqueue,1);
+
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
       for rule in rulesList do if proceed then begin
         createTask(rule,eachIndex,x);
-        if context.getGlobals^.taskQueue.getQueuedCount>settings.cpuCount*2 then begin
+        if earlyAborting or (context.getGlobals^.taskQueue.getQueuedCount>settings.cpuCount*2) then begin
           if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue(recycler);
           proceed:=proceed and not(aggregator^.earlyAbort);
         end;
@@ -187,6 +233,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
     end;
+    finalizePending(proceed);
     if x<>nil then disposeLiteral(x);
 
     while firstToAggregate<>nil do
@@ -534,23 +581,18 @@ CONSTRUCTOR T_eachTask.createEachTask();
   end;
 
 PROCEDURE T_eachTask.dropEachParameter;
+  VAR k:longint;
   begin
     enterCriticalSection(taskCs);
-    if eachPayload.eachParameter<>nil then disposeLiteral(eachPayload.eachParameter);
+    for k:=0 to length(payloads)-1 do if payloads[k].eachParameter<>nil then disposeLiteral(payloads[k].eachParameter);
     leaveCriticalSection(taskCs);
   end;
 
-PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
+PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads);
   begin
     enterCriticalSection(taskCs);
-    with eachPayload do begin
-      eachIndex       :=idx;
-      eachRule        :=expr;
-      if x=nil
-      then eachParameter:=nil
-      else eachParameter:=x^.rereferenced;
-      evaluationResult:=NIL_EVAL_RESULT;
-    end;
+    payloads:=payloads_;
+    setLength(results,0);
     nextToAggregate:=nil;
     inherited defineAndEnqueue(taskEnv);
     leaveCriticalSection(taskCs);
@@ -558,17 +600,24 @@ PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST expr:P_expr
 
 PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
   VAR indexLiteral:P_abstractIntLiteral;
+      localReturn:boolean=false;
+      k:longint=0;
+      payload:T_eachPayload;
   begin
     enterCriticalSection(taskCs);
     context^.beginEvaluation;
     leaveCriticalSection(taskCs);
     try
-      if context^.messages^.continueEvaluation then with eachPayload do begin
+      setLength(results,length(payloads));
+      for payload in payloads do if not(localReturn) and context^.messages^.continueEvaluation then with payload do begin
         indexLiteral:=newIntLiteral(eachIndex);
-        evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,context,@recycler,eachParameter,indexLiteral);
+        results[k]:=eachRule^.evaluateToLiteral(eachRule^.getLocation,context,@recycler,eachParameter,indexLiteral);
+        localReturn:=localReturn or results[k].triggeredByReturn;
+        inc(k);
         disposeLiteral(indexLiteral);
       end;
     finally
+      setLength(results,k);
       enterCriticalSection(taskCs);
       dropEachParameter;
       context^.finalizeTaskAndDetachFromParent;
