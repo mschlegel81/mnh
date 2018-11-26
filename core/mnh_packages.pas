@@ -950,22 +950,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         t,newNext:P_token;
         hasDeclareToken:boolean=false;
         hasAssignToken :boolean=false;
-        nonTypes:array of record
-          id:T_idString;
-          location:T_tokenLocation;
-        end;
-        k:longint;
-    PROCEDURE addNonType(CONST token:P_token);
-      VAR k:longint;
-      begin
-        k:=length(nonTypes);
-        setLength(nonTypes,k+1);
-        nonTypes[k].id:=token^.txt;
-        nonTypes[k].location:=token^.location;
-      end;
 
     begin
-      setLength(nonTypes,0);
       t:=statement.firstToken;
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,globals.primaryContext.messages);
@@ -979,8 +965,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           recycler.disposeToken(t^.next);
           t^.next:=newNext;
         end;
-        tt_identifier, tt_parameterIdentifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_blockLocalVariable:
-          addNonType(t^.next);
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
         else if t^.tokType in C_closingBrackets then dec(level)
@@ -990,9 +974,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           hasAssignToken :=hasAssignToken  or (t^.tokType=tt_assign );
         end;
         t:=t^.next;
-      end;
-      if hasAssignToken and (length(nonTypes)>0) then begin
-        for k:=0 to length(nonTypes)-1 do globals.primaryContext.messages^.postTextMessage(mt_el2_warning,nonTypes[k].location,nonTypes[k].id+' is not a type');
       end;
       result:=nil;
     end;
