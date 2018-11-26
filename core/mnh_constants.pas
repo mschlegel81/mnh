@@ -600,7 +600,15 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
 FUNCTION getTempFileName:string;
+OPERATOR :=(x:longint):T_sideEffects;
 IMPLEMENTATION
+OPERATOR :=(x:longint):T_sideEffects;
+  CONST bit:array[T_sideEffect] of word=(1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384);
+  VAR s:T_sideEffect;
+  begin
+    result:=[];
+    for s in T_sideEffect do if x and bit[s]>0 then include(result,s);
+  end;
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin

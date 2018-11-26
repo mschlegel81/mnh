@@ -19,6 +19,7 @@ TYPE
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult:P_literal; virtual;
     PROPERTY hasReturn:boolean read hasReturnLiteral;
+    FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_listAggregator=object(T_aggregator)
@@ -41,6 +42,7 @@ TYPE
     PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult:P_literal; virtual;
+    FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_minAggregator=object(T_aggregator)
@@ -66,6 +68,7 @@ TYPE
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
+      FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_orAggregator=object(T_aggregator)
@@ -76,6 +79,7 @@ TYPE
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
+      FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_opAggregator=object(T_aggregator)
@@ -342,21 +346,19 @@ PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST d
     if doDispose then disposeLiteral(er.literal);
   end;
 
-FUNCTION T_aggregator.earlyAbort: boolean;
-  begin
-    result:=hasReturnLiteral;
-  end;
-
+FUNCTION T_aggregator.isEarlyAbortingAggregator:boolean; begin result:=false; end;
+FUNCTION T_aggregator.earlyAbort:boolean; begin result:=hasReturnLiteral; end;
+FUNCTION T_headAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
 FUNCTION T_headAggregator.earlyAbort: boolean;
   begin
     result:=hasReturnLiteral or (resultLiteral<>nil) and (resultLiteral^.literalType<>lt_void);
   end;
-
+FUNCTION T_andAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
 FUNCTION T_andAggregator.earlyAbort: boolean;
   begin
     result:=hasReturnLiteral or not(boolResult);
   end;
-
+FUNCTION T_orAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
 FUNCTION T_orAggregator.earlyAbort: boolean;
   begin
     result:=hasReturnLiteral or boolResult;

@@ -333,8 +333,8 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating action for ',getName);
       {$endif}
       if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
-      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter).literal
-      else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler).literal;
+      then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
+      else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
       if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
       if tmp                  <>nil then disposeLiteral(tmp);
       state.actionTriggered:=false;
@@ -346,7 +346,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
       {$endif}
       oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true);
+      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true,nil,nil);
       result:=result or (oldEnabled<>state.enabled);
     end;
 
@@ -355,7 +355,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
       {$endif}
       oldCaption:=state.caption;
-      tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler).literal;
+      tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
       if tmp<>nil then begin
         if tmp^.literalType=lt_string
         then state.caption:=P_stringLiteral(tmp)^.value

@@ -121,8 +121,13 @@ FUNCTION inspect_imp intFuncSignature;
     end;
 
   PROCEDURE loadTemporaryPackage;
+    VAR msg:T_storedMessages;
+        k:longint;
     begin
-      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^,recycler),C_errorsAndWarnings);
+      msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler);
+      loadMessages:=messagesToLiteralForSandbox( msg,C_errorsAndWarnings);
+      for k:=0 to length(msg)-1 do disposeMessage(msg[k]);
+      setLength(msg,0);
     end;
 
   begin

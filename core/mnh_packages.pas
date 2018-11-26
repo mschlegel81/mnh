@@ -128,7 +128,6 @@ TYPE
       packageForPostEval  :P_package;
       messages            :P_messages;
       currentlyProcessing :boolean;
-      currentThreadLocals :P_messages;
       cs                  :TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters: P_messages);
@@ -239,7 +238,6 @@ CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST q
     editor:=quickEdit;
     messages:=quickAdapters;
     packageForPostEval:=nil;
-    currentThreadLocals:=nil;
     currentlyProcessing:=false;
     initCriticalSection(cs);
   end;
@@ -283,6 +281,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       if packageOrNil<>nil then begin;
         if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
           packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+        P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
         enterCriticalSection(packageOrNil^.packageCS);
         lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
@@ -290,6 +289,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
           packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
           stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
         end;
+        if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
         leaveCriticalSection(packageOrNil^.packageCS);
         lexer.destroy;
       end else begin
@@ -306,13 +306,13 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       enterCriticalSection(cs);
       currentlyProcessing:=true;
       evaluationContext.create(messages);
+      messages^.clear();
       evaluationContext.primaryContext.setAllowedSideEffectsReturningPrevious([
                 se_output,
                 se_sleep,
                 se_detaching,
                 se_readPackageState,
                 se_readFile]);
-      currentThreadLocals:=@evaluationContext.primaryContext.messages;
       while (sleepCount<100) and evaluationContext.primaryContext.messages^.continueEvaluation do begin
         while inputChanged do begin
           sleepCount:=0;
@@ -329,7 +329,6 @@ FUNCTION postEvalThread(p:pointer):ptrint;
         inc(sleepCount);
         enterCriticalSection(cs);
       end;
-      currentThreadLocals:=nil;
       evaluationContext.destroy;
       currentlyProcessing:=false;
       leaveCriticalSection(cs);
@@ -354,7 +353,7 @@ PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
 PROCEDURE T_postEvaluationData.ensureStop;
   begin
     enterCriticalSection(cs);
-    if currentThreadLocals<>nil then currentThreadLocals^.setStopFlag;
+    messages^.setStopFlag;
     while currentlyProcessing do begin
       leaveCriticalSection(cs);
       ThreadSwitch;
@@ -416,16 +415,21 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
   end;
 
 FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler):T_storedMessages;
+  VAR errorHolder:T_messagesErrorHolder;
+      m:P_storedMessage;
   begin
-    messages.clear;
+    errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
+    globals.primaryContext.messages:=@errorHolder;
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
-    messages.setupMessageRedirection(nil,[]);
     globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
-    result:=messages.storedMessages(true);
+    result:=errorHolder.storedMessages(true);
+    for m in result do m^.rereferenced;
+    errorHolder.destroy;
+    globals.primaryContext.messages:=@messages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
@@ -648,6 +652,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         interpret(stmt,usecase,globals,recycler);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},localIdInfos{$endif});
       end;
+      if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
       dec(extendsLevel);
       lexer.destroy;
     end;
@@ -945,22 +950,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         t,newNext:P_token;
         hasDeclareToken:boolean=false;
         hasAssignToken :boolean=false;
-        nonTypes:array of record
-          id:T_idString;
-          location:T_tokenLocation;
-        end;
-        k:longint;
-    PROCEDURE addNonType(CONST token:P_token);
-      VAR k:longint;
-      begin
-        k:=length(nonTypes);
-        setLength(nonTypes,k+1);
-        nonTypes[k].id:=token^.txt;
-        nonTypes[k].location:=token^.location;
-      end;
 
     begin
-      setLength(nonTypes,0);
       t:=statement.firstToken;
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,globals.primaryContext.messages);
@@ -974,8 +965,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           recycler.disposeToken(t^.next);
           t^.next:=newNext;
         end;
-        tt_identifier, tt_parameterIdentifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_blockLocalVariable:
-          addNonType(t^.next);
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
         else if t^.tokType in C_closingBrackets then dec(level)
@@ -985,9 +974,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           hasAssignToken :=hasAssignToken  or (t^.tokType=tt_assign );
         end;
         t:=t^.next;
-      end;
-      if hasAssignToken and (length(nonTypes)>0) then begin
-        for k:=0 to length(nonTypes)-1 do globals.primaryContext.messages^.postTextMessage(mt_el2_warning,nonTypes[k].location,nonTypes[k].id+' is not a type');
       end;
       result:=nil;
     end;
@@ -1210,6 +1196,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},localIdInfos{$endif});
       globals.timeBaseComponent(pc_tokenizing);
     end;
+    if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
     lexer.destroy;
     if usecase=lu_forCodeAssistance then begin
       readyForUsecase:=usecase;

@@ -42,6 +42,7 @@ TYPE
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual;
+      FUNCTION containsReturnToken:boolean; virtual;
   end;
 
   T_ruleMetaData=object
@@ -112,6 +113,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION patternString:string;
+      FUNCTION containsReturnToken:boolean; virtual;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -163,6 +165,7 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    BUILTIN_PMAP:P_intFuncCallback;
 IMPLEMENTATION
 TYPE
 P_builtinExpression=^T_builtinExpression;
@@ -937,8 +940,13 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
+     parameterList:T_listLiteral;
   begin
-    resultLiteral:=evaluateToLiteral(location,context,recycler,a,b).literal;
+    parameterList.create(2);
+    if a<>nil then parameterList.append(a,true);
+    if b<>nil then parameterList.append(b,true);
+    resultLiteral:=evaluate(location,context,recycler,@parameterList).literal;
+    parameterList.destroy;
     if (resultLiteral<>nil) and (resultLiteral^.literalType=lt_boolean) then begin
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
@@ -1051,6 +1059,14 @@ FUNCTION T_inlineExpression .arity: longint; begin result:=pattern.arity; end;
 FUNCTION T_builtinExpression.arity: longint; begin result:=C_arityKind[getMeta(func).arityKind].fixedParameters; end;
 FUNCTION T_builtinGeneratorExpression.arity: longint; begin result:=0; end;
 
+FUNCTION T_expression.containsReturnToken:boolean; begin result:=false; end;
+FUNCTION T_inlineExpression.containsReturnToken:boolean;
+  VAR p:T_preparedToken;
+  begin
+    result:=false;
+    for p in preparedBody do if p.token.tokType=tt_return then exit(true);
+  end;
+
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   begin
     result:=newMapLiteral;
@@ -1072,7 +1088,7 @@ CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); e
 DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
-    comment:=commentText;
+    if commentText<>'' then comment:=commentText;
   end;
 {$ifdef fullVersion}
 PROCEDURE T_ruleMetaData.addSuppressUnusedWarningAttribute;
@@ -1237,18 +1253,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluatePEachExpressionOk:boolean;
     VAR firstRep:P_token=nil;
-        lastRep:P_token=nil;
     begin
-      firstRep:=recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
-      firstRep^.next:=recycler.newToken(location,'t',tt_parallelEach);
-      lastRep:=firstRep^.next;
-      lastRep^.next:=recycler.newToken(location,'t',tt_identifier);
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_ponFlipper);
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_literal,f); f^.rereference;
-      lastRep:=lastRep^.next;
-      lastRep^.next:=recycler.newToken(location,'',tt_braceClose);
+      firstRep:=recycler.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
+      firstRep^.next:=recycler.newToken(location,'',tt_parList,newListLiteral(2)^.append(TList,true)^.append(f,true));
       context.reduceExpression(firstRep,recycler);
       result:=context.messages^.continueEvaluation and
               (firstRep<>nil) and

@@ -9,6 +9,7 @@ USES sysutils,
      mnh_contexts,
      listProcessing,
      recyclers,
+     mnh_subrules,
      mnh_funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 {$i mnh_func_defines.inc}
@@ -540,6 +541,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,
                               'group',  @group_imp ,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
+  BUILTIN_PMAP:=
   registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
 
 end.

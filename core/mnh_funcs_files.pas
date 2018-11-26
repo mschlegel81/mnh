@@ -543,6 +543,30 @@ FUNCTION relativeFilename_impl intFuncSignature;
     end;
   end;
 
+FUNCTION systemSpecificFilename_impl intFuncSignature;
+  FUNCTION convert(CONST s:P_literal):P_literal;
+    begin
+      if DirectorySeparator='/'
+      then exit(s^.rereferenced)
+      else exit(newStringLiteral(replaceAll(P_stringLiteral(s)^.value,'/',DirectorySeparator)));
+    end;
+
+  VAR iter:T_arrayOfLiteral;
+      l   :P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_string: result:=convert(arg0);
+      lt_emptySet,lt_stringSet,
+      lt_emptyList,lt_stringList: begin
+        result:=collection0^.newOfSameType(true);
+        iter:=collection0^.iteratableList;
+        for l in iter do collResult^.append(convert(l),false);
+        disposeLiteral(iter);
+      end;
+    end;
+  end;
+
 INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'files'          ,@files_impl         ,ak_unary     ,'files(searchPattern:String);//Returns a list of files matching the given search pattern');
   registerRule(FILES_BUILTIN_NAMESPACE,'allFiles'       ,@allFiles_impl      ,ak_variadic_1,'allFiles(root);//Returns a list of all files below root (string or stringList)#'+
@@ -582,5 +606,6 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt'      ,@extractFileExt_imp      ,ak_unary ,'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,ak_binary,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
   registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_binary,'relativeFileName(reference,file);//Returns the path of file relative to reference');
+  registerRule(FILES_BUILTIN_NAMESPACE,'systemSpecificFilename',@systemSpecificFilename_impl,ak_unary,'systemSpecificFilename(name:String);//Returns the path with system specific directory separators#systemSpecificFilename(name:StringCollection);');
 
 end.

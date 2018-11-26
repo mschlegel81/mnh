@@ -1,12 +1,12 @@
 object SettingsForm: TSettingsForm
   Left = 706
-  Height = 196
+  Height = 323
   Top = 344
   Width = 341
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 196
+  ClientHeight = 323
   ClientWidth = 341
   Constraints.MinWidth = 320
   DesignTimePPI = 144
@@ -17,10 +17,10 @@ object SettingsForm: TSettingsForm
   LCLVersion = '1.8.4.0'
   object PageControl: TPageControl
     Left = 0
-    Height = 139
+    Height = 323
     Top = 0
-    Width = 320
-    ActivePage = TabSheet_display
+    Width = 341
+    ActivePage = TabSheet_lineEnding
     Align = alClient
     TabIndex = 1
     TabOrder = 0
@@ -131,6 +131,109 @@ object SettingsForm: TSettingsForm
           OnEditingDone = outputSizeLimitEditingDone
           TabOrder = 0
           Text = 'outputSizeLimit'
+        end
+      end
+    end
+    object TabSheet_lineEnding: TTabSheet
+      Caption = 'line ending'
+      ClientHeight = 285
+      ClientWidth = 333
+      object GroupBox1: TGroupBox
+        Left = 0
+        Height = 117
+        Top = 0
+        Width = 333
+        Align = alTop
+        AutoSize = True
+        Caption = 'new files'
+        ClientHeight = 87
+        ClientWidth = 329
+        TabOrder = 0
+        object rb_saveNewDefault: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 0
+          Width = 329
+          Align = alTop
+          Caption = 'System default'
+          Checked = True
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 2
+          TabStop = True
+        end
+        object rb_saveNewLinux: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 29
+          Width = 329
+          Align = alTop
+          Caption = 'Linux'
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 0
+        end
+        object rb_saveNewWindows: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 58
+          Width = 329
+          Align = alTop
+          Caption = 'Windows'
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 1
+        end
+      end
+      object GroupBox2: TGroupBox
+        Left = 0
+        Height = 146
+        Top = 117
+        Width = 333
+        Align = alTop
+        AutoSize = True
+        Caption = 'existing files'
+        ClientHeight = 116
+        ClientWidth = 329
+        TabOrder = 1
+        object rb_saveDefault: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 29
+          Width = 329
+          Align = alTop
+          Caption = 'System defult'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 2
+        end
+        object rb_saveLinux: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 58
+          Width = 329
+          Align = alTop
+          Caption = 'Linux'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 0
+        end
+        object rb_saveWindows: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 87
+          Width = 329
+          Align = alTop
+          Caption = 'Windows'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 1
+        end
+        object rb_saveNoChange: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 0
+          Width = 329
+          Align = alTop
+          Caption = 'Don''t change'
+          Checked = True
+          OnChange = rb_saveDefaultChange
+          TabOrder = 3
+          TabStop = True
         end
       end
     end

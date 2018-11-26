@@ -16,6 +16,13 @@ CONST
    (text:'30 minutes'; interval:30/(24*60)),
    (text:'1 hour';     interval: 1/24));
   FILE_HISTORY_MAX_SIZE=100;
+
+  LINE_ENDING_UNCHANGED=0;
+  LINE_ENDING_DEFAULT=1;
+  LINE_ENDING_LINUX=2;
+  LINE_ENDING_WINDOWS=3;
+
+  LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
 TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
@@ -67,6 +74,8 @@ T_settings=object(T_serializable)
   doShowSplashScreen:boolean;
   fullFlavourLocation:string;
 
+  newFileLineEnding,overwriteLineEnding:byte;
+
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
@@ -107,7 +116,7 @@ DESTRUCTOR T_settings.destroy;
   begin
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235078; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235079; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -137,6 +146,8 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     {$ifdef fullVersion}
     if fullFlavourLocation='' then fullFlavourLocation:=paramStr(0);
     {$endif}
+    newFileLineEnding:=stream.readByte;
+    overwriteLineEnding:=stream.readByte;
     if not(stream.allOkay) then cleanExit else result:=true;
     savedAt:=now;
     wasLoaded:=result;
@@ -160,6 +171,8 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(doShowSplashScreen);
     stream.writeAnsiString(fullFlavourLocation);
+    stream.writeByte(newFileLineEnding);
+    stream.writeByte(overwriteLineEnding);
     savedAt:=now;
   end;
 
@@ -196,6 +209,8 @@ PROCEDURE T_settings.initDefaults;
     doShowSplashScreen:=true;
     fullFlavourLocation:={$ifdef fullVersion}paramStr(0){$else}''{$endif};
     htmlDocGeneratedForCodeHash:='';
+    newFileLineEnding:=LINE_ENDING_DEFAULT;
+    overwriteLineEnding:=LINE_ENDING_UNCHANGED;
   end;
 
 PROCEDURE T_settings.fixLocations;
