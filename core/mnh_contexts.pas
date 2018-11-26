@@ -271,9 +271,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
     primaryContext.create();
     prng.create;
     prng.randomize;
-    wallClock:=TEpikTimer.create(nil);
-    wallClock.clear;
-    wallClock.start;
+    wallClock:=nil;
     {$ifdef fullVersion}
     profiler:=nil;
     debuggingStepper:=nil;
@@ -293,7 +291,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
 DESTRUCTOR T_evaluationGlobals.destroy;
   begin
     prng.destroy;
-    FreeAndNil(wallClock);
+    if wallClock<>nil then FreeAndNil(wallClock);
     {$ifdef fullVersion}
     if profiler<>nil then dispose(profiler,destroy);
     profiler:=nil;
@@ -335,9 +333,11 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     {$endif}
     //timing:
     with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
-    wallClock.clear;
-    wallClock.start;
-    timingInfo.startOfProfiling:=wallClock.elapsed;
+    if wallClock<>nil then begin;
+      wallClock.clear;
+      wallClock.start;
+      timingInfo.startOfProfiling:=wallClock.elapsed;
+    end;
     //evaluation state
     if evaluationContextType=ect_silent
     then primaryContext.allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
@@ -444,6 +444,15 @@ FUNCTION T_evaluationGlobals.isPaused:boolean;
 
 FUNCTION T_context.wallclockTime: double;
   begin
+    if related.evaluation^.wallClock=nil then begin
+      enterCriticalSection(related.evaluation^.primaryContext.contextCS);
+      if related.evaluation^.wallClock=nil then begin
+        related.evaluation^.wallClock:=TEpikTimer.create(nil);
+        related.evaluation^.wallClock.clear;
+        related.evaluation^.wallClock.start;
+      end;
+      leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
+    end;
     result:=related.evaluation^.wallClock.elapsed;
   end;
 
@@ -469,9 +478,7 @@ PROCEDURE T_context.callStackPush(CONST callerLocation: T_tokenLocation;
     if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,callee);
   end;
 
-PROCEDURE T_context.callStackPushCategory(
-  CONST package: P_objectWithPath; CONST category: T_profileCategory;
-  VAR calls: T_packageProfilingCalls);
+PROCEDURE T_context.callStackPushCategory(CONST package: P_objectWithPath; CONST category: T_profileCategory; VAR calls: T_packageProfilingCalls);
   begin
     if tco_stackTrace in options then begin
       if calls[category]=nil then new(calls[category],create(package,category));
