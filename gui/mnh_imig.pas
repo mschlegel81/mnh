@@ -597,6 +597,7 @@ PROCEDURE T_imageSystem.processPendingMessages;
   end;
 
 INITIALIZATION
+  initialize(workflowCs);
   initCriticalSection(workflowCs);
   registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+

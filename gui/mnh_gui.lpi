@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="87">
+    <Units Count="88">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -491,6 +491,16 @@
         <Filename Value="ipcModel.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit85>
+      <Unit86>
+        <Filename Value="mnh_imig.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit86>
+      <Unit87>
+        <Filename Value="mnh_imig_form.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="DisplayImageForm"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit87>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
