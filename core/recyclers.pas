@@ -7,7 +7,7 @@ USES sysutils,
      mnh_out_adapters,
      valueStore,
      mnh_litVar,
-     mnh_tokens;
+     tokens;
 TYPE
   P_recycler=^T_recycler;
   T_recycler=object

@@ -9,7 +9,7 @@ USES sysutils,
      mnh_contexts,
      listProcessing,
      recyclers,
-     mnh_subrules,
+     subrules,
      mnh_funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 

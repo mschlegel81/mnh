@@ -9,7 +9,7 @@ USES sysutils,
      mnh_funcs,mnh_contexts,mnh_out_adapters,
      listProcessing,
      recyclers,
-     mnh_subrules;
+     subrules;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}

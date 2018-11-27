@@ -123,5 +123,3 @@ main->begin
     end;
   ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;
-
-

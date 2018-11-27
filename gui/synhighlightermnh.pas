@@ -8,7 +8,7 @@ USES
   mnh_constants,
   mnh_messages,
   mnh_funcs,
-  mnh_packages,
+  packages,
   codeAssistance;
 
 TYPE

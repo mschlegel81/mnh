@@ -6,7 +6,7 @@ USES Classes,
      mnh_litVar,
      mnh_operators,
      mnh_constants,mnh_basicTypes,
-     mnh_subrules,mnh_rule,mnh_packages;
+     subrules,rules,packages;
 TYPE
   T_openLocationCallback=FUNCTION (CONST location:T_searchTokenLocation):boolean of object;
 

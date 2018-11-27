@@ -1,4 +1,4 @@
-UNIT mnh_patterns;
+UNIT patterns;
 INTERFACE
 USES sysutils,
      math,
@@ -8,7 +8,7 @@ USES sysutils,
      mnh_basicTypes,mnh_constants,
      recyclers,
      mnh_litVar,
-     mnh_tokens,
+     tokens,
      mnh_messages,
      mnh_contexts;
 TYPE

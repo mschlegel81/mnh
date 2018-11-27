@@ -9,8 +9,8 @@ USES sysutils,
      mnh_tokenArray,
      mnh_contexts,
      mnh_litVar,
-     mnh_tokens,
-     mnh_subrules,
+     tokens,
+     subrules,
      recyclers,
      mnh_funcs;
 

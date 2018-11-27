@@ -6,7 +6,7 @@ USES sysutils,
      mnh_constants,
      mnh_basicTypes,
      mnh_litVar,
-     mnh_tokens,
+     tokens,
      mnh_out_adapters,
      mnh_messages,
      recyclers

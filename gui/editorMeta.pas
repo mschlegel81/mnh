@@ -27,7 +27,7 @@ USES  //basic classes
   mnh_debugging,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
-  mnh_packages,
+  packages,
   guiOutAdapters,
   mnh_datastores,
   editorMetaBase,

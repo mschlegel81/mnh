@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,
      //MNH:
      mnh_basicTypes,
-     mnh_tokens,
+     tokens,
      mnh_messages,
      mnh_out_adapters,
      tokenStack;

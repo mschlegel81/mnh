@@ -12,7 +12,7 @@ USES //FPC/LCL libraries
      mnh_messages,
      mnh_out_adapters,mnh_litVar,
      recyclers,
-     mnh_tokens,
+     tokens,
      valueStore,
      mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging,mnh_debuggingVar{$endif};
 TYPE

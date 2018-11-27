@@ -13,7 +13,7 @@ USES sysutils,math,
      mnh_html,
      mnh_doc,
      {$endif}
-     mnh_tokens,
+     tokens,
      mnh_messages,
      mnh_out_adapters;
 TYPE
@@ -357,7 +357,6 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   FUNCTION getBuiltinRuleInfo:string;
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
-      ensureBuiltinDocExamples;
       if (length(tokenText)>1) and (tokenText[1]='.')
       then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
       else doc:=functionDocMap.get(tokenText);
