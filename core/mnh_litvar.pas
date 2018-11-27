@@ -220,8 +220,8 @@ TYPE
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual; abstract;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual; abstract;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION arity:longint; virtual; abstract;
@@ -442,7 +442,7 @@ VAR
 FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef profilingFlavour}{$ifndef debugMode} inline; {$endif}{$endif}
-PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); {$ifndef profilingFlavour}inline;{$endif}
+PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; inline;
@@ -820,7 +820,7 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
         else T:=T^.super;
       end;
     end;
-    if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L));
+    if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil));
   end;
 
 FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_typableLiteral;
@@ -848,13 +848,13 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if P_typableLiteral(L)^.customType=@self then begin
       exit(P_typableLiteral(L^.rereferenced));
     end;
-    if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L) then begin
+    if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil) then begin
       result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
       result:=super^.cast(L,location,threadContext,recycler);
       if (result<>nil) then begin
-        if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,result)
+        if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,result,nil)
         then result^.customType:=@self
         else disposeLiteral(result);
       end;

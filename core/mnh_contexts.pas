@@ -40,7 +40,6 @@ CONST
 TYPE
   P_evaluationGlobals=^T_evaluationGlobals;
   P_context=^T_context;
-  P_taskQueue=^T_taskQueue;
 
   T_contextRecycler=object
     private

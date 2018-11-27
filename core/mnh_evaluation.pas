@@ -316,7 +316,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
       if not(parseBodyOk) then exit;
       while not(returnValue.triggeredByReturn)
-            and headRule^.evaluateToBoolean(whileLocation,@context,@recycler,true)
+            and headRule^.evaluateToBoolean(whileLocation,@context,@recycler,true,nil,nil)
             and (context.messages^.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;

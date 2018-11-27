@@ -74,7 +74,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
     result:=inherited evaluate(location,context,recycler);
     if config_hlLang<>nil then begin
-      tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler).literal;
+      tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
       if tmp<>nil then begin
         if tmp^.literalType=lt_string then begin
           oldLang:=state_hlLang;

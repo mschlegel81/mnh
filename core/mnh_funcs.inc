@@ -26,7 +26,7 @@ FUNCTION try_imp intFuncSignature;
       tryMessages.createErrorHolder(context.messages,[mt_el3_evalError..mt_el3_userDefined]);
       context.messages:=@tryMessages;
 
-      result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
+      result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
       if (result=nil) or (tryMessages.getFlags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
@@ -37,7 +37,7 @@ FUNCTION try_imp intFuncSignature;
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3]);
             tryMessages.clear;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral).literal;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral,nil).literal;
             if result=nil then begin
               context.messages:=oldMessages;
               context.raiseError('Error in catch block',tokenLocation);
@@ -45,7 +45,7 @@ FUNCTION try_imp intFuncSignature;
             disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
             if result=nil then begin
               context.messages:=oldMessages;
               context.raiseError('Error in catch block',tokenLocation);

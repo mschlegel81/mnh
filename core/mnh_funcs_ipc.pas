@@ -210,7 +210,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload).literal;
+          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload,nil).literal;
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');

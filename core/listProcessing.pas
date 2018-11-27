@@ -85,6 +85,7 @@ TYPE
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
+    PROCEDURE clearMapPayload;
   end;
 
   P_filterTask=^T_filterTask;
@@ -107,7 +108,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
       x:P_literal;
       proceed:boolean=true;
   begin
-    x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
+    x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
       indexLiteral:=newIntLiteral(eachIndex);
       for rule in rulesList do if proceed then begin
@@ -121,7 +122,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
       inc(eachIndex);
       disposeLiteral(indexLiteral);
       disposeLiteral(x);
-      x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
+      x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
     end;
     if x<>nil then disposeLiteral(x);
   end;
@@ -213,7 +214,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       proceed:boolean=true;
   begin
     recycling.fill:=0;
-    x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
+    x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
     earlyAborting:=aggregator^.isEarlyAbortingAggregator;
     for rule in rulesList do earlyAborting:=earlyAborting or P_inlineExpression(rule)^.containsReturnToken;
 
@@ -231,7 +232,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
       inc(eachIndex);
       disposeLiteral(x);
-      x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler).literal;
+      x:=inputIterator^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
     end;
     finalizePending(proceed);
     if x<>nil then disposeLiteral(x);
@@ -254,13 +255,13 @@ FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
   begin
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     result:=newListLiteral();
-    x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler).literal;
+    x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if isExpressionNullary
-      then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler  ).literal,false)
-      else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,x).literal,false);
+      then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,nil,nil).literal,false)
+      else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,x  ,nil).literal,false);
       disposeLiteral(x);
-      x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler).literal;
+      x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     end;
     if x<>nil then disposeLiteral(x);
   end;
@@ -319,6 +320,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
   FUNCTION enqueueValue(CONST x:P_literal):boolean;
     begin
       nextToEnqueue[enqueueFill]:=x;
+      if x<>nil then x^.rereference;
       inc(enqueueFill);
       inc(elementsProcessed);
       if enqueueFill>=length(nextToEnqueue) then begin
@@ -343,13 +345,13 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/settings.cpuCount))
     else setLength(nextToEnqueue,1);
 
-    x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler).literal;
+    x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if isExpressionNullary
       then begin if enqueueValue(nil) then canAggregate; end
       else begin if enqueueValue(x  ) then canAggregate; end;
       disposeLiteral(x);
-      x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler).literal;
+      x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     end;
     setLength(nextToEnqueue,enqueueFill);
     createTask(nextToEnqueue);
@@ -421,7 +423,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       elementsProcessed:longint=0;
   FUNCTION enqueueValue(CONST x:P_literal):boolean;
     begin
-      nextToEnqueue[enqueueFill]:=x;
+      nextToEnqueue[enqueueFill]:=x^.rereferenced;
       inc(enqueueFill);
       inc(elementsProcessed);
       if enqueueFill>=length(nextToEnqueue) then begin
@@ -442,11 +444,11 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/settings.cpuCount))
     else setLength(nextToEnqueue,1);
 
-    x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler).literal;
+    x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
       if enqueueValue(x) then canAggregate;
       disposeLiteral(x);
-      x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler).literal;
+      x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;
     end;
     if x<>nil then disposeLiteral(x);
     setLength(nextToEnqueue,enqueueFill);
@@ -462,7 +464,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
 PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
   VAR x:T_evaluationResult;
   begin
-    x:=inputIterator^.evaluateToLiteral(location,@context,@recycler);
+    x:=inputIterator^.evaluateToLiteral(location,@context,@recycler,nil,nil);
     while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) do begin
       aggregator^.addToAggregation(
         x,
@@ -470,7 +472,7 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
         location,
         @context,recycler);
       disposeLiteral(x.literal);
-      x:=inputIterator^.evaluateToLiteral(location,@context,@recycler);
+      x:=inputIterator^.evaluateToLiteral(location,@context,@recycler,nil,nil);
     end;
     if x.literal<>nil then disposeLiteral(x.literal);
   end;
@@ -513,7 +515,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
-          if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,@recycler,true,mapParameter[k])
+          if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,@recycler,true,mapParameter[k],nil)
           then begin
             mapResult[j]:=mapParameter[k];
             inc(j);
@@ -522,6 +524,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
+      clearMapPayload;
       context^.finalizeTaskAndDetachFromParent;
     end;
   end;
@@ -530,15 +533,21 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST expr: P_expressionLiteral);
   begin
     create(false);
     mapPayload.mapRule:=expr;
-    mapPayload.mapParameter:=nil;
+    setLength(mapPayload.mapParameter,0);
   end;
 
 PROCEDURE T_mapTask.defineAndEnqueue(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral);
   VAR k:longint;
+      {$ifdef debugMode}
+      i:longint;
+      {$endif}
   begin
-    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
-    mapPayload.mapParameter:=x;
-    for k:=0 to length(mapPayload.mapParameter)-1 do if mapPayload.mapParameter[k]<>nil then mapPayload.mapParameter[k]^.rereference;
+    clearMapPayload;
+    setLength(mapPayload.mapParameter,length(x));
+    for k:=0 to length(x)-1 do mapPayload.mapParameter[k]:=x[k];
+    {$ifdef debugMode}
+    for k:=1 to length(x)-1 do if x[k]<>nil then for i:=0 to k-1 do if pointer(x[i])=pointer(x[k]) then raise Exception.create('Adding duplicate map parameter');
+    {$endif}
     nextToAggregate:=nil;
     inherited defineAndEnqueue(taskEnv);
   end;
@@ -553,7 +562,7 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
-          lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,@recycler,mapParameter[k]).literal;
+          lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,@recycler,mapParameter[k],nil).literal;
           if (lit<>nil) then begin
             if lit^.literalType=lt_void then disposeLiteral(lit)
             else begin
@@ -565,13 +574,17 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
+      clearMapPayload;
       context^.finalizeTaskAndDetachFromParent;
     end;
   end;
 
 DESTRUCTOR T_mapTask.destroy;
   begin
-    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    enterCriticalSection(taskCs);
+    clearMapPayload;
+    clearContext;
+    leaveCriticalSection(taskCs);
     inherited destroy;
   end;
 
@@ -629,18 +642,30 @@ DESTRUCTOR T_eachTask.destroy;
   begin
     enterCriticalSection(taskCs);
     dropEachParameter;
+    clearContext;
     leaveCriticalSection(taskCs);
     inherited destroy;
   end;
 
 FUNCTION T_eachTask.canGetResult:boolean;
   begin
+    enterCriticalSection(taskCs);
     result:=context^.state=fts_finished;
+    leaveCriticalSection(taskCs);
   end;
 
 FUNCTION T_mapTask.canGetResult:boolean;
   begin
+    enterCriticalSection(taskCs);
     result:=context^.state=fts_finished;
+    leaveCriticalSection(taskCs);
+  end;
+
+PROCEDURE T_mapTask.clearMapPayload;
+  VAR k:longint;
+  begin
+    for k:=0 to length(mapPayload.mapParameter)-1 do if mapPayload.mapParameter[k]<>nil then disposeLiteral(mapPayload.mapParameter[k]);
+    setLength(mapPayload.mapParameter,0);
   end;
 
 CONSTRUCTOR T_futureLiteral.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);

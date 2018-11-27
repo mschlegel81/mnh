@@ -99,9 +99,9 @@ private memoized serve_('download',...)->begin
   print('Updating data - old: ',typeOf(names));
   local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
   local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
-  local namesMap :=getData('https://oeis.org/names.gz').filter({$x.matches('^A\d{6} ')}).pMap(idAndRest  ).toMap;
+  local namesMap :=getData('https://oeis.org/names.gz').pEach(line,line.matches('^A\d{6} ') ? idAndRest(line) : void).toMap;
   print('Names file parsed - ',namesMap.size,' entries');
-  local seriesMap:=getData('https://oeis.org/stripped.gz').filter({$x.matches('^A\d{6} ')}).pMap(idAndSeries).toMap;
+  local seriesMap:=getData('https://oeis.org/stripped.gz').pEach(line,line.matches('^A\d{6} ') ? idAndSeries(line) : void).toMap;
   print('Series file parsed - ',seriesMap.size,' entries');
   local maxSeries:=max(namesMap.getInner(0).max,seriesMap.getInner(0).max);
   print('Updating names list of ',maxSeries,' relevant entries');
