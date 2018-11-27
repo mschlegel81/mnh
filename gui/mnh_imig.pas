@@ -157,7 +157,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
     begin
       if outputMethod<>nil then begin
         sLit:=newStringLiteral(s);
-        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,sLit).literal;
+        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
         disposeLiteral(sLit);
         if outputLit<>nil then disposeLiteral(outputLit);
       end else context.messages^.postTextMessage(mt_el1_note,tokenLocation,s);
