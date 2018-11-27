@@ -239,6 +239,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       enableDynamicItems;
       firstShow:=false;
       UpdateTimeTimer.enabled:=true;
+      {$ifdef LINUX}
+      miIncFontSize.ShortCut:=scCtrl+187;
+      {$endif}
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - end of initialization block'); {$endif}
     end;
     if hasEditor then getEditor^.activate;
