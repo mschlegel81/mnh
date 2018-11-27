@@ -57,7 +57,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
   begin
-    if APP_STYLE<>APP_STYLE_BLANK then prepareDoc;
+    {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} prepareDoc;
   end;
 
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -110,10 +110,10 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
     Label2.caption:='build '+intToStr(BUILD_NUMBER)+' ['+CODE_HASH+']';
-    buttonInitNormal  .enabled:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitNormal  .visible:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitPortable.enabled:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitPortable.visible:=APP_STYLE=APP_STYLE_BLANK;
+    buttonInitNormal  .enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitNormal  .visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitPortable.enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitPortable.visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
   end;
 
 FINALIZATION
