@@ -328,8 +328,7 @@ PROCEDURE T_messagesRedirector.clear(CONST clearAllAdapters: boolean);
     leaveCriticalSection(messagesCs);
   end;
 
-FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType
-  ): boolean;
+FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType): boolean;
   begin
     result:=true;
   end;
@@ -381,11 +380,22 @@ PROCEDURE T_messagesDistributor.updateCollecting;
 CONSTRUCTOR T_messagesDistributor.createDistributor();
   begin
     inherited create;
+    enterCriticalSection(globalAdaptersCs);
+    setLength(allConnectors,length(allConnectors)+1);
+    allConnectors[length(allConnectors)-1]:=@self;
+    leaveCriticalSection(globalAdaptersCs);
   end;
 
 DESTRUCTOR T_messagesDistributor.destroy;
-  VAR k:longint;
+  VAR k:longint=0;
   begin
+    enterCriticalSection(globalAdaptersCs);
+    while (k<length(allConnectors)) and (allConnectors[k]<>@self) do inc(k);
+    if k<length(allConnectors) then begin
+      allConnectors[k]:=allConnectors[length(allConnectors)-1];
+      setLength(allConnectors,length(allConnectors)-1);
+    end;
+    leaveCriticalSection(globalAdaptersCs);
     enterCriticalSection(messagesCs);
     for k:=0 to length(adapters)-1 do if adapters[k].doDispose then dispose(adapters[k].adapter,destroy);
     setLength(adapters,0);
