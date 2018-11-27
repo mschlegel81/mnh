@@ -68,12 +68,12 @@ private copyToWeb->begin
     //!~<!--GEN0-->
 Die Aktuelle Version ist Build Nr. %{$0}s
 <table>
-<tr><td><a href="mnh5_%{$0}s_Linux.zip"         target="_blank">Linux                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_linux.zip'))}32.32x</td></tr>
-<tr><td><a href="mnh5_%{$0}s_Win32.zip"         target="_blank">Win32                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_win32.zip'))}32.32x</td></tr>
-<tr><td><a href="mnh5_%{$0}s_Win32_openSsl.zip" target="_blank">Win32 mit SSL-Libraries</a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_win32_openSsl.zip'))}32.32x</td></tr>
-<tr><td><a href="mnh5_%{$0}s_Win64.zip"         target="_blank">Win64                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_win64.zip'))}32.32x</td></tr>
-<tr><td><a href="mnh5_%{$0}s_Win64_openSsl.zip" target="_blank">Win64 mit SSL-Libraries</a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_win64_openSsl.zip'))}32.32x</td></tr>
-<tr><td><a href="mnh5_%{$0}s_code.zip"          target="_blank">Quelltext              </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\versions\mnh5_'&$0&'_code.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_Linux.zip"         target="_blank">Linux                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_linux.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_Win32.zip"         target="_blank">Win32                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_win32.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_Win32_openSsl.zip" target="_blank">Win32 mit SSL-Libraries</a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_win32_openSsl.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_Win64.zip"         target="_blank">Win64                  </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_win64.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_Win64_openSsl.zip" target="_blank">Win64 mit SSL-Libraries</a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_win64_openSsl.zip'))}32.32x</td></tr>
+<tr><td><a href="mnh5_%{$0}s_code.zip"          target="_blank">Quelltext              </a></td><td>MD5: %{md5(fileContents(DEV_ROOT&'\mnh5\target\mnh5_'&$0&'_code.zip'))}32.32x</td></tr>
 </table>
 <!--GEN1-->~.format(maxLoggedBuildNumber)));
   EDITOR_CALL.execAsync([WEB_PAGE_FOLDER&'downloads.html']);
@@ -123,3 +123,5 @@ main->begin
     end;
   ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;
+
+
