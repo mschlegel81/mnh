@@ -521,7 +521,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if hasEditor then getEditor^.activate;
   end;
 
-PROCEDURE TMnhForm.miAboutClick(Sender: TObject); begin splashForm.ShowModal; end;
+PROCEDURE TMnhForm.miAboutClick(Sender: TObject); begin splashForm.showAbout; end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); end;
 

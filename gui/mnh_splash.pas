@@ -28,26 +28,23 @@ TYPE
     PROCEDURE FormActivate(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE prepareDoc;
   private
+    startupCall:boolean;
+    PROCEDURE prepareDoc;
   public
+    PROCEDURE showAbout;
   end;
 
-FUNCTION splashForm:TSplashForm;
+VAR splashForm:TSplashForm;
 PROCEDURE splashOnStartup;
 IMPLEMENTATION
-VAR mySplashForm: TSplashForm=nil;
-FUNCTION splashForm:TSplashForm;
-  begin
-    if not(Assigned(mySplashForm)) then mySplashForm:=TSplashForm.create(nil);
-    result:=mySplashForm;
-  end;
-
 {$R *.lfm}
 
 PROCEDURE splashOnStartup;
   begin
-    if settings.doShowSplashScreen then splashForm.ShowModal;
+    splashForm:=TSplashForm.create(nil);
+    splashForm.startupCall:=true;
+    splashForm.ShowModal;
   end;
 
 PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
@@ -58,6 +55,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
   begin
     {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} prepareDoc;
+    if startupCall and not(settings.doShowSplashScreen) then close;
   end;
 
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -80,6 +78,12 @@ PROCEDURE TSplashForm.prepareDoc;
     ensureDemosAndPackages(Application,ProgressBar);
     makeHtmlFromTemplate(Application,ProgressBar);
     ProgressBar.visible:=false;
+  end;
+
+PROCEDURE TSplashForm.showAbout;
+  begin
+    startupCall:=false;
+    ShowModal;
   end;
 
 PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
@@ -117,7 +121,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
   end;
 
 FINALIZATION
-  if Assigned(mySplashForm) then FreeAndNil(mySplashForm);
+  if Assigned(splashForm) then FreeAndNil(splashForm);
 
 end.
 
