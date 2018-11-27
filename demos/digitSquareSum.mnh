@@ -1,9 +1,20 @@
-@demo_for=memoization
-memoized
-private sumsTo89(89)->true;
-private sumsTo89(1)->false;
-private sumsTo89(x)->x.digits.sqr.agg(+).sumsTo89;
+@demo_for=list processing
+count89(x0:IntList)->begin
+  local result:=0;
+  local x:=x0.digits.sqr        //vectorized: digits.sqr
+             .pMap({$L.agg(+)}) //parallelized aggregation per sub-list
+             .elementFrequency; //group to reduce working set size
+  while(x.size>0,begin
+    result+=x[89] orElse 0;
+    x[89]:=void;
+    x[ 1]:=void;
+    x:=x.pMap({[$x[0].digits.sqr.agg(+),$x[1]]})
+        .group(0)
+        .pMap({[$g[0,0],$g.getInner(1).agg(+)]})
+        .toMap;
+  end);
+  result;
+end;
 
-private count89->[100000..1].map(::sumsTo89).trueCount;
 //*See http://rosettacode.org/wiki/Iterated_digits_squaring
-main->print(count89);
+main->count89([1..100000]).print;
