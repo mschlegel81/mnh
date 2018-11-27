@@ -117,7 +117,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
     result:=inherited evaluate(location,context,recycler);
     if config_items<>nil then begin
       oldItems:=state_items;
-      tmp:=config_items^.evaluateToLiteral(location,@context,@recycler).literal;
+      tmp:=config_items^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
       if (tmp<>nil) then begin
         if tmp^.literalType in [lt_stringList,lt_emptyList]
         then state_items:=P_listLiteral(tmp)^

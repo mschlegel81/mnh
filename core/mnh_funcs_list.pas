@@ -43,7 +43,7 @@ begin
      iterator:=P_expressionLiteral(arg0);
      result:=newListLiteral(int1^.intValue);
      for i:=1 to int1^.intValue do begin
-       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler).literal;
+       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
        if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
        then break
        else listResult^.append(valueToAppend,false);

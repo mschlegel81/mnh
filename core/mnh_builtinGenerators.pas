@@ -278,9 +278,9 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
   begin
     result:=NIL_EVAL_RESULT;
     repeat
-      nextUnfiltered:=sourceGenerator^.evaluateToLiteral(location,context,recycler);
+      nextUnfiltered:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil);
       if (nextUnfiltered.literal<>nil) and (nextUnfiltered.literal^.literalType<>lt_void) then begin
-        if filterExpression^.evaluateToBoolean(location,context,recycler,true,nextUnfiltered.literal)
+        if filterExpression^.evaluateToBoolean(location,context,recycler,true,nextUnfiltered.literal,nil)
         then exit          (nextUnfiltered)
         else disposeLiteral(nextUnfiltered.literal);
       end else begin
@@ -310,7 +310,7 @@ FUNCTION filter_imp intFuncSignature;
         lt_map:begin
           result:=newMapLiteral;
           iter:=map0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x) then
+          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x,nil) then
             mapResult^.put(P_listLiteral(x)^.value[0],P_listLiteral(x)^.value[1],true);
           disposeLiteral(iter);
         end;
@@ -318,7 +318,7 @@ FUNCTION filter_imp intFuncSignature;
         lt_set ..lt_stringSet: begin
           result:=collection0^.newOfSameType(false);
           iter:=collection0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x) then
+          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x,nil) then
             collResult^.append(x,true);
           disposeLiteral(iter);
         end;
@@ -391,10 +391,10 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
   begin
     result:=NIL_EVAL_RESULT;
     repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler).literal;
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-        if isNullary then result:=mapExpression^.evaluateToLiteral(location,context,recycler)
-                     else result:=mapExpression^.evaluateToLiteral(location,context,recycler,nextUnmapped);
+        if isNullary then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
+                     else result:=mapExpression^.evaluateToLiteral(location,context,recycler,nextUnmapped,nil);
         disposeLiteral(nextUnmapped);
         //error handling
         if result.literal=nil then begin result.literal:=newVoidLiteral; result.triggeredByReturn:=false; exit(result); end;
@@ -757,7 +757,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location:T_tokenLocation; CONS
     result.triggeredByReturn:=false;
     result.literal:=nil;
     if (parameters=nil) or (parameters^.size=0) then begin
-      result:=evaluateToLiteral(location,context,recycler);
+      result:=evaluateToLiteral(location,context,recycler,nil,nil);
     end else if (parameters<>nil) and (parameters^.size=1) and (parameters^.value[0]^.literalType in [lt_smallint,lt_bigint]) then begin
       range.destroy;
       if parameters^.value[0]^.literalType=lt_smallint

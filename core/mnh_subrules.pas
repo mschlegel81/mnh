@@ -36,8 +36,8 @@ TYPE
     private
       FUNCTION getParameterNames:P_listLiteral; virtual; abstract;
     public
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
@@ -976,18 +976,20 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(NIL_EVAL_RESULT);
     {$ifdef fullVersion} P_context(context)^.callStackPush(location,@self,nil); {$endif}
-    result:=evaluateToLiteral(location,P_context(context),recycler);
+    result:=evaluateToLiteral(location,P_context(context),recycler,nil,nil);
     {$ifdef fullVersion} P_context(context)^.callStackPop(nil); {$endif}
   end;
 
 FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
-    parameterList.create(2);
-    if a<>nil then parameterList.append(a,true);
-    if b<>nil then parameterList.append(b,true);
-    result:=evaluate(location,context,recycler,@parameterList);
-    parameterList.destroy;
+    if (a<>nil) or (b<>nil) then begin
+      parameterList.create(2);
+      if a<>nil then parameterList.append(a,true);
+      if b<>nil then parameterList.append(b,true);
+      result:=evaluate(location,context,recycler,@parameterList);
+      parameterList.destroy;
+    end else result:=evaluate(location,context,recycler,nil);
   end;
 
 FUNCTION T_subruleExpression.getInlineValue: P_literal;
