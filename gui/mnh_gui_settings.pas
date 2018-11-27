@@ -102,7 +102,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     AntialiasCheckbox.checked := settings.antialiasedFonts;
     setFontSize(settings.fontSize);
     setOutputLimit(settings.outputLinesLimit);
-    if not(settings.loaded) then ensureDemosAndPackages;
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
@@ -160,7 +159,7 @@ PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
   begin
-    ensureDemosAndPackages(true);
+    ensureDemosAndPackages(nil,nil,true);
   end;
 
 PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
@@ -255,7 +254,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     end;
     saveSettings;
     saveWorkspace;
-    ensureDemosAndPackages(false);
+    ensureDemosAndPackages(nil,nil,false);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
   end;
   {$else}begin end;{$endif}

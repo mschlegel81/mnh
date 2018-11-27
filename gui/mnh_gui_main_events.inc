@@ -649,7 +649,7 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
-    makeHtmlFromTemplate();
+    makeHtmlFromTemplate(nil,nil);
     OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
   end;
 
