@@ -847,7 +847,7 @@ FUNCTION formatTabs_impl intFuncSignature;
       setLength(arr,0);
     end;
   end;
-
+{$WARN 5024 OFF}
 {$define LENGTH_MACRO:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   FUNCTION innerRec(l:P_literal):P_literal;
     VAR iter:T_arrayOfLiteral;
