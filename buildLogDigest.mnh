@@ -12,6 +12,7 @@ ignoredPatterns:=['3rd_party',
                   '/core/mnh_func_defines\.inc.*\(5024\)',
                   '/core/mnh_operators.*\(5059\)',
                   '/core/mnh_funcs_files.*\(6018\)',
+                  'dev/art\.source',
                   '/core/listProcessing.*\(5089\).*"nextToEnqueue"'
                   ];
 
