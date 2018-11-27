@@ -33,6 +33,7 @@ FUNCTION sendParametersToOtherInstance(CONST parameters:T_arrayOfString):boolean
       result:=true;
       if length(parameters)>0 then begin
         client.active:=true;
+        {$WARN 5092 OFF}
         for i:=0 to length(parameters)-1 do parameters[i]:=expandFileName(parameters[i]);
         client.SendStringMessage(join(parameters,C_lineBreakChar));
       end;

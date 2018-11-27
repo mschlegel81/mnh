@@ -488,15 +488,9 @@
         <IsPartOfProject Value="True"/>
       </Unit84>
       <Unit85>
-        <Filename Value="..\core\mnh_func_defines.inc"/>
+        <Filename Value="ipcModel.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit85>
-      <Unit86>
-        <Filename Value="mnh_imig_form.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="DisplayImageForm"/>
-        <ResourceBaseClass Value="Form"/>
-      </Unit86>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

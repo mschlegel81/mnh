@@ -1157,7 +1157,7 @@ object SplashForm: TSplashForm
       Top = 325
       Width = 762
       Align = alBottom
-      Caption = 'Show this annoying screen every time you start mnh'
+      Caption = 'Stay open on startup'
       Checked = True
       OnChange = CheckBox1Change
       State = cbChecked
