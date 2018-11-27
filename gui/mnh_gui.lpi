@@ -120,7 +120,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="85">
+    <Units Count="86">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -519,6 +519,10 @@
         <Filename Value="..\core\rules.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit84>
+      <Unit85>
+        <Filename Value="ipcModel.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit85>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

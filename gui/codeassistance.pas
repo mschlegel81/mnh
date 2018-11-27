@@ -82,6 +82,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
     globals^.afterEvaluation(recycler);
     if givenGlobals=nil then begin
       dispose(globals,destroy);
+      {$WARN 5089 OFF}
       adapters.destroy;
     end;
   end;
@@ -392,6 +393,7 @@ PROCEDURE finalizeCodeAssistance;
   end;
 
 INITIALIZATION
+  initialize(codeAssistanceCs);
   initCriticalSection(codeAssistanceCs);
 FINALIZATION
   if not(isFinalized) then finalizeCodeAssistance;

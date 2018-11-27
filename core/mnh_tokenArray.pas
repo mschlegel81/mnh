@@ -343,6 +343,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
       else exit(false);
     end;
+    {$WARN 5092 OFF}
     case token^.tokType of
       tt_each,tt_parallelEach: newName:=C_tokenInfo[token^.tokType].defaultId+'('+newName+',';
       else newName:=replaceOne(token^.singleTokenToString,oldName,newName);

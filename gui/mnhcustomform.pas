@@ -124,6 +124,7 @@ FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
 OPERATOR:=(x:T_listLiteral):T_arrayOfString;
   VAR i:longint;
   begin
+    {$WARN 5058 OFF}
     setLength(result,x.size);
     for i:=0 to length(result)-1 do begin
       if x.value[i]^.literalType=lt_string

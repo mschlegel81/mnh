@@ -477,6 +477,7 @@ PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansist
     end;
     requestedContextType:=contextType;
     setLength(mainParameters,0);
+    {$WARN 5092 OFF}
     params:=trim(params);
     while params<>'' do begin
       sp:=pos(' ',params);
