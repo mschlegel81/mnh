@@ -25,6 +25,7 @@ TYPE
     PROCEDURE buttonInitNormalClick(Sender: TObject);
     PROCEDURE buttonInitPortableClick(Sender: TObject);
     PROCEDURE CheckBox1Change(Sender: TObject);
+    PROCEDURE FormActivate(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE prepareDoc;
@@ -54,6 +55,11 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
     settings.doShowSplashScreen:=CheckBox1.checked;
   end;
 
+PROCEDURE TSplashForm.FormActivate(Sender: TObject);
+  begin
+    {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} prepareDoc;
+  end;
+
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     {$ifdef Windows}
@@ -71,10 +77,8 @@ PROCEDURE TSplashForm.prepareDoc;
     {$endif}
     ProgressBar.visible:=true;
     ProgressBar.caption:='Initializing';
-    Application.ProcessMessages;
-    ensureDemosAndPackages();
-    Application.ProcessMessages;
-    makeHtmlFromTemplate();
+    ensureDemosAndPackages(Application,ProgressBar);
+    makeHtmlFromTemplate(Application,ProgressBar);
     ProgressBar.visible:=false;
   end;
 
@@ -106,15 +110,10 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
     Label2.caption:='build '+intToStr(BUILD_NUMBER)+' ['+CODE_HASH+']';
-    {$ifdef UNIX}
-    prepareDoc;
-    {$else}
-    buttonInitNormal  .enabled:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitNormal  .visible:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitPortable.enabled:=APP_STYLE=APP_STYLE_BLANK;
-    buttonInitPortable.visible:=APP_STYLE=APP_STYLE_BLANK;
-    if APP_STYLE<>APP_STYLE_BLANK then prepareDoc;
-    {$endif}
+    buttonInitNormal  .enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitNormal  .visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitPortable.enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
+    buttonInitPortable.visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
   end;
 
 FINALIZATION

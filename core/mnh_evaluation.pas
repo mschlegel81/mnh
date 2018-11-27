@@ -11,7 +11,7 @@ USES sysutils,
      {$endif}
      mnh_constants,mnh_basicTypes,
      mnh_litVar,
-     mnh_tokens,
+     tokens,
      mnh_tokenArray,
      tokenStack,
      mnh_messages,
@@ -24,8 +24,8 @@ USES sysutils,
      mnh_funcs_math,
      mnh_funcs_list,
      mnh_funcs_types,
-     mnh_subrules,
-     mnh_rule,
+     subrules,
+     rules,
      mnh_aggregators,
      recyclers,
      listProcessing;
@@ -1254,7 +1254,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;
       childContext:P_context;
@@ -1283,8 +1283,8 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
     end;
   end;
 
-FUNCTION async_imp      intFuncSignature; begin result:=localOrGlobalAsync(false,params,tokenLocation,context,recycler); end;
-FUNCTION localAsync_imp intFuncSignature; begin result:=localOrGlobalAsync(true ,params,tokenLocation,context,recycler); end;
+FUNCTION async_imp      intFuncSignature; begin result:=localOrGlobalAsync(false,params,tokenLocation,context); end;
+FUNCTION localAsync_imp intFuncSignature; begin result:=localOrGlobalAsync(true ,params,tokenLocation,context); end;
 
 FUNCTION future_imp intFuncSignature;
   VAR future:P_futureLiteral;

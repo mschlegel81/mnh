@@ -8,7 +8,7 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
      mnh_funcs_mnh,
      mnh_contexts,
-     mnh_packages,
+     packages,
      recyclers,
      mnh_evaluation;
 
@@ -201,7 +201,7 @@ CONST DEF_VERBOSITY_STRING='';
           end;
           {$ifdef fullVersion} {$ifdef debugMode}
           if (param='-doc') then begin
-            makeHtmlFromTemplate();
+            makeHtmlFromTemplate(nil,nil);
             writeln(expandFileName(getHtmlRoot+'/index.html'));
             halt(0);
           end;

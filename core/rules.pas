@@ -1,4 +1,4 @@
-UNIT mnh_rule;
+UNIT rules;
 INTERFACE
 USES sysutils,math,
      myGenerics, myStringUtil,
@@ -6,13 +6,13 @@ USES sysutils,math,
      mnh_out_adapters,
      mnh_litVar, valueStore,
      mnh_funcs,
-     mnh_tokens,
+     tokens,
      mnh_tokenArray,
      mnh_messages,
      mnh_contexts,
-     mnh_patterns,
+     patterns,
      recyclers,
-     mnh_datastores, mnh_caches, mnh_subrules,mnh_operators;
+     mnh_datastores, mnh_caches, subrules,mnh_operators;
 TYPE
   T_subruleArray=array of P_subruleExpression;
 

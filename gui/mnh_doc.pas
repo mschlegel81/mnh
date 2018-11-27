@@ -6,6 +6,7 @@ USES sysutils,base64,
      mnh_messages,
      mnh_settings,
      mnh_basicTypes, mnh_constants,recyclers,
+     Forms,ComCtrls,
      mnh_litVar, mnh_html;
 TYPE
   T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
@@ -24,13 +25,12 @@ TYPE
     PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
   end;
 
-PROCEDURE makeHtmlFromTemplate();
+PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
-PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
-PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
+PROCEDURE ensureDemosAndPackages(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
 FUNCTION isRestorable(CONST fileName:string):longint;
 PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
@@ -38,18 +38,29 @@ IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
 
 {$i res_defaultFiles.inc}
-PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
+PROCEDURE ensureDemosAndPackages(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
   VAR i:longint;
       baseDir:string;
       fileName:string;
       fileContent:string;
   begin
+    if bar<>nil then begin
+      bar.caption:='Creating packages and demos';
+      bar.position:=0;
+      bar.max:=length(DEFAULT_FILES);
+      Application.ProcessMessages;
+    end;
     baseDir:=configDir;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
       fileName:=baseDir+DEFAULT_FILES[i,0];
       if not(fileExists(fileName)) or overwriteExisting then begin
         fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[i,1]));
         writeFile(fileName,fileContent);
+      end;
+      if bar<>nil then begin
+        bar.position:=i+1;
+        bar.max:=length(DEFAULT_FILES);
+        Application.ProcessMessages;
       end;
     end;
   end;
@@ -104,7 +115,7 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
     if replaceQualified and replaceUnqualified then dispose(outdatedDoc,destroy);
   end;
 
-PROCEDURE ensureBuiltinDocExamples;
+PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
   {$include res_examples.inc}
   VAR code:T_arrayOfString;
       i:longint;
@@ -216,6 +227,12 @@ PROCEDURE ensureBuiltinDocExamples;
 
   begin
     if functionDocExamplesReady then exit;
+    if bar<>nil then begin
+      bar.caption:='Executing example code for help/doc';
+      bar.max:=length(examples_txt);
+      bar.position:=0;
+      Application.ProcessMessages;
+    end;
     recycler.initRecycler;
     keys:=functionDocMap.keySet;
     setLength(allDocs,0);
@@ -227,9 +244,14 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(examplesToStore,0);
       //Read examples:---------------------------------------------------------------------
       setLength(code,0);
-      for i:=0 to length(examples_txt)-1 do
-      if trim(examples_txt[i])='' then processExample
-                                  else append(code,examples_txt[i]);
+      for i:=0 to length(examples_txt)-1 do begin
+        if trim(examples_txt[i])='' then processExample
+                                    else append(code,examples_txt[i]);
+        if bar<>nil then begin
+          bar.position:=i+1;
+          Application.ProcessMessages;
+        end;
+      end;
       processExample;
       //---------------------------------------------------------------------:Read examples
       storeExamples;
@@ -314,7 +336,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST html,txt:T_arrayOfSt
     append(htmlExample,html);
   end;
 
-PROCEDURE makeHtmlFromTemplate();
+PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
@@ -332,7 +354,7 @@ PROCEDURE makeHtmlFromTemplate();
         n: T_namespace;
         swapTmp: P_intrinsicFunctionDocumentation;
     begin
-      ensureBuiltinDocExamples;
+      ensureBuiltinDocExamples(Application,bar);
       //Prepare and sort data:-------------------------------------------------------------
       for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
       ids:=functionDocMap.keySet;
@@ -474,6 +496,12 @@ PROCEDURE makeHtmlFromTemplate();
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
+    if bar<>nil then begin
+      bar.caption:='Creating html documentation';
+      bar.max:=length(html_template_txt);
+      bar.position:=0;
+      Application.ProcessMessages;
+    end;
     for templateLine in html_template_txt do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
@@ -481,8 +509,13 @@ PROCEDURE makeHtmlFromTemplate();
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
       inc(templateLineCount);
-      settings.htmlDocGeneratedForCodeHash:=CODE_HASH;
+      if bar<>nil then begin
+        bar.max:=length(html_template_txt);
+        bar.position:=templateLineCount;
+        Application.ProcessMessages;
+      end;
     end;
+    settings.htmlDocGeneratedForCodeHash:=CODE_HASH;
     with outFile do if isOpen then close(handle);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
   end;

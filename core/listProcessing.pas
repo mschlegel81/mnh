@@ -5,7 +5,7 @@ USES sysutils,
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_settings,
-     mnh_litVar,mnh_subrules,
+     mnh_litVar,subrules,
      recyclers,
      mnh_aggregators,mnh_contexts;
 CONST FUTURE_RECYCLER_MAX_SIZE=16;

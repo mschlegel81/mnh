@@ -12,6 +12,7 @@ object SplashForm: TSplashForm
   DefaultMonitor = dmPrimary
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
+  OnActivate = FormActivate
   OnClose = FormClose
   OnShow = FormShow
   Position = poScreenCenter
@@ -1202,7 +1203,7 @@ object SplashForm: TSplashForm
       Top = 430
       Width = 762
       Align = alBottom
-      Style = pbstMarquee
+      Step = 1
       TabOrder = 3
       Visible = False
       BarShowText = True

@@ -1,4 +1,4 @@
-UNIT mnh_packages;
+UNIT packages;
 INTERFACE
 USES //basic classes
      sysutils,typinfo, FileUtil, Classes,
@@ -10,7 +10,7 @@ USES //basic classes
      mnh_messages,
      mnh_out_adapters,
      mnh_caches,
-     mnh_tokens, mnh_contexts,
+     tokens, mnh_contexts,
      mnh_profiling,
      {$ifdef fullVersion}
        mnh_doc,
@@ -30,9 +30,9 @@ USES //basic classes
      mnh_funcs_format,
      mnh_funcs_regex, mnh_funcs_xml, mnh_funcs_ipc, mnh_funcs_server,
      mnh_builtinGenerators,
-     mnh_patterns,
-     mnh_subrules,
-     mnh_rule,
+     patterns,
+     subrules,
+     rules,
      recyclers,
      mnh_tokenArray;
 

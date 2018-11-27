@@ -1,4 +1,4 @@
-UNIT mnh_subrules;
+UNIT subrules;
 INTERFACE
 USES //basic classes
      sysutils,
@@ -8,7 +8,7 @@ USES //basic classes
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_tokens,
+     tokens,
      mnh_contexts,
      mnh_tokenArray,
      valueStore,
@@ -20,7 +20,7 @@ USES //basic classes
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
      mnh_messages,
-     mnh_patterns;
+     patterns;
 TYPE
   T_subruleAttribute=record
     key,value:string;

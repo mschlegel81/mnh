@@ -4,36 +4,45 @@ ignoredCodes:=[1002,1008,1021,1022,1023,
                4056,4035,4055,
                5036,5044,
                9015,9022];
+alwaysIgnoredCodes:=[1023,1022,1021,1008,3104,9022,9015,1002];
+
 ignoredPatterns:=['3rd_party',
                   '/gui/.*\(5024\)',
-                  '/core/.*\(5024\).*"(location|context|tokenLocation)"',
                   '/core/mnh_litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
                   '/core/mnh_func_defines\.inc.*\(5024\)',
-                  '/core/mnh_builtinGenerators\.pas.*\(5024\).*"[a|b]"',
-                  '/core/mnh_builtinGenerators\.pas.*\(5024\).*"lengthLimit"'
+                  '/core/mnh_operators.*\(5059\)',
+                  '/core/mnh_funcs_files.*\(6018\)',
+                  '/core/listProcessing.*\(5089\).*"nextToEnqueue"'
                   ];
 
-private currentViolations->'build.log'.fileLines
-  .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
-  .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory.replace('/','\')],'').replace('\','/'))
-  .pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line)
-  .pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
-  .filter({$line.size=2})
-  .elementFrequency
-  .pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]).trim)});
+splitMessage(message:String)->begin
+  local errorCode:=message.matchComposite('\(....\)').trailing[0];
+  local fileLine :=message.matchComposite('\(\d*,\d*\)').trailing[0];
+  errorCode.isVoid OR fileLine.isVoid ? return void : void;
+  local parts:=message.split([fileLine,errorCode]);
+  local numericLine:=fileLine.unbrace.split(",").softCast;
+  [parts[0],//filename
+   "\v(",numericLine[0],"\v,\v",numericLine[1],"\v)\t",
+   parts[1],//message type
+   "\t",errorCode,"\t"]|parts.tail(2);
+end;
 
-private datastore storedViolations:=[];
+private currentViolations(doFilter:Boolean)->'build.log'.fileLines
+  .pEach(line,line.matches('\('&(doFilter ? ignoredCodes : alwaysIgnoredCodes)&'\)').agg(OR) ? void : line)
+  .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory.replace('/','\')],'').replace('\','/'))
+  .{doFilter ? $L.pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line) : $L}
+  .map(::splitMessage)
+  .elementFrequency
+  .map({$x[1]|"\vx\t"|$x[0]})
+  .sort(6).sort(4).sort(2)
+  .map(::join);
 
 //*Check for new violations
-main->currentViolations.minus(storedViolations)
-  .sort(2)
-  .sort(3)
-  .map({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
-  .join("\n")
-  .print;
+main->currentViolations(true)
+  .{$violations.size=0 ? print("No violations found after filtering") : $violations.join("\n").print}
+  orElse print('For all warnings use ',myPath.extractFileName,' unfiltered');
 
-//*Store current violations to be ignored in the next run
-main('store')->storedViolations:=currentViolations;
+main('unfiltered')->printf("%s",currentViolations(false));
 
 private existing(f:String)->fileExists(f) ? f : void;
 

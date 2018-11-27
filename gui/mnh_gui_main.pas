@@ -37,7 +37,7 @@ USES
   mnh_debugging,
   mnh_contexts,
   recyclers,
-  mnh_packages,
+  packages,
   mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,

@@ -9,8 +9,8 @@ USES sysutils,Classes,
      mnh_litVar,
      mnh_funcs,mnh_contexts,
      mnh_tokenArray,
-     mnh_subrules,
-     mnh_packages,mnh_doc,
+     subrules,
+     packages,mnh_doc,
      mnh_cmdLineInterpretation,
      recyclers,
      mnh_debuggingVar;
@@ -155,7 +155,7 @@ OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
   begin
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDemosAndPackages;
+    if not(fileExists(result)) then ensureDemosAndPackages(nil,nil);
   end;
 {$WARN 5024 OFF}
 FUNCTION main(p:pointer):ptrint;

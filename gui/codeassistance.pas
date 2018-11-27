@@ -14,7 +14,7 @@ USES
   mnh_out_adapters,
   mnh_contexts,
   recyclers,
-  mnh_packages;
+  packages;
 TYPE
   T_highlightingData=object
     warnLocations:array of record line,column:longint; isError:boolean; end;

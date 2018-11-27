@@ -857,6 +857,7 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  initialize(globalAdaptersCs);
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);
 FINALIZATION
