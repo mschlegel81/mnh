@@ -137,7 +137,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,@context.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
         if result<>nil then disposeLiteral(result);

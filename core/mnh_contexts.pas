@@ -344,7 +344,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
 
     primaryContext.setThreadOptions(globalOptions);
     disposeScope(primaryContext.valueScope);
-    primaryContext.valueScope:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+    primaryContext.valueScope:=nil;
     primaryContext.messages^.clear();
     with primaryContext.related do begin
       evaluation:=@self;

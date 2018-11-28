@@ -323,6 +323,16 @@ FUNCTION T_messagesRedirector.continueEvaluation: boolean;
     result:=(flags=[]) and ((messageReceiver=nil) or messageReceiver^.continueEvaluation);
   end;
 
+FUNCTION T_messagesErrorHolder.continueEvaluation: boolean;
+  begin
+    result:=(flags=[]) and ((parentMessages=nil) or (parentMessages^.continueEvaluation));
+  end;
+
+FUNCTION T_messages.continueEvaluation: boolean;
+  begin
+    result:=flags=[];
+  end;
+
 PROCEDURE T_messagesRedirector.clear(CONST clearAllAdapters: boolean);
   begin
     enterCriticalSection(messagesCs);
@@ -548,11 +558,6 @@ DESTRUCTOR T_messagesErrorHolder.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_messagesErrorHolder.continueEvaluation: boolean;
-  begin
-    result:=(flags=[]) and ((parentMessages=nil) or (parentMessages^.continueEvaluation));
-  end;
-
 PROCEDURE T_messagesErrorHolder.clear(CONST clearAllAdapters: boolean);
   begin
     inherited clear;
@@ -601,11 +606,6 @@ PROCEDURE T_messages.clearFlags;
     enterCriticalSection(messagesCs);
     flags:=[];
     leaveCriticalSection(messagesCs);
-  end;
-
-FUNCTION T_messages.continueEvaluation: boolean;
-  begin
-    result:=flags=[];
   end;
 
 PROCEDURE T_messages.setUserDefinedExitCode(CONST code: longint);

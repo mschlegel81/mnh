@@ -353,7 +353,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       temporaryReceiver:=newServer();
       sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
       repeat
-        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,@context.messages);
+        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages);
         if not(fetchedResult) then begin
           inc(aliveCheckCounter);
           if (aliveCheckCounter>100) then begin

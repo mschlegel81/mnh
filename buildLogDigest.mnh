@@ -23,7 +23,7 @@ splitMessage(message:String)->begin
   local parts:=message.split([fileLine,errorCode]);
   local numericLine:=fileLine.unbrace.split(",").softCast;
   [parts[0],//filename
-   "\v(",numericLine[0],"\v,\v",numericLine[1],"\v)\t",
+   "(",numericLine[0],",",numericLine[1],")\t",
    parts[1],//message type
    "\t",errorCode,"\t"]|parts.tail(2);
 end;
