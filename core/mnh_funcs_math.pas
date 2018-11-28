@@ -651,7 +651,7 @@ FUNCTION primes_impl intFuncSignature;
       for i:=2 to length(isPrime)-1 do
         isPrime[i]:=true;
       p:=2;
-      while (p*p<length(isPrime)) and context.messages^.continueEvaluation do begin
+      while (p*p<length(isPrime)) do begin
         i:=p*p;
         while i<length(isPrime) do begin
           isPrime[i]:=false;

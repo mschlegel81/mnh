@@ -1173,7 +1173,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
-    if isMain then globals.primaryContext.messages^.clear;
     clear(false);
     readyForUsecase:=lu_beingLoaded;
 
