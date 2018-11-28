@@ -14,6 +14,7 @@ LudicSieve->begin
 end;
 
 //Alternative Form: a generator
+@SuppressUnusedWarning
 ludicGenerator->
  {begin
     local L:=[];
