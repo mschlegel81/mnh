@@ -253,7 +253,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
               else if scopeLevel<>1 then context.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
               else begin
                 indexOfSave:=i;
-                makeStateful(@context.messages,token.location);
+                makeStateful(@context,token.location);
               end;
             end;
             parIdx:=-1;
@@ -380,7 +380,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
           tt_save: if subExpressionLevel=0 then begin
             if indexOfSave>=0 then context.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
             if scopeLevel<>1 then context.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-            makeStateful(@context.messages,token.location);
+            makeStateful(@context,token.location);
             indexOfSave:=i;
           end;
         end;
@@ -482,7 +482,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       end;
       currentlyEvaluating:=true;
 
-      if not(functionIdsReady) then resolveIds(@context.messages);
+      if not(functionIdsReady) then resolveIds(context.messages);
       blocking:=typ in C_subruleExpressionTypes;
       firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
       lastRep:=firstRep;
