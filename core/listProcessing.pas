@@ -649,16 +649,12 @@ DESTRUCTOR T_eachTask.destroy;
 
 FUNCTION T_eachTask.canGetResult:boolean;
   begin
-    enterCriticalSection(taskCs);
     result:=context^.state=fts_finished;
-    leaveCriticalSection(taskCs);
   end;
 
 FUNCTION T_mapTask.canGetResult:boolean;
   begin
-    enterCriticalSection(taskCs);
     result:=context^.state=fts_finished;
-    leaveCriticalSection(taskCs);
   end;
 
 PROCEDURE T_mapTask.clearMapPayload;
