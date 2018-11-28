@@ -4,10 +4,7 @@ LudicSieve->begin
   while(!(candidates==[]),begin
     local next:=head(candidates);
     next>candidates.size
-    ? begin
-        L|=candidates;
-        candidates:=[];
-      end
+    ? return L|candidates
     : begin
         candidates:=candidates[[0..candidates.size-1] mod next<>0];
         L|=next;
@@ -15,6 +12,21 @@ LudicSieve->begin
   end);
   L;
 end;
+
+//Alternative Form: a generator
+ludicGenerator->
+ {begin
+    local L:=[];
+    local R:=[];
+    return local curr:=1;
+  save;
+    curr+=1;
+    while(R.each(k,(R[index]-=1)=0 ? begin R[index]:=L[index]; true; end : false,OR),curr+=1);
+    L|=curr;
+    R|=curr;
+    curr;
+  end}.toGenerator;
+
 
 //*See http://rosettacode.org/wiki/Ludic_numbers
 @demo_for=math, list construction

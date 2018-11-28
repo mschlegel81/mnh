@@ -1,40 +1,40 @@
-private randomListElement(L:Set)->L.toList[intRandom(L.size)] orElse [];
+private randomListElement(L:Collection)->L.toList[intRandom(L.size)] orElse [];
 
-private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
-private neighbors(width,height,x,y)->
-  ([x>0        ? [x-1,y] : void,
-    y>0        ? [x,y-1] : void,
-    x<width-1  ? [x+1,y] : void,
-    y<height-1 ? [x,y+1] : void].each(p,p.get(0)+p.get(1)*width));
+//private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
+private memoized neighbors(width,height,x,y)->
+  [x>0        ? [x-1,y] : void,
+   y>0        ? [x,y-1] : void,
+   x<width-1  ? [x+1,y] : void,
+   y<height-1 ? [x,y+1] : void];
 
-private unvisitedNeighbor(width,height,currentIndex,visited)->
-  neighbors(width,height,currentIndex).minus(visited).randomListElement;
+private unvisitedNeighbor(width,height,p:IntList(2),visited)->
+  neighbors(width,height,p[0],p[1]).minus(visited).randomListElement;
 
 private randomUnvisitedCell(width,height,visited)->
-  [0..width*height-1].minus(visited).randomListElement;
+  cross([0..width],[0..height]).minus(visited).randomListElement;
 
 private makeMaze(width,height)->
 begin
   local visited:=[];
-  local position:=randomUnvisitedCell(width,height,visited);
+  local position:=[intRandom(width),intRandom(height)];
 
   while(!(position==[]),begin
-    visited|=position;
+    visited||=position;
     local continue:=true;
     while(continue,begin
       local next:=unvisitedNeighbor(width,height,position,visited);
       next==[] ? continue:=false : begin
         position:=next;
-        visited|=next;
+        visited||=next;
       end;
     end);
     position:=randomUnvisitedCell(width,height,visited);
   end);
 
-  local visitPairs:=[0..size(visited)-2].each(i,sort(visited.get([i,i+1])));
+  local visitPairs:=[0..size(visited)-2].each(i,sort(visited.get([i,i+1]))).toSet;
   [0..height-1].each(j,
-       [0..width-1].each(i,[i+(j-1)*width,i+j*width] in visitPairs ? "+   " : "+---",&)&"+",   //wall [i,j]->[i,j-1];
-       [0..width-1].each(i,[(i-1)+j*width,i+j*width] in visitPairs ? "    " : "|   ",&)&"|")  //wall [i,j]->[i-1,j]
+       [0..width-1].each(i,[[i  ,j-1],[i,j]] in visitPairs ? "+   " : "+---",&)&"+",   //wall [i,j]->[i,j-1];
+       [0..width-1].each(i,[[i-1,j  ],[i,j]] in visitPairs ? "    " : "|   ",&)&"|")  //wall [i,j]->[i-1,j]
      |([0..width-1].each(i,"+---",&)&"+");
 end;
 
