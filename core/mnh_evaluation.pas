@@ -277,7 +277,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         bodyParts:=getBodyParts(first,1,@context,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
-          context.raiseError('Invalid while-construct; Exactly one or two arguments (head, body) are expected.',errorLocation);
+          context.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
           exit(false);
         end;
 
@@ -301,9 +301,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       begin
         if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,recycler) then begin
           if reduceExpression(toReduce,context,recycler)=rr_okWithReturn then begin
-            returnValue.literal:=toReduce^.data;
+            returnValue.literal:=P_literal(toReduce^.data)^.rereferenced;
             returnValue.triggeredByReturn:=true;
-          end else recycler.cascadeDisposeToken(toReduce);
+          end;
+          recycler.cascadeDisposeToken(toReduce);
         end;
       end;
 
