@@ -1,0 +1,11 @@
+#!/usr/bin/mnh -GUI
+main->begin
+  setOptions([['axisStyleX',0],['axisStyleY',0],['autoscaleFactor',0.99]].toMap);
+  plot();
+  addPlot({[sin($t),cos($t)]},0,pi,100,'black polygon fs 0');
+  addPlot([[-0.5,-1],[0.5,0]],'black fs ellipse 0');
+  addPlot([[-0.5, 1],[0.5,0],[0,-1/2]-1/8,[0,-1/2]+1/8],'RGB1,1,1 fs ellipse 0');
+  addPlot([[-1,-1],[1,1]],'black ellipse 2');
+  addPlot([[0,1/2]-1/8,[0,1/2]+1/8],'black fs ellipse 0');
+  display;
+end;
