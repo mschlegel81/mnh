@@ -5,12 +5,12 @@ USES sysutils,
      bigint,
      Classes,FileUtil,LazFileUtils,LazUTF8,
      myGenerics,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
      recyclers,
-     mnh_contexts;
+     contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;

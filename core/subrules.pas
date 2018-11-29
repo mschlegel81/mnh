@@ -5,11 +5,11 @@ USES //basic classes
      //my utilities
      myGenerics,myStringUtil,
      //MNH:
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
      tokens,
-     mnh_contexts,
+     contexts,
      mnh_tokenArray,
      valueStore,
      recyclers,

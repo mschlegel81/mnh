@@ -3,11 +3,11 @@ INTERFACE
 USES
   sysutils,Forms,
   mnh_constants,
-  mnh_basicTypes,
+  basicTypes,
   mnh_funcs,
   mnh_litVar,
   recyclers,
-  mnh_contexts;
+  contexts;
 TYPE
   T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog);
 

@@ -4,7 +4,7 @@ USES sysutils,
      myGenerics,
      //MNH:
      mnh_constants,
-     mnh_basicTypes,
+     basicTypes,
      mnh_litVar,
      tokens,
      mnh_out_adapters,

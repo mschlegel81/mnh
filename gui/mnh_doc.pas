@@ -5,7 +5,7 @@ USES sysutils,base64,
      mnh_fileWrappers,
      mnh_messages,
      mnh_settings,
-     mnh_basicTypes, mnh_constants,recyclers,
+     basicTypes, mnh_constants,recyclers,
      Forms,ComCtrls,
      mnh_litVar, mnh_html;
 TYPE

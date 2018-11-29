@@ -4,11 +4,11 @@ INTERFACE
 USES sysutils,
      myGenerics,
      myStringUtil,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
      recyclers,
-     mnh_contexts,
+     contexts,
      mnh_settings,
      mnh_funcs;
 FUNCTION getMnhInfo:string;

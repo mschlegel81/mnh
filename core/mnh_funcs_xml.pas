@@ -2,12 +2,12 @@ UNIT mnh_funcs_xml;
 INTERFACE
 USES sysutils,XMLRead,dom,Classes,LazUTF8,
      myGenerics,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_litVar,
      mnh_funcs,
      mnh_messages,
      recyclers,
-     mnh_contexts;
+     contexts;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}

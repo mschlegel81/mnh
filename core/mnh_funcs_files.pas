@@ -3,11 +3,11 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
      myGenerics,mySys,myStringUtil,
-     mnh_constants,mnh_basicTypes,mnh_litVar,
+     mnh_constants,basicTypes,mnh_litVar,
      mnh_messages,
      mnh_funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
      recyclers,
-     mnh_contexts,mnh_datastores;
+     contexts,datastores;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 

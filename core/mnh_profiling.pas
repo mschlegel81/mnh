@@ -4,7 +4,7 @@ USES sysutils,
      //my libraries
      myGenerics,myStringUtil,
      //MNH:
-     mnh_basicTypes,
+     basicTypes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar;

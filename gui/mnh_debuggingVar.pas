@@ -2,7 +2,7 @@ UNIT mnh_debuggingVar;
 INTERFACE
 USES sysutils,
      mnh_constants,
-     mnh_basicTypes,
+     basicTypes,
      mnh_litVar,
      treeUtil;
 TYPE

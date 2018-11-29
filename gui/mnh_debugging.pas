@@ -2,7 +2,7 @@ UNIT mnh_debugging;
 INTERFACE
 USES sysutils,
      //MNH:
-     mnh_basicTypes,
+     basicTypes,
      tokens,
      mnh_messages,
      mnh_out_adapters,

@@ -15,7 +15,7 @@ USES  //basic classes
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
   //MNH:
-  mnh_constants, mnh_basicTypes, mnh_fileWrappers,
+  mnh_constants, basicTypes, mnh_fileWrappers,
   mnhCompletion;
 
 TYPE T_language=(LANG_MNH   = 0,

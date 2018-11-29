@@ -5,12 +5,12 @@ USES sysutils,
      {$ifdef fullVersion}
      myGenerics,
      {$endif}
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      recyclers,
      mnh_litVar,
      tokens,
      mnh_messages,
-     mnh_contexts;
+     contexts;
 TYPE
   T_patternElement=object
     private

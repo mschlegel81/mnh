@@ -2,7 +2,7 @@ UNIT recyclers;
 INTERFACE
 USES sysutils,
      myGenerics, myStringUtil,
-     mnh_basicTypes, mnh_constants,
+     basicTypes, mnh_constants,
      mnh_messages,
      mnh_out_adapters,
      valueStore,

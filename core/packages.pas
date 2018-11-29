@@ -5,12 +5,12 @@ USES //basic classes
      //my utilities:
      myGenerics, myStringUtil,
      //MNH:
-     mnh_constants, mnh_basicTypes,
+     mnh_constants, basicTypes,
      mnh_litVar, mnh_fileWrappers,
      mnh_messages,
      mnh_out_adapters,
-     mnh_caches,
-     tokens, mnh_contexts,
+     caches,
+     tokens, contexts,
      mnh_profiling,
      {$ifdef fullVersion}
        mnh_doc,
@@ -29,7 +29,7 @@ USES //basic classes
      mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files,
      mnh_funcs_format,
      mnh_funcs_regex, mnh_funcs_xml, mnh_funcs_ipc, mnh_funcs_server,
-     mnh_builtinGenerators,
+     builtinGenerators,
      patterns,
      subrules,
      rules,

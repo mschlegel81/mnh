@@ -10,7 +10,7 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls,
   ExtCtrls, StdCtrls,
-  mnh_constants, mnh_basicTypes, mnh_contexts,
+  mnh_constants, basicTypes, contexts,
   mnh_messages,
   recyclers,
   mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath,synOutAdapter;

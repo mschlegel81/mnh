@@ -11,7 +11,7 @@ USES
   Classes, SynEdit, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   //MNH
   mnh_constants,
-  mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings,
+  mnh_funcs, cmdLineInterpretation, contexts, mnh_settings,
   mnh_messages, mnh_out_adapters,
   mnh_debugging,
   mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase,synOutAdapter;

@@ -4,7 +4,7 @@ USES sysutils,
      myGenerics,mySys,
      myStringUtil,
      mnh_messages,
-     mnh_constants, mnh_basicTypes;
+     mnh_constants, basicTypes;
 TYPE
   T_adapterType=(at_unknown,
                  at_console,

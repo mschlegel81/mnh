@@ -6,12 +6,12 @@ USES sysutils,math,
      synacode,
      diff,
      myGenerics,myStringUtil,myCrypto,bigint,
-     mnh_basicTypes,
+     basicTypes,
      mnh_constants,
      mnh_messages,
      mnh_out_adapters,
      recyclers,
-     mnh_litVar,mnh_funcs,mnh_contexts;
+     mnh_litVar,mnh_funcs,contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 

@@ -5,13 +5,13 @@ USES sysutils,
      math,
      bigint,
      myGenerics,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_litVar,
      mnh_funcs,
      mnh_messages,
      mnh_out_adapters,
      recyclers,
-     mnh_contexts;
+     contexts;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION

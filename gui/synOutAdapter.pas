@@ -4,7 +4,7 @@ USES
   sysutils, SynEdit, Forms,
   SynEditKeyCmds,
   myStringUtil,
-  mnh_constants,mnh_basicTypes,
+  mnh_constants,basicTypes,
   mnh_messages,
   mnh_settings,
   myGenerics,mnh_out_adapters;

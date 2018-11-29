@@ -2,7 +2,7 @@ UNIT guiOutAdapters;
 INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      mnh_debugging,
-     mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
+     mnh_out_adapters,mnh_constants,mnh_settings,basicTypes,
      mnh_plotForm, mnh_tables,
      mnh_messages,
      mnh_evalThread,

@@ -3,13 +3,13 @@ INTERFACE
 USES sysutils,Classes,
      myGenerics,
      RegExpr,
-     mnh_constants,mnh_basicTypes,
+     mnh_constants,basicTypes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
      recyclers,
-     mnh_contexts;
+     contexts;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}

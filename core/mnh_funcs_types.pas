@@ -4,13 +4,13 @@ INTERFACE
 USES sysutils,
      bigint,
      mnh_constants,
-     mnh_basicTypes,
+     basicTypes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
      recyclers,
-     mnh_contexts;
+     contexts;
 VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
 
 IMPLEMENTATION

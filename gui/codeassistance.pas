@@ -5,14 +5,14 @@ USES
   sysutils,
   SynEdit,
   myGenerics,
-  mnh_basicTypes,
+  basicTypes,
   mnh_constants,
   mnh_fileWrappers,
   mnh_tokenArray,
   tokenStack,
   mnh_messages,
   mnh_out_adapters,
-  mnh_contexts,
+  contexts,
   recyclers,
   packages;
 TYPE

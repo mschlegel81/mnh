@@ -2,17 +2,17 @@ UNIT rules;
 INTERFACE
 USES sysutils,math,
      myGenerics, myStringUtil,
-     mnh_constants,mnh_basicTypes,
+     mnh_constants,basicTypes,
      mnh_out_adapters,
      mnh_litVar, valueStore,
      mnh_funcs,
      tokens,
      mnh_tokenArray,
      mnh_messages,
-     mnh_contexts,
+     contexts,
      patterns,
      recyclers,
-     mnh_datastores, mnh_caches, subrules,mnh_operators;
+     datastores, caches, subrules,mnh_operators;
 TYPE
   T_subruleArray=array of P_subruleExpression;
 

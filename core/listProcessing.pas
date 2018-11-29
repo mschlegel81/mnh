@@ -2,12 +2,12 @@ UNIT listProcessing;
 INTERFACE
 USES sysutils,
      math,
-     mnh_constants, mnh_basicTypes,
+     mnh_constants, basicTypes,
      mnh_out_adapters,
      mnh_settings,
      mnh_litVar,subrules,
      recyclers,
-     mnh_aggregators,mnh_contexts;
+     aggregators,contexts;
 CONST FUTURE_RECYCLER_MAX_SIZE=16;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);

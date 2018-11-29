@@ -2,7 +2,7 @@ UNIT mnh_html;
 INTERFACE
 USES sysutils,
      myStringUtil,
-     mnh_constants,mnh_basicTypes,
+     mnh_constants,basicTypes,
      mnh_litVar,mnh_out_adapters,FileUtil,tokens;
 TYPE
   T_rawTokenizeCallback=FUNCTION(CONST inputString:ansistring):T_rawTokenArray;

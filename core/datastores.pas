@@ -1,12 +1,12 @@
-UNIT mnh_datastores;
+UNIT datastores;
 INTERFACE
 USES sysutils,
      serializationUtil, myGenerics, myStringUtil,
-     mnh_basicTypes,
+     basicTypes,
      mnh_out_adapters, mnh_fileWrappers,
      recyclers,
      mnh_litVar,
-     mnh_tokenArray,mnh_contexts;
+     mnh_tokenArray,contexts;
 TYPE
   P_datastoreMeta=^T_datastoreMeta;
   T_datastoreMeta=object

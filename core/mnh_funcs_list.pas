@@ -2,11 +2,11 @@ UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
-     mnh_constants, mnh_basicTypes,
+     mnh_constants, basicTypes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_contexts,
+     contexts,
      listProcessing,
      recyclers,
      subrules,

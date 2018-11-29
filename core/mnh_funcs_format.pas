@@ -2,13 +2,13 @@ UNIT mnh_funcs_format;
 INTERFACE
 USES sysutils,
      myGenerics,myStringUtil,mySys,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_tokenArray,
      mnh_litVar,
      subrules,
      mnh_messages,
      recyclers,
-     mnh_contexts,
+     contexts,
      mnh_funcs;
 CONST MAX_FORMATS_TO_CACHE=4096;
 TYPE

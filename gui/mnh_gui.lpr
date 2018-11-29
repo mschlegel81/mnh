@@ -8,7 +8,7 @@ USES {$ifdef UNIX} cthreads,{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mySys,
-  mnh_cmdLineInterpretation,
+  cmdLineInterpretation,
   ipcModel,
   mnh_gui_main,
   mnh_gui_outputOnly,
@@ -17,7 +17,7 @@ USES {$ifdef UNIX} cthreads,{$endif}
 {$R *.res}
 
 begin
-  mnh_cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
+  cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
   if wantMainLoopAfterParseCmdLine then begin
     {$ifndef debugMode}
     hideConsole;

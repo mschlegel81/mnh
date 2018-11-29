@@ -1,4 +1,4 @@
-UNIT mnh_cmdLineInterpretation;
+UNIT cmdLineInterpretation;
 INTERFACE
 USES sysutils,
      myStringUtil,myGenerics,mySys,
@@ -7,7 +7,7 @@ USES sysutils,
      mnh_messages,
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
      mnh_funcs_mnh,
-     mnh_contexts,
+     contexts,
      packages,
      recyclers,
      mnh_evaluation;
