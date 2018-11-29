@@ -336,7 +336,30 @@ FUNCTION T_messages.continueEvaluation: boolean;
 PROCEDURE T_messagesRedirector.clear(CONST clearAllAdapters: boolean);
   begin
     enterCriticalSection(messagesCs);
+    inherited clear(clearAllAdapters);
+    leaveCriticalSection(messagesCs);
+  end;
+
+PROCEDURE T_messagesDistributor.clear(CONST clearAllAdapters: boolean);
+  VAR a:T_flaggedAdapter;
+  begin
+    inherited clear(clearAllAdapters);
+    collected:=[];
+    if clearAllAdapters then for a in adapters do a.adapter^.clear;
+    updateCollecting;
+  end;
+
+PROCEDURE T_messagesErrorHolder.clear(CONST clearAllAdapters: boolean);
+  begin
     inherited clear;
+    collector.clear;
+  end;
+
+PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
+  begin
+    enterCriticalSection(messagesCs);
+    flags:=[];
+    userDefinedExitCode:=0;
     leaveCriticalSection(messagesCs);
   end;
 
@@ -451,15 +474,6 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
 PROCEDURE T_messagesDummy.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   begin if disposeAfterPosting then disposeMessage(message); end;
 
-PROCEDURE T_messagesDistributor.clear(CONST clearAllAdapters: boolean);
-  VAR a:T_flaggedAdapter;
-  begin
-    inherited clear(clearAllAdapters);
-    collected:=[];
-    if clearAllAdapters then for a in adapters do a.adapter^.clear;
-    updateCollecting;
-  end;
-
 FUNCTION T_messagesDistributor.isCollecting(CONST messageType: T_messageType): boolean;
   begin
     result:=messageType in collecting;
@@ -558,12 +572,6 @@ DESTRUCTOR T_messagesErrorHolder.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_messagesErrorHolder.clear(CONST clearAllAdapters: boolean);
-  begin
-    inherited clear;
-    collector.clear;
-  end;
-
 FUNCTION T_messagesErrorHolder.isCollecting(CONST messageType: T_messageType): boolean;
   begin
     result:=(messageType in heldTypes) or (parentMessages<>nil) and parentMessages^.isCollecting(messageType);
@@ -653,14 +661,6 @@ PROCEDURE T_messages.postCustomMessages(CONST message: T_storedMessages);
   begin
     enterCriticalSection(messagesCs);
     for m in message do postCustomMessage(m);
-    leaveCriticalSection(messagesCs);
-  end;
-
-PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
-  begin
-    enterCriticalSection(messagesCs);
-    flags:=[];
-    userDefinedExitCode:=0;
     leaveCriticalSection(messagesCs);
   end;
 
