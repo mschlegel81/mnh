@@ -10,7 +10,7 @@ USES {$ifdef UNIX}cthreads,{$endif}
 
 begin
   if wantMainLoopAfterParseCmdLine then begin
-    if delegateToFullVersionRequired
+    if reEvaluationWithGUIrequired
     then begin
       if fileExists(settings.fullFlavourLocation)
       then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
