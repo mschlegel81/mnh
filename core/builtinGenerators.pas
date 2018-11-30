@@ -1,18 +1,18 @@
-UNIT mnh_builtinGenerators;
+UNIT builtinGenerators;
 INTERFACE
 USES sysutils,
      mySys,myCrypto,bigint,
      myStringUtil,
      mnh_constants,
-     mnh_basicTypes,
+     basicTypes,
      mnh_litVar,
-     mnh_funcs,mnh_contexts,mnh_out_adapters,
+     funcs,contexts,mnh_out_adapters,
      listProcessing,
      recyclers,
      subrules;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 TYPE
   P_listIterator=^T_listIterator;
   T_listIterator=object(T_builtinGeneratorExpression)

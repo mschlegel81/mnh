@@ -239,6 +239,7 @@ main->begin
 end;
 
 USE statistics;
+
 //*Limit to 50 timings per case and flavour
 //*Drop all values outside of 3 sigma environment
 main('cleanup')->begin

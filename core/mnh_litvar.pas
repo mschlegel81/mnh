@@ -5,7 +5,7 @@ USES sysutils, math, typinfo,
      Classes,LazUTF8,
      myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
-     mnh_basicTypes,
+     basicTypes,
      mnh_messages,
      mnh_out_adapters;
 

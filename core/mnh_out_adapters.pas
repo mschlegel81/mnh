@@ -4,7 +4,7 @@ USES sysutils,
      myGenerics,mySys,
      myStringUtil,
      mnh_messages,
-     mnh_constants, mnh_basicTypes;
+     mnh_constants, basicTypes;
 TYPE
   T_adapterType=(at_unknown,
                  at_console,
@@ -625,9 +625,11 @@ PROCEDURE T_messages.setExitCode;
   VAR mt:T_messageType;
       code:longint=0;
   begin
-    code:=userDefinedExitCode;
-    for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
-    ExitCode:=code;
+    if userDefinedExitCode<>0 then ExitCode:=userDefinedExitCode else begin
+      code:=0;
+      for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
+      ExitCode:=code;
+    end;
   end;
 
 PROCEDURE T_messages.postSingal(CONST kind: T_messageType; CONST location: T_searchTokenLocation);

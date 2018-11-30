@@ -8,9 +8,9 @@ USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   mnhFormHandler,
   myGenerics,myStringUtil,
-  mnh_constants,mnh_basicTypes,
+  mnh_constants,basicTypes,
   mnh_messages,
-  mnh_litVar, mnh_funcs,mnh_contexts,mnh_out_adapters,recyclers,
+  mnh_litVar, funcs,contexts,mnh_out_adapters,recyclers,
   mnh_fileWrappers,mnh_profiling;
 
 TYPE

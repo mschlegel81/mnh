@@ -3,11 +3,11 @@ INTERFACE
 USES
   sysutils,Forms,
   mnh_constants,
-  mnh_basicTypes,
-  mnh_funcs,
+  basicTypes,
+  funcs,
   mnh_litVar,
   recyclers,
-  mnh_contexts;
+  contexts;
 TYPE
   T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog,ft_imageForm);
 
@@ -119,7 +119,7 @@ FUNCTION T_formMeta.cyclable: boolean;
     result:=visible;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION anyFormShowing_imp intFuncSignature;
   begin
     result:=nil;

@@ -5,8 +5,8 @@ USES sysutils,   //system
      Classes,
      myGenerics,myTools,mySys, //common
      //mnh:
-     mnh_constants, mnh_basicTypes,
-     mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,
+     mnh_constants, basicTypes,
+     funcs,mnh_litVar,contexts,funcs_list,mnh_plotData,
      mnh_out_adapters,mnh_messages,
      recyclers,
      //imig:
@@ -59,7 +59,7 @@ TYPE
       PROCEDURE setSize(CONST width,height:longint);
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 IMPLEMENTATION
 FUNCTION obtainCurrentImageViaAdapters(CONST messages:P_messages):P_rawImage;
   VAR m:P_replaceImageMessage;

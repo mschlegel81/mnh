@@ -3,15 +3,15 @@ INTERFACE
 USES sysutils,Classes,
      mySys,
      myGenerics,myStringUtil,
-     mnh_constants,mnh_basicTypes,mnh_fileWrappers,
+     mnh_constants,basicTypes,mnh_fileWrappers,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_funcs,mnh_contexts,
+     funcs,contexts,
      mnh_tokenArray,
      subrules,
      packages,mnh_doc,
-     mnh_cmdLineInterpretation,
+     cmdLineInterpretation,
      recyclers,
      mnh_debuggingVar;
 TYPE
@@ -429,10 +429,10 @@ PROCEDURE T_runEvaluator.reEvaluateWithGUI;
       system.leaveCriticalSection(cs);
       exit;
     end;
-    if mnh_cmdLineInterpretation.profilingRun
+    if cmdLineInterpretation.profilingRun
     then requestedContextType:=ect_profiling
     else requestedContextType:=ect_normal;
-    mainParameters:=mnh_cmdLineInterpretation.mainParameters;
+    mainParameters:=cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
     system.leaveCriticalSection(cs);

@@ -2,7 +2,7 @@ UNIT valueStore;
 INTERFACE
 USES sysutils,
      mySys,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar

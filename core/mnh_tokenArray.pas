@@ -2,11 +2,11 @@ UNIT mnh_tokenArray;
 INTERFACE
 USES sysutils,math,
      myGenerics,myStringUtil,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_fileWrappers,
      mnh_litVar,
-     mnh_funcs,
-     mnh_funcs_mnh,
+     funcs,
+     funcs_mnh,
      recyclers,
      tokenStack,
      {$ifdef fullVersion}

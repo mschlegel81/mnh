@@ -1,4 +1,4 @@
-UNIT mnh_contexts;
+UNIT contexts;
 INTERFACE
 USES //FPC/LCL libraries
      sysutils,
@@ -7,7 +7,7 @@ USES //FPC/LCL libraries
      //my libraries
      myGenerics,mySys,myStringUtil,
      //MNH:
-     mnh_constants, mnh_basicTypes,
+     mnh_constants, basicTypes,
      mnh_settings,
      mnh_messages,
      mnh_out_adapters,mnh_litVar,

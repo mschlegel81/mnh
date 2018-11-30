@@ -1,18 +1,18 @@
-UNIT mnh_funcs_system;
+UNIT funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      bigint,
      Classes,FileUtil,LazFileUtils,LazUTF8,
      myGenerics,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      recyclers,
-     mnh_contexts;
+     contexts;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
@@ -217,8 +217,6 @@ INITIALIZATION
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
-  //registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
-  //registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
   {$ifdef fullVersion}timeLoc:={$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+

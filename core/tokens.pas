@@ -5,7 +5,7 @@ USES //basic classes
      //my utilities
      myGenerics,
      //MNH:
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar;

@@ -1,21 +1,21 @@
-UNIT mnh_funcs_math;
+UNIT funcs_math;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      math,
      bigint,
      myGenerics,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      mnh_messages,
      mnh_out_adapters,
      recyclers,
-     mnh_contexts;
+     contexts;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 {$define UNARY_NUM_TO_REAL:=FUNCTION recurse(CONST x:P_literal):P_literal;
   VAR iter:T_arrayOfLiteral;
       y:P_literal;

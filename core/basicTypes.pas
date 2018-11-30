@@ -1,4 +1,4 @@
-UNIT mnh_basicTypes;
+UNIT basicTypes;
 INTERFACE
 USES sysutils;
 TYPE

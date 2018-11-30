@@ -1,5 +1,5 @@
 {$ifdef include_implementation}
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
       i:longint;

@@ -105,140 +105,192 @@
         <PackageName Value="LazUtils"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="33">
+    <Units Count="46">
       <Unit0>
         <Filename Value="mnh_light.lpr"/>
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
-        <Filename Value="..\core\mnh_basicTypes.pas"/>
+        <Filename Value="..\core\listProcessing.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit1>
       <Unit2>
-        <Filename Value="..\core\mnh_funcs_system.pas"/>
+        <Filename Value="..\core\mnh_evaluation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit2>
       <Unit3>
-        <Filename Value="..\core\mnh_funcs_server.pas"/>
+        <Filename Value="..\core\mnh_out_adapters.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit3>
       <Unit4>
-        <Filename Value="..\core\mnh_contexts.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="..\core\listProcessing.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit5>
-      <Unit6>
-        <Filename Value="..\core\mnh_evaluation.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="..\core\mnh_funcs_ipc.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="..\core\mnh_out_adapters.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit8>
-      <Unit9>
         <Filename Value="..\core\mnh_litvar.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="mnh_litVar"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\core\mnh_operators.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\common\mySys.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\core\mnh_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\core\mnh_constants.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\core\mnh_profiling.pas"/>
+        <IsPartOfProject Value="True"/>
       </Unit9>
       <Unit10>
-        <Filename Value="..\core\mnh_funcs.pas"/>
+        <Filename Value="..\core\tokenStack.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit10>
       <Unit11>
-        <Filename Value="..\core\mnh_funcs_strings.pas"/>
+        <Filename Value="..\core\valueStore.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit11>
       <Unit12>
-        <Filename Value="..\core\mnh_subrules.pas"/>
+        <Filename Value="..\core\mnh_tokenArray.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit12>
       <Unit13>
-        <Filename Value="..\core\mnh_aggregators.pas"/>
+        <Filename Value="..\core\mnh_fileWrappers.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit13>
       <Unit14>
-        <Filename Value="..\core\mnh_patterns.pas"/>
+        <Filename Value="..\core\mnh_messages.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit14>
       <Unit15>
-        <Filename Value="..\core\mnh_funcs_mnh.pas"/>
+        <Filename Value="..\core\aggregators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit15>
       <Unit16>
-        <Filename Value="..\core\mnh_funcs_types.pas"/>
+        <Filename Value="..\core\basicTypes.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit16>
       <Unit17>
-        <Filename Value="..\core\mnh_funcs_math.pas"/>
+        <Filename Value="..\core\build_number.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit17>
       <Unit18>
-        <Filename Value="..\core\mnh_operators.pas"/>
+        <Filename Value="..\core\builtinGenerators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit18>
       <Unit19>
-        <Filename Value="..\core\mnh_packages.pas"/>
+        <Filename Value="..\core\caches.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit19>
       <Unit20>
-        <Filename Value="..\core\mnh_datastores.pas"/>
+        <Filename Value="..\core\cmdLineInterpretation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit20>
       <Unit21>
-        <Filename Value="..\core\mnh_funcs_list.pas"/>
+        <Filename Value="..\core\code_hash.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit21>
       <Unit22>
-        <Filename Value="..\core\mnh_funcs_format.pas"/>
+        <Filename Value="..\core\consoleAsk.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit22>
       <Unit23>
-        <Filename Value="..\core\mnh_funcs_files.pas"/>
+        <Filename Value="..\core\contexts.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit23>
       <Unit24>
-        <Filename Value="..\core\mnh_builtinGenerators.pas"/>
+        <Filename Value="..\core\datastores.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit24>
       <Unit25>
-        <Filename Value="..\core\mnh_funcs_regex.pas"/>
+        <Filename Value="..\core\func_defines.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit25>
       <Unit26>
-        <Filename Value="..\core\mnh_funcs_xml.pas"/>
+        <Filename Value="..\core\funcs.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit26>
       <Unit27>
-        <Filename Value="..\core\mnh_cmdLineInterpretation.pas"/>
+        <Filename Value="..\core\funcs_files.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit27>
       <Unit28>
-        <Filename Value="..\core\mnh_funcs.inc"/>
+        <Filename Value="..\core\funcs_format.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit28>
       <Unit29>
-        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Filename Value="..\core\funcs_ipc.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit29>
       <Unit30>
-        <Filename Value="..\common\mySys.pas"/>
+        <Filename Value="..\core\funcs_list.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit30>
       <Unit31>
-        <Filename Value="..\core\mnh_settings.pas"/>
+        <Filename Value="..\core\funcs_math.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit31>
       <Unit32>
-        <Filename Value="..\core\mnh_constants.pas"/>
+        <Filename Value="..\core\funcs_mnh.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit32>
+      <Unit33>
+        <Filename Value="..\core\funcs_package.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="..\core\funcs_regex.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="..\core\funcs_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="..\core\funcs_strings.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="..\core\funcs_system.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="..\core\funcs_types.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="..\core\funcs_xml.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="..\core\packages.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="..\core\patterns.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="..\core\recyclers.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="..\core\rules.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="..\core\subrules.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="..\core\tokens.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit45>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

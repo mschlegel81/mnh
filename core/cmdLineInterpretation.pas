@@ -1,13 +1,13 @@
-UNIT mnh_cmdLineInterpretation;
+UNIT cmdLineInterpretation;
 INTERFACE
-USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
+USES sysutils,
      myStringUtil,myGenerics,mySys,
      mnh_constants,
      mnh_fileWrappers,
      mnh_messages,
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
-     mnh_funcs_mnh,
-     mnh_contexts,
+     funcs_mnh,
+     contexts,
      packages,
      recyclers,
      mnh_evaluation;
@@ -23,14 +23,12 @@ PROCEDURE displayHelp;
 CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
+    reEvaluationWithGUIrequired:boolean=false;
     {$ifdef fullVersion}
     imigAdapters:P_abstractOutAdapter=nil;
     plotAdapters:P_abstractOutAdapter=nil;
     profilingRun:boolean=false;
-    reEvaluationWithGUIrequired:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
-    {$else}
-    delegateToFullVersionRequired:boolean=false;
     {$endif}
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -139,16 +137,12 @@ CONST DEF_VERBOSITY_STRING='';
             {$ifdef fullVersion}
               profilingRun:=true;
             {$else}
-              delegateToFullVersionRequired:=true;
+              reEvaluationWithGUIrequired:=true;
             {$endif}
             exit(true);
           end;
           if (param='-GUI') then begin
-            {$ifdef fullVersion}
-              reEvaluationWithGUIrequired:=true;
-            {$else}
-              delegateToFullVersionRequired:=true;
-            {$endif}
+            reEvaluationWithGUIrequired:=true;
             exit(true);
           end;
           if param='-quiet'    then begin wantConsoleAdapter:=false;               exit(true); end;
@@ -214,7 +208,7 @@ CONST DEF_VERBOSITY_STRING='';
           {$ifdef fullVersion}
             addFileToOpen(param);
           {$else}
-            delegateToFullVersionRequired:=true;
+            reEvaluationWithGUIrequired:=true;
           {$endif}
           exit(true);
         end;
@@ -246,11 +240,7 @@ CONST DEF_VERBOSITY_STRING='';
       if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
-        {$ifdef fullVersion}
-          reEvaluationWithGUIrequired:=true;
-        {$else}
-          delegateToFullVersionRequired:=true;
-        {$endif}
+        reEvaluationWithGUIrequired:=true;
         globals.destroy;
         recycler.cleanup;
         exit;
@@ -287,7 +277,7 @@ CONST DEF_VERBOSITY_STRING='';
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
     i:=1;
-    while (i<=paramCount) {$ifndef fullVersion} and not(delegateToFullVersionRequired) {$endif} do begin
+    while (i<=paramCount) {$ifndef fullVersion} and not(reEvaluationWithGUIrequired) {$endif} do begin
       if parseMnhCommand        (paramStr(i)) then inc(i) else
       if parseSingleMnhParameter(paramStr(i)) then begin
         inc(i);
@@ -330,7 +320,7 @@ CONST DEF_VERBOSITY_STRING='';
     wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay;
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(@consoleAdapters,nil);
-    if fileOrCommandToInterpret<>'' then begin
+    if (fileOrCommandToInterpret<>'') and not(reEvaluationWithGUIrequired) then begin
        if directExecutionMode then executeCommand
                               else executeScript;
        quitImmediate:=true;
@@ -339,9 +329,10 @@ CONST DEF_VERBOSITY_STRING='';
       displayHelp;
       quitImmediate:=true;
     end;
-    {$ifdef fullVersion}
-    quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0) and not(reEvaluationWithGUIrequired);
-    {$endif}
+
+    quitImmediate:=quitImmediate
+      {$ifdef fullVersion}and (length(filesToOpenInEditor)=0) {$endif}
+      and not(reEvaluationWithGUIrequired);
     result:=not(quitImmediate);
     consoleAdapters.destroy;
   end;

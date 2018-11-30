@@ -1,9 +1,9 @@
-UNIT mnh_aggregators;
+UNIT aggregators;
 INTERFACE
-USES mnh_funcs,
-     mnh_constants, mnh_basicTypes,
+USES funcs,
+     mnh_constants, basicTypes,
      mnh_out_adapters,
-     mnh_contexts,
+     contexts,
      mnh_litVar,
      recyclers,
      mnh_operators;

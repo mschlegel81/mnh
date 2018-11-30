@@ -1,15 +1,15 @@
-UNIT mnh_funcs_server;
+UNIT funcs_server;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,fphttpclient,lclintf,
      myStringUtil,myGenerics,httpUtil,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_contexts,
+     contexts,
      recyclers,
-     mnh_funcs;
+     funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
@@ -32,7 +32,7 @@ TYPE
   end;
 
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 VAR registry:specialize G_instanceRegistry<P_microserver>;
 

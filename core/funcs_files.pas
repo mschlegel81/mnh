@@ -1,15 +1,15 @@
-UNIT mnh_funcs_files;
+UNIT funcs_files;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
      myGenerics,mySys,myStringUtil,
-     mnh_constants,mnh_basicTypes,mnh_litVar,
+     mnh_constants,basicTypes,mnh_litVar,
      mnh_messages,
-     mnh_funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
+     funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
      recyclers,
-     mnh_contexts,mnh_datastores;
+     contexts,datastores;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders,recurseSubDirs:boolean):P_listLiteral;
   VAR i,j:longint;

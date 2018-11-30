@@ -4,9 +4,9 @@ INTERFACE
 USES
   sysutils,
   Classes, Forms, Controls, ExtCtrls,
-  mnh_constants,mnh_basicTypes,
-  mnh_litVar,mnh_contexts,
-  mnh_funcs,
+  mnh_constants,basicTypes,
+  mnh_litVar,contexts,
+  funcs,
   mypics,
   mnhFormHandler,
   recyclers,
@@ -86,7 +86,7 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
     end;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION getScreenSize_imp intFuncSignature;
   begin
     result:=nil;

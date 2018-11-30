@@ -1,6 +1,11 @@
-UNIT mnh_caches;
+UNIT caches;
 INTERFACE
-USES mnh_basicTypes, myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys{$ifdef fullVersion},mnh_settings{$endif};
+USES sysutils,
+     myGenerics,
+     basicTypes,
+     mnh_litVar,
+     mnh_out_adapters,
+     mnh_constants,mySys,mnh_settings;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=1;
 

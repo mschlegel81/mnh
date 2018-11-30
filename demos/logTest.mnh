@@ -1,0 +1,19 @@
+#!/usr/bin -out ?.log(p)
+LOG_FILE_NAME:=changeFileExt(myPath,'.log');
+EXIT_CODE:=156; //For Linux, exit codes must be in range 0..255
+main->begin
+  deleteFile(LOG_FILE_NAME);
+  local code:=executor.exec([myPath,'out']).trailing;
+  fileLineIterator(LOG_FILE_NAME).map(::print);
+  deleteFile(LOG_FILE_NAME);
+  code==EXIT_CODE
+  ? print('Exit code is okay')
+  : fail('Exit code is ',code,' should be ',EXIT_CODE);
+end;
+
+main('out')->begin
+  note('Creating output...');
+  rangeGenerator(1,1000).lazyMap(::factorize).map(::print);
+  warn('This is all...');
+  setExitCode(156);
+end;

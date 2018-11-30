@@ -7,12 +7,12 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil,
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, StdCtrls,
-  mnh_constants, mnh_basicTypes,
+  mnh_constants, basicTypes,
   mnhFormHandler,
   mnh_messages,
   recyclers,
-  mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
-  mnh_contexts, mnh_evalThread, plotstyles, plotMath, EpikTimer,
+  mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, funcs,
+  contexts, mnh_evalThread, plotstyles, plotMath, EpikTimer,
   plotExport;
 
 TYPE
@@ -543,7 +543,7 @@ FUNCTION TplotForm.wantTimerInterval: longint;
                                else result:=50;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION plotClosedByUser_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     result:=newBoolLiteral((myPlotForm<>nil) and myPlotForm.closedByUser);

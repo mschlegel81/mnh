@@ -1,14 +1,14 @@
-UNIT mnh_funcs;
+UNIT funcs;
 INTERFACE
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 USES sysutils,Classes,
      myGenerics,myStringUtil,
-     mnh_constants,mnh_basicTypes,
+     mnh_constants,basicTypes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      recyclers,
-     mnh_contexts
+     contexts
      {$ifdef fullVersion},
      mnh_doc{$endif};
 TYPE

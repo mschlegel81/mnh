@@ -1,0 +1,37 @@
+plain script;
+mutable earlierLychrels:=[].toMap;
+mutable relatedLychrels:=[].toMap;
+
+isLychrel(i:Int)->begin
+  local myHistory:=[i];
+  local x:=i;
+  local d:=x.digits;
+  [1..500].each(step,begin
+    x+=d.reverseList.composeDigits;
+    local seed:=earlierLychrels[x];
+    seed.isVoid
+    ? void
+    : begin
+        relatedLychrels[seed]|=i;
+        return true;
+      end;
+    myHistory|=x;
+    d:=x.digits;
+    d==d.reverseList
+    ? return false
+    : void;
+  end);
+  myHistory.each(h,
+    earlierLychrels[h]:=i);
+  true;
+end;
+
+lychrels:=[1..10000].filter(::isLychrel);
+print('Found ',relatedLychrels.size,' seed Lychrels below 10000');
+relatedLychrels.sort
+               .map({format("  %s\twith\t%s\trelated Lychrels",$L[0],+29+$L[1].size)})
+               .join("\n")
+               .&("\nTotal\t\t"&relatedLychrels.getInner(1).flatten.size&"\trelated Lychrels")
+               .print;
+printf('Found %{$0.size}s palindromic Lychrel numbers: %{$0.join(", ")}s',
+       [lychrels.pFilter({begin local d:=$x.digits; d==d.reverseList; end})]);

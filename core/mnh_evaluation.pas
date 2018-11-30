@@ -9,7 +9,7 @@ USES sysutils,
      {$ifndef debugMode}
      myStringUtil,
      {$endif}
-     mnh_constants,mnh_basicTypes,
+     mnh_constants,basicTypes,
      mnh_litVar,
      tokens,
      mnh_tokenArray,
@@ -17,16 +17,16 @@ USES sysutils,
      mnh_messages,
      mnh_settings,
      valueStore,
-     mnh_contexts,
-     mnh_funcs,
+     contexts,
+     funcs,
      mnh_operators,
-     mnh_funcs_mnh,
-     mnh_funcs_math,
-     mnh_funcs_list,
-     mnh_funcs_types,
+     funcs_mnh,
+     funcs_math,
+     funcs_list,
+     funcs_types,
      subrules,
      rules,
-     mnh_aggregators,
+     aggregators,
      recyclers,
      listProcessing;
 
@@ -1254,7 +1254,7 @@ FUNCTION doAsync(p:pointer):ptrint;
     freeMem(p,sizeOf(T_asyncTask));
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;

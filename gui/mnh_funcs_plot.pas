@@ -4,12 +4,12 @@ INTERFACE
 USES sysutils,math,
      myGenerics,
      myStringUtil,
-     mnh_basicTypes,
+     basicTypes,
      mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_contexts,
-     mnh_funcs,
+     contexts,
+     funcs,
      mnh_messages,
      recyclers,
      mnh_plotData,plotstyles,plotMath;
@@ -17,7 +17,7 @@ TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; 
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
@@ -360,7 +360,7 @@ FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSi
 FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterPlotState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
+  funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
@@ -388,27 +388,27 @@ INITIALIZATION
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]'+
     '#Transparency Index:'+'  #  TI$;// with an integer $');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
+  funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
+  funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
     'getOptions;//returns plot options as a key-value-list.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
+  funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
     'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
     'setOptions(key:string,value);//Sets a single plot option');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
+  funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
     'resetOptions;//Sets the default plot options');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
+  funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
     'renderToFile(filename<>'',width>=1,height>=1,[quality in [0..3]]);//Renders the current plot to a file.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_variadic_2,
+  funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_variadic_2,
     'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_nullary,
+  funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
+  funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
     'drawText(x,y,text);//Draws custom text#'+
     'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
+  funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
     'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
     'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
 end.

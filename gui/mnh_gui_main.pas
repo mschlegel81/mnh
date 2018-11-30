@@ -28,18 +28,18 @@ USES
   searchModel,
   mnhCompletion,
   ipcModel,
-  mnh_constants, mnh_basicTypes,mnh_settings,
+  mnh_constants, basicTypes,mnh_settings,
   mnh_messages,
   mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs,
+  funcs,
   mnh_debuggingVar,
   mnh_debugging,
-  mnh_contexts,
+  contexts,
   recyclers,
   packages,
   mnh_doc,
-  mnh_cmdLineInterpretation,
+  cmdLineInterpretation,
   mnh_evalThread,
   treeUtil,
   menuUtil,
@@ -217,7 +217,7 @@ FUNCTION TMnhForm.focusedEditor: TSynEdit;
     result:=outputEdit;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION editors_impl intFuncSignature;
   VAR s:string;
   begin

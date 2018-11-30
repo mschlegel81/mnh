@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES mnh_basicTypes, mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
+USES basicTypes, mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object

@@ -1,16 +1,16 @@
-UNIT mnh_funcs_xml;
+UNIT funcs_xml;
 INTERFACE
 USES sysutils,XMLRead,dom,Classes,LazUTF8,
      myGenerics,
-     mnh_basicTypes,mnh_constants,
+     basicTypes,mnh_constants,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      mnh_messages,
      recyclers,
-     mnh_contexts;
+     contexts;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_literal;
   VAR resultList:P_listLiteral;
