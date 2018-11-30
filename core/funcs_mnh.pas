@@ -1,4 +1,4 @@
-UNIT mnh_funcs_mnh;
+UNIT funcs_mnh;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
@@ -10,9 +10,9 @@ USES sysutils,
      recyclers,
      contexts,
      mnh_settings,
-     mnh_funcs;
+     funcs;
 FUNCTION getMnhInfo:string;
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
 PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;

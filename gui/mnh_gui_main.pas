@@ -32,7 +32,7 @@ USES
   mnh_messages,
   mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs,
+  funcs,
   mnh_debuggingVar,
   mnh_debugging,
   contexts,
@@ -217,7 +217,7 @@ FUNCTION TMnhForm.focusedEditor: TSynEdit;
     result:=outputEdit;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION editors_impl intFuncSignature;
   VAR s:string;
   begin

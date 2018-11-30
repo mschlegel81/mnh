@@ -1,4 +1,4 @@
-UNIT mnh_funcs_format;
+UNIT funcs_format;
 INTERFACE
 USES sysutils,
      myGenerics,myStringUtil,mySys,
@@ -9,7 +9,7 @@ USES sysutils,
      mnh_messages,
      recyclers,
      contexts,
-     mnh_funcs;
+     funcs;
 CONST MAX_FORMATS_TO_CACHE=4096;
 TYPE
   T_format=object
@@ -42,7 +42,7 @@ TYPE
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
 

@@ -1,4 +1,4 @@
-UNIT mnh_funcs_regex;
+UNIT funcs_regex;
 INTERFACE
 USES sysutils,Classes,
      myGenerics,
@@ -7,12 +7,12 @@ USES sysutils,Classes,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      recyclers,
      contexts;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
@@ -272,11 +272,11 @@ FUNCTION regexReplace_imp intFuncSignature;
 
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/en/regexp_syntax.html">the used library''s website.</a>';
 INITIALIZATION
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'validateRegex' ,@regexValidate_imp      ,ak_variadic_1,'validateRegex(regex:string);//Returns true iff regex is valid, false otherwise#validateRegex(regex:string,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise');
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,ak_binary ,'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary ,'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary ,'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
+  funcs.registerRule(REGEX_NAMESPACE,'validateRegex' ,@regexValidate_imp      ,ak_variadic_1,'validateRegex(regex:string);//Returns true iff regex is valid, false otherwise#validateRegex(regex:string,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise');
+  funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,ak_binary ,'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK);
+  funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary ,'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK);
+  funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary ,'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
+  funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
   initialize(regexCacheCs);
   initCriticalSection(regexCacheCs);
   regexCache.create(@disposeRegex)

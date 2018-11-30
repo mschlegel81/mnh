@@ -1,4 +1,4 @@
-UNIT mnh_funcs_list;
+UNIT funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
@@ -10,11 +10,11 @@ USES sysutils,
      listProcessing,
      recyclers,
      subrules,
-     mnh_funcs;
+     funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;

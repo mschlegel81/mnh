@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   mnhFormHandler, Classes, sysutils, FileUtil, Forms, Controls, Graphics,
-  Dialogs, StdCtrls, Menus, mnh_funcs, mnh_litVar, basicTypes,
+  Dialogs, StdCtrls, Menus, funcs, mnh_litVar, basicTypes,
   mnh_constants, mnh_out_adapters, myGenerics, contexts,recyclers;
 TYPE
   {$WARN 5024 OFF}
@@ -57,7 +57,7 @@ TYPE
   end;
 
 FUNCTION askForm: TaskForm;
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION ask_impl intFuncSignature;
 IMPLEMENTATION

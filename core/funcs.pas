@@ -1,6 +1,6 @@
-UNIT mnh_funcs;
+UNIT funcs;
 INTERFACE
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 USES sysutils,Classes,
      myGenerics,myStringUtil,
      mnh_constants,basicTypes,

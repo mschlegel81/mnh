@@ -6,13 +6,13 @@ USES sysutils,
      mnh_constants,
      basicTypes,
      mnh_litVar,
-     mnh_funcs,contexts,mnh_out_adapters,
+     funcs,contexts,mnh_out_adapters,
      listProcessing,
      recyclers,
      subrules;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 TYPE
   P_listIterator=^T_listIterator;
   T_listIterator=object(T_builtinGeneratorExpression)

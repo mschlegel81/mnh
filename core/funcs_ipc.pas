@@ -1,4 +1,4 @@
-UNIT mnh_funcs_ipc;
+UNIT funcs_ipc;
 INTERFACE
 USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil,
@@ -9,7 +9,7 @@ USES sysutils, Classes, simpleipc, //RTL
      contexts,mnh_litVar,
      mnh_tokenArray,
      recyclers,
-     mnh_funcs;
+     funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
@@ -286,7 +286,7 @@ DESTRUCTOR T_myIpcServer.destroy;
     recycler.cleanup;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION assertUniqueInstance_impl intFuncSignature;
   VAR markerServer:P_myIpcServer;

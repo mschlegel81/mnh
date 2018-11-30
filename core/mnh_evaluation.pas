@@ -18,12 +18,12 @@ USES sysutils,
      mnh_settings,
      valueStore,
      contexts,
-     mnh_funcs,
+     funcs,
      mnh_operators,
-     mnh_funcs_mnh,
-     mnh_funcs_math,
-     mnh_funcs_list,
-     mnh_funcs_types,
+     funcs_mnh,
+     funcs_math,
+     funcs_list,
+     funcs_types,
      subrules,
      rules,
      aggregators,
@@ -1254,7 +1254,7 @@ FUNCTION doAsync(p:pointer):ptrint;
     freeMem(p,sizeOf(T_asyncTask));
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;

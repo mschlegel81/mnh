@@ -7,7 +7,7 @@ USES
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_messages,
-  mnh_funcs,
+  funcs,
   packages,
   codeAssistance;
 

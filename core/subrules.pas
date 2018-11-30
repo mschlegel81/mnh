@@ -18,7 +18,7 @@ USES //basic classes
      mnh_debuggingVar,
      mnh_profiling,
      {$endif}
-     mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
+     funcs,funcs_math,funcs_mnh, funcs_strings,
      mnh_messages,
      patterns;
 TYPE
@@ -1431,7 +1431,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
 {$endif}
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
@@ -1544,7 +1544,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     {$ifdef debugMode}
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       recycler.disposeToken(first);
-      context.raiseError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location,mt_el4_systemError);
+      context.raiseError('This is unexpected. The result of stringToExpression should be an expression!',location,mt_el4_systemError);
       exit(nil);
     end;
     {$endif}
@@ -1604,7 +1604,7 @@ INITIALIZATION
   mnh_funcs_plot.generateRow:=@generateRow;
   mnh_profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$endif}
-  mnh_funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
+  funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');

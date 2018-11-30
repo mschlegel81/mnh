@@ -23,7 +23,7 @@ USES  //basic classes
   mnh_tokenArray,
   contexts,
   mnh_litVar,
-  mnh_funcs,
+  funcs,
   mnh_debugging,
   cmdLineInterpretation,
   mnh_evalThread,

@@ -161,10 +161,13 @@ private cleanup->begin
           end);
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
+   allFiles('consoles/lib')|
+   allFiles('gui/lib')|
    files('gui/res_*.inc')|
    files('regTest/testFailures.log')|
-   allFiles('versions','*.exe')|
-   files(BUILDS.getInner(5))|
+   allFiles('versions')|
+   allFiles('demos/inputs','*.txt')|
+   files(BUILDS.map({$B['compilate']}))|
    files('build.log'))
   .unique
   .map(::verboseDelete);

@@ -23,12 +23,12 @@ USES //basic classes
      {$else}
        mySys,
      {$endif}
-     mnh_funcs,
+     funcs,
      mnh_operators,
-     mnh_funcs_mnh,   mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
-     mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files,
-     mnh_funcs_format,
-     mnh_funcs_regex, mnh_funcs_xml, mnh_funcs_ipc, mnh_funcs_server,
+     funcs_mnh,   funcs_types, funcs_math,  funcs_strings,
+     funcs_list,  funcs_system, funcs_files,
+     funcs_format,
+     funcs_regex, funcs_xml, funcs_ipc, funcs_server,
      builtinGenerators,
      patterns,
      subrules,
@@ -520,7 +520,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$endif}
 
 {$define include_implementation}
-{$include mnh_funcs.inc}
+{$include funcs_package.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler; CONST forCodeAssistance:boolean);
   CONST usecase:array[false..true] of T_packageLoadUsecase = (lu_forImport,lu_forCodeAssistance);
@@ -1291,9 +1291,9 @@ PROCEDURE T_package.finalize(VAR context:T_context; VAR recycler:T_recycler);
       runAfter[i]^.evaluate(packageTokenLocation(@self),@context,@recycler,nil);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
-    mnh_funcs_server.onPackageFinalization(@self);
-    mnh_funcs_ipc   .onPackageFinalization(@self);
-    mnh_funcs_format.onPackageFinalization(@self);
+    funcs_server.onPackageFinalization(@self);
+    funcs_ipc   .onPackageFinalization(@self);
+    funcs_format.onPackageFinalization(@self);
     for rule in packageRules.valueSet do if rule^.getRuleType=rt_datastore then P_datastoreRule(rule)^.writeBack(context.messages);
     if isMain then context.getGlobals^.stopWorkers(recycler);
   end;
@@ -1689,7 +1689,7 @@ INITIALIZATION
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
   {$endif}
-  {$include mnh_funcs.inc}
+  {$include funcs_package.inc}
 {$undef include_initialization}
 
 FINALIZATION

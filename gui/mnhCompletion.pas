@@ -7,7 +7,7 @@ USES Classes, sysutils, LCLType, types,
      SynEdit, SynCompletion,
      mnh_constants,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      codeAssistance;
 
 TYPE
@@ -41,7 +41,7 @@ PROCEDURE initIntrinsicRuleList;
   begin
     if intrinsicRulesForCompletion_ready then exit;
     intrinsicRulesForCompletion.create;
-    for id in mnh_funcs.intrinsicRuleMap.keySet do begin
+    for id in funcs.intrinsicRuleMap.keySet do begin
       if pos(ID_QUALIFY_CHARACTER,id)<=0 then begin
         intrinsicRulesForCompletion.put(id);
         intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+id);

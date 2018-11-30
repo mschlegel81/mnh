@@ -1,4 +1,4 @@
-UNIT mnh_funcs_system;
+UNIT funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
@@ -8,11 +8,11 @@ USES sysutils,
      basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      recyclers,
      contexts;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);

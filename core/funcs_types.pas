@@ -1,4 +1,4 @@
-UNIT mnh_funcs_types;
+UNIT funcs_types;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
@@ -8,13 +8,13 @@ USES sysutils,
      mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_funcs,
+     funcs,
      recyclers,
      contexts;
 VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
 
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION softCast_imp intFuncSignature;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;

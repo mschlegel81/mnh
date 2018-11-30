@@ -4,7 +4,7 @@ USES
   sysutils,Forms,
   mnh_constants,
   basicTypes,
-  mnh_funcs,
+  funcs,
   mnh_litVar,
   recyclers,
   contexts;
@@ -119,7 +119,7 @@ FUNCTION T_formMeta.cyclable: boolean;
     result:=visible;
   end;
 
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 FUNCTION anyFormShowing_imp intFuncSignature;
   begin
     result:=nil;

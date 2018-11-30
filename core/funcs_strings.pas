@@ -1,4 +1,4 @@
-UNIT mnh_funcs_strings;
+UNIT funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,
@@ -11,9 +11,9 @@ USES sysutils,math,
      mnh_messages,
      mnh_out_adapters,
      recyclers,
-     mnh_litVar,mnh_funcs,contexts;
+     mnh_litVar,funcs,contexts;
 IMPLEMENTATION
-{$i mnh_func_defines.inc}
+{$i func_defines.inc}
 
 FUNCTION pos_imp intFuncSignature;
   FUNCTION posInt(x,y:P_literal):P_literal;

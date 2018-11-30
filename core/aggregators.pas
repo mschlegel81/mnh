@@ -1,6 +1,6 @@
 UNIT aggregators;
 INTERFACE
-USES mnh_funcs,
+USES funcs,
      mnh_constants, basicTypes,
      mnh_out_adapters,
      contexts,
