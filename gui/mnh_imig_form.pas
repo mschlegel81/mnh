@@ -104,5 +104,6 @@ INITIALIZATION
 
 FINALIZATION
   if myDisplayImageForm<>nil then FreeAndNil(myDisplayImageForm);
+  imigSystem.destroy;
 
 end.

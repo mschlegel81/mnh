@@ -157,7 +157,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
     begin
       if outputMethod<>nil then begin
         sLit:=newStringLiteral(s);
-        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,@recycler,sLit,nil).literal;
         disposeLiteral(sLit);
         if outputLit<>nil then disposeLiteral(outputLit);
       end else context.messages^.postTextMessage(mt_el1_note,tokenLocation,s);
@@ -592,8 +592,10 @@ FUNCTION T_imageSystem.append(CONST message: P_storedMessage): boolean;
 PROCEDURE T_imageSystem.processPendingMessages;
   VAR m:P_storedMessage;
   begin
+    enterCriticalSection(cs);
     for m in storedMessages do processMessage(m);
     clear;
+    leaveCriticalSection(cs);
   end;
 
 INITIALIZATION
