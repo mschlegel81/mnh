@@ -1583,17 +1583,40 @@ FUNCTION toExpression_imp intFuncSignature;
 FUNCTION interpret_imp intFuncSignature;
   VAR first:P_token=nil;
       package:P_abstractPackage;
-      previousPrivileges:T_sideEffects;
+      previousPrivileges,sideEffectWhitelist:T_sideEffects;
+
+      anyMatch:boolean;
+      se:T_sideEffect;
+      iter:T_arrayOfLiteral;
+      seId:P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then begin
+    if (params=nil) or (params^.size<1) or (params^.size>2) then exit(nil);
+    if (params^.size=2) then begin
+      if not(arg1^.literalType in [lt_stringList,lt_stringSet,lt_emptyList,lt_emptySet]) then exit(nil);
+      iter:=collection1^.iteratableList;
+      sideEffectWhitelist:=[];
+      for seId in iter do begin
+        anyMatch:=false;
+        for se in T_sideEffect do if C_sideEffectName[se]=P_stringLiteral(seId)^.value then begin
+          anyMatch:=true;
+          include(sideEffectWhitelist,se);
+        end;
+        if not(anyMatch) then context.raiseError('Invalid side effect name '+seId^.toString(),tokenLocation);
+      end;
+      disposeLiteral(iter);
+      if not(context.continueEvaluation) then exit(nil);
+    end else sideEffectWhitelist:=C_allSideEffects;
+    if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) then begin
+      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*sideEffectWhitelist);
+      result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+      context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
+    end else begin
       package:=P_abstractPackage(tokenLocation.package);
       if      arg0^.literalType=lt_string      then first:=stringToTokens(str0^.value,tokenLocation,package,context,recycler)
       else if arg0^.literalType in C_listTypes then first:=listToTokens  (list0      ,tokenLocation,package,context,recycler);
       if first=nil then exit(nil);
-      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(
-                          context.sideEffectWhitelist - [se_inputViaAsk]);
+      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*sideEffectWhitelist);
       result:=context.reduceToLiteral(first,recycler).literal;
       context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
     end;
@@ -1610,5 +1633,5 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.');
 end.

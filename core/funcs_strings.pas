@@ -62,6 +62,47 @@ FUNCTION pos_imp intFuncSignature;
     end;
   end;
 
+FUNCTION hasPrefix_imp intFuncSignature;
+  FUNCTION hasPrefixInt(x,y:P_literal):P_boolLiteral;
+    VAR a,b:string;
+    begin
+      a:=P_stringLiteral(x)^.value;
+      b:=P_stringLiteral(y)^.value;
+      result:=newBoolLiteral((length(b)<=length(a)) and (pos(b,a)=1));
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      if arg0^.literalType=lt_string then begin
+        if arg1^.literalType=lt_string then begin
+          result:=hasPrefixInt(arg0,arg1);
+        end else begin
+          result:=newListLiteral;
+          for i:=0 to list1^.size-1 do
+            listResult^.append(hasPrefixInt(arg0,list1^.value[i]),false);
+        end;
+      end else begin
+        if arg1^.literalType=lt_string then begin
+          result:=newListLiteral;
+          for i:=0 to list0^.size-1 do
+            listResult^.append(hasPrefixInt(list0^.value[i],
+                                                               arg1           ),false);
+        end else begin
+          if list0^.size=list1^.size then begin
+            result:=newListLiteral;
+            for i:=0 to list0^.size-1 do
+              listResult^.append(hasPrefixInt(list0^.value[i],
+                                        list1^.value[i]),false);
+          end else context.raiseError('Incompatible list lengths for function pos.',tokenLocation)
+        end;
+      end;
+    end;
+  end;
+
 FUNCTION copy_imp intFuncSignature;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
@@ -915,39 +956,40 @@ FUNCTION sha256_imp intFuncSignature;
 
 INITIALIZATION
   //Functions on Strings:
-  registerRule(STRINGS_NAMESPACE,'length'        ,@length_imp        ,ak_unary     ,'length(S:string);//Returns the number of characters in string S');
-  registerRule(STRINGS_NAMESPACE,'byteLength'    ,@byteLength_imp    ,ak_unary     ,'byteLength(S:string);//Returns the number of bytes in string S');
+  registerRule(STRINGS_NAMESPACE,'length'        ,@length_imp        ,ak_unary     ,'length(S:String);//Returns the number of characters in string S');
+  registerRule(STRINGS_NAMESPACE,'byteLength'    ,@byteLength_imp    ,ak_unary     ,'byteLength(S:String);//Returns the number of bytes in string S');
   registerRule(STRINGS_NAMESPACE,'pos'           ,@pos_imp           ,ak_binary    ,'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or Infinity if there is none');
+  registerRule(STRINGS_NAMESPACE,'hasPrefix'     ,@hasPrefix_imp     ,ak_binary    ,'hasPrefix(s,prefix);//Returns true if s starts with prefix');
   registerRule(STRINGS_NAMESPACE,'copy'          ,@copy_imp          ,ak_ternary   ,'copy(S,start,length)://Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars'         ,@chars_imp         ,ak_unary     ,'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering');
   registerRule(STRINGS_NAMESPACE,'charSet'       ,@charSet_imp       ,ak_unary     ,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
   registerRule(STRINGS_NAMESPACE,'byteToChar'    ,@byteToChar_imp    ,ak_unary     ,'byteToChar(b in [0..255]);//Returns the corresponding character as a string of one byte length');
   registerRule(STRINGS_NAMESPACE,'bytes'         ,@bytes_imp         ,ak_unary     ,'bytes(S);//Returns the bytes in S as a list of strings');
-  registerRule(STRINGS_NAMESPACE,'split'         ,@split_imp         ,ak_binary    ,'split(S:string,splitter:string);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result');
-  registerRule(STRINGS_NAMESPACE,'join'          ,@join_impl         ,ak_unary     ,'join(L:list);//Returns a string-concatenation of all elements in L#join(L:list,joiner:string);//Returns a string-concatenation of all elements, with joiner between.');
-  registerRule(STRINGS_NAMESPACE,'trim'          ,@trim_imp          ,ak_unary     ,'trim(S:string);//Returns string S without leading or trailing spaces');
-  registerRule(STRINGS_NAMESPACE,'trimLeft'      ,@trimLeft_imp      ,ak_unary     ,'trimLeft(S:string);//Returns string S without leading spaces');
-  registerRule(STRINGS_NAMESPACE,'trimRight'     ,@trimRight_imp     ,ak_unary     ,'trimRight(S:string);//Returns string S without trailing spaces');
-  registerRule(STRINGS_NAMESPACE,'upper'         ,@upper_imp         ,ak_unary     ,'upper(S:string);//Returns an uppercase representation of S');
-  registerRule(STRINGS_NAMESPACE,'lower'         ,@lower_imp         ,ak_unary     ,'lower(S:string);//Returns an lowercase representation of S');
-  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,ak_variadic_2,'clean(s,whiteList:stringCollection,instead:string);//Replaces all characters in s which are not in whitelist by instead.#clean(s,whiteList:stringCollection,instead:string,joinPlaceholders:boolean);//As above but joining placeholders');
-  registerRule(STRINGS_NAMESPACE,'unbrace'       ,@unbrace_imp       ,ak_unary     ,'unbrace(S:string);//Returns an unbraced representation of S');
-  registerRule(STRINGS_NAMESPACE,'escape'        ,@escape_imp        ,ak_unary     ,'escape(S:string);//Returns an escaped representation of S');
-  registerRule(STRINGS_NAMESPACE,'escapePascal'  ,@escapePascal_imp  ,ak_unary     ,'escapePascal(S:string);//Returns an escaped representation of S for use in Pascal source code');
-  registerRule(STRINGS_NAMESPACE,'escapeJava'    ,@escapeJava_imp    ,ak_unary     ,'escapeJava(S:string);//Returns an escaped representation of S for use in Java source code');
-  registerRule(STRINGS_NAMESPACE,'replaceOne'    ,@replaceOne_impl   ,ak_ternary   ,'replaceOne(source:string,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
-  registerRule(STRINGS_NAMESPACE,'replace'       ,@replace_impl      ,ak_ternary   ,'replace(source:string,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
-  registerRule(STRINGS_NAMESPACE,'repeat'        ,@repeat_impl       ,ak_binary    ,'repeat(s:string,k:int);//Returns a string containing s repeated k times');
-  registerRule(STRINGS_NAMESPACE,'reverseString' ,@reverseString_impl,ak_unary     ,'reverseString(S:string);//reverseString(S:stringList);//Returns returns S reversed (character wise not bytewise)');
+  registerRule(STRINGS_NAMESPACE,'split'         ,@split_imp         ,ak_binary    ,'split(S:String,splitter:String);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result');
+  registerRule(STRINGS_NAMESPACE,'join'          ,@join_impl         ,ak_unary     ,'join(L:List);//Returns a string-concatenation of all elements in L#join(L:List,joiner:String);//Returns a string-concatenation of all elements, with joiner between.');
+  registerRule(STRINGS_NAMESPACE,'trim'          ,@trim_imp          ,ak_unary     ,'trim(S:String);//Returns string S without leading or trailing spaces');
+  registerRule(STRINGS_NAMESPACE,'trimLeft'      ,@trimLeft_imp      ,ak_unary     ,'trimLeft(S:String);//Returns string S without leading spaces');
+  registerRule(STRINGS_NAMESPACE,'trimRight'     ,@trimRight_imp     ,ak_unary     ,'trimRight(S:String);//Returns string S without trailing spaces');
+  registerRule(STRINGS_NAMESPACE,'upper'         ,@upper_imp         ,ak_unary     ,'upper(S:String);//Returns an uppercase representation of S');
+  registerRule(STRINGS_NAMESPACE,'lower'         ,@lower_imp         ,ak_unary     ,'lower(S:String);//Returns an lowercase representation of S');
+  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,ak_variadic_2,'clean(s,whiteList:StringCollection,instead:String);//Replaces all characters in s which are not in whitelist by instead.#clean(s,whiteList:StringCollection,instead:String,joinPlaceholders:boolean);//As above but joining placeholders');
+  registerRule(STRINGS_NAMESPACE,'unbrace'       ,@unbrace_imp       ,ak_unary     ,'unbrace(S:String);//Returns an unbraced representation of S');
+  registerRule(STRINGS_NAMESPACE,'escape'        ,@escape_imp        ,ak_unary     ,'escape(S:String);//Returns an escaped representation of S');
+  registerRule(STRINGS_NAMESPACE,'escapePascal'  ,@escapePascal_imp  ,ak_unary     ,'escapePascal(S:String);//Returns an escaped representation of S for use in Pascal source code');
+  registerRule(STRINGS_NAMESPACE,'escapeJava'    ,@escapeJava_imp    ,ak_unary     ,'escapeJava(S:String);//Returns an escaped representation of S for use in Java source code');
+  registerRule(STRINGS_NAMESPACE,'replaceOne'    ,@replaceOne_impl   ,ak_ternary   ,'replaceOne(source:String,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'replace'       ,@replace_impl      ,ak_ternary   ,'replace(source:String,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'repeat'        ,@repeat_impl       ,ak_binary    ,'repeat(s:String,k:Int);//Returns a string containing s repeated k times');
+  registerRule(STRINGS_NAMESPACE,'reverseString' ,@reverseString_impl,ak_unary     ,'reverseString(S:String);//reverseString(S:StringList);//Returns returns S reversed (character wise not bytewise)');
   registerRule(STRINGS_NAMESPACE,'diff'          ,@diff_impl         ,ak_variadic_2,'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B#diff(A,B,convertModifies:boolean);//As above but optionally convert modifies to adds and deletes');
   registerRule(STRINGS_NAMESPACE,'diffStats'     ,@diffStats_impl    ,ak_binary    ,'diffStats(A,B);//Shows diff statistics for strings A and B or string lists A and B');
-  registerRule(STRINGS_NAMESPACE,'isUtf8'        ,@isUtf8_impl       ,ak_unary     ,'isUtf8(S:string);//Returns true if S is UTF8 encoded and false otherwise');
-  registerRule(STRINGS_NAMESPACE,'isAscii'       ,@isAscii_impl      ,ak_unary     ,'isAscii(S:string);//Returns true if S is ASCII encoded and false otherwise');
-  registerRule(STRINGS_NAMESPACE,'utf8ToAnsi'    ,@utf8ToAnsi_impl   ,ak_unary     ,'utf8ToAnsi(S:string);//Converts a UTF8 encoded string to an ANSI encoded string.');
-  registerRule(STRINGS_NAMESPACE,'ansiToUtf8'    ,@ansiToUtf8_impl   ,ak_unary     ,'ansiToUtf8(S:string);//Converts an ANSI encoded string to a UTF8 encoded string.');
-  registerRule(STRINGS_NAMESPACE,'base64encode'  ,@base64encode_impl ,ak_unary     ,'base64encode(S:string);//Converts a string to a base64 encoded string.');
-  registerRule(STRINGS_NAMESPACE,'base64decode'  ,@base64decode_impl ,ak_unary     ,'base64decode(S:string);//Converts a base64 encoded string to a string.');
-  registerRule(STRINGS_NAMESPACE,'compress'      ,@compress_impl     ,ak_unary     ,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#'+
+  registerRule(STRINGS_NAMESPACE,'isUtf8'        ,@isUtf8_impl       ,ak_unary     ,'isUtf8(S:String);//Returns true if S is UTF8 encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'isAscii'       ,@isAscii_impl      ,ak_unary     ,'isAscii(S:String);//Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'utf8ToAnsi'    ,@utf8ToAnsi_impl   ,ak_unary     ,'utf8ToAnsi(S:String);//Converts a UTF8 encoded string to an ANSI encoded string.');
+  registerRule(STRINGS_NAMESPACE,'ansiToUtf8'    ,@ansiToUtf8_impl   ,ak_unary     ,'ansiToUtf8(S:String);//Converts an ANSI encoded string to a UTF8 encoded string.');
+  registerRule(STRINGS_NAMESPACE,'base64encode'  ,@base64encode_impl ,ak_unary     ,'base64encode(S:String);//Converts a string to a base64 encoded string.');
+  registerRule(STRINGS_NAMESPACE,'base64decode'  ,@base64decode_impl ,ak_unary     ,'base64decode(S:String);//Converts a base64 encoded string to a string.');
+  registerRule(STRINGS_NAMESPACE,'compress'      ,@compress_impl     ,ak_unary     ,'compress(S:String);#Returns a compressed version of S#compress(S:String,k:Int);#'+
                                                            'As above but with a specified algorithm:#'+
                                                            '  1: deflate#'+
                                                            '  2: huffman with default model#'+
@@ -955,8 +997,8 @@ INITIALIZATION
                                                            '255: don''''t compress'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used');
-  registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary,'decompress(S:string);#Returns an uncompressed version of S');
-  registerRule(STRINGS_NAMESPACE,'formatTabs'    ,@formatTabs_impl,ak_unary,'formatTabs(S:string);#Applies tab formatting as on print');
-  registerRule(STRINGS_NAMESPACE,'md5'           ,@md5_imp,ak_unary,'md5(S:string);#Returns the MD5 digest as hexadecimal string for given input S');
-  registerRule(STRINGS_NAMESPACE,'sha256'        ,@sha256_imp,ak_unary,'sha256(S:string);#Returns SHA256 digest as hexadecimal string for given input S');
+  registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary,'decompress(S:String);#Returns an uncompressed version of S');
+  registerRule(STRINGS_NAMESPACE,'formatTabs'    ,@formatTabs_impl,ak_unary,'formatTabs(S:String);#Applies tab formatting as on print');
+  registerRule(STRINGS_NAMESPACE,'md5'           ,@md5_imp,ak_unary,'md5(S:String);#Returns the MD5 digest as hexadecimal string for given input S');
+  registerRule(STRINGS_NAMESPACE,'sha256'        ,@sha256_imp,ak_unary,'sha256(S:String);#Returns SHA256 digest as hexadecimal string for given input S');
 end.
