@@ -198,8 +198,8 @@ FUNCTION getMnhInfo:string;
   end;
 
 INITIALIZATION
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  ,'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  ,'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value');
   BUILTIN_MYPATH:=
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary,'myPath;//returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary,'executor;//returns the path to the currently executing instance of MNH');

@@ -1,3 +1,4 @@
+#!/usr/bin/mnh
 firstString(c:String)->begin
   local indexes:=indexOf(c.chars="'")+1;
   indexes.size<2

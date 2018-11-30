@@ -777,6 +777,8 @@ try({deserialize('x')},{warn($x.head.trailing)});
 
 interpret("3+4");
 
+interpret({print("Hello world")},[]);
+
 //Compose binary digits
 composeDigits([1,0,1],2);
 
@@ -873,6 +875,33 @@ intRandomGenerator(123,5).head(10);
 isaacRandomGenerator(123,5).head(10);
 
 modularInverse(3,32);
+
+byteToChar(100);
+
+byteToChar([10,12,97,45]);
+
+systemSpecificFilename('..\test/filename.txt');
+
+//#stringIterator
+stringIterator(['a','b','c'],1,3).head(10);
+
+//#vanDerCorputGenerator
+vanDerCorputGenerator(2).head(10);
+
+//#primeGenerator
+primeGenerator.head(1000).trailing(5);
+
+//#rangeGenerator
+rangeGenerator(0,5).head(10);
+
+//#rangeGenerator
+rangeGenerator(100,-100).head(10);
+
+divMod(10,7);
+
+'abba'.hasPrefix('ab');
+
+isPrime(47531677974672740279381824573269878221106369761801704860769848227327108403647);
 
 //==END REG TEST==
 
