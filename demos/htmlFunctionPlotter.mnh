@@ -4,7 +4,7 @@ private isValidReal(x)->x.isNumeric AND !x.isNan and !x.isInfinite;
 memoized
 pageSet(rawParameters,parameters)->begin
   //extract parameters in string form
-  local f_ :=(parameters['f'] orElse "sin(x)").replace('$','');
+  local f_ :=(parameters['f'] orElse "sin(x)").toString.replace('$','');
   local x0_:=parameters['x0'] orElse "-3";
   local x1_:=parameters['x1'] orElse "3";
   local sp_:=parameters['samples'] orElse "1000";
@@ -15,7 +15,7 @@ pageSet(rawParameters,parameters)->begin
   print('Function input: ',escape(f_));
   try({begin
         //replace "x" by valid expression variable "$x"
-        f:=f_.replace('x','$x').toExpression;
+        f:=f_.tokenSplit.map({$token='x' ? '$x' : $token}).toExpression;
         f.arity==1
         ? void
         : validationMessages|='Function must unary.';

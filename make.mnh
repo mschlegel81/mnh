@@ -134,13 +134,14 @@ private showStatus->
     local exe  :=B['targetDest'].systemSpecificFilename;
     local exist:=fileExists(exe);
     local canBuild:=B['canBuild'];
-    local version :=exist ? canBuild ? exe.codeVersion : '?' : '';
-    local cmpTime :=exist ? canBuild ? exe.compileTime : '?' : '';
+    local version    :=exist ? canBuild ? exe.codeVersion : '?' : '';
+    local testVersion:=exist ? canBuild ? exe.codeVersion : ensureCodeHash : '';
+    local cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
     [B['flavour'],
      exe,
      version==ensureCodeHash ? 'o.k.' : version,
      cmpTime,
-     B['doTest'] ? timeForFullTest(B['flavour'],version).roundToRelevantDigits(4) : '(n/a)'
+     B['doTest'] ? timeForFullTest(B['flavour'],testVersion).roundToRelevantDigits(4) : '(n/a)'
      ];
   end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print
   orElse print;
