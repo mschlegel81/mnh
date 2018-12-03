@@ -79,6 +79,11 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
       end;
     end;
 
+  PROCEDURE addItemIfNew(CONST s:string);
+    begin
+      if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(s);
+    end;
+
   VAR s:string;
   begin
     nameEdit.caption:=fname;
@@ -87,10 +92,10 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     extEdit.text:=ext;
     //directory
     dirComboBox.items.clear;
-    dirComboBox.items.add(rootPath);
-    dirComboBox.items.add(configDir+'packages');
-    dirComboBox.items.add(configDir+'demos');
-    for s in fileHistory.recentFolders do if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(s);
+    for s in folderHistory.items do dirComboBox.items.add(s);
+    addItemIfNew(rootPath            );
+    addItemIfNew(configDir+'packages');
+    addItemIfNew(configDir+'demos'   );
     dirComboBox.ItemIndex:=0;
     //sub dialog
     if uppercase(ext)='.MNH' then begin
