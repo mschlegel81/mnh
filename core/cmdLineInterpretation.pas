@@ -181,6 +181,7 @@ CONST DEF_VERBOSITY_STRING='';
     end;
 
   FUNCTION parseMnhCommand(CONST param:string):boolean;
+    VAR s:string;
     begin
       result:=false;
       if directExecutionMode then begin
@@ -202,7 +203,7 @@ CONST DEF_VERBOSITY_STRING='';
           {$endif} {$endif}
           if param='-cmd'           then begin directExecutionMode:=true;                exit(true); end;
           if startsWith(param,'-h') then begin wantHelpDisplay:=true;                    exit(true); end;
-          if param='-info'          then begin writeln(getMnhInfo); quitImmediate:=true; exit(true); end;
+          if param='-info'          then begin for s in getMnhInfo do writeln(s); quitImmediate:=true; exit(true); end;
         end;
         pst_parsingFileToEdit: begin
           {$ifdef fullVersion}

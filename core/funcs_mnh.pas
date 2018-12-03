@@ -11,7 +11,7 @@ USES sysutils,
      contexts,
      mnh_settings,
      funcs;
-FUNCTION getMnhInfo:string;
+FUNCTION getMnhInfo:T_arrayOfString;
 {$i func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
@@ -183,7 +183,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
     else result:=nil;
   end;
 
-FUNCTION getMnhInfo:string;
+FUNCTION getMnhInfo:T_arrayOfString;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
       dummyContext:T_context;
@@ -192,7 +192,7 @@ FUNCTION getMnhInfo:string;
     recycler.initRecycler;
     initialize(dummyContext);
     L:=mnhInfo_imp(nil,pseudoLoc,dummyContext,recycler);
-    result:=L^.toString();
+    result:=serializeToStringList(L,pseudoLoc,nil);
     disposeLiteral(L);
     recycler.cleanup;
   end;

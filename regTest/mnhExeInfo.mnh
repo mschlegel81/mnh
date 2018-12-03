@@ -1,0 +1,23 @@
+@SuppressUnusedParameterWarning
+private memoized memExeInfo(exe,exeFileInfo)->
+  exe=executor
+  ? mnh.mnhInfo
+  : try({(exe.exec(['-info'],false)[0] orElse '[].toMap').interpret([])},[]);
+
+private exeInfo(executable:String)->memExeInfo(executable,fileInfo(executable));
+
+canPlot->executor.canPlot;
+canPlot(exe:String)->exe.exeInfo['isFullVersion'];
+@SuppressUnusedWarning
+codeVersion(exe:String)->exe.exeInfo['codeVersion'] orElse '';
+codeHash->executor.codeHash;
+codeHash(exe:String)->exe.exeInfo.getAll(['flavour','codeVersion']).join(':');
+@SuppressUnusedWarning
+isDebug(exe:String)->exe.exeInfo['isDebugVersion'];
+flavour->executor.flavour;
+flavour(exe:String)->exe.exeInfo['flavour'] orElse '';
+@SuppressUnusedWarning
+compileTime(exe:String)->exe.exeInfo['compileTime'] orElse '';
+
+main(exe)->exe.exeInfo.each(line,line.join("\t")).join("\n").print;
+main->main(executor);

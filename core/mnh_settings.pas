@@ -34,6 +34,7 @@ T_formPosition=object(T_serializable)
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
 end;
 
+P_fileHistory=^T_fileHistory;
 T_fileHistory=object(T_serializable)
   items: T_arrayOfString;
 
@@ -44,9 +45,8 @@ T_fileHistory=object(T_serializable)
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
-  FUNCTION recentFolders:T_arrayOfString;
   FUNCTION historyItem(CONST index:longint):ansistring;
-  FUNCTION findFiles(CONST rootPath:string; CONST additionalPaths:T_arrayOfString):T_arrayOfString;
+  FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
 end;
 
 P_Settings=^T_settings;
@@ -288,22 +288,13 @@ FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
     else result:='';
   end;
 
-FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
-  VAR fileName:string;
-  begin
-    setLength(result,0);
-    for fileName in items do append(result,ExtractFileDir(fileName));
-    sortUnique(result);
-  end;
-
-FUNCTION T_fileHistory.findFiles(CONST rootPath:string; CONST additionalPaths:T_arrayOfString):T_arrayOfString;
+FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
   VAR allPathsToScan:T_arrayOfString;
       fileName:string;
       pathToScan:string;
       list:TStringList;
   begin
-    allPathsToScan:=recentFolders;
-    for pathToScan in additionalPaths do appendIfNew(allPathsToScan,pathToScan);
+    allPathsToScan:=items;
     result:=listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
       list:=FindAllFiles(pathToScan+DirectorySeparator,'',false);

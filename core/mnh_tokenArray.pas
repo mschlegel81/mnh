@@ -650,7 +650,8 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       '>': if startsWith(tt_comparatorGeq)       then apply(tt_comparatorGeq) else
            if startsWith(tt_mut_assignDrop)      then apply(tt_mut_assignDrop)
                                                  else apply(tt_comparatorGrt);
-      '=': if startsWith(tt_comparatorListEq)    then apply(tt_comparatorListEq)
+      '=': if startsWith(tt_comparatorListEq)    then apply(tt_comparatorListEq) else
+           if startsWith(tt_separatorMapItem)    then apply(tt_separatorMapItem)
                                                  else apply(tt_comparatorEq);
       '<': if startsWith(tt_comparatorNeq)       then apply(tt_comparatorNeq) else
            if startsWith(tt_comparatorLeq)       then apply(tt_comparatorLeq)

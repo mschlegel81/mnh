@@ -173,6 +173,7 @@ TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
     recentlyActivated:T_fileHistory;
+    folderHistory    :T_fileHistory;
     fileHistory      :T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
@@ -207,7 +208,7 @@ FUNCTION workspaceFilename:string;
     result:=configDir+'workspace.0';
   end;
 
-CONST workspaceSerialVersion=2661226501;
+CONST workspaceSerialVersion=2661226502;
 FUNCTION loadWorkspace:boolean;
   VAR stream:T_bufferedInputStreamWrapper;
       i:longint;
@@ -215,11 +216,13 @@ FUNCTION loadWorkspace:boolean;
   begin
     stream.createToReadFromFile(workspaceFilename);
     fileHistory.create;
+    folderHistory.create;
     if not(stream.readDWord=workspaceSerialVersion) then begin
       stream.destroy;
       exit(false);
     end;
-    if not(fileHistory.loadFromStream(stream)) then exit(false);
+    if not(fileHistory  .loadFromStream(stream)) then exit(false);
+    if not(folderHistory.loadFromStream(stream)) then exit(false);
     setLength(editorMetaData,stream.readNaturalNumber);
     if not(stream.allOkay) then begin
       setLength(editorMetaData,0);
@@ -259,6 +262,7 @@ PROCEDURE saveWorkspace;
     stream.createToWriteToFile(workspaceFilename);
     stream.writeDWord(workspaceSerialVersion);
     fileHistory.saveToStream(stream);
+    folderHistory.saveToStream(stream);
     pageIndex:=inputPageControl.activePageIndex;
     for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled
     then inc(visibleEditorCount)
@@ -291,6 +295,7 @@ PROCEDURE initNewWorkspace;
     new(editorMetaData[0],create(0));
     inputPageControl.activePageIndex:=0;
     setLength(fileHistory.items,0);
+    setLength(folderHistory.items,0);
     for i:=0 to 9 do globalBookmarks[i].editorIndex:=-1;
   end;
 
@@ -463,6 +468,7 @@ PROCEDURE T_editorMeta.activate;
     try
       restoreMenuItem.enabled:=isRestorable(getPath)>=0;
       recentlyActivated.fileClosed(getPath);
+      folderHistory.fileClosed(ExtractFileDir(getPath));
       if language_=LANG_MNH then begin
         outlineGroupBox.visible:=true;
         editor.highlighter:=highlighter;
@@ -557,7 +563,10 @@ PROCEDURE T_editorMeta.closeEditorWithDialogs;
       if mr=mrOk then if not(saveWithDialog) then exit;
       if mr=mrCancel then exit;
     end;
-    if isFile then fileHistory.fileClosed(fileInfo.filePath);
+    if isFile then begin
+      fileHistory.fileClosed(fileInfo.filePath);
+      folderHistory.fileClosed(ExtractFileDir(fileInfo.filePath));
+    end;
     closeEditorQuietly;
   end;
 
@@ -840,7 +849,10 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-    if (previousName<>'') and (previousName<>fileInfo.filePath) then fileHistory.fileClosed(previousName);
+    if (previousName<>'') and (previousName<>fileInfo.filePath) then begin
+      fileHistory.fileClosed(previousName);
+      folderHistory.fileClosed(ExtractFileDir(previousName));
+    end;
     if previousName<>fileInfo.filePath
     then lineEndingSetting:=settings.newFileLineEnding
     else lineEndingSetting:=settings.overwriteLineEnding;

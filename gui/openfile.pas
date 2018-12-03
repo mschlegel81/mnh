@@ -99,13 +99,10 @@ PROCEDURE TopenFileDialog.searchResultsListBoxKeyPress(Sender: TObject; VAR key:
   end;
 
 FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
-  VAR currentPaths:T_arrayOfString;
-      fileName:string;
+  VAR fileName:string;
   begin
     searchEdit.text:='';
-    currentPaths:=C_EMPTY_STRING_ARRAY;
-    for fileName in currentlyOpenFiles do appendIfNew(currentPaths,ExtractFileDir(fileName));
-    fileList:=fileHistory.findFiles(rootPath,currentPaths);
+    fileList:=folderHistory.findFiles(rootPath);
     searchResultsListBox.clear;
     selectedFile:='';
     result:=ShowModal;
