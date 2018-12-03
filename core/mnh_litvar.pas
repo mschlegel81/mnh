@@ -52,6 +52,10 @@ TYPE
   PP_literal = ^P_literal;
   P_setOfPointer=^T_setOfPointer;
   T_arrayOfLiteral=array of P_literal;
+  T_keyValuePair=record
+    key,value:P_literal;
+  end;
+  T_arrayOfKeyValuePair=array of T_keyValuePair;
   T_literal = object(T_objectWithIdAndLocation)
   private
     numberOfReferences: longint;
@@ -421,6 +425,7 @@ TYPE
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
+      FUNCTION entryList:T_arrayOfKeyValuePair;
       FUNCTION keyIteratableList:T_arrayOfLiteral;
 
       PROCEDURE drop(CONST L:P_literal);
@@ -443,6 +448,7 @@ FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef profilingFlavour}{$ifndef debugMode} inline; {$endif}{$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
+PROCEDURE disposeLiteral(VAR l: T_arrayOfKeyValuePair); {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; inline;
@@ -613,6 +619,16 @@ PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
   VAR lit:P_literal;
   begin
     for lit in l do if lit^.unreference<=0 then dispose(lit,destroy);
+    setLength(l,0);
+  end;
+
+PROCEDURE disposeLiteral(VAR l: T_arrayOfKeyValuePair); inline;
+  VAR pair:T_keyValuePair;
+  begin
+    for pair in l do with pair do begin
+      if key^  .unreference<=0 then dispose(key,destroy);
+      if value^.unreference<=0 then dispose(value,destroy);
+    end;
     setLength(l,0);
   end;
 
@@ -1460,16 +1476,16 @@ FUNCTION T_setLiteral.toString(CONST lengthLimit: longint): ansistring;
 
 FUNCTION T_mapLiteral.toString(CONST lengthLimit: longint): ansistring;
   VAR i,remainingLength: longint;
-      iter:T_arrayOfLiteral;
+      iter:T_arrayOfKeyValuePair;
   begin
     if size = 0 then result:='[]'
     else begin
-      iter:=iteratableList;;
+      iter:=entryList;
       remainingLength:=lengthLimit-1;
-      result:='['+iter[0]^.toString(remainingLength);
+      result:='['+iter[0].key^.toString(remainingLength)+' => '+iter[0].value^.toString(remainingLength);
       for i:=1 to size-1 do if remainingLength>0 then begin
         remainingLength:=lengthLimit-length(result);
-        result:=result+','+iter[i]^.toString(remainingLength);
+        result:=result+','+iter[i].key^.toString(remainingLength)+'=>'+iter[i].value^.toString(remainingLength);
       end else begin
         result:=result+',... ';
         break;
@@ -2797,6 +2813,18 @@ FUNCTION T_mapLiteral.iteratableList: T_arrayOfLiteral;
     for i:=0 to length(e)-1 do result[i]:=newListLiteral(2)^.append(e[i].key,true)^.append(e[i].value,true);
   end;
 
+FUNCTION T_mapLiteral.entryList:T_arrayOfKeyValuePair;
+  VAR e:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
+      i:longint;
+  begin
+    e:=dat.keyValueList;
+    setLength(result,length(e));
+    for i:=0 to length(e)-1 do begin
+      result[i].key  :=e[i].key  ^.rereferenced;
+      result[i].value:=e[i].value^.rereferenced;
+    end;
+  end;
+
 FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
   VAR L:P_literal;
   begin
@@ -3646,8 +3674,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
           if (adapters=nil) or (adapters^.continueEvaluation) then appendPart(L^.toString);
         end;
         lt_list..lt_emptyList,
-        lt_set ..lt_emptySet,
-        lt_map ..lt_emptyMap:
+        lt_set ..lt_emptySet:
         begin
           if outerIndex>0 then begin
             append(prevLines,nextLine);
@@ -3670,10 +3697,37 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
           case L^.literalType of
             lt_list..lt_emptyList: appendPart(']');
             lt_set ..lt_emptySet : appendPart('].toSet');
-            lt_map ..lt_emptyMap : appendPart('].toMap');
           end;
           if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then appendPart('.to'+P_typableLiteral(L)^.customType^.name);
         end;
+        lt_map ..lt_emptyMap:
+        begin
+          if outerIndex>0 then begin
+            append(prevLines,nextLine);
+            nextLine:=StringOfChar(' ',indent);
+          end;
+          appendPart('[');
+          inc(indent);
+          sortedTemp:=P_compoundLiteral(L)^.toList;
+          sortedTemp^.sort;
+          iter:=sortedTemp^.iteratableList;
+          disposeLiteral(sortedTemp);
+          for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.continueEvaluation) then begin
+            ser(P_listLiteral(iter[k])^.value[0],0);
+            nextLine+='=>';
+            ser(P_listLiteral(iter[k])^.value[1],1);
+            if k<length(iter)-1 then begin
+              appendSeparator;
+              append(prevLines,nextLine);
+              nextLine:=StringOfChar(' ',indent);
+            end;
+          end;
+          disposeLiteral(iter);
+          dec(indent);
+          appendPart('].toMap');
+          if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then appendPart('.to'+P_typableLiteral(L)^.customType^.name);
+        end;
+
         else if adapters<>nil then adapters^.raiseSimpleError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
       end;
     end;

@@ -1,5 +1,5 @@
 #!/usr/bin/mnh_light
-USE mnhInfo,formattingUtils,make_config,distroLog,testExpectation;
+USE mnhExeInfo,formattingUtils,make_config,distroLog,testExpectation;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
 private needBuild(B)->B['canBuild'] AND (!(B['targetDest'].fileExists) OR !([B['targetDest'].flavour,B['targetDest'].codeVersion]==[B['flavour'],ensureCodeHash]));

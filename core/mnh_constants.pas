@@ -124,7 +124,7 @@ TYPE
     //inline if: (<condition>?<then>:<else>)
     tt_iifCheck, tt_iifElse,
     //separators
-    tt_separatorComma, tt_separatorCnt,
+    tt_separatorComma, tt_separatorCnt, tt_separatorMapItem,
     //comparators
     tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
     tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
@@ -272,6 +272,7 @@ CONST
 {tt_iifElse}                    (defaultId:':';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
 {tt_separatorComma}             (defaultId:',';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator comma'),
 {tt_separatorCnt}               (defaultId:'..';            defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator ..#Used for constructing ranges and only allowed in that context'),
+{tt_separatorMapItem}           (defaultId:'=>';            defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator =>#Used for constructing key-value-pairs'),
 {tt_comparatorEq}               (defaultId:'=';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'),
 {tt_comparatorNeq}              (defaultId:'<>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Not-equals operator#Returns true if the scalar comparands are type-compatible#and not equal#For list operands a list of booleans is returned'),
 {tt_comparatorLeq}              (defaultId:'<=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Lesser-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser or equal to the right hand side#For list operands a list of booleans is returned'),

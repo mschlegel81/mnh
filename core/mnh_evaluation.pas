@@ -446,12 +446,12 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         exit;
       end;
       tokenBeforeElse:=prev;
-      while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
+      while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorMapItem,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         if p^.tokType in      C_openingBrackets then inc(bracketLevel)
         else if p^.tokType in C_closingBrackets then dec(bracketLevel);
         prev:=p; p:=p^.next;
       end;
-      if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
+      if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorMapItem,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
         stack.popLink(first);
         context.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
         exit;
@@ -623,7 +623,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             stack.push(first);
             didSubstitution:=true;
           end;
-        tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
+        tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt,tt_separatorMapItem, tt_iifCheck, tt_iifElse:
           if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
             trueLit:=P_literal(first^.data)=@boolLit[true];
             stack.push(first);
@@ -684,7 +684,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           end else begin
             //false AND ... -> false
             p:=first^.next;
-            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorMapItem,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
               p:=recycler.disposeToken(p);
@@ -697,7 +697,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           if (P_boolLiteral(first^.data)^.value) then begin
             //true OR ... -> true
             p:=first^.next;
-            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorMapItem,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
               p:=recycler.disposeToken(p);
@@ -720,7 +720,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           end else begin
             //<Lit> orElse ... -> <Lit>
             p:=first^.next;
-            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr,tt_separatorMapItem]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
               p:=recycler.disposeToken(p);
@@ -786,6 +786,11 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
 {$MACRO ON}
 {$define COMMON_CASES:=
+tt_separatorMapItem: begin
+  stack.push(first);
+  stack.push(first);
+  didSubstitution:=true;
+end;
 tt_listBraceOpen: begin
   first^.next^.data:=newListLiteral;
   first^.next^.tokType:=tt_list_constructor;
@@ -859,6 +864,16 @@ end}
       {$endif}
       case cTokType[0] of
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+ {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
+              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
+              stack.popDestroy(recycler);
+              stack.popLink(first);
+              first^.data:=newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
+              first^.next:=recycler.disposeToken(first^.next);
+              didSubstitution:=true;
+            end;
+            COMMON_CASES;
+          end;
  {cT[-1]=}tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
             and (stack.topIndex>0) and (stack.dat[stack.topIndex-1]^.tokType=tt_literal) then begin
             // <Lit> . # {$x}
