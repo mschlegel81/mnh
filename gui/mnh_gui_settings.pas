@@ -196,9 +196,12 @@ PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
   begin
     {$ifndef Windows}
-    TabSheet_install.visible:=false;
-    TabSheet_install.enabled:=false;
-    TabSheet_install.tabVisible:=false;
+    installButton.visible:=false;
+    installButton.enabled:=false;
+    uninstallButton.visible:=false;
+    uninstallButton.enabled:=false;
+    togglePortableButton.visible:=false;
+    togglePortableButton.enabled:=false;
     {$else}
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
     {$endif}
