@@ -1,8 +1,9 @@
+//================Type definitions===================
 type Matrix(M:List)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
 ducktype SquareMatrix(M:Matrix)->M.each(row,row.isNumericList(M.size),AND);
 @SuppressUnusedParameterWarning
 ducktype Vector(V:NumericList)->true;
-
+//================Basic operations===================
 private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
              ? void
@@ -11,7 +12,8 @@ private subMatrix(M:List,skipRow,skipCol)->
 private matrixDimensions(M:Matrix)->[M.size,M[0].size];
 
 //*Matrix multiplication
-mult(x:Matrix,y:Matrix)->begin
+@Override
+OPERATOR_MULT(x:Matrix,y:Matrix)->begin
   local dimX:=matrixDimensions(x);
   local dimY:=matrixDimensions(y);
   (dimX[1]==dimY[0]) ? [0..dimX[0]-1].each(i,
@@ -20,9 +22,17 @@ mult(x:Matrix,y:Matrix)->begin
 end;
 //*Matrix+vector multiplication
 @Override
-OPERATOR_MULT(x:Matrix,vec:Vector)->x.mult(vec.each(c,[c]));
+OPERATOR_MULT(x:Matrix,vec:Vector)->x*(vec.each(c,[c]).toMatrix);
 //*Vector+matrix multiplication
-OPERATOR_MULT(vec:NumericList,y:Matrix)->[vec].mult(y);
+OPERATOR_MULT(vec:NumericList,y:Matrix)->[vec].toMatrix*y;
+@Override
+OPERATOR_MULT(x:Matrix,i:Numeric)->(x.toBuiltin*i).toMatrix;
+@Override
+OPERATOR_MULT(i:Numeric,x:Matrix)->(x.toBuiltin*i).toMatrix;
+@Override
+OPERATOR_PLUS(x:Matrix,y:Matrix)->(x.toBuiltin+y.toBuiltin).toMatrix;
+@Override
+OPERATOR_MINUS(x:Matrix,y:Matrix)->(x.toBuiltin-y.toBuiltin).toMatrix;
 
 determinant(M:SquareMatrix)->
   M.size=1 ? M[0,0] :
@@ -30,24 +40,24 @@ determinant(M:SquareMatrix)->
              [0..M.size-1].each(i,-1^(i)*M[i,0]*M.subMatrix(i,0).determinant,+);
 
 crossProd(x:NumericList(3),y:NumericList(3))->[x[1]*y[2]-y[1]*x[2],
-                                           x[2]*y[0]-y[2]*x[0],
-                                           x[0]*y[1]-y[0]*x[1]];
-euclidNorm(x:NumericList)->x.sqr.agg(+).sqrt;
+                                               x[2]*y[0]-y[2]*x[0],
+                                               x[0]*y[1]-y[0]*x[1]];
+euclideanNorm(x:NumericList)->x.sqr.agg(+).sqrt;
 randomVec3OnSphere->begin
   local x:=random(3)-0.5;
-  x/euclidNorm(x);
+  x/euclideanNorm(x);
 end;
 
 @SuppressUnusedWarning=all
 randomOrthoMatrix->begin
   local x:=randomVec3OnSphere;
   local y:=x.crossProd(randomVec3OnSphere);
-        y:=y/euclidNorm(y);
+        y:=y/euclideanNorm(y);
   local z:=x.crossProd(y);
   [x,y,z];
 end;
 
-printMatrix(M)->M.each(row,row.join("\t")).join("\n").print;
+printMatrix(M:Matrix)->M.each(row,row.join("\t")).join("\n").print;
 
 private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).abs)];
 
@@ -91,3 +101,31 @@ rotX(angle)->[[1,         0 ,        0 ],
               [0,-sin(angle),cos(angle)]].toSquareMatrix;
 rot2D(angle)->[[ cos(angle),sin(angle)],
                [-sin(angle),cos(angle)]].toSquareMatrix;
+
+identityMatrix(dimensions>=1)->[0..dimensions-1].each(i,ord([0..dimensions-1]=i)).toSquareMatrix;
+
+dyadicProduct(v1,v2:Vector)->v1.each(e,v2*e).toMatrix;
+
+//*Returns the QR-decomposition of Matrix A
+//*See https://www.keithlantz.net/2012/05/qr-decomposition-using-householder-transformations/
+qrDecomposition(A:Matrix)->
+  begin
+    local R:=A;
+    local Q:=(local I:=identityMatrix(A.matrixDimensions[0]));
+    [0..A.matrixDimensions[1]-1].each(i,begin
+      print(R.getInner(i),' ',i);
+      local u:=R.getInner(i).each(x,index<i ? 0 : x);
+      local alpha:=((u[i] orElse 0)<0 ? 1 :-1) * u.euclideanNorm;
+      local v:=u.each(x,index=i ? x+alpha : x);
+      (alpha:=v.euclideanNorm)<1E-10
+      ? void
+      : begin
+          v/=alpha;
+          local P:=I-v.each(x,x*v*2).toMatrix;
+          R:=P*R;
+          Q:=Q*P;
+        end;
+    end);
+    [Q,R];
+  end;
+
