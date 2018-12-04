@@ -1,0 +1,24 @@
+//*Constructs a De Bruijn sequence for an alphabet of k entries
+//*containing all substrings of length n
+//*See: https://en.wikipedia.org/wiki/De_Bruijn_sequence
+deBruijn(k:Int,n:Int)->begin
+  local a:=[1..k*n]*0;
+  local sequence:=[];
+  local db:={begin
+    $t>n
+    ? n mod $p=0
+      ? sequence|=a[[1..$p]]
+      : void
+    : begin
+        a[$t]:=a[$t-$p];
+        db($t+1,$p);
+        k>a[$t-$p]+1 ?
+        [a[$t-$p]+1..k-1].each(j,
+          a[$t]:=j,
+          db($t+1,$t)) : void;
+      end; end};
+  db(1,1);
+  sequence;
+end;
+
+main->[1..7].each(i,print(deBruijn(2,i).join));
