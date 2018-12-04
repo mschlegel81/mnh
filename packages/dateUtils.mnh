@@ -30,3 +30,17 @@ dayOfYear(time:NumericOrList)->floor(time-dateOf(time.year,1,1));
 
 //*Returns the calendar week (cf. ISO8601)
 calendarWeek(time:NumericOrList)->(time.dayOfYear-3) div 7+1;
+
+getEasterDate(year:Int)->begin
+  local a := year mod 19;
+  local bc:=year.divMod(100);
+  local de:= bc[0].divMod(4);
+  local f := (bc[0] + 8) div 25;
+  local g := (bc[0] - f + 1) div 3;
+  local h := (19 * a + bc[0] - de[0] - g + 15) mod 30;
+  local ik:= bc[1].divMod(4);
+  local l := (32 + 2 * de[1] + 2 * ik[0] - h - ik[1]) mod 7;
+  local m := (a + 11 * h + 22 * l) div 451;
+  local np:= (h + l - 7 * m + 114).divMod(31);
+  dateOf(year,np[0], np[1] + 1);
+end;

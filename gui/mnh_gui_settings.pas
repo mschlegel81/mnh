@@ -196,9 +196,12 @@ PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
   begin
     {$ifndef Windows}
-    TabSheet_install.visible:=false;
-    TabSheet_install.enabled:=false;
-    TabSheet_install.tabVisible:=false;
+    installButton.visible:=false;
+    installButton.enabled:=false;
+    uninstallButton.visible:=false;
+    uninstallButton.enabled:=false;
+    togglePortableButton.visible:=false;
+    togglePortableButton.enabled:=false;
     {$else}
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
     {$endif}
@@ -244,10 +247,12 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     try
       for k:=0 to 2 do allOkay:=allOkay and CopyDirTree(foldersToMove[k,0],foldersToMove[k,1]);
       for k:=0 to 1 do allOkay:=allOkay and DeleteFile(filesToDelete[k]);
-      if oldWasNormal then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
+      if oldWasNormal  then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
       else for k:=0 to 2 do allOkay:=allOkay and DeleteDirectory(foldersToMove[k,0],false);
     except
       allOkay:=false;
+    end;
+    if not(allOkay) then begin
       if oldWasNormal
       then APP_STYLE:=APP_STYLE_NORMAL
       else APP_STYLE:=APP_STYLE_PORTABLE;

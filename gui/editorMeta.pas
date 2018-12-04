@@ -215,8 +215,8 @@ FUNCTION loadWorkspace:boolean;
       validMetaCount:longint=0;
   begin
     stream.createToReadFromFile(workspaceFilename);
-    fileHistory.create;
-    folderHistory.create;
+    fileHistory.create(false);
+    folderHistory.create(true);
     if not(stream.readDWord=workspaceSerialVersion) then begin
       stream.destroy;
       exit(false);
@@ -1234,7 +1234,9 @@ PROCEDURE T_runnerModel.haltEvaluation;
 INITIALIZATION
   setLength(editorMetaData,0);
   doNotCheckFileBefore:=now;
-  recentlyActivated.create;
+  recentlyActivated.create(false);
 FINALIZATION
   recentlyActivated.destroy;
+  folderHistory    .destroy;
+  fileHistory      .destroy;
 end.

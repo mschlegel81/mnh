@@ -1,5 +1,5 @@
 #!/usr/bin/mnh
-USE testExpectation,test_config,'../demos/oeis_server.mnh';
+USE testExpectation,test_config,'../demos/oeis/oeis_server.mnh';
 
 private mutable longestCaseText:=0;
 private printCase(s:String)->begin

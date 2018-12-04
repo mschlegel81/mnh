@@ -37,8 +37,8 @@ end;
 P_fileHistory=^T_fileHistory;
 T_fileHistory=object(T_serializable)
   items: T_arrayOfString;
-
-  CONSTRUCTOR create;
+  isFolderHistory:boolean;
+  CONSTRUCTOR create(CONST forFolders:boolean);
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
@@ -223,9 +223,10 @@ FUNCTION T_settings.savingRequested: boolean;
     result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
   end;
 
-CONSTRUCTOR T_fileHistory.create;
+CONSTRUCTOR T_fileHistory.create(CONST forFolders:boolean);
   begin
     items:=C_EMPTY_STRING_ARRAY;
+    isFolderHistory:=forFolders;
   end;
 
 DESTRUCTOR T_fileHistory.destroy;
@@ -262,7 +263,8 @@ FUNCTION T_fileHistory.polishHistory: boolean;
   begin
     result := false;
     for i:=0 to length(items)-1 do
-    if not(fileExists(items[i])) then begin
+    if not(isFolderHistory) and not(fileExists     (items[i])) or
+           isFolderHistory  and not(DirectoryExists(items[i])) then begin
       items[i]:='';
       result:=true;
     end;
