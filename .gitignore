@@ -25,3 +25,4 @@ core/build_number.inc
 /callgrind.out.*
 /target/*
 *.exe
+/demos/oeis/oeis_server.datastore*

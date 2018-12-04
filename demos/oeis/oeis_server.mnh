@@ -6,15 +6,15 @@ ipcId:=myPath.extractFileNameOnly&format('%x',myPath.fileStats).join;
 USE oeis_sequences;
 memoized implementationOf(index:Int)->begin
   local result:=implemented[index];
-  result.isVoid ? void : return result;
+  result.isVoid ? void : return result[0];
   result:=foundImplementations[index];
-  result.isVoid ? void : return result.toExpression;
+  result.isVoid ? void : return result[0].toExpression;
   result:=sequences[index];
   result.isVoid ? return void : void;
   result:=guessImplementation(result);
   result.isVoid ? return void : foundImplementations[index]:=result;
   print('Found new implementation [',index,'] ',result);
-  result.toExpression;
+  result[0].toExpression;
 end;
 
 implementationOf(s:String)->begin
@@ -141,18 +141,21 @@ private serve_('continue',start:IntList,additional>0)->begin
 end;
 
 private serve_('validate')->begin
-  local valids:=[];
-  implemented
-  .mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,::orElse)
+  local validCount:=0;
+  local invalids:=[];
+  local timedOut:=[].toSet;
+  implemented.mergeMaps(foundImplementations,::orElse)
+  .map({[$x[0],$x[1,0].isExpression ? $x[1,0] : $x[1,0].toExpression]})
+  .{print('Validating ',$L.size,' implemtatations') orElse $L}
   .each(seq,sequences.size>seq[0]>0 ? begin
-    local timeOut :=time+1;
+    local timeOut :=time+2;
     local id      :=seq[0];
     local storeSeq:=sequences[id];
     note('Validating ',format(IDFormat,id),' against ',seq[1]);
     local gen     := seq[1]();
     local maxValidated:=-1;
     local valid:=gen.isIteratableExpression AND
-    storeSeq.each(n0,time>timeOut ? note('Validation for sequence ',id,' timed out') : begin
+    storeSeq.each(n0,time>timeOut ? timedOut|=id : begin
       local n1:=gen();
       (index>0) AND isVoid(n1)
       ? true
@@ -161,10 +164,15 @@ private serve_('validate')->begin
           n1==n0;
         end;
     end,AND);
-     (valid ? valids|=id
-            : "Sequence "&(IDFormat.format(id))&' IS INVALID AT INDEX  %3d'.format(maxValidated));
-  end : format('No sequence found for id '&IDFormat,seq[0]))
-  | 'Valid:' & format(IDFormat,valids.sort).join(", ");
+    id in timedOut ? print('Validation of ',format(IDFormat,id),' against ',seq[1],' timed out') : void;
+    valid
+    ? validCount+=1
+    : invalids|="Sequence "&(IDFormat.format(id))&' IS INVALID AT INDEX  %3d'.format(maxValidated);
+    void;
+  end : invalids|=format('No sequence found for id '&IDFormat,seq[0]))
+  | 'Valid: ' & validCount & "\n" &
+    invalids.join("\n") &
+    "\nValidation timed out for "&format(IDFormat,timedOut.unique).join(", ");
 end;
 
 private serve_('statistics')->begin
@@ -201,10 +209,10 @@ private serve_('gen',seriesId,count)->begin
   f().head(n);
 end;
 
-private serve_('class')->foundImplementations.union(implemented).getInner(1).pMap(::classifyImplementation).elementFrequency.filter({$x[1]>1}).map({$x.join("\t")}).join("\n");
+private serve_('class')->implemented.mergeMaps(foundImplementations,::orElse).map({$x[1,1]}).elementFrequency.map({$x.join("\t")}).join("\n");
 private serve_('class',className)->begin
-  foundImplementations.union(implemented)
-    .pEach(i,classifyImplementation(i[1])==className ? i[0] : void)
+  implemented.mergeMaps(foundImplementations,::orElse)
+    .pMap({$entry[1,1]==className ? $entry[0] : void})
     .sort.formatInfo;
 end;
 
