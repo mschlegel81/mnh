@@ -16,6 +16,8 @@ private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape
 @demo_for=Inter Process Communication
 //*Return info on a series by ID(s)
 main('id',...)->getData($params).print;
+//*Return details on a series by ID(s)
+main('details',...)->getData($params).print;
 //*Returns info on a series by name pattern(s)
 main('name',...)->map(...,::validateRegex_)[0] orElse getData($params).print;
 //*Returns info on a series by part; start with \[ to indicate sequence start
@@ -30,6 +32,11 @@ main('validate')->getData($params).join("\n").print;
 main('class',...)->getData($params).join("\n").print;
 //*Scan for reproducible series
 main('scan')->getData($params).join("\n").print;
+//*Plot number frequencies
+main('plot')->begin
+  ['logscaleX'=>true,'fontsize'=>6,'logscaleY'=>true,'preserveAspect'=>false].toMap.setOptions;
+  getData('numberFrequencies').plot('. 0.3 red') orElse display;
+end;
 //*Stops the IPC server (if running)
 main('stopServer')->begin
   isIpcServerRunning(ipcId) AND sendIpcRequest(ipcId,['stop']);

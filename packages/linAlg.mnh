@@ -128,4 +128,3 @@ qrDecomposition(A:Matrix)->
     end);
     [Q,R];
   end;
-

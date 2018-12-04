@@ -376,7 +376,7 @@ private curry isKnoedel(n,m)->!isPrime(m) AND coprimesLesser(m).pEach(i,powMod(i
 
 @SuppressUnusedWarning
 @class=Knödel
-rangeGenerator( 2,2^60).filter(isKnoedel(1));
+A002997->rangeGenerator( 2,2^60).filter(isKnoedel(1));
 @SuppressUnusedWarning
 @class=Knödel
 A050990->rangeGenerator( 3,2^60).filter(isKnoedel(2));
