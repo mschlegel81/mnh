@@ -99,7 +99,6 @@ PROCEDURE TopenFileDialog.searchResultsListBoxKeyPress(Sender: TObject; VAR key:
   end;
 
 FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
-  VAR fileName:string;
   begin
     searchEdit.text:='';
     fileList:=folderHistory.findFiles(rootPath);

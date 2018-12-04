@@ -247,10 +247,12 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     try
       for k:=0 to 2 do allOkay:=allOkay and CopyDirTree(foldersToMove[k,0],foldersToMove[k,1]);
       for k:=0 to 1 do allOkay:=allOkay and DeleteFile(filesToDelete[k]);
-      if oldWasNormal then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
+      if oldWasNormal  then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
       else for k:=0 to 2 do allOkay:=allOkay and DeleteDirectory(foldersToMove[k,0],false);
     except
       allOkay:=false;
+    end;
+    if not(allOkay) then begin
       if oldWasNormal
       then APP_STYLE:=APP_STYLE_NORMAL
       else APP_STYLE:=APP_STYLE_PORTABLE;

@@ -1237,4 +1237,6 @@ INITIALIZATION
   recentlyActivated.create(false);
 FINALIZATION
   recentlyActivated.destroy;
+  folderHistory    .destroy;
+  fileHistory      .destroy;
 end.
