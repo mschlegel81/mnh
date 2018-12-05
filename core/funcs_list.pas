@@ -516,31 +516,31 @@ INITIALIZATION
   {$ifdef fullVersion}sortLoc:={$endif}
   registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,ak_variadic_1,
                                                'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
-                                               'sort(L,leqExpression:expression);//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
-                                               'sort(L,innerIndex:int);//Returns L sorted by given inner index');
+                                               'sort(L,leqExpression:Expression);//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
+                                               'sort(L,innerIndex:Int);//Returns L sorted by given inner index');
   registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,ak_unary     ,'sortPerm(L);//Returns indexes I so that L%I==sort(L)');
-  registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     ,'unique(L:list);//Returns list L without duplicates and enhanced for faster lookup');
+  registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     ,'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,ak_unary     ,'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
   registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,ak_unary     ,'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.');
   registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,ak_variadic_1,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,ak_binary    ,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,ak_ternary   ,'mergeMaps(A:map,B:map,M:expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.');
+  registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,ak_ternary   ,'mergeMaps(A:Map,B:Map,M:Expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.');
   registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,ak_variadic  ,'flatten(L,...);//Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,ak_unary     ,'size(L);//Returns the number of elements in list L');
-  registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,ak_unary     ,'trueCount(B:booleanList);//Returns the number of true values in B');
-  registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,ak_unary     ,'reverseList(L:list);//Returns L reversed');
+  registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,ak_unary     ,'trueCount(B:BooleanList);//Returns the number of true values in B');
+  registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,ak_unary     ,'reverseList(L:List);//Returns L reversed');
   BUILTIN_GET:=
   registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,ak_variadic_2,'get(L,accessor);//Returns elements of list, set or map L by accessor');
-  registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,ak_binary    ,'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:list,fallback:list);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors');
-  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2,'getInner(L:list,index);');
-  registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
+  registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,ak_binary    ,'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:List,fallback:List);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors');
+  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2,'getInner(L:List,index);');
+  registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     ,'indexOf(B:BooleanList);//Returns the indexes for which B is true.');
   registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
   {$ifdef fullVersion}groupLoc:={$endif}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,
-                              'group',  @group_imp ,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
+                              'group',  @group_imp ,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis');
+  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary,'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
   BUILTIN_PMAP:=
-  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
+  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary,'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
 
 end.

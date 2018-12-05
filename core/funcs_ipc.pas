@@ -385,9 +385,9 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
 INITIALIZATION
   registry.create;
   registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
-  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
-  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
-  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance');
+  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary ,'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server');
+  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary ,'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server');
+  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1,'isIpcServerRunning(serverId:String);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance');
 FINALIZATION
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;
