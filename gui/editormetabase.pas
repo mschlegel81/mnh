@@ -18,6 +18,14 @@ USES  //basic classes
   mnh_constants, basicTypes, mnh_fileWrappers,
   mnhCompletion;
 
+CONST editCommandToggleComment    =ecUserDefinedFirst;
+      editCommandPageRight        =ecUserDefinedFirst+1;
+      editCommandPageLeft         =ecUserDefinedFirst+2;
+      editCommandMoveLineUp       =ecUserDefinedFirst+4;
+      editCommandToggleBookmark   =ecUserDefinedFirst+3;
+      editCommandMoveLineDown     =ecUserDefinedFirst+5;
+      editCommandEscapeSelection  =ecUserDefinedFirst+6;
+      editCommandUnescapeSelection=ecUserDefinedFirst+7;
 TYPE T_language=(LANG_MNH   = 0,
                  LANG_CPP   = 1,
                  LANG_CSS   = 2,
@@ -73,6 +81,7 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE insertText(CONST s: string);
       PROCEDURE setMarkedWord(CONST wordText:string);
       PROCEDURE upperLowerCaseBlock(CONST upper:boolean);
+      PROCEDURE escapeSelection(CONST unescape:boolean);
   end;
 
 PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn;
@@ -87,109 +96,109 @@ VAR fileTypeMeta:array[T_language] of record
 IMPLEMENTATION
 
 PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST languageMenuRoot        :TMenuItem);
-  VAR SynBatSyn1            : TSynBatSyn            ;
-      SynCppSyn1            : TSynCppSyn            ;
-      SynCssSyn1            : TSynCssSyn            ;
-      SynDiffSyn1           : TSynDiffSyn           ;
-      SynFreePascalSyn1     : TSynFreePascalSyn     ;
-      SynHTMLSyn1           : TSynHTMLSyn           ;
-      SynIniSyn1            : TSynIniSyn            ;
-      SynJScriptSyn1        : TSynJScriptSyn        ;
-      SynJavaSyn1           : TSynJavaSyn           ;
-      SynPHPSyn1            : TSynPHPSyn            ;
-      SynPerlSyn1           : TSynPerlSyn           ;
-      SynPythonSyn1         : TSynPythonSyn         ;
-      SynSQLSyn1            : TSynSQLSyn            ;
-      SynUNIXShellScriptSyn1: TSynUNIXShellScriptSyn;
-      SynVBSyn1             : TSynVBSyn             ;
-      SynXMLSyn1            : TSynXMLSyn            ;
+  VAR SynBatSyn            : TSynBatSyn            ;
+      SynCppSyn            : TSynCppSyn            ;
+      SynCssSyn            : TSynCssSyn            ;
+      SynDiffSyn           : TSynDiffSyn           ;
+      SynFreePascalSyn     : TSynFreePascalSyn     ;
+      SynHTMLSyn           : TSynHTMLSyn           ;
+      SynIniSyn            : TSynIniSyn            ;
+      SynJScriptSyn        : TSynJScriptSyn        ;
+      SynJavaSyn           : TSynJavaSyn           ;
+      SynPHPSyn            : TSynPHPSyn            ;
+      SynPerlSyn           : TSynPerlSyn           ;
+      SynPythonSyn         : TSynPythonSyn         ;
+      SynSQLSyn            : TSynSQLSyn            ;
+      SynUNIXShellScriptSyn: TSynUNIXShellScriptSyn;
+      SynVBSyn             : TSynVBSyn             ;
+      SynXMLSyn            : TSynXMLSyn            ;
 
   PROCEDURE initHighlighters;
     begin
-      SynBatSyn1            :=TSynBatSyn            .create(languageMenuRoot);
-      SynCppSyn1            :=TSynCppSyn            .create(languageMenuRoot);
-      SynCssSyn1            :=TSynCssSyn            .create(languageMenuRoot);
-      SynDiffSyn1           :=TSynDiffSyn           .create(languageMenuRoot);
-      SynFreePascalSyn1     :=TSynFreePascalSyn     .create(languageMenuRoot);
-      SynHTMLSyn1           :=TSynHTMLSyn           .create(languageMenuRoot);
-      SynIniSyn1            :=TSynIniSyn            .create(languageMenuRoot);
-      SynJScriptSyn1        :=TSynJScriptSyn        .create(languageMenuRoot);
-      SynJavaSyn1           :=TSynJavaSyn           .create(languageMenuRoot);
-      SynPHPSyn1            :=TSynPHPSyn            .create(languageMenuRoot);
-      SynPerlSyn1           :=TSynPerlSyn           .create(languageMenuRoot);
-      SynPythonSyn1         :=TSynPythonSyn         .create(languageMenuRoot);
-      SynSQLSyn1            :=TSynSQLSyn            .create(languageMenuRoot);
-      SynUNIXShellScriptSyn1:=TSynUNIXShellScriptSyn.create(languageMenuRoot);
-      SynVBSyn1             :=TSynVBSyn             .create(languageMenuRoot);
-      SynXMLSyn1            :=TSynXMLSyn            .create(languageMenuRoot);
-      SynBatSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynCppSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynCssSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynFreePascalSyn1     .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynIniSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynJavaSyn1           .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynJScriptSyn1        .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynPerlSyn1           .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynPHPSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynPythonSyn1         .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynSQLSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynUNIXShellScriptSyn1.NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynVBSyn1             .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
-      SynCppSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynCssSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynFreePascalSyn1     .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynHTMLSyn1           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynIniSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynJavaSyn1           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynJScriptSyn1        .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynPerlSyn1           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynPHPSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynPythonSyn1         .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynSQLSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynUNIXShellScriptSyn1.SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynVBSyn1             .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynXMLSyn1            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
-      SynBatSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynCppSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynCssSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynFreePascalSyn1     .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynHTMLSyn1           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynIniSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynJavaSyn1           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynJScriptSyn1        .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynPerlSyn1           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynPHPSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynPythonSyn1         .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynSQLSyn1            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynUNIXShellScriptSyn1.KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynVBSyn1             .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
-      SynBatSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynCppSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynCssSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynFreePascalSyn1     .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynHTMLSyn1           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynIniSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynJavaSyn1           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynJScriptSyn1        .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynPerlSyn1           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynPHPSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynPythonSyn1         .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynSQLSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynUNIXShellScriptSyn1.CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynVBSyn1             .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynXMLSyn1            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
-      SynCppSyn1            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynCssSyn1            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynFreePascalSyn1     .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynIniSyn1            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynJavaSyn1           .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynJScriptSyn1        .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynPerlSyn1           .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynPHPSyn1            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynPythonSyn1         .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynSQLSyn1            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynUNIXShellScriptSyn1.StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
-      SynVBSyn1             .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynBatSyn            :=TSynBatSyn            .create(languageMenuRoot);
+      SynCppSyn            :=TSynCppSyn            .create(languageMenuRoot);
+      SynCssSyn            :=TSynCssSyn            .create(languageMenuRoot);
+      SynDiffSyn           :=TSynDiffSyn           .create(languageMenuRoot);
+      SynFreePascalSyn     :=TSynFreePascalSyn     .create(languageMenuRoot);
+      SynHTMLSyn           :=TSynHTMLSyn           .create(languageMenuRoot);
+      SynIniSyn            :=TSynIniSyn            .create(languageMenuRoot);
+      SynJScriptSyn        :=TSynJScriptSyn        .create(languageMenuRoot);
+      SynJavaSyn           :=TSynJavaSyn           .create(languageMenuRoot);
+      SynPHPSyn            :=TSynPHPSyn            .create(languageMenuRoot);
+      SynPerlSyn           :=TSynPerlSyn           .create(languageMenuRoot);
+      SynPythonSyn         :=TSynPythonSyn         .create(languageMenuRoot);
+      SynSQLSyn            :=TSynSQLSyn            .create(languageMenuRoot);
+      SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(languageMenuRoot);
+      SynVBSyn             :=TSynVBSyn             .create(languageMenuRoot);
+      SynXMLSyn            :=TSynXMLSyn            .create(languageMenuRoot);
+      SynBatSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynCppSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynCssSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynFreePascalSyn     .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynIniSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynJavaSyn           .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynJScriptSyn        .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynPerlSyn           .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynPHPSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynPythonSyn         .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynSQLSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynUNIXShellScriptSyn.NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynVBSyn             .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
+      SynCppSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynCssSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynFreePascalSyn     .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynHTMLSyn           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynIniSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynJavaSyn           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynJScriptSyn        .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynPerlSyn           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynPHPSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynPythonSyn         .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynSQLSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynUNIXShellScriptSyn.SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynVBSyn             .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynXMLSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynBatSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynCppSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynCssSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynFreePascalSyn     .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynHTMLSyn           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynIniSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynJavaSyn           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynJScriptSyn        .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynPerlSyn           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynPHPSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynPythonSyn         .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynSQLSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynUNIXShellScriptSyn.KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynVBSyn             .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynBatSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynCppSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynCssSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynFreePascalSyn     .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynHTMLSyn           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynIniSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynJavaSyn           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynJScriptSyn        .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynPerlSyn           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynPHPSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynPythonSyn         .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynSQLSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynUNIXShellScriptSyn.CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynVBSyn             .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynXMLSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynCppSyn            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynCssSyn            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynFreePascalSyn     .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynIniSyn            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynJavaSyn           .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynJScriptSyn        .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynPerlSyn           .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynPHPSyn            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynPythonSyn         .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynSQLSyn            .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynUNIXShellScriptSyn.StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
+      SynVBSyn             .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
     end;
 
   PROCEDURE initFileTypes;
@@ -211,26 +220,26 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
 
     begin
       addFileType(LANG_MNH   ,'mnh' ,nil                   ,'&MNH');
-      addFileType(LANG_CPP   ,'cpp' ,SynCppSyn1            ,'&C++');
+      addFileType(LANG_CPP   ,'cpp' ,SynCppSyn            ,'&C++');
       addFileType(LANG_CPP   ,'c'   );
       addFileType(LANG_CPP   ,'h'   );
       addFileType(LANG_CPP   ,'hh'  );
-      addFileType(LANG_CSS   ,'css' ,SynCssSyn1            ,'CSS'        );
-      addFileType(LANG_DIFF  ,'diff',SynDiffSyn1           ,'&diff'      );
-      addFileType(LANG_HTML  ,'html',SynHTMLSyn1           ,'&HTML'      );
-      addFileType(LANG_INI   ,'ini' ,SynIniSyn1            ,'&ini'       );
-      addFileType(LANG_JAVA  ,'java',SynJavaSyn1           ,'&Java'      );
-      addFileType(LANG_JS    ,'js'  ,SynJScriptSyn1        ,'JavaScript' );
+      addFileType(LANG_CSS   ,'css' ,SynCssSyn            ,'CSS'        );
+      addFileType(LANG_DIFF  ,'diff',SynDiffSyn           ,'&diff'      );
+      addFileType(LANG_HTML  ,'html',SynHTMLSyn           ,'&HTML'      );
+      addFileType(LANG_INI   ,'ini' ,SynIniSyn            ,'&ini'       );
+      addFileType(LANG_JAVA  ,'java',SynJavaSyn           ,'&Java'      );
+      addFileType(LANG_JS    ,'js'  ,SynJScriptSyn        ,'JavaScript' );
       addFileType(LANG_JS    ,'json');
-      addFileType(LANG_PAS   ,'pas' ,SynFreePascalSyn1     ,'&Pascal'             );
-      addFileType(LANG_PERL  ,'perl',SynPerlSyn1           ,'Perl'                );
-      addFileType(LANG_PHP   ,'php' ,SynPHPSyn1            ,'PHP'                 );
-      addFileType(LANG_PYTHON,'py'  ,SynPythonSyn1         ,'Python'              );
-      addFileType(LANG_SHELL ,'sh'  ,SynUNIXShellScriptSyn1,'Shell script'        );
-      addFileType(LANG_SQL   ,'sql' ,SynSQLSyn1            ,'&SQL'                );
-      addFileType(LANG_VB    ,'vb'  ,SynVBSyn1             ,'&Visual Basic'       );
-      addFileType(LANG_BAT   ,'bat' ,SynBatSyn1            ,'Windows &Batch File' );
-      addFileType(LANG_XML   ,'xml' ,SynXMLSyn1            ,'&XML'                );
+      addFileType(LANG_PAS   ,'pas' ,SynFreePascalSyn     ,'&Pascal'             );
+      addFileType(LANG_PERL  ,'perl',SynPerlSyn           ,'Perl'                );
+      addFileType(LANG_PHP   ,'php' ,SynPHPSyn            ,'PHP'                 );
+      addFileType(LANG_PYTHON,'py'  ,SynPythonSyn         ,'Python'              );
+      addFileType(LANG_SHELL ,'sh'  ,SynUNIXShellScriptSyn,'Shell script'        );
+      addFileType(LANG_SQL   ,'sql' ,SynSQLSyn            ,'&SQL'                );
+      addFileType(LANG_VB    ,'vb'  ,SynVBSyn             ,'&Visual Basic'       );
+      addFileType(LANG_BAT   ,'bat' ,SynBatSyn            ,'Windows &Batch File' );
+      addFileType(LANG_XML   ,'xml' ,SynXMLSyn            ,'&XML'                );
       addFileType(LANG_TXT   ,'txt' ,nil                   ,'unknown (&Text)'     );
       fileTypeMeta[LANG_OUTPUT].extensions:='OUTPUT';
       fileTypeMeta[LANG_OUTPUT].highlighter:=outputHighlighter;
@@ -243,13 +252,16 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
     disposeHighlighters:=not(Assigned(languageMenuRoot));
   end;
 
-PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
+  VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
-    if      command=ecUserDefinedFirst   then begin command:=ecNone; toggleComment;              end
-    else if command=ecUserDefinedFirst+4 then begin command:=ecNone; moveLine(true);             end
-    else if command=ecUserDefinedFirst+5 then begin command:=ecNone; moveLine(false);            end
-    else if command=ecUpperCaseBlock     then begin command:=ecNone; upperLowerCaseBlock(true);  end
-    else if command=ecLowerCaseBlock     then begin command:=ecNone; upperLowerCaseBlock(false); end;
+    if      command=editCommandToggleComment     then begin command:=ecNone; toggleComment;              end
+    else if command=editCommandMoveLineUp        then begin command:=ecNone; moveLine(true);             end
+    else if command=editCommandMoveLineDown      then begin command:=ecNone; moveLine(false);            end
+    else if command=ecUpperCaseBlock             then begin command:=ecNone; upperLowerCaseBlock(true);  end
+    else if command=ecLowerCaseBlock             then begin command:=ecNone; upperLowerCaseBlock(false); end
+    else if command=editCommandEscapeSelection   then begin command:=ecNone; escapeSelection(false);     end
+    else if command=editCommandUnescapeSelection then begin command:=ecNone; escapeSelection(true);      end;
   end;
 
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
@@ -259,7 +271,8 @@ PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
     activate;
   end;
 
-CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST bookmarkImages:TImageList);
+CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
+  CONST bookmarkImages: TImageList);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
@@ -278,9 +291,14 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
         insertKey=45;
         deleteKey=46;
         backspaceKey=8;
+        tabKey=9;
+        enterKey=13;
 
   VAR style:TSynSelectedColor;
+      isRealEditor:boolean;
   begin
+    isRealEditor:=bookmarkImages<>nil;
+
     completionLogic.create;
     editor_:=TSynEdit.create(parent);
     editor_.parent:=parent;
@@ -316,11 +334,13 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
     addKeystroke(ecSelWordRight      ,scShift+scCtrl+rightArrow);
     addKeystroke(ecPageDown          ,pageDownKey);
     addKeystroke(ecSelPageDown       ,scShift+pageDownKey);
-    addKeystroke(ecUserDefinedFirst+1,scCtrl+pageDownKey);
+    if isRealEditor then
+    addKeystroke(editCommandPageRight,scCtrl+pageDownKey);
     addKeystroke(ecSelPageBottom     ,scShift+scCtrl+pageDownKey);
     addKeystroke(ecPageUp            ,pageUpKey);
     addKeystroke(ecSelPageUp         ,scShift + pageUpKey);
-    addKeystroke(ecUserDefinedFirst+2,scCtrl + pageUpKey);
+    if isRealEditor then
+    addKeystroke(editCommandPageLeft ,scCtrl + pageUpKey);
     addKeystroke(ecSelPageTop        ,scShift + scCtrl + pageUpKey);
     addKeystroke(ecLineStart         ,pos1Key);
     addKeystroke(ecSelLineStart      ,scShift + pos1Key);
@@ -338,7 +358,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
     addKeystroke(ecDeleteLastChar    ,backspaceKey);
     addKeystroke(ecUndo              ,scAlt + backspaceKey);
     addKeystroke(ecRedo              ,scShift + scAlt + backspaceKey);
-    addKeystroke(ecLineBreak         ,13);
+    addKeystroke(ecLineBreak         ,enterKey);
     addKeystroke(ecSelectAll         ,scCtrl + ord('A'));
     addKeystroke(ecCopy              ,scCtrl + ord('C'));
     addKeystroke(ecBlockUnindent     ,scCtrl + ord('U'));
@@ -347,9 +367,10 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
     addKeystroke(ecDeleteLine        ,scCtrl + ord('Y'));
     addKeystroke(ecUndo              ,scCtrl + ord('Z'));
     addKeystroke(ecRedo              ,scShift + scCtrl + ord('Z'));
-    addKeystroke(ecUserDefinedFirst  ,scShift + scCtrl + ord('C'));
-    addKeystroke(ecShiftTab          ,scShift + 9);
-    addKeystroke(ecUserDefinedFirst+3,scShift + scCtrl + ord('B'));
+    addKeystroke(editCommandToggleComment  ,scShift + scCtrl + ord('C'));
+    addKeystroke(ecShiftTab          ,scShift + tabKey);
+    if isRealEditor then
+    addKeystroke(editCommandToggleBookmark,scShift + scCtrl + ord('B'));
     addKeystroke(ecColSelUp          ,scShift + scAlt + upArrow);
     addKeystroke(ecColSelDown        ,scShift + scAlt + downArrow);
     addKeystroke(ecColSelLeft        ,scShift + scAlt + leftArrow);
@@ -372,11 +393,13 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
       addKeystroke(ecToggleMarker8,scCtrl+scShift+ord('8'));  addKeystroke(ecGotoMarker8,scCtrl+ord('8'));
       addKeystroke(ecToggleMarker9,scCtrl+scShift+ord('9'));  addKeystroke(ecGotoMarker9,scCtrl+ord('9'));
     end;
-    addKeystroke(ecBlockIndent       ,scCtrl + ord('I'));
-    addKeystroke(ecUpperCaseBlock    ,scCtrl + scShift + ord('U'));
-    addKeystroke(ecLowerCaseBlock    ,scCtrl + scShift + ord('L'));
-    addKeystroke(ecUserDefinedFirst+4,scAlt + upArrow);
-    addKeystroke(ecUserDefinedFirst+5,scAlt + downArrow);
+    addKeystroke(ecBlockIndent               ,scCtrl +           ord('I'));
+    addKeystroke(ecUpperCaseBlock            ,scCtrl + scShift + ord('U'));
+    addKeystroke(ecLowerCaseBlock            ,scCtrl + scShift + ord('L'));
+    addKeystroke(editCommandMoveLineUp       ,scAlt  + upArrow);
+    addKeystroke(editCommandMoveLineDown     ,scAlt  + downArrow);
+    addKeystroke(editCommandEscapeSelection  ,scCtrl +           ord('E'));
+    addKeystroke(editCommandUnescapeSelection,scCtrl + scShift + ord('E'));
     highlighter:=TSynMnhSyn.create(parent,msf_input);
     editor_.highlighter:=highlighter;
 
@@ -424,7 +447,8 @@ FUNCTION T_basicEditorMeta.isPseudoFile: boolean;
     result:=true;
   end;
 
-PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
+PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string;
+  CONST fallback: T_language);
   VAR l:T_language;
       s:string;
       ext:string;
@@ -454,7 +478,7 @@ PROCEDURE T_basicEditorMeta.setCaret(CONST location: T_searchTokenLocation);
     editor.CaretXY:=newCaret;
   end;
 
-FUNCTION T_basicEditorMeta.currentBlockOrLine:T_lineRange;
+FUNCTION T_basicEditorMeta.currentBlockOrLine: T_lineRange;
   begin
     initialize(result);
     if editor.BlockBegin.y<1 then begin
@@ -575,7 +599,7 @@ PROCEDURE T_basicEditorMeta.setMarkedWord(CONST wordText: string);
     if (language_=LANG_MNH) then highlighter.setMarkedWord(wordText);
   end;
 
-PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
+PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper: boolean);
   VAR txt:string;
       oldBegin,oldEnd,oldCaret:TPoint;
       oldMode:TSynSelectionMode;
@@ -608,6 +632,48 @@ PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
                else txt:=lowercase(txt);
       editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,txt);
     end;
+    editor.CaretXY      :=oldCaret;
+    editor.BlockBegin   :=oldBegin;
+    editor.BlockEnd     :=oldEnd  ;
+    editor.SelectionMode:=oldMode;
+  end;
+
+PROCEDURE T_basicEditorMeta.escapeSelection(CONST unescape:boolean);
+  CONST lineBreaks:array[0..1] of string=(C_lineBreakChar,C_carriageReturnChar+C_lineBreakChar);
+  VAR oldTxt,newTxt:string;
+      lengthDelta:longint=0;
+      s,q:string;
+      first:boolean=true;
+      oldBegin,oldEnd,oldCaret:TPoint;
+      oldMode:TSynSelectionMode;
+      unescapedLength:longint=0;
+
+  begin
+    if editor.readonly then exit;
+    oldBegin:=editor.BlockBegin;
+    oldEnd  :=editor.BlockEnd;
+    oldCaret:=editor.CaretXY;
+    oldMode :=editor.SelectionMode;
+
+    if oldMode=smColumn then exit;
+    oldTxt:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+    if unescape then begin
+      newTxt:=unescapeString(oldTxt,1,unescapedLength);
+      if unescapedLength<length(oldTxt) then newTxt+=copy(oldTxt,unescapedLength+1,length(oldTxt));
+      lengthDelta:=length(newTxt)-length(oldTxt);
+    end else begin
+      newTxt:='';
+      for s in split(oldTxt,lineBreaks,false) do begin
+        if not(first) then newTxt:=newTxt+'&'+C_lineBreakChar;
+        q:=escapeString(s,es_pickShortest);
+        newTxt+=q;
+        lengthDelta:=length(q)-length(s);
+        first:=false;
+      end;
+    end;
+    if oldCaret=oldEnd then oldCaret.x+=lengthDelta;
+    oldEnd.x+=lengthDelta;
+    editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,newTxt);
     editor.CaretXY      :=oldCaret;
     editor.BlockBegin   :=oldBegin;
     editor.BlockEnd     :=oldEnd  ;
