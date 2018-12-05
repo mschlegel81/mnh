@@ -150,13 +150,13 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
     result.triggeredByReturn:=false;
     if workBig then case bounding of
       bUpper:
-        if bigNext.compare(bigLim)=CR_LESSER then begin
+        if bigNext.compare(bigLim) in [CR_LESSER,CR_EQUAL] then begin
           tmp:=plus(bigNext,1);
           result.literal:=newIntLiteral(bigNext);
           bigNext:=tmp;
         end else result.literal:=newVoidLiteral;
       bLower:
-        if bigNext.compare(bigLim)=CR_GREATER then begin
+        if bigNext.compare(bigLim) in [CR_GREATER,CR_EQUAL] then begin
           tmp:=minus(bigNext,1);
           result.literal:=newIntLiteral(bigNext);
           bigNext:=tmp;
@@ -168,12 +168,12 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
       end;
     end else case bounding of
       bUpper:
-        if smallNext<smallLim then begin
+        if smallNext<=smallLim then begin
           result.literal:=newIntLiteral(smallNext);
           inc(smallNext);
         end else result.literal:=newVoidLiteral;
       bLower:
-        if smallNext>smallLim then begin
+        if smallNext>=smallLim then begin
           result.literal:=newIntLiteral(smallNext);
           dec(smallNext);
         end else result.literal:=newVoidLiteral;
