@@ -11,27 +11,32 @@ private synchronized logHlAssoc(filename,assoc)->
 
 main->main('');
 
+fileFingerprint(filename)->fileInfo(filename).getAll(['time','size']);
+
 @demo_for=custom forms
 main(fileToOpen)->begin
   local filename:='';
   local lines   :='';
   local hl      :='txt';
+  local fInfo   :=[];
   local openFile:={fileExists($filename)
     ? begin
         logHlAssoc(filename,hl);
         filename:=$filename;
         lines:=filename.fileLines.join("\n");
         hl:=filename.getHlAssoc;
+        fInfo:=fileFingerprint(filename);
       end
     : begin
         logHlAssoc(filename,hl);
         lines:='';
         hl:='txt';
+        fInfo:=[];
       end};
   openFile(fileToOpen.expandedFileName);
   showDialog('Fileviewer',
             [newSplitPanel([newEdit
-                              .bind('filename')
+                              .bind(::filename)
                               .withCaption('File')
                               .withAction(openFile)],
                            [newButton
@@ -41,6 +46,10 @@ main(fileToOpen)->begin
                .withCaption('Highlighting')
                .bind('hl'),
              newOutputEditor({hl})
-               .withCaption({lines})]);
+               .withCaption({lines}),
+             newWorker({
+               fileFingerprint(filename)==fInfo
+               ? void
+               : openFile(filename)} ,1)]);
   logHlAssoc(filename,hl);
 end;

@@ -1,0 +1,67 @@
+plain script;
+
+string :='test';
+integer:=234;
+real   :=pi;
+
+print('Call with parameter:');
+printf("  This is a %s",string);
+
+print('Call with multiple parameters');
+printf("  %s != %s",integer,real);
+
+print('Call with multiple parameters, reordering and/or computing');
+printf("  %{$1}s != %{$0}s",integer,real);
+printf("  %{$1}s != %{sqrt($0).round}s",integer,real);
+
+print('Passing a list will result in multiple lines of output');
+printf("  %s",[integer,real,string]);
+
+print('Call without parameter, using string interpolation');
+printf("  printf: %{string}s");
+print ("  print : %{string}s");
+
+print('Insteaf of %{...}s you can write {...}');
+printf("  pi={pi}");
+
+print('Decimal format: %d (note the fallback for strings');
+printf('  %d',[integer,real,string]);
+
+print('Decimal format: %5d (5 chars wide without leading zero)');
+printf('  %5d',[integer,-integer]);
+
+print('Decimal format: %5.5d (5 chars wide with leading zero)');
+printf('  %5.5d',[integer,-integer]);
+
+print('Exponential form: %e');
+printf('  %e',[integer,real]);
+
+print('Exponential form: %3.3e');
+printf('  %3.3e',[integer,real]);
+
+print('Float form: %f');
+printf('  %f',[integer,real]);
+
+print('Float form: %7.3f (7 chars total, 3 decimal places)');
+printf('  %7.3f',[integer,real]);
+
+print('General number format: %g');
+printf('  %g',[integer,real]);
+
+print('General number format: %5.2g (5 chars with minimum, 2 most significant digits)');
+printf('  %5.2g',[integer,real]);
+
+print('Money format %m');
+printf('  %m',[integer]);
+
+print('Money format %m');
+printf('  %m',[integer]);
+
+print('Number format: %6.2n (6 chars width minimum, 2 decimal places)');
+printf('  %6.2n',[integer,real]);
+
+print('Hexadecimal form: %x');
+printf('  %x',integer);
+
+print('Hexadecimal form: %6.4x (6 chars width minimum, 4 digits guaranteed even if zero)');
+printf('  %6.4x',integer);

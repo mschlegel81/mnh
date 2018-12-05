@@ -33,5 +33,5 @@ relatedLychrels.sort
                .join("\n")
                .&("\nTotal\t\t"&relatedLychrels.getInner(1).flatten.size&"\trelated Lychrels")
                .print;
-printf('Found %{$0.size}s palindromic Lychrel numbers: %{$0.join(", ")}s',
+printf('Found {$0.size} palindromic Lychrel numbers: {$0.join(", ")}',
        [lychrels.pFilter({begin local d:=$x.digits; d==d.reverseList; end})]);

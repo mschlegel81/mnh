@@ -105,8 +105,8 @@ end;
 
 private unzip(filename:String)->
   mnhInfo['targetOs'].matches('(i?)Linux')
-  ? 'zcat'     .exec([filename])[0]
-  : sevenZipExe.exec(['e','-so','-bd',filename])[0];
+  ? 'zcat'     .exec([filename])
+  : sevenZipExe.exec(['e','-so','-bd',filename]);
 
 private getData(URL:String)->begin
   local filename:=URL.split('/').trailing;
@@ -118,9 +118,10 @@ private getData(URL:String)->begin
   print(filename,' downloaded');
   filename.writeFile(data);
   local temp:=unzip(filename);
-  print(filename,' decompressed');
+  temp[1]==0 ? print(filename,' decompressed')
+             : fail('Decompression returned with exit code ',temp[1]);
   deleteFile(filename);
-  temp;
+  temp[0];
 end;
 
 //*Updates datastores based on input files

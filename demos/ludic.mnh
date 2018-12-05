@@ -38,5 +38,5 @@ main->begin
       "\n  The first 25 are: ",LUDICS.head(25),'.',
       "\n  There are ",LUDICS[LUDICS<=1000].size,' lesser or equal to 1000.',
       "\n  The 2000..2005th are ",LUDICS.get([2000..2005]-1),'.',
-      "\n  The triplets below 250 are ",format('(%{$0}s,%{$0+2}s,%{$0+6}s)',triplets).join(','));
+      "\n  The triplets below 250 are ",format('({$0},{$0+2},{$0+6})',triplets).join(','));
 end;

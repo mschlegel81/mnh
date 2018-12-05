@@ -7,7 +7,7 @@ private lastSundaysInYear(year:Int)->begin
   .sort;                                 //sort the result (because grouping may change the ordering)
 end;
 
-private DATE_FMT:='%{formatTime("dd.mm.yyyy",$0)}s';
+private DATE_FMT:='{formatTime("dd.mm.yyyy",$0)}';
 
 @demo_for=date operations
 //*Print out the last sundays of each month in 2015
