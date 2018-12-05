@@ -476,8 +476,16 @@ FUNCTION formatTime_imp intFuncSignature;
       i:longint;
       fmt:ansistring;
   FUNCTION fmtIt(CONST t:double):P_stringLiteral;
+    CONST placeholders:T_charSet=['Y','y','M','m','D','d','H','h','N','n','S','s','Z','z'];
+    VAR simpleResult:shortstring;
+        i,i1:longint;
     begin
-      result:=newStringLiteral(FormatDateTime(fmt,t));
+      simpleResult:=FormatDateTime(fmt,t);
+      i1:=length(fmt);
+      i :=length(simpleResult);
+      if i<i1 then i1:=i;
+      for i:=1 to i1 do if not(fmt[i] in placeholders) then simpleResult[i]:=fmt[i];
+      result:=newStringLiteral(simpleResult);
     end;
 
   begin
