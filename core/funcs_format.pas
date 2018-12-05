@@ -195,8 +195,6 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       part:='';
       setLength(result,0);
       while i<=length(formatString) do begin
-        writeln('Parsing: ',formatString,'; fmt:',fmtPart,'; simple: ',simpleFmtPart);
-        writeln('        ',StringOfChar(' ',i),'^');
         case formatString[i] of
           '{': if fmtPart then begin
                  inc(bracketLevel);
@@ -262,8 +260,6 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         setLength(result,length(result)+1);
         result[length(result)-1]:=part;
       end;
-      writeln('Format parts:');
-      for i:=0 to length(result)-1 do writeln('  ',escapeString(result[i],es_dontCare));
     end;
 
   FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_inlineExpression;
