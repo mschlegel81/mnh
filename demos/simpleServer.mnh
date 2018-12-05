@@ -4,11 +4,11 @@ private upSince:=systime;
 
 serve(method,'/index.html'  ,protocol):=//!~
 <body>
-<h3>serverTest @%{$0}s</h3>
+<h3>serverTest @{$0}</h3>
 <ul>
-  <li><a href=%{$0}s/ping>  ping  </a></li>
-  <li><a href=%{$0}s/time>  time  </a></li>
-  <li><a href=%{$0}s/uptime>upTime</a></li>
+  <li><a href={$0}/ping>  ping  </a></li>
+  <li><a href={$0}/time>  time  </a></li>
+  <li><a href={$0}/uptime>upTime</a></li>
 </ul>
 </body>
 ~.format(address).wrapTextInHttp;

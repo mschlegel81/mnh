@@ -661,7 +661,7 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean;
     if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit;
     wordUnderCursor:=editor.GetWordAtRowCol(caret);
     if updateMarker then begin
-      for m in editorMetaData do m^.setMarkedWord(wordUnderCursor);
+      for m in editorMetaData do if m^.enabled then m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
     if forHelpOrJump and (latestAssistanceReponse<>nil) then with editor do

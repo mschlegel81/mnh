@@ -306,9 +306,9 @@ PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButto
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
-    if command=ecUserDefinedFirst+1 then begin command:=ecNone; cycleEditors(true ); end else
-    if command=ecUserDefinedFirst+2 then begin command:=ecNone; cycleEditors(false); end else
-    if command=ecUserDefinedFirst+3 then begin
+    if command=editCommandPageRight      then begin command:=ecNone; cycleEditors(true ); end else
+    if command=editCommandPageLeft       then begin command:=ecNone; cycleEditors(false); end else
+    if command=editCommandToggleBookmark then begin
       getEditor^.toggleBreakpoint;
       miDebug.checked:=true;
       runnerModel.debugMode:=true;

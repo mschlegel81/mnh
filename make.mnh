@@ -127,24 +127,28 @@ private testExe(B:Map,...)->begin
   : tprint('Test failed') orElse false;
 end;
 
-private showStatus->
-  print orElse
-  tprint('Current code hash: ',ensureCodeHash,"\n") orElse
+private showStatus->begin
+  print;
+  tprint('Current code hash: ',ensureCodeHash);
+  tprint('Current build no.: ',getBuildNumber(currentCodeHash));
   BUILDS.each(B,begin
     local exe  :=B['targetDest'].systemSpecificFilename;
     local exist:=fileExists(exe);
     local canBuild:=B['canBuild'];
     local version    :=exist ? canBuild ? exe.codeVersion : '?' : '';
-    local testVersion:=exist ? canBuild ? exe.codeVersion : ensureCodeHash : '';
+    local testVersion:=exist ? canBuild ? exe.codeVersion : currentCodeHash : '';
     local cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
     [B['flavour'],
      exe,
-     version==ensureCodeHash ? 'o.k.' : version,
+     version==currentCodeHash ? 'o.k.' : version,
      cmpTime,
      B['doTest'] ? timeForFullTest(B['flavour'],testVersion).roundToRelevantDigits(4) : '(n/a)'
      ];
-  end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print
-  orElse print;
+  end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print;
+  BUILDS.each(B,B['distro'] ? allTestsPassed(B['flavour'],currentCodeHash) : void,AND)
+  ? ASTERISK_FRAME_FMT.printf('READY FOR DISTRO')
+  : print;
+end;
 
 private verboseDelete(file)->
   fileExists(file)

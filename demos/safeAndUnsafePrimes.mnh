@@ -15,5 +15,5 @@ unsafePrimeGenerator->primeGenerator.filter({!isPrime(($x-1) div 2)});
 main->
   print("The first 35 safe primes are: \n  ",safePrimeGenerator.head(35).join(" "),
       "\nThe first 40 unsafe primes are: \n  ",unsafePrimeGenerator.head(35).join(" ")) orElse
-  printf("There are\t%{safePrimesBelow($0)}s\tsafe primes below\t%{$0}",[1000000,10000000]) orElse
-  printf("There are\t%{unsafePrimesBelow($0)}s\tunsafe primes below\t%{$0}",[1000000,10000000]);
+  printf("There are\t{safePrimesBelow($0)}\tsafe primes below\t{$0}",[1000000,10000000]) orElse
+  printf("There are\t{unsafePrimesBelow($0)}\tunsafe primes below\t{$0}",[1000000,10000000]);

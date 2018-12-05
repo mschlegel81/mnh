@@ -21,6 +21,7 @@ private flavourDependentScripts:=
    'numDiff',
    'montyHall',
    'grep',
+   'printfUsageDemo',
    'rk4',
    'relevantDigitsTest',
    'root',

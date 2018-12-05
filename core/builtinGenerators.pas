@@ -101,48 +101,108 @@ TYPE
   P_rangeGenerator=^T_rangeGenerator;
   T_rangeGenerator=object(T_builtinGeneratorExpression)
     private
-      nextVal,minVal,maxVal,increment:int64;
+      bounding:(bUpper,bLower,bNone);
+      workBig:boolean;
+      smallNext,smallLim:int64;
+      bigNext  ,bigLim  :T_bigInt;
     public
-      CONSTRUCTOR create(CONST first,last:int64; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST first,last:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_rangeGenerator.create(CONST first,last: int64; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_rangeGenerator.create(CONST first,last: P_abstractIntLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
-    nextVal:=first;
-    if last>=first then begin
-      maxVal:=last;
-      minVal:=first;
-      increment:=1;
+    workBig:=(last<>nil) and ((last^.literalType =lt_bigint) and not(P_bigIntLiteral(last )^.value.canBeRepresentedAsInt64))
+                          or ((first^.literalType=lt_bigint) and not(P_bigIntLiteral(first)^.value.canBeRepresentedAsInt64));
+    if workBig then begin
+      if first^.literalType=lt_bigint
+      then bigNext.create (P_bigIntLiteral(first)^.value)
+      else bigNext.fromInt(first^.intValue);
+    end else smallNext:=first^.intValue;
+
+    if last=nil then begin
+      bounding:=bNone;
     end else begin
-      maxVal:=first;
-      minVal:=last;
-      increment:=-1;
+      if last^.isInRelationTo(tt_comparatorGrt,first)
+      then bounding:=bUpper
+      else bounding:=bLower;
+      if workBig then begin
+        if last^.literalType=lt_bigint
+        then bigLim.create (P_bigIntLiteral(last)^.value)
+        else bigLim.fromInt(last^.intValue);
+      end else smallLim:=last^.intValue;
     end;
   end;
 
 FUNCTION T_rangeGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
   begin
-    result:='rangeGenerator('+intToStr(minVal)+','+intToStr(maxVal)+')';
+    if workBig
+    then result:='rangeGenerator('+bigNext.toString   +','+bigLim.toString   +')'
+    else result:='rangeGenerator('+intToStr(smallNext)+','+intToStr(smallLim)+')';
   end;
 
 FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
+  VAR tmp:T_bigInt;
   begin
     result.triggeredByReturn:=false;
-    if (minVal<=nextVal) and (nextVal<=maxVal) then begin
-      result.literal:=newIntLiteral(nextVal);
-      inc(nextVal,increment);
-    end else result.literal:=newVoidLiteral;
+    if workBig then case bounding of
+      bUpper:
+        if bigNext.compare(bigLim) in [CR_LESSER,CR_EQUAL] then begin
+          tmp:=plus(bigNext,1);
+          result.literal:=newIntLiteral(bigNext);
+          bigNext:=tmp;
+        end else result.literal:=newVoidLiteral;
+      bLower:
+        if bigNext.compare(bigLim) in [CR_GREATER,CR_EQUAL] then begin
+          tmp:=minus(bigNext,1);
+          result.literal:=newIntLiteral(bigNext);
+          bigNext:=tmp;
+        end else result.literal:=newVoidLiteral;
+      bNone : begin
+        tmp:=plus(bigNext,1);
+        result.literal:=newIntLiteral(bigNext);
+        bigNext:=tmp;
+      end;
+    end else case bounding of
+      bUpper:
+        if smallNext<=smallLim then begin
+          result.literal:=newIntLiteral(smallNext);
+          inc(smallNext);
+        end else result.literal:=newVoidLiteral;
+      bLower:
+        if smallNext>=smallLim then begin
+          result.literal:=newIntLiteral(smallNext);
+          dec(smallNext);
+        end else result.literal:=newVoidLiteral;
+      bNone : begin
+        result.literal:=newIntLiteral(smallNext);
+        inc(smallNext);
+        if smallNext=9223372036854775807 then begin
+          workBig:=true;
+          bigNext.fromInt(smallNext);
+        end;
+      end;
+    end;
+  end;
+
+DESTRUCTOR T_rangeGenerator.destroy;
+  begin
+    if workBig then begin
+      bigNext.destroy;
+      if bounding<>bNone then bigLim.destroy;
+    end;
   end;
 
 FUNCTION rangeGenerator intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
-      new(P_rangeGenerator(result),create(int0^.intValue,int1^.intValue,tokenLocation))
-    end;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    then new(P_rangeGenerator(result),create(int0,int1,tokenLocation))
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint])
+    then new(P_rangeGenerator(result),create(int0,nil,tokenLocation));
   end;
 
 TYPE
@@ -935,14 +995,14 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
 
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
-  registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
-  registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
+  registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary,'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator');
+  registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary,'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');
   registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary,'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel');
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary,'fileLineIterator(filename:String);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
-  registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
+  registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary,'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.');

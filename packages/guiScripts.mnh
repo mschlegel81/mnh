@@ -166,4 +166,5 @@ showCheatSheet(editorFile:String)->print(
 "\nStrg + I\tindent",
 "\nStrg + U\tunindent\tStrg + Shift + L\tconvert selection to lowercase",
 "\nStrg + Shift + C\ttoggle comment\tStrg + Shift + U\tcovert selection to uppercase",
-"\nStrg + Space\tcomplete");
+"\nStrg + Space\tcomplete\tStrg + E\tescape selection",
+"\n\t\tStrg + Shift + E\tunescape selection");

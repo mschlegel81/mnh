@@ -17,7 +17,7 @@ ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
 
   doPrint ? begin
     //Pretty printing:
-    printf("%{$0}5d  %{$2?'[':' '}s%{$1}5d%{$2?']':''}s",aColumn,bColumn,strikeOut);
+    printf("%{$0}5d  {$2?'[':' '}%{$1}5d{$2?']':''}",aColumn,bColumn,strikeOut);
     print("       =======");
     printf("        %5d",result);
   end : void;
