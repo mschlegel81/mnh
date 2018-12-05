@@ -33,7 +33,7 @@ TYPE
     inPackage:P_objectWithPath;
     parts:T_arrayOfString;
     formats:array of T_format;
-    formatSubrule:P_literal;
+    formatSubrule:P_inlineExpression;
     isTemporary:boolean;
     CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
     DESTRUCTOR destroy;
@@ -190,26 +190,46 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         bracketLevel:longint=0;
         part:ansistring;
         fmtPart:boolean=false;
+        simpleFmtPart:boolean=false;
     begin
       part:='';
       setLength(result,0);
       while i<=length(formatString) do begin
+        writeln('Parsing: ',formatString,'; fmt:',fmtPart,'; simple: ',simpleFmtPart);
+        writeln('        ',StringOfChar(' ',i),'^');
         case formatString[i] of
-          '{': begin
-                 if fmtPart then inc(bracketLevel);
-                 part:=part+formatString[i];
+          '{': if fmtPart then begin
+                 inc(bracketLevel);
+                 part+=formatString[i];
+               end else begin
+                 setLength(result,length(result)+1);
+                 result[length(result)-1]:=part;
+                 part:='%{';
+                 partStart:=i;
+                 bracketLevel:=1;
+                 fmtPart:=true; simpleFmtPart:=true;
                end;
           '}': begin
                  if fmtPart then dec(bracketLevel);
-                 part:=part+formatString[i];
+                 part+=formatString[i];
+                 if (bracketLevel=0) and fmtPart and simpleFmtPart then begin
+                   part+='s';
+                   setLength(result,length(result)+1);
+                   result[length(result)-1]:=part;
+                   part:='';
+                   partStart:=i;
+                   bracketLevel:=0;
+                   fmtPart:=false;
+                   simpleFmtPart:=false;
+                 end;
                end;
           '%': if fmtPart then begin
                  if bracketLevel>0
-                 then part:=part+formatString[i]
+                 then part+=formatString[i]
                  else context.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
                end else begin
                  if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
-                   part:=part+'%';
+                   part+='%';
                    inc(i);
                  end else begin
                    setLength(result,length(result)+1);
@@ -222,7 +242,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                end;
           'a'..'z','A'..'Z':
                if fmtPart then begin
-                 part:=part+formatString[i];
+                 part+=formatString[i];
                  if bracketLevel<=0 then begin
                    if not(formatString[i] in FORMAT_CHARS) then
                      context.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
@@ -233,8 +253,8 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                    bracketLevel:=0;
                    fmtPart:=false;
                  end;
-               end else part:=part+formatString[i];
-          else part:=part+formatString[i];
+               end else part+=formatString[i];
+          else part+=formatString[i];
         end;
         inc(i);
       end;
@@ -242,9 +262,11 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         setLength(result,length(result)+1);
         result[length(result)-1]:=part;
       end;
+      writeln('Format parts:');
+      for i:=0 to length(result)-1 do writeln('  ',escapeString(result[i],es_dontCare));
     end;
 
-  FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_literal;
+  FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_inlineExpression;
     VAR i,k:longint;
         needSubRule:boolean=false;
         expressionString:ansistring;
@@ -300,11 +322,6 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
-    if (formatSubrule<>nil) and (formatSubrule^.literalType<>lt_expression) then begin
-      disposeLiteral(formatSubrule);
-      formatSubrule:=nil;
-      exit;
-    end;
     setLength(formats,length(parts));
     for i:=0 to length(parts)-1 do if odd(i) then formats[i].create(parts[i]);
   end;
@@ -359,7 +376,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           se_accessHttp,
           se_accessIpc,
           se_executingExternal]*context.sideEffectWhitelist);
-        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,@recycler,fpar).literal;
+        temp:=formatSubrule^.evaluateFormat(tokenLocation,context,recycler,fpar);
         context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)
@@ -391,7 +408,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
 
     if formatSubrule=nil
     then i:=length(parts) shr 1
-    else i:=P_expression(formatSubrule)^.arity;
+    else i:=formatSubrule^.arity;
     if i<>(params^.size-1) then begin
       context.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin
