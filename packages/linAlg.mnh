@@ -113,7 +113,6 @@ qrDecomposition(A:Matrix)->
     local R:=A;
     local Q:=(local I:=identityMatrix(A.matrixDimensions[0]));
     [0..A.matrixDimensions[1]-1].each(i,begin
-      print(R.getInner(i),' ',i);
       local u:=R.getInner(i).each(x,index<i ? 0 : x);
       local alpha:=((u[i] orElse 0)<0 ? 1 :-1) * u.euclideanNorm;
       local v:=u.each(x,index=i ? x+alpha : x);
@@ -126,5 +125,7 @@ qrDecomposition(A:Matrix)->
           Q:=Q*P;
         end;
     end);
-    [Q,R];
+    [1..R.size-1].each(i,
+    [0..i-1].each(j,R[i,j]:=0));
+    [Q,R.toMatrix];
   end;
