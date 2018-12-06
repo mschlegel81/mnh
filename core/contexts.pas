@@ -704,10 +704,10 @@ PROCEDURE T_context.addChildContext;
     interLockedIncrement(related.childCount);
   end;
 
-PROCEDURE T_context.setThreadOptions(
-  CONST globalOptions: T_evaluationContextOptions);
+PROCEDURE T_context.setThreadOptions(CONST globalOptions: T_evaluationContextOptions);
   VAR threadOption :T_threadContextOption;
   begin
+    options:=[];
     for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in globalOptions then include(options,threadOption);
   end;
 
