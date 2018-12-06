@@ -342,7 +342,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     recycling.fill:=0;
 
     if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/settings.cpuCount))
+    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(3*settings.cpuCount)))
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
@@ -441,7 +441,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     recycling.fill:=0;
 
     if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/settings.cpuCount))
+    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(settings.cpuCount*3)))
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;

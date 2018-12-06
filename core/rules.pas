@@ -387,11 +387,13 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
     {$endif}
     if typedef=nil then begin
       rulePattern:=rule^.getPattern.getFirst;
-      inlineValue:=rule^.getInlineValue;
-      if inlineValue<>nil then begin
-        alwaysTrue:=boolLit[true].equals(inlineValue);
-        disposeLiteral(inlineValue);
-      end;
+      if rulePattern.isTypeCheckOnly then begin
+        inlineValue:=rule^.getInlineValue;
+        if inlineValue<>nil then begin
+          alwaysTrue:=boolLit[true].equals(inlineValue);
+          disposeLiteral(inlineValue);
+        end;
+      end else alwaysTrue:=false;
       new(typedef,create(getId,
                          rulePattern.getBuiltinTypeCheck,
                          rulePattern.getBuiltinCheckParameter,

@@ -39,6 +39,7 @@ TYPE
       PROPERTY getWhitelist:T_literalTypeSet read typeWhitelist;
       FUNCTION getBuiltinTypeCheck:T_typeCheck;
       FUNCTION getBuiltinCheckParameter:longint;
+      FUNCTION isTypeCheckOnly:boolean;
   end;
 
   T_patternElementLocation=object
@@ -305,6 +306,11 @@ FUNCTION T_patternElement.getBuiltinCheckParameter:longint;
     if      restrictionType=tt_typeCheck then result:=restrictionIdx
     else if restrictionType=tt_customTypeCheck then result:=customTypeCheck^.builtinSuperParameter
     else    result:=-1;
+  end;
+
+FUNCTION T_patternElement.isTypeCheckOnly:boolean;
+  begin
+    result:=restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal];
   end;
 
 CONSTRUCTOR T_pattern.create;
