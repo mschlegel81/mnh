@@ -220,7 +220,6 @@ CONST DEF_VERBOSITY_STRING='';
         recycler:T_recycler;
     begin
       recycler.initRecycler;
-      memoryComfortThreshold:=settings.memoryLimit;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false); {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
@@ -271,6 +270,7 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
+    memoryComfortThreshold:=settings.memoryLimit;
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
