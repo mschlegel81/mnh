@@ -221,7 +221,6 @@ CONST DEF_VERBOSITY_STRING='';
         recycler:T_recycler;
     begin
       recycler.initRecycler;
-      memoryComfortThreshold:=settings.memoryLimit;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false);
       consoleAdapters.addOutAdapter(imigAdapters,false);
@@ -274,6 +273,7 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
+    memoryComfortThreshold:=settings.memoryLimit;
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);

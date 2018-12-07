@@ -102,6 +102,7 @@ TYPE
 
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
+    PROCEDURE pushFontSizeToPlotContainer(CONST newSize:double);
     PROCEDURE doPlot;
     FUNCTION timerTick:boolean;
     FUNCTION wantTimerInterval:longint;
@@ -242,25 +243,14 @@ PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
   end;
 
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
-  VAR o:T_scalingOptions;
   begin
-    plotSystem.startGuiInteraction;
-    o:=plotSystem.currentPlot.options;
-    o.relativeFontSize:=o.relativeFontSize/1.1;
-    plotSystem.currentPlot.options:=o;
-    doPlot;
-    plotSystem.doneGuiInteraction;
+    pushFontSizeToPlotContainer(plotSystem.currentPlot.options.relativeFontSize/1.1);
   end;
 
 PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
   VAR o:T_scalingOptions;
   begin
-    plotSystem.startGuiInteraction;
-    o:=plotSystem.currentPlot.options;
-    o.relativeFontSize:=o.relativeFontSize*1.1;
-    plotSystem.currentPlot.options:=o;
-    doPlot;
-    plotSystem.doneGuiInteraction;
+    pushFontSizeToPlotContainer(plotSystem.currentPlot.options.relativeFontSize*1.1);
   end;
 
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
@@ -441,6 +431,26 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
     miLogscaleY.checked     :=currentScalingOptions.axisTrafo['y'].logscale;
   end;
 
+PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize:double);
+  VAR currentScalingOptions:T_scalingOptions;
+      i:longint;
+  begin
+    plotSystem.startGuiInteraction;
+    currentScalingOptions:=plotSystem.currentPlot.options;
+    currentScalingOptions.relativeFontSize:=newSize;
+    plotSystem.currentPlot.options:=currentScalingOptions;
+    pullPlotSettingsToGui();
+    i:=0;
+    while i<plotSystem.animation.frameCount do begin
+      currentScalingOptions:=plotSystem.animation.options[i];
+      currentScalingOptions.relativeFontSize:=newSize;
+      plotSystem.animation.options[i]:=currentScalingOptions;
+      inc(i);
+    end;
+    doPlot;
+    plotSystem.doneGuiInteraction;
+  end;
+
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
   VAR currentScalingOptions:T_scalingOptions;
       i:longint;
@@ -467,7 +477,6 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     updateCurrent;
     plotSystem.currentPlot.options:=currentScalingOptions;
     pullPlotSettingsToGui();
-    if plotSystem.animation.frameCount<=0 then doPlot;
     i:=0;
     while i<plotSystem.animation.frameCount do begin
       currentScalingOptions:=plotSystem.animation.options[i];
@@ -475,6 +484,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
       plotSystem.animation.options[i]:=currentScalingOptions;
       inc(i);
     end;
+    doPlot;
     plotSystem.doneGuiInteraction;
   end;
 
