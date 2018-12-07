@@ -235,6 +235,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_eachIndex,
       tt_eachParameter,
       tt_blank: result:=txt;
+      tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
+      tt_docComment      :result:=COMMENT_PREFIX+txt;
       else result:=C_tokenInfo[tokType].defaultId;
     end;
     if length(result)<1 then begin

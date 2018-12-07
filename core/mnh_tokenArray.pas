@@ -107,6 +107,8 @@ TYPE
   end;
   {$endif}
 
+  T_lexingStyle=(ls_onlyInterpretable,ls_retainAll,ls_retainComments);
+
   T_lexer=object
     private
       blob:record
@@ -122,8 +124,8 @@ TYPE
       nextStatement:T_enhancedStatement;
       beforeLastTokenized,
       lastTokenized:P_token;
-      FUNCTION getToken(CONST line:ansistring; CONST messages:P_messages; VAR recycler:T_recycler; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):P_token;
-      FUNCTION fetchNext(                      CONST messages:P_messages; VAR recycler:T_recycler; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):boolean;
+      FUNCTION getToken(CONST line:ansistring; CONST messages:P_messages; VAR recycler:T_recycler; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST lexingStyle:T_lexingStyle=ls_onlyInterpretable):P_token;
+      FUNCTION fetchNext(                      CONST messages:P_messages; VAR recycler:T_recycler; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST lexingStyle:T_lexingStyle=ls_onlyInterpretable):boolean;
       PROCEDURE resetTemp;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage);
@@ -428,7 +430,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
 {$endif}
 
 FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR recycler:T_recycler;
-  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): P_token;
+  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST lexingStyle:T_lexingStyle=ls_onlyInterpretable): P_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(message:ansistring);
@@ -525,7 +527,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       text:='';
       exit(result);
     end;
-    if retainBlanks then begin
+    if lexingStyle=ls_retainAll then begin
       while (inputLocation.column<=length(line)) and
             (line[inputLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do begin
         result^.txt:=result^.txt+line[inputLocation.column];
@@ -561,7 +563,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
           while (parsedLength+inputLocation.column<=length(line)) and not(line[parsedLength+inputLocation.column] in [C_lineBreakChar,C_carriageReturnChar,'#']) do inc(parsedLength);
           id:=copy(line,inputLocation.column+length(BLOCK_COMMENT_DELIMITER),parsedLength-1);
           if (length(line)>=parsedLength+inputLocation.column) and (line[parsedLength+inputLocation.column]='#') then inc(parsedLength);
-          if retainBlanks then begin
+          if lexingStyle in [ls_retainAll,ls_retainComments] then begin
             result^.tokType:=tt_blank;
             result^.txt:=copy(line,inputLocation.column,length(line));
           end else begin
@@ -601,7 +603,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       '/': if startsWith(COMMENT_PREFIX) then begin //comments
         parsedLength:=2;
         while (parsedLength+inputLocation.column<=length(line)) and not(line[parsedLength+inputLocation.column] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
-        if retainBlanks then begin
+        if lexingStyle in [ls_retainAll,ls_retainComments] then begin
           result^.tokType:=tt_blank;
           result^.txt:=copy(line,inputLocation.column,length(line));
         end else begin
@@ -669,27 +671,27 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
   end;
 
 FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
-  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): boolean;
+  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST lexingStyle:T_lexingStyle=ls_onlyInterpretable): boolean;
   FUNCTION fetch:P_token;
     begin
       result:=nil;
       while (result=nil) and (messages^.continueEvaluation) and (inputIndex<length(input)) do begin
-        result:=getToken(input[inputIndex],messages,recycler{$ifdef fullVersion},localIdInfos{$endif},retainBlanks);
+        result:=getToken(input[inputIndex],messages,recycler{$ifdef fullVersion},localIdInfos{$endif},lexingStyle);
         if (result=nil) then begin
           inc(inputIndex);
           inc(inputLocation.line);
           inputLocation.column:=1;
-        end else if not(retainBlanks) then case result^.tokType of
+        end else if lexingStyle<>ls_retainAll then case result^.tokType of
           tt_EOL: begin
             recycler.disposeToken(result);
             result:=nil;
           end;
-          tt_docComment: begin
+          tt_docComment: if lexingStyle<>ls_retainComments then begin
             myGenerics.append(nextStatement.comments ,result^.txt);
             recycler.disposeToken(result);
             result:=nil;
           end;
-          tt_attributeComment: begin
+          tt_attributeComment: if lexingStyle<>ls_retainComments then begin
             if (result^.txt<>'') then myGenerics.append(nextStatement.attributes,result^.txt);
             recycler.disposeToken(result);
             result:=nil;
@@ -967,7 +969,7 @@ FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhanced
     blob.closer:=localIdInfos^.getBlobCloserOrZero(inputLocation.line);
 
     adapters.createDummy;
-    while fetchNext(@adapters,recycler,nil,false) do begin end;
+    while fetchNext(@adapters,recycler,nil,ls_retainComments) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(input[length(input)-1]);
 
@@ -1104,7 +1106,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
     adapters.createDummy;
-    repeat until not(lexer.fetchNext(@adapters,recycler{$ifdef fullVersion},nil{$endif},true));
+    repeat until not(lexer.fetchNext(@adapters,recycler{$ifdef fullVersion},nil{$endif},ls_retainAll));
     adapters.destroy;
     t:=lexer.nextStatement.firstToken;
     lexer.resetTemp;

@@ -1064,7 +1064,7 @@ FUNCTION T_subruleExpression.getId: T_idString;
     if customId<>'' then exit(customId);
     if parent=nil then result:='?'
                   else result:=parent^.getId;
-    result:=result+pattern.toString;
+    result+=pattern.toString;
   end;
 
 FUNCTION T_builtinExpression.getId:T_idString;
@@ -1202,8 +1202,8 @@ FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   PROCEDURE addLine(CONST s:string);
     begin
-      if result='' then result:=                       ECHO_MARKER+COMMENT_PREFIX+s
-                   else result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+s;
+      if result='' then result:=                ECHO_MARKER+s
+                   else result+=C_lineBreakChar+ECHO_MARKER+s;
     end;
 
   VAR att:T_subruleAttribute;
@@ -1211,10 +1211,10 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   begin
     result:='';
     for att in attributes do begin
-      addLine('@'+att.key);
+      addLine(ATTRIBUTE_PREFIX+att.key);
       if att.value<>'' then result:=result+'='+att.value;
     end;
-    if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(s);
+    if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(COMMENT_PREFIX+s);
     if result<>'' then result:=result+C_lineBreakChar;
   end;
 
