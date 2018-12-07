@@ -20,9 +20,12 @@ printf("  %s",[integer,real,string]);
 print('Call without parameter, using string interpolation');
 printf("  printf: %{string}s");
 print ("  print : %{string}s");
+print('Note, that you cannot access function/each parameters by string interpolation');
 
 print('Insteaf of %{...}s you can write {...}');
 printf("  pi={pi}");
+print('You can use curly brackets or percent signs in formats by escaping them');
+printf('  I am {3/4}%% sure that \{ and \} can be escaped');
 
 print('Decimal format: %d (note the fallback for strings');
 printf('  %d',[integer,real,string]);
