@@ -1,0 +1,21 @@
+ducktype NaturalNumber(i>=0)->true;
+ducktype ListOfNaturals(L:IntList)->L.each(i,i.isNaturalNumber,AND);
+rank([])->0;
+//*Returns the index of a list of nonnegative integers
+//*The mapping is bijective
+rank(I:ListOfNaturals)->composeDigits(I.each(k,index=0 ? #1 : #0 ,repeat(#1,k),&).bytes.ord,2);
+
+unrank(0)->[];
+unrank(1)->[0];
+//*Inverse function for rank
+//*Returns a the list of nonnegative integers corresponding to the given index n
+unrank(n:Int)->n.digits(2).tail.join.split('0').length;
+
+//*See http://rosettacode.org/wiki/Index_finite_lists_of_positive_integers
+main->begin
+  print('List    : ',local x:=[1,6,1,4597,0]);
+  print('Rank    : ',local r:=x.rank);
+  print('Unranked: ',r.unrank);
+  print;
+  printf("%s\t->\t%s\t->\t%s",[0..10],[0..10].map(::unrank),[0..10].map(::unrank).map(::rank));
+end;
