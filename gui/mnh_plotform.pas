@@ -209,6 +209,7 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
     plotSystem.startGuiInteraction;
     plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
     plotSystem.doneGuiInteraction;
+    animateCheckBox.Checked:=false;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
