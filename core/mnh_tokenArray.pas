@@ -841,11 +841,11 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
         tt_endBlock:
-          localIdStack.scopePop(messages,t^.location,false);
+          localIdStack.scopePop(messages,t^.location,false,true);
         tt_braceOpen:
           localIdStack.scopePush(sc_bracketOnly);
         tt_braceClose:
-          localIdStack.scopePop(messages,t^.location,true);
+          localIdStack.scopePop(messages,t^.location,true,true);
         tt_each,tt_parallelEach:begin
           localIdStack.scopePush(sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,t^.location,tt_eachIndex);
@@ -863,7 +863,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;
     end;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false,true);
     localIdStack.destroy;
   end;
 
@@ -873,6 +873,15 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
       idType:T_tokenType;
       lastLocation:T_tokenLocation;
       idLoc:T_tokenLocation;
+      earlierSuppressedUnusedAttribute:boolean=false;
+  FUNCTION hasSuppressedUnusedAttribute:boolean;
+    VAR s:string;
+    begin
+      if earlierSuppressedUnusedAttribute then exit(true);
+      for s in nextStatement.attributes do earlierSuppressedUnusedAttribute:=earlierSuppressedUnusedAttribute or startsWith(s,SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
+      result:=earlierSuppressedUnusedAttribute;
+    end;
+
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(messages,recycler{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
@@ -881,11 +890,11 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
         tt_beginBlock:
           localIdStack.scopePush(sc_block);
         tt_endBlock:
-          localIdStack.scopePop(messages,lastTokenized^.location,false);
+          localIdStack.scopePop(messages,lastTokenized^.location,false,not(hasSuppressedUnusedAttribute));
         tt_braceOpen:
           localIdStack.scopePush(sc_bracketOnly);
         tt_braceClose:
-          localIdStack.scopePop(messages,lastTokenized^.location,true);
+          localIdStack.scopePop(messages,lastTokenized^.location,true,not(hasSuppressedUnusedAttribute));
         tt_each,tt_parallelEach:begin
           localIdStack.scopePush(sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastTokenized^.location,tt_eachIndex);
@@ -917,7 +926,7 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
     result:=nextStatement;
     if not(messages^.continueEvaluation) then recycler.cascadeDisposeToken(result.firstToken);
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false,not(hasSuppressedUnusedAttribute));
     localIdStack.destroy;
   end;
 
