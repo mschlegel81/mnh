@@ -198,8 +198,8 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       while i<=length(formatString) do begin
         case formatString[i] of
           '\': if not(fmtPart) and (i+1<=length(formatString)) and (formatString[i+1] in ['%','{','}']) then begin
-                   part+=formatString[i+1];
-                   inc(i);
+                 part+=formatString[i+1];
+                 inc(i);
                end else part+=formatString[i];
           '{': if fmtPart then begin
                  inc(bracketLevel);
