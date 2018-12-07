@@ -1,33 +1,36 @@
 HIGHLIGHTERS:=['mnh','cpp','c','h','hh','css','diff','html','ini','java','js','json','pas','perl','php','py','sh','sql','vb','bat','xml','txt','output'];
 
+ducktype StringOrNullaryExpression(x)->x.isString OR x.isExpression(0);
+ducktype StringListOrNullaryExpression(x)->x.isStringList OR x.isExpression(0);
+ducktype BooleanOrNullaryExpression(x)->x.isBoolean OR x.isExpression(0);
+ducktype HighlighterOrNullaryExpression(x)->x in HIGHLIGHTERS OR x.isExpression(0);
+ducktype NullaryOrUnaryExpression(e:Expression)->e.isExpression(0) OR e.isExpression(1);
+
 @SuppressUnusedWarning=all
-newButton  ->[['type','button'  ]].toMap;
-newEdit    ->[['type','edit'    ]].toMap;
-newCheckbox->[['type','checkbox']].toMap;
-newInputEditor(highlighter in HIGHLIGHTERS)->[['type','inputEditor'],['highlight',highlighter]].toMap;
-newInputEditor(highlighter:Expression(0))->[['type','inputEditor'],['highlight',highlighter]].toMap;    #
-newOutputEditor(highlighter in HIGHLIGHTERS)->[['type','outputEditor'],['highlight',highlighter]].toMap;
-newOutputEditor(highlighter:Expression(0))->[['type','outputEditor'],['highlight',highlighter]].toMap;
-newOutputConsole()->[['type','console']].toMap;
-newComboBox(options:StringList)->[['type','comboBox'],['items',options]].toMap;
-newComboBox(options:Expression(0))->[['type','comboBox'],['items',options]].toMap;
-newLabel   ->[['type','label'   ]].toMap;
-newPanel(contents:List)->[['type','panel'],['parts',contents]].toMap;
-newSplitPanel(left:List,right:List)->[['type','splitPanel'],['left',left],['right',right]].toMap;
-withCaption(m:Map,caption:String)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
-withCaption(m:Map,caption:Expression(0))->[['caption',caption]].toMap.mergeMaps(m,::orElse);
-withAction (m:Map,action:Expression(0))->[['action',action]].toMap.mergeMaps(m,::orElse);
-withAction (m:Map,action:Expression(1))->[['action',action]].toMap.mergeMaps(m,::orElse);
-withActionOnChange(m:Map,action:Expression(0))->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
-withActionOnChange(m:Map,action:Expression(1))->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
-withEnabledRule(m:Map,enabled:Boolean)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
-withEnabledRule(m:Map,enabled:Expression(0))->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
-bind(m:Map,idOfLocalVariable:String)->[['bind',idOfLocalVariable]].toMap.mergeMaps(m,::orElse);
-newPlotLink->[['type','plot']].toMap;
+//Elements:
+newButton                                                  ->['type'=>'button'  ].toMap;
+newEdit                                                    ->['type'=>'edit'    ].toMap;
+newCheckbox                                                ->['type'=>'checkbox'].toMap;
+newInputEditor (highlighter:HighlighterOrNullaryExpression)->['type'=>'inputEditor','highlight'=>highlighter].toMap;
+newOutputEditor(highlighter:HighlighterOrNullaryExpression)->['type'=>'outputEditor','highlight'=>highlighter].toMap;
+newOutputConsole                                           ->['type'=>'console'].toMap;
+newComboBox(options:StringListOrNullaryExpression)         ->['type'=>'comboBox','items'=>options].toMap;
+newLabel                                                   ->['type'=>'label'  ].toMap;
+newPanel(contents:List)                                    ->['type'=>'panel','parts'=>contents].toMap;
+newSplitPanel(left:List,right:List)                        ->['type'=>'splitPanel','left'=>left,'right'=>right].toMap;
+newPlotLink                                                ->['type'=>'plot'].toMap;
 //*Workers are background tasks without corresponding GUI element
 //*If no interval is given, the worker is invoked in every GUI-evaluation step
-newWorker(alwaysDo:Expression(0))->[['type','worker'],['action',alwaysDo]].toMap;
-newWorker(alwaysDo:Expression(0),intervalInSeconds:Numeric)->[['type','worker'],['action',alwaysDo],['interval',intervalInSeconds]].toMap;
-withMouseMoved(m:Map,onMouseMove:Expression(2))->[['mouseMoved',onMouseMove]].toMap.mergeMaps(m,::orElse);
-withMouseClicked(m:Map,onMouseClick:Expression(2))->[['mouseClicked',onMouseClick]].toMap.mergeMaps(m,::orElse);
-newGrid(colCount>=0,contents:List)->[['type','grid'],['colCount',colCount],['parts',contents]].toMap;
+newWorker(alwaysDo:Expression(0)                          )->['type'=>'worker','action'=>alwaysDo                              ].toMap;
+newWorker(alwaysDo:Expression(0),intervalInSeconds:Numeric)->['type'=>'worker','action'=>alwaysDo,'interval'=>intervalInSeconds].toMap;
+newGrid(colCount>=0,contents:List)                         ->['type'=>'grid','colCount'=>colCount,'parts'=>contents].toMap;
+
+private addOption(M:Map,L:List(2))->[L].toMap.mergeMaps(M,::orElse);
+//Element options:
+withCaption(m:Map,caption:StringOrNullaryExpression)       ->m.addOption('caption'=>caption);
+withAction (m:Map,action:NullaryOrUnaryExpression)         ->m.addOption('action' =>action);
+withActionOnChange(m:Map,action:NullaryOrUnaryExpression)  ->m.addOption('actionOnChange'=>action);
+withEnabledRule(m:Map,enabled:BooleanOrNullaryExpression)  ->m.addOption('enabled'=>enabled);
+bind(m:Map,idOfLocalVariable:String)                       ->m.addOption('bind'=>idOfLocalVariable);
+withMouseMoved  (m:Map,onMouseMove :Expression(2))         ->m.addOption('mouseMoved'=>onMouseMove);
+withMouseClicked(m:Map,onMouseClick:Expression(2))         ->m.addOption('mouseClicked'=>onMouseClick);
