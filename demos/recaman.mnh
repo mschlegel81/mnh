@@ -1,0 +1,43 @@
+recamanGenerator->{begin
+  local visited:=[].toSet;
+  local i:= 0;
+  local k:=-1;
+save;
+  k+=1;
+  i-k>0 AND !((i-k) in visited) ? i:=i-k : i:=i+k;
+  visited|=i;
+  i;
+end}.toGenerator;
+
+@SuppressUnusedWarning=all
+recamanDuplicatesGenerator->{begin
+  local visited:=[].toSet;
+  local i:= 0;
+  local k:=-1;
+save;
+  while(true,begin
+    k+=1;
+    i-k>0 AND !((i-k) in visited) ? i:=i-k : i:=i+k;
+    i in visited ? return i : void;
+    visited|=i;
+  end);
+end}.toGenerator;
+
+
+stepsNeededToContainAllIntegersUpTo(k:Int)->
+begin
+  local rest:=[0..k].toSet;
+  recamanGenerator.each(n,begin
+    rest>>n;
+    rest.size=0
+    ? return index
+    : void;
+  end);
+end;
+
+//*See http://rosettacode.org/wiki/Recaman%27s_sequence
+main->begin
+  printf('The first {$0} Recaman numbers are {recamanGenerator.head($0)}',15);
+  printf('The first duplicated Number in the sequence is {recamanDuplicatesGenerator.head(1)[0]}');
+  printf('You need {stepsNeededToContainAllIntegersUpTo($k)} steps to generate all integers up to (including) {$k}',1000);
+end;

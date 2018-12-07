@@ -337,6 +337,10 @@ USE kaprekar;
 @SuppressUnusedWarning
 A006886->naturalNumbers(1).filter(::isKaprekar);
 
+USE '../recaman.mnh';
+@SuppressUnusedWarning
+A005132->recamanGenerator;
+
 scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
   local fiboMod:={$state.tail|($state.agg(+) mod modulus)};
   local openStates:=cross([0..modulus-1],[0..modulus-1],
