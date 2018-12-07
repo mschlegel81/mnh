@@ -445,7 +445,7 @@ private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
             : [floor((-b+[-1,1]*sqrt(b^2-4*a*(c-2.0^63+1.0)))/(2*a)),
                floor((-b+[-1,1]*sqrt(b^2-4*a*(c+2.0^63-1.0)))/(2*a))].flatten.max;
       upperBound<0 ? void :
-      [format('rangeGenerator(0,%s).lazyMap({%s%s%s})',
+      [format('rangeGenerator(0,%s).lazyMap(\{%s%s%s\})',
             upperBound,
             a=0 ? '' : a&'*$x^2+',
             b=0 ? '' : b&'*$x+',
