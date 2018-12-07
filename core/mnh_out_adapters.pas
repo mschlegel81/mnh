@@ -117,7 +117,7 @@ TYPE
       //messages
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
-      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
+      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual;
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);                            virtual; abstract;
       PROCEDURE postCustomMessages(CONST message:T_storedMessages);
       PROCEDURE clear(CONST clearAllAdapters:boolean=true);                                                                           virtual;
@@ -183,6 +183,7 @@ TYPE
       //flags
       FUNCTION continueEvaluation:boolean; virtual;
       //messages
+      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual;
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);                            virtual;
       PROCEDURE clear(CONST clearAllAdapters:boolean=true);                                                                           virtual;
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;                                                                 virtual;
@@ -650,6 +651,15 @@ PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_sear
   VAR message:P_errorMessage;
   begin
     if (kind<>mt_el4_systemError) and (FlagQuietHalt in flags) then exit;
+    new(message,create(kind,location,split(text,C_lineBreakChar)));
+    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+    postCustomMessage(message);
+    disposeMessage(message);
+  end;
+
+PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
+  VAR message:P_errorMessage;
+  begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     postCustomMessage(message);
