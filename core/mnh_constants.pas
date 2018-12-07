@@ -62,9 +62,9 @@ CONST
   ATTRIBUTE_PREFIX              ='@';
   SPECIAL_COMMENT_BLOB_BEGIN_INFIX='!';
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
-  {$ifdef fullVersion}
   SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
   SUPPRESS_ALL_UNUSED_VALUE='all';
+  {$ifdef fullVersion}
   SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE='SuppressUnusedParameterWarning';
   {$endif}
   OVERRIDE_ATTRIBUTE='Override';

@@ -268,7 +268,11 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
-              then token.tokType:=tt_parameterIdentifier
+              then begin
+                if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
+                then parIdx:=-1
+                else token.tokType:=tt_parameterIdentifier;
+              end
               else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
             end
             else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
@@ -1064,7 +1068,7 @@ FUNCTION T_subruleExpression.getId: T_idString;
     if customId<>'' then exit(customId);
     if parent=nil then result:='?'
                   else result:=parent^.getId;
-    result:=result+pattern.toString;
+    result+=pattern.toString;
   end;
 
 FUNCTION T_builtinExpression.getId:T_idString;
@@ -1202,8 +1206,8 @@ FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   PROCEDURE addLine(CONST s:string);
     begin
-      if result='' then result:=                       ECHO_MARKER+COMMENT_PREFIX+s
-                   else result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+s;
+      if result='' then result:=                ECHO_MARKER+s
+                   else result+=C_lineBreakChar+ECHO_MARKER+s;
     end;
 
   VAR att:T_subruleAttribute;
@@ -1211,10 +1215,10 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   begin
     result:='';
     for att in attributes do begin
-      addLine('@'+att.key);
+      addLine(ATTRIBUTE_PREFIX+att.key);
       if att.value<>'' then result:=result+'='+att.value;
     end;
-    if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(s);
+    if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(COMMENT_PREFIX+s);
     if result<>'' then result:=result+C_lineBreakChar;
   end;
 

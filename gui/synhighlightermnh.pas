@@ -269,7 +269,7 @@ PROCEDURE TSynMnhSyn.next;
           if fLine[run]='>' then inc(run);
         end else inc(run,3);
       end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
-      if run>0 then exit;
+      if (run>0) and not((flavour=msf_help) and (specialLineCase=SPECIAL_LINE_CASE_ECHO)) then exit;
     end else while (run<RUN_LIMIT) and (fLine[run]=' ') do inc(run);
     if (flavour<>msf_debug) and (blobEnder<>#0) then begin
       if fLine[run]=#0 then begin

@@ -10,28 +10,51 @@ initHook:=begin
     end;
 end;
 
+niceWrap(s:String)->s.length<100 ? s : begin
+  local splitAt:=s.chars.head(100).each(c,c in [' ',','] ? index : void).trailing+1;
+  splitAt==[] ? splitAt:=100 : void;
+  copy(s,0,splitAt)&"\n\t"&copy(s,splitAt,s.length).niceWrap;
+end;
+
 private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
 private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
+printFormattedInfo(S:String)->S.decompress.print;
+printFormattedInfo(L:IntList)->print("\t",L.join(",").niceWrap);
+printFormattedInfo(L:List)->L.each(element,printFormattedInfo(element),'='.repeat(105).print);
+printFormattedInfo(M:Map)->begin
+  @SuppressUnusedWarning
+  local id  :=M['ID'] orElse '?';
+  local name:=M['Name'] orElse '?';
+  local seq :=M['Sequence'] orElse [];
+  local info:=M['Info'] orElse '?';
+  local gen :=M['genClass'];
+  printf("ID:\t{id}\n"&
+         "Name:\t{name.niceWrap}\n"&
+         "Seq.:\t{seq.join(',').niceWrap}\n"&
+         "Info:\t{info} series of {seq.size} elements"&
+         (gen.isVoid ? void : "\n\tGenerator avaliable: {gen[0].toString}"&
+                              "\n\tGenerator class    : {gen[1]}"));
+end;
 
 @demo_for=Inter Process Communication
 //*Return info on a series by ID(s)
-main('id',...)->getData($params).print;
+main('id',...)->getData($params).printFormattedInfo;
 //*Return details on a series by ID(s)
-main('details',...)->getData($params).print;
+main('details',...)->getData($params).printFormattedInfo;
 //*Returns info on a series by name pattern(s)
-main('name',...)->map(...,::validateRegex_)[0] orElse getData($params).print;
+main('name',...)->map(...,::validateRegex_)[0] orElse getData($params).printFormattedInfo;
 //*Returns info on a series by part; start with \[ to indicate sequence start
-main('part',part)->validateRegex_(part) orElse getData($params).print;
+main('part',part)->validateRegex_(part) orElse getData($params).printFormattedInfo;
 //*Returns info on possible continuations
-main('continue',sequenceStart,additional)->getData(['continue',sequenceStart.split(",").softCast.filter(::isInt),toInt(additional)]).print;
+main('continue',sequenceStart,additional)->getData(['continue',sequenceStart.split(",").softCast.filter(::isInt),toInt(additional)]).printFormattedInfo;
 //*Returns statistics on the given input
-main('statistics')->getData($params).print;
+main('statistics')->getData($params).printFormattedInfo;
 //*Validates implemented series
-main('validate')->getData($params).join("\n").print;
+main('validate')->getData($params).printFormattedInfo;
 //*Return info on a series by class (or list classes)
-main('class',...)->getData($params).join("\n").print;
+main('class',...)->getData($params).printFormattedInfo;
 //*Scan for reproducible series
-main('scan')->getData($params).join("\n").print;
+main('scan')->getData($params).printFormattedInfo;
 //*Plot number frequencies
 main('plot')->begin
   ['logscaleX'=>true,'fontsize'=>6,'logscaleY'=>true,'preserveAspect'=>false].toMap.setOptions;
@@ -43,6 +66,6 @@ main('stopServer')->begin
   while(isIpcServerRunning(ipcId),sleep(0.1));
 end;
 //*Updates OEIS data
-main('download')->getData($params).print;
+main('download')->getData($params).printFormattedInfo;
 //*Generates values for given id
-main('gen',id,count)->getData($params).print;
+main('gen',id,count)->getData($params).printFormattedInfo;
