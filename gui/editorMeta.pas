@@ -257,7 +257,7 @@ PROCEDURE saveWorkspace;
       i,k:longint;
       visibleEditorCount:longint=0;
       pageIndex:longint=0;
-      virtualEditorIndex:T_arrayOfLongint;
+      editorIndexAfterLoading:T_arrayOfLongint;
   begin
     stream.createToWriteToFile(workspaceFilename);
     stream.writeDWord(workspaceSerialVersion);
@@ -265,22 +265,21 @@ PROCEDURE saveWorkspace;
     folderHistory.saveToStream(stream);
     pageIndex:=inputPageControl.activePageIndex;
     for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled
-    then inc(visibleEditorCount)
-    else if i<inputPageControl.activePageIndex then dec(pageIndex);
+    then inc(visibleEditorCount);
     stream.writeNaturalNumber(visibleEditorCount);
-    setLength(virtualEditorIndex,length(editorMetaData));
+    setLength(editorIndexAfterLoading,length(editorMetaData));
     k:=0;
     for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then begin
-      virtualEditorIndex[i]:=k; inc(k);
+      editorIndexAfterLoading[i]:=k; inc(k);
       editorMetaData[i]^.saveToStream(stream);
-    end else virtualEditorIndex[i]:=-1;
-    stream.writeLongint(pageIndex);
+    end else editorIndexAfterLoading[i]:=-1;
+    stream.writeLongint(editorIndexAfterLoading[pageIndex]);
     for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
       stream.writeInteger(-1);
       stream.writeInteger(0);
       stream.writeInteger(0);
     end else begin
-      stream.writeInteger(virtualEditorIndex[globalBookmarks[i].editorIndex]);
+      stream.writeInteger(editorIndexAfterLoading[globalBookmarks[i].editorIndex]);
       stream.writeInteger(globalBookmarks[i].lineIndex  );
       stream.writeInteger(globalBookmarks[i].columnIndex);
     end;
@@ -542,6 +541,7 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
   end;
 
 PROCEDURE T_editorMeta.closeEditorQuietly;
+  VAR k:longint;
   begin
     tabsheet.tabVisible:=false;
     editor.clearAll;
@@ -550,6 +550,7 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       isChanged:=false;
       ignoreDeleted:=false;
     end;
+    for k:=0 to length(globalBookmarks)-1 do if globalBookmarks[k].editorIndex=index then globalBookmarks[k].editorIndex:=-1;
     editor.modified:=false;
     getEditor^.activate;
   end;
