@@ -11,6 +11,9 @@ USES sysutils,
      contexts,
      funcs;
 CONST MAX_FORMATS_TO_CACHE=4096;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+IMPLEMENTATION
 TYPE
   T_format=object
     category:(fmtCat_decimal,
@@ -40,8 +43,6 @@ TYPE
     FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_arrayOfString;
   end;
 
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-IMPLEMENTATION
 {$i func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
@@ -196,6 +197,10 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       setLength(result,0);
       while i<=length(formatString) do begin
         case formatString[i] of
+          '\': if not(fmtPart) and (i+1<=length(formatString)) and (formatString[i+1] in ['%','{','}']) then begin
+                   part+=formatString[i+1];
+                   inc(i);
+               end else part+=formatString[i];
           '{': if fmtPart then begin
                  inc(bracketLevel);
                  part+=formatString[i];
