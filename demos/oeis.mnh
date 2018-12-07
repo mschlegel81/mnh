@@ -69,5 +69,3 @@ end;
 main('download')->getData($params).printFormattedInfo;
 //*Generates values for given id
 main('gen',id,count)->getData($params).printFormattedInfo;
-
-sendIpcRequest(oeis_server.ipcId,['gen','A061358','100']).byteLength;
