@@ -268,7 +268,11 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
-              then token.tokType:=tt_parameterIdentifier
+              then begin
+                if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
+                then parIdx:=-1
+                else token.tokType:=tt_parameterIdentifier;
+              end
               else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
             end
             else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
