@@ -18,7 +18,7 @@ end;
 
 private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
 private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
-printFormattedInfo(S:String)->S.decompress.print;
+printFormattedInfo(S:String)->S.decompress.split("\n").map(::niceWrap).join("\n").print;
 printFormattedInfo(L:IntList)->print("\t",L.join(",").niceWrap);
 printFormattedInfo(L:List)->L.each(element,printFormattedInfo(element),'='.repeat(105).print);
 printFormattedInfo(M:Map)->begin
@@ -55,6 +55,8 @@ main('validate')->getData($params).printFormattedInfo;
 main('class',...)->getData($params).printFormattedInfo;
 //*Scan for reproducible series
 main('scan')->getData($params).printFormattedInfo;
+//*Show info on duplicate series
+main('duplicates')->getData($params).printFormattedInfo;
 //*Plot number frequencies
 main('plot')->begin
   ['logscaleX'=>true,'fontsize'=>6,'logscaleY'=>true,'preserveAspect'=>false].toMap.setOptions;

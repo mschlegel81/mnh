@@ -266,6 +266,14 @@ private serve_('scan')->begin
   resetTimeout(foundImplementations.size&' Implementations found');
 end.compress;
 
+private serve_('duplicates')->
+  sequences.each(seq,[index,seq]).group(1).pMap({$group.size>1 ? [$group.getInner(0).sort,$group[0,1]] : void})
+  .sort(0)
+  .each(g,
+    "Sequence:\t",g[1]==[] ? "[]" : g[1].join(","),"\n",
+    'Occurs ',g[0].size,"x:\t",IDFormat.format(g[0]).join(", "),"\n",&)
+  .compress;
+
 private serve_('numberFrequencies')->
   sequences.pMap({$seq[0<$seq<1E6]}).flatten.elementFrequency.sort.resetTimeout;
 
@@ -289,3 +297,5 @@ main()->begin
   while(time<timeout,sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;
+
+serve_('duplicates');
