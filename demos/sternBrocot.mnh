@@ -7,7 +7,7 @@ save;
     L|=[L[j]+L[j-1],L[j]];
     L[i];
   end;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 @demo_for=generators, expressions/stateful
 //*See http://rosettacode.org/wiki/Stern-Brocot_sequence

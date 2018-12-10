@@ -248,7 +248,6 @@ PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
   end;
 
 PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
-  VAR o:T_scalingOptions;
   begin
     pushFontSizeToPlotContainer(plotSystem.currentPlot.options.relativeFontSize*1.1);
   end;

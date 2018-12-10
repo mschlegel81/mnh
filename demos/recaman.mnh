@@ -7,7 +7,7 @@ save;
   i-k>0 AND !((i-k) in visited) ? i:=i-k : i:=i+k;
   visited|=i;
   i;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 @SuppressUnusedWarning=all
 recamanDuplicatesGenerator->{begin
@@ -21,7 +21,7 @@ save;
     i in visited ? return i : void;
     visited|=i;
   end);
-end}.toGenerator;
+end}.toIteratableExpression;
 
 
 stepsNeededToContainAllIntegersUpTo(k:Int)->

@@ -11,7 +11,7 @@ multifactorialGenerator(degree)->{begin
   local i:=-1;
 save;
   (local fOfI:=f(i+=1))>=0 ? fOfI : void;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 //*See http://rosettacode.org/wiki/Multifactorial
 @demo_for=formatting, expressions

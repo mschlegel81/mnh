@@ -248,7 +248,9 @@ INITIALIZATION
   BUILTIN_TOSET:=
   registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,ak_unary,'toSet(X);#Casts X to set or wraps a scalar in a set');
   registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,ak_unary,'toMap(X:Collection);#Casts X to map or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,@toGenerator_imp,ak_unary,'toGenerator(e:Expression(0));#Marks the expression as generator if possible or throws an error');
+  registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
+  registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary,'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'),
+                                                                            ak_unary,'toGenerator(e:Expression(0));#Alias for toIteratableExpression');
   registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,ak_unary,'typeOf(x); //Returns a description of x''s type');
   registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,ak_unary     ,'isVoid(x); //Returns true if x is void (or no arguments were given)');
   registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,ak_unary     ,'isScalar(x); //Returns true if x is a scalar');

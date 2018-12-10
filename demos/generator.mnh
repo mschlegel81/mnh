@@ -16,7 +16,7 @@ save;
   end);
   while(nextSquare>nextCube,nextCube:=cubes());
   nextSquare;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 //*Extracts elements with given indexes from a generator
 extract(generator:IteratableExpression, indexes:IntList)->generator.head(indexes.max+1)[indexes];

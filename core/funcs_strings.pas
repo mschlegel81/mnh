@@ -16,158 +16,52 @@ IMPLEMENTATION
 {$i func_defines.inc}
 
 FUNCTION pos_imp intFuncSignature;
-  FUNCTION posInt(x,y:P_literal):P_literal;
-    VAR i:int64;
-    begin
-      if P_stringLiteral(x)^.getEncoding=se_utf8
-      then i:=int64(UTF8Pos(P_stringLiteral(x)^.value,
-                            P_stringLiteral(y)^.value))
-      else i:=int64(    pos(P_stringLiteral(x)^.value,
-                            P_stringLiteral(y)^.value));
+  VAR i:int64;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
+    then begin
+      if str0^.getEncoding=se_utf8
+      then i:=int64(UTF8Pos(str0^.value,
+                            str1^.value))
+      else i:=int64(    pos(str0^.value,
+                            str1^.value));
       i-=1;
       if i<0 then result:=newRealLiteral(infinity)
              else result:=newIntLiteral(i);
-    end;
-
-  VAR i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and
-       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      if arg0^.literalType=lt_string then begin
-        if arg1^.literalType=lt_string then begin
-          result:=posInt(arg0,
-                         arg1);
-        end else begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            listResult^.append(posInt(arg0,list1^.value[i]),false);
-        end;
-      end else begin
-        if arg1^.literalType=lt_string then begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            listResult^.append(posInt(list0^.value[i],
-                                                               arg1           ),false);
-        end else begin
-          if list0^.size=list1^.size then begin
-            result:=newListLiteral;
-            for i:=0 to list0^.size-1 do
-              listResult^.append(posInt(list0^.value[i],
-                                        list1^.value[i]),false);
-          end else context.raiseError('Incompatible list lengths for function pos.',tokenLocation)
-        end;
-      end;
-    end;
+    end else result:=genericVectorization('pos',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION hasPrefix_imp intFuncSignature;
-  FUNCTION hasPrefixInt(x,y:P_literal):P_boolLiteral;
-    VAR a,b:string;
-    begin
-      a:=P_stringLiteral(x)^.value;
-      b:=P_stringLiteral(y)^.value;
-      result:=newBoolLiteral((length(b)<=length(a)) and (pos(b,a)=1));
-    end;
-
-  VAR i:longint;
+  VAR a,b:string;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and
-       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      if arg0^.literalType=lt_string then begin
-        if arg1^.literalType=lt_string then begin
-          result:=hasPrefixInt(arg0,arg1);
-        end else begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            listResult^.append(hasPrefixInt(arg0,list1^.value[i]),false);
-        end;
-      end else begin
-        if arg1^.literalType=lt_string then begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            listResult^.append(hasPrefixInt(list0^.value[i],
-                                                               arg1           ),false);
-        end else begin
-          if list0^.size=list1^.size then begin
-            result:=newListLiteral;
-            for i:=0 to list0^.size-1 do
-              listResult^.append(hasPrefixInt(list0^.value[i],
-                                        list1^.value[i]),false);
-          end else context.raiseError('Incompatible list lengths for function pos.',tokenLocation)
-        end;
-      end;
-    end;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
+    then begin
+      a:=str0^.value;
+      b:=str1^.value;
+      result:=newBoolLiteral((length(b)<=length(a)) and (pos(b,a)=1));
+    end else result:=genericVectorization('hasPrefix',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION copy_imp intFuncSignature;
-  VAR anyList:boolean=false;
-      allOkay:boolean=true;
-      i1:longint=0;
-      i:longint;
-
-  PROCEDURE checkLength(CONST L:P_literal); inline;
-    VAR s:longint;
+  FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):P_stringLiteral; inline;
     begin
-      s:=P_listLiteral(L)^.size;
-      if not(anyList) then begin i1:=s; anyList:=true; end
-                      else if    i1<>s then allOkay:=false;
-    end;
-
-  FUNCTION safeString(CONST index:longint):P_stringLiteral; inline;
-    begin
-      if arg0^.literalType=lt_string
-        then result:=str0
-        else result:=P_stringLiteral(list0^.value[index]);
-    end;
-
-  FUNCTION safeStart(CONST index:longint):longint; inline;
-    begin
-      if arg1^.literalType in [lt_smallint,lt_bigint]
-        then result:=int1^.intValue
-        else result:=P_abstractIntLiteral(list1^.value[index])^.intValue;
-      inc(result);
-    end;
-
-  FUNCTION safeLen(CONST index:longint):longint; inline;
-    begin
-      if arg2^.literalType in [lt_smallint,lt_bigint]
-        then result:=int2^.intValue
-        else result:=P_abstractIntLiteral(list2^.value[index])^.intValue;
-    end;
-
-  FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):string; inline;
-    begin
-      if s^.getEncoding=se_utf8 then result:=UTF8Copy(s^.value,start,len)
-                                else result:=    copy(s^.value,start,len);
+      if s^.getEncoding=se_utf8 then result:=newStringLiteral(UTF8Copy(s^.value,start,len))
+                                else result:=newStringLiteral(    copy(s^.value,start,len));
     end;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList])
-                                          and (arg1^.literalType in [lt_smallint,lt_bigint,lt_intList   ,lt_emptyList])
-                                          and (arg2^.literalType in [lt_smallint,lt_bigint,lt_intList   ,lt_emptyList]) then begin
-      anyList:=false;
-      if arg0^.literalType in [lt_stringList,lt_emptyList] then checkLength(arg0);
-      if arg1^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg1);
-      if arg2^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg2);
-      if not(allOkay) then exit(nil)
-      else if not(anyList) then
-        result:=newStringLiteral(myCopy(str0,
-                           P_abstractIntLiteral(arg1)^.intValue+1,
-                           P_abstractIntLiteral(arg2)^.intValue))
-      else begin
-        result:=newListLiteral;
-        for i:=0 to i1-1 do
-          listResult^.appendString(
-                myCopy(safeString(i),
-                       safeStart(i),
-                       safeLen(i)));
-      end;
-    end;
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_smallint,lt_bigint]) and (arg2^.literalType in [lt_smallint,lt_bigint])
+    then result:=myCopy(str0,
+                        P_abstractIntLiteral(arg1)^.intValue+1,
+                        P_abstractIntLiteral(arg2)^.intValue)
+    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    then result:=myCopy(str0,
+                        P_abstractIntLiteral(arg1)^.intValue+1,
+                        maxLongint)
+    else result:=genericVectorization('copy',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
@@ -229,24 +123,15 @@ FUNCTION byteToChar_imp intFuncSignature;
       end;
       context.raiseError('Value '+i^.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
     end;
-
-  VAR k:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      case arg0^.literalType of
-        lt_smallint,lt_bigint: result:=charOf(P_abstractIntLiteral(int0));
-        lt_emptyList: result:=newListLiteral(0);
-        lt_intList: begin
-          result:=list0^.newOfSameType(true);
-          for k:=0 to list0^.size-1 do listResult^.append(charOf(P_abstractIntLiteral(list0^.value[k])),false);
-        end;
-      end;
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint])
+    then result:=charOf(P_abstractIntLiteral(int0))
+    else result:=genericVectorization('byteToChar',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION charSet_imp intFuncSignature;
-  FUNCTION charset_internal(CONST input:P_literal):P_setLiteral;
+  FUNCTION charset_internal(CONST input:P_stringLiteral):P_setLiteral;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
@@ -256,9 +141,9 @@ FUNCTION charSet_imp intFuncSignature;
         byteSet:T_charSet=[];
         c:char;
     begin
-      if P_stringLiteral(input)^.getEncoding=se_utf8 then begin
+      if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
-        txt:=P_stringLiteral(input)^.value;
+        txt:=input^.value;
         byteIndex:=1;
         for charIndex:=1 to UTF8Length(txt) do begin
           sub:='';
@@ -272,35 +157,26 @@ FUNCTION charSet_imp intFuncSignature;
         for sub in charSetUtf8.values do result^.appendString(sub);
         charSetUtf8.destroy;
       end else begin
-        txt:=P_stringLiteral(input)^.value;
+        txt:=input^.value;
         for c in txt do include(byteSet,c);
         result:=newSetLiteral;
         for c in byteSet do result^.appendString(c);
       end;
     end;
 
-  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=charset_internal(arg0);
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(charset_internal(list0^.value[i]),false);
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=charset_internal(str0)
+    else result:=genericVectorization('charSet',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION bytes_imp intFuncSignature;
-
-  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=bytes_internal(arg0);
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(bytes_internal(list0^.value[i]),false);
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=bytes_internal(arg0)
+    else result:=genericVectorization('bytes',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION split_imp intFuncSignature;
@@ -393,28 +269,11 @@ FUNCTION join_impl intFuncSignature;
   end;
 
 {$define STRINGLITERAL_ROUTINE:=
-FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR iter:T_arrayOfLiteral;
-      sub:P_literal;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
-      lt_list,lt_stringList,lt_emptyList,
-      lt_set ,lt_stringSet ,lt_emptySet :  begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
-        iter  :=P_collectionLiteral(x)^.iteratableList;
-        for sub in iter do collResult^.append(recurse(sub),false);
-        disposeLiteral(iter);
-      end;
-      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context);
-    end;
-  end;
-
 begin
   result:=nil;
-  if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList,lt_set,lt_stringSet,lt_emptySet])
-  then result:=recurse(arg0);
+  if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+  then result:=str0^.CALL_MACRO
+  else result:=genericVectorization(ID_MACRO,params,tokenLocation,context,recycler);
 end}
 
 FUNCTION trim_imp      intFuncSignature; {$define CALL_MACRO:=trim}     {$define ID_MACRO:='trim'}     STRINGLITERAL_ROUTINE;
@@ -429,13 +288,17 @@ FUNCTION escape_imp    intFuncSignature; {$define CALL_MACRO:=escape}   {$define
 FUNCTION escapePascal_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(escapeString(str0^.value,es_strictPascalStyle));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(escapeString(str0^.value,es_strictPascalStyle))
+    else result:=genericVectorization('escapePascal',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION escapeJava_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(escapeString(str0^.value,es_javaStyle));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(escapeString(str0^.value,es_javaStyle))
+    else result:=genericVectorization('escapeJava',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
@@ -663,17 +526,11 @@ FUNCTION reverseString_impl intFuncSignature;
       end;
     end;
 
-  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_string: result:=newStringLiteral(rev(arg0));
-      lt_stringList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to list0^.size-1 do
-          listResult^.appendString(rev(list0^.value[i]));
-      end;
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(rev(arg0))
+    else result:=genericVectorization('reverseString',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_mapLiteral;
@@ -813,42 +670,48 @@ FUNCTION isUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(str0^.getEncoding in [se_utf8,se_ascii]);
+    then result:=newBoolLiteral(str0^.getEncoding in [se_utf8,se_ascii])
+    else result:=genericVectorization('isUtf8',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION isAscii_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(str0^.getEncoding=se_ascii);
+    then result:=newBoolLiteral(str0^.getEncoding=se_ascii)
+    else result:=genericVectorization('isAscii',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION utf8ToAnsi_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(UTF8ToCP1252(str0^.value));
+    then result:=newStringLiteral(UTF8ToCP1252(str0^.value))
+    else result:=genericVectorization('utf8ToAnsi',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION ansiToUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(CP1252ToUTF8(str0^.value));
+    then result:=newStringLiteral(CP1252ToUTF8(str0^.value))
+    else result:=genericVectorization('ansiToUtf8',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION base64encode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(EncodeStringBase64(str0^.value));
+    then result:=newStringLiteral(EncodeStringBase64(str0^.value))
+    else result:=genericVectorization('base64encode',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION base64decode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(DecodeStringBase64(str0^.value));
+    then result:=newStringLiteral(DecodeStringBase64(str0^.value))
+    else result:=genericVectorization('base64decode',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION compress_impl intFuncSignature;
@@ -857,7 +720,8 @@ FUNCTION compress_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(compressString(str0^.value,0))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_bigint,lt_smallint])
-      then result:=newStringLiteral(compressString(str0^.value,int1^.intValue))
+    then result:=newStringLiteral(compressString(str0^.value,int1^.intValue))
+    else result:=genericVectorization('compress',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION decompress_impl intFuncSignature;
@@ -873,7 +737,7 @@ FUNCTION decompress_impl intFuncSignature;
         exit(nil);
       end;
       result:=newStringLiteral(resultString);
-    end;
+    end else result:=genericVectorization('decompress',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION formatTabs_impl intFuncSignature;
@@ -926,7 +790,6 @@ FUNCTION md5_imp intFuncSignature;
       md5Int:T_bigInt;
       digits:T_arrayOfLongint;
       i:longint;
-
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
@@ -935,7 +798,7 @@ FUNCTION md5_imp intFuncSignature;
       for i:=1 to length(md5String) do digits[i-1]:=ord(md5String[i]);
       md5Int.createFromDigits(256,digits);
       result:=newIntLiteral(md5Int);
-    end else result:=nil;
+    end else result:=genericVectorization('md5',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION sha256_imp intFuncSignature;
@@ -951,7 +814,7 @@ FUNCTION sha256_imp intFuncSignature;
       for i:=0 to length(sha256Digest)-1 do sha256Digits[i]:=sha256Digest[i];
       sha256Int.createFromDigits(256,sha256Digits);
       result:=newIntLiteral(sha256Int);
-    end  else result:=nil;
+    end else result:=genericVectorization('sha256',params,tokenLocation,context,recycler);
   end;
 
 INITIALIZATION

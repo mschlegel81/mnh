@@ -29,7 +29,7 @@ save;
   (next+=1) in [100,10000,1000000]
   ? next*=10
   : next;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 @demo_for=math/strings, generators
 //*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number

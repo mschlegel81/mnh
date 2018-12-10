@@ -26,7 +26,7 @@ ludicGenerator->
     L|=curr;
     R|=curr;
     curr;
-  end}.toGenerator;
+  end}.toIteratableExpression;
 
 
 //*See http://rosettacode.org/wiki/Ludic_numbers

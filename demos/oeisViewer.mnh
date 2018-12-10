@@ -8,10 +8,11 @@ save;
 end;
 
 circleAnimation(generator:Iteratable)->begin
+  clearAnimation;
   local up:=false;
   local last:=0;
   local previous:=[];
-  local row:=[[0,0]];
+  local row:=[];
   ['autoscaleFactor'=>1.0,
    'autoscaleX'=>false,
    'autoscaleY'=>false,
@@ -29,11 +30,10 @@ circleAnimation(generator:Iteratable)->begin
      'x1'=>previous.max,
      'y0'=>-abs(last-next)/2,
      'y1'=> abs(last-next)/2].toMap.setOptions;
-    plot(row,'0.5 black l');
-    addPlot(previous,previous*0,'red .');
+    row==[] ? plot() : plot(row,'0.5 black l');
+    addPlot(previous,previous*0,'red . 0.5');
     addAnimationFrame;
     display;
-    print(index,' ',next,' ',round((time-frameStart)*1000),'ms/frame');
     last:=next;
   end);
 end;
@@ -67,7 +67,6 @@ main->begin
   local info:='';
   local genClass :='';
   local genString:='';
-
   local update:={begin
     id:=retrievedId:=$retrieved['ID'];
     name:=retrievedName:=$retrieved['Name'];
@@ -109,7 +108,7 @@ main->begin
            .bind(::genString),
     newButton.withCaption('Show graph')
              .withEnabledRule({!(sequence==[])})
-             .withAction({resetOptions orElse plot(sequence,'.') orElse display}),
+             .withAction({resetOptions orElse clearAnimation orElse plot(sequence,'.') orElse display}),
     newButton.withCaption('Show circle animation')
              .withEnabledRule({!(sequence==[])})
              .withAction({circleAnimation(sequence)}),

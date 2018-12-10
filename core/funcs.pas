@@ -54,6 +54,7 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 
 IMPLEMENTATION
@@ -115,7 +116,91 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
     context.raiseError(complaintText,tokenLocation);
   end;
 
-{$undef INNER_FORMATTING}
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+  VAR anyList:boolean=false;
+      firstSet:longint=-1;
+      allOkay:boolean=true;
+      consensusLength:longint=0;
+  PROCEDURE checkLength(CONST L:P_literal; CONST idx:longint); inline;
+    VAR s:longint;
+    begin
+      if L^.literalType in C_listTypes then begin
+        s:=P_listLiteral(L)^.size;
+        if not(anyList) then begin consensusLength:=s; anyList:=true; end
+                        else if    consensusLength<>s then allOkay:=false;
+      end else if L^.literalType in C_setTypes then firstSet:=idx;
+    end;
+
+  FUNCTION getListSubParameters(CONST index:longint):P_listLiteral; inline;
+    VAR k:longint;
+        x:P_literal;
+    begin
+      result:=newListLiteral(params^.size);
+      for k:=0 to params^.size-1 do begin
+        x:=params^.value[k];
+        if x^.literalType in C_listTypes
+        then result^.append(P_listLiteral(x)^.value[index],true)
+        else result^.append(x                             ,true);
+      end;
+    end;
+
+  VAR setIter:T_arrayOfLiteral;
+  FUNCTION getSetSubParameters(CONST index:longint):P_listLiteral; inline;
+    VAR k:longint;
+    begin
+      result:=newListLiteral(params^.size);
+      for k:=0 to params^.size-1 do
+      if k=firstSet then result^.append(setIter  [index],true)
+                    else result^.append(params^.value[k],true);
+    end;
+
+  VAR i:longint;
+      p :P_listLiteral;
+      fp:P_literal;
+      f :P_intFuncCallback;
+  begin
+    if params=nil then exit(nil);
+    if (params^.size=1) and (arg0^.literalType=lt_expression) then
+      exit(P_expressionLiteral(arg0)^.applyBuiltinFunction(functionId,tokenLocation,@context,@recycler));
+    for i:=0 to params^.size-1 do checkLength(params^.value[i],i);
+    if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
+    if not(intrinsicRuleMap.containsKey(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
+    if anyList then begin
+      result:=newListLiteral(consensusLength);
+      for i:=0 to consensusLength-1 do if allOkay then begin
+        p:=getListSubParameters(i);
+        fp:=f(p,tokenLocation,context,recycler);
+        disposeLiteral(p);
+        if fp=nil then allOkay:=false
+        else if not(context.continueEvaluation) then begin
+          allOkay:=false;
+          disposeLiteral(fp);
+        end else P_listLiteral(result)^.append(fp,false);
+      end;
+    end else if firstSet>=0 then begin
+      result:=newSetLiteral();
+      setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
+      for i:=0 to length(setIter)-1 do if allOkay then begin
+        p:=getSetSubParameters(i);
+        fp:=f(p,tokenLocation,context,recycler);
+        disposeLiteral(p);
+        if fp=nil then allOkay:=false
+        else if not(context.continueEvaluation) then begin
+          allOkay:=false;
+          disposeLiteral(fp);
+        end else begin
+          if fp^.literalType in (C_setTypes+C_listTypes)
+          then begin
+            P_setLiteral(result)^.appendAll(P_compoundLiteral(fp));
+            disposeLiteral(fp);
+          end else P_setLiteral(result)^.append(fp,false);
+        end;
+      end;
+      disposeLiteral(setIter);
+    end;
+    if not(allOkay) then disposeLiteral(result);
+  end;
+
 {$WARN 5024 OFF}
 FUNCTION clearPrint_imp intFuncSignature;
   begin
