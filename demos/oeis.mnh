@@ -10,17 +10,20 @@ initHook:=begin
     end;
 end;
 
-niceWrap(s:String)->s.length<100 ? s : begin
-  local splitAt:=s.chars.head(100).each(c,c in [' ',','] ? index : void).trailing+1;
-  splitAt==[] ? splitAt:=100 : void;
-  copy(s,0,splitAt)&"\n\t"&copy(s,splitAt,s.length).niceWrap;
+OUTPUT_WIDTH:=125;
+WRAP_WIDTH:=OUTPUT_WIDTH-5;
+
+niceWrap(s:String,injectTab:Boolean)->s.length<WRAP_WIDTH ? s : begin
+  local splitAt:=s.chars.head(WRAP_WIDTH).each(c,c in [' ',','] ? index : void).trailing+1;
+  splitAt==[] ? splitAt:=WRAP_WIDTH : void;
+  copy(s,0,splitAt)&"\n"&(injectTab ? "\t":"")&copy(s,splitAt,s.length).niceWrap(injectTab);
 end;
 
 private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
 private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
-printFormattedInfo(S:String)->S.decompress.split("\n").map(::niceWrap).join("\n").print;
-printFormattedInfo(L:IntList)->print("\t",L.join(",").niceWrap);
-printFormattedInfo(L:List)->L.each(element,printFormattedInfo(element),'='.repeat(105).print);
+printFormattedInfo(S:String)->S.decompress.split("\n").map({$x.niceWrap(true)}).join("\n").print;
+printFormattedInfo(L:IntList)->print(L.join(",").niceWrap(false));
+printFormattedInfo(L:List)->L.each(element,printFormattedInfo(element),'='.repeat(OUTPUT_WIDTH).print);
 printFormattedInfo(M:Map)->begin
   @SuppressUnusedWarning
   local id  :=M['ID'] orElse '?';
@@ -29,8 +32,8 @@ printFormattedInfo(M:Map)->begin
   local info:=M['Info'] orElse '?';
   local gen :=M['genClass'];
   printf("ID:\t{id}\n"&
-         "Name:\t{name.niceWrap}\n"&
-         "Seq.:\t{seq.join(',').niceWrap}\n"&
+         "Name:\t{name.niceWrap(true)}\n"&
+         "Seq.:\t{seq.join(',').niceWrap(true)}\n"&
          "Info:\t{info} series of {seq.size} elements"&
          (gen.isVoid ? void : "\n\tGenerator avaliable: {gen[0].toString}"&
                               "\n\tGenerator class    : {gen[1]}"));
@@ -71,3 +74,5 @@ end;
 main('download')->getData($params).printFormattedInfo;
 //*Generates values for given id
 main('gen',id,count)->getData($params).printFormattedInfo;
+
+getData(['details','5132']).decompress.print;

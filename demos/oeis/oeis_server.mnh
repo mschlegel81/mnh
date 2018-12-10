@@ -5,33 +5,34 @@ private datastore foundImplementations:=[].toMap;
 private datastore details  :=[].toMap;
 
 fetchDetails(indexes:IntList)->indexes.map(::fetchDetails).join("\n");
-fetchDetails(index:Int)->(details[index] orElse begin
-  local TRANS:=['%I'=>'Id  : ',
-        '%S'=>'Seq.: ',
-        '%T'=>' ...: ',
-        '%U'=>' ...: ',
-        '%N'=>'Name: ',
-        '%D'=>'Ref : ',
-        '%H'=>'Link: ',
-        '%F'=>'Frm.: ',
-        '%Y'=>'see : ',
-        '%A'=>'Author: ',
-        '%E'=>'Ext : ',
-        '%K'=>'Key : ',
-        '%C'=>'Comm: ',
-        '%O'=>'Off.: '];
+fetchDetails(index:Int)->details[index] orElse begin
+  local TRANS:=['%I'=>"Id  :\t",
+        '%S'=>"Seq.:\t",
+        '%T'=>" ...:\t",
+        '%U'=>" ...:\t",
+        '%N'=>"Name:\t",
+        '%D'=>"Ref :\t",
+        '%H'=>"Link:\t",
+        '%F'=>"Frm.:\t",
+        '%Y'=>"see :\t",
+        '%A'=>"Author:\t",
+        '%E'=>"Ext :\t",
+        '%K'=>"Key :\t",
+        '%C'=>"Comm:\t",
+        '%O'=>"Off.:\t"];
   local data:=
   httpGet('https://oeis.org/search?q=id:'&IDFormat.format(index)&'&fmt=text')
   .split("\n")
   .filter({$L.hasPrefix('%')})
-  .map({[copy($L,0,2),copy($L,3,length($L))]})
-  .map({$x[0]='%I' ? $x : [$x[0],$x[1].copy(8,1000)]})
-  .map({TRANS[$x[0]]&$x[1]})
+  .map({[copy($L,0,2),copy($L,3).replace(["\t","\v","\r"],' ')]})
+  .map({$x[0]='%I' ? $x : [$x[0],$x[1].copy(8)]})
+  .map({(TRANS[$x[0]] orElse "\t") &$x[1]})
+  .flatten
   .join("\n")
   .compress;
   details[index]:=data;
   data;
-end);
+end;
 
 ipcId:=myPath.extractFileNameOnly&format('%x',myPath.fileStats).join;
 
@@ -297,5 +298,3 @@ main()->begin
   while(time<timeout,sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;
-
-serve_('duplicates');
