@@ -54,6 +54,7 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 
 IMPLEMENTATION
@@ -115,7 +116,56 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
     context.raiseError(complaintText,tokenLocation);
   end;
 
-{$undef INNER_FORMATTING}
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
+  VAR anyList:boolean=false;
+      allOkay:boolean=true;
+      i1:longint=0;
+  PROCEDURE checkLength(CONST L:P_literal); inline;
+    VAR s:longint;
+    begin
+      if L^.literalType in C_listTypes then begin
+        s:=P_listLiteral(L)^.size;
+        if not(anyList) then begin i1:=s; anyList:=true; end
+                        else if    i1<>s then allOkay:=false;
+      end;
+    end;
+
+  FUNCTION getSubParameters(CONST index:longint):P_listLiteral; inline;
+    VAR k:longint;
+        x:P_literal;
+    begin
+      result:=newListLiteral(params^.size);
+      for k:=0 to params^.size-1 do begin
+        x:=params^.value[k];
+        if x^.literalType in C_listTypes
+        then result^.append(P_listLiteral(x)^.value[index],true)
+        else result^.append(x                             ,true);
+      end;
+    end;
+
+  VAR i:longint;
+      p :P_listLiteral;
+      fp:P_literal;
+      f :P_intFuncCallback;
+  begin
+    if params=nil then exit(nil);
+    for i:=0 to params^.size-1 do checkLength(params^.value[i]);
+    if not(allOkay) or not(anyList) then exit(nil);
+    if not(intrinsicRuleMap.containsKey(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
+    result:=newListLiteral(i1);
+    for i:=0 to i1-1 do if allOkay then begin
+      p:=getSubParameters(i);
+      fp:=f(p,tokenLocation,context,recycler);
+      disposeLiteral(p);
+      if fp=nil then allOkay:=false
+      else if not(context.continueEvaluation) then begin
+        allOkay:=false;
+        disposeLiteral(fp);
+      end else result^.append(fp,false);
+    end;
+    if not(allOkay) then disposeLiteral(result);
+  end;
+
 {$WARN 5024 OFF}
 FUNCTION clearPrint_imp intFuncSignature;
   begin

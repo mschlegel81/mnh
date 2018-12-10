@@ -477,10 +477,7 @@ FUNCTION printf_imp intFuncSignature;
   end;
 
 FUNCTION formatTime_imp intFuncSignature;
-  VAR L:P_listLiteral;
-      i:longint;
-      fmt:ansistring;
-  FUNCTION fmtIt(CONST t:double):P_stringLiteral;
+  FUNCTION fmtIt(CONST fmt:string; CONST t:double):P_stringLiteral;
     CONST placeholders:T_charSet=['Y','y','M','m','D','d','H','h','N','n','S','s','Z','z'];
     VAR simpleResult:shortstring;
         i,i1:longint;
@@ -495,23 +492,11 @@ FUNCTION formatTime_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
-      fmt:=P_stringLiteral(arg0)^.value;
-      case arg1^.literalType of
-        lt_smallint,
-        lt_bigint: result:=fmtIt(int1^.intValue);
-        lt_real:   result:=fmtIt(P_realLiteral(arg1)^.value);
-        lt_emptyList: result:=newListLiteral;
-        lt_realList,lt_intList,lt_numList: begin
-          result:=newListLiteral;
-          L:=list1;
-          for i:=0 to L^.size-1 do case(L^.value[i]^.literalType) of
-            lt_smallint,lt_bigint: P_listLiteral(result)^.append(fmtIt(P_abstractIntLiteral(L^.value[i])^.intValue),false);
-            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value[i])^.value),false);
-          end;
-        end;
-      end;
-    end;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg0^.literalType=lt_string)
+    then result:=fmtIt(str0^.value,P_numericLiteral(arg1)^.floatValue)
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
+    then result:=fmtIt('',P_numericLiteral(arg0)^.floatValue)
+    else result:=genericVectorization('formatTime',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION parseTime_imp intFuncSignature;
@@ -573,7 +558,7 @@ FUNCTION parseTime_imp intFuncSignature;
         for i:=0 to list1^.size-1 do
           P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^.value[i])^.value));
       end;
-    end;
+    end else result:=genericVectorization('parseTime',params,tokenLocation,context,recycler);
   end;
 
 INITIALIZATION
@@ -581,7 +566,7 @@ INITIALIZATION
   initialize(cachedFormatCS);
   system.initCriticalSection(cachedFormatCS);
   {$ifdef fullVersion}printfLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,ak_variadic_1,'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1,'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
   {$ifdef fullVersion}formatLoc:={$endif}
   registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1,'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    ,'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');

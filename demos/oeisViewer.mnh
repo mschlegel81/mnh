@@ -8,6 +8,7 @@ save;
 end;
 
 circleAnimation(generator:Iteratable)->begin
+  clearAnimation;
   local up:=false;
   local last:=0;
   local previous:=[];
@@ -33,7 +34,6 @@ circleAnimation(generator:Iteratable)->begin
     addPlot(previous,previous*0,'red . 0.5');
     addAnimationFrame;
     display;
-    print(index,' ',next,' ',round((time-frameStart)*1000),'ms/frame');
     last:=next;
   end);
 end;
