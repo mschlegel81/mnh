@@ -72,19 +72,19 @@ findAllMnhScripts->
                      ? ['/']
                      : driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':')
                     .union([mnhInfo['configDir'].extractFileDirectory])
-                    .pEach(root,note('Scanning ',root),allFiles(root,'*.mnh'),|)
+                    .pEach(root,allFiles(root,'*.mnh'),|)
                     .unique;
       scriptFolders:=result.extractFileDirectory.unique;
       result;
     end
-  : scriptFolders.pEach(root,note('Scanning ',root),allFiles(root,'*.mnh',false),|);
+  : scriptFolders.pEach(root,allFiles(root,'*.mnh',false),|);
 
 private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
 
 @utility=dependencies/find all importing files
 openImporting(editorFile:String)->begin
   print('Look for: ',editorFile);
-  findAllMnhScripts.minus([editorFile]).pEach(script,note(script),editorFile in inspect(script).useAndIncPaths ? script.printFileLink : void);
+  findAllMnhScripts.minus([editorFile]).pEach(script,editorFile in inspect(script).useAndIncPaths ? script.printFileLink : void);
   void;
 end;
 
