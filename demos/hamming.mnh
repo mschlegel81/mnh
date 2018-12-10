@@ -11,7 +11,7 @@ save;
     end
   : void;
   r;
-end}.toGenerator;
+end}.toIteratableExpression;
 
 @demo_for=list construction
 //*See http://rosettacode.org/wiki/Hamming_numbers

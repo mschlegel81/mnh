@@ -16,7 +16,7 @@ push (queue:Queue,value)->queue(['push',value]);
 @SuppressUnusedWarning
 empty(queue:Queue      )->queue(['empty']);
 
-dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toGenerator;
+dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toIteratableExpression;
 enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
 
 @demo_for=expressions/stateful, custom types

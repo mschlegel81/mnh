@@ -54,7 +54,7 @@ A000007->ord(naturalNumbers(0)=0);
 A000010->naturalNumbers(1).lazyMap(::EulerPhi);
 @SuppressUnusedWarning
 A000027->naturalNumbers(1);
-USE sequenceOfNonSquares;
+USE '..\sequenceOfNonSquares.mnh';
 @SuppressUnusedWarning
 A000037->naturalNumbers(1).lazyMap(::nonSquares);
 @SuppressUnusedWarning
@@ -65,7 +65,7 @@ A000108->rangeGenerator(0,13).lazyMap(::Catalan);
 A000124->naturalNumbers(0).lazyMap(::LazyCaterer);
 @SuppressUnusedWarning
 A000203->naturalNumbers(1).lazyMap(::DivisorFunction);
-USE semiprime;
+USE '..\semiprime.mnh';
 @SuppressUnusedWarning
 A001358->naturalNumbers(1).filter(::isSemiprime);
 @SuppressUnusedWarning
@@ -74,26 +74,26 @@ A003459->listIterator(primes(991)).filter(::isPermutablePrime);
 A025426->naturalNumbers(0).lazyMap({size(by2Squares($i))});
 @SuppressUnusedWarning
 A061358->naturalNumbers(0).lazyMap({size(by2Primes($i))});
-USE generators,ludic;
+USE generators,'..\ludic.mnh';
 @SuppressUnusedWarning
 A003309->listIterator(LudicSieve);
-USE pernicousNumbers;
+USE '..\pernicousNumbers.mnh';
 @SuppressUnusedWarning
 A052294->naturalNumbers(1).filter(::isPernicious);
-USE smithNumbers;
+USE '..\smithNumbers.mnh';
 @SuppressUnusedWarning
 A006753->naturalNumbers(1).filter(::isSmithNumber);
-USE thueMorseSequence;
+USE '..\thueMorseSequence.mnh';
 @SuppressUnusedWarning
 A010060->listIterator(thueMorseSequence(10000).ord);
-USE truncatablePrimes;
+USE '..\truncatablePrimes.mnh';
 @SuppressUnusedWarning
 A024785->listIterator(leftTruncatablePrimes (1000000));
 @SuppressUnusedWarning
 A024770->listIterator(rightTruncatablePrimes(1000000));
 @SuppressUnusedWarning
 A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatablePrimes(1000000)).sort);
-USE hofstadter_sequences;
+USE '..\hofstadter_sequences.mnh';
 @SuppressUnusedWarning
 @class=Hofstaedter
 A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
@@ -119,7 +119,7 @@ A005185->naturalNumbers(1).lazyMap(::hofstadter_sequences.Q);
 @class=Hofstaedter
 A007947->naturalNumbers(1).lazyMap({$n.factorize.unique.agg(*)});
 
-USE countTheCoins;
+USE '..\countTheCoins.mnh';
 @SuppressUnusedWarning
 @class=Partition number
 A000041->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i])});
@@ -187,7 +187,7 @@ A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])}
 @class=Partition number
 A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
 
-USE vampire;
+USE '..\vampire.mnh';
 @SuppressUnusedWarning
 A014575->naturalNumbers(1260).filter(::isVampire);
 
@@ -216,7 +216,7 @@ A023690->naturalNumbers(0).filter({$x.hammingWeight=8});
 @class=by Hamming weight
 A023691->naturalNumbers(0).filter({$x.hammingWeight=9});
 
-USE multifactorial;
+USE '..\multifactorial.mnh';
 @SuppressUnusedWarning
 @class=Multifactorial
 A000142->multifactorialGenerator(1);
@@ -248,7 +248,7 @@ A114806->multifactorialGenerator(9);
 @class=Multifactorial
 A288327->multifactorialGenerator(10);
 
-USE pascal;
+USE '..\pascal.mnh';
 @SuppressUnusedWarning
 @class=Pascal triangle row
 A010926->pascalTriangleRow(10).listIterator;
@@ -313,27 +313,27 @@ A010945->pascalTriangleRow(29).listIterator;
 @class=Pascal triangle row
 A010946->pascalTriangleRow(30).listIterator;
 
-USE perfectPowers;
+USE '..\perfectPowers.mnh';
 @SuppressUnusedWarning
 A001597->perfectPowers(10^6).listIterator;
 
-USE sternBrocot;
+USE '..\sternBrocot.mnh';
 @SuppressUnusedWarning
 A002487->sternBrocotGenerator;
 
-USE hofstadterConway;
+USE '..\hofstadterConway.mnh';
 @SuppressUnusedWarning
 A004001->hofstaderConwayGen;
 
-USE hamming;
+USE '..\hamming.mnh';
 @SuppressUnusedWarning
 A051037->hammingGenerator;
 
-USE harshad;
+USE '..\harshad.mnh';
 @SuppressUnusedWarning
 A005349->naturalNumbers(1).filter(::isHarshadNumber);
 
-USE kaprekar;
+USE '..\kaprekar.mnh';
 @SuppressUnusedWarning
 A006886->naturalNumbers(1).filter(::isKaprekar);
 

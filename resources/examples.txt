@@ -847,12 +847,13 @@ begin
   resetRandom;
   local gen:={begin local last:=0; save; last+=random; end};
   print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
-  gen:=gen.toGenerator;
+  gen:=gen.toIteratableExpression;
   print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
 end;
 
-//#toGenerator
-toGenerator(::sqr);
+//#toIteratableExpression
+toIteratableExpression(::sqr);
+toIteratableExpression({begin local i:=1; save; i+=i-1; end});
 
 md5('Test input. Could be anything really.');
 
