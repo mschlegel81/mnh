@@ -855,6 +855,8 @@ end;
 
 //#toIteratableExpression
 toIteratableExpression(::sqr);
+
+//#toIteratableExpression
 toIteratableExpression({begin local i:=1; save; i+=i-1; end});
 
 md5('Test input. Could be anything really.');

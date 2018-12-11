@@ -23,7 +23,6 @@ circleAnimation(generator:Iteratable)->begin
    'logscaleY'=>false,
    'preserveAspect'=>true].toMap.setOptions;
   generator.each(next,begin
-    local frameStart:=time;
     next=last ? void : row|=halfCircle(last,next,up:=!up);
     previous|=next;
     ['x0'=>previous.min,
@@ -33,9 +32,9 @@ circleAnimation(generator:Iteratable)->begin
     row==[] ? plot() : plot(row,'0.5 black l');
     addPlot(previous,previous*0,'red . 0.5');
     addAnimationFrame;
-    display;
     last:=next;
   end);
+  postDisplay;
 end;
 
 USE customFormUtil,'C:\dev\mnh5\demos\oeis\oeis_server.mnh';
@@ -70,7 +69,7 @@ main->begin
   local update:={begin
     id:=retrievedId:=$retrieved['ID'];
     name:=retrievedName:=$retrieved['Name'];
-    sequence:=$retrieved['Sequence'];
+    sequence:=$retrieved['Sequence'] orElse [];
     info:=$retrieved['Info']&' series of '&sequence.size&' elements';
     sequenceAsString:=sequence.formatList;
     genClass:=($retrieved['genClass'] orElse ['',''])[0];

@@ -1,4 +1,4 @@
-//*Returns the mean of all values in <code>X</code>
+//*Returns the mean of all values in X
 mean    (X:NumericList)->X.agg(+)/size(X);
 //*Returns the (statistical) variance X
 variance(X:NumericList)->mean(X^2)-mean(X)^2;
@@ -6,6 +6,6 @@ variance(X:NumericList)->mean(X^2)-mean(X)^2;
 @SuppressUnusedWarning=all
 standardVariation(X:NumericList)->sqrt(X.variance);
 //*Returns the median of numeric list X
-median(X:NumericList)->sort(X).get(size(X) div 2);
+median(X:NumericCollection)->sort(X)[size(X) div 2];
 //*Returns the decils of L
-decils(L)->sort(L).get(round([0..10]/10*(size(L)-1)));
+decils(L:NumericCollection)->sort(L)[round([0..10]/10*(size(L)-1))];

@@ -1,0 +1,43 @@
+@SuppressUnusedWarning
+private X:=[1,0.5,-2,3]|[1..5]/2|[-1..-10]/5;
+
+USE '..\packages\statistics.mnh';
+testStatistics->begin
+  print('Package statistics');
+  printf("  {nameOf $f}\t=\t{$f(X)}",
+  [::mean,::variance,::standardVariation,::median,::decils]);
+end;
+
+USE '..\packages\mathUtils.mnh';
+testMathUtils->begin
+  print('Package mathUtils');
+  printf("{nameOf $f}\t=\t{$f@$p}",
+    [::iterate        ,::sum,::prod,::runningSum,::factorial,::binomCoeff,::Bernoulli],
+    [[1,{1/($x+1)},10],[X]  ,[X]   ,[X]         ,[20]       ,[12,5]      ,[4]        ]);
+end;
+
+USE '..\packages\generators.mnh';
+testGenerators->begin
+  print('Package generators - chunkIterator');
+  chunkIterator([1..10],3).map(::print);
+  print('Package generators - pairGenerator');
+  pairGenerator(3,4,0).map(::print);
+  void;
+end;
+
+USE '..\packages\interpolation.mnh';
+testInterpolation->begin
+  print('Package interpolation');
+  local x:=[0,0.5,1,2];
+  local y:=[0,1,2,4.2];
+  printf("  {nameOf $f}\v(0.75)\t=\t{$f(x,y)(0.75)}",
+   [::interpolatePiecewise,
+    ::interpolateLineSegments,
+    ::interpolatePolynomial]);
+  void;
+end;
+
+main->testStatistics orElse
+      testMathUtils orElse
+      testGenerators orElse
+      testInterpolation;
