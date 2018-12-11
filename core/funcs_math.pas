@@ -537,8 +537,8 @@ FUNCTION isPrime_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint  : result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral  (arg0)^.value));
-      lt_smallint: result:=newBoolLiteral(millerRabinTest(P_smallIntLiteral(arg0)^.value));
+      lt_bigint  : result:=newBoolLiteral(isPrime(P_bigIntLiteral  (arg0)^.value));
+      lt_smallint: result:=newBoolLiteral(isPrime(P_smallIntLiteral(arg0)^.value));
       else         result:=genericVectorization('isPrime',params,tokenLocation,context,recycler);
     end;
   end;
