@@ -84,6 +84,7 @@ TYPE
     setupLocation:T_tokenLocation;
     setupContext:P_context;
     meta:array of P_guiElementMeta;
+    metaForUpdate:T_setOfPointer;
     plotLink:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
@@ -426,6 +427,7 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
     initCriticalSection(lock);
     enterCriticalSection(lock);
     setLength(meta,0);
+    metaForUpdate.create;
     displayPending:=false;
     leaveCriticalSection(lock);
     markedForCleanup:=false;
@@ -439,6 +441,7 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
     for k:=0 to length(meta)-1 do dispose(meta[k],destroy);
     setLength(meta,0);
     displayPending:=false;
+    metaForUpdate.destroy;
     leaveCriticalSection(lock);
     doneCriticalSection(lock);
   end;
@@ -543,6 +546,7 @@ PROCEDURE TscriptedForm.initialize();
 
   VAR formMeta:P_panelMeta;
       k:longint;
+      m:P_guiElementMeta;
   begin
     enterCriticalSection(lock);
     new(formMeta,createForExistingForm(self));
@@ -560,6 +564,7 @@ PROCEDURE TscriptedForm.initialize();
       end;
     end;
     addMeta(formMeta);
+    for m in meta do metaForUpdate.put(m);
     displayPending:=true;
     leaveCriticalSection(lock);
   end;
@@ -592,7 +597,10 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     context.parentCustomForm:=self;
     processingEvents:=true;
     for m in meta do if context.messages^.continueEvaluation then begin
-      if m^.evaluate(location,context,recycler) then result:=true;
+      if m^.evaluate(location,context,recycler) then begin
+        result:=true;
+        metaForUpdate.put(m);
+      end;
     end;
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
@@ -603,12 +611,13 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
 
 PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
   PROCEDURE updateComponents;
-    VAR m:P_guiElementMeta;
+    VAR metaPointer:pointer;
     begin
       if processingEvents
       then propagateCursor(self,crHourGlass)
       else propagateCursor(self,crDefault);
-      for m in meta do m^.update;
+      for metaPointer in metaForUpdate.values do P_guiElementMeta(metaPointer)^.update;
+      metaForUpdate.clear;
     end;
 
   begin
