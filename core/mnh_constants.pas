@@ -166,7 +166,7 @@ TYPE
     tt_EOL,
     tt_docComment,
     tt_attributeComment,
-    tt_use,tt_include,
+    tt_use,tt_include,tt_nameOf,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -321,7 +321,7 @@ CONST
 {tt_mut_nestedAppend}           (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
 {tt_mut_assignAppendAlt}        (defaultId:'||=';           defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Alt-List-concatenate/assign operator'),
 {tt_mut_nestedAppendAlt}        (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
-{tt_mut_assignDrop}             (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Drop operator'),
+{tt_mut_assignDrop}             (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Drop operator. Drops element from a set (by value) or from a map (by key)'),
 {tt_mut_nestedDrop}             (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
 {tt_type}                       (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'Type'),
 {tt_typeCheck}                  (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'Type check'),
@@ -334,6 +334,7 @@ CONST
 {tt_attributeComment}           (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
 {tt_use}                        (defaultId:'USE';           defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
 {tt_include}                    (defaultId:'INCLUDE';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
+{tt_nameOf}                     (defaultId:'nameOf';        defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Returns the name of the argument or the blank string if there is none'),
 {tt_blank}                      (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 TYPE
   T_literalType = (
