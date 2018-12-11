@@ -1073,6 +1073,13 @@ end}
             end;
             COMMON_CASES;
           end;
+ {cT[-1]=}tt_nameOf: begin
+            stack.popDestroy(recycler);
+            newLit:=newStringLiteral(P_literal(first^.data)^.getId);
+            disposeLiteral(first^.data);
+            first^.data:=newLit;
+            didSubstitution:=true;
+          end;
           else begin
             case cTokType[1] of
               COMMON_SEMICOLON_HANDLING;
@@ -1095,7 +1102,13 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
-{cT[0]=}tt_blockLocalVariable: if cTokType[1]=tt_listBraceOpen then begin
+{cT[0]=}tt_blockLocalVariable:
+        if cTokType[-1]=tt_nameOf then begin
+          first^.data:=newStringLiteral(first^.txt);
+          first^.tokType:=tt_literal;
+          stack.popDestroy(recycler);
+          didSubstitution:=true;
+        end else if cTokType[1]=tt_listBraceOpen then begin
           stack.push(first);
           didSubstitution:=true;
         end else begin
@@ -1218,7 +1231,7 @@ end}
           first:=recycler.disposeToken(first);
           didSubstitution:=true;
         end;
-{cT[0]=}tt_return: begin
+{cT[0]=}tt_return,tt_nameOf: begin
           stack.push(first);
           didSubstitution:=true;
         end;

@@ -28,7 +28,10 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
       case tmp^.literalType of
         lt_expression: config_items:=P_expressionLiteral(tmp);
         lt_stringList,
-        lt_emptyList: state_items :=P_listLiteral(tmp)^;
+        lt_emptyList: begin
+          state_items :=P_listLiteral(tmp)^;
+          disposeLiteral(tmp);
+        end
         else context.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
       end;
     end;

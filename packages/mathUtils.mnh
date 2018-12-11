@@ -15,8 +15,7 @@ end;
 
 memoized
 factorial(i=0)->1;
-factorial(i>=21)->2.43290200817664E18*(1.0*[21..i]).agg(*);
-factorial(i in [1..20])->[1..i].agg(*);
+factorial(i>0)->[1..i].agg(*);
 
 memoized
 binomCoeff(0)->[1];
