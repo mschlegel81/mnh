@@ -197,7 +197,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         end;
       end;
       disposeLiteral(setIter);
-    end;
+    end else result:=nil;
     if not(allOkay) then disposeLiteral(result);
   end;
 
