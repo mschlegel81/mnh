@@ -9,5 +9,5 @@ object scriptedForm: TscriptedForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyUp = FormKeyUp
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
 end

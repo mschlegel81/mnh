@@ -248,7 +248,10 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config.caption:=P_expressionLiteral(tmp);
-        lt_string    : state .caption:=P_stringLiteral(tmp)^.value;
+        lt_string    : begin
+          state .caption:=P_stringLiteral(tmp)^.value;
+          disposeLiteral(tmp);
+        end
         else context.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
       end;
     end;
