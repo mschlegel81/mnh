@@ -529,6 +529,8 @@ FUNCTION factorize_impl intFuncSignature;
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
+      setLength(factors.smallFactors,0);
+      setLength(factors.bigFactors,0);
       listResult^.sort;
     end else result:=genericVectorization('factorize',params,tokenLocation,context,recycler);
   end;
