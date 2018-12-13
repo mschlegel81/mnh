@@ -1,4 +1,4 @@
-UNIT mnh_evaluation;
+UNIT evaluation;
 INTERFACE
 {$ifndef debugMode}
   {$define useTryCatchBlocks}
@@ -10,16 +10,16 @@ USES sysutils,
      myStringUtil,
      {$endif}
      mnh_constants,basicTypes,
-     mnh_litVar,
+     litVar,
      tokens,
-     mnh_tokenArray,
+     tokenArray,
      tokenStack,
      mnh_messages,
      mnh_settings,
      valueStore,
      contexts,
      funcs,
-     mnh_operators,
+     operators,
      funcs_mnh,
      funcs_math,
      funcs_list,

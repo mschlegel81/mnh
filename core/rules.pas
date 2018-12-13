@@ -3,16 +3,16 @@ INTERFACE
 USES sysutils,math,
      myGenerics, myStringUtil,
      mnh_constants,basicTypes,
-     mnh_out_adapters,
-     mnh_litVar, valueStore,
+     out_adapters,
+     litVar, valueStore,
      funcs,
      tokens,
-     mnh_tokenArray,
+     tokenArray,
      mnh_messages,
      contexts,
      patterns,
      recyclers,
-     datastores, caches, subrules,mnh_operators;
+     datastores, caches, subrules,operators;
 TYPE
   T_subruleArray=array of P_subruleExpression;
 

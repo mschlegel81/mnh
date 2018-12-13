@@ -1,4 +1,4 @@
-UNIT mnh_litVar;
+UNIT litVar;
 {$Q-}
 INTERFACE
 USES sysutils, math, typinfo,
@@ -7,7 +7,7 @@ USES sysutils, math, typinfo,
      mnh_constants,
      basicTypes,
      mnh_messages,
-     mnh_out_adapters;
+     out_adapters;
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
       HASH_SHRINK_THRESHOLD_FACTOR=0.5;

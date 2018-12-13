@@ -3,9 +3,9 @@ INTERFACE
 USES Classes,sysutils,dateutils,typinfo,
      FileUtil,
      myGenerics,serializationUtil,mySys,
-     mnh_fileWrappers,
+     fileWrappers,
      mnh_constants,mnh_messages,
-     mnh_out_adapters;
+     out_adapters;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),

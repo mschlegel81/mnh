@@ -1,9 +1,12 @@
 UNIT mnh_html;
 INTERFACE
 USES sysutils,
+     FileUtil,
      myStringUtil,
      mnh_constants,basicTypes,
-     mnh_litVar,mnh_out_adapters,FileUtil,tokens;
+     out_adapters,
+     litVar,
+     tokens;
 TYPE
   T_rawTokenizeCallback=FUNCTION(CONST inputString:ansistring):T_rawTokenArray;
 

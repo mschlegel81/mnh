@@ -6,17 +6,17 @@ USES //basic classes
      myGenerics,myStringUtil,
      //MNH:
      basicTypes,mnh_constants,
-     mnh_out_adapters,
-     mnh_litVar,
+     out_adapters,
+     litVar,
      tokens,
      contexts,
-     mnh_tokenArray,
+     tokenArray,
      valueStore,
      recyclers,
      {$ifdef fullVersion}
-     mnh_plotData,mnh_funcs_plot,plotMath,
-     mnh_debuggingVar,
-     mnh_profiling,
+     mnh_plotData,funcs_plot,plotMath,
+     debuggingVar,
+     profiling,
      {$endif}
      funcs,funcs_math,funcs_mnh, funcs_strings,
      mnh_messages,
@@ -1653,8 +1653,8 @@ FUNCTION interpret_imp intFuncSignature;
 
 INITIALIZATION
   {$ifdef fullVersion}
-  mnh_funcs_plot.generateRow:=@generateRow;
-  mnh_profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
+  funcs_plot.generateRow:=@generateRow;
+  profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$endif}
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;

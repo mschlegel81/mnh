@@ -11,8 +11,8 @@ USES
   mnhFormHandler,
   mnh_messages,
   recyclers,
-  mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, funcs,
-  contexts, mnh_evalThread, plotstyles, plotMath, EpikTimer,
+  mnh_plotData, mnh_settings, out_adapters, litVar, funcs,
+  contexts, evalThread, plotstyles, plotMath, EpikTimer,
   plotExport;
 
 TYPE

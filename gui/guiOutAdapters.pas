@@ -1,11 +1,13 @@
 UNIT guiOutAdapters;
 INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
-     mnh_debugging,
-     mnh_out_adapters,mnh_constants,mnh_settings,basicTypes,
+     debugging,
+     out_adapters,
+     mnh_constants,basicTypes,
+     mnh_settings,
      mnh_plotForm, mnh_tables,
      mnh_messages,
-     mnh_evalThread,
+     evalThread,
      synOutAdapter,
      variableTreeViews,mnhCustomForm, askDialog;
 
@@ -50,7 +52,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TS
     guiAdapters.addOutAdapter(@plotSystem   ,false);
     guiAdapters.addOutAdapter(@guiEventsAdapter,false);
     unitIsInitialized:=true;
-    mnh_out_adapters.gui_started:=true;
+    out_adapters.gui_started:=true;
     initializePlotForm;
   end;
 

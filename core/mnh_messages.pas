@@ -2,7 +2,8 @@ UNIT mnh_messages;
 INTERFACE
 USES sysutils,
      myGenerics,
-     mnh_constants,basicTypes;
+     mnh_constants,
+     basicTypes;
 
 TYPE
   T_stateFlag=(FlagQuietHalt,

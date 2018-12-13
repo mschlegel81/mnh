@@ -1,14 +1,14 @@
-UNIT mnh_operators;
+UNIT operators;
 INTERFACE
 USES sysutils,
      bigint,
      mnh_constants,
      basicTypes,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_tokenArray,
+     out_adapters,
+     tokenArray,
      contexts,
-     mnh_litVar,
+     litVar,
      tokens,
      subrules,
      recyclers,
@@ -1074,7 +1074,7 @@ PROCEDURE registerUnary(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONS
   end;
 
 INITIALIZATION
-  mnh_litVar.resolveOperatorCallback:=@resolveOperator;
+  litVar.resolveOperatorCallback:=@resolveOperator;
   registerOperator(tt_comparatorEq     ,@comparator_eq     ,@perform_eq);
   registerOperator(tt_comparatorNeq    ,@comparator_Neq    ,@perform_neq);
   registerOperator(tt_comparatorLeq    ,@comparator_Leq    ,@perform_leq);

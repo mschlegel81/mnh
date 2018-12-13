@@ -10,10 +10,18 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls,
   ExtCtrls, StdCtrls,
+  myGenerics,
   mnh_constants, basicTypes, contexts,
   mnh_messages,
   recyclers,
-  mnh_litVar, mnhFormHandler,myGenerics,funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath,synOutAdapter;
+  out_adapters,
+  litVar,
+  mnhFormHandler,
+  funcs,
+  editorMetaBase,
+  mnh_plotForm,
+  plotMath,
+  synOutAdapter;
 
 TYPE
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,

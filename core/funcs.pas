@@ -3,10 +3,11 @@ INTERFACE
 {$i func_defines.inc}
 USES sysutils,Classes,
      myGenerics,myStringUtil,
-     mnh_constants,basicTypes,
+     mnh_constants,
+     basicTypes,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_litVar,
+     out_adapters,
+     litVar,
      recyclers,
      contexts
      {$ifdef fullVersion},

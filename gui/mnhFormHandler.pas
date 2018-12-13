@@ -5,7 +5,7 @@ USES
   mnh_constants,
   basicTypes,
   funcs,
-  mnh_litVar,
+  litVar,
   recyclers,
   contexts;
 TYPE

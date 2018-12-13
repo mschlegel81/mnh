@@ -6,25 +6,26 @@ USES //basic classes
      myGenerics, myStringUtil,
      //MNH:
      mnh_constants, basicTypes,
-     mnh_litVar, mnh_fileWrappers,
+     fileWrappers,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
+     litVar,
      caches,
      tokens, contexts,
-     mnh_profiling,
+     profiling,
      {$ifdef fullVersion}
        mnh_doc,
-       mnh_funcs_plot,
+       funcs_plot,
        mnh_plotData,
        mnh_settings,
        mnh_html,
        tokenStack,
-       mnh_debuggingVar,
+       debuggingVar,
      {$else}
        mySys,
      {$endif}
      funcs,
-     mnh_operators,
+     operators,
      funcs_mnh,   funcs_types, funcs_math,  funcs_strings,
      funcs_list,  funcs_system, funcs_files,
      funcs_format,
@@ -34,7 +35,7 @@ USES //basic classes
      subrules,
      rules,
      recyclers,
-     mnh_tokenArray;
+     tokenArray;
 
 {$define include_interface}
 TYPE

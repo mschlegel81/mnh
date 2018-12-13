@@ -7,7 +7,7 @@ USES sysutils,
      {$endif}
      basicTypes,mnh_constants,
      recyclers,
-     mnh_litVar,
+     litVar,
      tokens,
      mnh_messages,
      contexts;

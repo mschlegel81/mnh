@@ -2,11 +2,11 @@ UNIT aggregators;
 INTERFACE
 USES funcs,
      mnh_constants, basicTypes,
-     mnh_out_adapters,
+     out_adapters,
      contexts,
-     mnh_litVar,
+     litVar,
      recyclers,
-     mnh_operators;
+     operators;
 TYPE
   T_aggregator=object
   private

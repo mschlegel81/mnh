@@ -115,20 +115,20 @@
         <IsPartOfProject Value="True"/>
       </Unit1>
       <Unit2>
-        <Filename Value="..\core\mnh_evaluation.pas"/>
+        <Filename Value="..\core\evaluation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit2>
       <Unit3>
-        <Filename Value="..\core\mnh_out_adapters.pas"/>
+        <Filename Value="..\core\out_adapters.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit3>
       <Unit4>
-        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Filename Value="..\core\litvar.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_litVar"/>
+        <UnitName Value="litVar"/>
       </Unit4>
       <Unit5>
-        <Filename Value="..\core\mnh_operators.pas"/>
+        <Filename Value="..\core\operators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit5>
       <Unit6>
@@ -144,7 +144,7 @@
         <IsPartOfProject Value="True"/>
       </Unit8>
       <Unit9>
-        <Filename Value="..\core\mnh_profiling.pas"/>
+        <Filename Value="..\core\profiling.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit9>
       <Unit10>
@@ -156,11 +156,11 @@
         <IsPartOfProject Value="True"/>
       </Unit11>
       <Unit12>
-        <Filename Value="..\core\mnh_tokenArray.pas"/>
+        <Filename Value="..\core\tokenArray.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit12>
       <Unit13>
-        <Filename Value="..\core\mnh_fileWrappers.pas"/>
+        <Filename Value="..\core\fileWrappers.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit13>
       <Unit14>

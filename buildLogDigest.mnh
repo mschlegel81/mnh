@@ -8,9 +8,9 @@ alwaysIgnoredCodes:=[1023,1022,1021,1008,3104,9022,9015,1002];
 
 ignoredPatterns:=['3rd_party',
                   '/gui/.*\(5024\)',
-                  '/core/mnh_litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
+                  '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
                   '/core/func_defines\.inc.*\(5024\)',
-                  '/core/mnh_operators.*\(5059\)',
+                  '/core/operators.*\(5059\)',
                   '/core/funcs_files.*\(6018\)',
                   '/core/listProcessing.*\(5089\).*"nextToEnqueue"'
                   ];

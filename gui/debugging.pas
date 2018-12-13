@@ -1,11 +1,11 @@
-UNIT mnh_debugging;
+UNIT debugging;
 INTERFACE
 USES sysutils,
      //MNH:
      basicTypes,
      tokens,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
      tokenStack;
 TYPE
   P_debuggingSnapshot=^T_debuggingSnapshot;

@@ -2,12 +2,12 @@ UNIT mnh_doc;
 INTERFACE
 USES sysutils,base64,
      myStringUtil, myGenerics, serializationUtil,
-     mnh_fileWrappers,
+     fileWrappers,
      mnh_messages,
      mnh_settings,
      basicTypes, mnh_constants,recyclers,
      Forms,ComCtrls,
-     mnh_litVar, mnh_html;
+     litVar, mnh_html;
 TYPE
   T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
