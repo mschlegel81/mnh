@@ -793,7 +793,7 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                      else exit(newIntLiteral(bigint.modulus(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
+                     else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value.modulus(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
       end;
