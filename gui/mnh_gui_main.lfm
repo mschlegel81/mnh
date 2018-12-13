@@ -2813,8 +2813,8 @@ object MnhForm: TMnhForm
     end
     object outlineTreeView: TTreeView
       Left = 0
-      Height = 138
-      Top = 58
+      Height = 51
+      Top = 145
       Width = 166
       Align = alClient
       Images = outlineImageList
@@ -2822,6 +2822,35 @@ object MnhForm: TMnhForm
       ScrollBars = ssAutoBoth
       TabOrder = 2
       Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+    end
+    object rbOutlineSortByNameCase: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 58
+      Width = 166
+      Align = alTop
+      Caption = 'by id'
+      Checked = True
+      TabOrder = 5
+      TabStop = True
+    end
+    object rbOutlineSortByName: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 87
+      Width = 166
+      Align = alTop
+      Caption = 'by id (case insensitive)'
+      TabOrder = 3
+    end
+    object rbOutlineSortByLoc: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 116
+      Width = 166
+      Align = alTop
+      Caption = 'by location'
+      TabOrder = 4
     end
   end
   object MainMenu1: TMainMenu

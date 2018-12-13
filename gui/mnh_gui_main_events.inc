@@ -205,8 +205,10 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
+  VAR outlineModel:P_outlineTreeModel;
   begin
     if firstShow then begin
+      new(outlineModel,create(outlineTreeView,cbOutlineShowPrivate,cbOutlineShowImported,rbOutlineSortByNameCase,rbOutlineSortByName,rbOutlineSortByLoc,@openLocation));
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       editorMeta.setupUnit(self,
                            inputPageControl,
@@ -221,9 +223,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand,
                            outlineGroupBox,
-                           outlineTreeView,
-                           cbOutlineShowPrivate,
-                           cbOutlineShowImported,
+                           outlineModel,
                            @openLocation);
 
       quick.meta.createWithParent(QuickTabSheet,nil);

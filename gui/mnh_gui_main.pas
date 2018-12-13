@@ -48,7 +48,8 @@ USES
   renameDialog,
   mnhCustomForm,
   openFile,
-  saveFile;
+  saveFile,
+  outlines;
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}
@@ -124,6 +125,9 @@ TYPE
     miShowQuickEval,
     miShowOutput,
     miShowAssistance:          TMenuItem;
+    rbOutlineSortByLoc: TRadioButton;
+    rbOutlineSortByName: TRadioButton;
+    rbOutlineSortByNameCase: TRadioButton;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
