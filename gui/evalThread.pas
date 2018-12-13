@@ -1,19 +1,19 @@
-UNIT mnh_evalThread;
+UNIT evalThread;
 INTERFACE
 USES sysutils,Classes,
      mySys,
      myGenerics,myStringUtil,
-     mnh_constants,basicTypes,mnh_fileWrappers,
+     mnh_constants,basicTypes,fileWrappers,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_litVar,
+     out_adapters,
+     litVar,
      funcs,contexts,
-     mnh_tokenArray,
+     tokenArray,
      subrules,
      packages,mnh_doc,
      cmdLineInterpretation,
      recyclers,
-     mnh_debuggingVar;
+     debuggingVar;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript,er_die);
   T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning);

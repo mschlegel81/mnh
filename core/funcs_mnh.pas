@@ -5,8 +5,8 @@ USES sysutils,
      myGenerics,
      myStringUtil,
      basicTypes,mnh_constants,
-     mnh_out_adapters,
-     mnh_litVar,
+     out_adapters,
+     litVar,
      recyclers,
      contexts,
      mnh_settings,
@@ -21,9 +21,9 @@ PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; V
   begin
     if argIsEndTime then sleepUntil:=0 else sleepUntil:=context.wallclockTime;
     case argument^.literalType of
-      lt_smallint: sleepUntil:=sleepUntil+P_smallIntLiteral(argument)^.value;
-      lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (argument)^.value.toFloat;
-      lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (argument)^.value;
+      lt_smallint: sleepUntil+=P_smallIntLiteral(argument)^.value;
+      lt_bigint  : sleepUntil+=P_bigIntLiteral  (argument)^.value.toFloat;
+      lt_real    : sleepUntil+=P_realLiteral    (argument)^.value;
     end;
     while (context.wallclockTime<sleepUntil) and (context.messages^.continueEvaluation) do begin
       sleepInt:=round(900*(sleepUntil-context.wallclockTime));

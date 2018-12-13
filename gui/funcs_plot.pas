@@ -1,4 +1,4 @@
-UNIT mnh_funcs_plot;
+UNIT funcs_plot;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,
@@ -6,8 +6,8 @@ USES sysutils,math,
      myStringUtil,
      basicTypes,
      mnh_constants,
-     mnh_out_adapters,
-     mnh_litVar,
+     out_adapters,
+     litVar,
      contexts,
      funcs,
      mnh_messages,

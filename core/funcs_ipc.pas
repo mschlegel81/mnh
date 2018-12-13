@@ -5,9 +5,10 @@ USES sysutils, Classes, simpleipc, //RTL
      {$ifdef UNIX}myStringUtil,{$endif}  //my tools
      basicTypes,mnh_constants,
      mnh_messages,
-     mnh_out_adapters,
-     contexts,mnh_litVar,
-     mnh_tokenArray,
+     out_adapters,
+     litVar,
+     contexts,
+     tokenArray,
      recyclers,
      funcs;
 

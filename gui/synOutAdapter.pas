@@ -7,7 +7,7 @@ USES
   mnh_constants,basicTypes,
   mnh_messages,
   mnh_settings,
-  myGenerics,mnh_out_adapters;
+  myGenerics,out_adapters;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
                                               mt_printline,

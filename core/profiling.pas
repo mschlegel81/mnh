@@ -1,4 +1,4 @@
-UNIT mnh_profiling;
+UNIT profiling;
 INTERFACE
 USES sysutils,
      //my libraries
@@ -6,8 +6,8 @@ USES sysutils,
      //MNH:
      basicTypes,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_litVar;
+     out_adapters,
+     litVar;
 
 TYPE
   T_profileCategory=(pc_importing,pc_tokenizing,pc_declaration,pc_interpretation,pc_unknown,pc_total);

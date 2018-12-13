@@ -193,25 +193,25 @@ end;
 @SuppressUnusedWarning=all
 toString(style:PlotStyle)->style.getInner(1).join(" ");
 
-LINE     :=[['style','line'     ]].toMap.toPlotStyle;
-STEPLEFT :=[['style','stepLeft' ]].toMap.toPlotStyle;
-STEPRIGHT:=[['style','stepRight']].toMap.toPlotStyle;
-BAR      :=[['style','bar'      ]].toMap.toPlotStyle;
-BOX      :=[['style','box'      ]].toMap.toPlotStyle;
-ELLIPSE  :=[['style','ellipse'  ]].toMap.toPlotStyle;
-TUBE     :=[['style','tube'     ]].toMap.toPlotStyle;
-POLYGON  :=[['style','polygon'  ]].toMap.toPlotStyle;
-DOT      :=[['style','.']].toMap.toPlotStyle;
-PLUS     :=[['style','+']].toMap.toPlotStyle;
-CROSS    :=[['style','x']].toMap.toPlotStyle;
-IMPULSE  :=[['style','i']].toMap.toPlotStyle;
+LINE     :=['style'=>'line'     ].toMap.toPlotStyle; LINE     (S:PlotStyle)->modifyStyle(S,'style','line'     );
+STEPLEFT :=['style'=>'stepLeft' ].toMap.toPlotStyle; STEPLEFT (S:PlotStyle)->modifyStyle(S,'style','stepLeft' );
+STEPRIGHT:=['style'=>'stepRight'].toMap.toPlotStyle; STEPRIGHT(S:PlotStyle)->modifyStyle(S,'style','stepRight');
+BAR      :=['style'=>'bar'      ].toMap.toPlotStyle; BAR      (S:PlotStyle)->modifyStyle(S,'style','bar'      );
+BOX      :=['style'=>'box'      ].toMap.toPlotStyle; BOX      (S:PlotStyle)->modifyStyle(S,'style','box'      );
+ELLIPSE  :=['style'=>'ellipse'  ].toMap.toPlotStyle; ELLIPSE  (S:PlotStyle)->modifyStyle(S,'style','ellipse'  );
+TUBE     :=['style'=>'tube'     ].toMap.toPlotStyle; TUBE     (S:PlotStyle)->modifyStyle(S,'style','tube'     );
+POLYGON  :=['style'=>'polygon'  ].toMap.toPlotStyle; POLYGON  (S:PlotStyle)->modifyStyle(S,'style','polygon'  );
+DOT      :=['style'=>'.'        ].toMap.toPlotStyle; DOT      (S:PlotStyle)->modifyStyle(S,'style','.'        );
+PLUS     :=['style'=>'+'        ].toMap.toPlotStyle; PLUS     (S:PlotStyle)->modifyStyle(S,'style','+'        );
+CROSS    :=['style'=>'x'        ].toMap.toPlotStyle; CROSS    (S:PlotStyle)->modifyStyle(S,'style','x'        );
+IMPULSE  :=['style'=>'i'        ].toMap.toPlotStyle; IMPULSE  (S:PlotStyle)->modifyStyle(S,'style','i'        );
 withDot    (S:PlotStyle)->modifyStyle(S,'style2','.');
 withPlus   (S:PlotStyle)->modifyStyle(S,'style2','+');
 withCross  (S:PlotStyle)->modifyStyle(S,'style2','x');
 withImpulse(S:PlotStyle)->modifyStyle(S,'style2','i');
 filled     (S:PlotStyle)->modifyStyle(S,'style2','f');
 fillSolid  (S:PlotStyle)->modifyStyle(S,'style2','s');
-withScale(S:PlotStyle,scaleModifier>0.0)->modifyStyle(S,'scale',scaleModifier);
+withScale(S:PlotStyle,scaleModifier>=0.0)->modifyStyle(S,'scale',scaleModifier);
 coloredBlack (S:PlotStyle)->modifyStyle(S,'color','black');
 coloredRed   (S:PlotStyle)->modifyStyle(S,'color','red');
 coloredBlue  (S:PlotStyle)->modifyStyle(S,'color','blue');
@@ -252,11 +252,28 @@ setPlotRangeManually(centerX:Numeric,centerY:Numeric,range:Numeric) ->
               ['y0'        ,centerY-range],
               ['y1'        ,centerY+range]]);
 
+//*Add a tube plot based on expressions; samples are distributed linearly
 addTubePlot(f0:Expression(1),f1:Expression(1),x0:Numeric,x1>x0,sampleCount>=2,style:PlotStyle)->begin
   (x0+(x1-x0)/(sampleCount-1)*[0..sampleCount-1])
-  .pEach(x,[x,f0(x)],[x,f1(x)]).addPlot(TUBE.mergeMaps(style,::orElse).toPlotStyle.toString);
+  .pEach(x,[x,f0(x)],[x,f1(x)]).addPlot(style.TUBE.toString);
 end;
 
+//*Add a tube plot based on value lists
+addTubePlot(x:NumericList,y0:NumericList,y1:NumericList,style:PlotStyle)->begin
+  x.size==y0.size==y1.size ? void : fail('Size mismatch');
+  x.each(px,[px,y0[index]],[px,y1[index]]).addPlot(style.TUBE.toString);
+end;
+
+//*Add plot showing transparent boxes from lowValues to high values with middleValues as lines
+addBinPlot(binLimits:NumericList,lowValues:NumericList,middleValues:NumericList,highValues:NumericList,style:PlotStyle)->begin
+  binLimits.size-1==lowValues.size==middleValues.size==highValues.size ? void : fail('Size mismatch');
+  [0..lowValues.size-1].each(i,[binLimits[i],lowValues[i]],[binLimits[i+1],highValues[i]])
+                       .addPlot(style.BOX.filled.withScale(0).toString);
+  [0..middleValues.size-1].each(i,[binLimits[i],middleValues[i]],[binLimits[i+1],middleValues[i]],[Nan,Nan])
+                          .addPlot(style.LINE.toString);
+end;
+
+//*Plot bars with labels per bar
 barPlot(values:NumericList,texts:StringList,style:PlotStyle)->begin
   resetOptions;
   setPlotAxisStyle('x',false,false,false);

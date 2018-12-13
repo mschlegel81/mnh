@@ -129,11 +129,11 @@
         <UnitName Value="SynHighlighterMnh"/>
       </Unit5>
       <Unit6>
-        <Filename Value="..\core\mnh_fileWrappers.pas"/>
+        <Filename Value="..\core\fileWrappers.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit6>
       <Unit7>
-        <Filename Value="..\core\mnh_out_adapters.pas"/>
+        <Filename Value="..\core\out_adapters.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit7>
       <Unit8>
@@ -141,12 +141,12 @@
         <IsPartOfProject Value="True"/>
       </Unit8>
       <Unit9>
-        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Filename Value="..\core\litvar.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_litVar"/>
+        <UnitName Value="litVar"/>
       </Unit9>
       <Unit10>
-        <Filename Value="mnh_evalThread.pas"/>
+        <Filename Value="evalThread.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit10>
       <Unit11>
@@ -238,11 +238,11 @@
         <UnitName Value="plotExport"/>
       </Unit24>
       <Unit25>
-        <Filename Value="..\core\mnh_tokenArray.pas"/>
+        <Filename Value="..\core\tokenArray.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit25>
       <Unit26>
-        <Filename Value="..\core\mnh_evaluation.pas"/>
+        <Filename Value="..\core\evaluation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit26>
       <Unit27>
@@ -250,12 +250,11 @@
         <IsPartOfProject Value="True"/>
       </Unit27>
       <Unit28>
-        <Filename Value="mnh_funcs_plot.pas"/>
+        <Filename Value="funcs_plot.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="funcs_plot"/>
       </Unit28>
       <Unit29>
-        <Filename Value="mnh_debugging.pas"/>
+        <Filename Value="debugging.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit29>
       <Unit30>
@@ -303,11 +302,11 @@
         <IsPartOfProject Value="True"/>
       </Unit40>
       <Unit41>
-        <Filename Value="..\core\mnh_profiling.pas"/>
+        <Filename Value="..\core\profiling.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit41>
       <Unit42>
-        <Filename Value="..\core\mnh_operators.pas"/>
+        <Filename Value="..\core\operators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit42>
       <Unit43>
@@ -315,7 +314,7 @@
         <IsPartOfProject Value="True"/>
       </Unit43>
       <Unit44>
-        <Filename Value="mnh_debuggingVar.pas"/>
+        <Filename Value="debuggingVar.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit44>
       <Unit45>

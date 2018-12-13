@@ -9,9 +9,9 @@ USES sysutils,math,
      basicTypes,
      mnh_constants,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
      recyclers,
-     mnh_litVar,funcs,contexts;
+     litVar,funcs,contexts;
 IMPLEMENTATION
 {$i func_defines.inc}
 

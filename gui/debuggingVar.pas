@@ -1,9 +1,9 @@
-UNIT mnh_debuggingVar;
+UNIT debuggingVar;
 INTERFACE
 USES sysutils,
      mnh_constants,
      basicTypes,
-     mnh_litVar,
+     litVar,
      treeUtil;
 TYPE
   P_variableTreeEntryAnonymousValue=^T_variableTreeEntryAnonymousValue;

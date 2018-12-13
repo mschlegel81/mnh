@@ -2,12 +2,13 @@ UNIT valueStore;
 INTERFACE
 USES sysutils,
      mySys,
-     basicTypes,mnh_constants,
+     basicTypes,
+     mnh_constants,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_litVar
+     out_adapters,
+     litVar
      {$ifdef fullVersion},
-     mnh_debuggingVar
+     debuggingVar
      {$endif};
 TYPE
   P_namedVariable=^T_namedVariable;

@@ -9,7 +9,7 @@ USES sysutils,
      basicTypes, mnh_constants,
      mnh_settings,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
      plotstyles,plotMath;
 TYPE
   T_plotQuality=0..3;

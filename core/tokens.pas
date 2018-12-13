@@ -5,10 +5,11 @@ USES //basic classes
      //my utilities
      myGenerics,
      //MNH:
-     basicTypes,mnh_constants,
+     basicTypes,
+     mnh_constants,
      mnh_messages,
-     mnh_out_adapters,
-     mnh_litVar;
+     out_adapters,
+     litVar;
 TYPE
   {$ifdef fullVersion}
   T_rawToken=record txt:string; tokType:T_tokenType; end;

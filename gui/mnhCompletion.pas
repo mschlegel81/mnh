@@ -6,7 +6,7 @@ USES Classes, sysutils, LCLType, types,
      //GUI: SynEdit
      SynEdit, SynCompletion,
      mnh_constants,
-     mnh_litVar,
+     litVar,
      funcs,
      codeAssistance;
 

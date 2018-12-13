@@ -10,8 +10,12 @@ USES
   myGenerics,myStringUtil,
   mnh_constants,basicTypes,
   mnh_messages,
-  mnh_litVar, funcs,contexts,mnh_out_adapters,recyclers,
-  mnh_fileWrappers,mnh_profiling;
+  litVar, funcs,
+  contexts,
+  out_adapters,
+  recyclers,
+  fileWrappers,
+  profiling;
 
 TYPE
   TtableForm = class(TForm)

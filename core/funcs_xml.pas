@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,XMLRead,dom,Classes,LazUTF8,
      myGenerics,
      basicTypes,mnh_constants,
-     mnh_litVar,
+     litVar,
      funcs,
      mnh_messages,
      recyclers,

@@ -5,14 +5,14 @@ USES sysutils,
      //MNH:
      mnh_constants,
      basicTypes,
-     mnh_litVar,
+     litVar,
      tokens,
-     mnh_out_adapters,
+     out_adapters,
      mnh_messages,
      recyclers
      {$ifdef fullVersion},
-     mnh_profiling,
-     mnh_debuggingVar
+     profiling,
+     debuggingVar
      {$endif};
 TYPE
   P_tokenStack=^T_TokenStack;

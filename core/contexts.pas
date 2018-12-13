@@ -7,14 +7,16 @@ USES //FPC/LCL libraries
      //my libraries
      myGenerics,mySys,myStringUtil,
      //MNH:
-     mnh_constants, basicTypes,
+     mnh_constants,
+     basicTypes,
      mnh_settings,
      mnh_messages,
-     mnh_out_adapters,mnh_litVar,
+     out_adapters,
+     litVar,
      recyclers,
      tokens,
      valueStore,
-     mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging,mnh_debuggingVar{$endif};
+     profiling{$ifdef fullVersion},tokenStack,debugging,debuggingVar{$endif};
 TYPE
   T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace,eco_beepOnError);
   T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_stackTrace);

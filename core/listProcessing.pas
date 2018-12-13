@@ -3,9 +3,9 @@ INTERFACE
 USES sysutils,
      math,
      mnh_constants, basicTypes,
-     mnh_out_adapters,
+     out_adapters,
      mnh_settings,
-     mnh_litVar,subrules,
+     litVar,subrules,
      recyclers,
      aggregators,contexts;
 CONST FUTURE_RECYCLER_MAX_SIZE=16;

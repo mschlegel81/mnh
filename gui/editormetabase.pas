@@ -15,7 +15,8 @@ USES  //basic classes
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
   //MNH:
-  mnh_constants, basicTypes, mnh_fileWrappers,
+  mnh_constants, basicTypes,
+  fileWrappers,
   mnhCompletion;
 
 CONST editCommandToggleComment    =ecUserDefinedFirst;

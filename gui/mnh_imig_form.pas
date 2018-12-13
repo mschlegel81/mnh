@@ -5,12 +5,12 @@ USES
   sysutils,
   Classes, Forms, Controls, ExtCtrls,
   mnh_constants,basicTypes,
-  mnh_litVar,contexts,
+  litVar,contexts,
   funcs,
   mypics,
   mnhFormHandler,
   recyclers,
-  mnh_out_adapters, mnh_imig;
+  out_adapters, mnh_imig;
 
 TYPE
   TDisplayImageForm = class(TForm)

@@ -1,10 +1,12 @@
 UNIT consoleAsk;
 INTERFACE
-USES myGenerics, myStringUtil,
-     basicTypes, mnh_constants,
-     funcs, sysutils, mnh_litVar,
-     mnh_out_adapters,
-     contexts,recyclers;
+USES sysutils,
+     myGenerics, myStringUtil,
+     mnh_constants,basicTypes,
+     out_adapters,
+     litVar,
+     contexts,recyclers,
+     funcs;
 IMPLEMENTATION
 {$i func_defines.inc}
 VAR cs:TRTLCriticalSection;

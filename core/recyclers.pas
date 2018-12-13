@@ -4,9 +4,9 @@ USES sysutils,
      myGenerics, myStringUtil,
      basicTypes, mnh_constants,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
      valueStore,
-     mnh_litVar,
+     litVar,
      tokens;
 TYPE
   P_recycler=^T_recycler;

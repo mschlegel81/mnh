@@ -3,9 +3,12 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
      myGenerics,mySys,myStringUtil,
-     mnh_constants,basicTypes,mnh_litVar,
+     mnh_constants,basicTypes,
+     fileWrappers,
+     out_adapters,
+     litVar,
      mnh_messages,
-     funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
+     funcs,tokenArray,
      recyclers,
      contexts,datastores;
 IMPLEMENTATION
@@ -186,8 +189,8 @@ FUNCTION writeFile_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string)
                                           and (arg1^.literalType=lt_string)
       and context.checkSideEffects('writeFile',tokenLocation,[se_writeFile]) then begin
-      ok:=mnh_fileWrappers.writeFile(str0^.value,
-                                     str1^.value);
+      ok:=fileWrappers.writeFile(str0^.value,
+                                 str1^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
     end;

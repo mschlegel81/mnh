@@ -3,8 +3,8 @@ INTERFACE
 USES Classes,
      StdCtrls,
      ComCtrls,
-     mnh_litVar,
-     mnh_operators,
+     litVar,
+     operators,
      mnh_constants,basicTypes,
      subrules,rules,packages;
 TYPE

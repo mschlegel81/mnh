@@ -12,9 +12,9 @@ USES
   //MNH
   mnh_constants,
   funcs, cmdLineInterpretation, contexts, mnh_settings,
-  mnh_messages, mnh_out_adapters,
-  mnh_debugging,
-  mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase,synOutAdapter;
+  mnh_messages, out_adapters,
+  debugging,
+  evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase,synOutAdapter;
 
 TYPE
   ToutputOnlyForm = class(T_abstractMnhForm)
@@ -80,7 +80,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addOutAdapter(@consoleAdapters,false);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
-    mnh_evalThread.initUnit(@guiAdapters);
+    evalThread.initUnit(@guiAdapters);
 
     editorMetaBase.editorFont:=TFont.create;
 
@@ -91,7 +91,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     then editorMetaBase.editorFont.quality:=fqCleartypeNatural
     else editorMetaBase.editorFont.quality:=fqNonAntialiased;
 
-    mnh_out_adapters.gui_started:=true;
+    out_adapters.gui_started:=true;
     caption:='MNH';
     setupEditorMetaBase(outputHighlighter,nil);
   end;
@@ -104,7 +104,7 @@ PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseActi
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);
   begin
-    mnh_evalThread.earlyFinalization;
+    evalThread.earlyFinalization;
     editorMetaBase.editorFont.free;
     Timer1.enabled:=false;
     guiAdapters.removeOutAdapter(@consoleAdapters);

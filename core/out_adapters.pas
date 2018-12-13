@@ -1,4 +1,4 @@
-UNIT mnh_out_adapters;
+UNIT out_adapters;
 INTERFACE
 USES sysutils,
      myGenerics,mySys,

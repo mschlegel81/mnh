@@ -8,7 +8,7 @@ USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   mnh_constants,basicTypes,
   mnh_messages,recyclers,
-  mnh_debuggingVar,treeUtil, mnh_litVar,contexts,funcs,mnh_out_adapters,mnhFormHandler;
+  debuggingVar,treeUtil, litVar,contexts,funcs,out_adapters,mnhFormHandler;
 
 TYPE
   TVarTreeViewForm = class(TForm)

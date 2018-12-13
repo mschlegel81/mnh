@@ -3,14 +3,14 @@ INTERFACE
 USES sysutils,
      myStringUtil,myGenerics,mySys,
      mnh_constants,
-     mnh_fileWrappers,
+     fileWrappers,
      mnh_messages,
-     mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
+     out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
      funcs_mnh,
      contexts,
      packages,
      recyclers,
-     mnh_evaluation;
+     evaluation;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 {$ifdef fullVersion}

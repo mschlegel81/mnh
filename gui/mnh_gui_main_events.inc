@@ -152,7 +152,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
     {$endif}
 
-    mnh_evalThread.initUnit(@guiAdapters);
+    evalThread.initUnit(@guiAdapters);
     runEvaluator.ensureEditScripts;
     SynHighlighterMnh.initLists;
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - end'); {$endif}
@@ -163,7 +163,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     //Suppress timer-events:
     UpdateTimeTimer.enabled:=false;
     //Finalze other units
-    mnh_evalThread.earlyFinalization;
+    evalThread.earlyFinalization;
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     searchReplaceModel.destroy;

@@ -3,10 +3,11 @@ INTERFACE
 USES sysutils,
      serializationUtil, myGenerics, myStringUtil,
      basicTypes,
-     mnh_out_adapters, mnh_fileWrappers,
+     out_adapters,
+     fileWrappers,
      recyclers,
-     mnh_litVar,
-     mnh_tokenArray,contexts;
+     litVar,
+     tokenArray,contexts;
 TYPE
   P_datastoreMeta=^T_datastoreMeta;
   T_datastoreMeta=object
@@ -146,7 +147,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.destroy;
     end else begin
       result:=newVoidLiteral;
-      fileLines:=mnh_fileWrappers.fileLines(fileName,accessed);
+      fileLines:=fileWrappers.fileLines(fileName,accessed);
       if not(accessed) then exit(newVoidLiteral);
       dropFirst(fileLines,1);
       lexer.create(fileLines,location,P_abstractPackage(location.package));

@@ -6,8 +6,8 @@ USES sysutils,   //system
      myGenerics,myTools,mySys, //common
      //mnh:
      mnh_constants, basicTypes,
-     funcs,mnh_litVar,contexts,funcs_list,mnh_plotData,
-     mnh_out_adapters,mnh_messages,
+     funcs,litVar,contexts,funcs_list,mnh_plotData,
+     out_adapters,mnh_messages,
      recyclers,
      //imig:
      workflows, imageGeneration,mypics,pixMaps,

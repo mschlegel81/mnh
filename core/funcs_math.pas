@@ -6,10 +6,10 @@ USES sysutils,
      bigint,
      myGenerics,
      basicTypes,mnh_constants,
-     mnh_litVar,
+     litVar,
      funcs,
      mnh_messages,
-     mnh_out_adapters,
+     out_adapters,
      recyclers,
      contexts;
 VAR BUILTIN_MIN,
@@ -529,6 +529,8 @@ FUNCTION factorize_impl intFuncSignature;
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
+      setLength(factors.smallFactors,0);
+      setLength(factors.bigFactors,0);
       listResult^.sort;
     end else result:=genericVectorization('factorize',params,tokenLocation,context,recycler);
   end;
@@ -537,8 +539,8 @@ FUNCTION isPrime_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint  : result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral  (arg0)^.value));
-      lt_smallint: result:=newBoolLiteral(millerRabinTest(P_smallIntLiteral(arg0)^.value));
+      lt_bigint  : result:=newBoolLiteral(isPrime(P_bigIntLiteral  (arg0)^.value));
+      lt_smallint: result:=newBoolLiteral(isPrime(P_smallIntLiteral(arg0)^.value));
       else         result:=genericVectorization('isPrime',params,tokenLocation,context,recycler);
     end;
   end;

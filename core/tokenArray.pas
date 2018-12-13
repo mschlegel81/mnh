@@ -1,10 +1,10 @@
-UNIT mnh_tokenArray;
+UNIT tokenArray;
 INTERFACE
 USES sysutils,math,
      myGenerics,myStringUtil,
      basicTypes,mnh_constants,
-     mnh_fileWrappers,
-     mnh_litVar,
+     fileWrappers,
+     litVar,
      funcs,
      funcs_mnh,
      recyclers,
@@ -15,7 +15,7 @@ USES sysutils,math,
      {$endif}
      tokens,
      mnh_messages,
-     mnh_out_adapters;
+     out_adapters;
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
   P_abstractPackage=^T_abstractPackage;

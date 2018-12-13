@@ -6,8 +6,8 @@ INTERFACE
 
 USES
   mnhFormHandler, Classes, sysutils, FileUtil, Forms, Controls, Graphics,
-  Dialogs, StdCtrls, Menus, funcs, mnh_litVar, basicTypes,
-  mnh_constants, mnh_out_adapters, myGenerics, contexts,recyclers;
+  Dialogs, StdCtrls, Menus, funcs, litVar, basicTypes,
+  mnh_constants, out_adapters, myGenerics, contexts,recyclers;
 TYPE
   {$WARN 5024 OFF}
   TaskForm = class(TForm)
