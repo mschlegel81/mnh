@@ -286,9 +286,9 @@ PROCEDURE T_outlineTreeModel.treeViewDblClick(Sender: TObject);
 FUNCTION T_outlineTreeModel.ruleSorting:T_ruleSorting;
   begin
     result:=rs_none;
-    if sortByNameCaseRadio.Checked then exit(rs_byNameCaseSensitive);
-    if sortByNameRadio    .Checked then exit(rs_byNameCaseInsensitive);
-    if sortByLocationRadio.Checked then exit(rs_byLocation);
+    if sortByNameCaseRadio.checked then exit(rs_byNameCaseSensitive);
+    if sortByNameRadio    .checked then exit(rs_byNameCaseInsensitive);
+    if sortByLocationRadio.checked then exit(rs_byLocation);
   end;
 
 end.

@@ -284,7 +284,6 @@
       <Unit28>
         <Filename Value="funcs_plot.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="funcs_plot"/>
       </Unit28>
       <Unit29>
         <Filename Value="debugging.pas"/>

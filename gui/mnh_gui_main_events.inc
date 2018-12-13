@@ -33,6 +33,7 @@ PROCEDURE miShowOutputClick(Sender: TObject);
 PROCEDURE miShowQuickEvalClick(Sender: TObject);
 PROCEDURE miStackTracingClick(Sender: TObject);
 PROCEDURE miHaltEvaluationClick(Sender: TObject);
+PROCEDURE outlineToggleBoxChange(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -416,6 +417,22 @@ PROCEDURE TMnhForm.miHaltEvaluationClick(Sender: TObject);
     quick.task.ensureStop;
     currentSnapshot:=nil;
   end;
+
+PROCEDURE TMnhForm.outlineToggleBoxChange(Sender: TObject);
+begin
+  if outlineToggleBox.checked then begin
+    BottomPanel.AutoSize:=true;
+    outputPageControl.parent:=TopPanel;
+    outputPageControl.Align:=alBottom;
+    bottomPanelSplitter.parent:=TopPanel;
+  end else begin
+    BottomPanel.AutoSize:=false;
+    BottomPanel.height:=outputPageControl.height;
+    bottomPanelSplitter.parent:=self;
+    outputPageControl.parent:=BottomPanel;
+    outputPageControl.Align:=alClient;
+  end;
+end;
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin

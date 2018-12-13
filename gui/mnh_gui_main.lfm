@@ -20,18 +20,7 @@ object MnhForm: TMnhForm
   OnResize = FormResize
   OnShow = FormShow
   LCLVersion = '1.8.4.0'
-  object inputPageControl: TPageControl
-    Left = 175
-    Height = 226
-    Top = 30
-    Width = 542
-    TabStop = False
-    Align = alClient
-    TabOrder = 0
-    OnChange = inputPageControlChange
-    Options = [nboKeyboardTabSwitch]
-  end
-  object Splitter1: TSplitter
+  object bottomPanelSplitter: TSplitter
     Cursor = crVSplit
     Left = 0
     Height = 8
@@ -54,7 +43,7 @@ object MnhForm: TMnhForm
     ParentColor = False
     ParentShowHint = False
     ShowHint = True
-    TabOrder = 1
+    TabOrder = 0
     Visible = False
     object tbRun: TToolButton
       Left = 1
@@ -105,8 +94,8 @@ object MnhForm: TMnhForm
       OnClick = tbMicroStepClick
     end
   end
-  object Splitter4: TSplitter
-    Left = 170
+  object outlineSplitter: TSplitter
+    Left = 163
     Height = 226
     Top = 30
     Width = 5
@@ -120,7 +109,7 @@ object MnhForm: TMnhForm
     BevelOuter = bvNone
     ClientHeight = 365
     ClientWidth = 717
-    TabOrder = 4
+    TabOrder = 3
     object outputPageControl: TPageControl
       Left = 0
       Height = 329
@@ -640,11 +629,11 @@ object MnhForm: TMnhForm
       end
       object AssistanceTabSheet: TTabSheet
         Caption = 'AssistanceTabSheet'
-        ClientHeight = 149
+        ClientHeight = 291
         ClientWidth = 709
         inline assistanceSynEdit: TSynEdit
           Left = 0
-          Height = 149
+          Height = 291
           Top = 0
           Width = 709
           Align = alClient
@@ -2785,17 +2774,17 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 226
     Top = 30
-    Width = 170
+    Width = 163
     Align = alLeft
     Caption = 'Outline'
     ClientHeight = 196
-    ClientWidth = 166
-    TabOrder = 5
+    ClientWidth = 159
+    TabOrder = 4
     object cbOutlineShowPrivate: TCheckBox
       Left = 0
       Height = 29
       Top = 0
-      Width = 166
+      Width = 159
       Align = alTop
       Caption = 'show private rules'
       Checked = True
@@ -2806,7 +2795,7 @@ object MnhForm: TMnhForm
       Left = 0
       Height = 29
       Top = 29
-      Width = 166
+      Width = 159
       Align = alTop
       Caption = 'show imported rules'
       TabOrder = 1
@@ -2815,7 +2804,7 @@ object MnhForm: TMnhForm
       Left = 0
       Height = 51
       Top = 145
-      Width = 166
+      Width = 159
       Align = alClient
       Images = outlineImageList
       ReadOnly = True
@@ -2827,7 +2816,7 @@ object MnhForm: TMnhForm
       Left = 0
       Height = 29
       Top = 58
-      Width = 166
+      Width = 159
       Align = alTop
       Caption = 'by id'
       Checked = True
@@ -2838,7 +2827,7 @@ object MnhForm: TMnhForm
       Left = 0
       Height = 29
       Top = 87
-      Width = 166
+      Width = 159
       Align = alTop
       Caption = 'by id (case insensitive)'
       TabOrder = 3
@@ -2847,10 +2836,42 @@ object MnhForm: TMnhForm
       Left = 0
       Height = 29
       Top = 116
-      Width = 166
+      Width = 159
       Align = alTop
       Caption = 'by location'
       TabOrder = 4
+    end
+    object outlineToggleBox: TToggleBox
+      Left = 128
+      Height = 30
+      Top = -24
+      Width = 30
+      Anchors = [akTop, akRight]
+      Caption = '|'
+      OnChange = outlineToggleBoxChange
+      TabOrder = 6
+    end
+  end
+  object TopPanel: TPanel
+    Left = 168
+    Height = 226
+    Top = 30
+    Width = 549
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 226
+    ClientWidth = 549
+    TabOrder = 5
+    object inputPageControl: TPageControl
+      Left = 0
+      Height = 226
+      Top = 0
+      Width = 549
+      TabStop = False
+      Align = alClient
+      TabOrder = 0
+      OnChange = inputPageControlChange
+      Options = [nboKeyboardTabSwitch]
     end
   end
   object MainMenu1: TMainMenu

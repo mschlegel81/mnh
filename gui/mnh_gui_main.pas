@@ -125,6 +125,7 @@ TYPE
     miShowQuickEval,
     miShowOutput,
     miShowAssistance:          TMenuItem;
+    TopPanel: TPanel;
     rbOutlineSortByLoc: TRadioButton;
     rbOutlineSortByName: TRadioButton;
     rbOutlineSortByNameCase: TRadioButton;
@@ -135,10 +136,10 @@ TYPE
     Panel1,
     Panel2:                    TPanel;
     ReplaceDialog:             TReplaceDialog;
-    Splitter1,
+    bottomPanelSplitter,
     Splitter2,
     Splitter3,
-    Splitter4,
+    outlineSplitter,
     Splitter5:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
@@ -155,6 +156,7 @@ TYPE
     QuickTabSheet:             TTabSheet;
     HelpSheet: TTabSheet;
     outlineTreeView: TTreeView;
+    outlineToggleBox: TToggleBox;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,

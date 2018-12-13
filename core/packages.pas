@@ -1670,7 +1670,7 @@ FUNCTION T_package.declaredRules(CONST ruleSorting:T_ruleSorting): T_ruleList;
       rs_byNameCaseInsensitive:
         for i:=1 to length(result)-1 do
         for j:=0 to i-1 do
-        if UpperCase(result[i]^.getId)<UpperCase(result[j]^.getId) then begin
+        if uppercase(result[i]^.getId)<uppercase(result[j]^.getId) then begin
           tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
         end;
       rs_byLocation:
