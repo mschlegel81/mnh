@@ -173,7 +173,7 @@ end.compress;
 private serve_('validate')->
   implemented.mergeMaps(foundImplementations,::orElse)
   .map({[$x[0],$x[1,0].isExpression ? $x[1,0] : $x[1,0].toExpression]})
-  .{print('Validating ',$L.size,' implemtatations') orElse $L}
+  .{print('Validating ',$L.size,' implementatations') orElse $L}
   .pEach(seq,sequences.size>seq[0]>0 ? begin
     local timeOut :=time+2;
     local id      :=seq[0];

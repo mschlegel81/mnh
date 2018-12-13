@@ -3,6 +3,8 @@ isHappy(4)->false;
 isHappy(1)->true;
 isHappy(n)->n.digits.sqr.agg(+).isHappy;
 
+happyNumberGenerator->rangeGenerator(1).filter(::isHappy);
+
 //*Generate the first n happy numbers
 //*See also http://rosettacode.org/wiki/Happy_numbers
-main(n)->rangeGenerator(1,2^60).filter(::isHappy).head(n.toInt).print;
+main(n)->happyNumberGenerator.head(n.toInt).print;
