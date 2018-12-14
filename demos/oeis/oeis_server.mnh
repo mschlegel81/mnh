@@ -98,23 +98,24 @@ private classify(L:IntList)->begin
 end;
 
 private unzip(filename:String)->
+  print('Unzipping ',filename) orElse
   mnhInfo['targetOs'].matches('(i?)Linux')
   ? 'zcat'     .exec([filename])
   : sevenZipExe.exec(['e','-so','-bd',filename]);
 
 private getData(URL:String)->begin
   local filename:=URL.split('/').trailing;
-  fileExists(filename)
-  ? return unzip(filename)
-  : void;
-
-  local data:=httpGet(URL);
-  print(filename,' downloaded');
-  filename.writeFile(data);
+  (local fileExistedBefore:=fileExists(filename))
+  ? void
+  : begin
+      local data:=httpGet(URL);
+      print(filename,' downloaded');
+      filename.writeFile(data);
+    end;
   local temp:=unzip(filename);
   temp[1]==0 ? print(filename,' decompressed')
              : fail('Decompression returned with exit code ',temp[1]);
-  deleteFile(filename);
+  fileExistedBefore ? void : deleteFile(filename);
   temp[0];
 end;
 
@@ -127,10 +128,11 @@ private memoized serve_('download',...)->begin
   respond('Updating data - old: ',typeOf(names));
   local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
   local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
-  local namesMap :=getData('https://oeis.org/names.gz').pEach(line,line.matches('^A\d{6} ') ? idAndRest(line) : void).toMap;
-  respond('Names file parsed - ',namesMap.size,' entries');
-  local seriesMap:=getData('https://oeis.org/stripped.gz').pEach(line,line.matches('^A\d{6} ') ? idAndSeries(line) : void).toMap;
+  local namesMap:=future({getData('https://oeis.org/names.gz'   ).pEach(line,line.matches('^A\d{6} ') ? idAndRest(line)   : void).toMap});
+  local seriesMap:=       getData('https://oeis.org/stripped.gz').pEach(line,line.matches('^A\d{6} ') ? idAndSeries(line) : void).toMap;
   respond('Series file parsed - ',seriesMap.size,' entries');
+  namesMap:=namesMap();
+  respond('Names file parsed - ',namesMap.size,' entries');
   local maxSeries:=max(namesMap.getInner(0).max,seriesMap.getInner(0).max);
   respond('Updating names list of ',maxSeries,' relevant entries');
   names    :=rangeGenerator(0,maxSeries).pMap({namesMap [$i] orElse ''});
@@ -259,7 +261,7 @@ end;
 private serve_('scan')->begin
   foundImplementations:=
   sequences.pEach(seq,implemented[index].isVoid ? begin
-    local imp:=try({guessImplementation(seq)},{fail('guessImplementation failed for ',index)});
+    local imp:=try({guessImplementation(seq)},{fail('guessImplementation failed for ',index,"\n",$0.map({$x.join("\t")}).join("\n"))});
     imp.isVoid
     ? void
     : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
@@ -282,12 +284,12 @@ private serve_(...)->'Unkown command: '&toString(...);
 serve(['stop'])->print('Stop signal received') orElse timeout:=time;
 serve(parameters)->begin
   local t0:=time;
-  print("Last request: ",parameters);
+  print("Processing request: ",parameters);
   local result:=
   parameters.isList
     ? serve_@parameters
     : serve_(parameters);
-  print('  answered in ',round(time-t0,3),'s');
+  print("Request: ",parameters,' answered in ',round(time-t0,3),'s');
   result.resetTimeout;
 end;
 

@@ -39,50 +39,48 @@ private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).a
 
 //for A003459:-------------------------------------------------
 private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
-
-private naturalNumbers(lowerBound:Int)->rangeGenerator(lowerBound,2^63-1);
 //-------------------------------------------------------------
 @SuppressUnusedWarning
 A000002->listIterator(Kolakoski_1_2(10000));
 @SuppressUnusedWarning
-A000005->naturalNumbers(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
+A000005->rangeGenerator(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
 @SuppressUnusedWarning
 A000006->primeGenerator.sqrt.floor;
 @SuppressUnusedWarning
-A000007->ord(naturalNumbers(0)=0);
+A000007->ord(rangeGenerator(0)=0);
 @SuppressUnusedWarning
-A000010->naturalNumbers(1).lazyMap(::EulerPhi);
+A000010->rangeGenerator(1).lazyMap(::EulerPhi);
 @SuppressUnusedWarning
-A000027->naturalNumbers(1);
+A000027->rangeGenerator(1);
 USE '..\sequenceOfNonSquares.mnh';
 @SuppressUnusedWarning
-A000037->naturalNumbers(1).lazyMap(::nonSquares);
+A000037->rangeGenerator(1).lazyMap(::nonSquares);
 @SuppressUnusedWarning
 A000040->primeGenerator;
 @SuppressUnusedWarning
 A000108->rangeGenerator(0,13).lazyMap(::Catalan);
 @SuppressUnusedWarning
-A000124->naturalNumbers(0).lazyMap(::LazyCaterer);
+A000124->rangeGenerator(0).lazyMap(::LazyCaterer);
 @SuppressUnusedWarning
-A000203->naturalNumbers(1).lazyMap(::DivisorFunction);
+A000203->rangeGenerator(1).lazyMap(::DivisorFunction);
 USE '..\semiprime.mnh';
 @SuppressUnusedWarning
-A001358->naturalNumbers(1).filter(::isSemiprime);
+A001358->rangeGenerator(1).filter(::isSemiprime);
 @SuppressUnusedWarning
 A003459->listIterator(primes(991)).filter(::isPermutablePrime);
 @SuppressUnusedWarning
-A025426->naturalNumbers(0).lazyMap({size(by2Squares($i))});
+A025426->rangeGenerator(0).lazyMap({size(by2Squares($i))});
 @SuppressUnusedWarning
-A061358->naturalNumbers(0).lazyMap({size(by2Primes($i))});
+A061358->rangeGenerator(0).lazyMap({size(by2Primes($i))});
 USE generators,'..\ludic.mnh';
 @SuppressUnusedWarning
 A003309->listIterator(LudicSieve);
 USE '..\pernicousNumbers.mnh';
 @SuppressUnusedWarning
-A052294->naturalNumbers(1).filter(::isPernicious);
+A052294->rangeGenerator(1).filter(::isPernicious);
 USE '..\smithNumbers.mnh';
 @SuppressUnusedWarning
-A006753->naturalNumbers(1).filter(::isSmithNumber);
+A006753->rangeGenerator(1).filter(::isSmithNumber);
 USE '..\thueMorseSequence.mnh';
 @SuppressUnusedWarning
 A010060->listIterator(thueMorseSequence(10000).ord);
@@ -96,125 +94,125 @@ A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatable
 USE '..\hofstadter_sequences.mnh';
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
+A005228->rangeGenerator(1).lazyMap(::hofstadter_sequences.R);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A030124->naturalNumbers(1).lazyMap(::hofstadter_sequences.S);
+A030124->rangeGenerator(1).lazyMap(::hofstadter_sequences.S);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005206->naturalNumbers(0).lazyMap(::hofstadter_sequences.G);
+A005206->rangeGenerator(0).lazyMap(::hofstadter_sequences.G);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005374->naturalNumbers(0).lazyMap(::hofstadter_sequences.H);
+A005374->rangeGenerator(0).lazyMap(::hofstadter_sequences.H);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005378->naturalNumbers(0).lazyMap(::hofstadter_sequences.F);
+A005378->rangeGenerator(0).lazyMap(::hofstadter_sequences.F);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005379->naturalNumbers(0).lazyMap(::hofstadter_sequences.M);
+A005379->rangeGenerator(0).lazyMap(::hofstadter_sequences.M);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A005185->naturalNumbers(1).lazyMap(::hofstadter_sequences.Q);
+A005185->rangeGenerator(1).lazyMap(::hofstadter_sequences.Q);
 @SuppressUnusedWarning
 @class=Hofstaedter
-A007947->naturalNumbers(1).lazyMap({$n.factorize.unique.agg(*)});
+A007947->rangeGenerator(1).lazyMap({$n.factorize.unique.agg(*)});
 
 USE '..\countTheCoins.mnh';
 @SuppressUnusedWarning
 @class=Partition number
-A000041->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i])});
+A000041->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i])});
 @SuppressUnusedWarning
 @class=Partition number
-A001156->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
+A001156->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
 @SuppressUnusedWarning
 @class=Partition number
-A003108->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
+A003108->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
 @SuppressUnusedWarning
 @class=Partition number
-A018819->naturalNumbers(0).lazyMap({countPartitions($i,2^[0..20])});
+A018819->rangeGenerator(0).lazyMap({countPartitions($i,2^[0..20])});
 @SuppressUnusedWarning
 @class=Partition number
-A062051->naturalNumbers(0).lazyMap({countPartitions($i,3^[0..20])});
+A062051->rangeGenerator(0).lazyMap({countPartitions($i,3^[0..20])});
 @SuppressUnusedWarning
 @class=Partition number
-A001996->naturalNumbers(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
+A001996->rangeGenerator(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
 @SuppressUnusedWarning
 @class=Partition number
-A000607->naturalNumbers(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
+A000607->rangeGenerator(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
 @SuppressUnusedWarning
 @class=Partition number
-A002095->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
+A002095->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
 @SuppressUnusedWarning
 @class=Partition number
-A000008->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
+A000008->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
 @SuppressUnusedWarning
 @class=Partition number
-A001299->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
+A001299->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
 @SuppressUnusedWarning
 @class=Partition number
-A001300->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
+A001300->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
 @SuppressUnusedWarning
 @class=Partition number
-A001301->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
+A001301->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
 @SuppressUnusedWarning
 @class=Partition number
-A001302->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
+A001302->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
 @SuppressUnusedWarning
 @class=Partition number
-A001306->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
+A001306->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
 @SuppressUnusedWarning
 @class=Partition number
-A001310->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
+A001310->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
 @SuppressUnusedWarning
 @class=Partition number
-A001312->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
+A001312->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
 @SuppressUnusedWarning
 @class=Partition number
-A001313->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
+A001313->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
 @SuppressUnusedWarning
 @class=Partition number
-A001362->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
+A001362->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
 @SuppressUnusedWarning
 @class=Partition number
-A001364->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
+A001364->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
 @SuppressUnusedWarning
 @class=Partition number
-A067996->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
+A067996->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
 @SuppressUnusedWarning
 @class=Partition number
-A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
+A169718->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
 @SuppressUnusedWarning
 @class=Partition number
-A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
+A187243->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10])});
 
 USE '..\vampire.mnh';
 @SuppressUnusedWarning
-A014575->naturalNumbers(1260).filter(::isVampire);
+A014575->rangeGenerator(1260).filter(::isVampire);
 
 @SuppressUnusedWarning
 @class=by Hamming weight
-A018900->naturalNumbers(0).filter({$x.hammingWeight=2});
+A018900->rangeGenerator(0).filter({$x.hammingWeight=2});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A014311->naturalNumbers(0).filter({$x.hammingWeight=3});
+A014311->rangeGenerator(0).filter({$x.hammingWeight=3});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A014312->naturalNumbers(0).filter({$x.hammingWeight=4});
+A014312->rangeGenerator(0).filter({$x.hammingWeight=4});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A014313->naturalNumbers(0).filter({$x.hammingWeight=5});
+A014313->rangeGenerator(0).filter({$x.hammingWeight=5});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A023688->naturalNumbers(0).filter({$x.hammingWeight=6});
+A023688->rangeGenerator(0).filter({$x.hammingWeight=6});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A023689->naturalNumbers(0).filter({$x.hammingWeight=7});
+A023689->rangeGenerator(0).filter({$x.hammingWeight=7});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A023690->naturalNumbers(0).filter({$x.hammingWeight=8});
+A023690->rangeGenerator(0).filter({$x.hammingWeight=8});
 @SuppressUnusedWarning
 @class=by Hamming weight
-A023691->naturalNumbers(0).filter({$x.hammingWeight=9});
+A023691->rangeGenerator(0).filter({$x.hammingWeight=9});
 
 USE '..\multifactorial.mnh';
 @SuppressUnusedWarning
@@ -331,11 +329,11 @@ A051037->hammingGenerator;
 
 USE '..\harshad.mnh';
 @SuppressUnusedWarning
-A005349->naturalNumbers(1).filter(::isHarshadNumber);
+A005349->rangeGenerator(1).filter(::isHarshadNumber);
 
 USE '..\kaprekar.mnh';
 @SuppressUnusedWarning
-A006886->naturalNumbers(1).filter(::isKaprekar);
+A006886->rangeGenerator(1).filter(::isKaprekar);
 
 USE '../recaman.mnh';
 @SuppressUnusedWarning
@@ -358,16 +356,16 @@ end;
 
 @SuppressUnusedWarning
 @class=Fibonacci sequence modulo
-A015134->naturalNumbers(1).lazyMap({scanFiboMod(2,$n)});
+A015134->rangeGenerator(1).lazyMap({scanFiboMod(2,$n)});
 @SuppressUnusedWarning
 @class=Fibonacci sequence modulo
-A106285->naturalNumbers(1).lazyMap({scanFiboMod(3,$n)});
+A106285->rangeGenerator(1).lazyMap({scanFiboMod(3,$n)});
 @SuppressUnusedWarning
 @class=Fibonacci sequence modulo
-A106286->naturalNumbers(1).lazyMap({scanFiboMod(4,$n)});
+A106286->rangeGenerator(1).lazyMap({scanFiboMod(4,$n)});
 @SuppressUnusedWarning
 @class=Fibonacci sequence modulo
-A106287->naturalNumbers(1).lazyMap({scanFiboMod(5,$n)});
+A106287->rangeGenerator(1).lazyMap({scanFiboMod(5,$n)});
 
 private coprimesLesser(n)->begin
   local result:=[2..n-1];
@@ -922,20 +920,10 @@ private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
   local b:=sequence[1]-c-a;
   local n:=[0..sequence.size-1];
   a*n^2+b*n+c==sequence
-  ? begin
-      local upperBound:=a=0
-            ? b=0
-              ? 2^63-1
-              : floor((2^63.0-1.0-c)/b)
-            : [floor((-b+[-1,1]*sqrt(b^2-4*a*(c-2.0^63+1.0)))/(2*a)),
-               floor((-b+[-1,1]*sqrt(b^2-4*a*(c+2.0^63-1.0)))/(2*a))].flatten.max;
-      upperBound<0 ? void :
-      [format('rangeGenerator(0,%s).lazyMap(\{%s%s%s\})',
-            upperBound,
-            a=0 ? '' : a&'*$x^2+',
-            b=0 ? '' : b&'*$x+',
-            c),'polynomial'];
-    end
+  ? [format('rangeGenerator(0).lazyMap(\{%s%s%s\})',
+             a=0 ? '' : a&'*$x^2+',
+             b=0 ? '' : b&'*$x+',
+             c),'polynomial']
   : void;
 end;
 
@@ -960,8 +948,8 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   base:=(base.agg(+)/base.size);
   sequence==          round([0..sequence.size-1]^base)
   ? return [format(sequence==[0..sequence.size-1]^round(base)
-           ?       'rangeGenerator(0,%s)^%{round($1)}s'
-           : 'round(rangeGenerator(0,%s)^%s)',floor((2.0^63-1.0)^(1/base)),base),'power series']
+           ?       'rangeGenerator(0)^%{round($0)}s'
+           : 'round(rangeGenerator(0)^%s)',base),'power series']
   : void;
 
   //one based index
@@ -969,8 +957,8 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   base:=(base.agg(+)/base.size);
   sequence==          round([1..sequence.size]^base)
   ? return [format(sequence==[1..sequence.size]^round(base)
-           ?       'rangeGenerator(1,%s)^%{round($1)}s'
-           : 'round(rangeGenerator(1,%s)^%s)',floor((2.0^63-1.0)^(1/base)),base),'power series']
+           ?       'rangeGenerator(1)^%{round($1)}s'
+           : 'round(rangeGenerator(1)^%s)',base),'power series']
   : void;
 
   //zero based index
@@ -979,8 +967,8 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
 
   sequence==                round(base^ [0..sequence.size-1])
   ? return [format(sequence==round(base)^[0..sequence.size-1]
-           ? '%{round($0)}s^rangeGenerator(0,%s)'
-           : 'round(%s^rangeGenerator(0,%s))',base,floor(ln(2.0^63-1.0)/ln(base))),'exponential series']
+           ? '%{round($0)}s^rangeGenerator(0)'
+           : 'round(%s^rangeGenerator(0))',base),'exponential series']
   : void;
 
   //one based index
@@ -989,15 +977,15 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
 
   sequence==                round(base^ [1..sequence.size])
   ? return [format(sequence==round(base)^[1..sequence.size-1]
-           ? '%{round($0)}s^rangeGenerator(1,%s)'
-           : 'round(%s^rangeGenerator(1,%s))',base,floor(ln(2.0^63-1.0)/ln(base))),'exponential series']
+           ? '%{round($0)}s^rangeGenerator(1)'
+           : 'round(%s^rangeGenerator(1))',base),'exponential series']
   : void;
 end;
 
 findPeriodicParam(L:IntList)->L.size<10 ? void :
   indexOf(L[0]=L).filter({1<$x<=L.size div 2}).each(shift,
     L.tail(shift)==L.leading(shift)
-    ? ["rangeGenerator(0,"&(2^63-1)&").lazyMap({"&L.head(shift).toString&'[$i mod '&shift&']})','periodic series']
+    ? ["rangeGenerator(0).lazyMap({"&L.head(shift).toString&'[$i mod '&shift&']})','periodic series']
     : void,orElse);
 
 @SuppressUnusedWarning

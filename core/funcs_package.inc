@@ -27,7 +27,7 @@ FUNCTION try_imp intFuncSignature;
       context.messages:=@tryMessages;
 
       result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-      if (result=nil) or (tryMessages.getFlags<>[]) then begin
+      if (result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin
@@ -37,19 +37,13 @@ FUNCTION try_imp intFuncSignature;
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3]);
             tryMessages.clear;
+            context.messages:=oldMessages;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral,nil).literal;
-            if result=nil then begin
-              context.messages:=oldMessages;
-              context.raiseError('Error in catch block',tokenLocation);
-            end;
             disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
+            context.messages:=oldMessages;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-            if result=nil then begin
-              context.messages:=oldMessages;
-              context.raiseError('Error in catch block',tokenLocation);
-            end;
           end;
         end else begin
           tryMessages.clear;
