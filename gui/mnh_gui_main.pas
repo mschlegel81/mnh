@@ -57,8 +57,6 @@ TYPE
   { TMnhForm }
 
   TMnhForm = class(T_abstractMnhForm)
-    cbOutlineShowPrivate,
-    cbOutlineShowImported:     TCheckBox;
     autoShowOutputCheckbox: TCheckBox;
     evaluateQuickInCurrentPackageCheckbox: TCheckBox;
     FindDialog:                TFindDialog;
@@ -124,11 +122,15 @@ TYPE
     miRestoreDefaultFile,
     miShowQuickEval,
     miShowOutput,
-    miShowAssistance:          TMenuItem;
+    miShowAssistance,
+    omiSortByLocation,
+    omiSortByName,
+    omiSortByNameCase,
+    MenuItem1,
+    omiShowImported,
+    omiShowPrivate: TMenuItem;
+    OutlinePopup: TPopupMenu;
     TopPanel: TPanel;
-    rbOutlineSortByLoc: TRadioButton;
-    rbOutlineSortByName: TRadioButton;
-    rbOutlineSortByNameCase: TRadioButton;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;

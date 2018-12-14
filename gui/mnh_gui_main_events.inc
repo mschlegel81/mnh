@@ -209,7 +209,13 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
   VAR outlineModel:P_outlineTreeModel;
   begin
     if firstShow then begin
-      new(outlineModel,create(outlineTreeView,cbOutlineShowPrivate,cbOutlineShowImported,rbOutlineSortByNameCase,rbOutlineSortByName,rbOutlineSortByLoc,@openLocation));
+      new(outlineModel,create(outlineTreeView,
+        omiShowPrivate,
+        omiShowImported,
+        omiSortByNameCase,
+        omiSortByName,
+        omiSortByLocation,
+        @openLocation));
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       editorMeta.setupUnit(self,
                            inputPageControl,
@@ -540,7 +546,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
 
 PROCEDURE TMnhForm.miAboutClick(Sender: TObject); begin splashForm.showAbout; end;
 
-PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); end;
+PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); ActiveControl:=getEditor^.editor; end;
 
 PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject); begin closeAllEditorsButCurrent; end;
 PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject); begin closeAllUnmodifiedEditors; end;
@@ -548,6 +554,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);              begin if hasEdito
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
   begin
     inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(utilityScriptFileName,true);
+    ActiveControl:=getEditor^.editor;
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);

@@ -3,6 +3,7 @@ INTERFACE
 USES Classes,
      StdCtrls,
      ComCtrls,
+     menus,
      litVar,
      operators,
      mnh_constants,basicTypes,
@@ -19,10 +20,10 @@ TYPE
       openLocation:T_openLocationCallback;
 
       showPrivateCheckbox,
-      showImportedCheckbox:TCheckBox;
+      showImportedCheckbox,
       sortByNameCaseRadio,
       sortByNameRadio,
-      sortByLocationRadio:TRadioButton;
+      sortByLocationRadio:TMenuItem;
 
       currentMainPackage:P_package;
 
@@ -30,8 +31,8 @@ TYPE
       PROCEDURE openSelectedLocation;
     public
       CONSTRUCTOR create(CONST tree:TTreeView;
-                         CONST showPrivateCB,showImportedCB:TCheckBox;
-                         CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TRadioButton;
+                         CONST showPrivateCB,showImportedCB:TMenuItem;
+                         CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
                          CONST openLocationCallback:T_openLocationCallback);
       DESTRUCTOR destroy;
       PROCEDURE refresh;
@@ -188,8 +189,8 @@ PROCEDURE T_outlineNode.refresh;
   end;
 
 CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView;
-                                      CONST showPrivateCB, showImportedCB: TCheckBox;
-                                      CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TRadioButton;
+                                      CONST showPrivateCB, showImportedCB: TMenuItem;
+                                      CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
                                       CONST openLocationCallback:T_openLocationCallback);
   begin
     view:=tree;
