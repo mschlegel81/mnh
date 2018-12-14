@@ -42,6 +42,7 @@ TYPE
   P_package=^T_package;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
+  T_ruleSorting=(rs_none,rs_byNameCaseSensitive,rs_byNameCaseInsensitive,rs_byLocation);
 
   T_packageReference=object
     id,path:ansistring;
@@ -112,7 +113,7 @@ TYPE
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
-      FUNCTION declaredRules:T_ruleList;
+      FUNCTION declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleList;
       FUNCTION usedPackages:T_packageList;
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -1654,16 +1655,32 @@ FUNCTION T_package.usedPackages: T_packageList;
     for i:=0 to length(result)-1 do result[i]:=packageUses[i].pack;
   end;
 
-FUNCTION T_package.declaredRules: T_ruleList;
+FUNCTION T_package.declaredRules(CONST ruleSorting:T_ruleSorting): T_ruleList;
   VAR tmp:P_rule;
       i,j:longint;
   begin
     result:=packageRules.valueSet;
-    for i:=1 to length(result)-1 do
-    for j:=0 to i-1 do
-    if result[i]^.getId<result[j]^.getId then begin
-      tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
+    case ruleSorting of
+      rs_byNameCaseSensitive:
+        for i:=1 to length(result)-1 do
+        for j:=0 to i-1 do
+        if result[i]^.getId<result[j]^.getId then begin
+          tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
+        end;
+      rs_byNameCaseInsensitive:
+        for i:=1 to length(result)-1 do
+        for j:=0 to i-1 do
+        if uppercase(result[i]^.getId)<uppercase(result[j]^.getId) then begin
+          tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
+        end;
+      rs_byLocation:
+        for i:=1 to length(result)-1 do
+        for j:=0 to i-1 do
+        if result[i]^.getLocation<result[j]^.getLocation then begin
+          tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
+        end;
     end;
+
   end;
 
 FUNCTION T_package.getImport(CONST idOrPath:string):P_abstractPackage;

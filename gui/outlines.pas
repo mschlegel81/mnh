@@ -3,6 +3,7 @@ INTERFACE
 USES Classes,
      StdCtrls,
      ComCtrls,
+     menus,
      litVar,
      operators,
      mnh_constants,basicTypes,
@@ -19,17 +20,27 @@ TYPE
       openLocation:T_openLocationCallback;
 
       showPrivateCheckbox,
-      showImportedCheckbox:TCheckBox;
+      showImportedCheckbox,
+      sortByNameCaseRadio,
+      sortByNameRadio,
+      sortByLocationRadio:TMenuItem;
+
+      currentMainPackage:P_package;
+
       packageNodes:array of P_outlineNode;
       PROCEDURE openSelectedLocation;
     public
-      CONSTRUCTOR create(CONST tree:TTreeView; CONST showPrivateCB,showImportedCB:TCheckBox; CONST openLocationCallback:T_openLocationCallback);
+      CONSTRUCTOR create(CONST tree:TTreeView;
+                         CONST showPrivateCB,showImportedCB:TMenuItem;
+                         CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
+                         CONST openLocationCallback:T_openLocationCallback);
       DESTRUCTOR destroy;
       PROCEDURE refresh;
       PROCEDURE update(CONST mainPackage:P_package);
       PROCEDURE checkboxClick(Sender: TObject);
       PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
       PROCEDURE treeViewDblClick(Sender: TObject);
+      FUNCTION ruleSorting:T_ruleSorting;
   end;
 
   T_outlineNode=object
@@ -135,7 +146,7 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     isLocal:=mainPackage;
     isPublic:=true;
     location:=packageTokenLocation(package);
-    for rule in package^.declaredRules do if rule^.hasPublicSubrule or mainPackage then begin
+    for rule in package^.declaredRules(containingModel^.ruleSorting) do if rule^.hasPublicSubrule or mainPackage then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
         new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
@@ -177,13 +188,24 @@ PROCEDURE T_outlineNode.refresh;
     if associatedNode.visible then for child in children do child^.refresh;
   end;
 
-CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView; CONST showPrivateCB, showImportedCB: TCheckBox; CONST openLocationCallback:T_openLocationCallback);
+CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView;
+                                      CONST showPrivateCB, showImportedCB: TMenuItem;
+                                      CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
+                                      CONST openLocationCallback:T_openLocationCallback);
   begin
     view:=tree;
     showPrivateCheckbox :=showPrivateCB;
     showImportedCheckbox:=showImportedCB;
-    showPrivateCB .OnClick:=@checkboxClick;
-    showImportedCB.OnClick:=@checkboxClick;
+    sortByNameCaseRadio :=sortByNameCaseRB;
+    sortByNameRadio     :=sortByNameRB;
+    sortByLocationRadio :=sortByLocationRB;
+
+    showPrivateCB   .OnClick:=@checkboxClick;
+    showImportedCB  .OnClick:=@checkboxClick;
+    sortByNameCaseRB.OnClick:=@checkboxClick;
+    sortByNameRB    .OnClick:=@checkboxClick;
+    sortByLocationRB.OnClick:=@checkboxClick;
+
     tree.OnKeyDown:=@treeViewKeyDown;
     tree.OnDblClick:=@treeViewDblClick;
     openLocation:=openLocationCallback;
@@ -202,11 +224,9 @@ DESTRUCTOR T_outlineTreeModel.destroy;
   end;
 
 PROCEDURE T_outlineTreeModel.refresh;
-  VAR node:P_outlineNode;
   begin
     enterCriticalSection(cs);
-    for node in packageNodes do node^.refresh;
-    if not(showImportedCheckbox.checked) then packageNodes[0]^.associatedNode.expand(false);
+    update(currentMainPackage);
     leaveCriticalSection(cs);
   end;
 
@@ -215,6 +235,7 @@ PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
       i:longint;
   begin
     enterCriticalSection(cs);
+    currentMainPackage:=mainPackage;
     if mainPackage=nil then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
       setLength(packageNodes,0);
@@ -236,7 +257,7 @@ PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
       packageNodes[0]^.updateWithPackage(mainPackage,true);
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
     end;
-    refresh;
+    if not(showImportedCheckbox.checked) then packageNodes[0]^.associatedNode.expand(false);
     leaveCriticalSection(cs);
   end;
 
@@ -261,6 +282,14 @@ PROCEDURE T_outlineTreeModel.treeViewKeyDown(Sender: TObject; VAR key: word; Shi
 PROCEDURE T_outlineTreeModel.treeViewDblClick(Sender: TObject);
   begin
     openSelectedLocation;
+  end;
+
+FUNCTION T_outlineTreeModel.ruleSorting:T_ruleSorting;
+  begin
+    result:=rs_none;
+    if sortByNameCaseRadio.checked then exit(rs_byNameCaseSensitive);
+    if sortByNameRadio    .checked then exit(rs_byNameCaseInsensitive);
+    if sortByLocationRadio.checked then exit(rs_byLocation);
   end;
 
 end.

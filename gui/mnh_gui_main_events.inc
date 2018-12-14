@@ -33,6 +33,7 @@ PROCEDURE miShowOutputClick(Sender: TObject);
 PROCEDURE miShowQuickEvalClick(Sender: TObject);
 PROCEDURE miStackTracingClick(Sender: TObject);
 PROCEDURE miHaltEvaluationClick(Sender: TObject);
+PROCEDURE outlineToggleBoxChange(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -205,8 +206,16 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
+  VAR outlineModel:P_outlineTreeModel;
   begin
     if firstShow then begin
+      new(outlineModel,create(outlineTreeView,
+        omiShowPrivate,
+        omiShowImported,
+        omiSortByNameCase,
+        omiSortByName,
+        omiSortByLocation,
+        @openLocation));
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       editorMeta.setupUnit(self,
                            inputPageControl,
@@ -221,9 +230,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand,
                            outlineGroupBox,
-                           outlineTreeView,
-                           cbOutlineShowPrivate,
-                           cbOutlineShowImported,
+                           outlineModel,
                            @openLocation);
 
       quick.meta.createWithParent(QuickTabSheet,nil);
@@ -417,6 +424,22 @@ PROCEDURE TMnhForm.miHaltEvaluationClick(Sender: TObject);
     currentSnapshot:=nil;
   end;
 
+PROCEDURE TMnhForm.outlineToggleBoxChange(Sender: TObject);
+begin
+  if outlineToggleBox.checked then begin
+    BottomPanel.AutoSize:=true;
+    outputPageControl.parent:=TopPanel;
+    outputPageControl.Align:=alBottom;
+    bottomPanelSplitter.parent:=TopPanel;
+  end else begin
+    BottomPanel.AutoSize:=false;
+    BottomPanel.height:=outputPageControl.height;
+    bottomPanelSplitter.parent:=self;
+    outputPageControl.parent:=BottomPanel;
+    outputPageControl.Align:=alClient;
+  end;
+end;
+
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if quick.task.processing then exit;
@@ -523,7 +546,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
 
 PROCEDURE TMnhForm.miAboutClick(Sender: TObject); begin splashForm.showAbout; end;
 
-PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); end;
+PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); ActiveControl:=getEditor^.editor; end;
 
 PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject); begin closeAllEditorsButCurrent; end;
 PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject); begin closeAllUnmodifiedEditors; end;
@@ -531,6 +554,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);              begin if hasEdito
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
   begin
     inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(utilityScriptFileName,true);
+    ActiveControl:=getEditor^.editor;
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);

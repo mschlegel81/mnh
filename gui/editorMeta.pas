@@ -147,8 +147,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
                     CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineTreeView       :TTreeView;
-                    CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
+                    CONST p_outlineModel          :P_outlineTreeModel;
                     CONST p_openlocation          :T_openLocationCallback);
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
@@ -311,8 +310,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
                     CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineTreeView       :TTreeView;
-                    CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
+                    CONST p_outlineModel          :P_outlineTreeModel;
                     CONST p_openlocation          :T_openLocationCallback);
 
   VAR i:longint;
@@ -332,7 +330,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     assistanceTabSheet    :=p_assistanceTabSheet    ;
     outlineGroupBox       :=p_outlineGroupBox       ;
-    new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,p_openlocation));
+    outlineModel          :=p_outlineModel;
 
     if not(loadWorkspace) then initNewWorkspace;
   end;
@@ -487,6 +485,7 @@ PROCEDURE T_editorMeta.activate;
       end;
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
+      mainForm.ActiveControl:=editor_;
       mainForm.onDebuggerEvent;
     except end; //catch and ignore all exceptions
   end;

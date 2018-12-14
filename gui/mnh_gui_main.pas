@@ -48,7 +48,8 @@ USES
   renameDialog,
   mnhCustomForm,
   openFile,
-  saveFile;
+  saveFile,
+  outlines;
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}
@@ -56,8 +57,6 @@ TYPE
   { TMnhForm }
 
   TMnhForm = class(T_abstractMnhForm)
-    cbOutlineShowPrivate,
-    cbOutlineShowImported:     TCheckBox;
     autoShowOutputCheckbox: TCheckBox;
     evaluateQuickInCurrentPackageCheckbox: TCheckBox;
     FindDialog:                TFindDialog;
@@ -123,7 +122,15 @@ TYPE
     miRestoreDefaultFile,
     miShowQuickEval,
     miShowOutput,
-    miShowAssistance:          TMenuItem;
+    miShowAssistance,
+    omiSortByLocation,
+    omiSortByName,
+    omiSortByNameCase,
+    MenuItem1,
+    omiShowImported,
+    omiShowPrivate: TMenuItem;
+    OutlinePopup: TPopupMenu;
+    TopPanel: TPanel;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -131,10 +138,10 @@ TYPE
     Panel1,
     Panel2:                    TPanel;
     ReplaceDialog:             TReplaceDialog;
-    Splitter1,
+    bottomPanelSplitter,
     Splitter2,
     Splitter3,
-    Splitter4,
+    outlineSplitter,
     Splitter5:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
@@ -151,6 +158,7 @@ TYPE
     QuickTabSheet:             TTabSheet;
     HelpSheet: TTabSheet;
     outlineTreeView: TTreeView;
+    outlineToggleBox: TToggleBox;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,
