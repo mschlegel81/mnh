@@ -476,6 +476,7 @@ FUNCTION randomIfs_impl intFuncSignature;
 
 CONSTRUCTOR T_imageDimensionsMessage.createGetSizeRequest;
   begin
+    inherited create(mt_image_obtainDimensions);
     newWidth:=0;
     newHeight:=0;
     retrieved:=false;
