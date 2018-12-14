@@ -106,6 +106,8 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     end;
     runnerModel.haltEvaluation;
     quick.task.ensureStop;
+    settings.outline.viewWidth:=outlineGroupBox.width;
+    settings.outline.fullHeight:=outlineToggleBox.checked;
     saveWorkspace;
   end;
 
@@ -121,6 +123,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - begin'); {$endif}
     quitPosted:=false;
     registerForm(self,ft_main);
+    outlineGroupBox.width:=settings.outline.viewWidth;
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
     //Dynamic GUI components:
@@ -232,7 +235,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            outlineGroupBox,
                            outlineModel,
                            @openLocation);
-
+      if outlineToggleBox.checked<>settings.outline.fullHeight then begin
+        outlineToggleBox.checked:=settings.outline.fullHeight;
+        outlineToggleBoxChange(Sender);
+      end;
       quick.meta.createWithParent(QuickTabSheet,nil);
       quick.meta.editor.Align:=alTop;
       quick.meta.editor.height:=80;

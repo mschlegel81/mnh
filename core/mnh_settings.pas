@@ -64,6 +64,11 @@ T_settings=object(T_serializable)
   fontSize:longint;
   antialiasedFonts:boolean;
   mainForm:T_formPosition;
+  outline:record
+    showPrivate,showImported,sortByName,sortByNameCaseSen,sortByLoc,
+    fullHeight:boolean;
+    viewWidth:longint;
+  end;
   outputBehaviour: T_messageTypeSet;
   wordWrapEcho:boolean;
   outputLinesLimit:longint;
@@ -116,7 +121,7 @@ DESTRUCTOR T_settings.destroy;
   begin
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235079; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235080; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -132,6 +137,15 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     editorFontname := stream.readAnsiString;
     antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
+    with outline do begin
+      showPrivate      :=stream.readBoolean;
+      showImported     :=stream.readBoolean;
+      sortByName       :=stream.readBoolean;
+      sortByNameCaseSen:=stream.readBoolean;
+      sortByLoc        :=stream.readBoolean;
+      fullHeight       :=stream.readBoolean;
+      viewWidth        :=stream.readLongint;
+    end;
     outputBehaviour:=stream.readNaturalNumber;
     outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
@@ -161,6 +175,15 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeAnsiString(editorFontname);
     stream.writeBoolean(antialiasedFonts);
     mainForm.saveToStream(stream);
+    with outline do begin
+      stream.writeBoolean(showPrivate      );
+      stream.writeBoolean(showImported     );
+      stream.writeBoolean(sortByName       );
+      stream.writeBoolean(sortByNameCaseSen);
+      stream.writeBoolean(sortByLoc        );
+      stream.writeBoolean(fullHeight       );
+      stream.writeLongint(viewWidth        );
+    end;
     stream.writeNaturalNumber(outputBehaviour);
     stream.writeBoolean(doResetPlotOnEvaluation);
     stream.writeBoolean(cacheAnimationFrames);
@@ -189,6 +212,15 @@ PROCEDURE T_settings.initDefaults;
       width := 480;
       height := 480;
       isFullscreen := false;
+    end;
+    with outline do begin
+      showPrivate:=true;
+      showImported:=true;
+      sortByName:=false;
+      sortByNameCaseSen:=true;
+      sortByLoc:=false;
+      fullHeight:=false;
+      viewWidth:=100;
     end;
     outputBehaviour:=C_defaultOutputBehavior_interactive;
     doResetPlotOnEvaluation:=true;

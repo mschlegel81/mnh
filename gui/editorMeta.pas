@@ -485,7 +485,6 @@ PROCEDURE T_editorMeta.activate;
       end;
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
-      mainForm.ActiveControl:=editor_;
       mainForm.onDebuggerEvent;
     except end; //catch and ignore all exceptions
   end;

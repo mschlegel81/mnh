@@ -3,9 +3,10 @@ INTERFACE
 USES Classes,
      StdCtrls,
      ComCtrls,
-     menus,
+     Menus,
      litVar,
      operators,
+     mnh_settings,
      mnh_constants,basicTypes,
      subrules,rules,packages;
 TYPE
@@ -200,11 +201,11 @@ CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView;
     sortByNameRadio     :=sortByNameRB;
     sortByLocationRadio :=sortByLocationRB;
 
-    showPrivateCB   .OnClick:=@checkboxClick;
-    showImportedCB  .OnClick:=@checkboxClick;
-    sortByNameCaseRB.OnClick:=@checkboxClick;
-    sortByNameRB    .OnClick:=@checkboxClick;
-    sortByLocationRB.OnClick:=@checkboxClick;
+    showPrivateCB   .OnClick:=@checkboxClick; showPrivateCB   .checked:=settings.outline.showPrivate;
+    showImportedCB  .OnClick:=@checkboxClick; showImportedCB  .checked:=settings.outline.showImported;
+    sortByNameCaseRB.OnClick:=@checkboxClick; sortByNameCaseRB.checked:=settings.outline.sortByNameCaseSen;
+    sortByNameRB    .OnClick:=@checkboxClick; sortByNameRB    .checked:=settings.outline.sortByName;
+    sortByLocationRB.OnClick:=@checkboxClick; sortByLocationRB.checked:=settings.outline.sortByLoc;
 
     tree.OnKeyDown:=@treeViewKeyDown;
     tree.OnDblClick:=@treeViewDblClick;
@@ -263,6 +264,11 @@ PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
 
 PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
   begin
+    settings.outline.showPrivate      :=showPrivateCheckbox .checked;
+    settings.outline.showImported     :=showImportedCheckbox.checked;
+    settings.outline.sortByNameCaseSen:=sortByNameCaseRadio .checked;
+    settings.outline.sortByName       :=sortByNameRadio     .checked;
+    settings.outline.sortByLoc        :=sortByLocationRadio .checked;
     refresh;
   end;
 
