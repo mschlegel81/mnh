@@ -43,6 +43,7 @@ TYPE
       FUNCTION singleMessageOut(CONST m:P_storedMessage):boolean;
       PROCEDURE doneOutput;
     public
+      wrapEcho:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
                          CONST messageTypesToInclude:T_messageTypeSet=[mt_clearConsole,
                                                                        mt_printline,
@@ -164,7 +165,7 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
         first:=false;
       end else begin
         message:=messageList[0];
-        if settings.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
+        if wrapEcho and (syn.charsInWindow-5<length(message)) then begin
           if length(messageList)=1
           then tokens:=tokenSplit(message)
           else tokens:=message;
@@ -289,6 +290,7 @@ PROCEDURE T_synOutAdapter.doneOutput;
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
     inherited create(at_gui,messageTypesToInclude);
+    wrapEcho:=false;
     id:=interLockedIncrement(lastSynOutId);
     synOwnerForm:=owner;
     syn         :=outputEdit;
