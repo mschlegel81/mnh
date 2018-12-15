@@ -60,17 +60,9 @@ PROCEDURE miSaveClick(Sender: TObject);
 //Settings
 PROCEDURE miDecFontSizeClick(Sender: TObject);
 PROCEDURE miIncFontSizeClick(Sender: TObject);
-PROCEDURE miMinErrorlevel1Click(Sender: TObject);
-PROCEDURE miMinErrorlevel2Click(Sender: TObject);
-PROCEDURE miMinErrorlevel3Click(Sender: TObject);
-PROCEDURE miMinErrorlevel4Click(Sender: TObject);
-PROCEDURE miUserErrorsClick(Sender: TObject);
-PROCEDURE miDeclarationEchoClick(Sender: TObject);
-PROCEDURE miExpressionEchoClick(Sender: TObject);
-PROCEDURE miExpressionResultClick(Sender: TObject);
-PROCEDURE miTimingInfoClick(Sender: TObject);
-PROCEDURE miWrapEchoClick(Sender: TObject);
 PROCEDURE miFullscreenClick(Sender: TObject);
+PROCEDURE stdOutputPopupClick(Sender:TObject);
+PROCEDURE quickOutputPopupClick(Sender:TObject);
 
 PROCEDURE subMenuFileClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
@@ -233,8 +225,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand,
                            outlineGroupBox,
-                           outlineModel,
-                           @openLocation);
+                           outlineModel);
       if outlineToggleBox.checked<>settings.outline.fullHeight then begin
         outlineToggleBox.checked:=settings.outline.fullHeight;
         outlineToggleBoxChange(Sender);
@@ -371,10 +362,6 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.checked:=not(miProfile.checked);
-    if miProfile.checked and not(miTimingInfo.checked) then begin
-      miTimingInfo.checked:=miTimingInfo.AutoCheck;
-      miTimingInfoClick(Sender);
-    end;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
@@ -560,7 +547,6 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);              begin if hasEdito
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
   begin
     inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(utilityScriptFileName,true);
-    ActiveControl:=getEditor^.editor;
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
@@ -575,6 +561,7 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
     then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     UpdateTimeTimer.enabled:=true;
+    ActiveControl:=getEditor^.editor;
   end;
 
 PROCEDURE TMnhForm.miReloadClick(Sender: TObject); begin if hasEditor then getEditor^.reloadFile(getEditor^.getPath); end;
@@ -597,25 +584,6 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize-1; processFontSettings; end;
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize+1; processFontSettings; end;
-PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin setVerbosity(1); end;
-PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin setVerbosity(2); end;
-PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin setVerbosity(3); end;
-PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin setVerbosity(4); end;
-PROCEDURE TMnhForm.miUserErrorsClick(Sender: TObject);
-  begin
-    if miUserErrors.checked then setVerbosity(254) else setVerbosity(255);
-  end;
-
-PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .checked,mt_echo_declaration); end;
-PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .checked,mt_echo_input);       end;
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.checked,mt_echo_output);      end;
-PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info);
-                                                                   setSpecificMessageType(miTimingInfo      .checked,mt_profile_call_info);         end;
-PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
-  begin
-    settings.wordWrapEcho:=miWrapEcho.checked;
-    updateWordWrap;
-  end;
 
 PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
   begin
@@ -639,8 +607,10 @@ PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
     historyIdx:=TMenuItem(Sender).Tag;
     with fileHistory do begin
       if fileExists(historyItem(historyIdx))
-      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
-      else if polishHistory then updateFileHistory;
+      then begin
+        inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true);
+        ActiveControl:=getEditor^.editor;
+      end else if polishHistory then updateFileHistory;
     end;
   end;
 
@@ -650,8 +620,10 @@ PROCEDURE TMnhForm.miRecentFileItemClick(Sender: TObject);
     historyIdx:=TMenuItem(Sender).Tag;
     with recentlyActivated do begin
       if fileExists(historyItem(historyIdx))
-      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
-      else if polishHistory then updateFileHistory;
+      then begin
+        inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true);
+        ActiveControl:=getEditor^.editor;
+      end else if polishHistory then updateFileHistory;
     end;
   end;
 

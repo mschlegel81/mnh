@@ -58,11 +58,33 @@ TYPE
 
   TMnhForm = class(T_abstractMnhForm)
     autoShowOutputCheckbox: TCheckBox;
+    errorSubmenu1: TMenuItem;
     evaluateQuickInCurrentPackageCheckbox: TCheckBox;
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
     outlineGroupBox:                 TGroupBox;
+    miEchoDecl1: TMenuItem;
+    miEchoInput1: TMenuItem;
+    miEchoOutput1: TMenuItem;
+    miErrorL5: TMenuItem;
+    miErrorL6: TMenuItem;
+    miErrorL7: TMenuItem;
+    miErrorL8: TMenuItem;
+    miErrorUserDefined1: TMenuItem;
+    miShowTiming1: TMenuItem;
+    miWrapEcho1: TMenuItem;
+    miErrorUserDefined: TMenuItem;
+    miErrorL4: TMenuItem;
+    miErrorL3: TMenuItem;
+    miErrorL2: TMenuItem;
+    miErrorL1: TMenuItem;
+    errorSubmenu: TMenuItem;
+    miShowTiming: TMenuItem;
+    miWrapEcho: TMenuItem;
+    miEchoDecl: TMenuItem;
+    miEchoOutput: TMenuItem;
+    miEchoInput: TMenuItem;
     markerImageList,
     outlineImageList,
     breakpointsImagesList,
@@ -70,7 +92,6 @@ TYPE
     callStackList:             TListBox;
     MainMenu1:                 TMainMenu;
     miLanguageRoot,
-    MenuItem4,
     miAbout,
     miCallMain,
     miClear,
@@ -79,10 +100,7 @@ TYPE
     miCloseAllUnmodified,
     miDebug,
     miDecFontSize,
-    miDeclarationEcho,
     miEvaluateNow,
-    miExpressionEcho,
-    miExpressionResult,
     miFind,
     miFindNext,
     miFindPrevious,
@@ -91,10 +109,6 @@ TYPE
     miHaltEvaluation,
     miHelp,
     miIncFontSize,
-    miMinErrorlevel1,
-    miMinErrorlevel2,
-    miMinErrorlevel3,
-    miMinErrorlevel4,
     miOpen,
     miOpenDocumentation,
     miProfile,
@@ -103,8 +117,6 @@ TYPE
     miRunExternally,
     miSave,
     miSaveAs,
-    miTimingInfo,
-    miWrapEcho,
     mi_settings,
     subMenuCode,
     subMenuEvaluation,
@@ -114,7 +126,6 @@ TYPE
     miEditGuiScripts,
     submenuEditorAppearance,
     miStackTracing,
-    miUserErrors,
     miFileHistoryRoot,
     miHtmlExport,
     miRecentFileRoot,
@@ -129,6 +140,8 @@ TYPE
     MenuItem1,
     omiShowImported,
     omiShowPrivate: TMenuItem;
+    QuickOutputPopup: TPopupMenu;
+    StdOutputPopup: TPopupMenu;
     OutlinePopup: TPopupMenu;
     TopPanel: TPanel;
     OpenDialog:                TOpenDialog;

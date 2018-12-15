@@ -6,11 +6,12 @@ USES sysutils,
      mnh_messages,
      mnh_constants, basicTypes;
 TYPE
-  T_adapterType=(at_unknown,
-                 at_console,
+  T_adapterType=(at_console,
                  at_textFile,
+                 at_textMessageCollector,
                  {$ifdef fullVersion}
-                 at_gui,
+                 at_guiSynOutput,
+                 at_guiEventsCollector,
                  at_plot,
                  at_imig,
                  {$endif}
@@ -18,16 +19,21 @@ TYPE
                  at_printTextFileAtRuntime);
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
-    {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
-    {at_textFile} [mt_printline..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
-    {at_gui}      [low(T_messageType)..high(T_messageType)],
+    {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_displayTable,mt_plot_postDisplay,mt_guiEdit_done,mt_displayVariableTree,mt_displayCustomForm],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_imig}     [mt_image_postDisplay..mt_image_obtainDimensions],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
+
+  {$ifdef fullVersion}
+  C_messagesLeadingToErrorIfNotHandled:T_messageTypeSet=[mt_debugger_breakpoint..mt_displayCustomForm];
+  {$endif}
 
 TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
@@ -120,6 +126,7 @@ TYPE
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
       PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual;
+      PROCEDURE raiseUnhandledError(CONST unhandledMessage:P_storedMessage);
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);                            virtual; abstract;
       PROCEDURE postCustomMessages(CONST message:T_storedMessages);
       PROCEDURE clear(CONST clearAllAdapters:boolean=true);                                                                           virtual;
@@ -297,7 +304,7 @@ CONSTRUCTOR T_messagesRedirector.createRedirector();
     inherited create;
     messagesToRedirect:=[];
     messageReceiver:=nil;
-    collector.create(at_unknown,C_textMessages);
+    collector.create(at_textMessageCollector,C_textMessages);
     addOutAdapter(@collector,false);
     inherited clear;
   end;
@@ -441,33 +448,54 @@ DESTRUCTOR T_messagesDistributor.destroy;
 
 PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   VAR a:T_flaggedAdapter;
+      appended:boolean=false;
   begin
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    for a in adapters do if a.adapter^.append(message) then include(collected,message^.messageType);
+    for a in adapters do if a.adapter^.append(message) then appended:=true;
+    if appended then include(collected,message^.messageType);
+    {$ifdef fullVersion}
+    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+    {$endif}
     if disposeAfterPosting then disposeMessage(message);
     leaveCriticalSection(messagesCs);
   end;
 
 PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
+  VAR appended:boolean=false;
   begin
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     if message^.messageType in heldTypes then begin
       collector.append(message);
+      appended:=true;
       if disposeAfterPosting then disposeMessage(message);
-    end else if parentMessages<>nil then parentMessages^.postCustomMessage(message,disposeAfterPosting);
+    end else if parentMessages<>nil then begin
+      parentMessages^.postCustomMessage(message,disposeAfterPosting);
+      appended:=true;
+    end;
+    {$ifdef fullVersion}
+    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+    {$endif}
     leaveCriticalSection(messagesCs);
   end;
 
 PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   VAR a:T_flaggedAdapter;
+      appended:boolean=false;
   begin
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    for a in adapters do if a.adapter^.append(message) then include(collected,message^.messageType);
+    for a in adapters do if a.adapter^.append(message) then appended:=true;
+    if appended then include(collected,message^.messageType);
     if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
-    then messageReceiver^.postCustomMessage(message,false);
+    then begin
+      messageReceiver^.postCustomMessage(message,false);
+      appended:=true;
+    end;
+    {$ifdef fullVersion}
+    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+    {$endif}
     if disposeAfterPosting then disposeMessage(message);
     leaveCriticalSection(messagesCs);
   end;
@@ -564,7 +592,7 @@ CONSTRUCTOR T_messagesErrorHolder.createErrorHolder(CONST parent: P_messages;
     inherited create();
     heldTypes:=typesToHold;
     parentMessages:=parent;
-    collector.create(at_unknown,C_textMessages);
+    collector.create(at_textMessageCollector,C_textMessages);
   end;
 
 DESTRUCTOR T_messagesErrorHolder.destroy;
@@ -663,6 +691,15 @@ PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST locat
   VAR message:P_errorMessage;
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
+    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+    postCustomMessage(message);
+    disposeMessage(message);
+  end;
+
+PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage);
+  VAR message:P_errorMessage;
+  begin
+    new(message,create(mt_el3_evalError,unhandledMessage^.getLocation,'Unhandled message of type "'+unhandledMessage^.getMessageTypeName+'"'));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     postCustomMessage(message);
     disposeMessage(message);

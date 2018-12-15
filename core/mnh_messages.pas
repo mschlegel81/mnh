@@ -1,6 +1,7 @@
 UNIT mnh_messages;
 INTERFACE
 USES sysutils,
+     typinfo,
      myGenerics,
      mnh_constants,
      basicTypes;
@@ -90,16 +91,16 @@ TYPE
     mt_displayCustomForm
     {$endif});
 
+  T_ideMessageConfig=packed record
+    echo_input,echo_declaration,echo_output,echo_wrapping,
+    show_timing,
+    show_all_userMessages:boolean;
+    suppressWarningsUnderLevel:byte;
+  end;
+
   T_messageTypeSet=set of T_messageType;
 
 CONST
-  {$ifdef fullVersion}
-  C_messagesAlwaysProcessedInGuiMode:T_messageTypeSet=[mt_debugger_breakpoint,
-                                                       mt_displayTable,
-                                                       mt_guiEdit_done,
-                                                       mt_displayVariableTree,
-                                                       mt_displayCustomForm];
-  {$endif}
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messageTypeMeta:array[T_messageType] of record
@@ -155,6 +156,15 @@ CONST
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
 
+  C_defaultIdeMessageConfig:T_ideMessageConfig=(
+    echo_input:true;
+    echo_declaration:true;
+    echo_output:true;
+    echo_wrapping:false;
+    show_timing:false;
+    show_all_userMessages:false;
+    suppressWarningsUnderLevel:3);
+
 TYPE
   P_storedMessage=^T_storedMessage;
   T_storedMessages=array of P_storedMessage;
@@ -176,6 +186,7 @@ TYPE
       FUNCTION messageClass:T_messageClass;
       PROPERTY messageType:T_messageType read kind;
       FUNCTION messageText:T_arrayOfString; virtual;
+      FUNCTION getMessageTypeName:string;
       PROPERTY getLocation:T_searchTokenLocation read location;
   end;
 
@@ -215,38 +226,23 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-OPERATOR :=(CONST x:T_messageTypeSet):qword;
-OPERATOR :=(x:qword):T_messageTypeSet;
+OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 PROCEDURE disposeMessage(message:P_storedMessage);
 FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
-OPERATOR :=(CONST x:T_messageTypeSet):qword;
-  VAR mt:T_messageType;
-      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
-      i:longint;
+OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    for i:=0 to length(mask)-1 do mask[i]:=false;
-    i:=length(mask)-1;
-    for mt:=low(T_messageType) to high(T_messageType) do if i>0 then begin
-      mask[i]:=mt in x;
-      dec(i);
-    end;
-    result:=0;
-    move(mask,result,sizeOf(qword));
-  end;
-
-OPERATOR :=(x:qword):T_messageTypeSet;
-  VAR mt:T_messageType;
-      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
-      i:longint;
-  begin
-    initialize(mask);
-    move(x,mask,sizeOf(qword));
-    i:=length(mask)-1;
-    result:=[];
-    for mt:=low(T_messageType) to high(T_messageType) do begin
-      if (i>0) and mask[i] then include(result,mt);
-      dec(i);
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_profile_call_info,mt_endOfEvaluation,mt_el4_systemError,mt_el3_noMatchingMain];
+    if x.echo_input       then result+=[mt_echo_input      ,mt_echo_continued];
+    if x.echo_output      then result+=[mt_echo_output     ,mt_echo_continued];
+    if x.echo_declaration then result+=[mt_echo_declaration,mt_echo_continued];
+    if x.show_timing      then result+=[mt_timing_info];
+    if x.show_all_userMessages then result+=[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
+    case x.suppressWarningsUnderLevel of
+        4: begin end;
+        3: result+=[mt_el3_evalError,mt_el3_userDefined];
+        2: result+=[mt_el3_evalError,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning];
+      else result+=[mt_el3_evalError,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning,mt_el1_note,mt_el1_userNote];
     end;
   end;
 
@@ -401,6 +397,11 @@ FUNCTION T_storedMessage.messageClass: T_messageClass;
 FUNCTION T_storedMessage.messageText: T_arrayOfString;
   begin
     result:=C_EMPTY_STRING_ARRAY;
+  end;
+
+FUNCTION T_storedMessage.getMessageTypeName:string;
+  begin
+    result:= copy(getEnumName(TypeInfo(kind),ord(kind)),4,1000);
   end;
 
 FUNCTION T_storedMessageWithText.messageText: T_arrayOfString;

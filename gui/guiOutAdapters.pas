@@ -70,12 +70,13 @@ FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributo
 
 CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_abstractMnhForm);
   begin
-    inherited create(at_gui,[mt_displayTable,
-                             mt_displayVariableTree,
-                             mt_displayCustomForm,
-                             mt_endOfEvaluation,
-                             mt_guiEdit_done,
-                             mt_debugger_breakpoint]);
+    inherited create(at_guiEventsCollector,
+                    [mt_displayTable,
+                     mt_displayVariableTree,
+                     mt_displayCustomForm,
+                     mt_endOfEvaluation,
+                     mt_guiEdit_done,
+                     mt_debugger_breakpoint]);
     form:=guiForm;
   end;
 

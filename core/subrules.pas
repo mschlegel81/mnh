@@ -1433,7 +1433,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     new(holder,createErrorHolder(oldMessages,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]));
     context.messages:=holder;
 
-    collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
+    collector.create(at_textMessageCollector,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     constructInitialTList;
 
     dataReadyVectorized:=evaluateVectorExpressionOk;

@@ -59,7 +59,7 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(CONST adapters:P_messagesDi
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters^.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
-    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior{$ifdef fullVersion}+C_messagesAlwaysProcessedInGuiMode{$endif};
+    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
   end;
 
 PROCEDURE displayHelp;

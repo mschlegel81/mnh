@@ -1,66 +1,80 @@
 PROCEDURE initializeOutputSettings;
-  VAR j:byte;
-      maxLevel:byte=5;
   begin
     with MnhForm do begin
-      miDeclarationEcho .checked:=mt_echo_declaration in settings.outputBehaviour;
-      miExpressionEcho  .checked:=mt_echo_input       in settings.outputBehaviour;
-      miExpressionResult.checked:=mt_echo_output      in settings.outputBehaviour;
-      miTimingInfo      .checked:=mt_timing_info      in settings.outputBehaviour;;
-      miWrapEcho        .checked:=                       settings.wordWrapEcho;
-      for j:=4 downto 1 do if (C_errorMessageTypes[j] * settings.outputBehaviour <> []) then maxLevel:=j;
-      miMinErrorlevel1.checked:=maxLevel= 1;
-      miMinErrorlevel2.checked:=maxLevel= 2;
-      miMinErrorlevel3.checked:=maxLevel= 3;
-      miMinErrorlevel4.checked:=maxLevel>=4;
-      miUserErrors    .checked:=(mt_el1_userNote    in settings.outputBehaviour)
-                            and (mt_el2_userWarning in settings.outputBehaviour)
-                            and (mt_el3_userDefined in settings.outputBehaviour);
+      miEchoDecl         .checked:=settings.     outputBehavior.echo_declaration;
+      miEchoDecl1        .checked:=settings.quickOutputBehavior.echo_declaration;
+      miEchoInput        .checked:=settings.     outputBehavior.echo_input;
+      miEchoInput1       .checked:=settings.quickOutputBehavior.echo_input;
+      miEchoOutput       .checked:=settings.     outputBehavior.echo_output;
+      miEchoOutput1      .checked:=settings.quickOutputBehavior.echo_output;
+      miWrapEcho         .checked:=settings.     outputBehavior.echo_wrapping;
+      miWrapEcho1        .checked:=settings.quickOutputBehavior.echo_wrapping;
+      miShowTiming       .checked:=settings.     outputBehavior.show_timing;
+      miShowTiming1      .checked:=settings.quickOutputBehavior.show_timing;
+      miErrorUserDefined .checked:=settings.     outputBehavior.show_all_userMessages;
+      miErrorUserDefined1.checked:=settings.quickOutputBehavior.show_all_userMessages;
+      miErrorL1          .checked:=settings.     outputBehavior.suppressWarningsUnderLevel<=1;
+      miErrorL5          .checked:=settings.quickOutputBehavior.suppressWarningsUnderLevel<=1;
+      miErrorL2          .checked:=settings.     outputBehavior.suppressWarningsUnderLevel =2;
+      miErrorL6          .checked:=settings.quickOutputBehavior.suppressWarningsUnderLevel =2;
+      miErrorL3          .checked:=settings.     outputBehavior.suppressWarningsUnderLevel =3;
+      miErrorL7          .checked:=settings.quickOutputBehavior.suppressWarningsUnderLevel =3;
+      miErrorL4          .checked:=settings.     outputBehavior.suppressWarningsUnderLevel>=4;
+      miErrorL8          .checked:=settings.quickOutputBehavior.suppressWarningsUnderLevel>=4;
     end;
-    guiOutAdapter.outputBehavior:=settings.outputBehaviour+C_messagesAlwaysProcessedInGuiMode;
-    P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
+    guiOutAdapter.outputBehavior                                                :=settings.outputBehavior;
+    P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0)^.outputBehavior:=settings.quickOutputBehavior;
+    guiOutAdapter                                                                 .wrapEcho:=settings.outputBehavior     .echo_wrapping;
+    P_synOutAdapter(P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0))^.wrapEcho:=settings.quickOutputBehavior.echo_wrapping;
     setupOutputBehaviourFromCommandLineOptions(@guiAdapters,nil);
-  end;
-
-PROCEDURE setVerbosity(level:byte);
-  VAR j:byte;
-  begin
-    case level of
-      1: begin
-           MnhForm.miMinErrorlevel1.checked:=true;
-           MnhForm.miUserErrors    .checked:=true;
-         end;
-      2: MnhForm.miMinErrorlevel2.checked:=true;
-      3: MnhForm.miMinErrorlevel3.checked:=true;
-      4: MnhForm.miMinErrorlevel4.checked:=true;
-    255: MnhForm.miUserErrors    .checked:=true;
-    254: begin
-           MnhForm.miUserErrors  .checked:=MnhForm.miMinErrorlevel1.checked;
-           if MnhForm.miMinErrorlevel1.checked then level:=1;
-           if MnhForm.miMinErrorlevel2.checked then level:=2;
-           if MnhForm.miMinErrorlevel3.checked then level:=3;
-           if MnhForm.miMinErrorlevel4.checked then level:=4;
-         end;
-    end;
-    if level in [1..4] then for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=level,C_errorMessageTypes[j]);
-    if MnhForm.miUserErrors.checked then guiOutAdapter.enableMessageType(true,[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined]);
-    settings.outputBehaviour:=guiOutAdapter.outputBehavior;
-    MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
-  end;
-
-PROCEDURE setSpecificMessageType(CONST enable:boolean; CONST messageType:T_messageType);
-  begin
-    guiOutAdapter.enableMessageType(enable,[messageType]);
-    settings.outputBehaviour:=guiOutAdapter.outputBehavior;
-    MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
   end;
 
 PROCEDURE updateWordWrap;
   begin
-    if settings.wordWrapEcho
+    if settings.outputBehavior.echo_wrapping
     then guiAdapters.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
     else guiAdapters.preferredEchoLineLength:=-1;
-    MnhForm.quick.adapters^.preferredEchoLineLength:=guiAdapters.preferredEchoLineLength;
+    if settings.quickOutputBehavior.echo_wrapping
+    then MnhForm.quick.adapters^.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
+    else MnhForm.quick.adapters^.preferredEchoLineLength:=-1;
+  end;
+
+PROCEDURE TMnhForm.stdOutputPopupClick(Sender:TObject);
+  begin
+    with settings.outputBehavior do begin
+      echo_declaration     :=miEchoDecl         .checked;
+      echo_input           :=miEchoInput        .checked;
+      echo_output          :=miEchoOutput       .checked;
+      echo_wrapping        :=miWrapEcho         .checked;
+      show_timing          :=miShowTiming       .checked;
+      show_all_userMessages:=miErrorUserDefined .checked;
+      if miErrorL1.checked then suppressWarningsUnderLevel:=1;
+      if miErrorL2.checked then suppressWarningsUnderLevel:=2;
+      if miErrorL3.checked then suppressWarningsUnderLevel:=3;
+      if miErrorL4.checked then suppressWarningsUnderLevel:=4;
+    end;
+    guiOutAdapter.outputBehavior:=settings.outputBehavior;
+    guiOutAdapter.wrapEcho:=settings.outputBehavior.echo_wrapping;
+    updateWordWrap;
+  end;
+
+PROCEDURE TMnhForm.quickOutputPopupClick(Sender:TObject);
+  begin
+    with settings.quickOutputBehavior do begin
+      echo_declaration     :=miEchoDecl1        .checked;
+      echo_input           :=miEchoInput1       .checked;
+      echo_output          :=miEchoOutput1      .checked;
+      echo_wrapping        :=miWrapEcho1        .checked;
+      show_timing          :=miShowTiming1      .checked;
+      show_all_userMessages:=miErrorUserDefined1.checked;
+      if miErrorL5.checked then suppressWarningsUnderLevel:=1;
+      if miErrorL6.checked then suppressWarningsUnderLevel:=2;
+      if miErrorL7.checked then suppressWarningsUnderLevel:=3;
+      if miErrorL8.checked then suppressWarningsUnderLevel:=4;
+    end;
+    P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0)^.outputBehavior:=settings.quickOutputBehavior;
+    P_synOutAdapter(P_messagesDistributor(MnhForm.quick.adapters)^.getAdapter(0))^.wrapEcho:=settings.quickOutputBehavior.echo_wrapping;
+    updateWordWrap;
   end;
 
 PROCEDURE processFontSettings;

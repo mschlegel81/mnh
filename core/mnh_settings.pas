@@ -69,8 +69,8 @@ T_settings=object(T_serializable)
     fullHeight:boolean;
     viewWidth:longint;
   end;
-  outputBehaviour: T_messageTypeSet;
-  wordWrapEcho:boolean;
+  outputBehavior,
+  quickOutputBehavior: T_ideMessageConfig;
   outputLinesLimit:longint;
   doResetPlotOnEvaluation: boolean;
   cacheAnimationFrames: boolean;
@@ -146,12 +146,11 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
       fullHeight       :=stream.readBoolean;
       viewWidth        :=stream.readLongint;
     end;
-    outputBehaviour:=stream.readNaturalNumber;
-    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
+    stream.read(outputBehavior,sizeOf(outputBehavior));
+    stream.read(quickOutputBehavior,sizeOf(quickOutputBehavior));
     doResetPlotOnEvaluation := stream.readBoolean;
     cacheAnimationFrames    := stream.readBoolean;
     saveIntervalIdx:=stream.readByte;
-    wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
@@ -184,11 +183,11 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       stream.writeBoolean(fullHeight       );
       stream.writeLongint(viewWidth        );
     end;
-    stream.writeNaturalNumber(outputBehaviour);
+    stream.write(outputBehavior,sizeOf(outputBehavior));
+    stream.write(quickOutputBehavior,sizeOf(quickOutputBehavior));
     stream.writeBoolean(doResetPlotOnEvaluation);
     stream.writeBoolean(cacheAnimationFrames);
     stream.writeByte(saveIntervalIdx);
-    stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
@@ -201,7 +200,6 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
 
 PROCEDURE T_settings.initDefaults;
   begin
-    wordWrapEcho:=false;
     cpuCount:=getNumberOfCPUs;
     editorFontname:='';
     fontSize:=0;
@@ -222,7 +220,8 @@ PROCEDURE T_settings.initDefaults;
       fullHeight:=false;
       viewWidth:=100;
     end;
-    outputBehaviour:=C_defaultOutputBehavior_interactive;
+    outputBehavior    :=C_defaultIdeMessageConfig;
+    quickOutputBehavior:=C_defaultIdeMessageConfig;
     doResetPlotOnEvaluation:=true;
     cacheAnimationFrames:=true;
     saveIntervalIdx:=0;

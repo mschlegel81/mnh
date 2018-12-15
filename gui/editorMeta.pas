@@ -147,8 +147,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
                     CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineModel          :P_outlineTreeModel;
-                    CONST p_openlocation          :T_openLocationCallback);
+                    CONST p_outlineModel          :P_outlineTreeModel);
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
 FUNCTION addEditorMetaForNewFile:longint;
@@ -244,7 +243,8 @@ FUNCTION loadWorkspace:boolean;
       globalBookmarks[i].editorIndex:=stream.readInteger;
       globalBookmarks[i].lineIndex  :=stream.readInteger;
       globalBookmarks[i].columnIndex:=stream.readInteger;
-      if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) then begin
+      if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) and
+         (globalBookmarks[i].lineIndex  >=0) then begin
         editorMetaData[globalBookmarks[i].editorIndex]^.editor.SetBookMark(i,globalBookmarks[i].columnIndex,globalBookmarks[i].lineIndex);
       end else globalBookmarks[i].editorIndex:=-1;
     end;
@@ -275,8 +275,8 @@ PROCEDURE saveWorkspace;
     stream.writeLongint(editorIndexAfterLoading[pageIndex]);
     for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
       stream.writeInteger(-1);
-      stream.writeInteger(0);
-      stream.writeInteger(0);
+      stream.writeInteger(-1);
+      stream.writeInteger(-1);
     end else begin
       stream.writeInteger(editorIndexAfterLoading[globalBookmarks[i].editorIndex]);
       stream.writeInteger(globalBookmarks[i].lineIndex  );
@@ -310,8 +310,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
                     CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineModel          :P_outlineTreeModel;
-                    CONST p_openlocation          :T_openLocationCallback);
+                    CONST p_outlineModel          :P_outlineTreeModel);
 
   VAR i:longint;
   begin
@@ -486,6 +485,7 @@ PROCEDURE T_editorMeta.activate;
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
       mainForm.onDebuggerEvent;
+      mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
   end;
 
@@ -548,7 +548,11 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       isChanged:=false;
       ignoreDeleted:=false;
     end;
-    for k:=0 to length(globalBookmarks)-1 do if globalBookmarks[k].editorIndex=index then globalBookmarks[k].editorIndex:=-1;
+    for k:=0 to length(globalBookmarks)-1 do if globalBookmarks[k].editorIndex=index then begin
+      globalBookmarks[k].editorIndex:=-1;
+      globalBookmarks[k].lineIndex:=-1;
+      globalBookmarks[k].columnIndex:=-1;
+    end;
     editor.modified:=false;
     getEditor^.activate;
   end;

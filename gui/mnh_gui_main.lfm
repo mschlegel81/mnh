@@ -1156,6 +1156,7 @@ object MnhForm: TMnhForm
           Font.Quality = fqNonAntialiased
           ParentColor = False
           ParentFont = False
+          PopupMenu = StdOutputPopup
           TabOrder = 0
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
@@ -2267,6 +2268,7 @@ object MnhForm: TMnhForm
           Font.Quality = fqNonAntialiased
           ParentColor = False
           ParentFont = False
+          PopupMenu = QuickOutputPopup
           TabOrder = 0
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
@@ -2960,60 +2962,6 @@ object MnhForm: TMnhForm
     end
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'
-      object miExpressionEcho: TMenuItem
-        AutoCheck = True
-        Caption = '&Expression echo'
-        OnClick = miExpressionEchoClick
-      end
-      object miExpressionResult: TMenuItem
-        AutoCheck = True
-        Caption = 'Expression &result'
-        OnClick = miExpressionResultClick
-      end
-      object miDeclarationEcho: TMenuItem
-        AutoCheck = True
-        Caption = '&Declaration echo'
-        Checked = True
-        OnClick = miDeclarationEchoClick
-      end
-      object miWrapEcho: TMenuItem
-        AutoCheck = True
-        Caption = '&Wrap echo'
-        OnClick = miWrapEchoClick
-      end
-      object miTimingInfo: TMenuItem
-        AutoCheck = True
-        Caption = 'Show &timing info'
-        OnClick = miTimingInfoClick
-      end
-      object MenuItem4: TMenuItem
-        Caption = 'Error display...'
-        object miMinErrorlevel1: TMenuItem
-          Caption = '1: Show all'
-          RadioItem = True
-          OnClick = miMinErrorlevel1Click
-        end
-        object miMinErrorlevel2: TMenuItem
-          Caption = '2: Show warnings and errors'
-          RadioItem = True
-          OnClick = miMinErrorlevel2Click
-        end
-        object miMinErrorlevel3: TMenuItem
-          Caption = '3: Show all errors'
-          Checked = True
-          RadioItem = True
-          OnClick = miMinErrorlevel3Click
-        end
-        object miMinErrorlevel4: TMenuItem
-          Caption = '4: Show system errors only'
-          RadioItem = True
-          OnClick = miMinErrorlevel4Click
-        end
-        object miUserErrors: TMenuItem
-          Caption = 'Show all &User defined messages'
-          OnClick = miUserErrorsClick
-        end
-      end
       object miIncFontSize: TMenuItem
         Caption = 'Increase Font Size'
         ShortCut = 16571
@@ -5226,6 +5174,132 @@ object MnhForm: TMnhForm
         AutoCheck = True
         Caption = 'by location'
         RadioItem = True
+      end
+    end
+  end
+  object StdOutputPopup: TPopupMenu
+    left = 604
+    top = 130
+    object miEchoInput: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &input'
+      OnClick = stdOutputPopupClick
+    end
+    object miEchoOutput: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &output'
+      OnClick = stdOutputPopupClick
+    end
+    object miEchoDecl: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &declarations'
+      OnClick = stdOutputPopupClick
+    end
+    object miWrapEcho: TMenuItem
+      AutoCheck = True
+      Caption = '&wrap echo'
+      OnClick = stdOutputPopupClick
+    end
+    object miShowTiming: TMenuItem
+      AutoCheck = True
+      Caption = 'show &timing info'
+      OnClick = stdOutputPopupClick
+    end
+    object errorSubmenu: TMenuItem
+      Caption = '&error display...'
+      object miErrorL1: TMenuItem
+        AutoCheck = True
+        Caption = '&1: show all'
+        RadioItem = True
+        OnClick = stdOutputPopupClick
+      end
+      object miErrorL2: TMenuItem
+        AutoCheck = True
+        Caption = '&2: show warnings and errors'
+        Checked = True
+        RadioItem = True
+        OnClick = stdOutputPopupClick
+      end
+      object miErrorL3: TMenuItem
+        AutoCheck = True
+        Caption = '&3: show all errors'
+        RadioItem = True
+        OnClick = stdOutputPopupClick
+      end
+      object miErrorL4: TMenuItem
+        AutoCheck = True
+        Caption = '&4: show system errors only'
+        RadioItem = True
+        OnClick = stdOutputPopupClick
+      end
+      object miErrorUserDefined: TMenuItem
+        AutoCheck = True
+        Caption = 'show all user defined errors'
+        Checked = True
+        OnClick = stdOutputPopupClick
+      end
+    end
+  end
+  object QuickOutputPopup: TPopupMenu
+    left = 644
+    top = 170
+    object miEchoInput1: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &input'
+      OnClick = quickOutputPopupClick
+    end
+    object miEchoOutput1: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &output'
+      OnClick = quickOutputPopupClick
+    end
+    object miEchoDecl1: TMenuItem
+      AutoCheck = True
+      Caption = 'echo &declarations'
+      OnClick = quickOutputPopupClick
+    end
+    object miWrapEcho1: TMenuItem
+      AutoCheck = True
+      Caption = '&wrap echo'
+      OnClick = quickOutputPopupClick
+    end
+    object miShowTiming1: TMenuItem
+      AutoCheck = True
+      Caption = 'show &timing info'
+      OnClick = quickOutputPopupClick
+    end
+    object errorSubmenu1: TMenuItem
+      Caption = '&error display...'
+      object miErrorL5: TMenuItem
+        AutoCheck = True
+        Caption = '&1: show all'
+        RadioItem = True
+        OnClick = quickOutputPopupClick
+      end
+      object miErrorL6: TMenuItem
+        AutoCheck = True
+        Caption = '&2: show warnings and errors'
+        Checked = True
+        RadioItem = True
+        OnClick = quickOutputPopupClick
+      end
+      object miErrorL7: TMenuItem
+        AutoCheck = True
+        Caption = '&3: show all errors'
+        RadioItem = True
+        OnClick = quickOutputPopupClick
+      end
+      object miErrorL8: TMenuItem
+        AutoCheck = True
+        Caption = '&4: show system errors only'
+        RadioItem = True
+        OnClick = quickOutputPopupClick
+      end
+      object miErrorUserDefined1: TMenuItem
+        AutoCheck = True
+        Caption = 'show all user defined errors'
+        Checked = True
+        OnClick = quickOutputPopupClick
       end
     end
   end

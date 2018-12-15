@@ -1,7 +1,7 @@
 UNIT litVar;
 {$Q-}
 INTERFACE
-USES sysutils, math, typinfo,
+USES sysutils, math,
      Classes,LazUTF8,
      myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
@@ -585,7 +585,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
       result:=newListLiteral(3);
       if message^.prefix<>''
       then result^.appendString(trim(message^.prefix))
-      else result^.appendString(copy(getEnumName(TypeInfo(message^.messageType),ord(message^.messageType)),4,1000));
+      else result^.appendString(message^.getMessageTypeName);
     end;
 
   VAR m:P_storedMessage;
