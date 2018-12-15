@@ -10,7 +10,8 @@ TYPE
                  at_textFile,
                  at_textMessageCollector,
                  {$ifdef fullVersion}
-                 at_gui,
+                 at_guiSynOutput,
+                 at_guiEventsCollector,
                  at_plot,
                  {$endif}
                  at_sandboxAdapter,
@@ -21,7 +22,8 @@ CONST
     {at_textFile} [mt_printline   ..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
-    {at_gui}      [low(T_messageType)..high(T_messageType)],
+    {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_displayTable,mt_plot_postDisplay,mt_guiEdit_done,mt_displayVariableTree,mt_displayCustomForm],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],

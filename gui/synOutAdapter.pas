@@ -289,7 +289,7 @@ PROCEDURE T_synOutAdapter.doneOutput;
 
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
-    inherited create(at_gui,messageTypesToInclude);
+    inherited create(at_guiSynOutput,messageTypesToInclude);
     wrapEcho:=false;
     id:=interLockedIncrement(lastSynOutId);
     synOwnerForm:=owner;
