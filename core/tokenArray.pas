@@ -856,7 +856,10 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
         tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
-            if not(localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable)) then messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+            case localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable) of
+              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',t^.location);
+            end;
           end else if (localIdStack.hasId(t^.txt,idType,idLoc)) then begin
             t^.tokType:=idType;
             if idType=tt_eachIndex then t^.location:=idLoc;
@@ -905,8 +908,10 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
         tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
-            if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable))
-            then messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+            case localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable) of
+              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastTokenized^.location);
+            end;
           end else if (localIdStack.hasId(lastTokenized^.txt,idType,idLoc)) then begin
             lastTokenized^.tokType:=idType;
             if idType=tt_eachIndex then lastTokenized^.location:=idLoc;
