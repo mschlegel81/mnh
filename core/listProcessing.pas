@@ -64,6 +64,7 @@ TYPE
     payloads:T_eachPayloads;
     nextToAggregate:P_eachTask;
     results:T_evaluationResults;
+    processingTime:double;
     CONSTRUCTOR createEachTask();
     PROCEDURE dropEachParameter;
     PROCEDURE defineAndEnqueue(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads);
@@ -131,7 +132,12 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
   CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
 
-  VAR firstToAggregate:P_eachTask=nil;
+  VAR earlyAborting:boolean=false;
+      {chunkSizeByProcessingTime is chosen so that each chunk takes one second on average}
+      chunkSizeByProcessingTime:longint=8;
+      totalProcessed     :int64 =1   ;
+      totalProcessingTime:double=1E-6;
+      firstToAggregate:P_eachTask=nil;
       lastToAggregate:P_eachTask=nil;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_eachTask;
@@ -147,18 +153,22 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
+        totalProcessed+=length(toAggregate^.results);
+        totalProcessingTime+=toAggregate^.processingTime;
         for r in toAggregate^.results do aggregator^.addToAggregation(r,true,eachLocation,@context,recycler);
         with recycling do if fill<length(dat) then begin
           dat[fill]:=toAggregate;
           inc(fill);
         end else dispose(toAggregate,destroy);
+        if earlyAborting
+        then chunkSizeByProcessingTime:=round(max(1.0,min(8.0,totalProcessed/totalProcessingTime)))
+        else chunkSizeByProcessingTime:=round(max(1.0,min(1E6,totalProcessed/totalProcessingTime)));
       end;
     end;
 
   VAR nextToEnqueue:T_eachPayloads;
       enqueueFill:longint=0;
       processed:longint;
-      earlyAborting:boolean=false;
 
   FUNCTION defineAndEnqueueTask:P_eachTask;
     begin
@@ -201,9 +211,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       if enqueueFill>=length(nextToEnqueue) then begin
         inc(processed,enqueueFill);
         defineAndEnqueueTask;
-        if earlyAborting
-        then setLength(nextToEnqueue,min(8,max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount)))))
-        else setLength(nextToEnqueue,      max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount))) );
+        setLength(nextToEnqueue,min(chunkSizeByProcessingTime,max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount)))));
         enqueueFill:=0;
       end;
     end;
@@ -604,6 +612,7 @@ PROCEDURE T_eachTask.dropEachParameter;
 PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads);
   begin
     enterCriticalSection(taskCs);
+    processingTime:=0;
     payloads:=payloads_;
     setLength(results,0);
     nextToAggregate:=nil;
@@ -620,6 +629,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
     enterCriticalSection(taskCs);
     context^.beginEvaluation;
     leaveCriticalSection(taskCs);
+    processingTime:=now;
     try
       setLength(results,length(payloads));
       for payload in payloads do if not(localReturn) and context^.messages^.continueEvaluation then with payload do begin
@@ -630,6 +640,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
         disposeLiteral(indexLiteral);
       end;
     finally
+      processingTime:=(now-processingTime)*24*60*60; //processingTime @post is in seconds;
       setLength(results,k);
       enterCriticalSection(taskCs);
       dropEachParameter;
