@@ -430,6 +430,7 @@ FUNCTION subSets_impl intFuncSignature;
       if params^.size=2 then acceptOnlySetsOfSize:=int1^.intValue;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         setLength(mustContain,0);
+        initialize(mightContain);
         if arg0^.literalType in C_listTypes
         then buildFreqMap(list0)
         else buildFreqMap(set0);
