@@ -354,10 +354,14 @@ FUNCTION isInfinite_impl {$define PREDICATE:=isInfinite} {$define FUNC_NAME:='is
 {$undef FUNC_NAME}
 
 FUNCTION subSets_impl intFuncSignature;
-  VAR sets:specialize G_literalKeyMap<byte>;
+  TYPE T_multiset=array of record value:P_literal; multiplicity:longint; end;
+       T_freqMap=specialize G_literalKeyMap<longint>;
+  VAR resultSets:P_listLiteral;
       acceptOnlySetsOfSize:longint=-1;
-  PROCEDURE recurseBuildSets(CONST mustContain,mightContain:T_arrayOfLiteral);
-    VAR newMust,newMight:T_arrayOfLiteral;
+
+  PROCEDURE recurseBuildSets(CONST mustContain: T_arrayOfLiteral; CONST mightContain:T_multiset);
+    VAR newMust :T_arrayOfLiteral;
+        newMight:T_multiset;
         newSet:P_collectionLiteral;
         i:longint;
     begin
@@ -367,105 +371,74 @@ FUNCTION subSets_impl intFuncSignature;
         setLength(newMust,length(mustContain));
         for i:=0 to length(newMust)-1 do newMust[i]:=mustContain[i];
         recurseBuildSets(newMust,newMight);
-        setLength(newMust,length(newMust)+1);
-        newMust[length(newMust)-1]:=mightContain[0];
-        recurseBuildSets(newMust,newMight);
+        for i:=1 to mightContain[0].multiplicity do begin
+          setLength(newMust,length(newMust)+1);
+          newMust[length(newMust)-1]:=mightContain[0].value;
+          recurseBuildSets(newMust,newMight);
+        end;
         setLength(newMust,0);
         setLength(newMight,0);
       end else begin
         if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
-        newSet:=collection0^.newOfSameType(false);
+        if arg0^.literalType in C_setTypes
+        then newSet:=newSetLiteral (length(mustContain))
+        else newSet:=newListLiteral(length(mustContain));
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        if sets.get(newSet,0)=0 then sets.put(newSet,1)
-                                else disposeLiteral(newSet);
+        resultSets^.append(newSet,false);
       end;
     end;
 
-  FUNCTION directBuildSets(mightContain:T_arrayOfLiteral):boolean;
-    VAR maxInt,prevInt,currInt:qword;
-        bits:bitpacked array [0..8*sizeOf(qword)-1] of boolean;
-        k,trueCount:longint;
-        newSet:P_collectionLiteral;
-        prevDummy:byte;
-
-    PROCEDURE next; inline;
-      VAR lo,lz:qword;
-      begin
-        lo:=currInt and -currInt;
-        lz:=(currInt+lo) and not(currInt);
-        currInt:=currInt or lz;
-        currInt:=currInt and not(lz-1);
-        currInt:=currInt or ((lz div lo) shr 1)-1;
-      end;
-
+  VAR mightContain:T_multiset;
+  PROCEDURE buildFreqMap(CONST list:P_listLiteral);
+    VAR freqMap:T_freqMap;
+        freqList:T_freqMap.KEY_VALUE_LIST;
+        freqEntry:T_freqMap.P_CACHE_ENTRY;
+        i:longint;
     begin
-      initialize(bits);
-      if acceptOnlySetsOfSize=0 then begin
-        if collection0^.literalType in C_setTypes
-        then newSet:=newSetLiteral
-        else newSet:=newListLiteral;
-        sets.put(newSet,1);
-        exit(true);
+      freqMap.create;
+      for i:=0 to list^.size-1 do begin
+        freqEntry:=freqMap.getEntry(list^.value[i]);
+        if freqEntry=nil
+        then freqMap.put(list^.value[i],1)
+        else inc(freqEntry^.value);
       end;
-      if (acceptOnlySetsOfSize>length(mightContain)) or (length(mightContain)=0) then exit(true);
-      if (length(mightContain)>=length(bits)-1)                                  then exit(false);
-
-      maxInt:=1;
-      for k:=1 to length(mightContain)-1 do maxInt:=maxInt+maxInt+1;
-      if (acceptOnlySetsOfSize>0) then begin
-        currInt:=qword(1) shl acceptOnlySetsOfSize-1;
-        prevInt:=0;
-        while (prevInt<currInt) and (currInt<=maxInt) do begin
-          move(currInt,bits,sizeOf(qword));
-          if collection0^.literalType in C_setTypes
-          then newSet:=newSetLiteral (acceptOnlySetsOfSize)
-          else newSet:=newListLiteral(acceptOnlySetsOfSize);
-          for k:=0 to length(bits)-1 do if bits[k] then newSet^.append(mightContain[k],true);
-          if not(sets.putNew(newSet,1,prevDummy)) then disposeLiteral(newSet);
-
-          prevInt:=currInt;
-          next;
-        end;
-      end else begin
-        currInt:=0;
-        while (currInt<=maxInt) do begin
-          trueCount:=PopCnt(currInt);
-          move(currInt,bits,sizeOf(qword));
-          if collection0^.literalType in C_setTypes
-          then newSet:=newSetLiteral (trueCount)
-          else newSet:=newListLiteral(trueCount);
-          for k:=0 to length(bits)-1 do if bits[k] then newSet^.append(mightContain[k],true);
-          if not(sets.putNew(newSet,1,prevDummy)) then disposeLiteral(newSet);
-          inc(currInt);
-        end;
+      freqList:=freqMap.keyValueList;
+      setLength(mightContain,length(freqList));
+      for i:=0 to length(mightContain)-1 do begin
+        mightContain[i].value:=freqList[i].key;
+        mightContain[i].multiplicity:=freqList[i].value;
       end;
-      result:=true;
+      setLength(freqList,0);
+      freqMap.destroy;
     end;
 
-  VAR mustContain,mightContain:T_arrayOfLiteral;
-      i:longint;
-      tempList:P_listLiteral;
+  PROCEDURE buildFreqMap(CONST s:P_setLiteral);
+    VAR iter:T_arrayOfLiteral;
+        i:longint;
+    begin
+      iter:=s^.iteratableList;
+      setLength(mightContain,length(iter));
+      for i:=0 to length(mightContain)-1 do begin
+        mightContain[i].value:=iter[i];
+        mightContain[i].multiplicity:=1;
+      end;
+      disposeLiteral(iter);
+    end;
+
+  VAR mustContain :T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType in [lt_smallint,lt_bigint])) then begin
       if params^.size=2 then acceptOnlySetsOfSize:=int1^.intValue;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
-        sets.create;
         setLength(mustContain,0);
-        if arg0^.literalType in C_listTypes then begin
-          tempList:=P_listLiteral(list0^.clone);
-          tempList^.sort;
-          mightContain:=tempList^.iteratableList;
-          disposeLiteral(tempList);
-        end else mightContain:=set0^.iteratableList;
+        if arg0^.literalType in C_listTypes
+        then buildFreqMap(list0)
+        else buildFreqMap(set0);
 
-        if not(directBuildSets(            mightContain)) then
-              recurseBuildSets(mustContain,mightContain);
-        disposeLiteral(mightContain);
-        mustContain:=sets.keySet;
-        result:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do listResult^.append(mustContain[i],false);
-        sets.destroy;
+        resultSets:=newListLiteral();
+        recurseBuildSets(mustContain,mightContain);
+        result:=resultSets;
       end else begin
         result:=newListLiteral^.append(newListLiteral                   ,false)
                               ^.append(newListLiteral^.append(arg0,true),false);
@@ -539,7 +512,8 @@ FUNCTION isPrime_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint  : result:=newBoolLiteral(isPrime(P_bigIntLiteral  (arg0)^.value));
+      lt_bigint  : result:=newBoolLiteral(    not(P_bigIntLiteral  (arg0)^.value.isNegative) and
+                                          isPrime(P_bigIntLiteral  (arg0)^.value));
       lt_smallint: result:=newBoolLiteral(isPrime(P_smallIntLiteral(arg0)^.value));
       else         result:=genericVectorization('isPrime',params,tokenLocation,context,recycler);
     end;

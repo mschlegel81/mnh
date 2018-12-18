@@ -65,7 +65,6 @@ TYPE
       PROCEDURE ensureTraceInError(VAR error:T_errorMessage);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
-
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
@@ -95,6 +94,7 @@ TYPE
   {$endif}
 
   T_scopeType=(sc_block,sc_each,sc_bracketOnly);
+  T_addIdResult=(air_ok,air_reintroduce,air_notInBlock);
 
   T_idStack=object
     scope:array of record
@@ -113,7 +113,7 @@ TYPE
     PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
+    FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
     FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
   end;
 
@@ -484,22 +484,22 @@ FUNCTION T_idStack.scopeBottom:boolean;
     result:=length(scope)=0;
   end;
 
-FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):boolean;
+FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
   VAR i,j:longint;
   begin
     i:=length(scope)-1;
     if idType=tt_blockLocalVariable
     then while (i>=0) and (scope[i].scopeType<>sc_block) do dec(i);
-    if i<0 then exit(false);
+    if i<0 then exit(air_notInBlock);
     with scope[i] do begin
-      for j:=0 to length(ids)-1 do if ids[j].name=id then exit(false);
+      for j:=0 to length(ids)-1 do if ids[j].name=id then exit(air_reintroduce);
       j:=length(ids);
       setLength(ids,j+1);
       ids[j].name:=id;
       ids[j].used:=idType<>tt_blockLocalVariable;
       ids[j].location:=location;
       ids[j].idType:=idType;
-      result:=true;
+      result:=air_ok;
     end;
   end;
 
