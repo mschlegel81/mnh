@@ -3,4 +3,6 @@
 main->subSets([1..7],3)              //all 3-element subsets of [1..7]
       .filter({$x.agg(+)=12})        //keep subsets which sum up to 12
       .map({$x[sortPerm($x and 1)]}) //sort subsets so that first number is even
+      .each(p,p,p[[0,2,1]])          //take lists as they are and with last two elements swapped
+      .sort
       .map(::print);
