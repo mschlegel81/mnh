@@ -394,6 +394,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
   VAR iterator:P_expressionLiteral;
   begin
     result:=nil;
+    if not(tco_spawnWorker in context.threadOptions) or (context.callDepth>STACK_DEPTH_LIMIT-16) or not(isMemoryInComfortZone) then exit(filter_imp(params,tokenLocation,context,recycler));
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       case arg0^.literalType of
         lt_emptyList,

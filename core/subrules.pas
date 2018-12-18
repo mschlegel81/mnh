@@ -966,7 +966,10 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
     if replaces(parameters,location,toReduce,dummy,P_context(context)^,P_recycler(recycler)^)
     then begin
       result:=P_context(context)^.reduceToLiteral(toReduce,P_recycler(recycler)^);
-    end else result.literal:=nil;
+    end else begin
+      result.literal:=nil;
+      result.triggeredByReturn:=false;
+    end;
   end;
 
 FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST parameters:P_listLiteral):P_literal;

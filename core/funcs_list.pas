@@ -2,6 +2,7 @@ UNIT funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
+     mySys,
      mnh_constants, basicTypes,
      mnh_messages,
      out_adapters,
@@ -497,7 +498,7 @@ FUNCTION pMap_imp intFuncSignature;
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16)
+      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
       then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler,arg0)
       else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler);
       disposeLiteral(iterator);
