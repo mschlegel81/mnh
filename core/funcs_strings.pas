@@ -286,18 +286,23 @@ FUNCTION escape_imp    intFuncSignature; {$define CALL_MACRO:=escape}   {$define
 {$undef STRINGLITERAL_ROUTINE}
 
 FUNCTION escapePascal_imp intFuncSignature;
+  VAR dummy:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(escapeString(str0^.value,es_strictPascalStyle))
+    then result:=newStringLiteral(escapeString(str0^.value,es_mnhPascalStyle,dummy))
     else result:=genericVectorization('escapePascal',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION escapeJava_imp intFuncSignature;
+  VAR nonescapableFound:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(escapeString(str0^.value,es_javaStyle))
+    then begin
+      result:=newStringLiteral(escapeString(str0^.value,es_javaStyle,nonescapableFound));
+      if nonescapableFound then context.raiseError('escapeJava cannot be applied to this string because it contains characters that cannot be represented.',tokenLocation);
+    end
     else result:=genericVectorization('escapeJava',params,tokenLocation,context,recycler);
   end;
 
