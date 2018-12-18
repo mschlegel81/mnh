@@ -366,10 +366,8 @@ FUNCTION subSets_impl intFuncSignature;
         i:longint;
     begin
       if length(mightContain)>0 then begin
-        setLength(newMight,length(mightContain)-1);
-        for i:=0 to length(newMight)-1 do newMight[i]:=mightContain[i+1];
-        setLength(newMust,length(mustContain));
-        for i:=0 to length(newMust)-1 do newMust[i]:=mustContain[i];
+        setLength(newMight,length(mightContain)-1); for i:=0 to length(newMight)-1 do newMight[i]:=mightContain[i+1];
+        setLength(newMust ,length(mustContain )  ); for i:=0 to length(newMust )-1 do newMust [i]:=mustContain[i];
         recurseBuildSets(newMust,newMight);
         for i:=1 to mightContain[0].multiplicity do begin
           setLength(newMust,length(newMust)+1);
@@ -432,6 +430,7 @@ FUNCTION subSets_impl intFuncSignature;
       if params^.size=2 then acceptOnlySetsOfSize:=int1^.intValue;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         setLength(mustContain,0);
+        initialize(mightContain);
         if arg0^.literalType in C_listTypes
         then buildFreqMap(list0)
         else buildFreqMap(set0);

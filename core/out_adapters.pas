@@ -105,6 +105,7 @@ TYPE
     private
       messagesCs:TRTLCriticalSection;
       flags:T_stateFlags;
+      errorCount:longint;
       userDefinedExitCode:longint;
       CONSTRUCTOR create(); //private, because it is abstract
     public
@@ -452,6 +453,13 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
   begin
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+    if message^.messageClass in [mc_error,mc_fatal] then begin
+      inc(errorCount);
+      if errorCount>20 then begin
+        leaveCriticalSection(messagesCs);
+        exit;
+      end;
+    end;
     for a in adapters do if a.adapter^.append(message) then appended:=true;
     if appended then include(collected,message^.messageType);
     {$ifdef fullVersion}
@@ -462,17 +470,17 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
   end;
 
 PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
-  VAR appended:boolean=false;
+  {$ifdef fullVersion} VAR appended:boolean=false; {$endif}
   begin
     enterCriticalSection(messagesCs);
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     if message^.messageType in heldTypes then begin
       collector.append(message);
-      appended:=true;
+      {$ifdef fullVersion} appended:=true; {$endif}
       if disposeAfterPosting then disposeMessage(message);
     end else if parentMessages<>nil then begin
       parentMessages^.postCustomMessage(message,disposeAfterPosting);
-      appended:=true;
+      {$ifdef fullVersion} appended:=true; {$endif}
     end;
     {$ifdef fullVersion}
     if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
@@ -617,6 +625,7 @@ CONSTRUCTOR T_messages.create();
     flags:=[];
     userDefinedExitCode:=0;
     preferredEchoLineLength:=0;
+    errorCount:=0;
   end;
 
 DESTRUCTOR T_messages.destroy;
@@ -642,6 +651,7 @@ PROCEDURE T_messages.clearFlags;
   begin
     enterCriticalSection(messagesCs);
     flags:=[];
+    errorCount:=0;
     leaveCriticalSection(messagesCs);
   end;
 

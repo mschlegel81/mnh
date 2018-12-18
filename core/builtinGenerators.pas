@@ -678,9 +678,10 @@ CONSTRUCTOR T_stringIterator.create(CONST loc:T_tokenLocation; CONST chars:T_cha
 
 FUNCTION T_stringIterator.toString(CONST lengthLimit:longint=maxLongint):string;
   VAR i:longint;
+      nonescapableFound:boolean;
   begin
-    result:='stringIterator(['+escapeString(charSet[0],es_pickShortest);
-    for i:=1 to length(charSet)-1 do result+=','+escapeString(charSet[i],es_pickShortest);
+    result:='stringIterator(['+escapeString(charSet[0],es_pickShortest,nonescapableFound);
+    for i:=1 to length(charSet)-1 do result+=','+escapeString(charSet[i],es_pickShortest,nonescapableFound);
     result+='],'+intToStr(minL)+','+intToStr(maxL)+')';
   end;
 

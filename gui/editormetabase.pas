@@ -648,7 +648,7 @@ PROCEDURE T_basicEditorMeta.escapeSelection(CONST unescape:boolean);
       oldBegin,oldEnd,oldCaret:TPoint;
       oldMode:TSynSelectionMode;
       unescapedLength:longint=0;
-
+      nonescapableFound:boolean;
   begin
     if editor.readonly then exit;
     oldBegin:=editor.BlockBegin;
@@ -666,7 +666,7 @@ PROCEDURE T_basicEditorMeta.escapeSelection(CONST unescape:boolean);
       newTxt:='';
       for s in split(oldTxt,lineBreaks,false) do begin
         if not(first) then newTxt:=newTxt+'&'+C_lineBreakChar;
-        q:=escapeString(s,es_pickShortest);
+        q:=escapeString(s,es_pickShortest,nonescapableFound);
         newTxt+=q;
         lengthDelta:=length(q)-length(s);
         first:=false;
