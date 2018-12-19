@@ -634,7 +634,7 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
-  VAR nextToPrepare:longint;
+  {$ifndef unix}VAR nextToPrepare:longint;{$endif}
   begin
     enterCriticalSection(seriesCs);
     if length(frame)=0 then begin
