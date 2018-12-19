@@ -32,21 +32,21 @@ circleAnimation(generator:Iteratable)->begin
     row==[] ? plot() : plot(row,'0.5 black l');
     addPlot(previous,previous*0,'red . 0.5');
     addAnimationFrame;
+    display;
     last:=next;
   end);
-  postDisplay;
 end;
 
-USE customFormUtil,'C:\dev\mnh5\demos\oeis\oeis_server.mnh';
+USE customFormUtil,'oeis\oeis_server.mnh';
 
-@SuppressUnusedWarning
-initHook:=begin
-  isIpcServerRunning(oeis_server.ipcId) OR $1=='stopServer'
+queryServer(...)->begin
+  isIpcServerRunning(oeis_server.ipcId)
   ? void
   : begin
       executor.execAsync([inspect['uses'].each(i,i[0].matches('(?i)oeis_server') ? i[1] : void,head)]);
-      sleep(1);
+      while(!isIpcServerRunning(oeis_server.ipcId),sleep(0.1));
     end;
+  sendIpcRequest(oeis_server.ipcId,...);
 end;
 
 formatList(S:IntList)->begin
@@ -69,7 +69,7 @@ main->begin
   local update:={begin
     id:=retrievedId:=$retrieved['ID'];
     name:=retrievedName:=$retrieved['Name'];
-    sequence:=$retrieved['Sequence'] orElse [];
+    sequence:=$retrieved['Sequence'];
     info:=$retrieved['Info']&' series of '&sequence.size&' elements';
     sequenceAsString:=sequence.formatList;
     genClass:=($retrieved['genClass'] orElse ['',''])[0];
@@ -79,10 +79,10 @@ main->begin
   showDialog('OEIS viewer',
     [newEdit.withCaption('ID')
             .bind(::id)
-            .withAction({sendIpcRequest(oeis_server.ipcId,['id',id]).head.update}),
+            .withAction({queryServer('id',id).head.update}),
     newEdit.withCaption('Name')
            .bind(::name)
-           .withAction({sendIpcRequest(oeis_server.ipcId,['name',name]).head.update}),
+           .withAction({queryServer('name',name).head.update}),
     newOutputEditor('txt')
            .withCaption({sequenceAsString}),
     newEdit.withCaption('Query more')
