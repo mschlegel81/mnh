@@ -1460,22 +1460,27 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString; CONST forCo
       result:='is'+result;
     end;
 
-  PROCEDURE wput(CONST s:ansistring); inline;
+  PROCEDURE wput(CONST s:ansistring; CONST packageOrNil:P_objectWithPath); inline;
     begin
       userDefinedRules.put(s);
-      if forCompletion and (pos(ID_QUALIFY_CHARACTER,s)<=0) then userDefinedRules.put(ID_QUALIFY_CHARACTER+s);
+      if forCompletion and (pos(ID_QUALIFY_CHARACTER,s)<=0) then begin
+        userDefinedRules.put(ID_QUALIFY_CHARACTER+s);
+        if packageOrNil<>nil then userDefinedRules.put(packageOrNil^.getId+ID_QUALIFY_CHARACTER+s);
+      end;
     end;
 
   VAR rule:P_rule;
+      use :P_package;
   begin
     for rule in packageRules.valueSet do begin
-      wput(rule^.getId);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId));
+      wput(rule^.getId,nil);
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId),nil);
     end;
     for rule in importedRules.valueSet do  begin
-      wput(rule^.getId);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId));
+      wput(rule^.getId,rule^.getLocation.package);
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId),rule^.getLocation.package);
     end;
+    if not(forCompletion) then for use in secondaryPackages do userDefinedRules.put(use^.getId);
   end;
 
 PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages);
