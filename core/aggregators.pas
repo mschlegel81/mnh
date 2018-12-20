@@ -91,13 +91,18 @@ TYPE
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
-  T_expressionAggregator=object(T_aggregator)
+  T_binaryExpressionAggregator=object(T_aggregator)
     private
       aggregator:P_expressionLiteral;
     public
       CONSTRUCTOR create(CONST ex:P_expressionLiteral);
       DESTRUCTOR destroy; virtual;
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
+  end;
+
+  T_unaryExpressionAggregator=object(T_binaryExpressionAggregator)
+    CONSTRUCTOR create(CONST ex:P_expressionLiteral);
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
   T_trailingAggregator=object(T_aggregator)
@@ -121,7 +126,8 @@ TYPE
   P_andAggregator         =^T_andAggregator;
   P_orAggregator          =^T_orAggregator;
   P_opAggregator          =^T_opAggregator;
-  P_expressionAggregator  =^T_expressionAggregator;
+  P_binaryExpressionAggregator=^T_binaryExpressionAggregator;
+  P_unaryExpressionAggregator =^T_unaryExpressionAggregator;
   P_trailingAggregator    =^T_trailingAggregator;
   P_setAggregator         =^T_setAggregator;
 
@@ -132,7 +138,7 @@ FUNCTION newMaxAggregator                   :P_maxAggregator;
 FUNCTION newHeadAggregator                  :P_headAggregator;
 FUNCTION newTrailingAggregator              :P_trailingAggregator;
 FUNCTION newSetAggregator                   :P_setAggregator;
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
   begin
@@ -154,9 +160,17 @@ FUNCTION newHeadAggregator    :P_headAggregator;     begin new(result,create); e
 FUNCTION newTrailingAggregator:P_trailingAggregator; begin new(result,create); end;
 FUNCTION newSetAggregator     :P_setAggregator;      begin new(result,create); end;
 
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
+  VAR res1:P_unaryExpressionAggregator;
+      res2:P_binaryExpressionAggregator;
   begin
-    new(result,create(ex));
+    if (ex^.canApplyToNumberOfParameters(2)) then begin
+      new(res2,create(ex));
+      result:=res2;
+    end else begin
+      new(res1,create(ex));
+      result:=res1;
+    end;
   end;
 
 CONSTRUCTOR T_aggregator.create(CONST initialValue:P_literal); begin hasReturnLiteral:=false; resultLiteral:=initialValue; end;
@@ -178,14 +192,20 @@ CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
     opPointer:=intFuncForOperator[op];
   end;
 
-CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral);
+CONSTRUCTOR T_binaryExpressionAggregator.create(CONST ex: P_expressionLiteral);
   begin
     inherited create(nil);
     aggregator:=ex; aggregator^.rereference;
   end;
 
+CONSTRUCTOR T_unaryExpressionAggregator.create(CONST ex: P_expressionLiteral);
+  begin
+    inherited create(ex);
+    resultLiteral:=newVoidLiteral;
+  end;
+
 DESTRUCTOR T_aggregator          .destroy; begin if resultLiteral<>nil then disposeLiteral(resultLiteral); end;
-DESTRUCTOR T_expressionAggregator.destroy; begin disposeLiteral(aggregator); inherited destroy; end;
+DESTRUCTOR T_binaryExpressionAggregator.destroy; begin disposeLiteral(aggregator); inherited destroy; end;
 
 {$MACRO ON}
 {$define aggregationDefaultHandling:=
@@ -328,7 +348,7 @@ PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
     if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
+PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
   VAR newValue:P_literal;
   begin
     aggregationDefaultHandling;
@@ -342,6 +362,18 @@ PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST d
         context^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location);
         resultLiteral:=newVoidLiteral;
       end;
+    end;
+    if doDispose then disposeLiteral(er.literal);
+  end;
+
+PROCEDURE T_unaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
+  VAR newValue:P_literal;
+  begin
+    aggregationDefaultHandling;
+    if er.literal^.literalType<>lt_void then begin
+      newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,er.literal,nil).literal;
+      if newValue=nil then context^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location)
+                      else disposeLiteral(newValue);
     end;
     if doDispose then disposeLiteral(er.literal);
   end;

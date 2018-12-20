@@ -371,7 +371,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
-           (parameterListLiteral^.value[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(2))
+           (parameterListLiteral^.value[0]^.literalType=lt_expression) and
+           (P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(2) or
+            P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(1))
         then begin
           newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
           firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
