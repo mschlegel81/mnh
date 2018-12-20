@@ -70,7 +70,14 @@ end;
 
 PROCEDURE T_recycler.cleanup;
   begin
-    with tokens do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
+    with tokens do while fill>0 do begin
+      dec(fill);
+      try
+        dispose(dat[fill],destroy);
+      except
+        dat[fill]:=nil;
+      end;
+    end;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;

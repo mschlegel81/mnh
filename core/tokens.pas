@@ -29,8 +29,8 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
-    PROCEDURE define(CONST original:T_token); {$ifndef profilingFlavour}inline;{$endif}
-    PROCEDURE undefine; {$ifndef profilingFlavour}inline;{$endif}
+    PROCEDURE define(CONST original:T_token); {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
+    PROCEDURE undefine; {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
     FUNCTION last:P_token;
     FUNCTION getCount:longint;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
