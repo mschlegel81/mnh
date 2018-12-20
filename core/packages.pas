@@ -283,17 +283,21 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       if packageOrNil<>nil then begin;
         if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
           packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-        P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-        enterCriticalSection(packageOrNil^.packageCS);
-        lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-        while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
-          packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
+        if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution])
+          then P_postEvaluationData(p)^.messages^.raiseSimpleError('Error while loading',packageTokenLocation(packageOrNil))
+        else begin
+          P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+          enterCriticalSection(packageOrNil^.packageCS);
+          lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
           stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+          while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
+            packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
+            stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+          end;
+          if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
+          leaveCriticalSection(packageOrNil^.packageCS);
+          lexer.destroy;
         end;
-        if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
-        leaveCriticalSection(packageOrNil^.packageCS);
-        lexer.destroy;
       end else begin
         tempPackage:=packageFromCode(input,'<quick>');
         tempPackage^.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
@@ -315,7 +319,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
                 se_detaching,
                 se_readPackageState,
                 se_readFile]);
-      while (sleepCount<100) and evaluationContext.primaryContext.messages^.continueEvaluation do begin
+      while (sleepCount<1000) and evaluationContext.primaryContext.messages^.continueEvaluation do begin
         while inputChanged do begin
           sleepCount:=0;
           leaveCriticalSection(cs);
