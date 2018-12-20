@@ -376,7 +376,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
           firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
-        end else context.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+        end else begin
+          context.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+          exit;
+        end;
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifdef useTryCatchBlocks}
         try
