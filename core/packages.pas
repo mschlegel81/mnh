@@ -1263,6 +1263,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     {$ifdef fullVersion}
     anyCalled:=false;
     suppressAllUnusedWarnings:=false;
+    enterCriticalSection(packageCS);
     {$endif}
     for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
     setLength(runAfter,0);
@@ -1277,6 +1278,9 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
+    {$ifdef fullVersion}
+    leaveCriticalSection(packageCS);
+    {$endif}
   end;
 
 PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
