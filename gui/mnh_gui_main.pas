@@ -470,6 +470,7 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
         if edit<>nil then edit^.setWorkingDir;
         quick.evaluationDeferred:=false;
         quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit,runnerModel.firstCallAfterActivation));
+        runnerModel.firstCallAfterActivation:=false;
       end else quick.evaluationDeferred:=true;
     end else begin
       quick.completion.assignEditor(quick.meta.editor,nil,true);
