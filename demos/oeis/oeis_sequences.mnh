@@ -40,303 +40,205 @@ private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).a
 //for A003459:-------------------------------------------------
 private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
 //-------------------------------------------------------------
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 A000002->listIterator(Kolakoski_1_2(10000));
-@SuppressUnusedWarning
 A000005->rangeGenerator(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
-@SuppressUnusedWarning
 A000006->primeGenerator.sqrt.floor;
-@SuppressUnusedWarning
 A000007->ord(rangeGenerator(0)=0);
-@SuppressUnusedWarning
 A000010->rangeGenerator(1).lazyMap(::EulerPhi);
-@SuppressUnusedWarning
 A000027->rangeGenerator(1);
 USE '..\sequenceOfNonSquares.mnh';
-@SuppressUnusedWarning
 A000037->rangeGenerator(1).lazyMap(::nonSquares);
-@SuppressUnusedWarning
 A000040->primeGenerator;
-@SuppressUnusedWarning
 A000108->rangeGenerator(0,13).lazyMap(::Catalan);
-@SuppressUnusedWarning
 A000124->rangeGenerator(0).lazyMap(::LazyCaterer);
-@SuppressUnusedWarning
 A000203->rangeGenerator(1).lazyMap(::DivisorFunction);
 USE '..\semiprime.mnh';
-@SuppressUnusedWarning
 A001358->rangeGenerator(1).filter(::isSemiprime);
-@SuppressUnusedWarning
 A003459->listIterator(primes(991)).filter(::isPermutablePrime);
-@SuppressUnusedWarning
 A025426->rangeGenerator(0).lazyMap({size(by2Squares($i))});
-@SuppressUnusedWarning
 A061358->rangeGenerator(0).lazyMap({size(by2Primes($i))});
 USE generators,'..\ludic.mnh';
-@SuppressUnusedWarning
 A003309->listIterator(LudicSieve);
 USE '..\pernicousNumbers.mnh';
-@SuppressUnusedWarning
 A052294->rangeGenerator(1).filter(::isPernicious);
 USE '..\smithNumbers.mnh';
-@SuppressUnusedWarning
 A006753->rangeGenerator(1).filter(::isSmithNumber);
 USE '..\thueMorseSequence.mnh';
-@SuppressUnusedWarning
 A010060->listIterator(thueMorseSequence(10000).ord);
 USE '..\truncatablePrimes.mnh';
-@SuppressUnusedWarning
 A024785->listIterator(leftTruncatablePrimes (1000000));
-@SuppressUnusedWarning
 A024770->listIterator(rightTruncatablePrimes(1000000));
-@SuppressUnusedWarning
 A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatablePrimes(1000000)).sort);
 USE '..\hofstadter_sequences.mnh';
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005228->rangeGenerator(1).lazyMap(::hofstadter_sequences.R);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A030124->rangeGenerator(1).lazyMap(::hofstadter_sequences.S);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005206->rangeGenerator(0).lazyMap(::hofstadter_sequences.G);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005374->rangeGenerator(0).lazyMap(::hofstadter_sequences.H);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005378->rangeGenerator(0).lazyMap(::hofstadter_sequences.F);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005379->rangeGenerator(0).lazyMap(::hofstadter_sequences.M);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A005185->rangeGenerator(1).lazyMap(::hofstadter_sequences.Q);
-@SuppressUnusedWarning
 @class=Hofstaedter
 A007947->rangeGenerator(1).lazyMap({$n.factorize.unique.agg(*)});
 
 USE '..\countTheCoins.mnh';
-@SuppressUnusedWarning
 @class=Partition number
 A000041->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i])});
-@SuppressUnusedWarning
 @class=Partition number
 A001156->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
-@SuppressUnusedWarning
 @class=Partition number
 A003108->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
-@SuppressUnusedWarning
 @class=Partition number
 A018819->rangeGenerator(0).lazyMap({countPartitions($i,2^[0..20])});
-@SuppressUnusedWarning
 @class=Partition number
 A062051->rangeGenerator(0).lazyMap({countPartitions($i,3^[0..20])});
-@SuppressUnusedWarning
 @class=Partition number
 A001996->rangeGenerator(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
-@SuppressUnusedWarning
 @class=Partition number
 A000607->rangeGenerator(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
-@SuppressUnusedWarning
 @class=Partition number
 A002095->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
-@SuppressUnusedWarning
 @class=Partition number
 A000008->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
-@SuppressUnusedWarning
 @class=Partition number
 A001299->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
-@SuppressUnusedWarning
 @class=Partition number
 A001300->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
-@SuppressUnusedWarning
 @class=Partition number
 A001301->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
-@SuppressUnusedWarning
 @class=Partition number
 A001302->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
-@SuppressUnusedWarning
 @class=Partition number
 A001306->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
-@SuppressUnusedWarning
 @class=Partition number
 A001310->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
-@SuppressUnusedWarning
 @class=Partition number
 A001312->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
-@SuppressUnusedWarning
 @class=Partition number
 A001313->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
-@SuppressUnusedWarning
 @class=Partition number
 A001362->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
-@SuppressUnusedWarning
 @class=Partition number
 A001364->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
-@SuppressUnusedWarning
 @class=Partition number
 A067996->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
-@SuppressUnusedWarning
 @class=Partition number
 A169718->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
-@SuppressUnusedWarning
 @class=Partition number
 A187243->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10])});
 
 USE '..\vampire.mnh';
-@SuppressUnusedWarning
 A014575->rangeGenerator(1260).filter(::isVampire);
 
-@SuppressUnusedWarning
 @class=by Hamming weight
 A018900->rangeGenerator(0).filter({$x.hammingWeight=2});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A014311->rangeGenerator(0).filter({$x.hammingWeight=3});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A014312->rangeGenerator(0).filter({$x.hammingWeight=4});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A014313->rangeGenerator(0).filter({$x.hammingWeight=5});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A023688->rangeGenerator(0).filter({$x.hammingWeight=6});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A023689->rangeGenerator(0).filter({$x.hammingWeight=7});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A023690->rangeGenerator(0).filter({$x.hammingWeight=8});
-@SuppressUnusedWarning
 @class=by Hamming weight
 A023691->rangeGenerator(0).filter({$x.hammingWeight=9});
 
 USE '..\multifactorial.mnh';
-@SuppressUnusedWarning
 @class=Multifactorial
 A000142->multifactorialGenerator(1);
-@SuppressUnusedWarning
 @class=Multifactorial
 A006882->multifactorialGenerator(2);
-@SuppressUnusedWarning
 @class=Multifactorial
 A007661->multifactorialGenerator(3);
-@SuppressUnusedWarning
 @class=Multifactorial
 A007662->multifactorialGenerator(4);
-@SuppressUnusedWarning
 @class=Multifactorial
 A085157->multifactorialGenerator(5);
-@SuppressUnusedWarning
 @class=Multifactorial
 A085158->multifactorialGenerator(6);
-@SuppressUnusedWarning
 @class=Multifactorial
 A114799->multifactorialGenerator(7);
-@SuppressUnusedWarning
 @class=Multifactorial
 A114800->multifactorialGenerator(8);
-@SuppressUnusedWarning
 @class=Multifactorial
 A114806->multifactorialGenerator(9);
-@SuppressUnusedWarning
 @class=Multifactorial
 A288327->multifactorialGenerator(10);
 
 USE '..\pascal.mnh';
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010926->pascalTriangleRow(10).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010927->pascalTriangleRow(11).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010928->pascalTriangleRow(12).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010929->pascalTriangleRow(13).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010930->pascalTriangleRow(14).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010931->pascalTriangleRow(15).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010932->pascalTriangleRow(16).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010933->pascalTriangleRow(17).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010934->pascalTriangleRow(18).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010935->pascalTriangleRow(19).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010936->pascalTriangleRow(20).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010937->pascalTriangleRow(21).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010938->pascalTriangleRow(22).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010939->pascalTriangleRow(23).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010940->pascalTriangleRow(24).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010941->pascalTriangleRow(25).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010942->pascalTriangleRow(26).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010943->pascalTriangleRow(27).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010944->pascalTriangleRow(28).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010945->pascalTriangleRow(29).listIterator;
-@SuppressUnusedWarning
 @class=Pascal triangle row
 A010946->pascalTriangleRow(30).listIterator;
 
 USE '..\perfectPowers.mnh';
-@SuppressUnusedWarning
 A001597->perfectPowers(10^6).listIterator;
 
 USE '..\sternBrocot.mnh';
-@SuppressUnusedWarning
 A002487->sternBrocotGenerator;
 
 USE '..\hofstadterConway.mnh';
-@SuppressUnusedWarning
 A004001->hofstaderConwayGen;
 
 USE '..\hamming.mnh';
-@SuppressUnusedWarning
 A051037->hammingGenerator;
 
 USE '..\harshad.mnh';
-@SuppressUnusedWarning
 A005349->rangeGenerator(1).filter(::isHarshadNumber);
 
 USE '..\kaprekar.mnh';
-@SuppressUnusedWarning
 A006886->rangeGenerator(1).filter(::isKaprekar);
 
 USE '../recaman.mnh';
-@SuppressUnusedWarning
 A005132->recamanGenerator;
 
 scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
@@ -354,16 +256,12 @@ scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
   groupCount;
 end;
 
-@SuppressUnusedWarning
 @class=Fibonacci sequence modulo
 A015134->rangeGenerator(1).lazyMap({scanFiboMod(2,$n)});
-@SuppressUnusedWarning
 @class=Fibonacci sequence modulo
 A106285->rangeGenerator(1).lazyMap({scanFiboMod(3,$n)});
-@SuppressUnusedWarning
 @class=Fibonacci sequence modulo
 A106286->rangeGenerator(1).lazyMap({scanFiboMod(4,$n)});
-@SuppressUnusedWarning
 @class=Fibonacci sequence modulo
 A106287->rangeGenerator(1).lazyMap({scanFiboMod(5,$n)});
 
@@ -376,348 +274,234 @@ end;
 
 private curry isKnoedel(n,m)->!isPrime(m) AND coprimesLesser(m).pEach(i,powMod(i,m-n,m)=1,AND);
 
-@SuppressUnusedWarning
 @class=Knödel
 A002997->rangeGenerator( 2,2^60).filter(isKnoedel(1));
-@SuppressUnusedWarning
 @class=Knödel
 A050990->rangeGenerator( 3,2^60).filter(isKnoedel(2));
-@SuppressUnusedWarning
 @class=Knödel
 A033553->rangeGenerator( 4,2^60).filter(isKnoedel(3));
-@SuppressUnusedWarning
 @class=Knödel
 A050992->rangeGenerator( 5,2^60).filter(isKnoedel(4));
-@SuppressUnusedWarning
 @class=Knödel
 A050993->rangeGenerator( 6,2^60).filter(isKnoedel(5));
-@SuppressUnusedWarning
 @class=Knödel
 A208154->rangeGenerator( 7,2^60).filter(isKnoedel(6));
-@SuppressUnusedWarning
 @class=Knödel
 A208155->rangeGenerator( 8,2^60).filter(isKnoedel(7));
-@SuppressUnusedWarning
 @class=Knödel
 A208156->rangeGenerator( 9,2^60).filter(isKnoedel(8));
-@SuppressUnusedWarning
 @class=Knödel
 A208157->rangeGenerator(10,2^60).filter(isKnoedel(9));
-@SuppressUnusedWarning
 @class=Knödel
 A208158->rangeGenerator(11,2^60).filter(isKnoedel(10));
-@SuppressUnusedWarning
 @class=Knödel
 A225506->rangeGenerator(2,2^60).filter(isKnoedel(-2));
-@SuppressUnusedWarning
 @class=Knödel
 A225507->rangeGenerator(2,2^60).filter(isKnoedel(-3));
-@SuppressUnusedWarning
 @class=Knödel
 A225508->rangeGenerator(2,2^60).filter(isKnoedel(-4));
-@SuppressUnusedWarning
 @class=Knödel
 A225509->rangeGenerator(2,2^60).filter(isKnoedel(-5));
-@SuppressUnusedWarning
 @class=Knödel
 A225514->rangeGenerator(2,2^60).filter(isKnoedel(-10));
 
 USE strongPseudoprimes;
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A001262->strongPseudoprimeGenerator(2);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020229->strongPseudoprimeGenerator(3);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020230->strongPseudoprimeGenerator(4);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020231->strongPseudoprimeGenerator(5);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020232->strongPseudoprimeGenerator(6);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020233->strongPseudoprimeGenerator(7);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020234->strongPseudoprimeGenerator(8);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020235->strongPseudoprimeGenerator(9);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020236->strongPseudoprimeGenerator(10);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020237->strongPseudoprimeGenerator(11);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020238->strongPseudoprimeGenerator(12);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020239->strongPseudoprimeGenerator(13);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020240->strongPseudoprimeGenerator(14);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020241->strongPseudoprimeGenerator(15);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020242->strongPseudoprimeGenerator(16);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020243->strongPseudoprimeGenerator(17);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020244->strongPseudoprimeGenerator(18);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020245->strongPseudoprimeGenerator(19);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020246->strongPseudoprimeGenerator(20);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020247->strongPseudoprimeGenerator(21);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020248->strongPseudoprimeGenerator(22);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020249->strongPseudoprimeGenerator(23);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020250->strongPseudoprimeGenerator(24);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020251->strongPseudoprimeGenerator(25);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020252->strongPseudoprimeGenerator(26);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020253->strongPseudoprimeGenerator(27);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020254->strongPseudoprimeGenerator(28);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020255->strongPseudoprimeGenerator(29);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020256->strongPseudoprimeGenerator(30);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020257->strongPseudoprimeGenerator(31);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020258->strongPseudoprimeGenerator(32);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020259->strongPseudoprimeGenerator(33);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020260->strongPseudoprimeGenerator(34);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020261->strongPseudoprimeGenerator(35);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020262->strongPseudoprimeGenerator(36);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020263->strongPseudoprimeGenerator(37);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020264->strongPseudoprimeGenerator(38);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020265->strongPseudoprimeGenerator(39);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020266->strongPseudoprimeGenerator(40);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020267->strongPseudoprimeGenerator(41);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020268->strongPseudoprimeGenerator(42);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020269->strongPseudoprimeGenerator(43);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020270->strongPseudoprimeGenerator(44);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020271->strongPseudoprimeGenerator(45);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020272->strongPseudoprimeGenerator(46);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020273->strongPseudoprimeGenerator(47);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020274->strongPseudoprimeGenerator(48);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020275->strongPseudoprimeGenerator(49);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020276->strongPseudoprimeGenerator(50);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020277->strongPseudoprimeGenerator(51);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020278->strongPseudoprimeGenerator(52);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020279->strongPseudoprimeGenerator(53);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020280->strongPseudoprimeGenerator(54);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020281->strongPseudoprimeGenerator(55);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020282->strongPseudoprimeGenerator(56);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020283->strongPseudoprimeGenerator(57);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020284->strongPseudoprimeGenerator(58);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020285->strongPseudoprimeGenerator(59);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020286->strongPseudoprimeGenerator(60);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020287->strongPseudoprimeGenerator(61);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020288->strongPseudoprimeGenerator(62);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020289->strongPseudoprimeGenerator(63);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020290->strongPseudoprimeGenerator(64);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020291->strongPseudoprimeGenerator(65);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020292->strongPseudoprimeGenerator(66);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020293->strongPseudoprimeGenerator(67);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020294->strongPseudoprimeGenerator(68);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020295->strongPseudoprimeGenerator(69);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020296->strongPseudoprimeGenerator(70);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020297->strongPseudoprimeGenerator(71);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020298->strongPseudoprimeGenerator(72);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020299->strongPseudoprimeGenerator(73);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020300->strongPseudoprimeGenerator(74);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020301->strongPseudoprimeGenerator(75);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020302->strongPseudoprimeGenerator(76);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020303->strongPseudoprimeGenerator(77);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020304->strongPseudoprimeGenerator(78);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020305->strongPseudoprimeGenerator(79);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020306->strongPseudoprimeGenerator(80);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020307->strongPseudoprimeGenerator(81);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020308->strongPseudoprimeGenerator(82);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020309->strongPseudoprimeGenerator(83);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020310->strongPseudoprimeGenerator(84);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020311->strongPseudoprimeGenerator(85);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020312->strongPseudoprimeGenerator(86);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020313->strongPseudoprimeGenerator(87);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020314->strongPseudoprimeGenerator(88);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020315->strongPseudoprimeGenerator(89);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020316->strongPseudoprimeGenerator(90);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020317->strongPseudoprimeGenerator(91);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020318->strongPseudoprimeGenerator(92);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020319->strongPseudoprimeGenerator(93);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020320->strongPseudoprimeGenerator(94);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020321->strongPseudoprimeGenerator(95);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020322->strongPseudoprimeGenerator(96);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020323->strongPseudoprimeGenerator(97);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020324->strongPseudoprimeGenerator(98);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020325->strongPseudoprimeGenerator(99);
-@SuppressUnusedWarning
 @class=strongPseudoprime
 A020326->strongPseudoprimeGenerator(100);
 
@@ -731,121 +515,82 @@ save;
   r;
 end}.toGenerator;
 
-@SuppressUnusedWarning
 @class=Aliquot
 A008885->aliquotSequenceGenerator(30);
-@SuppressUnusedWarning
 @class=Aliquot
 A008886->aliquotSequenceGenerator(42);
-@SuppressUnusedWarning
 @class=Aliquot
 A008887->aliquotSequenceGenerator(60);
-@SuppressUnusedWarning
 @class=Aliquot
 A008888->aliquotSequenceGenerator(138);
-@SuppressUnusedWarning
 @class=Aliquot
 A008889->aliquotSequenceGenerator(150);
-@SuppressUnusedWarning
 @class=Aliquot
 A008890->aliquotSequenceGenerator(168);
-@SuppressUnusedWarning
 @class=Aliquot
 A008891->aliquotSequenceGenerator(180);
-@SuppressUnusedWarning
 @class=Aliquot
 A008892->aliquotSequenceGenerator(276);
-@SuppressUnusedWarning
 @class=Aliquot
 A014360->aliquotSequenceGenerator(552);
-@SuppressUnusedWarning
 @class=Aliquot
 A014361->aliquotSequenceGenerator(564);
-@SuppressUnusedWarning
 @class=Aliquot
 A014362->aliquotSequenceGenerator(660);
-@SuppressUnusedWarning
 @class=Aliquot
 A014363->aliquotSequenceGenerator(966);
-@SuppressUnusedWarning
 @class=Aliquot
 A014364->aliquotSequenceGenerator(1074);
-@SuppressUnusedWarning
 @class=Aliquot
 A014365->aliquotSequenceGenerator(1134);
-@SuppressUnusedWarning
 @class=Aliquot
 A045477->aliquotSequenceGenerator(840);
-@SuppressUnusedWarning
 @class=Aliquot
 A074906->aliquotSequenceGenerator(1521);
-@SuppressUnusedWarning
 @class=Aliquot
 A074907->aliquotSequenceGenerator(570);
-@SuppressUnusedWarning
 @class=Aliquot
 A143090->aliquotSequenceGenerator(12);
-@SuppressUnusedWarning
 @class=Aliquot
 A143645->aliquotSequenceGenerator(24);
-@SuppressUnusedWarning
 @class=Aliquot
 A143721->aliquotSequenceGenerator(38);
-@SuppressUnusedWarning
 @class=Aliquot
 A143722->aliquotSequenceGenerator(48);
-@SuppressUnusedWarning
 @class=Aliquot
 A143723->aliquotSequenceGenerator(52);
-@SuppressUnusedWarning
 @class=Aliquot
 A143733->aliquotSequenceGenerator(62);
-@SuppressUnusedWarning
 @class=Aliquot
 A143737->aliquotSequenceGenerator(68);
-@SuppressUnusedWarning
 @class=Aliquot
 A143741->aliquotSequenceGenerator(72);
-@SuppressUnusedWarning
 @class=Aliquot
 A143754->aliquotSequenceGenerator(75);
-@SuppressUnusedWarning
 @class=Aliquot
 A143755->aliquotSequenceGenerator(80);
-@SuppressUnusedWarning
 @class=Aliquot
 A143756->aliquotSequenceGenerator(81);
-@SuppressUnusedWarning
 @class=Aliquot
 A143757->aliquotSequenceGenerator(82);
-@SuppressUnusedWarning
 @class=Aliquot
 A143758->aliquotSequenceGenerator(84);
-@SuppressUnusedWarning
 @class=Aliquot
 A143759->aliquotSequenceGenerator(86);
-@SuppressUnusedWarning
 @class=Aliquot
 A143767->aliquotSequenceGenerator(87);
-@SuppressUnusedWarning
 @class=Aliquot
 A143846->aliquotSequenceGenerator(88);
-@SuppressUnusedWarning
 @class=Aliquot
 A143847->aliquotSequenceGenerator(96);
-@SuppressUnusedWarning
 @class=Aliquot
 A143919->aliquotSequenceGenerator(100);
-@SuppressUnusedWarning
 @class=Aliquot
 A143930->aliquotSequenceGenerator(3630);
-@SuppressUnusedWarning
 @class=Aliquot
 A171103->aliquotSequenceGenerator(46758);
-@SuppressUnusedWarning
 @class=Aliquot
 A203777->aliquotSequenceGenerator(220);
-@SuppressUnusedWarning
 @class=Aliquot
 A269542->aliquotSequenceGenerator(702);
 
@@ -860,54 +605,38 @@ save;
 end}.toIteratableExpression;
 
 
-@SuppressUnusedWarning
 @class=Collatz
 A008873->collatzGenerator(97);
-@SuppressUnusedWarning
 @class=Collatz
 A008874->collatzGenerator(63);
-@SuppressUnusedWarning
 @class=Collatz
 A008875->collatzGenerator(95);
-@SuppressUnusedWarning
 @class=Collatz
 A008876->collatzGenerator(81);
-@SuppressUnusedWarning
 @class=Collatz
 A008877->collatzGenerator(57);
-@SuppressUnusedWarning
 @class=Collatz
 A008878->collatzGenerator(39);
-@SuppressUnusedWarning
 @class=Collatz
 A008879->collatzGenerator(87);
-@SuppressUnusedWarning
 @class=Collatz
 A008880->collatzGenerator(33);
-@SuppressUnusedWarning
 @class=Collatz
 A008882->collatzGenerator(99);
-@SuppressUnusedWarning
 @class=Collatz
 A008883->collatzGenerator(51);
-@SuppressUnusedWarning
 @class=Collatz
 A008884->collatzGenerator(27);
-@SuppressUnusedWarning
 @class=Collatz
 A033478->collatzGenerator(3);
-@SuppressUnusedWarning
 @class=Collatz
 A033479->collatzGenerator(9);
-@SuppressUnusedWarning
 @class=Collatz
 A033481->collatzGenerator(21);
 
 USE '..\happyNumbers.mnh';
-@SuppressUnusedWarning
 A007770->happyNumberGenerator;
 
-@SuppressUnusedWarning
 memoized implemented->
   inspect['declares']
   .filter({$x[0].matches('^A\d{6}$')})
@@ -988,7 +717,6 @@ findPeriodicParam(L:IntList)->L.size<10 ? void :
     ? ["rangeGenerator(0).lazyMap({"&L.head(shift).toString&'[$i mod '&shift&']})','periodic series']
     : void,orElse);
 
-@SuppressUnusedWarning
 guessImplementation([])->void;
 guessImplementation(sequence:IntList)->
   findPolyParam(sequence) orElse
