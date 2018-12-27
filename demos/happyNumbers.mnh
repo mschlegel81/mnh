@@ -3,6 +3,7 @@ isHappy(4)->false;
 isHappy(1)->true;
 isHappy(n)->n.digits.sqr.agg(+).isHappy;
 
+@OEIS=A007770
 happyNumberGenerator->rangeGenerator(1).filter(::isHappy);
 
 //*Generate the first n happy numbers

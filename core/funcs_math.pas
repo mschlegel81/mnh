@@ -497,7 +497,14 @@ FUNCTION factorize_impl intFuncSignature;
       then begin
         factors.smallFactors:=factorizeSmall(P_smallIntLiteral(arg0)^.value);
         setLength(factors.bigFactors,0);
-      end else factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value);
+      end else begin
+        if P_bigIntLiteral(arg0)^.value.canBeRepresentedAsInt1024
+        then factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value)
+        else begin
+          context.raiseError('Cannot factorize numbers larger than 2^1024',tokenLocation);
+          exit(nil);
+        end;
+      end;
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);

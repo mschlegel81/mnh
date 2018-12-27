@@ -1,0 +1,36 @@
+//*Returns all packages used
+//*Works only if inspectionUtil is included, not used
+memoized transitiveUses->begin
+  local used:=inspect['uses'].getInner(0);
+  local oldUsed:=[];
+  while(!(oldUsed==used),begin
+    oldUsed:=used;
+    used:=used.union@(used.map({$P.inspect['uses'].getInner(0)}));
+  end);
+  used;
+end;
+
+//*Returns all rules declared locally and in all imported packaged
+//*Works only if inspectionUtil is included, not used
+@SuppressUnusedWarning
+memoized allRules->begin
+  local M:=inspect['declares'];
+  transitiveUses.each(import,import.inspect['declares'].each(R,
+    M[import+'.'+R[0]]:=R[1]));
+  M;
+end;
+
+ducktype RuleInfoMap(M:Map)->
+  M.isMap AND
+  M['subrules'].isList AND
+  M['location'].isString;
+
+ducktype RuleInfo(L:List(2))->
+  L[0].isString AND
+  L[1].isRuleInfoMap;
+
+ruleAttributes(info:RuleInfo)->info[1].ruleAttributes;
+ruleAttributes(info:RuleInfoMap)->info['subrules'].each(sub,sub['attributes'],aggregator({mergeMaps($x,$y,::orElse)}));
+
+getFunction(info:RuleInfo)->info[1].getFunction;
+getFunction(info:RuleInfoMap)->info['function'] orElse {void};

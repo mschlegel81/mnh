@@ -46,6 +46,7 @@ TYPE
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual; abstract;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -56,6 +57,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -1064,6 +1066,11 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
 PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   begin
     extender^.resolveId(token,adaptersOrNil{$ifdef fullVersion},markAsUsed{$endif});
+  end;
+
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+  begin
+    result:=extender^.inspect(includeRulePointer,context,recycler);
   end;
 
 FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider):boolean;
