@@ -87,7 +87,6 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
 
       FUNCTION isMain:boolean;
@@ -109,6 +108,7 @@ TYPE
       PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
@@ -677,9 +677,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       VAR i,j:longint;
           rulesSet:T_ruleMap.KEY_VALUE_LIST;
           dummyRule:P_rule;
+          {$ifdef fullVersion}
+          attribute:string;
+          suppressUnusedImport:boolean=false;
+          {$endif}
       begin
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_importing,pseudoCallees);
+        for attribute in statement.attributes do if startsWith(attribute,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then suppressUnusedImport:=true;
         {$endif}
         if profile then globals.timeBaseComponent(pc_importing);
         for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,recycler,usecase=lu_forCodeAssistance);
@@ -702,8 +707,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
           end;
         end;
-        for i:=0 to length(packageUses)-1 do if mergeCustomOps(packageUses[i].pack,globals.primaryContext.messages)
-        then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
+        for i:=0 to length(packageUses)-1 do begin
+          if mergeCustomOps(packageUses[i].pack,globals.primaryContext.messages) {$ifdef fullVersion} or suppressUnusedImport {$endif}
+          then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
+        end;
       end;
 
     begin
@@ -795,7 +802,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           otherRule:P_rule;
       begin
         if not(P_typecheckRule(ruleGroup)^.castRuleIsValid) then exit;
-        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup));
+        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,P_typecheckRule(ruleGroup)));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
           globals.primaryContext.messages^.raiseSimpleError(
             'Cannot declare implicit typecast rule '+castRule^.getId+C_lineBreakChar+
