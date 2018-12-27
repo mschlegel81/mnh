@@ -1,3 +1,5 @@
+INCLUDE inspectionUtil;
+
 //for A000002:------------------------------------------------
 private listOf(value,count=0)->[];
 private listOf(value,count>=1)->[1..count].each(i,value);
@@ -8,14 +10,21 @@ private Kolakoski_1_2(len)->begin
                listOf((index and 1)+1,runLength),|));
   K.head(len);
 end;
-
+@SuppressUnusedWarning
+A000002->listIterator(Kolakoski_1_2(10000));
+A000005->rangeGenerator(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
+A000006->primeGenerator.sqrt.floor;
+A000007->ord(rangeGenerator(0)=0);
 //for A000010:------------------------------------------------
 private EulerPhi(n>1)->factorize(n).elementFrequency.each(p,p[0]^(p[1]-1)*(p[0]-1),*);
 private EulerPhi(1)->1;
-
+A000010->rangeGenerator(1).lazyMap(::EulerPhi);
+//-------------------------------------------------------------
+A000027->rangeGenerator(1);
 //for A000108:-------------------------------------------------
 private Catalan(n<=1)->1;
 private Catalan(n> 1)->(n+[2..n]).agg(*) div [2..n].agg(*);
+A000108->rangeGenerator(0).lazyMap(::Catalan);
 
 //for A025426:-------------------------------------------------
 private by2Squares(n>0)->begin
@@ -40,17 +49,13 @@ private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).a
 //for A003459:-------------------------------------------------
 private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
 //-------------------------------------------------------------
-@SuppressUnusedWarning=all
-A000002->listIterator(Kolakoski_1_2(10000));
-A000005->rangeGenerator(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
-A000006->primeGenerator.sqrt.floor;
-A000007->ord(rangeGenerator(0)=0);
-A000010->rangeGenerator(1).lazyMap(::EulerPhi);
-A000027->rangeGenerator(1);
+
+
+
 USE '..\sequenceOfNonSquares.mnh';
-A000037->rangeGenerator(1).lazyMap(::nonSquares);
+
 A000040->primeGenerator;
-A000108->rangeGenerator(0,13).lazyMap(::Catalan);
+
 A000124->rangeGenerator(0).lazyMap(::LazyCaterer);
 A000203->rangeGenerator(1).lazyMap(::DivisorFunction);
 USE '..\semiprime.mnh';
@@ -634,14 +639,19 @@ A033479->collatzGenerator(9);
 @class=Collatz
 A033481->collatzGenerator(21);
 
+@SuppressUnusedWarning
 USE '..\happyNumbers.mnh';
-A007770->happyNumberGenerator;
 
 memoized implemented->
-  inspect['declares']
-  .filter({$x[0].matches('^A\d{6}$')})
-  .map({[$x[0].copy(1,6).softCast,[$x[1,'function'],$x[1,'subrules',0,'attributes','class'] orElse 'custom implementation']]})
-  .toMap;
+  allRules.each(rule,begin
+    local attributes:=rule.ruleAttributes;
+    local id:=attributes['OEIS'] orElse rule[0]; //use ruleId as fallback to annotation
+    id.isString AND id.matches('^A\d{6}$')
+    ? [id.copy(1,6).softCast,
+       [rule.getFunction,
+       attributes['class'] orElse 'custom implementation']]
+    : void;
+  end).toMap;
 
 private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
   local c:=sequence[0];

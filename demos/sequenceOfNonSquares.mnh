@@ -1,4 +1,7 @@
 nonSquares(n)->n + floor(1/2 + sqrt(n));
+@SuppressUnusedWarning
+@OEIS=A000037
+A000037->rangeGenerator(1).lazyMap(::nonSquares);
 @demo_for=math, list processing
 main-> begin
   print('OEIS: A000037 starts with ',nonSquares([1..22]).join(", "),", ...");
