@@ -81,7 +81,7 @@ TYPE
   T_typeCastRule=object(T_ruleWithSubrules)
     private
       typedef:P_typedef;
-      {$ifdef fullVersion}related:P_ruleWithSubrules;{$endif}
+      related:P_ruleWithSubrules;
     public
       CONSTRUCTOR create(CONST def:P_typedef; CONST relatedCheckRule:P_ruleWithSubrules);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
@@ -254,8 +254,8 @@ CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_
     inherited create('to'+def^.getName,relatedCheckRule^.getLocation,rt_customTypeCast);
     typedef:=def;
     allowCurrying:=false;
-    {$ifdef fullVersion}
     related:=relatedCheckRule;
+    {$ifdef fullVersion}
     if def^.isDucktyping then setIdResolved;
     {$endif}
   end;
