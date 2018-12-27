@@ -136,14 +136,14 @@ FUNCTION inspect_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect(true,context,recycler)
+    if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,@context,recycler)
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
         if inspectedPackageIsTemporary then loadTemporaryPackage;
-        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler);
+        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),@context,recycler);
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         if inspectedPackageIsTemporary then dispose(tempPackage,destroy);
         exit(result);
@@ -154,7 +154,7 @@ FUNCTION inspect_imp intFuncSignature;
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage;
-      result:=tempPackage^.inspect(false,context,recycler)^.put('messages',loadMessages,false);
+      result:=tempPackage^.inspect(false,@context,recycler)^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;
