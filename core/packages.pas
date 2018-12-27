@@ -801,8 +801,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       VAR castRule:P_typeCastRule;
           otherRule:P_rule;
       begin
-        if not(P_typecheckRule(ruleGroup)^.castRuleIsValid) then exit;
-        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,P_typecheckRule(ruleGroup)));
+        if not(P_typeCheckRule(ruleGroup)^.castRuleIsValid) then exit;
+        new(castRule,create(P_typeCheckRule(ruleGroup)^.getTypedef,P_typeCheckRule(ruleGroup)));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
           globals.primaryContext.messages^.raiseSimpleError(
             'Cannot declare implicit typecast rule '+castRule^.getId+C_lineBreakChar+
@@ -1419,7 +1419,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       case ruleType of
         rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
         rt_customTypeCheck,
-        rt_duckTypeCheck  : new(P_typecheckRule            (result),create(ruleId,ruleDeclarationStart,ruleType=rt_duckTypeCheck));
+        rt_duckTypeCheck  : new(P_typeCheckRule            (result),create(ruleId,ruleDeclarationStart,ruleType=rt_duckTypeCheck));
         rt_customTypeCast : raise Exception.create('Custom type casts should not be created this way.');
         rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      metaData,modifier_private in modifiers));
         rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,metaData,modifier_private in modifiers,modifier_plain in modifiers));

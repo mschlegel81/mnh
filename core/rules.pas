@@ -81,9 +81,9 @@ TYPE
   T_typeCastRule=object(T_ruleWithSubrules)
     private
       typedef:P_typedef;
-      {$ifdef fullVersion}related:P_rule;{$endif}
+      {$ifdef fullVersion}related:P_ruleWithSubrules;{$endif}
     public
-      CONSTRUCTOR create(CONST def:P_typedef; CONST relatedCheckRule:P_rule);
+      CONSTRUCTOR create(CONST def:P_typedef; CONST relatedCheckRule:P_ruleWithSubrules);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
@@ -92,10 +92,11 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE setIdResolved; virtual;
       {$endif}
+      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
   end;
 
-  P_typecheckRule=^T_typecheckRule;
-  T_typecheckRule=object(T_ruleWithSubrules)
+  P_typeCheckRule=^T_typeCheckRule;
+  T_typeCheckRule=object(T_ruleWithSubrules)
     private
       typedef:P_typedef;
     public
@@ -248,7 +249,7 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
     cache.create(rule_cs);
   end;
 
-CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_rule);
+CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_ruleWithSubrules);
   begin
     inherited create('to'+def^.getName,relatedCheckRule^.getLocation,rt_customTypeCast);
     typedef:=def;
@@ -259,7 +260,7 @@ CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_
     {$endif}
   end;
 
-CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
+CONSTRUCTOR T_typeCheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
   begin
     if ducktyping
     then inherited create(ruleId,startAt,rt_duckTypeCheck)
@@ -325,7 +326,7 @@ DESTRUCTOR T_datastoreRule.destroy;
   end;
 
 FUNCTION T_typeCastRule .getRootId:T_idString; begin result:=typedef^.getName; end;
-FUNCTION T_typecheckRule.getRootId:T_idString; begin result:=typedef^.getName; end;
+FUNCTION T_typeCheckRule.getRootId:T_idString; begin result:=typedef^.getName; end;
 
 PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression; VAR context: T_context);
   VAR i,j:longint;
@@ -364,7 +365,7 @@ PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR
     if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
   end;
 
-PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
+PROCEDURE T_typeCheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
   VAR rulePattern:T_patternElement;
       inlineValue:P_literal;
       alwaysTrue:boolean=false;
@@ -404,7 +405,7 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
     end;
   end;
 
-FUNCTION T_typecheckRule.castRuleIsValid:boolean;
+FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
   begin
     result:=(getRuleType=rt_customTypeCheck) or subrules[0]^.hasValidValidCustomTypeCheckPattern(false);
   end;
@@ -423,7 +424,7 @@ FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
   end;
 
 FUNCTION T_typeCastRule .hasPublicSubrule:boolean; begin result:=true; end;
-FUNCTION T_typecheckRule.hasPublicSubrule:boolean; begin result:=true; end;
+FUNCTION T_typeCheckRule.hasPublicSubrule:boolean; begin result:=true; end;
 
 {$ifdef fullVersion}
 PROCEDURE T_typeCastRule.setIdResolved;
@@ -584,7 +585,7 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
     end;
   end;
 
-FUNCTION T_typecheckRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
+FUNCTION T_typeCheckRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR boolResult:boolean=false;
   begin
     boolResult:=(param<>nil)
@@ -620,17 +621,17 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
   end;
 
-FUNCTION T_typecheckRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
+FUNCTION T_typeCheckRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
   begin
     result:=subrules[0]^.getPattern.getFirstParameterTypeWhitelist;
   end;
 
-FUNCTION T_typecheckRule.getTypedef:P_typedef;
+FUNCTION T_typeCheckRule.getTypedef:P_typedef;
   begin
     result:=typedef;
   end;
 
-DESTRUCTOR T_typecheckRule.destroy;
+DESTRUCTOR T_typeCheckRule.destroy;
   begin
     if typedef<>nil then dispose(typedef,destroy);
     inherited destroy;
@@ -666,6 +667,35 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
     VAR sub:P_subruleExpression;
     begin
       result:=newListLiteral(length(subrules));
+      for sub in subrules do result^.append(sub^.inspect,false);
+    end;
+
+  begin
+    result:=inherited inspect(includeFunctionPointer,context,recycler)^
+            .put(newStringLiteral('subrules'),subrulesList,false);
+    if includeFunctionPointer then
+    result^.put(newStringLiteral('function'),getFunctionPointer(context,recycler,tt_localUserRule,getLocation),false);
+  end;
+
+FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
+  FUNCTION privateOrPublic:string;
+    begin
+      if related^.hasPublicSubrule
+      then result:=PUBLIC_TEXT
+      else result:=PRIVATE_TEXT;
+    end;
+
+  FUNCTION subrulesList:P_listLiteral;
+    VAR sub:P_subruleExpression;
+    begin
+      result:=newListLiteral(length(subrules)+1);
+      result^.append(newMapLiteral^
+        .put('pattern'   ,'()'           )^
+        .put('location'  ,getLocation    )^
+        .put('type'      ,privateOrPublic)^
+        .put('body'      ,'//implicitly declared')^
+        .put('comment'   ,related^.subrules[0]^.metaData.comment)^
+        .put('attributes',related^.subrules[0]^.metaData.getAttributesLiteral,false),false);
       for sub in subrules do result^.append(sub^.inspect,false);
     end;
 
