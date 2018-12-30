@@ -12,8 +12,7 @@ end;
 private change(amount<=0,set)->1;
 
 //*Returns the number of ways <amount> can be represented as a sum of integers in <set>
-@SuppressUnusedWarning
-countPartitions(amount:Int,set:IntCollection)->
+private countPartitions(amount:Int,set:IntCollection)->
   set.size=0 ? 0 : change(amount,set.sort.reverseList);
 
 //*See  http://rosettacode.org/wiki/Count_the_coins
@@ -21,3 +20,72 @@ main->printf("There are %d ways to make a dollar from coins\n"&
              "  and %d ways to make a euro from coins.",
              change(100,[100,50,25,10,5,1]),
              change(100,[100,50,20,10,5,2,1]));
+
+@SuppressUnusedWarning=all
+@class=Partition number
+@OEIS=A000008
+A000008->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
+@OEIS=A000041
+@class=Partition number
+A000041->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i])});
+@class=Partition number
+@OEIS=A000607
+A000607->rangeGenerator(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
+@class=Partition number
+@OEIS=A001156
+A001156->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
+@class=Partition number
+@OEIS=A001299
+A001299->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
+@class=Partition number
+@OEIS=A001300
+A001300->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
+@class=Partition number
+@OEIS=A001301
+A001301->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
+@class=Partition number
+@OEIS=A001302
+A001302->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
+@class=Partition number
+@OEIS=A001306
+A001306->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
+@class=Partition number
+@OEIS=A001310
+A001310->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
+@class=Partition number
+@OEIS=A001312
+A001312->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
+@class=Partition number
+@OEIS=A001313
+A001313->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
+@class=Partition number
+@OEIS=A001362
+A001362->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
+@class=Partition number
+@OEIS=A001364
+A001364->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
+@class=Partition number
+@OEIS=A001996
+A001996->rangeGenerator(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
+@class=Partition number
+@OEIS=A002095
+A002095->rangeGenerator(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
+@class=Partition number
+@OEIS=A003108
+A003108->rangeGenerator(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
+@class=Partition number
+@OEIS=A018819
+A018819->rangeGenerator(0).lazyMap({countPartitions($i,2^[0..20])});
+@class=Partition number
+@OEIS=A062051
+A062051->rangeGenerator(0).lazyMap({countPartitions($i,3^[0..20])});
+@class=Partition number
+@OEIS=A067996
+A067996->rangeGenerator(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
+@class=Partition number
+@OEIS=A169718
+A169718->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
+@class=Partition number
+@OEIS=A187243
+A187243->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10])});
+
