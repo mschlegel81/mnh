@@ -1,5 +1,8 @@
 @demo_for=filter
 isSemiprime(n>1)->factorize(n).size=2;
 isSemiprime(n  )->false;
+@OEIS=A001358
+@SuppressUnusedWarning
+A001358->rangeGenerator(1).filter(::isSemiprime);
 //*See http://rosettacode.org/wiki/Semiprime
 main->[1..100].filter(::isSemiprime).print;

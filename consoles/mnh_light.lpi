@@ -105,7 +105,7 @@
         <PackageName Value="LazUtils"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="46">
+    <Units Count="47">
       <Unit0>
         <Filename Value="mnh_light.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -291,6 +291,10 @@
         <Filename Value="..\core\tokens.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit45>
+      <Unit46>
+        <Filename Value="..\common\myStringUtil.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit46>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
