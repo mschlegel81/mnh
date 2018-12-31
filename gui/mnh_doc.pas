@@ -456,10 +456,11 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
           if isOpen then close(handle);
           cmdParam:=getHtmlRoot+DirectorySeparator+cmdParam;
           if not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
+            {$ifdef debugMode} writeln(stdErr,'        DEBUG: creating file ',cmdParam);{$endif}
+            ensurePath(cmdParam);
             assign(handle,cmdParam);
             rewrite(handle);
             isOpen:=true;
-            {$ifdef debugMode} writeln(stdErr,'        DEBUG: creating file ',cmdParam);{$endif}
           end else begin
             isOpen:=false;
             {$ifdef debugMode} writeln(stdErr,'        DEBUG: not(!) creating file ',cmdParam);{$endif}
