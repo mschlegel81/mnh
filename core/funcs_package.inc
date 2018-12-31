@@ -159,6 +159,19 @@ FUNCTION inspect_imp intFuncSignature;
     end;
   end;
 
+FUNCTION inspectAll_imp intFuncSignature;
+  VAR main,p:P_package;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      main:=P_package(tokenLocation.package)^.mainPackage;
+      result:=newMapLiteral;
+      for p in main^.secondaryPackages do
+      mapResult^.put(p   ^.getPath,p   ^.inspect(true,@context,recycler),false);
+      mapResult^.put(main^.getPath,main^.inspect(true,@context,recycler),false);
+    end;
+  end;
+
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
@@ -186,6 +199,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary,'runScript(filenameOrId:String,parameters:StringList);//executes the given script - in the current program instance but strictly isolated#'+
                                                                                            'runScript(filenameOrId:String,parameters:StringList,connectionLevel);//executes the given script with connectionLevel#  // 0: isolated#  // 1: print#  // 2: print and warnings#  // 3: print, warnings and errors#  // Add an additional boolean parameter true to enforce determinism');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary,'inspectAll;//Returs information on all currently loaded packages');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
 {$endif}

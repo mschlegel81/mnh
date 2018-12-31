@@ -701,9 +701,9 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR contex
 
   begin
     result:=inherited inspect(includeFunctionPointer,context,recycler)^
-            .put(newStringLiteral('subrules'),subrulesList,false);
+            .put('subrules',subrulesList,false);
     if includeFunctionPointer then
-    result^.put(newStringLiteral('function'),getFunctionPointer(context,recycler,tt_localUserRule,getLocation),false);
+    result^.put('function',getFunctionPointer(context,recycler,tt_localUserRule,getLocation),false);
   end;
 
 FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler): P_mapLiteral;
