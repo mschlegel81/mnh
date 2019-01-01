@@ -1106,8 +1106,7 @@ FUNCTION T_inlineExpression.inspect: P_mapLiteral;
     result:=newMapLiteral;
     P_mapLiteral(result)^.put('pattern' ,pattern.toString)^
                          .put('location',getLocation     )^
-                         .put('type'    ,C_expressionTypeString[typ])^
-                         .put('body'    ,toDocString(false) );
+                         .put('type'    ,C_expressionTypeString[typ]);
   end;
 
 FUNCTION T_subruleExpression.inspect: P_mapLiteral;

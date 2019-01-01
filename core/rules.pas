@@ -693,7 +693,6 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR contex
         .put('pattern'   ,'()'           )^
         .put('location'  ,getLocation    )^
         .put('type'      ,privateOrPublic)^
-        .put('body'      ,'//implicitly declared')^
         .put('comment'   ,related^.subrules[0]^.metaData.comment)^
         .put('attributes',related^.subrules[0]^.metaData.getAttributesLiteral,false),false);
       for sub in subrules do result^.append(sub^.inspect,false);
@@ -722,7 +721,6 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
         .put('pattern'   ,'()'           )^
         .put('location'  ,getLocation    )^
         .put('type'      ,privateOrPublic)^
-        .put('body'      ,value^.toString)^
         .put('comment'   ,meta.comment   )^
         .put('attributes',meta.getAttributesLiteral,false),false);
       value^.unreference;
