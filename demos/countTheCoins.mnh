@@ -88,4 +88,3 @@ A169718->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])}
 @class=Partition number
 @OEIS=A187243
 A187243->rangeGenerator(0).lazyMap({countPartitions($i,[1, 5, 10])});
-
