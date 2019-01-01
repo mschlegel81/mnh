@@ -74,5 +74,3 @@ end;
 main('download')->getData($params).printFormattedInfo;
 //*Generates values for given id
 main('gen',id,count)->getData($params).printFormattedInfo;
-
-getData(['details','5132']).decompress.print;

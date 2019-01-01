@@ -1,5 +1,3 @@
-INCLUDE inspectionUtil;
-
 //for A000002:------------------------------------------------
 private listOf(value,count=0)->[];
 private listOf(value,count>=1)->[1..count].each(i,value);
@@ -591,8 +589,7 @@ A033479->collatzGenerator(9);
 A033481->collatzGenerator(21);
 
 @SuppressUnusedWarning
-USE '..\happyNumbers.mnh';
-
+USE '..\happyNumbers.mnh',inspectionUtil;
 memoized implemented->
   allRules.each(rule,begin
     local attributes:=rule.ruleAttributes;
