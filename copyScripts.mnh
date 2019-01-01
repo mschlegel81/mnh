@@ -1,0 +1,13 @@
+plain script;
+
+destRoot:=mnhInfo['configDir'];
+srcRoot:=myPath.expandedFileName.extractFileDirectory&'/';
+sub:=['demos','packages'];
+
+files(destRoot&sub&'/*').map({print($0,' -> NUL') orElse deleteFile($0)});
+
+sub.each(f,files(srcRoot&f&'/*')
+           .each(name,[name,destRoot&f&'/'&extractFileName(name)]),|)
+   .each(c,print(c[0],' -> ',c[1]) orElse copyFile@c,and)
+? print('Copying o.k.')
+: fail('Copy failed');
