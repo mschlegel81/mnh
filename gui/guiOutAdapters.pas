@@ -12,16 +12,6 @@ USES SynEdit,SynEditKeyCmds,Forms,
      variableTreeViews,mnhCustomForm, askDialog;
 
 TYPE
-  T_abstractMnhForm=class(TForm)
-    public
-      PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); virtual; abstract;
-      PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
-      PROCEDURE onDebuggerEvent;                                virtual; abstract;
-      PROCEDURE onEndOfEvaluation;                              virtual; abstract;
-      PROCEDURE triggerFastPolling;                             virtual; abstract;
-      PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); virtual; abstract;
-  end;
-
   T_guiEventsAdapter=object(T_collectingOutAdapter)
     form:T_abstractMnhForm;
     CONSTRUCTOR create(CONST guiForm:T_abstractMnhForm);
@@ -53,7 +43,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TS
     guiAdapters.addOutAdapter(@guiEventsAdapter,false);
     unitIsInitialized:=true;
     out_adapters.gui_started:=true;
-    initializePlotForm;
+    initializePlotForm(parent);
   end;
 
 FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributor;

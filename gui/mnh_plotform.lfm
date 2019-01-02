@@ -149,6 +149,10 @@ object plotForm: TplotForm
         Caption = 'Render to file...'
         OnClick = miRenderToFileClick
       end
+      object miCreateScript: TMenuItem
+        Caption = 'Create script...'
+        OnClick = miCreateScriptClick
+      end
       object miCacheFrames: TMenuItem
         Caption = 'Cache animation Frames'
         OnClick = miCacheFramesClick

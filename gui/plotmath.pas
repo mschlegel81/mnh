@@ -1,10 +1,12 @@
 UNIT plotMath;
 INTERFACE
 USES sysutils, math,
-     Graphics,
+     Graphics, base64,
      myGenerics,
      myStringUtil,
-     plotstyles;
+     basicTypes,
+     plotstyles,
+     litVar;
 CONST
   MIN_VALUE_FOR:array[false..true] of double=(-1E100, 1E-100);
   MAX_VALUE_FOR:array[false..true] of double=( 1E100,  1E100);
@@ -27,6 +29,7 @@ TYPE
       PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
       PROPERTY size:longint read alloc write setSize;
       PROCEDURE cloneTo(OUT other:T_dataRow);
+      FUNCTION toMnhString:string;
   end;
 
   T_rowToPaint = array of record
@@ -82,6 +85,7 @@ TYPE
     sample: T_dataRow;
     CONSTRUCTOR create(CONST index: longint; CONST row:T_dataRow);
     DESTRUCTOR destroy;
+    FUNCTION toPlotStatement(CONST firstRow:boolean):string;
   end;
 
   T_allSamples=array of T_sampleRow;
@@ -97,6 +101,8 @@ TYPE
     FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
+    FUNCTION getOptionString:string;
+    FUNCTION getOptionDiffString(CONST before:T_scalingOptions):string;
   end;
 
   T_customTextAnchor=(cta_topLeft   ,cta_top   ,cta_topRight   ,
@@ -122,6 +128,7 @@ TYPE
     PROCEDURE setAnchor(CONST s:string);
     PROCEDURE setForeground(CONST r,g,b:double);
     PROCEDURE setBackground(CONST r,g,b:double);
+    FUNCTION toTextStatement:string;
   end;
 
 VAR globalTextRenderingCs:TRTLCriticalSection;
@@ -165,6 +172,44 @@ PROCEDURE T_dataRow.cloneTo(OUT other: T_dataRow);
   begin
     other.init(alloc);
     move(dat^,other.dat^,sizeOf(T_point)*alloc);
+  end;
+
+FUNCTION numToString(num:double):string;
+  VAR inum:int64;
+  begin
+    if (num>=-9E18) and (num<9E18) then begin
+      inum:=round(num);
+      if num=inum then result:=intToStr(inum)
+                  else result:=myFloatToStr(num);
+    end else result:=myFloatToStr(num);
+  end;
+
+FUNCTION T_dataRow.toMnhString:string;
+  FUNCTION simplify(CONST num:double):P_numericLiteral;
+    VAR inum:int64;
+    begin
+      if (num>=-9E18) and (num<9E18) then begin
+        inum:=round(num);
+        if num=inum then result:=newIntLiteral(inum)
+                    else result:=newRealLiteral(num);
+      end else result:=newRealLiteral(num);
+    end;
+
+  VAR i:longint=0;
+      simple:boolean=true;
+      dataList:P_listLiteral;
+      compressedForm:string;
+      dummyLocation:T_tokenLocation;
+  begin
+    while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
+    dataList:=newListLiteral(alloc);
+    if simple
+    then for i:=0 to alloc-1 do dataList^.append(simplify(dat[i,1]),false)
+    else for i:=0 to alloc-1 do dataList^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
+    compressedForm:=escapeString(EncodeStringBase64(compressString(serialize(dataList,dummyLocation,nil),1)),es_javaStyle,simple)+'.base64decode.decompress.deserialize';
+    result:=dataList^.toString();
+    disposeLiteral(dataList);
+    if length(compressedForm)<length(result) then result:=compressedForm;
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
@@ -334,6 +379,28 @@ PROCEDURE T_customText.setBackground(CONST r, g, b: double);
     background[cc_red  ]:=round(255*max(0,min(1,r)));
     background[cc_green]:=round(255*max(0,min(1,g)));
     background[cc_blue ]:=round(255*max(0,min(1,b)));
+  end;
+
+FUNCTION T_customText.toTextStatement:string;
+  CONST anchorText:array[T_customTextAnchor] of string=('"TL"','"T"','"TR"','"L"','"C"','"R"','"BL"','"B"','"BR"');
+  VAR dummy:boolean;
+  begin
+    if absolutePosition
+    then result:='drawTextAbsolute('
+    else result:='drawText(';
+    result+=numToString(p[0])+','+numToString(p[1])+','+
+            escapeString(join(text,C_lineBreakChar),es_pickShortest,dummy);
+    if isNan(fontSize) then result+=',Nan' else result+=','+numToString(fontSize);
+    result+=','+anchorText[anchor];
+    result+=','+escapeString(fontName,es_pickShortest,dummy);
+    result+=',['+numToString(foreground[cc_red  ]*255)+','+
+                 numToString(foreground[cc_green]*255)+','+
+                 numToString(foreground[cc_blue ]*255)+']';
+    if not(transparentBackground) then
+    result+=',['+numToString(background[cc_red  ]*255)+','+
+                 numToString(background[cc_green]*255)+','+
+                 numToString(background[cc_blue ]*255)+']';
+    result+=');';
   end;
 
 PROCEDURE T_scalingOptions.setDefaults;
@@ -669,6 +736,32 @@ FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
     result:=absFontSize(xRes,yRes,relativeFontSize);
   end;
 
+FUNCTION T_scalingOptions.getOptionString:string;
+  VAR defaults:T_scalingOptions;
+  begin
+    defaults.setDefaults;
+    result:=getOptionDiffString(defaults);
+  end;
+
+FUNCTION T_scalingOptions.getOptionDiffString(CONST before:T_scalingOptions):string;
+  begin
+    result:='';
+    if axisTrafo['x'].worldMin <>before.axisTrafo['x'].worldMin  then result:=                            '"x0"=>'+numToString(axisTrafo['x'].worldMin);
+    if axisTrafo['x'].worldMax <>before.axisTrafo['x'].worldMax  then result+=BoolToStr(result='','',',')+'"x1"=>'+numToString(axisTrafo['x'].worldMax);
+    if axisTrafo['y'].worldMin <>before.axisTrafo['y'].worldMin  then result+=BoolToStr(result='','',',')+'"y0"=>'+numToString(axisTrafo['y'].worldMin);
+    if axisTrafo['y'].worldMax <>before.axisTrafo['y'].worldMax  then result+=BoolToStr(result='','',',')+'"y1"=>'+numToString(axisTrafo['y'].worldMax);
+    if relativeFontSize        <>before.relativeFontSize         then result+=BoolToStr(result='','',',')+'"fontsize"=>'+numToString(relativeFontSize);
+    if preserveAspect          <>before.preserveAspect           then result+=BoolToStr(result='','',',')+'"preserveAspect"=>'+boolLit[preserveAspect].toString;
+    if axisTrafo['x'].autoscale<>before.axisTrafo['x'].autoscale then result+=BoolToStr(result='','',',')+'"autoscaleX"=>'+boolLit[axisTrafo['x'].autoscale].toString;
+    if axisTrafo['y'].autoscale<>before.axisTrafo['y'].autoscale then result+=BoolToStr(result='','',',')+'"autoscaleY"=>'+boolLit[axisTrafo['y'].autoscale].toString;
+    if axisTrafo['x'].logscale <>before.axisTrafo['x'].logscale  then result+=BoolToStr(result='','',',')+'"logscaleX"=>' +boolLit[axisTrafo['x'].logscale ].toString;
+    if axisTrafo['y'].logscale <>before.axisTrafo['y'].logscale  then result+=BoolToStr(result='','',',')+'"logscaleY"=>' +boolLit[axisTrafo['y'].logscale ].toString;
+    if autoscaleFactor         <>before.autoscaleFactor          then result+=BoolToStr(result='','',',')+'"autoscaleFactor"=>'+numToString(autoscaleFactor);
+    if axisStyle['x']          <>before.axisStyle['x']           then result+=BoolToStr(result='','',',')+'"axisStyleX"=>'+intToStr(byte(axisStyle['x']));
+    if axisStyle['y']          <>before.axisStyle['y']           then result+=BoolToStr(result='','',',')+'"axisStyleY"=>'+intToStr(byte(axisStyle['y']));
+    if result<>'' then result:='setOptions(['+result+'].toMap);';
+  end;
+
 CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);
   begin
     style.create(index);
@@ -679,6 +772,13 @@ DESTRUCTOR T_sampleRow.destroy;
   begin
     style.destroy;
     sample.free;
+  end;
+
+FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean):string;
+  VAR dummy:boolean;
+  begin
+    if firstRow then result:='plot(' else result:='addPlot(';
+    result+=sample.toMnhString+','+escapeString(style.toString,es_pickShortest,dummy)+');';
   end;
 
 PROCEDURE T_axisTrafo.prepare;

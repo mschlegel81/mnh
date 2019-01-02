@@ -254,11 +254,12 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
 FUNCTION T_style.toString:ansistring;
   VAR s:T_plotStyle;
   begin
-    result:=floatToStr(styleModifier)+' ';
-    for s in style do result:=result+C_styleName[s,0]+' ';
-    result:=result+'RGB'+floatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
-                  +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
-                  +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4);
+    result:='';
+    if styleModifier<>1 then result:=floatToStr(styleModifier)+' ';
+    for s in style do result+=C_styleName[s,0]+' ';
+    result+='RGB'+floatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
+                 +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
+                 +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4)+' TI'+intToStr(transparentIndex and 3);
   end;
 
 FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;

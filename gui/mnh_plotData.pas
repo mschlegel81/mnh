@@ -5,7 +5,7 @@ USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      FPReadBMP,FPWriteBMP,
      IntfGraphics,
-     mySys,
+     mySys,myGenerics,
      basicTypes, mnh_constants,
      mnh_settings,
      mnh_messages,
@@ -129,6 +129,7 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfString;
   end;
 
   P_plotSeriesFrame=^T_plotSeriesFrame;
@@ -198,6 +199,7 @@ TYPE
       PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
+      FUNCTION getPlotStatement:T_arrayOfString;
   end;
 
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
@@ -1337,6 +1339,18 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     system.leaveCriticalSection(cs);
   end;
 
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfString;
+  VAR opt:string;
+      i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    opt:=scalingOptions.getOptionDiffString(prevOptions);
+    if opt='' then setLength(result,0) else result:=opt;
+    for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0));
+    for i:=0 to length(customText)-1 do append(result,customText[i]^.toTextStatement);
+    system.leaveCriticalSection(cs);
+  end;
+
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   begin
     isProcessingMessage:=true;
@@ -1387,6 +1401,28 @@ PROCEDURE T_plotSystem.startGuiInteraction;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_plotSystem.getPlotStatement:T_arrayOfString;
+  VAR prevOptions:T_scalingOptions;
+      i:longint;
+  begin
+    enterCriticalSection(cs);
+    result:='plain script;';
+    myGenerics.append(result,'resetOptions;');
+    myGenerics.append(result,'clearAnimation;');
+    prevOptions.setDefaults;
+    if animation.frameCount>0 then begin
+      for i:=0 to length(animation.frame)-1 do begin
+        myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
+        prevOptions:=animation.frame[i]^.plotData.scalingOptions;
+        myGenerics.append(result,'addAnimationFrame;');
+      end;
+    end else begin
+      myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
+    end;
+    myGenerics.append(result,'display;');
     leaveCriticalSection(cs);
   end;
 
