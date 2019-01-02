@@ -50,15 +50,16 @@ A000203->rangeGenerator(1).lazyMap(::DivisorFunction);
 private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
 A003459->listIterator(primes(991)).filter(::isPermutablePrime);
 //-------------------------------------------------------------
-USE '..\sequenceOfNonSquares.mnh';
-
+USE generators,
+    '..\ludic.mnh',
+    '..\sequenceOfNonSquares.mnh',
+    '..\hofstadter_sequences.mnh',
+    '..\countTheCoins.mnh',
+    '..\semiprime.mnh';
 
 A000124->rangeGenerator(0).lazyMap({($n+$n^2+2) div 2});
-USE '..\semiprime.mnh';
 A025426->rangeGenerator(0).lazyMap({size(by2Squares($i))});
 A061358->rangeGenerator(0).lazyMap({size(by2Primes($i))});
-USE generators,'..\ludic.mnh';
-A003309->listIterator(LudicSieve);
 USE '..\pernicousNumbers.mnh';
 A052294->rangeGenerator(1).filter(::isPernicious);
 USE '..\smithNumbers.mnh';
@@ -69,24 +70,8 @@ USE '..\truncatablePrimes.mnh';
 A024785->listIterator(leftTruncatablePrimes (1000000));
 A024770->listIterator(rightTruncatablePrimes(1000000));
 A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatablePrimes(1000000)).sort);
-USE '..\hofstadter_sequences.mnh';
-@class=Hofstaedter
-A005228->rangeGenerator(1).lazyMap(::hofstadter_sequences.R);
-@class=Hofstaedter
-A030124->rangeGenerator(1).lazyMap(::hofstadter_sequences.S);
-@class=Hofstaedter
-A005206->rangeGenerator(0).lazyMap(::hofstadter_sequences.G);
-@class=Hofstaedter
-A005374->rangeGenerator(0).lazyMap(::hofstadter_sequences.H);
-@class=Hofstaedter
-A005378->rangeGenerator(0).lazyMap(::hofstadter_sequences.F);
-@class=Hofstaedter
-A005379->rangeGenerator(0).lazyMap(::hofstadter_sequences.M);
-@class=Hofstaedter
-A005185->rangeGenerator(1).lazyMap(::hofstadter_sequences.Q);
 A007947->rangeGenerator(1).lazyMap({$n.factorize.unique.agg(*)});
 
-USE '..\countTheCoins.mnh';
 
 USE '..\vampire.mnh';
 A014575->rangeGenerator(1260).filter(::isVampire);

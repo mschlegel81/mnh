@@ -252,12 +252,15 @@ FUNCTION execSync_impl intFuncSignature;
           end;
           if tempProcess.running then begin
             if tempProcess.output.NumBytesAvailable>0
-            then n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES)
-            else n:=0;
-          end;
-          if tempProcess.running then begin
-            if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
-                   else begin inc(sleepTime); sleep(sleepTime); end;
+            then begin
+              n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES)
+              sleepTime:=0;
+              inc(BytesRead, n);
+            end else begin
+              n:=0;
+              inc(sleepTime);
+              sleep(sleepTime);
+            end;
           end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
