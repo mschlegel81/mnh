@@ -50,6 +50,9 @@ USE generators,
     '..\semiprime.mnh';
 
 A000124->rangeGenerator(0).lazyMap({($n+$n^2+2) div 2});
+A005097->primeGenerator.{begin $g(); $g; end}.lazyMap({($x-1) div 2});
+A005098->rangeGenerator(1).filter({isPrime(4*$k+1)});
+A006254->primeGenerator.{begin $g(); $g; end}.lazyMap({($x+1) div 2});
 A025426->rangeGenerator(0).lazyMap({size(by2Squares($i))});
 
 //for A061358:-------------------------------------------------

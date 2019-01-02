@@ -9,15 +9,22 @@ USES
   sysutils, FileUtil,
   //LCL
   Classes, SynEdit, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  //my util
+  myGenerics,fileWrappers,
   //MNH
   mnh_constants,
   funcs, cmdLineInterpretation, contexts, mnh_settings,
   mnh_messages, out_adapters,
   debugging,
+  litVar,
   evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase,synOutAdapter;
 
 TYPE
+
+  { ToutputOnlyForm }
+
   ToutputOnlyForm = class(T_abstractMnhForm)
+      SaveDialog: TSaveDialog;
     Timer1: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -54,7 +61,21 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
-PROCEDURE ToutputOnlyForm.onEditFinished(CONST data:P_editScriptTask);  begin end;
+PROCEDURE ToutputOnlyForm.onEditFinished(CONST data:P_editScriptTask);
+  VAR fileText:T_arrayOfString;
+      i:longint;
+  begin
+    if data^.successful and (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) and (data^.wantNewEditor) then begin
+      if SaveDialog.execute then begin
+        setLength(fileText,P_listLiteral(data^.getOutput)^.size);
+        for i:=0 to length(fileText)-1 do fileText[i]:=P_stringLiteral(P_listLiteral(data^.getOutput)^.value[i])^.value;
+        writeFileLines(SaveDialog.fileName,fileText,LINE_ENDING[settings.newFileLineEnding],false);
+        setLength(fileText,0);
+      end;
+    end;
+    disposeMessage(data);
+  end;
+
 PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data:P_debuggingSnapshot); begin end;
 PROCEDURE ToutputOnlyForm.onDebuggerEvent;                              begin end;
 

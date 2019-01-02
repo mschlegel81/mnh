@@ -1,6 +1,8 @@
+CIRCLE_DETAIL:=30;
+
 halfCircle(startAt:Int,endAt:Int,up:Boolean)->begin
-  local C:=cos([0..30]/30*pi);
-  local S:=sin([0..30]/30*pi);
+  local C:=cos([0..CIRCLE_DETAIL]/CIRCLE_DETAIL*pi);
+  local S:=sin([0..CIRCLE_DETAIL]/CIRCLE_DETAIL*pi);
 save;
   local radius:=(endAt-startAt)/2;
   local center:=(endAt+startAt)/2;
