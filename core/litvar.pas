@@ -462,6 +462,7 @@ FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;  inline;
 FUNCTION newMapLiteral                                : P_mapLiteral;  inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 
+FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal; inline;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;

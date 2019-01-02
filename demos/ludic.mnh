@@ -15,6 +15,7 @@ end;
 
 //Alternative Form: a generator
 @SuppressUnusedWarning
+@OEIS=A003309
 ludicGenerator->
  {begin
     local L:=[];

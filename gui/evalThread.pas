@@ -1,6 +1,7 @@
 UNIT evalThread;
 INTERFACE
 USES sysutils,Classes,
+     Forms,
      mySys,
      myGenerics,myStringUtil,
      mnh_constants,basicTypes,fileWrappers,
@@ -11,6 +12,7 @@ USES sysutils,Classes,
      tokenArray,
      subrules,
      packages,mnh_doc,
+     debugging,
      cmdLineInterpretation,
      recyclers,
      debuggingVar;
@@ -60,6 +62,7 @@ TYPE
       CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
       PROCEDURE execute(VAR globals:T_evaluationGlobals; VAR recycler:T_recycler);
     public
+      CONSTRUCTOR createForNewEditor(CONST editLines:T_arrayOfString; CONST language:string='mnh');
       DESTRUCTOR destroy; virtual;
       FUNCTION getOutput:P_literal;
       FUNCTION getOutputLanguage:string;
@@ -69,6 +72,16 @@ TYPE
       FUNCTION wantInsert:boolean;
       PROPERTY successful:boolean read succeeded;
       FUNCTION withSuccessFlag(CONST trueWhenOk:boolean):P_editScriptTask;
+  end;
+
+  T_abstractMnhForm=class(TForm)
+    public
+      PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); virtual; abstract;
+      PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
+      PROCEDURE onDebuggerEvent;                                virtual; abstract;
+      PROCEDURE onEndOfEvaluation;                              virtual; abstract;
+      PROCEDURE triggerFastPolling;                             virtual; abstract;
+      PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); virtual; abstract;
   end;
 
   P_evaluator=^T_evaluator;
@@ -320,6 +333,21 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputIndex
     done:=false;
   end;
 
+CONSTRUCTOR T_editScriptTask.createForNewEditor(CONST editLines:T_arrayOfString; CONST language:string='mnh');
+  VAR s:string;
+  begin
+    inherited create(mt_guiEdit_done);
+    script:=nil;
+    inputEditIndex:=-1;
+    input:=nil;
+    outputLanguage:=language;
+    done:=true;
+    succeeded:=true;
+    output:=newListLiteral(length(editLines));
+    for s in editLines do P_listLiteral(output)^.appendString(s);
+    done:=false;
+  end;
+
 DESTRUCTOR T_editScriptTask.destroy;
   begin
     if output<>nil then disposeLiteral(output);
@@ -339,10 +367,10 @@ PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; VAR recycler
 
 FUNCTION T_editScriptTask.getOutput:P_literal; begin result:=output; end;
 FUNCTION T_editScriptTask.getOutputLanguage:string; begin result:=outputLanguage; end;
-FUNCTION T_editScriptTask.wantNewEditor:boolean; begin result:=(script^.createNewEditor) and (output<>nil) and (output^.literalType=lt_stringList); end;
+FUNCTION T_editScriptTask.wantNewEditor:boolean; begin result:=((script=nil) or script^.createNewEditor) and (output<>nil) and (output^.literalType=lt_stringList); end;
 FUNCTION T_editScriptTask.inputIdx:longint; begin result:=inputEditIndex; end;
-FUNCTION T_editScriptTask.wantOutput:boolean; begin result:=((output<>nil) and (output^.literalType=lt_stringList)) and ((script^.scriptType=st_edit) or script^.createNewEditor); end;
-FUNCTION T_editScriptTask.wantInsert:boolean; begin result:=((output<>nil) and (output^.literalType=lt_string)) and (script^.scriptType=st_insert); end;
+FUNCTION T_editScriptTask.wantOutput:boolean; begin result:=((output<>nil) and (output^.literalType=lt_stringList)) and ((script=nil) or (script^.scriptType=st_edit) or script^.createNewEditor); end;
+FUNCTION T_editScriptTask.wantInsert:boolean; begin result:=((output<>nil) and (output^.literalType=lt_string)) and (script<>nil) and (script^.scriptType=st_insert); end;
 FUNCTION T_editScriptTask.withSuccessFlag(CONST trueWhenOk:boolean):P_editScriptTask;
   begin
     succeeded:=trueWhenOk;

@@ -21,13 +21,34 @@ memoized M(0):=0; M(n>0)->n-F(M(n-1));
 memoized Q(n<=2):=1;
 Q(n)->Q(n-Q(n-1))+Q(n-Q(n-2));
 
+@class=Hofstaedter
+@OEIS=A005228
+A005228->rangeGenerator(1).lazyMap(::R);
+@class=Hofstaedter
+@OEIS=A030124
+A030124->rangeGenerator(1).lazyMap(::S);
+@class=Hofstaedter
+@OEIS=A005206
+A005206->rangeGenerator(0).lazyMap(::G);
+@class=Hofstaedter
+@OEIS=A005374
+A005374->rangeGenerator(0).lazyMap(::H);
+@class=Hofstaedter
+@OEIS=A005378
+A005378->rangeGenerator(0).lazyMap(::F);
+@class=Hofstaedter
+@OEIS=A005379
+A005379->rangeGenerator(0).lazyMap(::M);
+@class=Hofstaedter
+@OEIS=A005185
+A005185->rangeGenerator(1).lazyMap(::Q);
+
 @demo_for=memoization, math
-main->begin
-  print('(OEIS A005228) R: ',[1..20].map(::R).join(', '));
-  print('(OEIS A030124) S: ',[1..20].map(::S).join(', '));
-  print('(OEIS A005206) G: ',[1..20].map(::G).join(', '));
-  print('(OEIS A005374) H: ',[1..20].map(::H).join(', '));
-  print('(OEIS A005378) F: ',[1..20].map(::F).join(', '));
-  print('(OEIS A005379) M: ',[1..20].map(::M).join(', '));
-  print('(OEIS A005185) Q: ',[1..20].map(::Q).join(', '));
-end;
+main->
+  print("(OEIS A005228) R:\t",A005228.head(20).join(', '),"\n",
+        "(OEIS A030124) S:\t",A030124.head(20).join(', '),"\n",
+        "(OEIS A005206) G:\t",A005206.head(20).join(', '),"\n",
+        "(OEIS A005374) H:\t",A005374.head(20).join(', '),"\n",
+        "(OEIS A005378) F:\t",A005378.head(20).join(', '),"\n",
+        "(OEIS A005379) M:\t",A005379.head(20).join(', '),"\n",
+        "(OEIS A005185) Q:\t",A005185.head(20).join(', '));

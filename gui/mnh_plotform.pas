@@ -29,6 +29,9 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miScriptFromAnimation: TMenuItem;
+    miScriptFromFrame: TMenuItem;
+    miCreateScript: TMenuItem;
     miCacheFrames: TMenuItem;
     miRenderToFile: TMenuItem;
     miAntiAliasing4: TMenuItem;
@@ -69,12 +72,15 @@ TYPE
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
     PROCEDURE miCacheFramesClick(Sender: TObject);
+    PROCEDURE miCreateScriptClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miLogscaleXClick(Sender: TObject);
     PROCEDURE miLogscaleYClick(Sender: TObject);
     PROCEDURE miPreserveAspectClick(Sender: TObject);
     PROCEDURE miRenderToFileClick(Sender: TObject);
+    PROCEDURE miScriptFromAnimationClick(Sender: TObject);
+    PROCEDURE miScriptFromFrameClick(Sender: TObject);
     PROCEDURE miXFinerGridClick(Sender: TObject);
     PROCEDURE miXGridClick(Sender: TObject);
     PROCEDURE miXTicsClick(Sender: TObject);
@@ -111,11 +117,12 @@ TYPE
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
-PROCEDURE initializePlotForm;
+PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
 VAR plotSystem:T_plotSystem;
     currentlyExporting:boolean=false;
 IMPLEMENTATION
 VAR myPlotForm:TplotForm=nil;
+    main:T_abstractMnhForm;
 
 FUNCTION plotForm: TplotForm;
   begin
@@ -316,6 +323,25 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
       currentlyExporting:=false;
     end;
     plotSystem.doneGuiInteraction;
+  end;
+
+PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
+  begin
+    miScriptFromAnimation.enabled:=plotSystem.animation.frameCount>0;
+  end;
+
+PROCEDURE TplotForm.miScriptFromAnimationClick(Sender: TObject);
+  VAR task:P_editScriptTask;
+  begin
+    new(task,createForNewEditor(plotSystem.getPlotStatement(-1)));
+    main.onEditFinished(task);
+  end;
+
+PROCEDURE TplotForm.miScriptFromFrameClick(Sender: TObject);
+  VAR task:P_editScriptTask;
+  begin
+    new(task,createForNewEditor(plotSystem.getPlotStatement(animationFrameIndex)));
+    main.onEditFinished(task);
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
@@ -595,13 +621,14 @@ FUNCTION uninitialized_fallback intFuncSignature;
     result:=nil;
   end;
 
-PROCEDURE initializePlotForm;
+PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
   begin
     reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
     reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      );
+    main:=mainForm;
   end;
 
 PROCEDURE executePlot;
