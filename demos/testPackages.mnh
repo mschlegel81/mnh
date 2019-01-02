@@ -26,6 +26,7 @@ testGenerators->begin
 end;
 
 USE '..\packages\interpolation.mnh';
+@SuppressUnusedWarning
 testInterpolation->begin
   print('Package interpolation');
   local x:=[0,0.5,1,2];
