@@ -30,6 +30,8 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miScriptFromAnimation: TMenuItem;
+    miScriptFromFrame: TMenuItem;
     miCreateScript: TMenuItem;
     miCacheFrames: TMenuItem;
     miRenderToFile: TMenuItem;
@@ -78,6 +80,8 @@ TYPE
     PROCEDURE miLogscaleYClick(Sender: TObject);
     PROCEDURE miPreserveAspectClick(Sender: TObject);
     PROCEDURE miRenderToFileClick(Sender: TObject);
+    PROCEDURE miScriptFromAnimationClick(Sender: TObject);
+    PROCEDURE miScriptFromFrameClick(Sender: TObject);
     PROCEDURE miXFinerGridClick(Sender: TObject);
     PROCEDURE miXGridClick(Sender: TObject);
     PROCEDURE miXTicsClick(Sender: TObject);
@@ -246,13 +250,6 @@ PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
     settings.cacheAnimationFrames:=miCacheFrames.checked;
   end;
 
-PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
-  VAR task:P_editScriptTask;
-  begin
-    new(task,createForNewEditor(plotSystem.getPlotStatement));
-    main.onEditFinished(task);
-  end;
-
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
   begin
     pushFontSizeToPlotContainer(plotSystem.currentPlot.options.relativeFontSize/1.1);
@@ -327,6 +324,25 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
       currentlyExporting:=false;
     end;
     plotSystem.doneGuiInteraction;
+  end;
+
+PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
+  begin
+    miScriptFromAnimation.enabled:=plotSystem.animation.frameCount>0;
+  end;
+
+PROCEDURE TplotForm.miScriptFromAnimationClick(Sender: TObject);
+  VAR task:P_editScriptTask;
+  begin
+    new(task,createForNewEditor(plotSystem.getPlotStatement(-1)));
+    main.onEditFinished(task);
+  end;
+
+PROCEDURE TplotForm.miScriptFromFrameClick(Sender: TObject);
+  VAR task:P_editScriptTask;
+  begin
+    new(task,createForNewEditor(plotSystem.getPlotStatement(animationFrameIndex)));
+    main.onEditFinished(task);
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);

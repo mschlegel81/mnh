@@ -199,7 +199,7 @@ TYPE
       PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
-      FUNCTION getPlotStatement:T_arrayOfString;
+      FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   end;
 
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
@@ -1404,7 +1404,7 @@ PROCEDURE T_plotSystem.doneGuiInteraction;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plotSystem.getPlotStatement:T_arrayOfString;
+FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   VAR prevOptions:T_scalingOptions;
       i:longint;
   begin
@@ -1414,10 +1414,12 @@ FUNCTION T_plotSystem.getPlotStatement:T_arrayOfString;
     myGenerics.append(result,'clearAnimation;');
     prevOptions.setDefaults;
     if animation.frameCount>0 then begin
-      for i:=0 to length(animation.frame)-1 do begin
+      if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
         myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
         prevOptions:=animation.frame[i]^.plotData.scalingOptions;
         myGenerics.append(result,'addAnimationFrame;');
+      end else begin
+        myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
       end;
     end else begin
       myGenerics.append(result,currentPlot.getRowStatements(prevOptions));

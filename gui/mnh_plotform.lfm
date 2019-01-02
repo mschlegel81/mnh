@@ -152,6 +152,14 @@ object plotForm: TplotForm
       object miCreateScript: TMenuItem
         Caption = 'Create script...'
         OnClick = miCreateScriptClick
+        object miScriptFromAnimation: TMenuItem
+          Caption = 'Animation'
+          OnClick = miScriptFromAnimationClick
+        end
+        object miScriptFromFrame: TMenuItem
+          Caption = 'Current frame only'
+          OnClick = miScriptFromFrameClick
+        end
       end
       object miCacheFrames: TMenuItem
         Caption = 'Cache animation Frames'
