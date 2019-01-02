@@ -245,14 +245,11 @@ FUNCTION execSync_impl intFuncSignature;
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.messages^.continueEvaluation do begin
-          memStream.setSize(BytesRead+READ_BYTES);
-          if not(includeStdErr) then begin
-            while tempProcess.stdErr.NumBytesAvailable>0 do
-            tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
-          end;
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(stdErrDummy,length(stdErrDummy));
           if tempProcess.running then begin
             if tempProcess.output.NumBytesAvailable>0
             then begin
+              memStream.setSize(BytesRead+READ_BYTES);
               n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
               sleepTime:=0;
               inc(BytesRead, n);
@@ -265,8 +262,8 @@ FUNCTION execSync_impl intFuncSignature;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(stdErrDummy,length(stdErrDummy));
           memStream.setSize(BytesRead+READ_BYTES);
-          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
