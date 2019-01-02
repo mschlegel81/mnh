@@ -4,6 +4,7 @@ object outputOnlyForm: ToutputOnlyForm
   Top = 248
   Width = 176
   Caption = 'outputOnlyForm'
+  DesignTimePPI = 144
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -14,5 +15,10 @@ object outputOnlyForm: ToutputOnlyForm
     Interval = 1
     OnTimer = Timer1Timer
     left = 16
+  end
+  object SaveDialog: TSaveDialog
+    Filter = 'MNH Script|*.mnh'
+    Options = [ofPathMustExist, ofEnableSizing, ofViewDetail]
+    left = 56
   end
 end
