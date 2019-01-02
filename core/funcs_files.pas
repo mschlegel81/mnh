@@ -253,7 +253,7 @@ FUNCTION execSync_impl intFuncSignature;
           if tempProcess.running then begin
             if tempProcess.output.NumBytesAvailable>0
             then begin
-              n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES)
+              n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
               sleepTime:=0;
               inc(BytesRead, n);
             end else begin
