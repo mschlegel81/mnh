@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="88">
+    <Units Count="89">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -501,6 +501,10 @@
         <ComponentName Value="DisplayImageForm"/>
         <ResourceBaseClass Value="Form"/>
       </Unit87>
+      <Unit88>
+        <Filename Value="..\core\funcs_files.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit88>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
