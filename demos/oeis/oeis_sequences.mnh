@@ -33,14 +33,6 @@ private by2Squares(n>0)->begin
   (n-S).intersect(S).filter({n-$s<=$s}).map({round(sqrt(n-$s))&'^2+'&round(sqrt($s))&'^2'});
 end;
 private by2Squares(n=0):=[];
-
-//for A061358:-------------------------------------------------
-private by2Primes(n:Int)->begin
-  local S:=primes(n);
-  (n-S).intersect(S).filter({n-$s<=$s}).map({(n-$s)&'+'&$s});
-end;
-
-
 //for A000203:-------------------------------------------------
 private DivisorFunction(1)->1;
 private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).agg(+);
@@ -59,7 +51,13 @@ USE generators,
 
 A000124->rangeGenerator(0).lazyMap({($n+$n^2+2) div 2});
 A025426->rangeGenerator(0).lazyMap({size(by2Squares($i))});
-A061358->rangeGenerator(0).lazyMap({size(by2Primes($i))});
+
+//for A061358:-------------------------------------------------
+private by2Primes(n:Int)->begin
+  local S:=primes(n);
+  (n-S).intersect(S).filter({n-$s<=$s}).size;
+end;
+A061358->rangeGenerator(0).lazyMap({by2Primes($i)});
 USE '..\pernicousNumbers.mnh';
 A052294->rangeGenerator(1).filter(::isPernicious);
 USE '..\smithNumbers.mnh';
@@ -578,7 +576,7 @@ USE '..\happyNumbers.mnh',inspectionUtil;
 memoized implemented->
   allRules.each(rule,begin
     local attributes:=rule.ruleAttributes;
-    local id:=attributes['OEIS'] orElse rule[0]; //use ruleId as fallback to annotation
+    local id:=attributes['OEIS'] orElse rule[0].split('.').trailing; //use ruleId as fallback to annotation
     id.isString AND id.matches('^A\d{6}$')
     ? [id.copy(1,6).softCast,
        [rule.getFunction,
