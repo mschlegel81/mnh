@@ -17,10 +17,30 @@ VAR BUILTIN_MIN,
 IMPLEMENTATION
 {$i func_defines.inc}
 FUNCTION sqrt_imp intFuncSignature;
+  VAR intRoot:int64;
+      bigRoot:T_bigInt;
+      fltRoot:T_myFloat;
+      isSquare:boolean;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(sqrt(P_numericLiteral(arg0)^.floatValue))
-    else result:=genericVectorization('sqrt',params,tokenLocation,context,recycler);
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_smallint:begin
+        fltRoot:=sqrt(P_smallIntLiteral(arg0)^.value);
+        intRoot:=trunc(fltRoot);
+        isSquare:=P_smallIntLiteral(arg0)^.value=intRoot*intRoot;
+        if isSquare then result:=newIntLiteral (intRoot)
+                    else result:=newRealLiteral(fltRoot);
+      end;
+      lt_bigint: begin
+        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(isSquare);
+        if isSquare then result:=newIntLiteral(bigRoot)
+        else begin
+          bigRoot.destroy;
+          result:=newRealLiteral(sqrt(P_bigIntLiteral(arg0)^.floatValue));
+        end;
+      end;
+      lt_real: result:=newRealLiteral(sqrt(P_realLiteral(arg0)^.value))
+      else result:=genericVectorization('sqrt',params,tokenLocation,context,recycler);
+    end else result:=nil;
   end;
 
 FUNCTION sin_imp intFuncSignature;
