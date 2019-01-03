@@ -77,7 +77,8 @@ T_settings=object(T_serializable)
 
   htmlDocGeneratedForCodeHash:string;
   doShowSplashScreen:boolean;
-  fullFlavourLocation:string;
+  fullFlavourLocation,
+  lightFlavourLocation:string;
 
   newFileLineEnding,overwriteLineEnding:byte;
 
@@ -115,13 +116,14 @@ CONSTRUCTOR T_settings.create;
     mainForm.create;
     wasLoaded:=false;
     fullFlavourLocation:='';
+    lightFlavourLocation:='';
   end;
 
 DESTRUCTOR T_settings.destroy;
   begin
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235080; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235081; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -156,9 +158,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     doShowSplashScreen:=stream.readBoolean or (CODE_HASH<>htmlDocGeneratedForCodeHash);
     fullFlavourLocation:=stream.readAnsiString;
-    {$ifdef fullVersion}
-    if fullFlavourLocation='' then fullFlavourLocation:=paramStr(0);
-    {$endif}
+    lightFlavourLocation:=stream.readAnsiString;
     newFileLineEnding:=stream.readByte;
     overwriteLineEnding:=stream.readByte;
     if not(stream.allOkay) then cleanExit else result:=true;
@@ -193,6 +193,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(doShowSplashScreen);
     stream.writeAnsiString(fullFlavourLocation);
+    stream.writeAnsiString(lightFlavourLocation);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
     savedAt:=now;
@@ -239,6 +240,7 @@ PROCEDURE T_settings.initDefaults;
     outputLinesLimit:=maxLongint;
     doShowSplashScreen:=true;
     fullFlavourLocation:={$ifdef fullVersion}paramStr(0){$else}''{$endif};
+    lightFlavourLocation:={$ifdef fullVersion}''{$else}paramStr(0){$endif};
     htmlDocGeneratedForCodeHash:='';
     newFileLineEnding:=LINE_ENDING_DEFAULT;
     overwriteLineEnding:=LINE_ENDING_UNCHANGED;
@@ -246,7 +248,13 @@ PROCEDURE T_settings.initDefaults;
 
 PROCEDURE T_settings.fixLocations;
   begin
-    {$ifdef fullVersion}fullFlavourLocation:=paramStr(0);{$endif}
+    {$ifdef fullVersion}
+    fullFlavourLocation :=paramStr(0);
+    if lightFlavourLocation='' then begin
+      lightFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh_light'{$ifdef Windows}+'.exe'{$endif};
+      if not(fileExists(lightFlavourLocation)) then lightFlavourLocation:='';
+    end;
+    {$else}             lightFlavourLocation:=paramStr(0);{$endif};
   end;
 
 FUNCTION T_settings.savingRequested: boolean;

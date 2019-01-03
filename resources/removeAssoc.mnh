@@ -1,6 +1,7 @@
 writeFileLines('uninstall.vbs',
 ['Set UAC = CreateObject("Shell.Application")',
- 'UAC.ShellExecute "cmd", "/c ftype mnh.script=&& assoc .mnh=&& rmdir /S /Q %ALLUSERSPROFILE%\MNH && del #",  "", "runas", 1'
-].replace('#',executor));
+ 'UAC.ShellExecute "cmd", "/c ftype mnh.script=&& assoc .mnh=",  "", "runas", 1'
+]);
 exec('cmd',['/C','uninstall.vbs']);
 deleteFile('uninstall.vbs');
+deleteDir(mnhInfo['configDir'].extractFileDirectory);

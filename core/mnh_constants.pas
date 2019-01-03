@@ -625,7 +625,7 @@ FUNCTION getAppName: string;
 PROCEDURE detectAppStyle;
   begin
     if fileExists(ExtractFileDir(paramStr(0))+DirectorySeparator+SETTINGS_FILE_NAME) then APP_STYLE:=APP_STYLE_PORTABLE
-    else if                     fileExists(GetAppConfigDir(false)+SETTINGS_FILE_NAME) then APP_STYLE:=APP_STYLE_NORMAL
+    else if                    fileExists(GetAppConfigDir(false)+SETTINGS_FILE_NAME) then APP_STYLE:=APP_STYLE_NORMAL
   end;
 {$endif}
 

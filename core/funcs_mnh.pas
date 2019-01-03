@@ -179,7 +179,8 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('build'          ,BUILD_NUMBER               )^
       .put('flavour'        ,FLAVOUR_STRING             )^
       .put('configDir'      ,configDir                  )^
-      .put('fullVersionPath',settings.fullFlavourLocation)
+      .put('fullVersionPath' ,settings.fullFlavourLocation)^
+      .put('lightVersionPath',settings.lightFlavourLocation)
     else result:=nil;
   end;
 
