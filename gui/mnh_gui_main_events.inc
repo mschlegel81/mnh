@@ -160,7 +160,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     UpdateTimeTimer.enabled:=false;
     //Finalze other units
     evalThread.earlyFinalization;
-    if APP_STYLE<>APP_STYLE_BLANK then saveSettings;
+    {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     searchReplaceModel.destroy;
     runnerModel.destroy;
