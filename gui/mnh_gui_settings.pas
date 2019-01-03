@@ -183,8 +183,10 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteFile(settingsFileName);
     DeleteFile(workspaceFilename);
     DeleteFile(settings.lightFlavourLocation);
+    {$ifdef Windows}
     APP_STYLE:=APP_STYLE_BLANK;
     deleteMyselfOnExit;
+    {$endif}
     halt;
   end;
 
