@@ -20,9 +20,9 @@ object SettingsForm: TSettingsForm
     Height = 323
     Top = 0
     Width = 341
-    ActivePage = TabSheet_lineEnding
+    ActivePage = TabSheet_install
     Align = alClient
-    TabIndex = 1
+    TabIndex = 3
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
@@ -239,7 +239,7 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 158
+      ClientHeight = 285
       ClientWidth = 333
       object Panel1: TPanel
         Left = 0
@@ -343,7 +343,7 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 158
+      ClientHeight = 285
       ClientWidth = 333
       object installButton: TButton
         Left = 0
@@ -363,7 +363,7 @@ object SettingsForm: TSettingsForm
         Width = 333
         Align = alTop
         AutoSize = True
-        Caption = 'Remove file associations and program folder'
+        Caption = 'Uninstall and quit immediately'
         OnClick = uninstallButtonClick
         TabOrder = 1
       end

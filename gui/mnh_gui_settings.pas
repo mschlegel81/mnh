@@ -11,12 +11,9 @@ USES
 
 CONST MINIMUM_OUTPUT_LINES=16;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=
-        ('Convert to normal (non-portable) version (removes file associations)',
-         'Convert to portable version (removes file associations)');
+        ('Convert to normal (non-portable) version',
+         'Convert to portable version');
 TYPE
-
-  { TSettingsForm }
-
   TSettingsForm = class(TForm)
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
@@ -180,6 +177,15 @@ PROCEDURE TSettingsForm.rb_saveDefaultChange(Sender: TObject);
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
   begin
     sandbox^.runUninstallScript;
+    DeleteDirectory(getHtmlRoot    ,false);
+    DeleteDirectory(getDemosRoot   ,false);
+    DeleteDirectory(getPackagesRoot,false);
+    DeleteFile(settingsFileName);
+    DeleteFile(workspaceFilename);
+    DeleteFile(settings.lightFlavourLocation);
+    APP_STYLE:=APP_STYLE_BLANK;
+    deleteMyselfOnExit;
+    halt;
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
@@ -228,7 +234,6 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       k:longint;
       allOkay:boolean=true;
   begin
-    sandbox^.runUninstallScript;
     sourceFolder:=configDir;
     foldersToMove[0,0]:=getHtmlRoot;
     foldersToMove[1,0]:=getDemosRoot;
