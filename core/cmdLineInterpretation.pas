@@ -289,8 +289,7 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
-    memoryComfortThreshold:=settings.memoryLimit;
-    startMemChecker;
+    startMemChecker(settings.memoryLimit);
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
