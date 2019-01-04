@@ -142,10 +142,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     if not inherited loadFromStream(stream) then cleanExit;
 
     cpuCount:=stream.readLongint;
-    if cpuCount<=0 then begin
-      cpuCount:=getNumberOfCPUs;
-      if cpuCount<1 then cpuCount:=1;
-    end;
+    if cpuCount<=0 then cpuCount:=getNumberOfCPUs;
     with editor do begin
       fontSize:=stream.readLongint;
       fontName := stream.readAnsiString;
