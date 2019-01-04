@@ -1,4 +1,4 @@
-USE formattingUtils;
+USE '..\packages\formattingUtils.mnh';
 
 toGray(l:BooleanList)->begin
   local last:=false;

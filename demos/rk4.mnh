@@ -1,4 +1,4 @@
-USE rungeKutta;
+USE '..\packages\rungeKutta.mnh';
 private df     :={[1,$x[0]*sqrt($x[1])]};
 private initial:=[0,1];
 private exact(t)->1/16*(t^2+4)^2;

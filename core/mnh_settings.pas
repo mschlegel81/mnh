@@ -49,6 +49,8 @@ T_fileHistory=object(T_serializable)
   FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
 end;
 
+T_cmdLineFlag=(clf_GUI,clf_QUIET,clf_SILENT,clf_HEADLESS,clf_PROFILE,clf_PAUSEALWAYS);
+
 P_Settings=^T_settings;
 T_settings=object(T_serializable)
   private
@@ -60,9 +62,12 @@ T_settings=object(T_serializable)
   memoryLimit:int64;
   cpuCount:longint;
   saveIntervalIdx:byte;
-  editorFontname: string;
-  fontSize:longint;
-  antialiasedFonts:boolean;
+  //IDE:
+  editor:record
+    fontName        :string;
+    fontSize        :longint;
+    antialiasedFonts:boolean;
+  end;
   mainForm:T_formPosition;
   outline:record
     showPrivate,showImported,sortByName,sortByNameCaseSen,sortByLoc,
@@ -79,6 +84,12 @@ T_settings=object(T_serializable)
   doShowSplashScreen:boolean;
   fullFlavourLocation,
   lightFlavourLocation:string;
+
+  externalRunOptions:record
+    flags:set of T_cmdLineFlag;
+    callLightFlavour:boolean;
+    verbosity,customFolder:ansistring;
+  end;
 
   newFileLineEnding,overwriteLineEnding:byte;
 
@@ -123,7 +134,7 @@ DESTRUCTOR T_settings.destroy;
   begin
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235081; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235082; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -131,13 +142,12 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     if not inherited loadFromStream(stream) then cleanExit;
 
     cpuCount:=stream.readLongint;
-    if cpuCount<=0 then begin
-      cpuCount:=getNumberOfCPUs;
-      if cpuCount<1 then cpuCount:=1;
+    if cpuCount<=0 then cpuCount:=getNumberOfCPUs;
+    with editor do begin
+      fontSize:=stream.readLongint;
+      fontName := stream.readAnsiString;
+      antialiasedFonts:=stream.readBoolean;
     end;
-    fontSize:=stream.readLongint;
-    editorFontname := stream.readAnsiString;
-    antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
     with outline do begin
       showPrivate      :=stream.readBoolean;
@@ -161,6 +171,12 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     lightFlavourLocation:=stream.readAnsiString;
     newFileLineEnding:=stream.readByte;
     overwriteLineEnding:=stream.readByte;
+    with externalRunOptions do begin
+      stream.read(flags,sizeOf(flags));
+      callLightFlavour:=stream.readBoolean;
+      verbosity   :=stream.readAnsiString;
+      customFolder:=stream.readAnsiString;
+    end;
     if not(stream.allOkay) then cleanExit else result:=true;
     savedAt:=now;
     wasLoaded:=result;
@@ -170,9 +186,11 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   begin
     inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
-    stream.writeLongint(fontSize);
-    stream.writeAnsiString(editorFontname);
-    stream.writeBoolean(antialiasedFonts);
+    with editor do begin
+      stream.writeLongint(fontSize);
+      stream.writeAnsiString(fontName);
+      stream.writeBoolean(antialiasedFonts);
+    end;
     mainForm.saveToStream(stream);
     with outline do begin
       stream.writeBoolean(showPrivate      );
@@ -196,15 +214,23 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeAnsiString(lightFlavourLocation);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
+    with externalRunOptions do begin
+      stream.write(flags,sizeOf(flags));
+      stream.writeBoolean   (callLightFlavour);
+      stream.writeAnsiString(verbosity   );
+      stream.writeAnsiString(customFolder);
+    end;
     savedAt:=now;
   end;
 
 PROCEDURE T_settings.initDefaults;
   begin
     cpuCount:=getNumberOfCPUs;
-    editorFontname:='';
-    fontSize:=0;
-    antialiasedFonts:=false;
+    with editor do begin
+      fontName:='';
+      fontSize:=0;
+      antialiasedFonts:=false;
+    end;
     with mainForm do begin
       top := 0;
       Left := 0;
@@ -244,6 +270,12 @@ PROCEDURE T_settings.initDefaults;
     htmlDocGeneratedForCodeHash:='';
     newFileLineEnding:=LINE_ENDING_DEFAULT;
     overwriteLineEnding:=LINE_ENDING_UNCHANGED;
+    with externalRunOptions do begin
+      flags:=[];
+      callLightFlavour:=false;
+      verbosity:='';
+      customFolder:='';
+    end;
   end;
 
 PROCEDURE T_settings.fixLocations;
@@ -254,7 +286,7 @@ PROCEDURE T_settings.fixLocations;
       lightFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh_light'{$ifdef Windows}+'.exe'{$endif};
       if not(fileExists(lightFlavourLocation)) then lightFlavourLocation:='';
     end;
-    {$else}             lightFlavourLocation:=paramStr(0);{$endif};
+    {$else} lightFlavourLocation:=paramStr(0);{$endif};
   end;
 
 FUNCTION T_settings.savingRequested: boolean;

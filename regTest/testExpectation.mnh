@@ -1,5 +1,5 @@
 #!/usr/bin/mnh_light
-USE guiScripts,test_config,'..\make_config.mnh',formattingUtils;
+USE '..\packages\guiScripts.mnh',test_config,'..\make_config.mnh','..\packages\formattingUtils.mnh','..\packages\statistics.mnh';
 private plain datastore expectations:=[].toMap;
 private datastore runTimes:=[].toMap;
 
@@ -239,8 +239,6 @@ main->begin
           : 'complete'];
      end).sort(2).formatTable(['Test','by flavour?','Completeness']).join("\n").print;
 end;
-
-USE statistics;
 
 //*Limit to 50 timings per case and flavour
 //*Drop all values outside of 3 sigma environment

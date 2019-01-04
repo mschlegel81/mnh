@@ -227,7 +227,7 @@ private serve_('statistics')->begin
   format("\n\nThere are implementations available for %s series ", implemented.mergeMaps(foundImplementations,{$0 orElse $1}).size);
 end.compress;
 
-USE generators;
+USE '..\..\packages\generators.mnh';
 private serve_('gen',seriesId,count)->begin
   local seriesIdx:=seriesId.clean(['0'..'9'],'').softCast;
   local n:=count.softCast;

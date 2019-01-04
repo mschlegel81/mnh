@@ -1,11 +1,10 @@
-USE formattingUtils;
+USE '..\packages\formattingUtils.mnh';
 
 //*Returns an expression f($n), returning the Factorial of $n
 multifactorial(degree=1)->{$n<=0 ? 1 : [1.0,1..$n].agg(*).round};
 //*Returns an expression f($n), returning the Multifactorial of given degree
 multifactorial(degree>1)->{$n<=0 ? 1 : (toReal($n)-degree*[0..($n-1) div degree]).agg(*).round};
 
-@SuppressUnusedWarning=Used in oeis_sequences
 multifactorialGenerator(degree)->{begin
   local f:=multifactorial(degree);
   local i:=-1;
@@ -17,3 +16,35 @@ end}.toIteratableExpression;
 @demo_for=formatting, expressions
 main->printf('%s',[1..5].each(degree,flatten(degree,[1..10].map(multifactorial(degree))))
 .formatTable('Degree'|('#'&[1..10])));
+
+@SuppressUnusedWarning=all
+@class=Multifactorial
+@OEIS=A000142
+A000142->multifactorialGenerator(1);
+@class=Multifactorial
+@OEIS=A006882
+A006882->multifactorialGenerator(2);
+@class=Multifactorial
+@OEIS=A007661
+A007661->multifactorialGenerator(3);
+@class=Multifactorial
+@OEIS=A007662
+A007662->multifactorialGenerator(4);
+@class=Multifactorial
+@OEIS=A085157
+A085157->multifactorialGenerator(5);
+@class=Multifactorial
+@OEIS=A085158
+A085158->multifactorialGenerator(6);
+@class=Multifactorial
+@OEIS=A114799
+A114799->multifactorialGenerator(7);
+@class=Multifactorial
+@OEIS=A114800
+A114800->multifactorialGenerator(8);
+@class=Multifactorial
+@OEIS=A114806
+A114806->multifactorialGenerator(9);
+@class=Multifactorial
+@OEIS=A288327
+A288327->multifactorialGenerator(10);

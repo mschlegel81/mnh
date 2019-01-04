@@ -1,3 +1,4 @@
+@OEIS=A051037
 hammingGenerator->{begin
   local P5:=[1,2,3,5].toSet;
   local H:=[1]; //generated Hamming numbers

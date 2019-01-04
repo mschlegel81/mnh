@@ -382,10 +382,7 @@ PROCEDURE TMnhForm.miRestoreDefaultFileClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
   begin
-    askForm.initWithQuestion('Please give command line parameters');
-    if askForm.ShowModal=mrOk
-    then runnerModel.runExternally(askForm.getLastAnswerReleasing(nil))
-    else                           askForm.getLastAnswerReleasing(nil);
+    if customRunForm.ShowModal=mrOk then runnerModel.runExternally(customRunForm.scriptParamEdit.text);
   end;
 
 PROCEDURE TMnhForm.miShowAssistanceClick(Sender: TObject);

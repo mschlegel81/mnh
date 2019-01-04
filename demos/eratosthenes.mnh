@@ -1,4 +1,4 @@
-USE generators;
+USE '..\packages\generators.mnh';
 
 sieve(maxToCheck>2)->begin
   //initialize boolean array, marking 0 and 1 as "not prime"

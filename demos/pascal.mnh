@@ -1,3 +1,4 @@
+USE '..\packages\generators.mnh';
 memoized
 pascalTriangleRow(n<1)->1;
 pascalTriangleRow(n)->(pascalTriangleRow(n-1)|0)+(0|pascalTriangleRow(n-1));
@@ -8,3 +9,68 @@ private printTri(n:Int)->printf("%s",[0..n-1].each(i,repeat("\v",n-i)&pascalTria
 
 //*See http://rosettacode.org/wiki/Pascal%27s_triangle
 main(lineCount)->printTri(softCast(lineCount));
+
+@SuppressUnusedWarning=all
+@class=Pascal triangle row
+@OEIS=A010926
+A010926->pascalTriangleRow(10).listIterator;
+@class=Pascal triangle row
+@OEIS=A010927
+A010927->pascalTriangleRow(11).listIterator;
+@class=Pascal triangle row
+@OEIS=A010928
+A010928->pascalTriangleRow(12).listIterator;
+@class=Pascal triangle row
+@OEIS=A010929
+A010929->pascalTriangleRow(13).listIterator;
+@class=Pascal triangle row
+@OEIS=A010930
+A010930->pascalTriangleRow(14).listIterator;
+@class=Pascal triangle row
+@OEIS=A010931
+A010931->pascalTriangleRow(15).listIterator;
+@class=Pascal triangle row
+@OEIS=A010932
+A010932->pascalTriangleRow(16).listIterator;
+@class=Pascal triangle row
+@OEIS=A010933
+A010933->pascalTriangleRow(17).listIterator;
+@class=Pascal triangle row
+@OEIS=A010934
+A010934->pascalTriangleRow(18).listIterator;
+@class=Pascal triangle row
+@OEIS=A010935
+A010935->pascalTriangleRow(19).listIterator;
+@class=Pascal triangle row
+@OEIS=A010936
+A010936->pascalTriangleRow(20).listIterator;
+@class=Pascal triangle row
+@OEIS=A010937
+A010937->pascalTriangleRow(21).listIterator;
+@class=Pascal triangle row
+@OEIS=A010938
+A010938->pascalTriangleRow(22).listIterator;
+@class=Pascal triangle row
+@OEIS=A010939
+A010939->pascalTriangleRow(23).listIterator;
+@class=Pascal triangle row
+@OEIS=A010940
+A010940->pascalTriangleRow(24).listIterator;
+@class=Pascal triangle row
+@OEIS=A010941
+A010941->pascalTriangleRow(25).listIterator;
+@class=Pascal triangle row
+@OEIS=A010942
+A010942->pascalTriangleRow(26).listIterator;
+@class=Pascal triangle row
+@OEIS=A010943
+A010943->pascalTriangleRow(27).listIterator;
+@class=Pascal triangle row
+@OEIS=A010944
+A010944->pascalTriangleRow(28).listIterator;
+@class=Pascal triangle row
+@OEIS=A010945
+A010945->pascalTriangleRow(29).listIterator;
+@class=Pascal triangle row
+@OEIS=A010946
+A010946->pascalTriangleRow(30).listIterator;

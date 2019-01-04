@@ -1,4 +1,4 @@
-USE formattingUtils;
+USE '..\packages\formattingUtils.mnh';
 
 A:=[[27,'Jonah'],
     [18,'Alan' ],

@@ -12,6 +12,17 @@ USES sysutils,
      recyclers,
      evaluation;
 
+CONST
+  FLAG_GUI          ='-GUI';
+  FLAG_QUIET        ='-quiet';
+  FLAG_SILENT       ='-silent';
+  FLAG_HEADLESS     ='-headless';
+  FLAG_PAUSE_ON_ERR ='-pauseOnError';
+  FLAG_PAUSE_ALWAYS ='-pauseAfter';
+  FLAG_PROFILE      ='-profile';
+
+  FLAG_TEXT:array[T_cmdLineFlag] of string=(FLAG_GUI,FLAG_QUIET,FLAG_SILENT,FLAG_HEADLESS,FLAG_PROFILE,FLAG_PAUSE_ALWAYS);
+
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 {$ifdef fullVersion}
 FUNCTION getFileToInterpretFromCommandLine:ansistring;
@@ -24,6 +35,8 @@ CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     reEvaluationWithGUIrequired:boolean=false;
+    pauseAtEnd:boolean=false;
+    pauseOnError:boolean=false;
     {$ifdef fullVersion}
     imigAdapters:P_abstractOutAdapter=nil;
     plotAdapters:P_abstractOutAdapter=nil;
@@ -90,18 +103,20 @@ PROCEDURE displayHelp;
     writeln('                       u/U  : user defined notes, warnings and errors');
     writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
-    writeln('  -GUI              force evaluation with GUI');
+    writeln('  '+FLAG_GUI+'              force evaluation with GUI');
     writeln('  -h                display this help or help on the input file if present and quit');
-    writeln('  -headless         forbid input via ask (scripts using ask will crash)');
+    writeln('  '+FLAG_HEADLESS+'         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
-    writeln('  -profile          do a profiling run - implies -vt');
+    writeln('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
     writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     writeln('     if no options are given, the global output settings will be used');
     writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
-    writeln('  -quiet            disable console output');
-    writeln('  -silent           suppress beeps');
+    writeln('  '+FLAG_QUIET+'            disable console output');
+    writeln('  '+FLAG_SILENT+'           suppress beeps');
+    writeln('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
+    writeln('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
@@ -112,6 +127,7 @@ CONST DEF_VERBOSITY_STRING='';
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
       verbosityString:string=DEF_VERBOSITY_STRING;
       quitImmediate:boolean=false;
+      memCheckerStarted:boolean=false;
       {$ifdef UNIX}
       hasAnyMnhParameter:boolean=false;
       {$endif}
@@ -133,7 +149,7 @@ CONST DEF_VERBOSITY_STRING='';
             verbosityString+=app;
             exit(true);
           end;
-          if (param='-profile') then begin
+          if (param=FLAG_PROFILE) then begin
             {$ifdef fullVersion}
               profilingRun:=true;
             {$else}
@@ -141,15 +157,17 @@ CONST DEF_VERBOSITY_STRING='';
             {$endif}
             exit(true);
           end;
-          if (param='-GUI') then begin
+          if (param=FLAG_GUI) then begin
             reEvaluationWithGUIrequired:=true;
             exit(true);
           end;
-          if param='-quiet'    then begin wantConsoleAdapter:=false;               exit(true); end;
-          if param='-silent'   then begin suppressBeep      :=true ;               exit(true); end;
-          if param='-headless' then begin headless          :=true ;               exit(true); end;
-          if param='-out'      then begin parsingState:=pst_parsingOutFileRewrite; exit(true); end;
-          if param='+out'      then begin parsingState:=pst_parsingOutFileAppend;  exit(true); end;
+          if param=FLAG_QUIET        then begin wantConsoleAdapter:=false;               exit(true); end;
+          if param=FLAG_SILENT       then begin suppressBeep      :=true ;               exit(true); end;
+          if param=FLAG_HEADLESS     then begin headless          :=true ;               exit(true); end;
+          if param=FLAG_PAUSE_ON_ERR then begin pauseOnError      :=true ;               exit(true); end;
+          if param=FLAG_PAUSE_ALWAYS then begin pauseAtEnd        :=true ;               exit(true); end;
+          if param='-out'            then begin parsingState:=pst_parsingOutFileRewrite; exit(true); end;
+          if param='+out'            then begin parsingState:=pst_parsingOutFileAppend;  exit(true); end;
         end;
         pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
           setLength(deferredAdapterCreations,length(deferredAdapterCreations)+1);
@@ -201,8 +219,8 @@ CONST DEF_VERBOSITY_STRING='';
             halt(0);
           end;
           {$endif} {$endif}
-          if param='-cmd'           then begin directExecutionMode:=true;                exit(true); end;
-          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                    exit(true); end;
+          if param='-cmd'           then begin directExecutionMode:=true;                              exit(true); end;
+          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                                  exit(true); end;
           if param='-info'          then begin for s in getMnhInfo do writeln(s); quitImmediate:=true; exit(true); end;
         end;
         pst_parsingFileToEdit: begin
@@ -233,6 +251,7 @@ CONST DEF_VERBOSITY_STRING='';
         wantHelpDisplay:=false;
         globals.destroy;
         recycler.cleanup;
+        if pauseAtEnd then readln;
         exit;
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
@@ -248,18 +267,17 @@ CONST DEF_VERBOSITY_STRING='';
       globals.destroy;
       recycler.cleanup;
       consoleAdapters.setExitCode;
+      if pauseAtEnd or pauseOnError and ((ExitCode<>0) or (consoleAdapters.triggersBeep) {$ifdef fullVersion} or profilingRun {$endif}) then readln;
     end;
 
   PROCEDURE executeCommand;
     begin
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       executePackage(packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME),lu_forDirectExecution);
     end;
 
   PROCEDURE executeScript;
     VAR package:P_package;
     begin
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
       new(package,create(newFileCodeProvider(fileOrCommandToInterpret),nil));
       executePackage(package,lu_forCallingMain);
@@ -273,8 +291,6 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
-    memoryComfortThreshold:=settings.memoryLimit;
-    startMemChecker;
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
@@ -323,6 +339,8 @@ CONST DEF_VERBOSITY_STRING='';
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(@consoleAdapters,nil);
     if (fileOrCommandToInterpret<>'') and not(reEvaluationWithGUIrequired) then begin
+       startMemChecker(settings.memoryLimit);
+       memCheckerStarted:=true;
        if directExecutionMode then executeCommand
                               else executeScript;
        quitImmediate:=true;
@@ -336,6 +354,7 @@ CONST DEF_VERBOSITY_STRING='';
       {$ifdef fullVersion}and (length(filesToOpenInEditor)=0) {$endif}
       and not(reEvaluationWithGUIrequired);
     result:=not(quitImmediate);
+    if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
     consoleAdapters.destroy;
   end;
 

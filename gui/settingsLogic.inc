@@ -80,7 +80,7 @@ PROCEDURE TMnhForm.quickOutputPopupClick(Sender:TObject);
 PROCEDURE processFontSettings;
   begin
     with MnhForm do begin
-      outputEdit.Font.name:=settings.editorFontname;
+      outputEdit.Font.name:=settings.editor.fontName;
       outputEdit.Font.size:=SettingsForm.fontSize;
       if SettingsForm.AntialiasCheckbox.checked
       then outputEdit.Font.quality:=fqCleartypeNatural
