@@ -1,3 +1,4 @@
+@OEIS=A005132
 recamanGenerator->{begin
   local visited:=[].toSet;
   local i:= 0;

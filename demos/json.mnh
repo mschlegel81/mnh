@@ -1,4 +1,4 @@
-USE jsonUtils;
+USE '..\packages\jsonUtils.mnh';
 
 json:=//!~{
   "Herausgeber": "Xema",

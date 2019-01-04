@@ -1,4 +1,4 @@
-USE dateUtils;
+USE '..\packages\dateUtils.mnh';
 private lastSundaysInYear(year:Int)->begin
   [dateOf(year,1,1)..dateOf(year,12,31)] //take all days in that year
   .filter({dayOfWeek($d)=SUNDAY})        //take only sundays

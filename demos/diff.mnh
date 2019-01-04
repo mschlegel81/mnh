@@ -1,4 +1,4 @@
-USE guiScripts;
+USE '..\packages\guiScripts.mnh';
 //*Shows the diff of two files
 @demo_for=diff
 main(file1:String,file2:String)->
