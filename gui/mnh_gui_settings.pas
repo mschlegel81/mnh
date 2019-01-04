@@ -92,17 +92,17 @@ FUNCTION SettingsForm: TSettingsForm;
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    if settings.editorFontname<>'' then begin
-      EditorFontDialog.Font.name := settings.editorFontname;
-      FontButton.Font.name := settings.editorFontname;
+    if settings.editor.fontName<>'' then begin
+      EditorFontDialog.Font.name := settings.editor.fontName;
+      FontButton.Font.name := settings.editor.fontName;
     end;
-    AntialiasCheckbox.checked := settings.antialiasedFonts;
-    setFontSize(settings.fontSize);
+    AntialiasCheckbox.checked := settings.editor.antialiasedFonts;
+    setFontSize(settings.editor.fontSize);
     setOutputLimit(settings.outputLinesLimit);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.editorFontname;
+    FontButton.caption := settings.editor.fontName;
     with settings.mainForm do begin
       if top<0  then top := 0;
       if Left<0 then Left := 0;
@@ -135,11 +135,11 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.execute then begin
       setFontSize(EditorFontDialog.Font.size);
-      settings.editorFontname := EditorFontDialog.Font.name;
+      settings.editor.fontName := EditorFontDialog.Font.name;
 
-      FontButton.Font.name := settings.editorFontname;
+      FontButton.Font.name := settings.editor.fontName;
       FontButton.Font.size := getFontSize;
-      FontButton.caption := settings.editorFontname;
+      FontButton.caption := settings.editor.fontName;
     end;
   end;
 
@@ -192,13 +192,13 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
   begin
-    if settings.editorFontname<>'' then exit;
-    settings.editorFontname:=editorFont.name;
-    EditorFontDialog.Font.name := settings.editorFontname;
-    FontButton.Font.name := settings.editorFontname;
+    if settings.editor.fontName<>'' then exit;
+    settings.editor.fontName:=editorFont.name;
+    EditorFontDialog.Font.name := settings.editor.fontName;
+    FontButton.Font.name := settings.editor.fontName;
     setFontSize(editorFont.size);
     FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.editorFontname;
+    FontButton.caption := settings.editor.fontName;
   end;
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
@@ -281,7 +281,7 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
 
 PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
   begin
-    settings.antialiasedFonts:=AntialiasCheckbox.checked;
+    settings.editor.antialiasedFonts:=AntialiasCheckbox.checked;
   end;
 
 PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
@@ -298,7 +298,7 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
   begin
     FontSizeEdit.text := intToStr(value);
     EditorFontDialog.Font.size := value;
-    settings.fontSize:=value;
+    settings.editor.fontSize:=value;
   end;
 
 FUNCTION TSettingsForm.getOutputLimit: longint;

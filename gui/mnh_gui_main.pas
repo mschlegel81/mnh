@@ -49,7 +49,8 @@ USES
   mnhCustomForm,
   openFile,
   saveFile,
-  outlines;
+  outlines,
+  customRunDialog;
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}

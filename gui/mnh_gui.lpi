@@ -120,7 +120,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="87">
+    <Units Count="88">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -527,6 +527,14 @@
         <Filename Value="..\core\funcs_files.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit86>
+      <Unit87>
+        <Filename Value="customrundialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="CustomRunForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="customRunDialog"/>
+      </Unit87>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

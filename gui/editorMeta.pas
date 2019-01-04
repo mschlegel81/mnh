@@ -5,6 +5,7 @@ USES  //basic classes
   //my utilities:
   serializationUtil,
   myGenerics,
+  myStringUtil,
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
   //GUI: SynEdit
@@ -1180,26 +1181,25 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
   end;
 
 PROCEDURE T_runnerModel.runExternally(CONST mainParameters:string='');
-  VAR params:string;
-      callParameters:T_arrayOfString;
-      sp:longint;
+  VAR callParameters:T_arrayOfString;
+      flag:T_cmdLineFlag;
+      executor:string='';
   begin
-    params:=mainParameters;
-    setLength(callParameters,1);
-    callParameters[0]:=getEditor^.getPath;
-
-    params:=trim(params);
-    while params<>'' do begin
-      sp:=pos(' ',params);
-      if sp<=0 then begin
-        append(callParameters,params);
-        params:='';
-      end else begin
-        append(callParameters,copy(params,1,sp-1));
-        params:=trim(copy(params,sp+1,length(params)));
-      end;
+    callParameters:=FLAG_PAUSE_ALWAYS;
+    with settings.externalRunOptions do begin
+      for flag in flags do
+        append(callParameters,FLAG_TEXT[flag]);
+      if verbosity<>'' then append(callParameters,'-v'+verbosity);
+      if customFolder=''
+      then getEditor^.setWorkingDir
+      else SetCurrentDirUTF8(customFolder);
+      if callLightFlavour then executor:=settings.lightFlavourLocation
+                          else executor:=paramStr(0);
     end;
-    runCommandAsyncOrPipeless(paramStr(0),callParameters,true);
+
+    append(callParameters,getEditor^.getPath);
+    append(callParameters,splitCommandLine(trim(mainParameters)));
+    runCommandAsyncOrPipeless(executor,callParameters,true);
   end;
 
 PROCEDURE T_runnerModel.rerun(CONST profiling:boolean);

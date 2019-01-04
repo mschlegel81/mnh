@@ -1,0 +1,264 @@
+object CustomRunForm: TCustomRunForm
+  Left = 1092
+  Height = 456
+  Top = 423
+  Width = 481
+  AutoSize = True
+  Caption = 'Run externally'
+  ClientHeight = 456
+  ClientWidth = 481
+  DesignTimePPI = 144
+  OnCreate = FormCreate
+  LCLVersion = '1.8.4.0'
+  object GroupBox1: TGroupBox
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = RunButton
+    Left = 0
+    Height = 63
+    Top = 0
+    Width = 419
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = True
+    Caption = 'script parameters'
+    ClientHeight = 33
+    ClientWidth = 415
+    TabOrder = 0
+    object scriptParamEdit: TEdit
+      Left = 0
+      Height = 33
+      Top = 0
+      Width = 415
+      Align = alClient
+      TabOrder = 0
+    end
+  end
+  object GroupBox2: TGroupBox
+    AnchorSideLeft.Control = GroupBox1
+    AnchorSideTop.Control = GroupBox1
+    AnchorSideTop.Side = asrBottom
+    AnchorSideBottom.Control = GroupBox4
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 208
+    Top = 63
+    Width = 131
+    Align = alCustom
+    Anchors = [akTop, akLeft, akBottom]
+    Caption = 'executable'
+    ClientHeight = 178
+    ClientWidth = 127
+    TabOrder = 2
+    object fullVersionRb: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 127
+      Align = alTop
+      Caption = 'full version'
+      Checked = True
+      OnChange = fullVersionRbChange
+      TabOrder = 1
+      TabStop = True
+    end
+    object lightVersionRb: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 29
+      Width = 127
+      Align = alTop
+      Caption = 'light version'
+      OnChange = fullVersionRbChange
+      TabOrder = 0
+    end
+  end
+  object GroupBox3: TGroupBox
+    AnchorSideLeft.Control = GroupBox2
+    AnchorSideTop.Control = GroupBox2
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 121
+    Top = 271
+    Width = 481
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = True
+    Caption = 'execution folder'
+    ClientHeight = 91
+    ClientWidth = 477
+    TabOrder = 4
+    object scriptLocRb: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 477
+      Align = alTop
+      Caption = 'script location'
+      Checked = True
+      OnChange = customLocRbChange
+      TabOrder = 0
+      TabStop = True
+    end
+    object customLocRb: TRadioButton
+      Left = 0
+      Height = 29
+      Top = 29
+      Width = 477
+      Align = alTop
+      Caption = 'custom location'
+      OnChange = customLocRbChange
+      TabOrder = 1
+    end
+    object DirectoryEdit: TDirectoryEdit
+      Left = 0
+      Height = 33
+      Top = 58
+      Width = 477
+      ShowHidden = False
+      ButtonWidth = 34
+      NumGlyphs = 1
+      Align = alClient
+      Enabled = False
+      MaxLength = 0
+      TabOrder = 2
+      OnChange = DirectoryEditChange
+    end
+  end
+  object GroupBox4: TGroupBox
+    AnchorSideLeft.Control = GroupBox2
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = GroupBox1
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 131
+    Height = 208
+    Top = 63
+    Width = 350
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = True
+    Caption = 'additional flags'
+    ClientHeight = 178
+    ClientWidth = 346
+    TabOrder = 3
+    object guiFlagCb: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 346
+      Align = alTop
+      Caption = '-GUI'
+      OnChange = guiFlagCbChange
+      TabOrder = 0
+    end
+    object quietFlagCb: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 29
+      Width = 346
+      Align = alTop
+      Caption = '-quiet (suppress console output)'
+      OnChange = quietFlagCbChange
+      TabOrder = 1
+    end
+    object silentFlagCb: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 58
+      Width = 346
+      Align = alTop
+      Caption = '-silent (suppress beeps)'
+      OnChange = silentFlagCbChange
+      TabOrder = 2
+    end
+    object headlessFlagCb: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 87
+      Width = 346
+      Align = alTop
+      Caption = '-headless (forbid input)'
+      OnChange = headlessFlagCbChange
+      TabOrder = 3
+    end
+    object profileFlagCb: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 116
+      Width = 346
+      Align = alTop
+      Caption = '-profile'
+      OnChange = profileFlagCbChange
+      TabOrder = 4
+    end
+    object Label1: TLabel
+      AnchorSideLeft.Control = profileFlagCb
+      AnchorSideTop.Control = profileFlagCb
+      AnchorSideTop.Side = asrBottom
+      Left = 0
+      Height = 25
+      Top = 145
+      Width = 78
+      Align = alCustom
+      Caption = 'Verbosity:'
+      ParentColor = False
+    end
+    object verbosityEdit: TEdit
+      AnchorSideLeft.Control = Label1
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = profileFlagCb
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = profileFlagCb
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = GroupBox4
+      AnchorSideBottom.Side = asrBottom
+      Left = 78
+      Height = 33
+      Top = 145
+      Width = 268
+      Align = alCustom
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      OnChange = verbosityEditChange
+      TabOrder = 5
+    end
+  end
+  object RunButton: TButton
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = GroupBox4
+    Left = 419
+    Height = 63
+    Top = 0
+    Width = 62
+    Align = alCustom
+    Anchors = [akTop, akRight, akBottom]
+    AutoSize = True
+    Caption = 'RUN'
+    ModalResult = 1
+    TabOrder = 1
+  end
+  object Button1: TButton
+    AnchorSideTop.Control = GroupBox3
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = GroupBox3
+    AnchorSideRight.Side = asrBottom
+    Left = 407
+    Height = 35
+    Top = 392
+    Width = 74
+    Align = alCustom
+    Anchors = [akTop, akRight]
+    AutoSize = True
+    Cancel = True
+    Caption = 'cancel'
+    ModalResult = 2
+    TabOrder = 5
+  end
+end

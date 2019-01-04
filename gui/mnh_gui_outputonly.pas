@@ -106,9 +106,9 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     editorMetaBase.editorFont:=TFont.create;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
-    editorMetaBase.editorFont.name:=settings.editorFontname;
-    editorMetaBase.editorFont.size:=settings.fontSize;
-    if settings.antialiasedFonts
+    editorMetaBase.editorFont.name:=settings.editor.fontName;
+    editorMetaBase.editorFont.size:=settings.editor.fontSize;
+    if settings.editor.antialiasedFonts
     then editorMetaBase.editorFont.quality:=fqCleartypeNatural
     else editorMetaBase.editorFont.quality:=fqNonAntialiased;
 

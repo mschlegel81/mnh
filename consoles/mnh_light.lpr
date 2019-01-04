@@ -18,5 +18,6 @@ begin
       end;
     end else displayHelp;
   end;
+  if pauseAtEnd then readln;
 end.
 
