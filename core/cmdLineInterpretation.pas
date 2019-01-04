@@ -126,6 +126,7 @@ CONST DEF_VERBOSITY_STRING='';
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
       verbosityString:string=DEF_VERBOSITY_STRING;
       quitImmediate:boolean=false;
+      memCheckerStarted:boolean=false;
       {$ifdef UNIX}
       hasAnyMnhParameter:boolean=false;
       {$endif}
@@ -217,8 +218,8 @@ CONST DEF_VERBOSITY_STRING='';
             halt(0);
           end;
           {$endif} {$endif}
-          if param='-cmd'           then begin directExecutionMode:=true;                exit(true); end;
-          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                    exit(true); end;
+          if param='-cmd'           then begin directExecutionMode:=true;                              exit(true); end;
+          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                                  exit(true); end;
           if param='-info'          then begin for s in getMnhInfo do writeln(s); quitImmediate:=true; exit(true); end;
         end;
         pst_parsingFileToEdit: begin
@@ -268,14 +269,12 @@ CONST DEF_VERBOSITY_STRING='';
 
   PROCEDURE executeCommand;
     begin
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       executePackage(packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME),lu_forDirectExecution);
     end;
 
   PROCEDURE executeScript;
     VAR package:P_package;
     begin
-      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
       new(package,create(newFileCodeProvider(fileOrCommandToInterpret),nil));
       executePackage(package,lu_forCallingMain);
@@ -289,7 +288,6 @@ CONST DEF_VERBOSITY_STRING='';
 
   VAR i:longint;
   begin
-    startMemChecker(settings.memoryLimit);
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
@@ -338,6 +336,8 @@ CONST DEF_VERBOSITY_STRING='';
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(@consoleAdapters,nil);
     if (fileOrCommandToInterpret<>'') and not(reEvaluationWithGUIrequired) then begin
+       startMemChecker(settings.memoryLimit);
+       memCheckerStarted:=true;
        if directExecutionMode then executeCommand
                               else executeScript;
        quitImmediate:=true;
@@ -351,6 +351,7 @@ CONST DEF_VERBOSITY_STRING='';
       {$ifdef fullVersion}and (length(filesToOpenInEditor)=0) {$endif}
       and not(reEvaluationWithGUIrequired);
     result:=not(quitImmediate);
+    if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
     consoleAdapters.destroy;
   end;
 
