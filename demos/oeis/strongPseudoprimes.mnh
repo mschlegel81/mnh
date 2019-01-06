@@ -198,8 +198,8 @@ A020285->strongPseudoprimeGenerator(59);
 @class=strongPseudoprime
 @OEIS=A020286
 A020286->strongPseudoprimeGenerator(60);
-@class
- @OEIS=A020287
+@class=strongPseudoprime
+@OEIS=A020287
 A020287->strongPseudoprimeGenerator(61);
 @class=strongPseudoprime
 @OEIS=A020288

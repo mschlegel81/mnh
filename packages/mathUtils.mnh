@@ -37,3 +37,5 @@ Gamma(x)->exp(0.5*ln(2*pi)+(x-1/2)*ln(x)-x+x/2*ln(x*sinh(1/x)+1/(810*x^6)));
 memoized
 Bernoulli(n=0)->1;
 Bernoulli(n)  ->-1/(n+1)*[0..n-1].each(k,binomCoeff(n+1,k)*Bernoulli(k),+);
+
+sumOfProperDividers(n>=1)->n.factorize.elementFrequency.each(x,(x[0]^(x[1]+1)-1)/(x[0]-1),*)-n;

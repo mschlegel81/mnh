@@ -108,6 +108,7 @@ private getData(URL:String)->begin
   (local fileExistedBefore:=fileExists(filename))
   ? void
   : begin
+      print('Fetching data from ',URL);
       local data:=httpGet(URL);
       print(filename,' downloaded');
       filename.writeFile(data);
@@ -128,11 +129,10 @@ private memoized serve_('download',...)->begin
   respond('Updating data - old: ',typeOf(names));
   local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
   local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
-  local namesMap:=future({getData('https://oeis.org/names.gz'   ).pEach(line,line.matches('^A\d{6} ') ? idAndRest(line)   : void).toMap});
-  local seriesMap:=       getData('https://oeis.org/stripped.gz').pEach(line,line.matches('^A\d{6} ') ? idAndSeries(line) : void).toMap;
-  respond('Series file parsed - ',seriesMap.size,' entries');
-  namesMap:=namesMap();
+  local namesMap:=getData('https://oeis.org/names.gz'   ).pEach(line,line.matches('^A\d{6} ') ? idAndRest(line)   : void).toMap;
   respond('Names file parsed - ',namesMap.size,' entries');
+  local seriesMap:=getData('https://oeis.org/stripped.gz').pEach(line,line.matches('^A\d{6} ') ? idAndSeries(line) : void).toMap;
+  respond('Series file parsed - ',seriesMap.size,' entries');
   local maxSeries:=max(namesMap.getInner(0).max,seriesMap.getInner(0).max);
   respond('Updating names list of ',maxSeries,' relevant entries');
   names    :=rangeGenerator(0,maxSeries).pMap({namesMap [$i] orElse ''});

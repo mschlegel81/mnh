@@ -142,35 +142,35 @@ end;
 private curry isKnoedel(n,m)->!isPrime(m) AND coprimesLesser(m).pEach(i,powMod(i,m-n,m)=1,AND);
 
 @class=Knödel
-A002997->rangeGenerator( 2,2^60).filter(isKnoedel(1));
+A002997->rangeGenerator( 2).filter(isKnoedel(1));
 @class=Knödel
-A050990->rangeGenerator( 3,2^60).filter(isKnoedel(2));
+A050990->rangeGenerator( 3).filter(isKnoedel(2));
 @class=Knödel
-A033553->rangeGenerator( 4,2^60).filter(isKnoedel(3));
+A033553->rangeGenerator( 4).filter(isKnoedel(3));
 @class=Knödel
-A050992->rangeGenerator( 5,2^60).filter(isKnoedel(4));
+A050992->rangeGenerator( 5).filter(isKnoedel(4));
 @class=Knödel
-A050993->rangeGenerator( 6,2^60).filter(isKnoedel(5));
+A050993->rangeGenerator( 6).filter(isKnoedel(5));
 @class=Knödel
-A208154->rangeGenerator( 7,2^60).filter(isKnoedel(6));
+A208154->rangeGenerator( 7).filter(isKnoedel(6));
 @class=Knödel
-A208155->rangeGenerator( 8,2^60).filter(isKnoedel(7));
+A208155->rangeGenerator( 8).filter(isKnoedel(7));
 @class=Knödel
-A208156->rangeGenerator( 9,2^60).filter(isKnoedel(8));
+A208156->rangeGenerator( 9).filter(isKnoedel(8));
 @class=Knödel
-A208157->rangeGenerator(10,2^60).filter(isKnoedel(9));
+A208157->rangeGenerator(10).filter(isKnoedel(9));
 @class=Knödel
-A208158->rangeGenerator(11,2^60).filter(isKnoedel(10));
+A208158->rangeGenerator(11).filter(isKnoedel(10));
 @class=Knödel
-A225506->rangeGenerator(2,2^60).filter(isKnoedel(-2));
+A225506->rangeGenerator(2).filter(isKnoedel(-2));
 @class=Knödel
-A225507->rangeGenerator(2,2^60).filter(isKnoedel(-3));
+A225507->rangeGenerator(2).filter(isKnoedel(-3));
 @class=Knödel
-A225508->rangeGenerator(2,2^60).filter(isKnoedel(-4));
+A225508->rangeGenerator(2).filter(isKnoedel(-4));
 @class=Knödel
-A225509->rangeGenerator(2,2^60).filter(isKnoedel(-5));
+A225509->rangeGenerator(2).filter(isKnoedel(-5));
 @class=Knödel
-A225514->rangeGenerator(2,2^60).filter(isKnoedel(-10));
+A225514->rangeGenerator(2).filter(isKnoedel(-10));
 
 USE strongPseudoprimes;
 private aliquotSequenceGenerator(startValue)->{begin
