@@ -43,6 +43,26 @@ FUNCTION sqrt_imp intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION isqrt_imp intFuncSignature;
+  VAR intRoot:int64;
+      bigRoot:T_bigInt;
+      isSquare:boolean;
+  begin
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_smallint:begin
+        intRoot:=trunc(sqrt(P_smallIntLiteral(arg0)^.value));
+        result:=newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
+      end;
+      lt_bigint: begin
+        if (P_bigIntLiteral(arg0)^.value.canBeRepresentedAsInt1024)
+        then bigRoot:=T_fixedSizeNonnegativeInt(P_bigIntLiteral(arg0)^.value).iSqrt(true,isSquare).toNewBigInt
+        else bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(isSquare);
+        result:=newListLiteral(2)^.append(newIntLiteral(bigRoot),false)^.appendBool(isSquare);
+      end;
+      else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
+    end else result:=nil;
+  end;
+
 FUNCTION sin_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
@@ -992,6 +1012,7 @@ FUNCTION divMod_impl intFuncSignature;
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'isqrt' ,@isqrt_imp ,ak_unary,'isqrt(n);//Returns [floor(sqrt(n)),isSquare(n)]');
   registerRule(MATH_NAMESPACE,'sin'   ,@sin_imp   ,ak_unary,'sin(n);//Returns the sine of numeric or expression parameter n');
   registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,ak_unary,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
   registerRule(MATH_NAMESPACE,'cos'   ,@cos_imp   ,ak_unary,'cos(n);//Returns the cosine of numeric or expression parameter n');
