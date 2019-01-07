@@ -872,7 +872,7 @@ end}
       case cTokType[0] of
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
-              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
+              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: begin
               stack.popDestroy(recycler);
               stack.popLink(first);
               first^.data:=newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
