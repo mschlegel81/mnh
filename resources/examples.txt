@@ -163,6 +163,10 @@ sqrt(3);
 
 sqrt({1+$x});
 
+isqrt(121);
+
+isqrt(255);
+
 sign(-0.92);
 
 sign(3);

@@ -1,0 +1,57 @@
+isPrimeFactorizationPalindrome(i>0)->begin
+  local hasOdd:=false;
+  i.factorize.elementFrequency.getInner(1).each(f,
+    (f and 1)=1
+    ? hasOdd ? return false : hasOdd:=true
+    : void);
+  true;
+end;
+isPrimeFactorizationPalindrome(i<=0)->false;
+
+isPalindrome(i:Int,base:Int)->begin
+  (local d:=i.digits(base))==d.reverseList;
+end;
+
+isPalindrome(i:Int,bases:IntList)->bases.each(base,i.isPalindrome(base),OR);
+
+palindromeBase(k>=1,underlyingBase:Int)->begin
+  [0..size(local e:=underlyingBase^[0 .. k-1]) div 2].each(i,[e[i],e[size(e)-1-i]].unique.agg(+)).unique.reverseList;
+end;
+
+palindromeGenerator(underlyingBase:Int)->{begin
+  local i:=-1;
+  local baseIndex:=1;
+  local BASE:=[1];
+save;
+  local d:=digits(i+=1,underlyingBase);
+  d.size>BASE.size
+  ? begin
+      BASE:=palindromeBase(baseIndex+=1,underlyingBase);
+      d:=digits(i:=underlyingBase^(BASE.size-1),underlyingBase);
+    end
+  : void;
+  (d*BASE).agg(+);
+end}.toIteratableExpression;
+
+@SuppressUnusedWarning=all
+@OEIS=A057135
+@class=palindrome
+A057135->palindromeGenerator(10).filter({isPalindrome($x^2,10)});
+@class=palindrome
+A002113->palindromeGenerator(10);
+@class=palindrome
+A006995->palindromeGenerator(2);
+@class=palindrome
+A014190->palindromeGenerator(3);
+@class=palindrome
+A014192->palindromeGenerator(4);
+@class=palindrome
+A173551->palindromeGenerator(10).filter({isPalindrome($x,[2..9])});
+@class=palindrome
+A253148->palindromeGenerator(256).filter({$x>=256 AND isPalindrome($x,10)});
+@class=palindrome
+A262069->palindromeGenerator(60).filter({isPalindrome($x,10)});
+@class=palindrome
+A265641->palindromeGenerator(10).filter(::isPrimeFactorizationPalindrome);
+@class=palindrome
+A265640->rangeGenerator(1).filter(::isPrimeFactorizationPalindrome);

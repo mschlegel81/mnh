@@ -42,7 +42,8 @@ A000203->rangeGenerator(1).lazyMap(::DivisorFunction);
 private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
 A003459->listIterator(primes(991)).filter(::isPermutablePrime);
 //-------------------------------------------------------------
-USE '..\..\packages\generators.mnh',
+USE palindromes,
+    '..\..\packages\generators.mnh',
     '..\ludic.mnh',
     '..\sequenceOfNonSquares.mnh',
     '..\hofstadter_sequences.mnh',
