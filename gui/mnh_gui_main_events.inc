@@ -362,6 +362,10 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.checked:=not(miProfile.checked);
+    if miProfile.checked then begin
+      miShowTiming.checked:=true;
+      stdOutputPopupClick(Sender);
+    end;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);

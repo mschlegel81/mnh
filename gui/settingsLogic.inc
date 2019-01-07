@@ -47,6 +47,7 @@ PROCEDURE TMnhForm.stdOutputPopupClick(Sender:TObject);
       echo_output          :=miEchoOutput       .checked;
       echo_wrapping        :=miWrapEcho         .checked;
       show_timing          :=miShowTiming       .checked;
+      if not(show_timing) then miProfile.checked:=false;
       show_all_userMessages:=miErrorUserDefined .checked;
       if miErrorL1.checked then suppressWarningsUnderLevel:=1;
       if miErrorL2.checked then suppressWarningsUnderLevel:=2;

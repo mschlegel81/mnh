@@ -3035,8 +3035,8 @@ object MnhForm: TMnhForm
     Title = 'Open file...'
     Filter = 'MNH Package|*.mnh|All Files|*.*'
     Options = [ofOverwritePrompt, ofPathMustExist, ofFileMustExist, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
-    left = 400
-    top = 136
+    left = 608
+    top = 32
   end
   object debugItemsImageList: TImageList
     Height = 30
@@ -4398,19 +4398,19 @@ object MnhForm: TMnhForm
     }
   end
   object FindDialog: TFindDialog
-    left = 272
-    top = 192
+    left = 608
+    top = 136
   end
   object ReplaceDialog: TReplaceDialog
     Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
-    left = 400
-    top = 192
+    left = 608
+    top = 80
   end
   object breakpointsImagesList: TImageList
     Height = 15
     Width = 15
     left = 400
-    top = 248
+    top = 192
     Bitmap = {
       4C69010000000F0000000F000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
@@ -4458,8 +4458,8 @@ object MnhForm: TMnhForm
   object outlineImageList: TImageList
     Height = 15
     Width = 27
-    left = 495
-    top = 106
+    left = 400
+    top = 80
     Bitmap = {
       4C69070000001B0000000F000000D9EBFF00D3E9FFFFCBE5FFFFC3E3FFFFBBE0
       FFFFC0E4FFFFC5E9FFFFBCE5FFFFB3E2FFFFAADEFFFFA1DBFFFF98D7FFFF8DD3
@@ -4819,8 +4819,8 @@ object MnhForm: TMnhForm
     }
   end
   object markerImageList: TImageList
-    left = 510
-    top = 202
+    left = 400
+    top = 136
     Bitmap = {
       4C690A0000001000000010000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000E5E5E5FFD7D7D7FFD6D6D6FFDCDCDCFFEBEBEBFFF0F0F000F0F0F000F0F0
@@ -5146,8 +5146,8 @@ object MnhForm: TMnhForm
     }
   end
   object OutlinePopup: TPopupMenu
-    left = 228
-    top = 158
+    left = 272
+    top = 136
     object omiShowPrivate: TMenuItem
       AutoCheck = True
       Caption = 'Show private rules'
@@ -5178,8 +5178,8 @@ object MnhForm: TMnhForm
     end
   end
   object StdOutputPopup: TPopupMenu
-    left = 604
-    top = 130
+    left = 496
+    top = 80
     object miEchoInput: TMenuItem
       AutoCheck = True
       Caption = 'echo &input'
@@ -5241,8 +5241,8 @@ object MnhForm: TMnhForm
     end
   end
   object QuickOutputPopup: TPopupMenu
-    left = 644
-    top = 170
+    left = 496
+    top = 136
     object miEchoInput1: TMenuItem
       AutoCheck = True
       Caption = 'echo &input'
