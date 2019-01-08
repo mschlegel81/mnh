@@ -117,6 +117,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     registerForm(self,ft_main);
     outlineGroupBox.width:=settings.outline.viewWidth;
     updateRules; //rules must be updated before splash for correct documentation
+    initIpcServer(self);
     splashOnStartup;
     //Dynamic GUI components:
     scriptMenu.create(subMenuCode,@miRunCustomUtilScript);
@@ -140,7 +141,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     runnerModel.create;
     focusEditorOnEditMouseUp:=false;
 
-    initIpcServer(self);
     //Initialize other units
     initGuiOutAdapters(MnhForm,outputEdit);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
@@ -362,6 +362,10 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.checked:=not(miProfile.checked);
+    if miProfile.checked then begin
+      miShowTiming.checked:=true;
+      stdOutputPopupClick(Sender);
+    end;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);

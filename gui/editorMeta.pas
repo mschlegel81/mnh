@@ -555,6 +555,7 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       globalBookmarks[k].columnIndex:=-1;
     end;
     editor.modified:=false;
+    strictlyReadOnly:=false;
     getEditor^.activate;
   end;
 
