@@ -10,6 +10,7 @@ USES
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_settings,
+  {$ifdef Windows} packages, {$endif}
   mnh_doc;
 
 TYPE
@@ -91,6 +92,7 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
+    sandbox^.runInstallScript;
     prepareDoc;
     close;
     {$endif}
@@ -100,6 +102,7 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
+    sandbox^.runInstallScript;
     prepareDoc;
     close;
     {$endif}
