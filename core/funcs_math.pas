@@ -54,7 +54,7 @@ FUNCTION isqrt_imp intFuncSignature;
         result:=newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
       end;
       lt_bigint: begin
-        if (P_bigIntLiteral(arg0)^.value.canBeRepresentedAsInt1024)
+        if (P_bigIntLiteral(arg0)^.value.relevantBits<FIXED_SIZE_DIGITS*BITS_PER_DIGIT-16)
         then bigRoot:=T_fixedSizeNonnegativeInt(P_bigIntLiteral(arg0)^.value).iSqrt(true,isSquare).toNewBigInt
         else bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(isSquare);
         result:=newListLiteral(2)^.append(newIntLiteral(bigRoot),false)^.appendBool(isSquare);
