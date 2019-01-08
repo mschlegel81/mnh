@@ -45,6 +45,7 @@ PROCEDURE splashOnStartup;
   begin
     splashForm:=TSplashForm.create(nil);
     splashForm.startupCall:=true;
+    splashForm.position:=poScreenCenter;
     splashForm.ShowModal;
   end;
 
@@ -85,6 +86,7 @@ PROCEDURE TSplashForm.prepareDoc;
 PROCEDURE TSplashForm.showAbout;
   begin
     startupCall:=false;
+    position:=poOwnerFormCenter;
     ShowModal;
   end;
 

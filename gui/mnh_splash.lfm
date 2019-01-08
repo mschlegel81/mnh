@@ -18,6 +18,7 @@ object SplashForm: TSplashForm
   Position = poScreenCenter
   ShowInTaskBar = stAlways
   LCLVersion = '1.8.4.0'
+  Scaled = False
   object Panel1: TPanel
     Left = 0
     Height = 463
