@@ -59,33 +59,11 @@ TYPE
 
   TMnhForm = class(T_abstractMnhForm)
     autoShowOutputCheckbox: TCheckBox;
-    errorSubmenu1: TMenuItem;
     evaluateQuickInCurrentPackageCheckbox: TCheckBox;
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
     outlineGroupBox:                 TGroupBox;
-    miEchoDecl1: TMenuItem;
-    miEchoInput1: TMenuItem;
-    miEchoOutput1: TMenuItem;
-    miErrorL5: TMenuItem;
-    miErrorL6: TMenuItem;
-    miErrorL7: TMenuItem;
-    miErrorL8: TMenuItem;
-    miErrorUserDefined1: TMenuItem;
-    miShowTiming1: TMenuItem;
-    miWrapEcho1: TMenuItem;
-    miErrorUserDefined: TMenuItem;
-    miErrorL4: TMenuItem;
-    miErrorL3: TMenuItem;
-    miErrorL2: TMenuItem;
-    miErrorL1: TMenuItem;
-    errorSubmenu: TMenuItem;
-    miShowTiming: TMenuItem;
-    miWrapEcho: TMenuItem;
-    miEchoDecl: TMenuItem;
-    miEchoOutput: TMenuItem;
-    miEchoInput: TMenuItem;
     markerImageList,
     outlineImageList,
     breakpointsImagesList,
@@ -111,6 +89,7 @@ TYPE
     miHelp,
     miIncFontSize,
     miOpen,
+    miOpenClassic,
     miOpenDocumentation,
     miProfile,
     miReload,
@@ -140,7 +119,19 @@ TYPE
     omiSortByNameCase,
     MenuItem1,
     omiShowImported,
-    omiShowPrivate: TMenuItem;
+    omiShowPrivate,
+
+    miEchoDecl,         miEchoDecl1,
+    miEchoOutput,       miEchoInput1,
+    miEchoInput,        miEchoOutput1,
+    miErrorL4,          miErrorL5,
+    miErrorL3,          miErrorL6,
+    miErrorL2,          miErrorL7,
+    miErrorL1,          miErrorL8,
+    miErrorUserDefined, miErrorUserDefined1,
+    miShowTiming,       miShowTiming1,
+    miWrapEcho,         miWrapEcho1,
+    errorSubmenu,       errorSubmenu1: TMenuItem;
     QuickOutputPopup: TPopupMenu;
     StdOutputPopup: TPopupMenu;
     OutlinePopup: TPopupMenu;

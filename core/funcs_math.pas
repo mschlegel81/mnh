@@ -31,7 +31,7 @@ FUNCTION sqrt_imp intFuncSignature;
                     else result:=newRealLiteral(fltRoot);
       end;
       lt_bigint: begin
-        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(isSquare);
+        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(false,isSquare);
         if isSquare then result:=newIntLiteral(bigRoot)
         else begin
           bigRoot.destroy;
@@ -54,9 +54,9 @@ FUNCTION isqrt_imp intFuncSignature;
         result:=newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
       end;
       lt_bigint: begin
-        if (P_bigIntLiteral(arg0)^.value.canBeRepresentedAsInt1024)
+        if (P_bigIntLiteral(arg0)^.value.relevantBits<FIXED_SIZE_DIGITS*BITS_PER_DIGIT-16)
         then bigRoot:=T_fixedSizeNonnegativeInt(P_bigIntLiteral(arg0)^.value).iSqrt(true,isSquare).toNewBigInt
-        else bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(isSquare);
+        else bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,isSquare);
         result:=newListLiteral(2)^.append(newIntLiteral(bigRoot),false)^.appendBool(isSquare);
       end;
       else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
@@ -963,7 +963,7 @@ FUNCTION bitShift_impl intFuncSignature;
       else res.fromInt(P_smallIntLiteral(arg0)^.value);
       res.shiftRight(int1^.intValue);
       result:=newIntLiteral(res);
-    end else result:=genericVectorization('bitShift',params,tokenLocation,context,recycler);
+    end else result:=genericVectorization('shiftRight',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION divMod_impl intFuncSignature;

@@ -9,12 +9,10 @@ USES
   ExtCtrls,
   myStringUtil,
   myGenerics,
+  mnh_constants,
   editorMeta;
 
 TYPE
-
-  { TopenFileDialog }
-
   TopenFileDialog = class(TForm)
     CancelButton: TButton;
     OpenDialog1: TOpenDialog;
@@ -37,6 +35,7 @@ TYPE
   public
     PROPERTY getSelectedFile:string read selectedFile;
     FUNCTION showForRoot(CONST rootPath:string):longint;
+    FUNCTION showClassicDialog:longint;
   end;
 
 FUNCTION openFileDialog:TopenFileDialog;
@@ -84,7 +83,7 @@ PROCEDURE TopenFileDialog.searchEditKeyDown(Sender: TObject; VAR key: word; Shif
 PROCEDURE TopenFileDialog.searchEditKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key=#13) and (searchResultsListBox.items.count=1) then begin
-      selectedFile:=searchResultsListBox.items[0];
+      selectedFile:=expandMnhDir(searchResultsListBox.items[0]);
       ModalResult:=mrOk;
     end;
   end;
@@ -93,18 +92,30 @@ PROCEDURE TopenFileDialog.searchResultsListBoxKeyPress(Sender: TObject; VAR key:
   begin
     if (key=#13) and (searchResultsListBox.ItemIndex>=0) and (searchResultsListBox.ItemIndex<searchResultsListBox.items.count)
     then begin
-      selectedFile:=searchResultsListBox.items[searchResultsListBox.ItemIndex];
+      selectedFile:=expandMnhDir(searchResultsListBox.items[searchResultsListBox.ItemIndex]);
       ModalResult:=mrOk;
     end;
   end;
 
 FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
+  VAR k:longint;
   begin
     searchEdit.text:='';
     fileList:=folderHistory.findFiles(rootPath);
+    append(fileList,fileHistory.items);
+    sortUnique(fileList);
+    for k:=0 to length(fileList)-1 do fileList[k]:=collapseMnhDir(fileList[k]);
     searchResultsListBox.clear;
     selectedFile:='';
     result:=ShowModal;
+  end;
+
+FUNCTION TopenFileDialog.showClassicDialog:longint;
+  begin
+    if OpenDialog1.execute then begin
+      selectedFile:=OpenDialog1.fileName;
+      result:=mrOk;
+    end else result:=mrCancel;
   end;
 
 FINALIZATION

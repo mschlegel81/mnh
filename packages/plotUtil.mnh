@@ -210,7 +210,7 @@ withPlus   (S:PlotStyle)->modifyStyle(S,'style2','+');
 withCross  (S:PlotStyle)->modifyStyle(S,'style2','x');
 withImpulse(S:PlotStyle)->modifyStyle(S,'style2','i');
 filled     (S:PlotStyle)->modifyStyle(S,'style2','f');
-fillSolid  (S:PlotStyle)->modifyStyle(S,'style2','s');
+fillSolid  (S:PlotStyle)->modifyStyle(S,'style2','fs');
 withScale(S:PlotStyle,scaleModifier>=0.0)->modifyStyle(S,'scale',scaleModifier);
 coloredBlack (S:PlotStyle)->modifyStyle(S,'color','black');
 coloredRed   (S:PlotStyle)->modifyStyle(S,'color','red');
