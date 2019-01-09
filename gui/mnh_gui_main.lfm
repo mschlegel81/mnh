@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 785
+  Left = 1091
   Height = 659
-  Top = 202
+  Top = 258
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
@@ -2848,6 +2848,11 @@ object MnhForm: TMnhForm
         Caption = 'Open'
         ShortCut = 16463
         OnClick = miOpenClick
+      end
+      object miOpenClassic: TMenuItem
+        Caption = 'Open (classic dialog)'
+        ShortCut = 24655
+        OnClick = miOpenClassicClick
       end
       object miReload: TMenuItem
         Caption = 'Reload from filesystem'

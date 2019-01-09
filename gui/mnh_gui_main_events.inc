@@ -53,6 +53,7 @@ PROCEDURE miCloseAllUnmodifiedClick(Sender: TObject);
 PROCEDURE miCloseClick(Sender: TObject);
 PROCEDURE miEditGuiScriptsClick(Sender: TObject);
 PROCEDURE miOpenClick(Sender: TObject);
+PROCEDURE miOpenClassicClick(Sender: TObject);
 PROCEDURE miReloadClick(Sender: TObject);
 PROCEDURE miSaveAsClick(Sender: TObject);
 PROCEDURE miSaveClick(Sender: TObject);
@@ -560,6 +561,15 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     then currentPath:=GetCurrentDir
     else currentPath:=ExtractFileDir(currentEdit^.getPath);
     if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    UpdateTimeTimer.enabled:=true;
+    ActiveControl:=getEditor^.editor;
+  end;
+
+PROCEDURE TMnhForm.miOpenClassicClick(Sender: TObject);
+  begin
+    UpdateTimeTimer.enabled:=false;
+    if (openFileDialog.showClassicDialog=mrOk) and fileExists(openFileDialog.getSelectedFile)
     then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     UpdateTimeTimer.enabled:=true;
     ActiveControl:=getEditor^.editor;

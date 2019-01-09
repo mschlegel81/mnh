@@ -11,6 +11,9 @@ USES
   editorMeta,editorMetaBase,closeDialog;
 
 TYPE
+
+  { TSaveFileDialog }
+
   TSaveFileDialog = class(TForm)
     Button1: TButton;
     CancelButton: TButton;
@@ -55,7 +58,7 @@ PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
   VAR mr:TModalResult;
   begin
     if key=#13 then begin
-      selectedFile:=dirComboBox.text+DirectorySeparator+nameEdit.text+extEdit.text;
+      selectedFile:=expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text;
       if fileExists(selectedFile) then begin
          mr:=closeDialogForm.showOnOverwrite(selectedFile);
          if      mr=mrOk    then ModalResult:=mrOk
@@ -81,7 +84,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
 
   PROCEDURE addItemIfNew(CONST s:string);
     begin
-      if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(s);
+      if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(collapseMnhDir(s));
     end;
 
   VAR s:string;
@@ -92,7 +95,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     extEdit.text:=ext;
     //directory
     dirComboBox.items.clear;
-    for s in folderHistory.items do dirComboBox.items.add(s);
+    for s in folderHistory.items do dirComboBox.items.add(collapseMnhDir(s));
     addItemIfNew(rootPath            );
     addItemIfNew(configDir+'packages');
     addItemIfNew(configDir+'demos'   );

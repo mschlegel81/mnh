@@ -2,12 +2,12 @@ object SaveFileDialog: TSaveFileDialog
   Left = 1116
   Height = 173
   Top = 186
-  Width = 480
+  Width = 500
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'Save File'
   ClientHeight = 173
-  ClientWidth = 480
+  ClientWidth = 500
   Constraints.MinWidth = 500
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
@@ -17,12 +17,12 @@ object SaveFileDialog: TSaveFileDialog
     Left = 0
     Height = 33
     Top = 0
-    Width = 480
+    Width = 500
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
     ClientHeight = 33
-    ClientWidth = 480
+    ClientWidth = 500
     TabOrder = 0
     object Label1: TLabel
       Left = 0
@@ -37,19 +37,20 @@ object SaveFileDialog: TSaveFileDialog
       Left = 51
       Height = 33
       Top = 0
-      Width = 311
+      Width = 331
       Align = alClient
       OnKeyPress = dirComboBoxKeyPress
       TabOrder = 0
       Text = 'nameEdit'
     end
     object extEdit: TComboBox
-      Left = 362
+      Left = 382
       Height = 33
       Top = 0
       Width = 118
       Align = alRight
       ItemHeight = 25
+      OnKeyPress = dirComboBoxKeyPress
       TabOrder = 1
       Text = 'extEdit'
     end
@@ -58,12 +59,12 @@ object SaveFileDialog: TSaveFileDialog
     Left = 0
     Height = 33
     Top = 33
-    Width = 480
+    Width = 500
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
     ClientHeight = 33
-    ClientWidth = 480
+    ClientWidth = 500
     TabOrder = 1
     object Label2: TLabel
       Left = 0
@@ -78,7 +79,7 @@ object SaveFileDialog: TSaveFileDialog
       Left = 54
       Height = 33
       Top = 0
-      Width = 426
+      Width = 446
       Align = alClient
       ItemHeight = 25
       OnKeyPress = dirComboBoxKeyPress
@@ -90,7 +91,7 @@ object SaveFileDialog: TSaveFileDialog
     Left = 0
     Height = 38
     Top = 66
-    Width = 480
+    Width = 500
     Align = alTop
     Caption = 'Classical dialog...'
     OnClick = Button1Click
@@ -100,7 +101,7 @@ object SaveFileDialog: TSaveFileDialog
     Left = 0
     Height = 38
     Top = 104
-    Width = 480
+    Width = 500
     Align = alTop
     Cancel = True
     Caption = 'Cancel'

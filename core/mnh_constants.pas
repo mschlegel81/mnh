@@ -600,6 +600,8 @@ CONST
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
+FUNCTION collapseMnhDir(CONST fileName:string):string;
+FUNCTION expandMnhDir(CONST fileName:string):string;
 FUNCTION getTempFileName:string;
 IMPLEMENTATION
 
@@ -638,6 +640,16 @@ FUNCTION configDir:string;
     {$else}
     result:=GetAppConfigDir(false);
     {$endif}
+  end;
+
+FUNCTION collapseMnhDir(CONST fileName:string):string;
+  begin
+    result:=StringReplace(fileName,configDir,'[mnhDir]'+DirectorySeparator,[rfIgnoreCase]);
+  end;
+
+FUNCTION expandMnhDir(CONST fileName:string):string;
+  begin
+    result:=StringReplace(fileName,'[mnhDir]'+DirectorySeparator,configDir,[rfIgnoreCase]);
   end;
 
 VAR tempFilesCs:TRTLCriticalSection;
