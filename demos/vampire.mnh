@@ -1,13 +1,11 @@
-private areFangs(fangs,sortedDigits)->fangs.digits.flatten.sort == sortedDigits;
-
-private testRange(digitCount,mid)->testRange(10^(digitCount-1),mid,10^digitCount-1);
-private testRange(t0,t1,t2)->abs(t2-t1)<abs(t1-t0) ? [t1..t2]
-                                                   : [t0..t1];
+USE '..\packages\mathUtils.mnh';
 private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
-  local toTest:=testRange(iDigits.size div 2,round(sqrt(i)));
-  toTest:=toTest[i mod toTest=0];
-  [i div toTest,toTest].transpose.pFilter({$f.areFangs(iDigits)});
+  local minDiv:=10^(iDigits.size div 2-1);
+  local dividers:=factorize(i).elementFrequency.each(x,powers(x),*).toList;
+  dividers:=dividers[minDiv<=dividers and sqr(dividers)<=i];
+  [dividers,i div dividers].transpose
+    .pFilter({!($f mod 10=0).agg(AND) AND $f.digits.flatten.sort==iDigits});
 end;
 
 @SuppressUnusedWarning
@@ -24,7 +22,7 @@ private verbosePrintVampire(i)->printVampire(i) orElse print(i,' is not a vampir
 
 private vampireCandidateGenerator->{
 begin
-  local next:=9;
+  local next:=1259;
 save;
   (next+=1) in [100,10000,1000000]
   ? next*=10
