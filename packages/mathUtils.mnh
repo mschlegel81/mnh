@@ -40,3 +40,26 @@ Bernoulli(n)  ->-1/(n+1)*[0..n-1].each(k,binomCoeff(n+1,k)*Bernoulli(k),+);
 
 sumOfProperDividers(n>1)->n.factorize.elementFrequency.each(x,(x[0]^(x[1]+1)-1)/(x[0]-1),*)-n;
 sumOfProperDividers(n<=1)->0;
+
+memoized powers(x:IntList(2))->toSet(x[0]^[0..x[1]]);
+allDividerPairs(n>=10000)->
+  begin
+    local d:=factorize(n).elementFrequency.each(x,powers(x),*).toList;
+    d:=d[d*d<=n];
+    [d,n div d].transpose;
+  end;
+
+allDividerPairs(n>=1)->begin
+  local range:=[1..isqrt(n)[0]];
+  local mask:=(local d:=divMod(n,range)).getInner(1)=0;
+  [range[mask],d[mask].getInner(0)].transpose;
+end;
+
+allPartitions(L:List)->begin
+  rangeGenerator(2^L.size,2^(L.size)+2^(L.size-1)-1).pEach(maskIndex,
+    begin
+      local mask:=tail(maskIndex.digits(2)=0);
+      mask;
+      [L[!mask],L[mask]];
+    end);
+end;

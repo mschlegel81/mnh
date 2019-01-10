@@ -20,26 +20,29 @@ TYPE
     displayPending:boolean;
     rootNode:P_variableTreeEntryAnonymousValue;
     model:T_treeModel;
+    vacant:boolean;
   public
     PROCEDURE initWithLiteral(CONST L:P_literal; CONST newCaption:string);
     PROCEDURE conditionalDoShow;
+    PROCEDURE clearForm;
   end;
 
-PROCEDURE resetTreeForms;
+PROCEDURE resetTreeForms(CONST doDispose:boolean=false);
 PROCEDURE conditionalShowVarTrees;
 IMPLEMENTATION
 VAR treeForms: array of TVarTreeViewForm;
     treeFormCs:TRTLCriticalSection;
 
-PROCEDURE resetTreeForms;
+PROCEDURE resetTreeForms(CONST doDispose:boolean=false);
   VAR i:longint;
   begin
     enterCriticalSection(treeFormCs);
     for i:=0 to length(treeForms)-1 do begin
       unregisterForm(treeForms[i]);
-      FreeAndNil(treeForms[i]);
+      if doDispose then FreeAndNil(treeForms[i])
+                   else treeForms[i].clearForm;
     end;
-    setLength(treeForms,0);
+    if doDispose then setLength(treeForms,0);
     leaveCriticalSection(treeFormCs);
   end;
 
@@ -52,8 +55,14 @@ PROCEDURE conditionalShowVarTrees;
   end;
 
 FUNCTION newTreeForm:TVarTreeViewForm;
+  VAR i:longint;
   begin
     enterCriticalSection(treeFormCs);
+    for i:=0 to length(treeForms)-1 do if treeForms[i].vacant then begin
+      leaveCriticalSection(treeFormCs);
+      registerForm(treeForms[i],ft_variableView);
+      exit(treeForms[i]);
+    end;
     result:=TVarTreeViewForm.create(nil);
     setLength(treeForms,length(treeForms)+1);
     treeForms[length(treeForms)-1]:=result;
@@ -93,7 +102,19 @@ PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
     VarTreeView.items.clear;
   end;
 
-PROCEDURE TVarTreeViewForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TVarTreeViewForm.clearForm;
+  begin
+    if rootNode<>nil then dispose(rootNode,destroy);
+    rootNode:=nil;
+    VarTreeView.items.clear;
+    vacant:=true;
+    displayPending:=false;
+    unregisterForm(self);
+    close;
+  end;
+
+PROCEDURE TVarTreeViewForm.FormKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
@@ -104,6 +125,7 @@ PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
     model.create(VarTreeView);
     rootNode:=nil;
     if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
+    vacant:=true;
   end;
 
 PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption: string);
@@ -119,11 +141,12 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption:
     model.addChildren(node);
     displayPending:=true;
     caption:=newCaption;
+    vacant:=false;
   end;
 
 PROCEDURE TVarTreeViewForm.conditionalDoShow;
   begin
-    if displayPending then begin
+    if displayPending and not(vacant) then begin
       displayPending:=false;
       Show;
     end;
@@ -135,7 +158,7 @@ INITIALIZATION
   initialize(treeFormCs);
   initCriticalSection(treeFormCs);
 FINALIZATION
-  resetTreeForms;
+  resetTreeForms(true);
   doneCriticalSection(treeFormCs);
 end.
 

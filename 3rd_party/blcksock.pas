@@ -48,7 +48,7 @@ Special thanks to Gregor Ibic <gregor.ibic@intelicom.si>
  for good inspiration about SSL programming.
 }
 
-{$DEFINE ONCEWINSOCK}
+{DEFINE ONCEWINSOCK}
 {Note about define ONCEWINSOCK:
 If you remove this compiler directive, then socket interface is loaded and
 initialized on constructor of TBlockSocket class for each socket separately.

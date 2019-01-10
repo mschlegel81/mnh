@@ -750,9 +750,12 @@ PROCEDURE T_editorMeta.clearBookmark(markIndex:longint);
 
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
+      mark:TSynEditMark;
   begin
     for i:=0 to editor_.Marks.count-1 do if (editor_.Marks[i].line=editor_.CaretY) and not(editor_.Marks[i].IsBookmark) then begin
+      mark:=editor.Marks[i];
       editor_.Marks.remove(editor.Marks[i]);
+      mark.free;
       runEvaluator.globals.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
     end;

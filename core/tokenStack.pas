@@ -208,7 +208,7 @@ CONSTRUCTOR T_callStack.create;
 
 DESTRUCTOR T_callStack.destroy;
   begin
-
+    clear;
   end;
 
 PROCEDURE T_callStack.clear;

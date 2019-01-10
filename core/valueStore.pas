@@ -290,7 +290,7 @@ FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;
       exit(result);
     end;
     system.leaveCriticalSection(cs);
-    result:=parentScope^.getVariableValue(id);
+    if parentScope<>nil then result:=parentScope^.getVariableValue(id);
   end;
 
 FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;

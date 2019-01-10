@@ -146,6 +146,7 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         sleep(1);
         system.enterCriticalSection(cs);
       end;
+      disposeMessage(snapshot);
     end;
     system.leaveCriticalSection(cs);
   end;
