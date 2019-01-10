@@ -6,6 +6,7 @@ object VarTreeViewForm: TVarTreeViewForm
   Caption = 'MNH Variable view'
   ClientHeight = 360
   ClientWidth = 480
+  DesignTimePPI = 144
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyUp = FormKeyUp
