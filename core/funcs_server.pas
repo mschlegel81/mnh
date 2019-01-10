@@ -2,6 +2,7 @@ UNIT funcs_server;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,fphttpclient,lclintf,
+     Classes,
      myStringUtil,myGenerics,httpUtil,
      basicTypes,mnh_constants,
      mnh_messages,
@@ -332,23 +333,32 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
       requestText:ansistring='';
+      requestStream:TStringStream=nil;
       encodedRequest:P_literal;
-
+      client:TFPHTTPClient;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       requestText:=str0^.value;
+      requestStream:=nil;
+    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
+      requestText   :=str0^.value;
+      requestStream:=TStringStream.Create(str1^.value);
+      requestStream.Seek(0,0);
     end else begin
       encodedRequest:=encodeRequest_impl(params,tokenLocation,context,recycler);
       if encodedRequest=nil then exit(nil)
                             else requestText:=P_stringLiteral(encodedRequest)^.value;
     end;
     try
+      client:=TFPHTTPClient.create(nil);
+      client.AllowRedirect:=true;
+      client.RequestBody:=requestStream;
       case method of
-        hm_put:   resultText:=TFPCustomHTTPClient.SimplePut   (requestText);
-        hm_post:  resultText:=TFPCustomHTTPClient.SimplePost  (requestText);
-        hm_delete:resultText:=TFPCustomHTTPClient.SimpleDelete(requestText);
-        else      resultText:=TFPCustomHTTPClient.SimpleGet   (requestText);
+        hm_put:   resultText:=client.put   (requestText);
+        hm_post:  resultText:=client.Post  (requestText);
+        hm_delete:resultText:=client.delete(requestText);
+        else      resultText:=client.get   (requestText);
       end;
     except
       on E : Exception do begin
@@ -356,6 +366,8 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
       end;
     end;
+    client.free;
+    if requestStream<>nil then requestStream.Free;
     result:=newStringLiteral(resultText);
   end;
 
@@ -395,10 +407,10 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,ak_unary     ,'extractRawParameters(request:String);//Returns the parameter part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'extractPath'         ,@extractPath_impl         ,ak_unary     ,'extractPath(request:String);//Returns the path part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'encodeRequest'       ,@encodeRequest_impl       ,ak_ternary   ,'encodeRequest(address:String,path:String,parameters:String);#encodeRequest(address:String,path:String,parameters:keyValueList);//Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,ak_unary     ,'httpGet(URL:String);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:String,path:String,parameters:String);#httpGet(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,ak_unary     ,'httpPut(URL:String);#httpPut(address:String,path:String,parameters:String);#httpPut(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     ,'httpPost(URL:String);#httpPost(address:String,path:String,parameters:String);#httpPost(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     ,'httpDelete(URL:String);#httpDelete(address:String,path:String,parameters:String);#httpDelete(address:String,path:String,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,ak_unary     ,'httpGet(URL:String);#httpGet(URL:String,body:String);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:String,path:String,parameters:String);#httpGet(address:String,path:String,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,ak_unary     ,'httpPut(URL:String);#httpPut(URL:String,body:String);#httpPut(address:String,path:String,parameters:String);#httpPut(address:String,path:String,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     ,'httpPost(URL:String);#httpPost(URL:String,body:String);#httpPost(address:String,path:String,parameters:String);#httpPost(address:String,path:String,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     ,'httpDelete(URL:String);#httpDelete(URL:String,bodyString);#httpDelete(address:String,path:String,parameters:String);#httpDelete(address:String,path:String,parameters:keyValueList);');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     ,'openUrl(URL:String);//Opens the URL in the default browser');
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
