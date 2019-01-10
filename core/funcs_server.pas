@@ -343,7 +343,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       requestStream:=nil;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
       requestText   :=str0^.value;
-      requestStream:=TStringStream.Create(str1^.value);
+      requestStream:=TStringStream.create(str1^.value);
       requestStream.Seek(0,0);
     end else begin
       encodedRequest:=encodeRequest_impl(params,tokenLocation,context,recycler);
@@ -367,7 +367,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       end;
     end;
     client.free;
-    if requestStream<>nil then requestStream.Free;
+    if requestStream<>nil then requestStream.free;
     result:=newStringLiteral(resultText);
   end;
 

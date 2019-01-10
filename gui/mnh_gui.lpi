@@ -120,7 +120,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="88">
+    <Units Count="89">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -535,6 +535,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="customRunDialog"/>
       </Unit87>
+      <Unit88>
+        <Filename Value="..\common\huffman.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit88>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
