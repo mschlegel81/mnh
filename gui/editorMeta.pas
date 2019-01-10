@@ -755,7 +755,7 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
     for i:=0 to editor_.Marks.count-1 do if (editor_.Marks[i].line=editor_.CaretY) and not(editor_.Marks[i].IsBookmark) then begin
       mark:=editor.Marks[i];
       editor_.Marks.remove(editor.Marks[i]);
-      mark.Free;
+      mark.free;
       runEvaluator.globals.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
     end;
