@@ -698,7 +698,7 @@ FUNCTION digits_impl intFuncSignature;
           end;
         end;
       end;
-    end;
+    end else result:=genericVectorization('digits',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION composeDigits_imp intFuncSignature;
