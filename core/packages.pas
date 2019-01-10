@@ -768,6 +768,15 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
   VAR assignmentToken:P_token;
 
+  FUNCTION continueDatastoreDeclaration:boolean;
+    begin
+      if getCodeProvider^.isPseudoFile then begin
+        globals.primaryContext.messages^.raiseSimpleError('data stores require the package to be saved to a file.',statement.firstToken^.location);
+        recycler.cascadeDisposeToken(statement.firstToken);
+        result:=false;
+      end else result:=true;
+    end;
+
   PROCEDURE parseRule;
     VAR p:P_token; //iterator
         ruleDeclarationStart:T_tokenLocation;
@@ -829,7 +838,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         statement.firstToken:=recycler.disposeToken(statement.firstToken);
       end;
       evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
-
+      if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
       if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.firstToken^.location);
         recycler.cascadeDisposeToken(statement.firstToken);
@@ -934,11 +943,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData:T_ruleMetaData;
         newRuleCreated:boolean;
     begin
-      if (getCodeProvider^.isPseudoFile) then begin
-        globals.primaryContext.messages^.raiseSimpleError('data stores require the package to be saved to a file.',statement.firstToken^.location);
-        recycler.cascadeDisposeToken(statement.firstToken);
-        exit;
-      end;
+      if not(continueDatastoreDeclaration) then exit;
       while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
         include(ruleModifiers,statement.firstToken^.getModifier);
         loc:=statement.firstToken^.location;
