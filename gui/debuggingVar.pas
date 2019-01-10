@@ -28,6 +28,7 @@ TYPE
       CONSTRUCTOR create(CONST value_:P_literal; CONST id_:T_idString);
       FUNCTION toString:string; virtual;
       PROPERTY getIdOnly:T_idString read id;
+      DESTRUCTOR destroy; virtual;
   end;
 
   T_debuggerVariableCategory=(dvc_global,          //mutable of datastore from this package
@@ -190,6 +191,12 @@ DESTRUCTOR T_variableTreeEntryAnonymousValue.destroy;
     for i:=0 to length(preparedChildren)-1 do dispose(preparedChildren[i],destroy);
     setLength(preparedChildren,0);
     disposeLiteral(value);
+  end;
+
+DESTRUCTOR T_variableTreeEntryNamedValue.destroy;
+  begin
+    id:='';
+    inherited destroy;
   end;
 
 end.
