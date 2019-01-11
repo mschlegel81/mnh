@@ -2,7 +2,9 @@ private ipAndPort:='localhost:43210';
 private address:='http://'+ipAndPort;
 private upSince:=systime;
 
-serve(method,'/index.html'  ,protocol):=//!~
+serve(request:Map)->serve(request['request','path']);
+
+serve('/index.html'):=//!~
 <body>
 <h3>serverTest @{$0}</h3>
 <ul>
@@ -13,9 +15,9 @@ serve(method,'/index.html'  ,protocol):=//!~
 </body>
 ~.format(address).wrapTextInHttp;
 
-serve(method,'/time'  ,protocol)->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',systime),'text');
-serve(method,'/uptime',protocol)->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',upSince-systime),'text');
-serve(method,'/ping'  ,protocol):=wrapTextInHttp('Pong!','text');
+serve('/time'  )->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',systime),'text');
+serve('/uptime')->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',upSince-systime),'text');
+serve('/ping'  ):=wrapTextInHttp('Pong!','text');
 
 memoized complainOnce(method,request,protocol)->begin
   warn("Unhandled request:",
