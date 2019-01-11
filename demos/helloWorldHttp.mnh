@@ -1,7 +1,7 @@
 mutable counter:=0;
-
-serve(method,request='/page.html',protocol)->begin counter+=1; wrapTextInHttp("Hello world"); end;
-serve(method,request,protocol)->httpError;
+serve(request:Map)->begin counter+=1; wrapTextInHttp("Hello world.<br><br>"&request['request'].map({$x.join(":\t")}).join("<br>")
+                                                                &"<br><br>"&request['header' ].map({$x.join(":\t")}).join("<br>") ); end;
+serve(request)->httpError;
 @demo_for=httpServer
 main->begin
   //start server without timeout (=0) -> server will stop on end of evaluation

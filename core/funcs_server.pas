@@ -87,7 +87,7 @@ FUNCTION startServer_impl intFuncSignature;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(3)) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) and
        (arg2^.literalType in [lt_smallint,lt_bigint,lt_real])  and
        context.checkSideEffects('startHttpServer',tokenLocation,[se_alterContextState,se_server,se_detaching]) then begin
 
@@ -152,9 +152,9 @@ PROCEDURE T_microserver.serve;
   CONST minSleepTime=0;
         maxSleepTime=100;
 
-  VAR request:T_requestTriplet;
+  VAR request:T_httpRequest;
       response:P_literal;
-      requestLiteral:T_listLiteral;
+      requestMap:P_mapLiteral;
       sleepTime:longint=minSleepTime;
       start:double;
       statistics:record
@@ -164,6 +164,21 @@ PROCEDURE T_microserver.serve;
       end;
       finalMessage:T_arrayOfString;
       recycler:T_recycler;
+  PROCEDURE fillRequestLiteral;
+    VAR headerMap:P_mapLiteral;
+        i:longint;
+    begin
+      headerMap:=newMapLiteral;
+      requestMap:=newMapLiteral
+        ^.put('request',
+          newMapLiteral^.put('method',C_httpRequestMethodName[request.method])
+                       ^.put('path',request.request)
+                       ^.put('protocol',request.protocol),false)
+        ^.put('header',headerMap,false)
+        ^.put('body',request.body);
+      for i:=0 to length(request.header)-1 do with request.header[i] do headerMap^.put(key,value);
+    end;
+
   begin
     recycler.initRecycler;
     with statistics do begin
@@ -184,22 +199,19 @@ PROCEDURE T_microserver.serve;
         start:=context^.wallclockTime;
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        requestLiteral.create(3);
-        requestLiteral.appendString(C_httpRequestMethodName[request.method])^
-                      .appendString(request.request)^
-                      .appendString(request.protocol);
-        response:=servingExpression^.evaluate(feedbackLocation,context,@recycler,@requestLiteral).literal;
-        requestLiteral.destroy;
+        fillRequestLiteral;
+        response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,@recycler,requestMap,nil).literal;
+        disposeLiteral(requestMap);
         statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
         start:=context^.wallclockTime;
         if (response<>nil) then begin
           if response^.literalType=lt_string
-          then socket.SendString(P_stringLiteral(response)^.value)
-          else socket.SendString(response^.toString);
+          then socket.sendString(P_stringLiteral(response)^.value)
+          else socket.sendString(response^.toString);
           disposeLiteral(response);
         end else begin
           context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
-          socket.SendString(HTTP_404_RESPONSE);
+          socket.sendString(HTTP_404_RESPONSE);
         end;
         statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
       end else begin
@@ -400,7 +412,7 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   registry.create;
-  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   ,'startHttpServer(urlAndPort:String,requestToResponseFunc:Expression(3),timeoutInSeconds:Numeric);//Starts a new microserver-instance');
+  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   ,'startHttpServer(urlAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance');
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,ak_variadic_1,'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type.');
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,ak_variadic  ,'httpError;//Returns http-representation of error 404.#httpError(code:Int);//Returns http-representation of given error code.');
   registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,ak_unary     ,'extractParameters(request:String);//Returns the parameters of an http request as a keyValueList');

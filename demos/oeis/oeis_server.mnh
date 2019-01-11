@@ -289,7 +289,7 @@ serve(parameters)->begin
   parameters.isList
     ? serve_@parameters
     : serve_(parameters);
-  print("Request: ",parameters,' answered in ',round(time-t0,3),'s');
+  printf('Request: %s answered in %3.6fs',toString(parameters),time-t0);
   result.resetTimeout;
 end;
 

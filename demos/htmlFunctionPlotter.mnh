@@ -1,4 +1,4 @@
-private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=50 onkeydown="if (event.keyCode == 13) { this.form.submit(); return false; }"></td></tr>';
+private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=50 onkeydown="if (event.keyCode == 13) \{ this.form.submit(); return false; \}"></td></tr>';
 
 private isValidReal(x)->x.isNumeric AND !x.isNan and !x.isInfinite;
 memoized
@@ -71,9 +71,10 @@ memoized unhandled(method,request,protocol)->begin
   httpError;
 end;
 
-serve(method,request,protocol)->begin
+serve(requestMap:Map)->begin
+  local request:=requestMap['request','path'];
   pageSet(request.extractRawParameters,request.extractParameters)[request.extractPath]
-  orElse unhandled@$params;
+  orElse unhandled@(requestMap.getAll(['method','path','protocol']));
 end;
 
 @demo_for=httpServer, plotting
@@ -87,3 +88,5 @@ main->begin
   ask('Press o.k. to shutdown server.',['o.k.']);
   stopAllHttpServers;
 end;
+
+
