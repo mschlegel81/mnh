@@ -21,7 +21,8 @@ fetchDetails(index:Int)->details[index] orElse begin
         '%C'=>"Comm:\t",
         '%O'=>"Off.:\t"];
   local data:=
-  httpGet('https://oeis.org/search?q=id:'&IDFormat.format(index)&'&fmt=text')
+  encodeRequest('https:','//oeis.org/search',['q'=>format('id:'&IDFormat,index),'fmt'=>'text'].toMap)
+  .httpGet['body']
   .split("\n")
   .filter({$L.hasPrefix('%')})
   .map({[copy($L,0,2),copy($L,3).replace(["\t","\v","\r"],' ')]})

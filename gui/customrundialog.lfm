@@ -9,6 +9,7 @@ object CustomRunForm: TCustomRunForm
   ClientWidth = 481
   DesignTimePPI = 144
   OnCreate = FormCreate
+  Position = poOwnerFormCenter
   LCLVersion = '1.8.4.0'
   object GroupBox1: TGroupBox
     AnchorSideLeft.Control = Owner
