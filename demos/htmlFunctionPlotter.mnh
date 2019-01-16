@@ -88,5 +88,3 @@ main->begin
   ask('Press o.k. to shutdown server.',['o.k.']);
   stopAllHttpServers;
 end;
-
-
