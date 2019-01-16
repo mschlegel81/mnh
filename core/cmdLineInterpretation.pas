@@ -21,6 +21,10 @@ CONST
   FLAG_PAUSE_ALWAYS ='-pauseAfter';
   FLAG_PROFILE      ='-profile';
 
+  FLAG_SHOW_HELP    ='-h';
+  FLAG_EXEC_CMD     ='-cmd';
+  FLAG_SHOW_INFO    ='-info';
+
   FLAG_TEXT:array[T_cmdLineFlag] of string=(FLAG_GUI,FLAG_QUIET,FLAG_SILENT,FLAG_HEADLESS,FLAG_PROFILE,FLAG_PAUSE_ALWAYS);
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
@@ -42,6 +46,7 @@ VAR mainParameters:T_arrayOfString;
     profilingRun:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
     {$endif}
+PROCEDURE pauseOnce;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
@@ -51,6 +56,12 @@ VAR fileOrCommandToInterpret:ansistring='';
       appending:boolean;
     end;
 //---------------:by command line parameters
+PROCEDURE pauseOnce;
+  begin
+    pauseAtEnd:=false;
+    pauseOnError:=false;
+    readln;
+  end;
 {$ifdef fullVersion}
 PROCEDURE addFileToOpen(CONST pathOrPattern:string);
   VAR info:T_fileInfo;
@@ -87,7 +98,7 @@ PROCEDURE displayHelp;
     for s in LOGO do writeln(s);
     writeln('');
     writeln('Accepted parameters: ');
-    writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');
+    writeln('  [mnh_options] [('+FLAG_EXEC_CMD+' commandToExecute) | (filename [parameters])]');
     writeln('  filename          if present the file is interpreted; parameters are passed if present');
     writeln('  -v[options]       verbosity. options can consist of multiple characters.');
     writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
@@ -103,14 +114,14 @@ PROCEDURE displayHelp;
     writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
     writeln('  '+FLAG_GUI+'              force evaluation with GUI');
-    writeln('  -h                display this help or help on the input file if present and quit');
+    writeln('  '+FLAG_SHOW_HELP+'                display this help or help on the input file if present and quit');
     writeln('  '+FLAG_HEADLESS+'         forbid input via ask (scripts using ask will crash)');
-    writeln('  -cmd              directly execute the following command');
-    writeln('  -info             show info; same as -cmd mnhInfo.print');
+    writeln('  '+FLAG_EXEC_CMD+'              directly execute the following command');
+    writeln('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
     writeln('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
     writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
-    writeln('     if no options are given, the global output settings will be used');
+    writeln('                    if no options are given, the global output settings will be used');
     writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
     writeln('  '+FLAG_QUIET+'            disable console output');
     writeln('  '+FLAG_SILENT+'           suppress beeps');
@@ -156,15 +167,12 @@ CONST DEF_VERBOSITY_STRING='';
             {$endif}
             exit(true);
           end;
-          if (param=FLAG_GUI) then begin
-            reEvaluationWithGUIrequired:=true;
-            exit(true);
-          end;
-          if param=FLAG_QUIET        then begin wantConsoleAdapter:=false;               exit(true); end;
-          if param=FLAG_SILENT       then begin suppressBeep      :=true ;               exit(true); end;
-          if param=FLAG_HEADLESS     then begin headless          :=true ;               exit(true); end;
-          if param=FLAG_PAUSE_ON_ERR then begin pauseOnError      :=true ;               exit(true); end;
-          if param=FLAG_PAUSE_ALWAYS then begin pauseAtEnd        :=true ;               exit(true); end;
+          if param=FLAG_GUI          then begin reEvaluationWithGUIrequired:=true ;      exit(true); end;
+          if param=FLAG_QUIET        then begin wantConsoleAdapter         :=false;      exit(true); end;
+          if param=FLAG_SILENT       then begin suppressBeep               :=true ;      exit(true); end;
+          if param=FLAG_HEADLESS     then begin headless                   :=true ;      exit(true); end;
+          if param=FLAG_PAUSE_ON_ERR then begin pauseOnError               :=true ;      exit(true); end;
+          if param=FLAG_PAUSE_ALWAYS then begin pauseAtEnd                 :=true ;      exit(true); end;
           if param='-out'            then begin parsingState:=pst_parsingOutFileRewrite; exit(true); end;
           if param='+out'            then begin parsingState:=pst_parsingOutFileAppend;  exit(true); end;
         end;
@@ -218,9 +226,9 @@ CONST DEF_VERBOSITY_STRING='';
             halt(0);
           end;
           {$endif} {$endif}
-          if param='-cmd'           then begin directExecutionMode:=true;                              exit(true); end;
-          if startsWith(param,'-h') then begin wantHelpDisplay:=true;                                  exit(true); end;
-          if param='-info'          then begin for s in getMnhInfo do writeln(s); quitImmediate:=true; exit(true); end;
+          if param=FLAG_EXEC_CMD  then begin directExecutionMode:=true;                              exit(true); end;
+          if param=FLAG_SHOW_HELP then begin wantHelpDisplay:=true;                                  exit(true); end;
+          if param=FLAG_SHOW_INFO then begin for s in getMnhInfo do writeln(s); quitImmediate:=true; exit(true); end;
         end;
         pst_parsingFileToEdit: begin
           {$ifdef fullVersion}
@@ -248,7 +256,7 @@ CONST DEF_VERBOSITY_STRING='';
         wantHelpDisplay:=false;
         globals.destroy;
         recycler.cleanup;
-        if pauseAtEnd then readln;
+        if pauseAtEnd then pauseOnce;
         exit;
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
@@ -264,7 +272,7 @@ CONST DEF_VERBOSITY_STRING='';
       globals.destroy;
       recycler.cleanup;
       consoleAdapters.setExitCode;
-      if pauseAtEnd or pauseOnError and ((ExitCode<>0) or (consoleAdapters.triggersBeep) {$ifdef fullVersion} or profilingRun {$endif}) then readln;
+      if pauseAtEnd or pauseOnError and ((ExitCode<>0) or (consoleAdapters.triggersBeep) {$ifdef fullVersion} or profilingRun {$endif}) then pauseOnce;
     end;
 
   PROCEDURE executeCommand;

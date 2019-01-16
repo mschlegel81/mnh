@@ -32,6 +32,6 @@ begin
     else Application.CreateForm(TMnhForm, MnhForm);
     Application.run;
     showConsole;
-    if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then readln;
+    if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then pauseOnce;
   end;
 end.
