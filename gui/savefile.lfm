@@ -12,6 +12,7 @@ object SaveFileDialog: TSaveFileDialog
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
   OnShow = FormShow
+  Position = poOwnerFormCenter
   LCLVersion = '1.8.4.0'
   object Panel1: TPanel
     Left = 0

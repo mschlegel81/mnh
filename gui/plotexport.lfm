@@ -7,7 +7,9 @@ object ExportPlotForm: TExportPlotForm
   Caption = 'Render Plot'
   ClientHeight = 431
   ClientWidth = 373
-  LCLVersion = '1.8.2.0'
+  DesignTimePPI = 144
+  Position = poOwnerFormCenter
+  LCLVersion = '1.8.4.0'
   object Panel1: TPanel
     Left = 0
     Height = 39
