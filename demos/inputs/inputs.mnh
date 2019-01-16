@@ -1,7 +1,7 @@
 //@demo_for=httpGet
 private ensureFile(path,URL)->fileExists(path) ? path : begin
   note('Fetching ',URL);
-  writeFile(path,httpGet(URL).decompress);
+  writeFile(path,httpGet(URL)['body'].decompress);
   path;
 end;
 
