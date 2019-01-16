@@ -53,6 +53,7 @@ TYPE
     firstIsHeader:boolean;
 
     displayPending:boolean;
+    vacant:boolean;
     sorted:record
       ascending:boolean;
       byColumn:longint;
@@ -62,29 +63,37 @@ TYPE
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
     PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
+    PROCEDURE clearForm;
   end;
 
-PROCEDURE resetTableForms;
+PROCEDURE resetTableForms(CONST doDispose:boolean=false);
 PROCEDURE conditionalShowTables;
 IMPLEMENTATION
 VAR tableForms: array of TtableForm;
     tableFormCs:TRTLCriticalSection;
 
-PROCEDURE resetTableForms;
+PROCEDURE resetTableForms(CONST doDispose:boolean=false);
   VAR i:longint;
   begin
     enterCriticalSection(tableFormCs);
     for i:=0 to length(tableForms)-1 do begin
       unregisterForm(tableForms[i]);
-      FreeAndNil(tableForms[i]);
+      if doDispose then FreeAndNil(tableForms[i])
+                   else tableForms[i].clearForm;
     end;
-    setLength(tableForms,0);
+    if doDispose then setLength(tableForms,0);
     leaveCriticalSection(tableFormCs);
   end;
 
 FUNCTION newTableForm:TtableForm;
+  VAR i:longint;
   begin
     enterCriticalSection(tableFormCs);
+    for i:=0 to length(tableForms)-1 do if tableForms[i].vacant then begin
+      leaveCriticalSection(tableFormCs);
+      registerForm(tableForms[i],ft_table);
+      exit(tableForms[i]);
+    end;
     result:=TtableForm.create(nil);
     setLength(tableForms,length(tableForms)+1);
     tableForms[length(tableForms)-1]:=result;
@@ -130,13 +139,6 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
     end else result:=nil;
   end;
 
-PROCEDURE showProfilingTable(CONST data: P_listLiteral);
-  begin
-    enterCriticalSection(tableFormCs);
-    newTableForm.initWithLiteral(data,'Profiling info',true);
-    leaveCriticalSection(tableFormCs);
-  end;
-
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
@@ -152,7 +154,16 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
     if literal<>nil then disposeLiteral(literal);
   end;
 
-PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TtableForm.clearForm;
+  begin
+    if literal<>nil then disposeLiteral(literal);
+    StringGrid.RowCount:=1;
+    StringGrid.colCount:=1;
+    vacant:=true;
+  end;
+
+PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
     if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=rect(0,1,StringGrid.colCount-1,StringGrid.RowCount-1);
@@ -280,12 +291,13 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
     end;
 
     displayPending:=true;
+    vacant:=false;
     caption:=newCaption;
   end;
 
 PROCEDURE TtableForm.conditionalDoShow;
   begin
-    if displayPending then begin
+    if displayPending and not(vacant) then begin
       displayPending:=false;
       Show;
       fillTable;
@@ -379,7 +391,7 @@ INITIALIZATION
   initialize(tableFormCs);
   initCriticalSection(tableFormCs);
 FINALIZATION
-  resetTableForms;
+  resetTableForms(true);
   doneCriticalSection(tableFormCs);
 
 end.
