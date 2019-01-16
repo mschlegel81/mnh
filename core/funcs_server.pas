@@ -3,6 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,fphttpclient,lclintf,
      Classes,
+     synautil,
      myStringUtil,myGenerics,httpUtil,
      basicTypes,mnh_constants,
      mnh_messages,
@@ -346,41 +347,92 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
   VAR resultText:ansistring='';
       requestText:ansistring='';
       requestStream:TStringStream=nil;
+      requestHeader:array of record key,value:string; end;
       encodedRequest:P_literal;
       client:TFPHTTPClient;
+      k:longint;
+      allOkay:boolean=true;
+
+  PROCEDURE constructRequestHeader(CONST input:P_mapLiteral);
+    VAR entry:T_keyValuePair;
+        k:longint=0;
+    begin
+      setLength(requestHeader,input^.size);
+      for entry in input^.entryList do with entry do begin
+        if (key^.literalType<>lt_string) or (value^.literalType<>lt_string) then begin
+          allOkay:=false;
+          exit;
+        end;
+        requestHeader[k].key  :=P_stringLiteral(key)^.value;
+        requestHeader[k].value:=P_stringLiteral(value)^.value;
+        inc(k);
+      end;
+    end;
+
+  FUNCTION responseLiteral:P_literal;
+    VAR headerMap:P_mapLiteral;
+        i:longint;
+        s:string;
+        key:string;
+    begin
+      headerMap:=newMapLiteral;
+      result:=newMapLiteral^.put('body',resultText)
+      ^.put('code',client.ResponseStatusCode)
+      ^.put('status',client.ResponseStatusText)
+      ^.put('header',headerMap,false);
+      for i:=0 to client.ResponseHeaders.count-1 do begin
+        s:=client.ResponseHeaders[i];
+        key:=fetch(s,':');
+        headerMap^.put(key,trim(s));
+      end;
+    end;
+
   begin
+    setLength(requestHeader,0);
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
       requestText:=str0^.value;
-      requestStream:=nil;
-    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
-      requestText   :=str0^.value;
-      requestStream:=TStringStream.create(str1^.value);
-      requestStream.Seek(0,0);
-    end else begin
-      encodedRequest:=encodeRequest_impl(params,tokenLocation,context,recycler);
-      if encodedRequest=nil then exit(nil)
-                            else requestText:=P_stringLiteral(encodedRequest)^.value;
-    end;
-    try
-      client:=TFPHTTPClient.create(nil);
-      client.AllowRedirect:=true;
-      client.RequestBody:=requestStream;
-      case method of
-        hm_put:   resultText:=client.put   (requestText);
-        hm_post:  resultText:=client.Post  (requestText);
-        hm_delete:resultText:=client.delete(requestText);
-        else      resultText:=client.get   (requestText);
+      for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
+        lt_string: begin
+          if requestStream=nil
+          then requestStream:=TStringStream.create(P_stringLiteral(params^.value[k])^.value)
+          else allOkay:=false;
+        end;
+        lt_map: begin
+          if length(requestHeader)=0
+          then constructRequestHeader(P_mapLiteral(params^.value[k]))
+          else allOkay:=false;
+        end;
+        else allOkay:=false;
       end;
-    except
-      on E : Exception do begin
-        resultText:='';
-        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
+    end else allOkay:=false;
+    if allOkay then begin
+      try
+        client:=TFPHTTPClient.create(nil);
+        client.AllowRedirect:=true;
+        client.RequestBody:=requestStream;
+        for k:=0 to length(requestHeader)-1 do client.AddHeader(requestHeader[k].key,requestHeader[k].value);
+        case method of
+          hm_put:   resultText:=client.put   (requestText);
+          hm_post:  resultText:=client.Post  (requestText);
+          hm_delete:resultText:=client.delete(requestText);
+          else      resultText:=client.get   (requestText);
+        end;
+      except
+        on E : Exception do begin
+          resultText:='';
+          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
+        end;
       end;
+      result:=responseLiteral;
+      client.free;
     end;
-    client.free;
     if requestStream<>nil then requestStream.free;
-    result:=newStringLiteral(resultText);
+    for k:=0 to length(requestHeader)-1 do with requestHeader[k] do begin
+      key:='';
+      value:='';
+    end;
+    setLength(requestHeader,0);
   end;
 
 FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context,recycler) else result:=nil; end;
@@ -419,10 +471,10 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,ak_unary     ,'extractRawParameters(request:String);//Returns the parameter part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'extractPath'         ,@extractPath_impl         ,ak_unary     ,'extractPath(request:String);//Returns the path part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'encodeRequest'       ,@encodeRequest_impl       ,ak_ternary   ,'encodeRequest(address:String,path:String,parameters:String);#encodeRequest(address:String,path:String,parameters:keyValueList);//Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,ak_unary     ,'httpGet(URL:String);#httpGet(URL:String,body:String);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:String,path:String,parameters:String);#httpGet(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,ak_unary     ,'httpPut(URL:String);#httpPut(URL:String,body:String);#httpPut(address:String,path:String,parameters:String);#httpPut(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     ,'httpPost(URL:String);#httpPost(URL:String,body:String);#httpPost(address:String,path:String,parameters:String);#httpPost(address:String,path:String,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     ,'httpDelete(URL:String);#httpDelete(URL:String,bodyString);#httpDelete(address:String,path:String,parameters:String);#httpDelete(address:String,path:String,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,ak_unary     ,'httpGet(URL:String);#httpGet(URL:String,body:String,header:Map);//Retrieves the contents of the given URL and returns them as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]');
+  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,ak_unary     ,'httpPut(URL:String);#httpPut(URL:String,body:String,header:Map);//Performs an http-PUT on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]');
+  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     ,'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]');
+  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     ,'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     ,'openUrl(URL:String);//Opens the URL in the default browser');
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
