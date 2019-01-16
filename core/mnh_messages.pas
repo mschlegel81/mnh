@@ -331,8 +331,10 @@ DESTRUCTOR T_storedMessage.destroy;
   end;
 
 DESTRUCTOR T_storedMessageWithText.destroy;
+  VAR i:longint;
   begin
     inherited destroy;
+    for i:=0 to length(txt)-1 do txt[i]:='';
     setLength(txt,0);
   end;
 
