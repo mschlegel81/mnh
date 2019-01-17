@@ -1,8 +1,9 @@
 object ExportPlotForm: TExportPlotForm
-  Left = 587
+  Left = 1250
   Height = 431
-  Top = 165
+  Top = 95
   Width = 373
+  AutoSize = True
   BorderStyle = bsDialog
   Caption = 'Render Plot'
   ClientHeight = 431
@@ -180,10 +181,10 @@ object ExportPlotForm: TExportPlotForm
     Align = alTop
     Caption = 'Render to file'
     Enabled = False
-    ModalResult = 1
+    OnClick = okButtonClick
     TabOrder = 3
   end
-  object Button2: TButton
+  object cancelButton: TButton
     Left = 0
     Height = 38
     Top = 308
@@ -192,6 +193,15 @@ object ExportPlotForm: TExportPlotForm
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
+    OnClick = cancelButtonClick
     TabOrder = 4
+  end
+  object ProgressBar1: TProgressBar
+    Left = 0
+    Height = 30
+    Top = 346
+    Width = 373
+    Align = alTop
+    TabOrder = 5
   end
 end

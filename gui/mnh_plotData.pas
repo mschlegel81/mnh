@@ -177,6 +177,7 @@ TYPE
 
   F_execPlotCallback=PROCEDURE;
   F_pullSettingsToGuiCallback=PROCEDURE of object;
+  P_plotSystem=^T_plotSystem;
   T_plotSystem=object(T_collectingOutAdapter)
     private
       plotChangedSinceLastDisplay:boolean;

@@ -6,12 +6,14 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls, EditBtn, ComCtrls;
+  StdCtrls, EditBtn, ComCtrls,
+  mnh_plotData;
 
 TYPE
   TExportPlotForm = class(TForm)
     OKButton: TButton;
-    Button2: TButton;
+    CancelButton: TButton;
+    ProgressBar1: TProgressBar;
     widthEdit: TEdit;
     heightEdit: TEdit;
     GroupBox1: TGroupBox;
@@ -25,15 +27,19 @@ TYPE
     rbExportAll: TRadioButton;
     rbExportCurrentOnly: TRadioButton;
     QualityTrackbar: TTrackBar;
+    PROCEDURE cancelButtonClick(Sender: TObject);
+    PROCEDURE okButtonClick(Sender: TObject);
     PROCEDURE OutputFileNameEditEditingDone(Sender: TObject);
     PROCEDURE QualityTrackbarChange(Sender: TObject);
     PROCEDURE widthEditChange(Sender: TObject);
   private
+    exporting,exportHalted:boolean;
+    psys:P_plotSystem;
+    animationFrameIndex:longint;
     PROCEDURE enableOkButton;
+    PROCEDURE enableAll;
   public
-    renderWidth:longint;
-    renderHeight:longint;
-    FUNCTION showModalFor(CONST isAnimation:boolean):integer;
+    FUNCTION showModalFor(CONST plotSystem:P_plotSystem; CONST selectedFrame:longint):integer;
     FUNCTION animationFileName(CONST frameIndex,framesTotal:longint):string;
   end;
 
@@ -53,6 +59,64 @@ PROCEDURE TExportPlotForm.OutputFileNameEditEditingDone(Sender: TObject);
   begin
     OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png');
     enableOkButton;
+  end;
+
+PROCEDURE TExportPlotForm.cancelButtonClick(Sender: TObject);
+  begin
+    if exporting then exportHalted:=true;
+  end;
+
+PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
+  VAR renderHeight,renderWidth,frameIndex:longint;
+  begin
+    if exporting then exit;
+
+    OKButton          .enabled:=false;
+    OutputFileNameEdit.enabled:=false;
+    widthEdit         .enabled:=false;
+    heightEdit        .enabled:=false;
+    CancelButton.ModalResult:=mrNone;
+    CancelButton.Cancel     :=false;
+    exporting:=true;
+    exportHalted:=false;
+
+    renderHeight:=strToIntDef(heightEdit.text,10000);
+    renderWidth :=strToIntDef(widthEdit.text,10000);
+
+    ProgressBar1.position:=0;
+    if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
+      ProgressBar1.max:=psys^.animation.frameCount;
+      for frameIndex:=0 to psys^.animation.frameCount-1 do if not(exportHalted) then begin
+        ProgressBar1.position:=frameIndex;
+        Application.ProcessMessages;
+        psys^.animation.renderFrame(frameIndex,
+                              animationFileName(
+                                   frameIndex,
+                                   psys^.animation.frameCount),
+                              renderWidth,
+                              renderHeight,
+                              QualityTrackbar.position,true);
+      end;
+    end else begin
+      ProgressBar1.max:=1;
+      if (psys^.animation.frameCount>0)
+      then psys^.animation.renderFrame(
+             animationFrameIndex,
+             OutputFileNameEdit.caption,
+             renderWidth,
+             renderHeight,
+             QualityTrackbar.position,false)
+      else psys^.currentPlot.renderToFile(
+             OutputFileNameEdit.caption,
+             renderWidth,
+             renderHeight,
+             QualityTrackbar.position);
+      ProgressBar1.position:=1;
+      Application.ProcessMessages;
+    end;
+    if exportHalted then ProgressBar1.position:=0 else ProgressBar1.position:=ProgressBar1.max;
+    exporting:=false;
+    enableAll;
   end;
 
 PROCEDURE TExportPlotForm.QualityTrackbarChange(Sender: TObject);
@@ -82,17 +146,34 @@ PROCEDURE TExportPlotForm.enableOkButton;
                       (OutputFileNameEdit.text<>'.png') and
                       DirectoryExists(ExtractFileDir(expandFileName(OutputFileNameEdit.text))) and
                       validSize(widthEdit.text) and
-                      validSize(heightEdit.text);
+                      validSize(heightEdit.text) and not(exporting);
   end;
 
-FUNCTION TExportPlotForm.showModalFor(CONST isAnimation: boolean): integer;
+PROCEDURE TExportPlotForm.enableAll;
+  VAR isAnimation:boolean;
   begin
+    OutputFileNameEdit.enabled:=true;
+    widthEdit         .enabled:=true;
+    heightEdit        .enabled:=true;
+    CancelButton.ModalResult:=mrCancel;
+    CancelButton.Cancel     :=true;
+    OKButton.enabled        :=true;
+    isAnimation:=psys^.animation.frameCount>0;
     rbExportCurrentOnly.enabled:=isAnimation;
     rbExportAll.enabled:=isAnimation;
     if not(isAnimation) then rbExportCurrentOnly.checked:=true;
+    enableOkButton;
+  end;
+
+FUNCTION TExportPlotForm.showModalFor(CONST plotSystem: P_plotSystem; CONST selectedFrame: longint): integer;
+  begin
+    psys:=plotSystem;
+    animationFrameIndex:=selectedFrame;
+    exporting          :=false;
+    exportHalted       :=false;
+    enableAll;
+    ProgressBar1.position:=0;
     result:=ShowModal;
-    renderHeight:=strToIntDef(heightEdit.text,10000);
-    renderWidth:=strToIntDef(widthEdit.text,10000);
   end;
 
 FUNCTION TExportPlotForm.animationFileName(CONST frameIndex, framesTotal: longint): string;
