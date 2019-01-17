@@ -21,6 +21,8 @@ USES sysutils,   //system
      ig_bifurcation,
      ig_funcTrees,
      ig_expoClouds;
+CONST
+  WORKFLOW_START_INTERVAL_MILLISECONDS=100;
 
 TYPE
   T_imageSystem=object(T_collectingOutAdapter)
@@ -208,13 +210,13 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       end;
       if isValid then begin
         enterCriticalSection(workflowCs);
-        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+5*ONE_SECOND>now)) do begin
+        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+WORKFLOW_START_INTERVAL_MILLISECONDS*1E-3*ONE_SECOND>now)) do begin
           leaveCriticalSection(workflowCs);
           if not(hasDelayMessage) then begin
             hasDelayMessage:=true;
             context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
           end;
-          sleep(random(5000));
+          sleep(random(WORKFLOW_START_INTERVAL_MILLISECONDS));
           ThreadSwitch;
           enterCriticalSection(workflowCs);
         end;
