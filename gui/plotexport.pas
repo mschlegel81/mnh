@@ -71,10 +71,12 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
   begin
     if exporting then exit;
 
-    OKButton          .enabled:=false;
-    OutputFileNameEdit.enabled:=false;
-    widthEdit         .enabled:=false;
-    heightEdit        .enabled:=false;
+    OKButton           .enabled:=false;
+    OutputFileNameEdit .enabled:=false;
+    widthEdit          .enabled:=false;
+    heightEdit         .enabled:=false;
+    rbExportCurrentOnly.enabled:=false;
+    rbExportAll        .enabled:=false;
     CancelButton.ModalResult:=mrNone;
     CancelButton.Cancel     :=false;
     exporting:=true;
@@ -84,6 +86,7 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
     renderWidth :=strToIntDef(widthEdit.text,10000);
 
     ProgressBar1.position:=0;
+    Application.ProcessMessages;
     if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
       ProgressBar1.max:=psys^.animation.frameCount;
       for frameIndex:=0 to psys^.animation.frameCount-1 do if not(exportHalted) then begin
@@ -157,7 +160,6 @@ PROCEDURE TExportPlotForm.enableAll;
     heightEdit        .enabled:=true;
     CancelButton.ModalResult:=mrCancel;
     CancelButton.Cancel     :=true;
-    OKButton.enabled        :=true;
     isAnimation:=psys^.animation.frameCount>0;
     rbExportCurrentOnly.enabled:=isAnimation;
     rbExportAll.enabled:=isAnimation;
