@@ -24,7 +24,6 @@ TYPE
     AnimationGroupBox: TGroupBox;
     animationFPSLabel: TLabel;
     frameIndexLabel: TLabel;
-    exportingGroupBox: TGroupBox;
     MainMenu: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
@@ -56,7 +55,6 @@ TYPE
     miAntiAliasing2: TMenuItem;
     miAntiAliasing3: TMenuItem;
     plotImage: TImage;
-    exportingProgressBar: TProgressBar;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
@@ -119,7 +117,6 @@ FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
 PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
 VAR plotSystem:T_plotSystem;
-    currentlyExporting:boolean=false;
 IMPLEMENTATION
 VAR myPlotForm:TplotForm=nil;
     main:T_abstractMnhForm;
@@ -278,50 +275,9 @@ PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   end;
 
 PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
-  VAR frameIndex:longint;
   begin
     plotSystem.startGuiInteraction;
-    if exportPlotForm.showModalFor(plotSystem.animation.frameCount>0)=mrOk then begin
-      exportingGroupBox.width:=round(ClientWidth*0.9);
-      exportingGroupBox.Left:=round(ClientWidth*0.05);
-      exportingGroupBox.visible:=true;
-      enabled:=false;
-      currentlyExporting:=true;
-      exportingProgressBar.position:=0;
-      if (exportPlotForm.rbExportAll.checked) and (plotSystem.animation.frameCount>0) then begin
-        exportingProgressBar.max:=plotSystem.animation.frameCount;
-        for frameIndex:=0 to plotSystem.animation.frameCount-1 do begin
-          exportingProgressBar.position:=frameIndex;
-          Application.ProcessMessages;
-          plotSystem.animation.renderFrame(frameIndex,
-                                exportPlotForm.animationFileName(
-                                     frameIndex,
-                                     plotSystem.animation.frameCount),
-                                exportPlotForm.renderWidth,
-                                exportPlotForm.renderHeight,
-                                exportPlotForm.QualityTrackbar.position,true);
-        end;
-      end else begin
-        exportingProgressBar.max:=1;
-        if (plotSystem.animation.frameCount>0)
-        then plotSystem.animation.renderFrame(
-               animationFrameIndex,
-               exportPlotForm.OutputFileNameEdit.caption,
-               exportPlotForm.renderWidth,
-               exportPlotForm.renderHeight,
-               exportPlotForm.QualityTrackbar.position,false)
-        else plotSystem.currentPlot.renderToFile(
-               exportPlotForm.OutputFileNameEdit.caption,
-               exportPlotForm.renderWidth,
-               exportPlotForm.renderHeight,
-               exportPlotForm.QualityTrackbar.position);
-        exportingProgressBar.position:=1;
-        Application.ProcessMessages;
-      end;
-      exportingGroupBox.visible:=false;
-      enabled:=true;
-      currentlyExporting:=false;
-    end;
+    exportPlotForm.showModalFor(@plotSystem,animationFrameIndex);
     plotSystem.doneGuiInteraction;
   end;
 

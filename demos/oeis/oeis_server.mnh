@@ -111,8 +111,9 @@ private getData(URL:String)->begin
   : begin
       print('Fetching data from ',URL);
       local data:=httpGet(URL);
+      data['code']!=200 ? fail('Response from ',URL,' is ',data['code']) :
       print(filename,' downloaded');
-      filename.writeFile(data);
+      filename.writeFile(data['body']);
     end;
   local temp:=unzip(filename);
   temp[1]==0 ? print(filename,' decompressed')
