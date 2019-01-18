@@ -22,7 +22,7 @@ USES sysutils,   //system
      ig_funcTrees,
      ig_expoClouds;
 CONST
-  WORKFLOW_START_INTERVAL_MILLISECONDS=100;
+  WORKFLOW_START_INTERVAL_MILLISECONDS=1100;
 
 TYPE
   T_imageSystem=object(T_collectingOutAdapter)
@@ -257,6 +257,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         thisWorkflow.progressQueue.ensureStop;
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
+        if isMemoryInComfortZone then lastWorkflowStart:=now-ONE_MINUTE;
         leaveCriticalSection(workflowCs);
       end;
       if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
