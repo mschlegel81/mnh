@@ -37,6 +37,7 @@ TYPE
     PROCEDURE headlessFlagCbChange(Sender: TObject);
     PROCEDURE profileFlagCbChange(Sender: TObject);
     PROCEDURE quietFlagCbChange(Sender: TObject);
+    PROCEDURE scriptParamEditKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE silentFlagCbChange(Sender: TObject);
     PROCEDURE verbosityEditChange(Sender: TObject);
   private
@@ -142,6 +143,11 @@ PROCEDURE TCustomRunForm.quietFlagCbChange(Sender: TObject);
       exclude(settings.externalRunOptions.flags,clf_PROFILE);
       profileFlagCb.checked:=false;
     end else exclude(settings.externalRunOptions.flags,clf_QUIET);
+  end;
+
+PROCEDURE TCustomRunForm.scriptParamEditKeyPress(Sender: TObject; VAR key: char);
+  begin
+    if key=#13 then ModalResult:=mrOk;
   end;
 
 PROCEDURE TCustomRunForm.silentFlagCbChange(Sender: TObject);
