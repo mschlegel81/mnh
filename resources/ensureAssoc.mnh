@@ -1,6 +1,6 @@
 writeFileLines('install.vbs',
 ['Set UAC = CreateObject("Shell.Application")',
- 'UAC.ShellExecute "cmd", "/c assoc .mnh=mnh.script&& ftype mnh.script=# %1 %*", "", "runas", 1'
+ 'UAC.ShellExecute "cmd", "/c assoc .mnh=mnh.script&& ftype mnh.script=""#"" ""%1"" %*", "", "runas", 1'
 ].replace('#',executor));
 exec('cmd',['/C','install.vbs']);
 deleteFile('install.vbs');
