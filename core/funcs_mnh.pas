@@ -180,7 +180,9 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('flavour'        ,FLAVOUR_STRING             )^
       .put('configDir'      ,configDir                  )^
       .put('fullVersionPath' ,settings.fullFlavourLocation)^
-      .put('lightVersionPath',settings.lightFlavourLocation)
+      .put('lightVersionPath',settings.lightFlavourLocation)^
+      .put('configured_cpus',settings.cpuCount)^
+      .put('configured_mem' ,settings.memoryLimit)
     else result:=nil;
   end;
 
