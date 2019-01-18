@@ -32,6 +32,7 @@ object CustomRunForm: TCustomRunForm
       Top = 0
       Width = 415
       Align = alClient
+      OnKeyPress = scriptParamEditKeyPress
       TabOrder = 0
     end
   end
