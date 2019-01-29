@@ -1134,14 +1134,14 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
         then globals.primaryContext.reduceExpression(t,recycler)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
-          writeln(getHelpOnMain);
+          globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
           {$ifdef fullVersion}displayedHelp:=true;{$endif}
         end else begin
           globals.primaryContext.raiseCannotApplyError('user defined rule '+mainRule^.getId,
                                         parametersForMain,
                                         mainRule^.getLocation,
                                         C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
-          if (length(mainParameters)=1) and (mainParameters[0]='-h') then writeln(getHelpOnMain);
+          if (length(mainParameters)=1) and (mainParameters[0]='-h') then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
         end;
         if profile then globals.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
