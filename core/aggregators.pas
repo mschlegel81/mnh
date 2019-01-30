@@ -356,9 +356,11 @@ PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; C
   VAR newValue:P_literal;
   begin
     aggregationDefaultHandling;
-    if resultLiteral=nil
-    then resultLiteral:=er.literal^.rereferenced
-    else if er.literal^.literalType<>lt_void then begin
+    if resultLiteral=nil then resultLiteral:=er.literal^.rereferenced
+    else if resultLiteral^.literalType=lt_void then begin
+      disposeLiteral(resultLiteral);
+      resultLiteral:=er.literal^.rereferenced;
+    end else if er.literal^.literalType<>lt_void then begin
       newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,resultLiteral,er.literal).literal;
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
