@@ -209,9 +209,13 @@ DESTRUCTOR T_binaryExpressionAggregator.destroy; begin disposeLiteral(aggregator
 
 {$MACRO ON}
 {$define aggregationDefaultHandling:=
-if (er.literal=nil) or earlyAbort then exit;
+if (er.literal=nil) then exit;
+if earlyAbort then begin
+  disposeLiteral(er.literal);
+  exit;
+end;
 if er.triggeredByReturn then begin
-  if resultLiteral<>nil then dispose(resultLiteral,destroy);
+  if resultLiteral<>nil then disposeLiteral(resultLiteral);
   resultLiteral:=er.literal;
   hasReturnLiteral:=true;
   if not(doDispose) then er.literal^.rereference;
