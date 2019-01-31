@@ -16,6 +16,10 @@ DEFAULT_DOWNHILL_SIMPLEX_OPTIONS:=downhillSimplexOptions(1,1/2,2,1/2);
 withStartSimplex(simplexOptions:Map,simplex:List)->simplexOptions.mergeMaps([['simplex',simplex]].toMap,::orElse);
 
 @SuppressUnusedWarning
+//*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide a specific initial simplex
+withStepLimit(simplexOptions:Map,maxSteps>1)->simplexOptions.mergeMaps([['maxSteps',maxSteps]].toMap,::orElse);
+
+@SuppressUnusedWarning
 //*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide an action on new best point
 //*The best point is passed to action in the form [f(x),x];
 withActionOnBestPoint(simplexOptions:Map,action:Expression(1))->simplexOptions.mergeMaps([['onNewBest',action]].toMap,::orElse);
@@ -40,8 +44,10 @@ downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0
   local beta :=options['beta' ];
   local gamma:=options['gamma'];
   local sigma:=options['sigma'];
+  local maxSteps:=options['maxSteps'] orElse Inf;
+  local stepCounter:=-1;
 
-  while(simplex[0,0]>precision AND (simplex[0,1]-simplex[N,1]).sqr.agg(+)>precision^2,
+  while((stepCounter+=1)<maxSteps AND (simplex[0,1]-simplex[N,1]).sqr.agg(+)>precision^2,
   begin
     local xc:=simplex.leading.getInner(1).agg(+)/(simplex.size-1);
     local xr:=(1+alpha)*xc-alpha*simplex.trailing[1];

@@ -4,14 +4,12 @@ object SplashForm: TSplashForm
   Top = 188
   Width = 768
   AutoSize = True
-  BorderStyle = bsToolWindow
   Caption = 'MNH5 - Splash'
   ClientHeight = 463
   ClientWidth = 768
   Color = clWhite
   DefaultMonitor = dmPrimary
   DesignTimePPI = 144
-  FormStyle = fsStayOnTop
   OnActivate = FormActivate
   OnClose = FormClose
   OnShow = FormShow

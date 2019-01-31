@@ -360,15 +360,14 @@ PROCEDURE T_messagesDistributor.clear(CONST clearAllAdapters: boolean);
 
 PROCEDURE T_messagesErrorHolder.clear(CONST clearAllAdapters: boolean);
   begin
-    inherited clear;
+    inherited clear(clearAllAdapters);
     collector.clear;
   end;
 
 PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
   begin
     enterCriticalSection(messagesCs);
-    flags:=[];
-    userDefinedExitCode:=0;
+    clearFlags;
     leaveCriticalSection(messagesCs);
   end;
 
@@ -457,6 +456,7 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
       inc(errorCount);
       if errorCount>20 then begin
         leaveCriticalSection(messagesCs);
+        if disposeAfterPosting then disposeMessage(message);
         exit;
       end;
     end;
@@ -465,8 +465,8 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
     {$ifdef fullVersion}
     if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
     {$endif}
-    if disposeAfterPosting then disposeMessage(message);
     leaveCriticalSection(messagesCs);
+    if disposeAfterPosting then disposeMessage(message);
   end;
 
 PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);

@@ -209,9 +209,13 @@ DESTRUCTOR T_binaryExpressionAggregator.destroy; begin disposeLiteral(aggregator
 
 {$MACRO ON}
 {$define aggregationDefaultHandling:=
-if (er.literal=nil) or earlyAbort then exit;
+if (er.literal=nil) then exit;
+if earlyAbort then begin
+  disposeLiteral(er.literal);
+  exit;
+end;
 if er.triggeredByReturn then begin
-  if resultLiteral<>nil then dispose(resultLiteral,destroy);
+  if resultLiteral<>nil then disposeLiteral(resultLiteral);
   resultLiteral:=er.literal;
   hasReturnLiteral:=true;
   if not(doDispose) then er.literal^.rereference;
@@ -352,9 +356,11 @@ PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; C
   VAR newValue:P_literal;
   begin
     aggregationDefaultHandling;
-    if resultLiteral=nil
-    then resultLiteral:=er.literal^.rereferenced
-    else if er.literal^.literalType<>lt_void then begin
+    if resultLiteral=nil then resultLiteral:=er.literal^.rereferenced
+    else if resultLiteral^.literalType=lt_void then begin
+      disposeLiteral(resultLiteral);
+      resultLiteral:=er.literal^.rereferenced;
+    end else if er.literal^.literalType<>lt_void then begin
       newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,resultLiteral,er.literal).literal;
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;

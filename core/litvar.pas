@@ -397,7 +397,7 @@ TYPE
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual;
-      FUNCTION size:longint;        virtual;
+      FUNCTION size:longint; virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
@@ -419,7 +419,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
-      FUNCTION size:longint;        virtual;
+      FUNCTION size:longint; virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
