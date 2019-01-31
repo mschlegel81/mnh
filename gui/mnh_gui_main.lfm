@@ -19,6 +19,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
+  Position = poScreenCenter
   LCLVersion = '1.8.4.0'
   object bottomPanelSplitter: TSplitter
     Cursor = crVSplit
