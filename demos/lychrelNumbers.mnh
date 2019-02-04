@@ -6,7 +6,7 @@ isLychrel(i:Int)->begin
   local myHistory:=[i];
   local x:=i;
   local d:=x.digits;
-  [1..500].each(step,begin
+  [1..50].each(step,begin
     x+=d.reverseList.composeDigits;
     local seed:=earlierLychrels[x];
     seed.isVoid
