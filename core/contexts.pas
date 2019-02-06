@@ -130,7 +130,7 @@ TYPE
     public
       PROCEDURE   evaluate(VAR recycler:T_recycler); virtual; abstract;
       CONSTRUCTOR create(CONST volatile:boolean);
-      PROCEDURE   defineAndEnqueue(CONST newEnvironment:P_context);
+      PROCEDURE   defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context; VAR recycler:T_recycler);
       PROCEDURE   clearContext;
       DESTRUCTOR  destroy; virtual;
   end;
@@ -733,7 +733,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
     initCriticalSection(taskCs);
   end;
 
-PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_context);
+PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context; VAR recycler:T_recycler);
   begin
     enterCriticalSection(taskCs);
     try
@@ -743,7 +743,9 @@ PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_context);
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      context^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
+      if (context^.getGlobals^.taskQueue.queuedCount>2*settings.cpuCount) and not(isVolatile)
+      then evaluate(recycler)
+      else context^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
     finally
       leaveCriticalSection(taskCs);
     end;
