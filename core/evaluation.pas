@@ -298,7 +298,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
     VAR whileLocation:T_tokenLocation;
         returnValue:T_evaluationResult;
-    PROCEDURE evaluateBody; {$ifndef profilingFlavour}inline;{$endif}
+    PROCEDURE evaluateBody;
       VAR toReduce,dummy:P_token;
       begin
         if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,recycler) then begin
@@ -603,6 +603,23 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
     end;
 
+  PROCEDURE process_op_lit_cascading;
+    begin
+      // x < y < z -> [x < y] and y < z
+      newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                              stack.topType,
+                              first^.data,
+                              stack.dat[stack.topIndex]^.location,
+                              @context,@recycler);
+      //LHS literal is now result of first comparison (still a literal)
+      disposeLiteral(stack.dat[stack.topIndex-1]^.data);
+      stack.dat[stack.topIndex-1]^.data:=newLit;
+      stack.dat[stack.topIndex-1]^.location:=stack.dat[stack.topIndex]^.location;
+      //applied comparator is replaced by operator 'and'
+      stack.dat[stack.topIndex]^.tokType:=tt_operatorAnd;
+      didSubstitution:=true;
+    end;
+
   PROCEDURE process_op_lit; {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
     VAR trueLit:boolean;
     begin
@@ -744,6 +761,99 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
     end;
 
+  PROCEDURE constructList;
+    begin
+      repeat
+        P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context,
+                      stack.topType=tt_list_constructor_ranging);
+        if first^.next^.tokType=tt_separatorCnt
+        then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
+        else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
+        first:=recycler.disposeToken(first);
+        first:=recycler.disposeToken(first);
+      until (first=nil) or (first^.tokType<>tt_literal) or
+            (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
+      didSubstitution:=true;
+    end;
+
+  PROCEDURE resolveElementAccess;
+    begin
+      newLit:=newListLiteral;
+      P_listLiteral(newLit)^
+      .append(first^.data,false)^
+      .appendAll(first^.next^.data);
+      disposeLiteral(first^.next^.data);
+      first^.tokType:=tt_intrinsicRule;
+      first^.data:=BUILTIN_GET;
+      first^.txt:='get';
+      first^.next^.tokType:=tt_parList;
+      first^.next^.data:=newLit;
+      applyRule(first^.next,first^.next^.next);
+    end;
+
+  PROCEDURE handleSquareBrackets;
+    begin
+      P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context,
+                    stack.topType=tt_list_constructor_ranging);
+      first:=recycler.disposeToken(first);
+      first:=recycler.disposeToken(first);
+      stack.popLink(first);   // -> ? | [ ...
+      first^.tokType:=tt_literal; // -> ? | <NewList>
+      didSubstitution:=true;
+      if (stack.topType in [tt_blockLocalVariable,tt_localUserRule,tt_importedUserRule]) then begin
+        // x # [y]:=... -> x<<[y]|...;
+        stack.popLink(first);
+        if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
+        if cTokType[2] in [tt_assign,tt_mutate,
+                           tt_mut_assignPlus,
+                           tt_mut_assignMinus,
+                           tt_mut_assignMult,
+                           tt_mut_assignDiv,
+                           tt_mut_assignStrConcat,
+                           tt_mut_assignAppend,
+                           tt_mut_assignAppendAlt,
+                           tt_mut_assignDrop] then begin
+          //first=                   x
+          //first^.next=             [y]
+          //first^.next^.next=       :=
+          //first^.next^.next^.next= ... (some expression)
+          case cTokType[2] of
+            tt_assign,tt_mutate   : first^.tokType:=tt_mut_nested_assign;
+            tt_mut_assignPlus     : first^.tokType:=tt_mut_nestedPlus     ;
+            tt_mut_assignMinus    : first^.tokType:=tt_mut_nestedMinus    ;
+            tt_mut_assignMult     : first^.tokType:=tt_mut_nestedMult     ;
+            tt_mut_assignDiv      : first^.tokType:=tt_mut_nestedDiv      ;
+            tt_mut_assignStrConcat: first^.tokType:=tt_mut_nestedStrConcat;
+            tt_mut_assignAppend   : first^.tokType:=tt_mut_nestedAppend   ;
+            tt_mut_assignAppendAlt: first^.tokType:=tt_mut_nestedAppendAlt;
+            tt_mut_assignDrop     : first^.tokType:=tt_mut_nestedDrop     ;
+          end;
+          first^.next^.next^.tokType:=tt_operatorConcatAlt;
+          //first=                   x<<
+          //first^.next=             [y]
+          //first^.next^.next=       ||
+          //first^.next^.next^.next= ... (some expression)
+          stack.push(first);
+        end else begin
+          if first^.tokType=tt_blockLocalVariable
+          then newLit:=context.valueScope^.getVariableValue(first^.txt)
+          else newLit:=P_mutableRule(first^.data)^.getValue(context,recycler);
+          if newLit<>nil then begin
+            first^.data:=newLit;
+            first^.tokType:=tt_literal;
+            resolveElementAccess;
+          end else begin
+            context.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
+            didSubstitution:=false;
+          end;
+        end;
+      end else if (stack.topType=tt_literal) then begin
+        // <Lit> | <NewList> ...
+        stack.popLink(first); // -> | <Lit> <NewList> ...
+        resolveElementAccess;
+      end;
+    end;
+
   PROCEDURE resolvePseudoFuncPointer;
     VAR exRule:P_expressionLiteral;
         ruleToken:P_token;
@@ -776,19 +886,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       recycler.cascadeDisposeToken(first);
     end;
 
-  PROCEDURE resolveElementAccess;
+  PROCEDURE processEntryConstructor;
     begin
-      newLit:=newListLiteral;
-      P_listLiteral(newLit)^
-      .append(first^.data,false)^
-      .appendAll(first^.next^.data);
-      disposeLiteral(first^.next^.data);
-      first^.tokType:=tt_intrinsicRule;
-      first^.data:=BUILTIN_GET;
-      first^.txt:='get';
-      first^.next^.tokType:=tt_parList;
-      first^.next^.data:=newLit;
-      applyRule(first^.next,first^.next^.next);
+      stack.popDestroy(recycler);
+      stack.popLink(first);
+      first^.data:=newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
+      first^.next:=recycler.disposeToken(first^.next);
+      didSubstitution:=true;
     end;
 
 {$MACRO ON}
@@ -872,13 +976,8 @@ end}
       case cTokType[0] of
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
-              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: begin
-              stack.popDestroy(recycler);
-              stack.popLink(first);
-              first^.data:=newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
-              first^.next:=recycler.disposeToken(first^.next);
-              didSubstitution:=true;
-            end;
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose:
+              processEntryConstructor;
             COMMON_CASES;
           end;
  {cT[-1]=}tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
@@ -901,23 +1000,10 @@ end}
             end;
             didSubstitution:=true;
           end;
- {cT[-1]=}tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
-            if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
-              // x < y < z -> [x < y] and y < z
-              newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                      stack.topType,
-                                      first^.data,
-                                      stack.dat[stack.topIndex]^.location,
-                                      @context,@recycler);
-              //LHS literal is now result of first comparison (still a literal)
-              disposeLiteral(stack.dat[stack.topIndex-1]^.data);
-              stack.dat[stack.topIndex-1]^.data:=newLit;
-              stack.dat[stack.topIndex-1]^.location:=stack.dat[stack.topIndex]^.location;
-              //applied comparator is replaced by operator 'and'
-              stack.dat[stack.topIndex]^.tokType:=tt_operatorAnd;
-              didSubstitution:=true;
-            end else process_op_lit;
-          end;
+ {cT[-1]=}tt_comparatorEq..tt_comparatorListEq:
+            if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq])
+            then process_op_lit_cascading
+            else process_op_lit;
  {cT[-1]=}tt_operatorIn..tt_operatorConcatAlt,
           tt_unaryOpPlus,tt_unaryOpMinus,tt_unaryOpNegate: process_op_lit;
  {cT[-1]=}tt_braceOpen : case cTokType[1] of // ( | <Lit>
@@ -932,79 +1018,9 @@ end}
             else context.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
           end;
  {cT[-1]=}tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
-            tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
-              repeat
-                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context,
-                              stack.topType=tt_list_constructor_ranging);
-                if first^.next^.tokType=tt_separatorCnt
-                then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
-                else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
-                first:=recycler.disposeToken(first);
-                first:=recycler.disposeToken(first);
-              until (first=nil) or (first^.tokType<>tt_literal) or
-                    (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
-              didSubstitution:=true;
-            end;
+            tt_separatorComma, tt_separatorCnt: constructList; // [ | <Lit> ,
             tt_listBraceClose: begin // [ | <Lit> ] ...
-              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context,
-                            stack.topType=tt_list_constructor_ranging);
-              first:=recycler.disposeToken(first);
-              first:=recycler.disposeToken(first);
-              stack.popLink(first);   // -> ? | [ ...
-              first^.tokType:=tt_literal; // -> ? | <NewList>
-              didSubstitution:=true;
-              if (stack.topType in [tt_blockLocalVariable,tt_localUserRule,tt_importedUserRule]) then begin
-                // x # [y]:=... -> x<<[y]|...;
-                stack.popLink(first);
-                if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
-                if cTokType[2] in [tt_assign,tt_mutate,
-                                   tt_mut_assignPlus,
-                                   tt_mut_assignMinus,
-                                   tt_mut_assignMult,
-                                   tt_mut_assignDiv,
-                                   tt_mut_assignStrConcat,
-                                   tt_mut_assignAppend,
-                                   tt_mut_assignAppendAlt,
-                                   tt_mut_assignDrop] then begin
-                  //first=                   x
-                  //first^.next=             [y]
-                  //first^.next^.next=       :=
-                  //first^.next^.next^.next= ... (some expression)
-                  case cTokType[2] of
-                    tt_assign,tt_mutate   : first^.tokType:=tt_mut_nested_assign;
-                    tt_mut_assignPlus     : first^.tokType:=tt_mut_nestedPlus     ;
-                    tt_mut_assignMinus    : first^.tokType:=tt_mut_nestedMinus    ;
-                    tt_mut_assignMult     : first^.tokType:=tt_mut_nestedMult     ;
-                    tt_mut_assignDiv      : first^.tokType:=tt_mut_nestedDiv      ;
-                    tt_mut_assignStrConcat: first^.tokType:=tt_mut_nestedStrConcat;
-                    tt_mut_assignAppend   : first^.tokType:=tt_mut_nestedAppend   ;
-                    tt_mut_assignAppendAlt: first^.tokType:=tt_mut_nestedAppendAlt;
-                    tt_mut_assignDrop     : first^.tokType:=tt_mut_nestedDrop     ;
-                  end;
-                  first^.next^.next^.tokType:=tt_operatorConcatAlt;
-                  //first=                   x<<
-                  //first^.next=             [y]
-                  //first^.next^.next=       ||
-                  //first^.next^.next^.next= ... (some expression)
-                  stack.push(first);
-                end else begin
-                  if first^.tokType=tt_blockLocalVariable
-                  then newLit:=context.valueScope^.getVariableValue(first^.txt)
-                  else newLit:=P_mutableRule(first^.data)^.getValue(context,recycler);
-                  if newLit<>nil then begin
-                    first^.data:=newLit;
-                    first^.tokType:=tt_literal;
-                    resolveElementAccess;
-                  end else begin
-                    context.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
-                    didSubstitution:=false;
-                  end;
-                end;
-              end else if (stack.topType=tt_literal) then begin
-                // <Lit> | <NewList> ...
-                stack.popLink(first); // -> | <Lit> <NewList> ...
-                resolveElementAccess;
-              end;
+              handleSquareBrackets;
             end;
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
@@ -1095,12 +1111,7 @@ end}
             end;
           end;
         end;
-{cT[0]=}tt_beginRule: begin
-          scopePush(context.valueScope,ACCESS_READWRITE);
-          stack.push(first);
-          didSubstitution:=true;
-        end;
-{cT[0]=}tt_beginBlock,tt_beginExpression: begin
+{cT[0]=}tt_beginRule,tt_beginBlock,tt_beginExpression: begin
           scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
