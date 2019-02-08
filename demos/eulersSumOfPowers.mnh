@@ -1,39 +1,21 @@
-//Euler's (disproved) sum of powers conjecture
-//  At least  k  positive  kth  powers are required to sum to a  kth  power,
-//  except for the trivial case of one  kth power:  y^k = y^k
-
-//is5th(i:int)->round(i^0.2)^5==i;
-
-memoized fifthSet ->toSet([1..floor(249*4^(1/5))]^5);
-memoized twoFifths->toSet([1..249]^5)+toSet([1..249]^5);
-
-//Idea: for a given x and a set of numbers S we can efficiently check if
-//        exists a in S, b in S
-//        such that x=a+b
-//Consequently we split the task in two levels,
-//  the first with  S = twoFifths (numbers that can be expressed as sum of two powers of five)
-//  the second with S = fifthSet  (powers of five)
-
-splitL1(powerOfFive:Int)->begin
-  local R:=
-  intersect(powerOfFive-twoFifths,twoFifths)
-           .map({[powerOfFive-$q,$q].sort})
-           .toSet
-           .map({$p.map(::splitL2).flatten.sort}).toSet;
-  R.size=0
-  ? void
-  : R.map({format('%s^5 = %s^5 + %s^5 + %s^5 + %s^5')@(round(powerOfFive^0.2)|round($x^0.2))});
+asTwoPowersOfFive(i:Int)->begin
+  local P:=[1..floor(i^(1/5))]^5;
+  local r:=intersect(i-P,P);
+  r.size=0 ? fail : begin
+    r:=r.toList.head;
+    round([i-r,r]^(1/5));
+  end;
 end;
 
-splitL2(sumOfP5:Int)->
-  intersect(sumOfP5-fifthSet,fifthSet)
-           .map({[sumOfP5-$q,$q].sort})
-           .toSet;
+asFourPowersOfFive(i:Int)->begin
+  local P:=([1..floor(i^(1/5))]^5).toSet;
+  local r:=intersect(P:=P+P,i-P);
+  r.size=0 ? void : begin
+    r:=r.toList.head;
+    sort(asTwoPowersOfFive(i-r) | asTwoPowersOfFive(r) | round(i^(1/5)));
+  end;
+end;
 
 //*See http://rosettacode.org/wiki/Euler%27s_sum_of_powers_conjecture
 @demo_for=math, list processing
-main->
-  fifthSet.pEach(p5,p5.splitL1,head)
-          .flatten
-          .join("\n")
-          .print;
+main->'%s^5 + %s^5 + %s^5 + %s^5 = %s^5'.printf@(rangeGenerator(1).each(k,asFourPowersOfFive(k^5),orElse));

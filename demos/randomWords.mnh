@@ -10,11 +10,11 @@ end;
 
 private memoized lengthTable->length(words).relativeFrequency;
 private memoized firstTable->words.copy(0,1).relativeFrequency;
-private memoized followerTable->words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2))
+private memoized followerTable->words.pEach(word,word.length<2 ? void : word.copy([0..length(word)-2],2))
                                      .flatten
-                                     .each(s,s.chars)
+                                     .pEach(s,s.chars)
                                      .group(0)
-                                     .each(g,[g[0,0],g.getInner(1).relativeFrequency])
+                                     .pEach(g,[g[0,0],g.getInner(1).relativeFrequency])
                                      .toMap;
 
 private randomFromTable(T:List)->begin

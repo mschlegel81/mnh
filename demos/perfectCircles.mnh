@@ -17,13 +17,13 @@ private errorFunc(k)->
  +($aPhi[1]<0 ? 100 : 0)};
 
 USE downhillSimplex;
-private datastore CONFIG_OF_K:=[[2,downhillSimplex(errorFunc(2),[2,2],0.1,1E-28)[1]]].toMap;
+private datastore CONFIG_OF_K:=[[2,downhillSimplex(errorFunc(2),[2,2],0.1,1E-10)[1]]].toMap;
 findSolution(forK>=2)->CONFIG_OF_K[forK] orElse begin
   local maxK:=CONFIG_OF_K.getInner(0).max;
   local par:=CONFIG_OF_K[maxK];
   [maxK+1..forK].each(k,begin
     (k-[99..1]/100).each(subK,par:=downhillSimplex(errorFunc(subK),par,0.001,1E-4 )[1]);
-                              par:=downhillSimplex(errorFunc(k   ),par,0.001,1E-28)[1];
+                              par:=downhillSimplex(errorFunc(k   ),par,0.001,1E-10)[1];
     note('New solution computed for k=',k,'; ',par);
     CONFIG_OF_K[k]:=par;
     void;
@@ -55,7 +55,7 @@ end;
 //*Creates and displays an animation
 main('animate')->begin
   clearAnimation;
-  [2..50].each(k,plotCircles(k,'orange polygon 0 fs','black'),
+  [2..50].each(k,plotCircles(k,'orange ellipse 0 fs','black'),
                  addAnimationFrame,
                  index=0 ? display : void);
   display;

@@ -541,14 +541,20 @@ PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
         oldLineEnd  :TPoint;
         newLineStart:TPoint;
     begin
-      if (range[0]-2<0) or (range[1]>=editor.lines.count) then exit;
+      if (range[0]-2<0) or (range[1]>editor.lines.count) then exit;
       oldLineText:=editor.lines[range[0]-2];
       oldLineStart.y:=range[0]-1; oldLineStart.x:=1;
       oldLineEnd  .y:=range[0]  ; oldLineEnd  .x:=1;
       editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
-      newLineStart.y:=range[1];
-      newLineStart.x:=1;
-      editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
+      if range[1]>editor.lines.count then begin
+        newLineStart.y:=range[1]-1;
+        newLineStart.x:=length(editor.lines[range[1]-2])+1;
+        editor.TextBetweenPoints[newLineStart,newLineStart]:=LineEnding+oldLineText;
+      end else begin
+        newLineStart.y:=range[1];
+        newLineStart.x:=1;
+        editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
+      end;
       blockDelta:=-1;
     end;
 
@@ -557,8 +563,14 @@ PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
         oldLineStart:TPoint;
         oldLineEnd  :TPoint;
         newLineStart:TPoint;
+        lastLine:boolean=false;
     begin
-      if range[1]>=editor.lines.count-1 then exit;
+      if range[1]>=editor.lines.count-1 then begin
+        newLineStart.y:=                    editor.lines.count   ;
+        newLineStart.x:=length(editor.lines[editor.lines.count-1])+1;
+        editor.SetTextBetweenPoints(newLineStart,newLineStart,LineEnding);
+        lastLine:=true;
+      end;
       oldLineText:=editor.lines[range[1]];
       oldLineStart.y:=range[1]+1; oldLineStart.x:=1;
       oldLineEnd  .y:=range[1]+2; oldLineEnd  .x:=1;
@@ -566,6 +578,11 @@ PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
       newLineStart.y:=range[0];
       newLineStart.x:=1;
       editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
+      if lastLine then begin
+        oldLineStart.y:=editor.lines.count-1; oldLineStart.x:=length(editor.lines[editor.lines.count-2])+1;
+        oldLineEnd  .y:=editor.lines.count  ; oldLineEnd  .x:=1;
+        editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
+      end;
       blockDelta:=1;
     end;
 

@@ -464,7 +464,7 @@ expectations:=
  'ethiopian'=>
  ['   17      34','    8  [   68]','    4  [  136]','    2  [  272]','    1     544','       =======','          578'],
  'eulersSumOfPowers'=>
- ['144^5 = 27^5 + 84^5 + 110^5 + 133^5'],
+ ['27^5 + 84^5 + 110^5 + 133^5 = 144^5'],
  'examples_from_file'=>
  ['FDLinux'=>
   ['in> arity({3});','out> 0','in> arity({sin($x)/$x});','out> 1','in> arity({sin($x)/$y});','out> 2',
