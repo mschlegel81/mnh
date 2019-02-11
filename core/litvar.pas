@@ -2853,10 +2853,12 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       prevMask:word; //dummy
       i:longint;
       maxSubsetSize:longint=0;
+      smallestSetIndex:longint=0;
       entry:T_occurenceCount.CACHE_ENTRY;
       iter:T_arrayOfLiteral;
       x:P_literal;
       acceptMask:word=0;
+      allSets:boolean=true;
 
   FUNCTION resultByRecursion:P_setLiteral;
     VAR innerCallParam,outerCallParam:P_listLiteral;
@@ -2878,14 +2880,35 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       disposeLiteral(outerCallParam);
     end;
 
+  FUNCTION resultByContains:P_setLiteral;
+    VAR iter:T_arrayOfLiteral;
+        elem:P_literal;
+        inAll:boolean;
+        k:longint;
+    begin
+      result:=newSetLiteral();
+      iter:=P_setLiteral(params^.value[smallestSetIndex])^.iteratableList;
+      for elem in iter do begin
+        inAll:=true;
+        for k:=0 to params^.size-1 do inAll:=inAll and ((k=smallestSetIndex) or P_setLiteral(params^.value[k])^.contains(elem));
+        if inAll then result^.append(elem,true);
+      end;
+      disposeLiteral(iter);
+    end;
+
   begin
     if not((params<>nil) and (params^.size>=1))                                            then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil);
-    if params^.size>16 then exit(resultByRecursion);
+    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil) else begin
+      allSets:=allSets and (params^.value[i]^.literalType in C_setTypes);
+      if P_compoundLiteral(params^.value[i])^.size<P_compoundLiteral(params^.value[smallestSetIndex])^.size
+      then smallestSetIndex:=i;
+      if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
+    end;
     if params^.size=1  then exit(P_compoundLiteral(params^.value[0])^.toSet());
+    if allSets then exit(resultByContains);
+    if params^.size>16 then exit(resultByRecursion);
 
     counterSet.create;
-    for i:=0 to params^.size-1 do if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
     counterSet.rehashForExpectedSize(maxSubsetSize);
     for i:=0 to params^.size-1 do begin
       iter:=P_compoundLiteral(params^.value[i])^.iteratableList;
@@ -2901,6 +2924,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
   VAR L:P_literal;
       iter:T_arrayOfLiteral;
+      s:P_setLiteral;
   begin
     if not((params<>nil) and
            (params^.size=2) and
@@ -2909,15 +2933,21 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     then exit(nil);
     result:=newSetLiteral;
     iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
-    result^.dat.rehashForExpectedSize(length(iter));
-    for L in iter do result^.dat.put(L,true);
-    disposeLiteral(iter);
-    iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
-    for L in iter do result^.dat.drop(L);
-    disposeLiteral(iter);
-    for L in result^.dat.keySet do begin
-      L^.rereference;
-      result^.modifyType(L);
+    if params^.value[1]^.literalType in C_setTypes then begin
+      s:=P_setLiteral(params^.value[1]);
+      for L in iter do if s^.contains(L) then result^.append(L,true);
+      disposeLiteral(iter);
+    end else begin
+      result^.dat.rehashForExpectedSize(length(iter));
+      for L in iter do result^.dat.put(L,true);
+      disposeLiteral(iter);
+      iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
+      for L in iter do result^.dat.drop(L);
+      disposeLiteral(iter);
+      for L in result^.dat.keySet do begin
+        L^.rereference;
+        result^.modifyType(L);
+      end;
     end;
   end;
 

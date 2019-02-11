@@ -245,7 +245,8 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     finalizePending(proceed);
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) and not(context.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while firstToAggregate<>nil do if not(canAggregate) then sleep(1);
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
@@ -358,10 +359,11 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     end;
     setLength(nextToEnqueue,enqueueFill);
-    createTask(nextToEnqueue);
+    if enqueueFill>0 then createTask(nextToEnqueue);
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) and not(context.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while firstToAggregate<>nil do if not(canAggregate) then sleep(1);
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
@@ -452,10 +454,12 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;
     end;
-    if x<>nil then disposeLiteral(x);
     setLength(nextToEnqueue,enqueueFill);
-    createTask(nextToEnqueue);
-    while firstToAggregate<>nil do if not(canAggregate) and not(context.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
+    if enqueueFill>0 then createTask(nextToEnqueue);
+    if x<>nil then disposeLiteral(x);
+
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while firstToAggregate<>nil do if not(canAggregate) then sleep(1);
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
