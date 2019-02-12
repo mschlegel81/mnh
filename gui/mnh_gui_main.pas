@@ -351,7 +351,7 @@ PROCEDURE TMnhForm.activeFileChanged(CONST newCaption:string; CONST isMnhFile:bo
 FUNCTION TMnhForm.openLocation(CONST location: T_searchTokenLocation): boolean;
   VAR newIdx:longint;
   begin
-    if (location.fileName='') or (location.fileName='?') then exit(false);
+    if (location.fileName='') or (location.fileName='?') or (location.filename='[MNH]') then exit(false);
     newIdx:=addOrGetEditorMetaForFiles(location.fileName,false);
     if newIdx<0 then exit(false);
     inputPageControl.activePageIndex:=newIdx;
