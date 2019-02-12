@@ -2935,7 +2935,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
     if params^.value[1]^.literalType in C_setTypes then begin
       s:=P_setLiteral(params^.value[1]);
-      for L in iter do if s^.contains(L) then result^.append(L,true);
+      for L in iter do if not(s^.contains(L)) then result^.append(L,true);
       disposeLiteral(iter);
     end else begin
       result^.dat.rehashForExpectedSize(length(iter));
