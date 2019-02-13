@@ -345,11 +345,11 @@ TYPE
 
   T_listLiteral=object(T_collectionLiteral)
     private
-      dat:PP_literal;
-      alloc,fill:longint;
+      dat:T_arrayOfLiteral;
+      fill:longint;
       PROCEDURE modifyType(CONST L:P_literal); {$ifndef profilingFlavour}inline;{$endif}
     public
-      PROPERTY value:PP_literal read dat;
+      PROPERTY value:T_arrayOfLiteral read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -1188,8 +1188,7 @@ CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
     strings :=0;
     booleans:=0;
     others  :=0;
-    getMem(dat,sizeOf(P_literal)*initialSize);
-    alloc:=initialSize;
+    setLength(dat,initialSize);
     fill:=0;
   end;
 
@@ -1247,8 +1246,7 @@ DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
   begin
     for i:=0 to fill-1 do disposeLiteral(dat[i]);
-    freeMem(dat,sizeOf(P_literal)*alloc);
-    alloc:=0;
+    setLength(dat,0);
     fill:=0;
   end;
 
@@ -2400,10 +2398,7 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       i0:=P_abstractIntLiteral(last)^.intValue;
       i1:=P_abstractIntLiteral(L   )^.intValue;
       newLen:=fill+abs(i1-i0)+1;
-      if newLen>alloc then begin
-        ReAllocMem(dat,sizeOf(P_literal)*newLen);
-        alloc:=newLen;
-      end;
+      if newLen>length(dat) then setLength(dat,newLen);
       while (i0<i1) do begin
         inc(i0);
         appendInt(i0);
@@ -2418,10 +2413,7 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       c0:=P_stringLiteral(last)^.val [1];
       c1:=P_stringLiteral(L)^.val [1];
       newLen:=fill+abs(ord(c1)-ord(c0))+1;
-      if newLen>alloc then begin
-        ReAllocMem(dat,sizeOf(P_literal)*newLen);
-        alloc:=newLen;
-      end;
+      if newLen>length(dat) then setLength(dat,newLen);
       while c0<c1 do begin
         inc(c0);
         appendString(c0);
@@ -2440,10 +2432,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
   begin
     result:=@self;
     if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
-    if alloc>fill then begin end else begin
-      alloc:=round(fill*1.25)+2;
-      ReAllocMem(dat,sizeOf(P_literal)*alloc);
-    end;
+    if length(dat)<=fill then setLength(dat,round(fill*1.25)+2);
     dat[fill]:=L;
     inc(fill);
     if incRefs then L^.rereference;
