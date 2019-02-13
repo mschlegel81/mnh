@@ -91,13 +91,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           then level:=0
           else context.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
         end else case first^.tokType of
-          tt_beginBlock:            begin stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginBlock:            begin stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_beginExpression,
-          tt_beginRule: begin inc(level); stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginRule: begin inc(level); stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
-              scopePop(context.valueScope);
+              recycler.scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
             end else context.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
@@ -105,7 +105,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             if stack.topType=C_compatibleBegin[first^.     tokType]
             then begin
               {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
-              scopePop(context.valueScope);
+              recycler.scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
               dec(level);
@@ -208,6 +208,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
 
     VAR iterator:P_expressionLiteral;
+        iteratorSource:P_literal;
         i:longint;
         eachLocation:T_tokenLocation;
 
@@ -243,13 +244,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         exit;
       end;
       if not(parseBodyOk) then exit;
-      iterator:=newIterator(P_literal(first^.data));
+      iteratorSource:=P_literal(first^.data);
+      iterator:=newIterator(iteratorSource);
       first^.next:=recycler.disposeToken(first^.next);
-      disposeLiteral(first^.data);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler)
+        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler,iteratorSource)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context,recycler);
       end else begin
         if eachType = tt_parallelEach then context.messages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
@@ -259,6 +260,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
       disposeLiteral(iterator);
+      disposeLiteral(iteratorSource);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -881,7 +883,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
   VAR initialScope:P_valueScope;
   PROCEDURE cleanupStackAndExpression;
     begin
-      while context.valueScope<>initialScope do scopePop(context.valueScope);
+      while context.valueScope<>initialScope do recycler.scopePop(context.valueScope);
       while stack.topIndex>=0 do stack.popDestroy(recycler);
       recycler.cascadeDisposeToken(first);
     end;
@@ -941,7 +943,7 @@ if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
     stack.popDestroy(recycler);
     first^.next:=recycler.disposeToken(first^.next);
     first^.next:=recycler.disposeToken(first^.next);
-    scopePop(context.valueScope);
+    recycler.scopePop(context.valueScope);
     didSubstitution:=true;
   end else begin
     first:=recycler.disposeToken(first);
@@ -1055,7 +1057,7 @@ end}
               stack.popDestroy(recycler);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
-              scopePop(context.valueScope);
+              recycler.scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1077,7 +1079,7 @@ end}
               end;
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
-              scopePop(context.valueScope);
+              recycler.scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1112,7 +1114,7 @@ end}
           end;
         end;
 {cT[0]=}tt_beginRule,tt_beginBlock,tt_beginExpression: begin
-          scopePush(context.valueScope,ACCESS_READWRITE);
+          recycler.scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1290,7 +1292,7 @@ FUNCTION doAsync(p:pointer):ptrint;
     result:=0;
     with P_asyncTask(p)^ do begin
       payload^.executeInContext(myContext,recycler);
-      myContext^.finalizeTaskAndDetachFromParent;
+      myContext^.finalizeTaskAndDetachFromParent(@recycler);
 
       disposeLiteral(payload);
       contextPool.disposeContext(myContext);
@@ -1301,7 +1303,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i func_defines.inc}
-FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
+FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;
       childContext:P_context;
@@ -1312,7 +1314,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
        context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
       try
-        childContext:=context.getNewAsyncContext(local);
+        childContext:=context.getNewAsyncContext(recycler,local);
         if childContext<>nil then begin
           if params^.size=2 then parameters:=list1;
           new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
@@ -1330,8 +1332,8 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
     end;
   end;
 
-FUNCTION async_imp      intFuncSignature; begin result:=localOrGlobalAsync(false,params,tokenLocation,context); end;
-FUNCTION localAsync_imp intFuncSignature; begin result:=localOrGlobalAsync(true ,params,tokenLocation,context); end;
+FUNCTION async_imp      intFuncSignature; begin result:=localOrGlobalAsync(false,params,tokenLocation,context,recycler); end;
+FUNCTION localAsync_imp intFuncSignature; begin result:=localOrGlobalAsync(true ,params,tokenLocation,context,recycler); end;
 
 FUNCTION future_imp intFuncSignature;
   VAR future:P_futureLiteral;

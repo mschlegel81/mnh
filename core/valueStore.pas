@@ -25,6 +25,7 @@ TYPE
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
+      FUNCTION clone:P_namedVariable;
   end;
 
 CONST
@@ -37,8 +38,6 @@ TYPE
 
   P_valueScope=^T_valueScope;
   T_valueScope=object
-    private
-      cs:TRTLCriticalSection;
       parentScope :P_valueScope;
       parentAccess:AccessLevel;
       refCount    :longint;
@@ -48,7 +47,7 @@ TYPE
       PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
       DESTRUCTOR destroy;
       PROCEDURE insteadOfDestroy;
-    public
+
       PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
       PROCEDURE createVariable(CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
       FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
@@ -58,106 +57,9 @@ TYPE
       //For debugging:
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       {$endif}
-      FUNCTION cloneSaveValueStore:P_valueScope;
   end;
 
-PROCEDURE disposeScope(VAR scope:P_valueScope); inline;
-FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope; inline;
-PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel); inline;
-PROCEDURE scopePop(VAR scope:P_valueScope); inline;
 IMPLEMENTATION
-VAR scopeRecycler:record
-      recyclerCS:TRTLCriticalSection;
-      fill:longint;
-      dat:array[0..63] of P_valueScope;
-    end;
-
-PROCEDURE disposeScope(VAR scope:P_valueScope);
-  begin
-    if scope=nil then exit;
-    enterCriticalSection(scope^.cs);
-    dec(scope^.refCount);
-    if scope^.refCount<>0 then begin
-      leaveCriticalSection(scope^.cs);
-      scope:=nil;
-      exit;
-    end;
-    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
-    then begin
-      leaveCriticalSection(scope^.cs);
-      dispose(scope,destroy);
-    end
-    else begin
-      leaveCriticalSection(scope^.cs);
-      if (fill>=length(dat))
-      then dispose(scope,destroy)
-      else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
-      end;
-      leaveCriticalSection(recyclerCS);
-    end;
-    scope:=nil;
-  end;
-
-PROCEDURE scopePop(VAR scope:P_valueScope);
-  VAR newScope:P_valueScope;
-  begin
-    if scope=nil then exit;
-    newScope:=scope^.parentScope;
-    enterCriticalSection(scope^.cs);
-    dec(scope^.refCount);
-    if scope^.refCount<>0 then begin
-      leaveCriticalSection(scope^.cs);
-      scope:=newScope;
-      exit;
-    end;
-    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
-    then begin
-      leaveCriticalSection(scope^.cs);
-      dispose(scope,destroy);
-    end
-    else begin
-      leaveCriticalSection(scope^.cs);
-      if (fill>=length(dat))
-      then dispose(scope,destroy)
-      else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
-      end;
-      leaveCriticalSection(recyclerCS);
-    end;
-    scope:=newScope;
-  end;
-
-FUNCTION newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope;
-  begin
-    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
-      if (fill>0) then begin
-        dec(fill);
-        result:=dat[fill];
-        result^.insteadOfCreate(scope,parentAccess);
-      end else new(result,create(scope,parentAccess));
-      leaveCriticalSection(recyclerCS);
-    end else new(result,create(scope,parentAccess));
-  end;
-
-PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel);
-  VAR newScope:P_valueScope;
-  begin
-    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
-      if (fill>0) then begin
-        dec(fill);
-        newScope:=dat[fill];
-        newScope^.insteadOfCreate(scope,parentAccess);
-      end else new(newScope,create(scope,parentAccess));
-      leaveCriticalSection(recyclerCS);
-    end else new(newScope,create(scope,parentAccess));
-    scope:=newScope;
-  end;
-
 CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
     id:=initialId;
@@ -200,20 +102,21 @@ FUNCTION T_namedVariable.getValue:P_literal;
     result^.rereference;
   end;
 
-FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistring;
+FUNCTION T_namedVariable.toString(CONST lengthLimit: longint): ansistring;
   begin
     result:=id+'='+value^.toString(lengthLimit-1-length(id));
   end;
 
+FUNCTION T_namedVariable.clone: P_namedVariable;
+  begin
+    new(result,create(id,value,readonly));
+  end;
+
 CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
   begin
-    initCriticalSection(cs);
-    enterCriticalSection(cs);
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
-      enterCriticalSection(parentScope^.cs);
-      inc(parentScope^.refCount);
-      leaveCriticalSection(parentScope^.cs);
+      interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
     if parentScope=nil
     then parentAccess:=ACCESS_BLOCKED
@@ -221,54 +124,40 @@ CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope; CONST accessToPare
     refCount        :=1;
     setLength(variables,0);
     varFill:=0;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
   begin
-    enterCriticalSection(cs);
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
-      enterCriticalSection(parentScope^.cs);
-      inc(parentScope^.refCount);
-      leaveCriticalSection(parentScope^.cs);
+      interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
     if parentScope=nil
     then parentAccess:=ACCESS_BLOCKED
     else parentAccess:=accessToParent;
     refCount        :=1;
-    leaveCriticalSection(cs);
   end;
 
 DESTRUCTOR T_valueScope.destroy;
   VAR k:longint;
   begin
-    enterCriticalSection(cs);
     for k:=0 to varFill-1 do dispose(variables[k],destroy);
-    setLength(variables,0);
     varFill:=0;
-    leaveCriticalSection(cs);
-    system.doneCriticalSection(cs);
-    if parentScope<>nil then disposeScope(parentScope);
+    setLength(variables,0);
   end;
 
 PROCEDURE T_valueScope.insteadOfDestroy;
   VAR k:longint;
   begin
-    enterCriticalSection(cs);
     for k:=0 to varFill-1 do dispose(variables[k],destroy);
     varFill:=0;
-    leaveCriticalSection(cs);
-    if parentScope<>nil then disposeScope(parentScope);
   end;
 
 PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
   begin
-    system.enterCriticalSection(cs);
     if varFill>=length(variables) then setLength(variables,varFill+1);
     new(variables[varFill],create(id,value,readonly));
     inc(varFill);
-    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean=true);
@@ -282,28 +171,22 @@ PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:int64;   
 FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;
   VAR k:longint;
   begin
-    system.enterCriticalSection(cs);
     result:=nil;
     for k:=0 to varFill-1 do if variables[k]^.id=id then begin
       result:=variables[k]^.getValue;
-      system.leaveCriticalSection(cs);
       exit(result);
     end;
-    system.leaveCriticalSection(cs);
     if parentScope<>nil then result:=parentScope^.getVariableValue(id);
   end;
 
 FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
   VAR k:longint;
   begin
-    system.enterCriticalSection(cs);
     result:=false;
     for k:=0 to varFill-1 do if variables[k]^.id=id then begin
       variables[k]^.setValue(value);
-      system.leaveCriticalSection(cs);
       exit(true);
     end;
-    system.leaveCriticalSection(cs);
     if (parentAccess>=ACCESS_READWRITE)
     then parentScope^.setVariableValue(id,value,location,context)
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
@@ -312,67 +195,24 @@ FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_litera
 FUNCTION T_valueScope.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
   VAR k:longint;
   begin
-    system.enterCriticalSection(cs);
     result:=nil;
     for k:=0 to varFill-1 do if variables[k]^.id=id then begin
       result:=variables[k]^.mutate(mutation,RHS,location,context,recycler);
-      system.leaveCriticalSection(cs);
       exit(result);
     end;
-    system.leaveCriticalSection(cs);
     if (parentAccess>=ACCESS_READWRITE)
     then result:=parentScope^.mutateVariableValue(id,mutation,RHS,location,context,recycler)
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
-  end;
-
-FUNCTION T_valueScope.cloneSaveValueStore:P_valueScope;
-  VAR k:longint;
-  begin
-    result:=newValueScopeAsChildOf(parentScope,parentAccess);
-    setLength(result^.variables,varFill);
-    result^.varFill:=varFill;
-    for k:=0 to varFill-1 do new(result^.variables[k],
-                                  create(variables[k]^.id,
-                                         variables[k]^.value,
-                                         variables[k]^.readonly));
   end;
 
 {$ifdef fullVersion}
 PROCEDURE T_valueScope.reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
   VAR k:longint;
   begin
-    system.enterCriticalSection(cs);
     if parentAccess>=ACCESS_READONLY then parentScope^.reportVariables(variableReport);
     for k:=0 to varFill-1 do variableReport.addEntry(variables[k]^.id,variables[k]^.value,false);
-    system.leaveCriticalSection(cs);
   end;
 {$endif}
 
-PROCEDURE clearScopeRecycler;
-  begin
-    with scopeRecycler do begin
-      enterCriticalSection(recyclerCS);
-      while fill>0 do begin
-        dec(fill);
-        try
-          dispose(dat[fill],destroy);
-        except
-          dat[fill]:=nil;
-        end;
-      end;
-      leaveCriticalSection(recyclerCS);
-    end;
-  end;
-
-INITIALIZATION
-  initialize(scopeRecycler);
-  with scopeRecycler do begin
-    initCriticalSection(recyclerCS);
-    fill:=0;
-  end;
-  memoryCleaner.registerCleanupMethod(@clearScopeRecycler);
-FINALIZATION
-  clearScopeRecycler;
-  doneCriticalSection(scopeRecycler.recyclerCS);
 end.
 

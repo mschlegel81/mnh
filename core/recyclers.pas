@@ -16,6 +16,10 @@ TYPE
         dat:array[0..1023] of P_token;
         fill:longint;
       end;
+      scopeRecycler:record
+        fill:longint;
+        dat:array[0..63] of P_valueScope;
+      end;
     public
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
@@ -25,6 +29,12 @@ TYPE
       FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
       FUNCTION newToken(CONST original:T_token):P_token; inline;
       FUNCTION newToken(CONST original:P_token):P_token; inline;
+
+      PROCEDURE disposeScope(VAR scope:P_valueScope); inline;
+      FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope; inline;
+      PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel); inline;
+      PROCEDURE scopePop(VAR scope:P_valueScope); inline;
+      FUNCTION  cloneSafeValueStore(CONST oldStore:P_valueScope):P_valueScope;
   end;
 
   P_abstractRule=^T_abstractRule;
@@ -62,11 +72,13 @@ TYPE
       FUNCTION getInlineValue:P_literal; virtual;
   end;
 
+PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 IMPLEMENTATION
 PROCEDURE T_recycler.initRecycler;
-begin
-  tokens.fill:=0;
-end;
+  begin
+    tokens.fill:=0;
+    scopeRecycler.fill:=0;
+  end;
 
 PROCEDURE T_recycler.cleanup;
   begin
@@ -76,6 +88,16 @@ PROCEDURE T_recycler.cleanup;
         dispose(dat[fill],destroy);
       except
         dat[fill]:=nil;
+      end;
+    end;
+    with scopeRecycler do begin
+      while fill>0 do begin
+        dec(fill);
+        try
+          dispose(dat[fill],destroy);
+        except
+          dat[fill]:=nil;
+        end;
       end;
     end;
   end;
@@ -100,7 +122,9 @@ PROCEDURE T_recycler.cascadeDisposeToken(VAR p: P_token);
     while p<>nil do p:=disposeToken(p);
   end;
 
-FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
+FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation;
+  CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer
+  ): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
@@ -119,6 +143,97 @@ FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
     result^.define(original^);
     result^.next:=nil;
+  end;
+
+PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
+  VAR parent:P_valueScope;
+  begin
+    if scope=nil then exit;
+    if interlockedDecrement(scope^.refCount)>0 then begin
+      scope:=nil;
+      exit;
+    end;
+    parent:=scope^.parentScope;
+    dispose(scope,destroy);
+    noRecycler_disposeScope(parent);
+    scope:=nil;
+  end;
+
+PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
+  VAR parent:P_valueScope;
+  begin
+    if scope=nil then exit;
+    if interlockedDecrement(scope^.refCount)>0 then begin
+      scope:=nil;
+      exit;
+    end;
+    parent:=scope^.parentScope;
+    with scopeRecycler do begin
+      if (fill>=length(dat))
+      then dispose(scope,destroy)
+      else begin
+        scope^.insteadOfDestroy;
+        dat[fill]:=scope;
+        inc(fill);
+      end;
+    end;
+    disposeScope(parent);
+    scope:=nil;
+  end;
+
+FUNCTION T_recycler.newValueScopeAsChildOf(CONST scope: P_valueScope; CONST parentAccess: AccessLevel): P_valueScope;
+  begin
+    with scopeRecycler do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.insteadOfCreate(scope,parentAccess);
+      end else new(result,create(scope,parentAccess));
+    end;
+  end;
+
+PROCEDURE T_recycler.scopePush(VAR scope: P_valueScope; CONST parentAccess: AccessLevel);
+  VAR newScope:P_valueScope;
+  begin
+    with scopeRecycler do begin
+      if (fill>0) then begin
+        dec(fill);
+        newScope:=dat[fill];
+        newScope^.insteadOfCreate(scope,parentAccess);
+      end else new(newScope,create(scope,parentAccess));
+    end;
+    scope:=newScope;
+  end;
+
+PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
+  VAR newScope:P_valueScope;
+  begin
+    if scope=nil then exit;
+    newScope:=scope^.parentScope;
+    if interlockedDecrement(scope^.refCount)>0 then begin
+      scope:=newScope;
+      exit;
+    end;
+    with scopeRecycler do begin
+      if (fill>=length(dat))
+      then dispose(scope,destroy)
+      else begin
+        scope^.insteadOfDestroy;
+        dat[fill]:=scope;
+        inc(fill);
+      end;
+    end;
+    if newScope<>nil then interlockedDecrement(newScope^.refCount);
+    scope:=newScope;
+  end;
+
+FUNCTION T_recycler.cloneSafeValueStore(CONST oldStore: P_valueScope): P_valueScope;
+  VAR k:longint;
+  begin
+    result:=newValueScopeAsChildOf(oldStore^.parentScope,oldStore^.parentAccess);
+    setLength(result^.variables,oldStore^.varFill);
+    result^.varFill:=oldStore^.varFill;
+    for k:=0 to oldStore^.varFill-1 do result^.variables[k]:=oldStore^.variables[k]^.clone;
   end;
 
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);

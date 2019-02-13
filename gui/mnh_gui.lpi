@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="90">
+    <Units Count="91">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -509,6 +509,10 @@
         <Filename Value="..\common\httpUtil.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit89>
+      <Unit90>
+        <Filename Value="..\core\basicTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit90>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
