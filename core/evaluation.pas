@@ -208,6 +208,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
 
     VAR iterator:P_expressionLiteral;
+        iteratorSource:P_literal;
         i:longint;
         eachLocation:T_tokenLocation;
 
@@ -243,13 +244,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         exit;
       end;
       if not(parseBodyOk) then exit;
-      iterator:=newIterator(P_literal(first^.data));
+      iteratorSource:=P_literal(first^.data);
+      iterator:=newIterator(iteratorSource);
       first^.next:=recycler.disposeToken(first^.next);
-      disposeLiteral(first^.data);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler)
+        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler,iteratorSource)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context,recycler);
       end else begin
         if eachType = tt_parallelEach then context.messages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
@@ -259,6 +260,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
       disposeLiteral(iterator);
+      disposeLiteral(iteratorSource);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;

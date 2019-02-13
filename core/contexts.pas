@@ -137,24 +137,19 @@ TYPE
 
   T_taskQueue=object
     private
-      subQueues:array of record
-        priority:longint;
-        first,last:P_queueTask;
-      end;
-      highestPrio     :longint;
-      highestPrioIndex:longint;
-
+      first,last:P_queueTask;
       queuedCount:longint;
+
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
     public
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    FUNCTION  dequeue:P_queueTask;
-    FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
-    PROPERTY getQueuedCount:longint read queuedCount;
-    PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION  dequeue:P_queueTask;
+      FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
+      PROPERTY getQueuedCount:longint read queuedCount;
+      PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
   T_evaluationGlobals=object
@@ -744,9 +739,9 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      if (context^.getGlobals^.taskQueue.queuedCount>2*settings.cpuCount) and not(isVolatile)
+      if (context^.related.evaluation^.taskQueue.queuedCount>2*settings.cpuCount) and not(isVolatile)
       then evaluate(recycler)
-      else context^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
+      else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
     finally
       leaveCriticalSection(taskCs);
     end;
@@ -774,9 +769,8 @@ CONSTRUCTOR T_taskQueue.create;
   begin
     system.initCriticalSection(cs);
     destructionPending:=false;
-    highestPrio:=-1;
-    highestPrioIndex:=-1;
-    setLength(subQueues,0);
+    first:=nil;
+    last:=nil;
     queuedCount:=0;
   end;
 
@@ -793,73 +787,35 @@ DESTRUCTOR T_taskQueue.destroy;
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   PROCEDURE ensurePoolThreads();
     begin
-      if (poolThreadsRunning<settings.cpuCount-1) then begin
+      while poolThreadsRunning<settings.cpuCount do begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
     end;
 
-  VAR subQueueIndex:longint=0;
   begin
     system.enterCriticalSection(cs);
-    if length(subQueues)=0 then begin
-      setLength(subQueues,1);
-      subQueues[0].priority:=context^.callDepth;
-      subQueues[0].first:=nil;
-      highestPrio:=subQueues[0].priority;
-      highestPrioIndex:=0;
-      queuedCount:=0;
-    end else begin
-      while (subQueueIndex<length(subQueues)) and (subQueues[subQueueIndex].priority<>context^.callDepth) do inc(subQueueIndex);
-      if subQueueIndex=length(subQueues) then begin
-        setLength(subQueues,subQueueIndex+1);
-        subQueues[subQueueIndex].priority:=context^.callDepth;
-        subQueues[subQueueIndex].first:=nil;
-        if subQueues[subQueueIndex].priority>highestPrio then begin
-          highestPrio:=subQueues[subQueueIndex].priority;
-          highestPrioIndex:=     subQueueIndex;
-        end;
-      end;
-    end;
     inc(queuedCount);
-    with subQueues[subQueueIndex] do begin
-      if first=nil then begin
-        first:=task;
-        last:=task;
-      end else begin
-        last^.nextToEvaluate:=task;
-        last:=task;
-      end;
+    if first=nil then begin
+      first:=task;
+      last:=task;
+    end else begin
+      last^.nextToEvaluate:=task;
+      last:=task;
     end;
     ensurePoolThreads();
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_taskQueue.dequeue: P_queueTask;
-  VAR k:longint;
   begin
     system.enterCriticalSection(cs);
-    if highestPrioIndex<0
+    if queuedCount<=0
     then result:=nil
     else begin
-      with subQueues[highestPrioIndex] do begin
-        dec(queuedCount);
-        result:=first;
-        first:=first^.nextToEvaluate;
-      end;
-      //drop subqueue if empty
-      if subQueues[highestPrioIndex].first=nil then begin
-        k:=length(subQueues)-1;
-        subQueues[highestPrioIndex]:=subQueues[k];
-        setLength(subQueues,k);
-        //find new highest prio
-        highestPrio:=-1;
-        highestPrioIndex:=-1;
-        for k:=0 to length(subQueues)-1 do if subQueues[k].priority>highestPrio then begin
-          highestPrio:=subQueues[k].priority;
-          highestPrioIndex:=     k;
-        end;
-      end;
+      dec(queuedCount);
+      result:=first;
+      first:=first^.nextToEvaluate;
     end;
     system.leaveCriticalSection(cs);
   end;
