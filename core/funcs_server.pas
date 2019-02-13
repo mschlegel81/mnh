@@ -95,7 +95,7 @@ FUNCTION startServer_impl intFuncSignature;
       timeout:=P_numericLiteral(arg2)^.floatValue/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       servingExpression^.rereference;
-      childContext:=context.getNewAsyncContext(false);
+      childContext:=context.getNewAsyncContext(recycler,false);
       if childContext<>nil then begin
         new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,childContext));
         if microserver^.socket.getLastListenerSocketError=0 then begin
@@ -135,7 +135,7 @@ DESTRUCTOR T_microserver.destroy;
   begin
     recycler.initRecycler;
     disposeLiteral(servingExpression);
-    context^.finalizeTaskAndDetachFromParent;
+    context^.finalizeTaskAndDetachFromParent(nil);
     contextPool.disposeContext(context);
     socket.destroy;
     registry.onDestruction(@self);

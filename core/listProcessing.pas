@@ -184,7 +184,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         lastToAggregate^.nextToAggregate:=result;
         lastToAggregate:=result;
       end;
-      result^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment,nextToEnqueue,recycler);
+      result^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),nextToEnqueue,recycler);
     end;
 
   PROCEDURE finalizePending(CONST enqueue:boolean);
@@ -311,7 +311,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
         task:=dat[fill];
         task^.clearContext;
       end else new(task,createMapTask(expr));
-      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment,x,recycler);
+      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -414,7 +414,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
         task:=dat[fill];
         task^.clearContext;
       end else new(task,createFilterTask(filterExpression));
-      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment,x,recycler);
+      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -487,7 +487,7 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
   VAR task:P_futureTask;
   begin
     new(task,create(future));
-    task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment,recycler);
+    task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),recycler);
   end;
 
 CONSTRUCTOR T_futureTask.create(CONST future: P_futureLiteral);
@@ -503,7 +503,7 @@ PROCEDURE T_futureTask.evaluate(VAR recycler:T_recycler);
       payload^.executeInContext(context,recycler);
       disposeLiteral(payload);
     finally
-      context^.finalizeTaskAndDetachFromParent;
+      context^.finalizeTaskAndDetachFromParent(@recycler);
     end;
   end;
 
@@ -531,7 +531,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
       end;
     finally
       clearMapPayload;
-      context^.finalizeTaskAndDetachFromParent;
+      context^.finalizeTaskAndDetachFromParent(@recycler);
     end;
   end;
 
@@ -581,7 +581,7 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
       end;
     finally
       clearMapPayload;
-      context^.finalizeTaskAndDetachFromParent;
+      context^.finalizeTaskAndDetachFromParent(@recycler);
     end;
   end;
 
@@ -642,7 +642,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
       setLength(results,k);
       enterCriticalSection(taskCs);
       dropEachParameter;
-      context^.finalizeTaskAndDetachFromParent;
+      context^.finalizeTaskAndDetachFromParent(@recycler);
       leaveCriticalSection(taskCs);
     end;
   end;

@@ -41,7 +41,7 @@ TYPE
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
       FUNCTION containsReturnToken:boolean; virtual;
   end;
 
@@ -83,7 +83,7 @@ TYPE
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
       {Calling with intrinsicTuleId='' means the original is cloned}
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
       PROCEDURE resolveIds(CONST messages:P_messages);
@@ -102,7 +102,7 @@ TYPE
       //Literal routines:
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
 
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
@@ -404,7 +404,7 @@ DESTRUCTOR T_inlineExpression.destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
-    disposeScope(saveValueStore);
+    noRecycler_disposeScope(saveValueStore);
     meta.destroy;
     doneCriticalSection(subruleCallCs);
   end;
@@ -546,7 +546,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
-          saveValueStore:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+          saveValueStore:=recycler.newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
           firstCallOfResumable:=true;
         end;
         previousValueScope:=context.valueScope;
@@ -563,7 +563,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
           if context.messages^.continueEvaluation then begin
             updateBody;
           end else begin
-            disposeScope(saveValueStore);
+            recycler.disposeScope(saveValueStore);
           end;
         end;
       end else begin
@@ -750,14 +750,14 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 
 FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
   begin
-    new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation));
+    new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation,P_recycler(recycler)^));
   end;
 
 FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
   VAR temp:P_inlineExpression;
   begin
     temp:=getEquivalentInlineExpression(P_context(threadContext)^,P_recycler(recycler)^);
-    new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation));
+    new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)^));
     disposeLiteral(temp);
   end;
 
@@ -784,9 +784,7 @@ PROCEDURE T_expression.validateSerializability(CONST messages:P_messages);
     if messages<>nil then messages^.raiseSimpleError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
-  CONST original: P_inlineExpression; CONST intrinsicRuleId: string;
-  CONST funcLocation: T_tokenLocation);
+CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; VAR recycler:T_recycler);
   VAR i:longint;
   PROCEDURE appendToExpression(VAR T:T_token);
     begin
@@ -818,7 +816,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
     indexOfSave:=original^.indexOfSave;
-    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.cloneSaveValueStore;
+    if original^.saveValueStore<>nil then saveValueStore:=recycler.cloneSafeValueStore(original^.saveValueStore);
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
     meta:=original^.meta;
     updatePatternForInline;
@@ -1035,15 +1033,15 @@ FUNCTION T_subruleExpression.getInlineValue: P_literal;
 
 FUNCTION T_expression.getParentId: T_idString; begin result:=''; end;
 
-FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: P_abstractContext): P_expressionLiteral;
+FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
   begin
     raise Exception.create('Clone is not implemented for expressions of type '+C_expressionTypeString[typ]);
     result:=nil;
   end;
 
-FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral;
+FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
   begin
-    new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location));
+    new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location,P_recycler(recycler)^));
   end;
 
 FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;

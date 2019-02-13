@@ -241,7 +241,7 @@ TYPE
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_expressionLiteral; virtual; abstract;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
   end;
 
   T_typedef=object
@@ -253,13 +253,13 @@ TYPE
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
       alwaysTrue:boolean;
-      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_typableLiteral;
+      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):boolean;
       FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
-      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages):P_literal;
+      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages; CONST recycler:pointer):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
       PROPERTY builtinTypeCheck:T_typeCheck read builtinsuper;
@@ -840,14 +840,14 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
     if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil));
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext):P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
       lt_expression: begin
         if L^.numberOfReferences<=1
         then result:=P_typableLiteral(L^.rereferenced)
-        else result:=P_expressionLiteral(L)^.clone(location,threadContext);
+        else result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
       end;
       lt_list..lt_emptyMap: begin
         if L^.numberOfReferences<=1
@@ -866,7 +866,7 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
       exit(P_typableLiteral(L^.rereferenced));
     end;
     if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil) then begin
-      result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
+      result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
       result:=super^.cast(L,location,threadContext,recycler);
@@ -879,10 +879,10 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if (result=nil) then threadContext^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
-FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages):P_literal;
+FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages; CONST recycler:pointer):P_literal;
   begin
     if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
-    result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
+    result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
     if result<>nil then P_typableLiteral(result)^.customType:=nil;
   end;
 //=====================================================================================================================

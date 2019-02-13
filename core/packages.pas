@@ -323,7 +323,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
         while inputChanged do begin
           sleepCount:=0;
           leaveCriticalSection(cs);
-          evaluationContext.resetForEvaluation(packageForPostEval,ect_silent,C_EMPTY_STRING_ARRAY);
+          evaluationContext.resetForEvaluation(packageForPostEval,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
           messages^.clear(false);
           messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
           interpretInPackage(packageForPostEval,lastInput,evaluationContext);
@@ -412,7 +412,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
     {$endif}
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
@@ -429,7 +429,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
     result:=errorHolder.storedMessages(true);
@@ -467,12 +467,12 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(fileName));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
     finally
       globals.afterEvaluation(recycler);
       result:=messagesToLiteralForSandbox(messages.storedMessages(false),C_textMessages);
-      globals.primaryContext.finalizeTaskAndDetachFromParent;
+      globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;

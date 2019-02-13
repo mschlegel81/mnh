@@ -52,7 +52,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE disposeContext(VAR context:P_context);
-      FUNCTION newContext(CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
+      FUNCTION newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   end;
 
   T_taskState=(fts_pending, //set on construction
@@ -101,10 +101,10 @@ TYPE
       FUNCTION reduceExpression(VAR first:P_token; VAR recycler:T_recycler):T_reduceResult; inline;
       FUNCTION reduceToLiteral(VAR first:P_token; VAR recycler:T_recycler):T_evaluationResult; inline;
       //Multithreading:
-      FUNCTION getFutureEnvironment:P_context;
-      FUNCTION getNewAsyncContext(CONST local:boolean):P_context;
+      FUNCTION getFutureEnvironment(VAR recycler:T_recycler):P_context;
+      FUNCTION getNewAsyncContext(VAR recycler:T_recycler; CONST local:boolean):P_context;
       PROCEDURE beginEvaluation;
-      PROCEDURE finalizeTaskAndDetachFromParent;
+      PROCEDURE finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
 
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
@@ -177,7 +177,7 @@ TYPE
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_messages);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString);
+      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
       PROCEDURE stopWorkers(VAR recycler:T_recycler);
       PROCEDURE afterEvaluation(VAR recycler:T_recycler);
 
@@ -232,7 +232,7 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
     context:=nil;
   end;
 
-FUNCTION T_contextRecycler.newContext(CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
+FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   begin
     if (tryEnterCriticalsection(recyclerCS)<>0) then begin
       if (fill>0) then begin
@@ -258,7 +258,7 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_context; CONST parent
 
       if parentScopeAccess=ACCESS_BLOCKED
       then valueScope:=nil
-      else valueScope:=newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
+      else valueScope:=recycler.newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
 
       {$ifdef fullVersion}
       parentCustomForm:=nil;
@@ -304,7 +304,7 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     primaryContext.destroy;
   end;
 
-PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString);
+PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
   VAR pc:T_profileCategory;
       i:longint;
   begin
@@ -345,7 +345,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     else primaryContext.allowedSideEffects:=C_allSideEffects;
 
     primaryContext.setThreadOptions(globalOptions);
-    disposeScope(primaryContext.valueScope);
+    recycler.disposeScope(primaryContext.valueScope);
     primaryContext.valueScope:=nil;
     primaryContext.messages^.clear();
     with primaryContext.related do begin
@@ -427,7 +427,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
-    while primaryContext.valueScope<>nil do scopePop(primaryContext.valueScope);
+    while primaryContext.valueScope<>nil do recycler.scopePop(primaryContext.valueScope);
   end;
 
 {$ifdef fullVersion}
@@ -462,13 +462,13 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
     with timingInfo do timeSpent[component]:=primaryContext.wallclockTime-timeSpent[component];
   end;
 
-FUNCTION T_context.getNewAsyncContext(CONST local: boolean): P_context;
+FUNCTION T_context.getNewAsyncContext(VAR recycler:T_recycler; CONST local: boolean): P_context;
   VAR parentAccess:AccessLevel;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
     if local then parentAccess:=ACCESS_READONLY
              else parentAccess:=ACCESS_BLOCKED;
-    result:=contextPool.newContext(@self,parentAccess);
+    result:=contextPool.newContext(recycler,@self,parentAccess);
   end;
 
 {$ifdef fullVersion}
@@ -534,10 +534,10 @@ FUNCTION T_context.setAllowedSideEffectsReturningPrevious(
     allowedSideEffects:=se;
   end;
 
-FUNCTION T_context.getFutureEnvironment : P_context;
+FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
     enterCriticalSection(contextCS);
-    result:=contextPool.newContext(@self,ACCESS_READONLY);
+    result:=contextPool.newContext(recycler,@self,ACCESS_READONLY);
     leaveCriticalSection(contextCS);
   end;
 
@@ -551,7 +551,7 @@ PROCEDURE T_context.beginEvaluation;
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_context.finalizeTaskAndDetachFromParent;
+PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
   begin
     enterCriticalSection(contextCS);
     with related do if childCount>0 then begin
@@ -568,7 +568,8 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent;
     callStack.clear;
     parentCustomForm:=nil;
     {$endif}
-    disposeScope(valueScope);
+    if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
+                         else recyclerOrNil^.disposeScope(valueScope);
     leaveCriticalSection(contextCS);
   end;
 
