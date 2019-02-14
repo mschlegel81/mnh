@@ -16,6 +16,7 @@ PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift:
 PROCEDURE InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
 //Search/Replace
 PROCEDURE miFindClick(Sender: TObject);
+PROCEDURE miFreezeOutputClick(Sender: TObject);
 PROCEDURE miRenameClick(Sender: TObject);
 PROCEDURE miReplaceClick(Sender: TObject);
 PROCEDURE miFindNextClick(Sender: TObject);
@@ -321,6 +322,13 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
   end;
 
 PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
+
+PROCEDURE TMnhForm.miFreezeOutputClick(Sender: TObject);
+  begin
+    if miFreezeOutput.checked then outputEdit.color:=clSilver
+                              else outputEdit.color:=clWhite;
+  end;
+
 PROCEDURE TMnhForm.miReplaceClick     (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,false); end;
 PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceModel.doFindNext        (focusedEditor);       end;
 PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
@@ -342,6 +350,7 @@ PROCEDURE TMnhForm.miRenameClick(Sender: TObject);
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
     if not(runnerModel.canRun) or quick.task.processing then exit;
+    miFreezeOutput.checked:=false; miFreezeOutputClick(Sender);
     updateWordWrap;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
@@ -352,6 +361,7 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if not(runnerModel.canRun) or quick.task.processing then exit;
+    miFreezeOutput.checked:=false; miFreezeOutputClick(Sender);
     updateWordWrap;
     runnerModel.customRun(false,miProfile.checked);
   end;
@@ -512,14 +522,16 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     else if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
-    flushedMessages:=guiOutAdapter.flushToGui;
+    if miFreezeOutput.checked
+    then flushedMessages:=[]
+    else flushedMessages:=guiOutAdapter.flushToGui(autoShowOutputCheckbox.checked);
     flushedMessages+=guiEventsAdapter.flushToGui;
     if ((flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages)) and autoShowOutputCheckbox.checked then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;
 
-    flushedMessages:=P_synOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui;
+    flushedMessages:=P_synOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui(true);
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;

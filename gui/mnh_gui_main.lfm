@@ -20,7 +20,7 @@ object MnhForm: TMnhForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.0.4'
   object bottomPanelSplitter: TSplitter
     Cursor = crVSplit
     Left = 0
@@ -117,11 +117,11 @@ object MnhForm: TMnhForm
       Top = 0
       Width = 717
       TabStop = False
-      ActivePage = QuickTabSheet
+      ActivePage = outputTabSheet
       Align = alClient
       Font.Color = clBlack
       ParentFont = False
-      TabIndex = 4
+      TabIndex = 2
       TabOrder = 0
       Options = [nboKeyboardTabSwitch]
       object HelpSheet: TTabSheet
@@ -148,7 +148,7 @@ object MnhForm: TMnhForm
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 77
           Gutter.MouseActions = <>
           HideSelection = True
           InsertMode = False
@@ -593,7 +593,7 @@ object MnhForm: TMnhForm
           SelectedColor.StrikeOutPriority = 50
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterMarks1: TSynGutterMarks
-              Width = 24
+              Width = 36
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
@@ -607,18 +607,19 @@ object MnhForm: TMnhForm
               LeadingZeros = False
             end
             object SynGutterChanges1: TSynGutterChanges
-              Width = 4
+              Width = 6
               MouseActions = <>
               ModifiedColor = 59900
               SavedColor = clGreen
             end
             object SynGutterSeparator1: TSynGutterSeparator
-              Width = 2
+              Width = 3
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
             end
             object SynGutterCodeFolding1: TSynGutterCodeFolding
+              Width = 15
               MouseActions = <>
               MarkupInfo.Background = clNone
               MarkupInfo.Foreground = clGray
@@ -650,7 +651,7 @@ object MnhForm: TMnhForm
           OnMouseUp = assistanceSynEditMouseUp
           BorderStyle = bsNone
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 77
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1106,7 +1107,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterMarks1: TSynGutterMarks
-              Width = 24
+              Width = 36
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
@@ -1120,18 +1121,19 @@ object MnhForm: TMnhForm
               LeadingZeros = False
             end
             object SynGutterChanges1: TSynGutterChanges
-              Width = 4
+              Width = 6
               MouseActions = <>
               ModifiedColor = 59900
               SavedColor = clGreen
             end
             object SynGutterSeparator1: TSynGutterSeparator
-              Width = 2
+              Width = 3
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
             end
             object SynGutterCodeFolding1: TSynGutterCodeFolding
+              Width = 15
               MouseActions = <>
               MarkupInfo.Background = clNone
               MarkupInfo.Foreground = clGray
@@ -1162,7 +1164,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 20
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1620,7 +1622,7 @@ object MnhForm: TMnhForm
               LeadingZeros = False
             end
             object SynGutterSeparator1: TSynGutterSeparator
-              Width = 2
+              Width = 3
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
@@ -1777,7 +1779,7 @@ object MnhForm: TMnhForm
             TabStop = False
             BorderStyle = bsNone
             Gutter.Visible = False
-            Gutter.Width = 57
+            Gutter.Width = 77
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -2217,7 +2219,7 @@ object MnhForm: TMnhForm
             SelectedColor.StrikeOutPriority = 50
             inline SynLeftGutterPartList1: TSynGutterPartList
               object SynGutterMarks1: TSynGutterMarks
-                Width = 24
+                Width = 36
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
@@ -2231,18 +2233,19 @@ object MnhForm: TMnhForm
                 LeadingZeros = False
               end
               object SynGutterChanges1: TSynGutterChanges
-                Width = 4
+                Width = 6
                 MouseActions = <>
                 ModifiedColor = 59900
                 SavedColor = clGreen
               end
               object SynGutterSeparator1: TSynGutterSeparator
-                Width = 2
+                Width = 3
                 MouseActions = <>
                 MarkupInfo.Background = clWhite
                 MarkupInfo.Foreground = clGray
               end
               object SynGutterCodeFolding1: TSynGutterCodeFolding
+                Width = 15
                 MouseActions = <>
                 MarkupInfo.Background = clNone
                 MarkupInfo.Foreground = clGray
@@ -2274,7 +2277,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 20
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -2732,7 +2735,7 @@ object MnhForm: TMnhForm
               LeadingZeros = False
             end
             object SynGutterSeparator1: TSynGutterSeparator
-              Width = 2
+              Width = 3
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
@@ -5244,6 +5247,11 @@ object MnhForm: TMnhForm
         Checked = True
         OnClick = stdOutputPopupClick
       end
+    end
+    object miFreezeOutput: TMenuItem
+      AutoCheck = True
+      Caption = 'Freeze Output'
+      OnClick = miFreezeOutputClick
     end
   end
   object QuickOutputPopup: TPopupMenu
