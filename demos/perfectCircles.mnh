@@ -1,6 +1,5 @@
-private norm(x:NumericList(2))->sqr(x).agg(+).sqrt;
 private center(aPhi,k)->aPhi[0]^k*[cos(aPhi[1]*k),sin(aPhi[1]*k)];
-private memoized rad0(aPhi)->norm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
+private memoized rad0(aPhi)->euklideanNorm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
 private radius(aPhi,k)->rad0(aPhi)*aPhi[0]^k;
 
 private zoomRotate(x:NumericList(2),zoom:Numeric,rotation:Numeric)->begin
@@ -11,8 +10,8 @@ private zoomRotate(x:NumericList(2),zoom:Numeric,rotation:Numeric)->begin
 end;
 
 private errorFunc(k)->
- {sqr(norm(center($aPhi,k  )-[1,0])-(rad0($aPhi)+radius($aPhi,k  )))
- +sqr(norm(center($aPhi,k+1)-[1,0])-(rad0($aPhi)+radius($aPhi,k+1)))
+ {sqr(euklideanNorm(center($aPhi,k  )-[1,0])-(rad0($aPhi)+radius($aPhi,k  )))
+ +sqr(euklideanNorm(center($aPhi,k+1)-[1,0])-(rad0($aPhi)+radius($aPhi,k+1)))
  +($aPhi[0]<1 ? 100 : 0)
  +($aPhi[1]<0 ? 100 : 0)};
 
