@@ -41,7 +41,7 @@ TYPE
       PROCEDURE appendInternal(CONST s:string);
       PROCEDURE startOutput;
       FUNCTION singleMessageOut(CONST m:P_storedMessage):boolean;
-      PROCEDURE doneOutput;
+      PROCEDURE doneOutput(CONST jumpDown:boolean);
     public
       wrapEcho:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
@@ -57,7 +57,7 @@ TYPE
                                                                        mt_echo_declaration,
                                                                        mt_echo_continued,
                                                                        mt_endOfEvaluation]);
-      FUNCTION flushToGui:T_messageTypeSet; virtual;
+      FUNCTION flushToGui(CONST jumpToEnd:boolean):T_messageTypeSet;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROPERTY ownerForm:TForm read synOwnerForm;
       PROCEDURE flushClear;
@@ -266,7 +266,7 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
     if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
   end;
 
-PROCEDURE T_synOutAdapter.doneOutput;
+PROCEDURE T_synOutAdapter.doneOutput(CONST jumpDown:boolean);
   begin
     if wroteToSyn then begin
       flushBuffer;
@@ -275,8 +275,10 @@ PROCEDURE T_synOutAdapter.doneOutput;
         synOwnerForm.visible:=true;
       end;
       syn.EndUpdate;
-      syn.executeCommand(ecEditorBottom,' ',nil);
-      syn.executeCommand(ecLineStart,' ',nil);
+      if jumpDown then begin
+        syn.executeCommand(ecEditorBottom,' ',nil);
+        syn.executeCommand(ecLineStart,' ',nil);
+      end;
     end else begin
       if hadDirectPrint and (not(synOwnerForm.showing) or not(synOwnerForm.visible)) then begin
         synOwnerForm.Show;
@@ -299,7 +301,7 @@ CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdi
     lastWasDirectPrint:=false;
   end;
 
-FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
+FUNCTION T_synOutAdapter.flushToGui(CONST jumpToEnd:boolean):T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
     system.enterCriticalSection(cs);
@@ -313,7 +315,7 @@ FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
       clear;
     finally
       if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
-      doneOutput;
+      doneOutput(jumpToEnd);
       system.leaveCriticalSection(cs);
     end;
   end;

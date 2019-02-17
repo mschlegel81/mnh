@@ -191,7 +191,6 @@ PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
-    plotImage.Align:=alClient;
     doPlot();
   end;
 
@@ -486,6 +485,8 @@ PROCEDURE TplotForm.doPlot;
     if not(showing) then Show;
     plotSystem.startGuiInteraction;
     updateInteractiveSection;
+    plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+
     if plotSystem.animation.frameCount<>0 then begin
       plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
       plotSystem.doneGuiInteraction;

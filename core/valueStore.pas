@@ -38,25 +38,25 @@ TYPE
 
   P_valueScope=^T_valueScope;
   T_valueScope=object
-      parentScope :P_valueScope;
-      parentAccess:AccessLevel;
-      refCount    :longint;
-      variables   :array of P_namedVariable;
-      varFill     :longint;
-      CONSTRUCTOR create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
-      PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
-      DESTRUCTOR destroy;
-      PROCEDURE insteadOfDestroy;
+    parentScope :P_valueScope;
+    parentAccess:AccessLevel;
+    refCount    :longint;
+    variables   :array of P_namedVariable;
+    varFill     :longint;
+    CONSTRUCTOR create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
+    PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
+    DESTRUCTOR destroy;
+    PROCEDURE insteadOfDestroy;
 
-      PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
-      PROCEDURE createVariable(CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
-      FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
-      FUNCTION  setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
-      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
-      {$ifdef fullVersion}
-      //For debugging:
-      PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
-      {$endif}
+    PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
+    PROCEDURE createVariable(CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
+    FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
+    FUNCTION  setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
+    FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+    {$ifdef fullVersion}
+    //For debugging:
+    PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
+    {$endif}
   end;
 
 IMPLEMENTATION

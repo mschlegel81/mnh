@@ -55,9 +55,6 @@ USES
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}
-
-  { TMnhForm }
-
   TMnhForm = class(T_abstractMnhForm)
     autoShowOutputCheckbox: TCheckBox;
     evaluateQuickInCurrentPackageCheckbox: TCheckBox;
@@ -132,9 +129,10 @@ TYPE
     miErrorUserDefined, miErrorUserDefined1,
     miShowTiming,       miShowTiming1,
     miWrapEcho,         miWrapEcho1,
-    errorSubmenu,       errorSubmenu1: TMenuItem;
-    QuickOutputPopup: TPopupMenu;
-    StdOutputPopup: TPopupMenu;
+    errorSubmenu,       errorSubmenu1,
+    miFreezeOutput: TMenuItem;
+    QuickOutputPopup,
+    StdOutputPopup,
     OutlinePopup: TPopupMenu;
     TopPanel: TPanel;
     OpenDialog:                TOpenDialog;
@@ -328,6 +326,7 @@ PROCEDURE TMnhForm.onDebuggerEvent;
 
 PROCEDURE TMnhForm.onEndOfEvaluation;
   begin
+    miFreezeOutput.checked:=false; miFreezeOutputClick(nil);
     enableDynamicItems;
     updateEditorsByGuiStatus;
     if   outputPageControl.activePage<>QuickTabSheet

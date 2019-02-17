@@ -22,19 +22,16 @@ begin
   P;
 end);
 
-//*Returns the Euklidean norm of x
-private norm(x)->sqrt(x.sqr.agg(+));
-
 //*Returns the length of path points in Euklidean norm
 private pathLength(points)->begin
   local result:=0;
   local lastPoint:=points.trailing;
-  points.each(p,result:=result+norm(lastPoint-p),lastPoint:=p);
+  points.each(p,result:=result+euklideanNorm(lastPoint-p),lastPoint:=p);
   result;
 end;
 
 //*Returns the length of a 4-node-path in Euklidean norm
-private len4(a,b,c,d)->norm(b-a)+norm(c-b)+norm(d-c);
+private len4(a,b,c,d)->euklideanNorm(b-a)+euklideanNorm(c-b)+euklideanNorm(d-c);
 
 //*Sierpinski-Curve sorting
 scSort(L)->begin
