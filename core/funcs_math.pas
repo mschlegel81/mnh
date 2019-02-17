@@ -1009,6 +1009,16 @@ FUNCTION divMod_impl intFuncSignature;
     result:=genericVectorization('divMod',params,tokenLocation,context,recycler);
   end;
 
+FUNCTION euklideanNorm_impl intFuncSignature;
+  VAR k:longint;
+      total:double=0;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_intList,lt_realList]) then begin
+      for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
+      result:=newRealLiteral(sqrt(total));
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -1056,4 +1066,5 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'modularInverse',@modularInverse_impl,ak_binary    ,'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists');
   registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift:Int);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed');
   registerRule(MATH_NAMESPACE,'divMod'        ,@divMod_impl        ,ak_binary,'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]');
+  registerRule(MATH_NAMESPACE,'euklideanNorm' ,@euklideanNorm_impl ,ak_unary ,'euklideanNorm(v:NumericList);//returns the Euklidean norm of vector v');
 end.
