@@ -10,11 +10,14 @@ begin
   if wantMainLoopAfterParseCmdLine then begin
     if reEvaluationWithGUIrequired
     then begin
+      pauseAtEnd  :=false;
+      pauseOnError:=false;
       if fileExists(settings.fullFlavourLocation)
       then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
       else begin
         writeln('Delegate to full version is required but file "',settings.fullFlavourLocation,'" is invalid');
         writeln('Reinstall to fix this problem');
+        ExitCode:=5;
       end;
     end else displayHelp;
   end;

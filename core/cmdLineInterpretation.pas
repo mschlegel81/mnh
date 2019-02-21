@@ -151,6 +151,7 @@ CONST DEF_VERBOSITY_STRING='';
     VAR app:string;
     begin
       result:=false;
+      if fileOrCommandToInterpret<>'' then exit(false);
       case parsingState of
         pst_initial: begin
           if startsWith(param,'-v') then begin
@@ -192,10 +193,10 @@ CONST DEF_VERBOSITY_STRING='';
     VAR parameters:T_arrayOfString;
         k:longint;
     begin
-     {$ifdef UNIX}
-     //To prevent repeated parsing of the same shebang under Linux/UNIX systems
-     if hasAnyMnhParameter then exit(true);
-     {$endif}
+      {$ifdef UNIX}
+      //To prevent repeated parsing of the same shebang under Linux/UNIX systems
+      if hasAnyMnhParameter then exit(true);
+      {$endif}
       parameters:=parseShebang(fileOrCommandToInterpret);
       for k:=1 to length(parameters)-1 do
       if not(parseSingleMnhParameter(parameters[k])) then begin
@@ -213,6 +214,7 @@ CONST DEF_VERBOSITY_STRING='';
         fileOrCommandToInterpret+=' '+param;
         exit(true);
       end;
+      if fileOrCommandToInterpret<>'' then exit(false);
       case parsingState of
         pst_initial: begin
           if (param='-edit') then begin
@@ -300,7 +302,7 @@ CONST DEF_VERBOSITY_STRING='';
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
     i:=1;
-    while (i<=paramCount) {$ifndef fullVersion} and not(reEvaluationWithGUIrequired) {$endif} do begin
+    while (i<=paramCount) do begin
       if parseMnhCommand        (paramStr(i)) then inc(i) else
       if parseSingleMnhParameter(paramStr(i)) then begin
         inc(i);
