@@ -68,7 +68,7 @@ begin
                    addPlot(trace1,'black');
                    addPlot(p2,'3 . red l');
                    addPlot(p1,'3 . black l');
-                   display;
+                   postDisplay;
                  end};
   replot();
   local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
@@ -88,7 +88,7 @@ begin
   t:=t[mask].each(it,it,it);
 
   setOptions([['autoscaleX',true],['autoscaleY',true],['preserveAspect',false],['axisStyleX',3],['axisStyleY',3]]);
-  plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube');
-  addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube');
+  plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube f');
+  addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube f');
   display;
 end;
