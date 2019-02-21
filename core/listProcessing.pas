@@ -9,6 +9,7 @@ USES sysutils,
      recyclers,
      aggregators,contexts;
 CONST FUTURE_RECYCLER_MAX_SIZE=16;
+      ENQUEUE_QUOTIENT=2;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 
@@ -202,8 +203,8 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         inc(processed,enqueueFill);
         defineAndEnqueueTask;
         if earlyAborting
-        then setLength(nextToEnqueue,min(8                    ,ceil(processed/(2*settings.cpuCount))))
-        else setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(processed/(2*settings.cpuCount))));
+        then setLength(nextToEnqueue,min(8                    ,ceil(processed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
+        else setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(processed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
         enqueueFill:=0;
       end;
     end;
@@ -222,13 +223,13 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     if iteratorSource^.literalType in C_compoundTypes
     then begin
       if earlyAborting then setLength(nextToEnqueue,1)
-                       else setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(3*settings.cpuCount)));
+                       else setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)));
     end else setLength(nextToEnqueue,1);
 
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
       for rule in rulesList do if proceed then begin
         createTask(rule,eachIndex,x);
-        if earlyAborting or (context.getGlobals^.taskQueue.getQueuedCount>settings.cpuCount*2) then begin
+        if earlyAborting then begin
           canAggregate;
           proceed:=proceed and not(aggregator^.earlyAbort);
         end;
@@ -328,7 +329,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       inc(elementsProcessed);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
-        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(2*settings.cpuCount))));
+        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
         enqueueFill:=0;
         result:=true;
       end else result:=false;
@@ -343,7 +344,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     recycling.fill:=0;
 
     if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(3*settings.cpuCount)))
+    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)))
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
@@ -430,7 +431,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       inc(elementsProcessed);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
-        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(2*settings.cpuCount))));
+        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
         enqueueFill:=0;
         result:=true;
       end else result:=false;
@@ -441,7 +442,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     recycling.fill:=0;
 
     if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(settings.cpuCount*3)))
+    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)))
     else setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;
