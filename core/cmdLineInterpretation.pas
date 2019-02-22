@@ -189,7 +189,7 @@ CONST DEF_VERBOSITY_STRING='';
       end;
     end;
 
-  FUNCTION parseShebangParameters:boolean;
+  FUNCTION parseShebangParameters(fileName:string):boolean;
     VAR parameters:T_arrayOfString;
         k:longint;
     begin
@@ -197,7 +197,7 @@ CONST DEF_VERBOSITY_STRING='';
       //To prevent repeated parsing of the same shebang under Linux/UNIX systems
       if hasAnyMnhParameter then exit(true);
       {$endif}
-      parameters:=parseShebang(fileOrCommandToInterpret);
+      parameters:=parseShebang(fileName);
       for k:=1 to length(parameters)-1 do
       if not(parseSingleMnhParameter(parameters[k])) then begin
         writeln('Invalid parameter/switch given by shebang: "',parameters[k],'"');
@@ -313,8 +313,8 @@ CONST DEF_VERBOSITY_STRING='';
         if (fileOrCommandToInterpret='') then begin
           begin
             if fileExists(paramStr(i)) then begin
+              if not(parseShebangParameters(paramStr(i))) then exit(false);
               fileOrCommandToInterpret:=paramStr(i);
-              if not(parseShebangParameters) then exit(false);
             end else begin
               if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
               then writeln('Invalid parameter/switch given!')
