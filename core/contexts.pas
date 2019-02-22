@@ -26,6 +26,7 @@ TYPE
   T_reduceResult            =(rr_fail,rr_ok,rr_okWithReturn);
 
 CONST
+  TASKS_TO_QUEUE_PER_CPU=2;
   C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
   {$ifdef fullVersion}
@@ -646,30 +647,29 @@ FUNCTION T_context.checkSideEffects(CONST id: string; CONST location: T_tokenLoc
   end;
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
-  //means that 0.511 seconds have passed since the last activity
-  CONST SLEEP_TIME_TO_QUIT=73;
-  VAR sleepTime:longint;
+  CONST MS_IDLE_BEFORE_QUIT=500;
+  VAR sleepCount:longint;
       currentTask:P_queueTask;
       recycler:T_recycler;
   begin
     recycler.initRecycler;
-    sleepTime:=0;
+    sleepCount:=0;
     with P_evaluationGlobals(p)^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
-          inc(sleepTime);
+          inc(sleepCount);
           ThreadSwitch;
-          sleep(sleepTime div 5);
+          sleep(1);
         end else begin
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
             currentTask^.clearContext;
             dispose(currentTask,destroy);
           end else currentTask^.evaluate(recycler);
-          sleepTime:=0;
+          sleepCount:=0;
         end;
-      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue.destructionPending) or not(primaryContext.messages^.continueEvaluation);
+      until (sleepCount>=MS_IDLE_BEFORE_QUIT) or (taskQueue.destructionPending) or not(primaryContext.messages^.continueEvaluation);
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
     end;
@@ -739,7 +739,7 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      if (context^.related.evaluation^.taskQueue.queuedCount>2*settings.cpuCount) and not(isVolatile)
+      if (context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) and not(isVolatile)
       then evaluate(recycler)
       else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
     finally
@@ -787,7 +787,7 @@ DESTRUCTOR T_taskQueue.destroy;
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   PROCEDURE ensurePoolThreads();
     begin
-      while poolThreadsRunning<settings.cpuCount do begin
+      while poolThreadsRunning<settings.cpuCount-1 do begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;

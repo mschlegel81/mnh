@@ -152,6 +152,7 @@ CONST DEF_VERBOSITY_STRING='';
     VAR app:string;
     begin
       result:=false;
+      if fileOrCommandToInterpret<>'' then exit(false);
       case parsingState of
         pst_initial: begin
           if startsWith(param,'-v') then begin
@@ -189,15 +190,15 @@ CONST DEF_VERBOSITY_STRING='';
       end;
     end;
 
-  FUNCTION parseShebangParameters:boolean;
+  FUNCTION parseShebangParameters(fileName:string):boolean;
     VAR parameters:T_arrayOfString;
         k:longint;
     begin
-     {$ifdef UNIX}
-     //To prevent repeated parsing of the same shebang under Linux/UNIX systems
-     if hasAnyMnhParameter then exit(true);
-     {$endif}
-      parameters:=parseShebang(fileOrCommandToInterpret);
+      {$ifdef UNIX}
+      //To prevent repeated parsing of the same shebang under Linux/UNIX systems
+      if hasAnyMnhParameter then exit(true);
+      {$endif}
+      parameters:=parseShebang(fileName);
       for k:=1 to length(parameters)-1 do
       if not(parseSingleMnhParameter(parameters[k])) then begin
         writeln('Invalid parameter/switch given by shebang: "',parameters[k],'"');
@@ -214,6 +215,7 @@ CONST DEF_VERBOSITY_STRING='';
         fileOrCommandToInterpret+=' '+param;
         exit(true);
       end;
+      if fileOrCommandToInterpret<>'' then exit(false);
       case parsingState of
         pst_initial: begin
           if (param='-edit') then begin
@@ -303,7 +305,7 @@ CONST DEF_VERBOSITY_STRING='';
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
     i:=1;
-    while (i<=paramCount) {$ifndef fullVersion} and not(reEvaluationWithGUIrequired) {$endif} do begin
+    while (i<=paramCount) do begin
       if parseMnhCommand        (paramStr(i)) then inc(i) else
       if parseSingleMnhParameter(paramStr(i)) then begin
         inc(i);
@@ -314,8 +316,8 @@ CONST DEF_VERBOSITY_STRING='';
         if (fileOrCommandToInterpret='') then begin
           begin
             if fileExists(paramStr(i)) then begin
+              if not(parseShebangParameters(paramStr(i))) then exit(false);
               fileOrCommandToInterpret:=paramStr(i);
-              if not(parseShebangParameters) then exit(false);
             end else begin
               if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
               then writeln('Invalid parameter/switch given!')

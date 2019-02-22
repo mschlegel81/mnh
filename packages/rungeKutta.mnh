@@ -75,8 +75,8 @@ memoized RK32->rungeKuttaStepper(
 //*Family of 2-stage 2nd order Runge-Kutta Methods
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
 memoized RK2(a)->rungeKuttaStepper(
-  [[a               ],
-   [1-1/(2*a),1/2*a]].toERK_ButcherTableau);
+  [[a                ],
+   [1-1/(2*a),1/(2*a)]].toERK_ButcherTableau);
 
 //*Euler Forward, as Runge-Kutta Method
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
