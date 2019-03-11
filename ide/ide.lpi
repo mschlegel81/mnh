@@ -1,0 +1,635 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="11"/>
+    <General>
+      <Flags>
+        <LRSInOutputDirectory Value="False"/>
+      </Flags>
+      <MainUnit Value="0"/>
+      <Title Value="ide"/>
+      <UseAppBundle Value="False"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <VersionInfo>
+      <Language Value=""/>
+      <CharSet Value=""/>
+    </VersionInfo>
+    <BuildModes Count="1">
+      <Item1 Name="default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="1">
+        <Mode0 Name="default"/>
+      </Modes>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="SynEdit"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="51">
+      <Unit0>
+        <Filename Value="ide.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="44" Y="12"/>
+        <UsageCount Value="119"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="idemain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="IdeMainForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="ideMain"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="55"/>
+        <CursorPos Y="85"/>
+        <UsageCount Value="119"/>
+        <Bookmarks Count="1">
+          <Item0 X="21" Y="146" ID="1"/>
+        </Bookmarks>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="../../lcl/ldocktree.pas"/>
+        <UnitName Value="LDockTree"/>
+        <TopLine Value="1564"/>
+        <CursorPos X="84" Y="1598"/>
+        <UsageCount Value="34"/>
+        <Bookmarks Count="1">
+          <Item0 X="18" Y="1302" ID="2"/>
+        </Bookmarks>
+      </Unit2>
+      <Unit3>
+        <Filename Value="../../lcl/include/control.inc"/>
+        <TopLine Value="1360"/>
+        <CursorPos Y="1377"/>
+        <UsageCount Value="34"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="../../lcl/include/wincontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="6358"/>
+        <CursorPos X="10" Y="6373"/>
+        <UsageCount Value="36"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="../../lcl/controls.pp"/>
+        <UnitName Value="Controls"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="414"/>
+        <CursorPos X="31" Y="447"/>
+        <UsageCount Value="50"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../../lcl/include/customform.inc"/>
+        <TopLine Value="2158"/>
+        <CursorPos Y="2175"/>
+        <UsageCount Value="34"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="../../lcl/include/scrollingwincontrol.inc"/>
+        <TopLine Value="49"/>
+        <CursorPos X="7" Y="58"/>
+        <UsageCount Value="34"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="../../lcl/include/dockzone.inc"/>
+        <TopLine Value="226"/>
+        <CursorPos X="41" Y="249"/>
+        <UsageCount Value="31"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="../../lcl/lclproc.pas"/>
+        <UnitName Value="LCLProc"/>
+        <TopLine Value="1480"/>
+        <CursorPos Y="1497"/>
+        <UsageCount Value="30"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="../../lcl/include/docktree.inc"/>
+        <CursorPos X="3"/>
+        <UsageCount Value="33"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="../../lcl/extctrls.pp"/>
+        <UnitName Value="ExtCtrls"/>
+        <TopLine Value="441"/>
+        <CursorPos X="5" Y="452"/>
+        <UsageCount Value="5"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="../../lcl/include/customsplitter.inc"/>
+        <CursorPos X="3" Y="35"/>
+        <UsageCount Value="5"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="../../lcl/helpintfs.pas"/>
+        <UnitName Value="HelpIntfs"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="80" Y="8"/>
+        <UsageCount Value="6"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="../../lcl/lazhelphtml.pas"/>
+        <UnitName Value="LazHelpHTML"/>
+        <TopLine Value="35"/>
+        <CursorPos X="3" Y="52"/>
+        <UsageCount Value="6"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="../../fpc/3.0.4/source/rtl/inc/objpash.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="180"/>
+        <CursorPos X="26" Y="206"/>
+        <UsageCount Value="11"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="../../lcl/lclclasses.pp"/>
+        <UnitName Value="LCLClasses"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="202"/>
+        <CursorPos Y="202"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="../../fpc/3.0.4/source/rtl/objpas/classes/classesh.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="1820"/>
+        <CursorPos X="16" Y="1841"/>
+        <UsageCount Value="10"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="../../lcl/include/dragobject.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="63"/>
+        <CursorPos X="3" Y="65"/>
+        <UsageCount Value="10"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="../../lazarus64/lcl/controls.pp"/>
+        <UnitName Value="Controls"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="412"/>
+        <CursorPos X="78" Y="434"/>
+        <UsageCount Value="11"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="../../lazarus64/lcl/forms.pp"/>
+        <UnitName Value="Forms"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="801"/>
+        <CursorPos X="14" Y="821"/>
+        <UsageCount Value="11"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="../../lazarus64/lcl/include/customform.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="2070"/>
+        <CursorPos X="73" Y="2080"/>
+        <UsageCount Value="10"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="../../lazarus64/lcl/include/dragobject.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="56"/>
+        <CursorPos X="4" Y="59"/>
+        <UsageCount Value="11"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="../../lazarus64/lcl/include/wincontrol.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="8058"/>
+        <CursorPos X="3" Y="8064"/>
+        <UsageCount Value="11"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="idelayoututil.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ideLayoutUtil"/>
+        <EditorIndex Value="24"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="29"/>
+        <CursorPos X="47" Y="46"/>
+        <UsageCount Value="25"/>
+        <Loaded Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="../../lazarus64/lcl/comctrls.pp"/>
+        <UnitName Value="ComCtrls"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="551"/>
+        <CursorPos X="3" Y="573"/>
+        <UsageCount Value="10"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="../../lazarus64/fpc/3.0.4/source/rtl/objpas/classes/classesh.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="2"/>
+        <CursorPos X="4" Y="24"/>
+        <UsageCount Value="10"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="../../lazarus64/fpc/3.0.4/source/rtl/objpas/sysutils/syshelph.inc"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="66"/>
+        <CursorPos X="14" Y="87"/>
+        <UsageCount Value="10"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="settings/mnh_gui_settings.pas"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="33" Y="10"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="../core/contexts.pas"/>
+        <EditorIndex Value="23"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="47" Y="19"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="mnh_doc.pas"/>
+        <EditorIndex Value="16"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="469"/>
+        <CursorPos X="4" Y="491"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="mnh_html.pas"/>
+        <EditorIndex Value="19"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="73" Y="11"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="../core/tokens.pas"/>
+        <EditorIndex Value="20"/>
+        <WindowIndex Value="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="../core/valueStore.pas"/>
+        <EditorIndex Value="21"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="42" Y="11"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="debuggingVar.pas"/>
+        <EditorIndex Value="22"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="6" Y="7"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="../core/packages.pas"/>
+        <EditorIndex Value="17"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="465"/>
+        <CursorPos X="4" Y="487"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="plot/funcs_plot.pas"/>
+        <EditorIndex Value="18"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="2" Y="20"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="editors/editorMeta.pas"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="10"/>
+        <CursorPos X="3" Y="32"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="synhighlightermnh.pas"/>
+        <UnitName Value="SynHighlighterMnh"/>
+        <EditorIndex Value="15"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="4"/>
+        <CursorPos X="3" Y="12"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="tables/mnh_tables.pas"/>
+        <EditorIndex Value="14"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="23"/>
+        <CursorPos Y="46"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="vartree/variabletreeviews.pas"/>
+        <UnitName Value="variableTreeViews"/>
+        <EditorIndex Value="12"/>
+        <WindowIndex Value="1"/>
+        <CursorPos Y="18"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <UnitName Value="mnh_plotForm"/>
+        <EditorIndex Value="13"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="173"/>
+        <CursorPos Y="195"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="output/guiOutAdapters.pas"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="40" Y="12"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <UnitName Value="mnhCustomForm"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="411"/>
+        <CursorPos Y="448"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="editors/editormetabase.pas"/>
+        <UnitName Value="editorMetaBase"/>
+        <EditorIndex Value="11"/>
+        <WindowIndex Value="1"/>
+        <CursorPos X="3" Y="20"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="customForms/component_checkbox.inc"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="1"/>
+        <CursorPos Y="22"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit45>
+      <Unit46>
+        <Filename Value="customForms/component_button.inc"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="1"/>
+        <CursorPos Y="22"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="customForms/component_edit.inc"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="31"/>
+        <CursorPos Y="53"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="customForms/component_combobox.inc"/>
+        <EditorIndex Value="9"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="51"/>
+        <CursorPos Y="73"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="customForms/component_outputMemo.inc"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="3"/>
+        <CursorPos Y="25"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="ask/askdialog.pas"/>
+        <UnitName Value="askDialog"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="78"/>
+        <CursorPos X="10" Y="102"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit50>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <Caret Line="146" TopLine="106"/>
+      </Position1>
+      <Position2>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <Caret Line="184" TopLine="155"/>
+      </Position2>
+      <Position3>
+        <Filename Value="plot/mnh_plotform.pas"/>
+      </Position3>
+      <Position4>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <Caret Line="184" TopLine="143"/>
+      </Position4>
+      <Position5>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <Caret Line="63" TopLine="42"/>
+      </Position5>
+      <Position6>
+        <Filename Value="plot/mnh_plotform.pas"/>
+        <Caret Line="195" TopLine="173"/>
+      </Position6>
+      <Position7>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="22" Column="3"/>
+      </Position7>
+      <Position8>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="32" Column="3" TopLine="10"/>
+      </Position8>
+      <Position9>
+        <Filename Value="output/guiOutAdapters.pas"/>
+        <Caret Line="11" Column="6"/>
+      </Position9>
+      <Position10>
+        <Filename Value="output/guiOutAdapters.pas"/>
+        <Caret Line="12" Column="24"/>
+      </Position10>
+      <Position11>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="19"/>
+      </Position11>
+      <Position12>
+        <Filename Value="editors/editormetabase.pas"/>
+        <Caret Line="20" Column="3"/>
+      </Position12>
+      <Position13>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="145" Column="2" TopLine="123"/>
+      </Position13>
+      <Position14>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="166" TopLine="144"/>
+      </Position14>
+      <Position15>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="197" TopLine="159"/>
+      </Position15>
+      <Position16>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="403" Column="68" TopLine="383"/>
+      </Position16>
+      <Position17>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="75" TopLine="54"/>
+      </Position17>
+      <Position18>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="402" TopLine="365"/>
+      </Position18>
+      <Position19>
+        <Filename Value="customForms/component_checkbox.inc"/>
+        <Caret Line="22"/>
+      </Position19>
+      <Position20>
+        <Filename Value="customForms/component_button.inc"/>
+        <Caret Line="22"/>
+      </Position20>
+      <Position21>
+        <Filename Value="customForms/component_edit.inc"/>
+        <Caret Line="53" TopLine="31"/>
+      </Position21>
+      <Position22>
+        <Filename Value="customForms/component_combobox.inc"/>
+        <Caret Line="73" TopLine="51"/>
+      </Position22>
+      <Position23>
+        <Filename Value="customForms/component_outputMemo.inc"/>
+        <Caret Line="25" TopLine="3"/>
+      </Position23>
+      <Position24>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="449" Column="28" TopLine="413"/>
+      </Position24>
+      <Position25>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="86" TopLine="64"/>
+      </Position25>
+      <Position26>
+        <Filename Value="customForms/mnhcustomform.pas"/>
+        <Caret Line="448" TopLine="411"/>
+      </Position26>
+      <Position27>
+        <Filename Value="output/guiOutAdapters.pas"/>
+        <Caret Line="12" Column="40"/>
+      </Position27>
+      <Position28>
+        <Filename Value="ask/askdialog.pas"/>
+        <Caret Line="8" Column="3"/>
+      </Position28>
+      <Position29>
+        <Filename Value="ask/askdialog.pas"/>
+        <Caret Line="71" TopLine="49"/>
+      </Position29>
+      <Position30>
+        <Filename Value="ask/askdialog.pas"/>
+        <Caret Line="92" TopLine="70"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <SearchPaths>
+      <IncludeFiles Value="../core"/>
+      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <IncludeAssertionCode Value="True"/>
+        <AllowLabel Value="False"/>
+      </SyntaxOptions>
+    </Parsing>
+    <CodeGeneration>
+      <Checks>
+        <IOChecks Value="True"/>
+        <RangeChecks Value="True"/>
+        <OverflowChecks Value="True"/>
+        <StackChecks Value="True"/>
+      </Checks>
+      <VerifyObjMethodCallValidity Value="True"/>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseHeaptrc Value="True"/>
+        <TrashVariables Value="True"/>
+      </Debugging>
+    </Linking>
+    <Other>
+      <CustomOptions Value="-dfullVersion"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

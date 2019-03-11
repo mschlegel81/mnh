@@ -1,0 +1,225 @@
+object askForm: TaskForm
+  Left = 887
+  Height = 465
+  Top = 194
+  Width = 342
+  AutoSize = True
+  BorderIcons = [biSystemMenu, biMaximize]
+  BorderStyle = bsSingle
+  Caption = 'askForm'
+  ClientHeight = 445
+  ClientWidth = 342
+  Constraints.MinHeight = 25
+  Constraints.MinWidth = 200
+  FormStyle = fsStayOnTop
+  Menu = MainMenu1
+  OnCreate = FormCreate
+  OnShow = FormShow
+  Position = poOwnerFormCenter
+  LCLVersion = '1.6.4.0'
+  object ComboBox1: TComboBox
+    Left = 0
+    Height = 23
+    Top = 30
+    Width = 342
+    Align = alTop
+    ItemHeight = 15
+    OnKeyDown = ComboBox1KeyDown
+    TabOrder = 0
+    Text = 'ComboBox1'
+  end
+  object Label1: TLabel
+    Left = 0
+    Height = 30
+    Top = 0
+    Width = 342
+    Align = alTop
+    Caption = 'Very long sample text. Very long sample text indeed. Now really: Very long sample text.'
+    Constraints.MinHeight = 20
+    Constraints.MinWidth = 342
+    ParentColor = False
+    WordWrap = True
+  end
+  object Button1: TButton
+    Left = 0
+    Height = 25
+    Top = 53
+    Width = 342
+    Align = alTop
+    Caption = 'Button1'
+    OnClick = ButtonClick
+    TabOrder = 1
+  end
+  object Button2: TButton
+    Left = 0
+    Height = 25
+    Top = 78
+    Width = 342
+    Align = alTop
+    Caption = 'Button2'
+    OnClick = ButtonClick
+    TabOrder = 2
+  end
+  object Button3: TButton
+    Left = 0
+    Height = 25
+    Top = 103
+    Width = 342
+    Align = alTop
+    Caption = 'Button3'
+    OnClick = ButtonClick
+    TabOrder = 3
+  end
+  object Button4: TButton
+    Left = 0
+    Height = 25
+    Top = 128
+    Width = 342
+    Align = alTop
+    Caption = 'Button4'
+    OnClick = ButtonClick
+    TabOrder = 4
+  end
+  object Button5: TButton
+    Left = 0
+    Height = 25
+    Top = 153
+    Width = 342
+    Align = alTop
+    Caption = 'Button5'
+    OnClick = ButtonClick
+    TabOrder = 5
+  end
+  object Button6: TButton
+    Left = 0
+    Height = 25
+    Top = 178
+    Width = 342
+    Align = alTop
+    Caption = 'Button6'
+    OnClick = ButtonClick
+    TabOrder = 6
+  end
+  object Button7: TButton
+    Left = 0
+    Height = 25
+    Top = 203
+    Width = 342
+    Align = alTop
+    Caption = 'Button7'
+    OnClick = ButtonClick
+    TabOrder = 7
+  end
+  object Button8: TButton
+    Left = 0
+    Height = 25
+    Top = 228
+    Width = 342
+    Align = alTop
+    Caption = 'Button8'
+    OnClick = ButtonClick
+    TabOrder = 8
+  end
+  object Button9: TButton
+    Left = 0
+    Height = 25
+    Top = 253
+    Width = 342
+    Align = alTop
+    Caption = 'Button9'
+    OnClick = ButtonClick
+    TabOrder = 9
+  end
+  object Button10: TButton
+    Left = 0
+    Height = 25
+    Top = 278
+    Width = 342
+    Align = alTop
+    Caption = 'Button10'
+    OnClick = ButtonClick
+    TabOrder = 10
+  end
+  object Button11: TButton
+    Left = 0
+    Height = 25
+    Top = 303
+    Width = 342
+    Align = alTop
+    Caption = 'Button11'
+    OnClick = ButtonClick
+    TabOrder = 11
+  end
+  object Button12: TButton
+    Left = 0
+    Height = 25
+    Top = 328
+    Width = 342
+    Align = alTop
+    Caption = 'Button12'
+    OnClick = ButtonClick
+    TabOrder = 12
+  end
+  object Button13: TButton
+    Left = 0
+    Height = 25
+    Top = 353
+    Width = 342
+    Align = alTop
+    Caption = 'Button13'
+    OnClick = ButtonClick
+    TabOrder = 13
+  end
+  object Button14: TButton
+    Left = 0
+    Height = 25
+    Top = 378
+    Width = 342
+    Align = alTop
+    Caption = 'Button14'
+    OnClick = ButtonClick
+    TabOrder = 14
+  end
+  object Button15: TButton
+    Left = 0
+    Height = 25
+    Top = 403
+    Width = 342
+    Align = alTop
+    Caption = 'Button15'
+    OnClick = ButtonClick
+    TabOrder = 15
+  end
+  object Button16: TButton
+    Left = 0
+    Height = 25
+    Top = 428
+    Width = 342
+    Align = alTop
+    Caption = 'Button16'
+    OnClick = ButtonClick
+    TabOrder = 16
+  end
+  object MainMenu1: TMainMenu
+    left = 112
+    top = 60
+    object miPickFile: TMenuItem
+      Caption = 'Pick &file'
+      OnClick = miPickFileClick
+    end
+    object miPickDirectory: TMenuItem
+      Caption = 'Pick &directory'
+      OnClick = miPickDirectoryClick
+    end
+  end
+  object OpenDialog1: TOpenDialog
+    Title = 'Pick file'
+    left = 125
+    top = 60
+  end
+  object SelectDirectoryDialog1: TSelectDirectoryDialog
+    Title = 'Pick Directory'
+    left = 168
+    top = 68
+  end
+end

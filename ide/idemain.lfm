@@ -1,0 +1,181 @@
+object IdeMainForm: TIdeMainForm
+  Left = 881
+  Height = 453
+  Top = 250
+  Width = 674
+  AllowDropFiles = True
+  Caption = 'mnh'
+  ClientHeight = 423
+  ClientWidth = 674
+  Color = clWhite
+  DesignTimePPI = 144
+  Menu = MainMenu
+  OnCreate = FormCreate
+  OnDropFiles = FormDropFiles
+  OnResize = FormResize
+  UseDockManager = True
+  LCLVersion = '2.0.0.4'
+  object PageControl1: TPageControl
+    Left = 528
+    Height = 387
+    Top = 0
+    Width = 146
+    Align = alRight
+    DockSite = True
+    DragKind = dkDock
+    DragMode = dmAutomatic
+    MultiLine = True
+    TabOrder = 0
+    OnStartDock = PageControl1StartDock
+    Options = [nboShowCloseButtons, nboMultiLine]
+  end
+  object Splitter1: TSplitter
+    Left = 520
+    Height = 387
+    Top = 0
+    Width = 8
+    Align = alRight
+    OnMoved = Splitter1Moved
+    ResizeAnchor = akRight
+  end
+  object Panel1: TPanel
+    Left = 160
+    Height = 387
+    Top = 0
+    Width = 360
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 387
+    ClientWidth = 360
+    TabOrder = 2
+    object PageControl2: TPageControl
+      Left = 0
+      Height = 124
+      Top = 263
+      Width = 360
+      Align = alBottom
+      DockSite = True
+      DragKind = dkDock
+      DragMode = dmAutomatic
+      MultiLine = True
+      TabOrder = 0
+      OnStartDock = PageControl2StartDock
+      Options = [nboShowCloseButtons, nboMultiLine]
+    end
+    object Splitter2: TSplitter
+      Cursor = crVSplit
+      Left = 0
+      Height = 8
+      Top = 255
+      Width = 360
+      Align = alBottom
+      OnMoved = Splitter1Moved
+      ResizeAnchor = akBottom
+    end
+    object Panel2: TPanel
+      Left = 0
+      Height = 255
+      Top = 0
+      Width = 360
+      Align = alClient
+      BevelOuter = bvNone
+      ClientHeight = 255
+      ClientWidth = 360
+      TabOrder = 2
+      object PageControl3: TPageControl
+        Left = 0
+        Height = 255
+        Top = 0
+        Width = 172
+        Align = alLeft
+        DockSite = True
+        DragKind = dkDock
+        DragMode = dmAutomatic
+        MultiLine = True
+        TabOrder = 0
+        OnStartDock = PageControl3StartDock
+        Options = [nboShowCloseButtons, nboMultiLine]
+      end
+      object Splitter3: TSplitter
+        Left = 172
+        Height = 255
+        Top = 0
+        Width = 8
+        OnMoved = Splitter1Moved
+      end
+      object PageControl5: TPageControl
+        Left = 180
+        Height = 255
+        Top = 0
+        Width = 180
+        Align = alClient
+        DockSite = True
+        DragKind = dkDock
+        DragMode = dmAutomatic
+        MultiLine = True
+        TabOrder = 2
+        OnStartDock = PageControl5StartDock
+        Options = [nboShowCloseButtons, nboMultiLine]
+      end
+    end
+  end
+  object Splitter4: TSplitter
+    Left = 152
+    Height = 387
+    Top = 0
+    Width = 8
+    OnMoved = Splitter1Moved
+  end
+  object PageControl4: TPageControl
+    Left = 0
+    Height = 387
+    Top = 0
+    Width = 152
+    ActivePage = TabSheet1
+    Align = alLeft
+    DockSite = True
+    DragKind = dkDock
+    DragMode = dmAutomatic
+    MultiLine = True
+    TabIndex = 0
+    TabOrder = 4
+    OnStartDock = PageControl4StartDock
+    Options = [nboShowCloseButtons, nboMultiLine]
+    object TabSheet1: TTabSheet
+      Caption = 'TabSheet1'
+      ClientHeight = 349
+      ClientWidth = 144
+      object Shape1: TShape
+        Left = 0
+        Height = 349
+        Top = 0
+        Width = 144
+        Align = alClient
+        Brush.Color = clRed
+        Shape = stDiamond
+      end
+    end
+  end
+  object StatusBar1: TStatusBar
+    Left = 0
+    Height = 36
+    Top = 387
+    Width = 674
+    Panels = <>
+  end
+  object MainMenu: TMainMenu
+    left = 564
+    top = 84
+    object smFile: TMenuItem
+      Caption = 'File'
+    end
+    object smShow: TMenuItem
+      Caption = 'Show'
+      object miSettings: TMenuItem
+        Caption = 'Settings'
+        ShortCut = 16464
+        OnClick = miSettingsClick
+      end
+    end
+  end
+end

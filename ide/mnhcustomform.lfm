@@ -1,0 +1,14 @@
+object scriptedForm: TscriptedForm
+  Left = 885
+  Height = 360
+  Top = 210
+  Width = 480
+  Caption = 'scriptedForm'
+  DesignTimePPI = 144
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnKeyUp = FormKeyUp
+  Position = poScreenCenter
+  LCLVersion = '1.8.4.0'
+end
