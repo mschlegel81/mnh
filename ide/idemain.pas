@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
-  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings;
+  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,editorMeta;
 
 TYPE
 
@@ -14,6 +14,7 @@ TYPE
 
   TIdeMainForm = class(TForm)
     MainMenu: TMainMenu;
+    miNew: TMenuItem;
     miSettings: TMenuItem;
     smFile: TMenuItem;
     smShow: TMenuItem;
@@ -25,16 +26,15 @@ TYPE
     PageControl4: TPageControl;
     Panel1: TPanel;
     Panel2: TPanel;
-    Shape1: TShape;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
     Splitter3: TSplitter;
     Splitter4: TSplitter;
     StatusBar1: TStatusBar;
-    TabSheet1: TTabSheet;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE miNewClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
     PROCEDURE PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
@@ -78,6 +78,11 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
     PageControl4.width := width*splitterPositions[4] div 65535;
   end;
 
+PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
+  begin
+    attachNewForm(getNewEditor);
+  end;
+
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
@@ -100,32 +105,33 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
 FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObject;
   VAR control:TControl;
       sheet:TTabSheet;
-      newForm:TForm;
+      newForm:T_mnhComponentForm;
       bounds:TRect;
   begin
     //Only handle pages with one control
     if PageControl.activePage.ControlCount<>1 then exit(nil);
     control:=PageControl.activePage.Controls[0];
     //If the sheet is a TForm return it directly
-    if control.ClassType.InheritsFrom(TForm.ClassType) then newForm:=TForm(control)
+    if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType) then newForm:=T_mnhComponentForm(control)
     else begin
-      //Wrap the sheet contents in a new form
-      newForm:=TForm.create(Application);
-      bounds.topLeft    :=ClientToScreen(control.BoundsRect.topLeft);
-      bounds.bottomRight:=ClientToScreen(control.BoundsRect.bottomRight);
-      sheet:=PageControl.activePage;
-      with newForm do begin
-        top     :=bounds.top;
-        Left    :=bounds.Left;
-        width   :=bounds.width;
-        height  :=bounds.height;
-        DragKind:= dkDock;
-        DragMode:= dmAutomatic;
-        caption :=sheet.caption;
-        control.parent:=newForm;
-        Show;
-      end;
-      FreeAndNil(sheet);
+      ////Wrap the sheet contents in a new form
+      //newForm:=TForm.create(Application);
+      //bounds.topLeft    :=ClientToScreen(control.BoundsRect.topLeft);
+      //bounds.bottomRight:=ClientToScreen(control.BoundsRect.bottomRight);
+      //sheet:=PageControl.activePage;
+      //with newForm do begin
+      //  top     :=bounds.top;
+      //  Left    :=bounds.Left;
+      //  width   :=bounds.width;
+      //  height  :=bounds.height;
+      //  DragKind:= dkDock;
+      //  DragMode:= dmAutomatic;
+      //  caption :=sheet.caption;
+      //  control.parent:=newForm;
+      //  Show;
+      //end;
+      //FreeAndNil(sheet);
+      raise Exception.create('Not an mnhComponent form!');
     end;
     result:=TDragDockObject.AutoCreate(newForm);
   end;

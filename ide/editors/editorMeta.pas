@@ -3,6 +3,8 @@ INTERFACE
 USES  //basic classes
   Classes, sysutils, LazUTF8, LCLType, types, LazFileUtils,
   //my utilities:
+  ideLayoutUtil,
+  editorForm,
   serializationUtil,
   myGenerics,
   myStringUtil,
@@ -19,7 +21,7 @@ USES  //basic classes
   mnh_plotForm,
   //MNH:
   mnh_doc,
-  outlines,
+  outlineFormUnit,
   mnh_constants, basicTypes, fileWrappers,mnh_settings,
   tokenArray,
   contexts,
@@ -39,7 +41,6 @@ TYPE
 P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_basicEditorMeta)
   private
-    index:longint;
     paintedWithStateHash:T_hashInt;
     fileInfo:record
       filePath:ansistring;
@@ -50,15 +51,14 @@ T_editorMeta=object(T_basicEditorMeta)
     strictlyReadOnly:boolean;
 
     latestAssistanceReponse:P_codeAssistanceResponse;
-    tabsheet    : TTabSheet;
+    form:TeditForm;
     PROCEDURE guessLanguage(CONST fallback:T_language);
-    CONSTRUCTOR create(CONST idx:longint);
-    CONSTRUCTOR create(CONST idx:longint; VAR stream:T_bufferedInputStreamWrapper);
+    CONSTRUCTOR create;
+    CONSTRUCTOR createFromStream(VAR stream:T_bufferedInputStreamWrapper);
 
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   public
     PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
-    FUNCTION enabled:boolean;
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
     FUNCTION isPseudoFile: boolean; virtual;
@@ -136,21 +136,17 @@ T_runnerModel=object
   end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
-                    CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_restoreMenuItem       :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
-                    CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineModel          :P_outlineTreeModel);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
 FUNCTION hasEditor:boolean;
-FUNCTION getEditor:P_editorMeta;
+//FUNCTION getEditor:P_editorMeta;
 FUNCTION addEditorMetaForNewFile:longint;
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
 PROCEDURE updateFonts(CONST Font:TFont);
@@ -176,19 +172,15 @@ VAR safeCallback:F_safeCallback;
     fileHistory      :T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
-    inputPageControl      :TPageControl;
     breakpointsImagesList :TImageList;
     bookmarkImagesList    :TImageList;
     EditKeyUp             :TKeyEvent;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
-    assistanceSynEdit     :TSynEdit;
-    assistanceTabSheet    :TTabSheet;
     restoreMenuItem       :TMenuItem;
-    outlineModel          :P_outlineTreeModel=nil;
-    outlineGroupBox       :TGroupBox;
     globalBookmarks       :array[0..9] of record
-                             editorIndex,lineIndex,columnIndex:longint;
+                             editor:P_editorMeta;
+                             lineIndex,columnIndex:longint;
                            end;
 
 VAR editorMetaData:array of P_editorMeta;
@@ -199,7 +191,7 @@ FUNCTION currentlyOpenFiles:T_arrayOfString;
   begin
     result:='';
     for meta in editorMetaData do
-    if meta^.enabled and meta^.isFile then append(result,meta^.fileInfo.filePath);
+    if meta^.isFile then append(result,meta^.fileInfo.filePath);
   end;
 
 FUNCTION workspaceFilename:string;
@@ -208,159 +200,135 @@ FUNCTION workspaceFilename:string;
   end;
 
 CONST workspaceSerialVersion=2661226502;
-FUNCTION loadWorkspace:boolean;
-  VAR stream:T_bufferedInputStreamWrapper;
-      i:longint;
-      validMetaCount:longint=0;
-  begin
-    stream.createToReadFromFile(workspaceFilename);
-    fileHistory.create(false);
-    folderHistory.create(true);
-    if not(stream.readDWord=workspaceSerialVersion) then begin
-      stream.destroy;
-      exit(false);
-    end;
-    if not(fileHistory  .loadFromStream(stream)) then exit(false);
-    if not(folderHistory.loadFromStream(stream)) then exit(false);
-    setLength(editorMetaData,stream.readNaturalNumber);
-    if not(stream.allOkay) then begin
-      setLength(editorMetaData,0);
-      stream.destroy;
-      exit(false);
-    end;
-    result:=true;
-    for i:=0 to length(editorMetaData)-1 do begin
-      new(editorMetaData[i],create(i,stream));
-      result:=result and stream.allOkay;
-      if result then validMetaCount:=i+1;
-    end;
-    result:=result and stream.allOkay;
-    if not(result) then setLength(editorMetaData,validMetaCount) else begin
-      if length(filesToOpenInEditor)=0
-      then inputPageControl.activePageIndex:=stream.readLongint
-      else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
-    end;
-    for i:=0 to 9 do begin
-      globalBookmarks[i].editorIndex:=stream.readInteger;
-      globalBookmarks[i].lineIndex  :=stream.readInteger;
-      globalBookmarks[i].columnIndex:=stream.readInteger;
-      if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) and
-         (globalBookmarks[i].lineIndex  >=0) then begin
-        editorMetaData[globalBookmarks[i].editorIndex]^.editor.SetBookMark(i,globalBookmarks[i].columnIndex,globalBookmarks[i].lineIndex);
-      end else globalBookmarks[i].editorIndex:=-1;
-    end;
-    stream.destroy;
-  end;
+//FUNCTION loadWorkspace:boolean;
+//  VAR stream:T_bufferedInputStreamWrapper;
+//      i:longint;
+//      validMetaCount:longint=0;
+//  begin
+//    stream.createToReadFromFile(workspaceFilename);
+//    fileHistory.create(false);
+//    folderHistory.create(true);
+//    if not(stream.readDWord=workspaceSerialVersion) then begin
+//      stream.destroy;
+//      exit(false);
+//    end;
+//    if not(fileHistory  .loadFromStream(stream)) then exit(false);
+//    if not(folderHistory.loadFromStream(stream)) then exit(false);
+//    setLength(editorMetaData,stream.readNaturalNumber);
+//    if not(stream.allOkay) then begin
+//      setLength(editorMetaData,0);
+//      stream.destroy;
+//      exit(false);
+//    end;
+//    result:=true;
+//    for i:=0 to length(editorMetaData)-1 do begin
+//      new(editorMetaData[i],create(i,stream));
+//      result:=result and stream.allOkay;
+//      if result then validMetaCount:=i+1;
+//    end;
+//    result:=result and stream.allOkay;
+//    if not(result) then setLength(editorMetaData,validMetaCount) else begin
+//      if length(filesToOpenInEditor)=0
+//      then inputPageControl.activePageIndex:=stream.readLongint
+//      else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
+//    end;
+//    for i:=0 to 9 do begin
+//      globalBookmarks[i].editorIndex:=stream.readInteger;
+//      globalBookmarks[i].lineIndex  :=stream.readInteger;
+//      globalBookmarks[i].columnIndex:=stream.readInteger;
+//      if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) and
+//         (globalBookmarks[i].lineIndex  >=0) then begin
+//        editorMetaData[globalBookmarks[i].editorIndex]^.editor.SetBookMark(i,globalBookmarks[i].columnIndex,globalBookmarks[i].lineIndex);
+//      end else globalBookmarks[i].editorIndex:=-1;
+//    end;
+//    stream.destroy;
+//  end;
 
-PROCEDURE saveWorkspace;
-  VAR stream:T_bufferedOutputStreamWrapper;
-      i,k:longint;
-      visibleEditorCount:longint=0;
-      pageIndex:longint=0;
-      editorIndexAfterLoading:T_arrayOfLongint;
-  begin
-    stream.createToWriteToFile(workspaceFilename);
-    stream.writeDWord(workspaceSerialVersion);
-    fileHistory.saveToStream(stream);
-    folderHistory.saveToStream(stream);
-    pageIndex:=inputPageControl.activePageIndex;
-    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled
-    then inc(visibleEditorCount);
-    stream.writeNaturalNumber(visibleEditorCount);
-    setLength(editorIndexAfterLoading,length(editorMetaData));
-    k:=0;
-    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then begin
-      editorIndexAfterLoading[i]:=k; inc(k);
-      editorMetaData[i]^.saveToStream(stream);
-    end else editorIndexAfterLoading[i]:=-1;
-    stream.writeLongint(editorIndexAfterLoading[pageIndex]);
-    for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
-      stream.writeInteger(-1);
-      stream.writeInteger(-1);
-      stream.writeInteger(-1);
-    end else begin
-      stream.writeInteger(editorIndexAfterLoading[globalBookmarks[i].editorIndex]);
-      stream.writeInteger(globalBookmarks[i].lineIndex  );
-      stream.writeInteger(globalBookmarks[i].columnIndex);
-    end;
-    stream.destroy;
-  end;
+//PROCEDURE saveWorkspace;
+//  VAR stream:T_bufferedOutputStreamWrapper;
+//      i,k:longint;
+//      pageIndex:longint=0;
+//  begin
+//    stream.createToWriteToFile(workspaceFilename);
+//    stream.writeDWord(workspaceSerialVersion);
+//    fileHistory.saveToStream(stream);
+//    folderHistory.saveToStream(stream);
+//    pageIndex:=inputPageControl.activePageIndex;
+//    stream.writeNaturalNumber(length(editorMetaData));
+//    k:=0;
+//    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then begin
+//      editorIndexAfterLoading[i]:=k; inc(k);
+//      editorMetaData[i]^.saveToStream(stream);
+//    end else editorIndexAfterLoading[i]:=-1;
+//    stream.writeLongint(editorIndexAfterLoading[pageIndex]);
+//    for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
+//      stream.writeInteger(-1);
+//      stream.writeInteger(-1);
+//      stream.writeInteger(-1);
+//    end else begin
+//      stream.writeInteger(editorIndexAfterLoading[globalBookmarks[i].editorIndex]);
+//      stream.writeInteger(globalBookmarks[i].lineIndex  );
+//      stream.writeInteger(globalBookmarks[i].columnIndex);
+//    end;
+//    stream.destroy;
+  //end;
 
 PROCEDURE initNewWorkspace;
   VAR i:longint;
   begin
     for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
     setLength(editorMetaData,1);
-    new(editorMetaData[0],create(0));
-    inputPageControl.activePageIndex:=0;
     setLength(fileHistory.items,0);
     setLength(folderHistory.items,0);
-    for i:=0 to 9 do globalBookmarks[i].editorIndex:=-1;
+    for i:=0 to 9 do globalBookmarks[i].editor:=nil;
   end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
-                    CONST p_inputPageControl      :TPageControl;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_bookmarkImagesList    :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_restoreMenuItem       :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
-                    CONST p_outlineGroupBox       :TGroupBox;
-                    CONST p_outlineModel          :P_outlineTreeModel);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
 
   VAR i:longint;
   begin
-    for i:=0 to 9 do globalBookmarks[i].editorIndex:=-1;
+    for i:=0 to 9 do globalBookmarks[i].editor:=nil;
     editorFont:=p_assistanceSynEdit.Font;
     setupEditorMetaBase(outputHighlighter,languageMenuRoot);
 
     mainForm              :=p_mainForm              ;
-    inputPageControl      :=p_inputPageControl      ;
     breakpointsImagesList :=p_breakpointsImagesList ;
     bookmarkImagesList    :=p_bookmarkImagesList    ;
     EditKeyUp             :=p_EditKeyUp             ;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     restoreMenuItem       :=p_restoreMenuItem;
-    assistanceSynEdit     :=p_assistanceSynEdit     ;
-    assistanceTabSheet    :=p_assistanceTabSheet    ;
-    outlineGroupBox       :=p_outlineGroupBox       ;
-    outlineModel          :=p_outlineModel;
 
-    if not(loadWorkspace) then initNewWorkspace;
+    {if not(loadWorkspace) then} initNewWorkspace;
   end;
 
 PROCEDURE gotoMarker(markerIndex:longint);
   VAR currentEdit:P_editorMeta;
-      i:longint;
   begin
     if (markerIndex<0) or (markerIndex>=length(globalBookmarks)) then exit;
-    if globalBookmarks[markerIndex].editorIndex<0 then exit;
-    currentEdit:=getEditor;
-    if currentEdit^.index=globalBookmarks[markerIndex].editorIndex then exit;
-    for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.enabled) and (editorMetaData[i]^.index=globalBookmarks[markerIndex].editorIndex) then begin
-      inputPageControl.activePageIndex:=i;
-      editorMetaData[i]^.editor.CaretY:=globalBookmarks[markerIndex].lineIndex;
-      editorMetaData[i]^.editor.CaretX:=globalBookmarks[markerIndex].columnIndex;
-      mainForm.ActiveControl:=editorMetaData[i]^.editor;
-    end;
+    if globalBookmarks[markerIndex].editor=nil then exit;
+    currentEdit:=globalBookmarks[markerIndex].editor;
+    currentEdit^.activate;
+    currentEdit^.editor.CaretY:=globalBookmarks[markerIndex].lineIndex;
+    currentEdit^.editor.CaretX:=globalBookmarks[markerIndex].columnIndex;
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
+CONSTRUCTOR T_editorMeta.create;
   begin
     latestAssistanceReponse:=nil;
     paintedWithStateHash:=0;
-    index:=idx;
-    tabsheet:=TTabSheet.create(inputPageControl);
-    tabsheet.PageControl:=inputPageControl;
-    createWithParent(tabsheet,bookmarkImagesList);
+    form:=TeditForm.create(mainForm);
+    editor_:=form.editor;
     paintedWithStateHash:=0;
-    index:=idx;
     editor_.Gutter.MarksPart.width:=breakpointsImagesList.width+bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnKeyUp             :=EditKeyUp;
@@ -374,16 +342,14 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
 
 CONST editorMetaSerial=1417366168;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
+CONSTRUCTOR T_editorMeta.createFromStream(VAR stream:T_bufferedInputStreamWrapper);
   VAR lineCount,markCount:longint;
       i:longint;
   begin
-    create(idx);
     if not(stream.readDWord=editorMetaSerial) then begin //#0
       stream.logWrongTypeError;
       exit;
     end;
-    tabsheet.tabVisible:=true;
     with fileInfo do begin
       filePath     :=stream.readAnsiString; //#1
       isChanged    :=stream.readBoolean;    //#2
@@ -454,7 +420,6 @@ FUNCTION T_editorMeta.isPseudoFile: boolean;
 PROCEDURE T_editorMeta.activate;
   VAR l:T_language;
   begin
-    if not(enabled) then exit;
     inherited activate;
     mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
 
@@ -542,7 +507,6 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
 PROCEDURE T_editorMeta.closeEditorQuietly;
   VAR k:longint;
   begin
-    tabsheet.tabVisible:=false;
     editor.clearAll;
     with fileInfo do begin
       filePath:='';
@@ -562,7 +526,6 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
   VAR mr:longint;
   begin
-    if not(enabled) then exit;
     if changed then begin
       mr:=closeDialogForm.showOnClose(pseudoName(true));
       if mr=mrOk then if not(saveWithDialog) then exit;
@@ -573,11 +536,6 @@ PROCEDURE T_editorMeta.closeEditorWithDialogs;
       folderHistory.fileClosed(ExtractFileDir(fileInfo.filePath));
     end;
     closeEditorQuietly;
-  end;
-
-FUNCTION T_editorMeta.enabled:boolean;
-  begin
-    result:=tabsheet.tabVisible;
   end;
 
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);

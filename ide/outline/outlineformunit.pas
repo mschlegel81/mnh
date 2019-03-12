@@ -1,52 +1,56 @@
-UNIT outlines;
+UNIT outlineFormUnit;
+
+{$mode objfpc}{$H+}
+
 INTERFACE
-USES Classes,
-     StdCtrls,
-     ComCtrls,
-     Menus,
-     litVar,
-     operators,
-     mnh_settings,
-     mnh_constants,basicTypes,
-     subrules,rules,packages;
+
+USES
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, ComCtrls, Menus,
+  ideLayoutUtil,
+  litVar,
+  operators,
+  mnh_settings,
+  mnh_constants,basicTypes,
+  subrules,rules,packages;
+
 TYPE
   T_openLocationCallback=FUNCTION (CONST location:T_searchTokenLocation):boolean of object;
-
-  P_outlineTreeModel=^T_outlineTreeModel;
   P_outlineNode=^T_outlineNode;
-  T_outlineTreeModel=object
-    private
-      cs:TRTLCriticalSection;
-      view:TTreeView;
-      openLocation:T_openLocationCallback;
 
-      showPrivateCheckbox,
-      showImportedCheckbox,
-      sortByNameCaseRadio,
-      sortByNameRadio,
-      sortByLocationRadio:TMenuItem;
+  { TOutlineForm }
 
-      currentMainPackage:P_package;
+  TOutlineForm = class(T_mnhComponentForm)
+    outlineGlyphs: TImageList;
+    showPrivateCheckbox: TMenuItem;
+    showImportedCheckbox: TMenuItem;
+    MenuItem3: TMenuItem;
+    sortByNameRadio: TMenuItem;
+    sortByNameCaseRadio: TMenuItem;
+    sortByLocationRadio: TMenuItem;
+    OutlinePopupMenu: TPopupMenu;
+    outlineTreeView: TTreeView;
+    PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE checkboxClick(Sender: TObject);
+    PROCEDURE treeViewDblClick(Sender: TObject);
+  private
+    cs:TRTLCriticalSection;
+    currentMainPackage:P_package;
 
-      packageNodes:array of P_outlineNode;
-      PROCEDURE openSelectedLocation;
-    public
-      CONSTRUCTOR create(CONST tree:TTreeView;
-                         CONST showPrivateCB,showImportedCB:TMenuItem;
-                         CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
-                         CONST openLocationCallback:T_openLocationCallback);
-      DESTRUCTOR destroy;
-      PROCEDURE refresh;
-      PROCEDURE update(CONST mainPackage:P_package);
-      PROCEDURE checkboxClick(Sender: TObject);
-      PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-      PROCEDURE treeViewDblClick(Sender: TObject);
-      FUNCTION ruleSorting:T_ruleSorting;
+    packageNodes:array of P_outlineNode;
+    PROCEDURE openSelectedLocation;
+    PROCEDURE refresh;
+    FUNCTION ruleSorting: T_ruleSorting;
+    PROCEDURE update(CONST mainPackage: P_package);
+
+  public
+    FUNCTION getIdeComponentType:T_ideComponent; virtual;
   end;
 
   T_outlineNode=object
     private
-      containingModel:P_outlineTreeModel;
+      containingModel:TOutlineForm;
       associatedNode:TTreeNode;
 
       isLocal :boolean;
@@ -57,12 +61,18 @@ TYPE
       PROCEDURE updateWithRule(CONST rule:P_rule; CONST inMainPackage:boolean);
       PROCEDURE updateWithSubrule(CONST subRule:P_subruleExpression; CONST ruleId:string; CONST inMainPackage:boolean);
       PROCEDURE updateWithPackage(CONST package:P_package; CONST mainPackage:boolean);
-      CONSTRUCTOR createBlank(CONST inModel:P_outlineTreeModel; CONST node:TTreeNode);
+      CONSTRUCTOR createBlank(CONST inModel:TOutlineForm; CONST node:TTreeNode);
       DESTRUCTOR destroy;
       PROCEDURE refresh;
   end;
 
+VAR openLocation:T_openLocationCallback;
 IMPLEMENTATION
+VAR
+  OutlineForm: TOutlineForm;
+
+{$R *.lfm}
+
 CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
               {rt_memoized}        0,
               {rt_mutable}         1,
@@ -124,7 +134,7 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
       end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
           setLength(children,childIdx+1);
-          new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
+          new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
         end;
         children[childIdx]^.updateWithSubrule(subRule,ruleId,inMainPackage);
         inc(childIdx);
@@ -147,10 +157,10 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     isLocal:=mainPackage;
     isPublic:=true;
     location:=packageTokenLocation(package);
-    for rule in package^.declaredRules(containingModel^.ruleSorting) do if rule^.hasPublicSubrule or mainPackage then begin
+    for rule in package^.declaredRules(containingModel.ruleSorting) do if rule^.hasPublicSubrule or mainPackage then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
-        new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
+        new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
       end;
       children[childIdx]^.updateWithRule(rule,mainPackage);
       inc(childIdx);
@@ -164,7 +174,7 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     refresh;
   end;
 
-CONSTRUCTOR T_outlineNode.createBlank(CONST inModel: P_outlineTreeModel; CONST node:TTreeNode);
+CONSTRUCTOR T_outlineNode.createBlank(CONST inModel: TOutlineForm; CONST node:TTreeNode);
   begin
     containingModel:=inModel;
     associatedNode:=node;
@@ -177,44 +187,25 @@ DESTRUCTOR T_outlineNode.destroy;
   begin
     for i:=0 to length(children)-1 do dispose(children[i],destroy);
     setLength(children,0);
-    containingModel^.view.items.delete(associatedNode);
+    containingModel.outlineTreeView.items.delete(associatedNode);
   end;
 
 PROCEDURE T_outlineNode.refresh;
   VAR child:P_outlineNode;
   begin
     associatedNode.visible:=(isPublic or isLocal) and
-                            (isPublic or containingModel^.showPrivateCheckbox.checked) and
-                            (isLocal or containingModel^.showImportedCheckbox.checked);
+                            (isPublic or containingModel.showPrivateCheckbox.checked) and
+                            (isLocal or containingModel.showImportedCheckbox.checked);
     if associatedNode.visible then for child in children do child^.refresh;
   end;
 
-CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView;
-                                      CONST showPrivateCB, showImportedCB: TMenuItem;
-                                      CONST sortByNameCaseRB,sortByNameRB,sortByLocationRB:TMenuItem;
-                                      CONST openLocationCallback:T_openLocationCallback);
+PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
   begin
-    view:=tree;
-    showPrivateCheckbox :=showPrivateCB;
-    showImportedCheckbox:=showImportedCB;
-    sortByNameCaseRadio :=sortByNameCaseRB;
-    sortByNameRadio     :=sortByNameRB;
-    sortByLocationRadio :=sortByLocationRB;
-
-    showPrivateCB   .OnClick:=@checkboxClick; showPrivateCB   .checked:=settings.outline.showPrivate;
-    showImportedCB  .OnClick:=@checkboxClick; showImportedCB  .checked:=settings.outline.showImported;
-    sortByNameCaseRB.OnClick:=@checkboxClick; sortByNameCaseRB.checked:=settings.outline.sortByNameCaseSen;
-    sortByNameRB    .OnClick:=@checkboxClick; sortByNameRB    .checked:=settings.outline.sortByName;
-    sortByLocationRB.OnClick:=@checkboxClick; sortByLocationRB.checked:=settings.outline.sortByLoc;
-
-    tree.OnKeyDown:=@treeViewKeyDown;
-    tree.OnDblClick:=@treeViewDblClick;
-    openLocation:=openLocationCallback;
     initCriticalSection(cs);
     setLength(packageNodes,0);
   end;
 
-DESTRUCTOR T_outlineTreeModel.destroy;
+PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
   VAR i:longint;
   begin
     enterCriticalSection(cs);
@@ -224,14 +215,32 @@ DESTRUCTOR T_outlineTreeModel.destroy;
     doneCriticalSection(cs);
   end;
 
-PROCEDURE T_outlineTreeModel.refresh;
+PROCEDURE TOutlineForm.openSelectedLocation;
+  begin
+    enterCriticalSection(cs);
+    if Assigned(outlineTreeView.Selected) and (outlineTreeView.Selected.data<>nil) then
+    openLocation(P_outlineNode(outlineTreeView.Selected.data)^.location);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE TOutlineForm.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if key=13 then openSelectedLocation;
+  end;
+
+PROCEDURE TOutlineForm.treeViewDblClick(Sender: TObject);
+  begin
+    openSelectedLocation;
+  end;
+
+PROCEDURE TOutlineForm.refresh;
   begin
     enterCriticalSection(cs);
     update(currentMainPackage);
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
+PROCEDURE TOutlineForm.update(CONST mainPackage:P_package);
   VAR imported:T_packageList;
       i:longint;
   begin
@@ -250,7 +259,7 @@ PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
         i:=length(packageNodes);
         setLength(packageNodes,length(imported)+1);
         while i<length(packageNodes) do begin
-          new(packageNodes[i],createBlank(@self,view.items.add(nil,'')));
+          new(packageNodes[i],createBlank(self,outlineTreeView.items.add(nil,'')));
           inc(i);
         end;
       end;
@@ -262,7 +271,7 @@ PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
+PROCEDURE TOutlineForm.checkboxClick(Sender: TObject);
   begin
     settings.outline.showPrivate      :=showPrivateCheckbox .checked;
     settings.outline.showImported     :=showImportedCheckbox.checked;
@@ -272,25 +281,12 @@ PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
     refresh;
   end;
 
-PROCEDURE T_outlineTreeModel.openSelectedLocation;
+FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
   begin
-    enterCriticalSection(cs);
-    if Assigned(view.Selected) and (view.Selected.data<>nil) then
-    openLocation(P_outlineNode(view.Selected.data)^.location);
-    leaveCriticalSection(cs);
+    result:=icOutline;
   end;
 
-PROCEDURE T_outlineTreeModel.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-  begin
-    if key=13 then openSelectedLocation;
-  end;
-
-PROCEDURE T_outlineTreeModel.treeViewDblClick(Sender: TObject);
-  begin
-    openSelectedLocation;
-  end;
-
-FUNCTION T_outlineTreeModel.ruleSorting:T_ruleSorting;
+FUNCTION TOutlineForm.ruleSorting:T_ruleSorting;
   begin
     result:=rs_none;
     if sortByNameCaseRadio.checked then exit(rs_byNameCaseSensitive);
@@ -299,3 +295,4 @@ FUNCTION T_outlineTreeModel.ruleSorting:T_ruleSorting;
   end;
 
 end.
+

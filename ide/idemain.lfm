@@ -131,30 +131,14 @@ object IdeMainForm: TIdeMainForm
     Height = 387
     Top = 0
     Width = 152
-    ActivePage = TabSheet1
     Align = alLeft
     DockSite = True
     DragKind = dkDock
     DragMode = dmAutomatic
     MultiLine = True
-    TabIndex = 0
     TabOrder = 4
     OnStartDock = PageControl4StartDock
     Options = [nboShowCloseButtons, nboMultiLine]
-    object TabSheet1: TTabSheet
-      Caption = 'TabSheet1'
-      ClientHeight = 349
-      ClientWidth = 144
-      object Shape1: TShape
-        Left = 0
-        Height = 349
-        Top = 0
-        Width = 144
-        Align = alClient
-        Brush.Color = clRed
-        Shape = stDiamond
-      end
-    end
   end
   object StatusBar1: TStatusBar
     Left = 0
@@ -168,6 +152,11 @@ object IdeMainForm: TIdeMainForm
     top = 84
     object smFile: TMenuItem
       Caption = 'File'
+      object miNew: TMenuItem
+        Caption = 'New'
+        ShortCut = 16462
+        OnClick = miNewClick
+      end
     end
     object smShow: TMenuItem
       Caption = 'Show'
