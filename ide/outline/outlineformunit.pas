@@ -1,4 +1,4 @@
-UNIT outlineFormUnit;
+UNIT outlines;
 
 {$mode objfpc}{$H+}
 
@@ -42,12 +42,38 @@ TYPE
     PROCEDURE openSelectedLocation;
     PROCEDURE refresh;
     FUNCTION ruleSorting: T_ruleSorting;
-    PROCEDURE update(CONST mainPackage: P_package);
 
   public
+    PROCEDURE update(CONST mainPackage: P_package);
     FUNCTION getIdeComponentType:T_ideComponent; virtual;
+    PROCEDURE fontSettingsChanged(newFont:TFont); virtual;
   end;
 
+VAR openLocation:T_openLocationCallback;
+
+PROCEDURE showOutlineForm;
+IMPLEMENTATION
+VAR myOutlineForm: TOutlineForm=nil;
+PROCEDURE showOutlineForm;
+  begin
+    if myOutlineForm=nil then begin
+      myOutlineForm:=TOutlineForm.create(mainForm);
+      dockNewForm(myOutlineForm);
+    end;
+  end;
+
+{$R *.lfm}
+
+CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
+              {rt_memoized}        0,
+              {rt_mutable}         1,
+              {rt_datastore}       2,
+              {rt_synchronized}    3,
+              {rt_customTypeCheck} 4,
+              {rt_duckTypeCheck}   4,
+              {rt_customTypeCast}  5,
+              {rt_customOperator}  6);
+TYPE
   T_outlineNode=object
     private
       containingModel:TOutlineForm;
@@ -65,23 +91,6 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE refresh;
   end;
-
-VAR openLocation:T_openLocationCallback;
-IMPLEMENTATION
-VAR
-  OutlineForm: TOutlineForm;
-
-{$R *.lfm}
-
-CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
-              {rt_memoized}        0,
-              {rt_mutable}         1,
-              {rt_datastore}       2,
-              {rt_synchronized}    3,
-              {rt_customTypeCheck} 4,
-              {rt_duckTypeCheck}   4,
-              {rt_customTypeCast}  5,
-              {rt_customOperator}  6);
 
 PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleId: string; CONST inMainPackage:boolean);
   begin
@@ -249,6 +258,7 @@ PROCEDURE TOutlineForm.update(CONST mainPackage:P_package);
     if mainPackage=nil then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
       setLength(packageNodes,0);
+      visible:=false;
     end else begin
       imported:=mainPackage^.usedPackages;
       //ensure correct node count
@@ -266,8 +276,9 @@ PROCEDURE TOutlineForm.update(CONST mainPackage:P_package);
       //update nodes
       packageNodes[0]^.updateWithPackage(mainPackage,true);
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
+      visible:=true;
     end;
-    if not(showImportedCheckbox.checked) then packageNodes[0]^.associatedNode.expand(false);
+    if not(showImportedCheckbox.checked) and (length(packageNodes)>0) then packageNodes[0]^.associatedNode.expand(false);
     leaveCriticalSection(cs);
   end;
 

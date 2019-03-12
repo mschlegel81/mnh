@@ -37,14 +37,14 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="59">
+    <Units Count="62">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <CursorPos X="44" Y="12"/>
-        <UsageCount Value="141"/>
+        <UsageCount Value="144"/>
       </Unit0>
       <Unit1>
         <Filename Value="idemain.pas"/>
@@ -53,10 +53,12 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="ideMain"/>
-        <EditorIndex Value="-1"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="1"/>
-        <CursorPos X="56" Y="11"/>
-        <UsageCount Value="141"/>
+        <TopLine Value="65"/>
+        <CursorPos X="67" Y="82"/>
+        <UsageCount Value="144"/>
+        <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="../../lcl/ldocktree.pas"/>
@@ -227,11 +229,11 @@
         <Filename Value="idelayoututil.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ideLayoutUtil"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="29"/>
-        <CursorPos X="70" Y="43"/>
-        <UsageCount Value="47"/>
+        <TopLine Value="15"/>
+        <CursorPos X="7" Y="44"/>
+        <UsageCount Value="50"/>
         <Loaded Value="True"/>
       </Unit24>
       <Unit25>
@@ -261,10 +263,12 @@
       </Unit27>
       <Unit28>
         <Filename Value="settings/mnh_gui_settings.pas"/>
-        <EditorIndex Value="-1"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="1"/>
-        <CursorPos X="33" Y="10"/>
-        <UsageCount Value="8"/>
+        <TopLine Value="59"/>
+        <CursorPos X="23" Y="96"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
       </Unit28>
       <Unit29>
         <Filename Value="../core/contexts.pas"/>
@@ -328,12 +332,9 @@
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="428"/>
-        <CursorPos X="9" Y="435"/>
-        <UsageCount Value="41"/>
-        <Bookmarks Count="1">
-          <Item0 X="20" Y="321" ID="1"/>
-        </Bookmarks>
+        <TopLine Value="382"/>
+        <CursorPos Y="403"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
@@ -389,11 +390,11 @@
       <Unit44>
         <Filename Value="editors/editormetabase.pas"/>
         <UnitName Value="editorMetaBase"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="1"/>
         <TopLine Value="256"/>
         <CursorPos X="5" Y="259"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit44>
       <Unit45>
@@ -453,36 +454,35 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="editorForm"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="14"/>
         <CursorPos Y="19"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit51>
       <Unit52>
         <Filename Value="../common/serializationUtil.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="1"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit52>
       <Unit53>
         <Filename Value="../common/myGenerics.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="1"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit53>
       <Unit54>
         <Filename Value="../common/myStringUtil.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="1"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit54>
       <Unit55>
@@ -491,160 +491,196 @@
         <ComponentName Value="OutlineForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="outlineFormUnit"/>
-        <EditorIndex Value="1"/>
+        <UnitName Value="outlines"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="1"/>
-        <TopLine Value="60"/>
-        <CursorPos X="7" Y="76"/>
-        <UsageCount Value="21"/>
+        <TopLine Value="20"/>
+        <CursorPos X="5" Y="54"/>
+        <UsageCount Value="24"/>
+        <Bookmarks Count="1">
+          <Item0 X="5" Y="261" ID="1"/>
+        </Bookmarks>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit55>
       <Unit56>
         <Filename Value="../../lazarus64/fpc/3.0.4/source/packages/fv/src/outline.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit56>
       <Unit57>
         <Filename Value="outline/outlines.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="-1"/>
         <WindowIndex Value="1"/>
         <TopLine Value="257"/>
         <CursorPos Y="300"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit57>
       <Unit58>
         <Filename Value="../core/mnh_settings.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="1"/>
         <TopLine Value="51"/>
         <CursorPos X="5" Y="73"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit58>
+      <Unit59>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AssistanceForm"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="87"/>
+        <CursorPos X="7" Y="118"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit59>
+      <Unit60>
+        <Filename Value="../../lazarus64/lcl/dialogs.pp"/>
+        <UnitName Value="Dialogs"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="373"/>
+        <CursorPos X="14" Y="395"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit60>
+      <Unit61>
+        <Filename Value="../../lazarus64/lcl/graphics.pp"/>
+        <UnitName Value="Graphics"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="1"/>
+        <TopLine Value="459"/>
+        <CursorPos X="3" Y="481"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit61>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="152" Column="67" TopLine="115"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="667" Column="5" TopLine="645"/>
       </Position1>
       <Position2>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="300" Column="23" TopLine="261"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="773" Column="48" TopLine="737"/>
       </Position2>
       <Position3>
         <Filename Value="editors/editorMeta.pas"/>
-        <Caret Line="24" Column="18"/>
+        <Caret Line="787" Column="30" TopLine="765"/>
       </Position3>
       <Position4>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="156" Column="76" TopLine="134"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="68" Column="11" TopLine="46"/>
       </Position4>
       <Position5>
-        <Filename Value="outline/outlineformunit.pas"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="25" Column="45" TopLine="15"/>
       </Position5>
       <Position6>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="34"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="30" Column="5" TopLine="15"/>
       </Position6>
       <Position7>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="288" Column="5" TopLine="267"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="65" TopLine="45"/>
       </Position7>
       <Position8>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="30"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="31" Column="14" TopLine="6"/>
       </Position8>
       <Position9>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="31" TopLine="15"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="203" TopLine="181"/>
       </Position9>
       <Position10>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="32" TopLine="16"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="68" Column="28" TopLine="29"/>
       </Position10>
       <Position11>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="33" TopLine="17"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="22" TopLine="13"/>
       </Position11>
       <Position12>
         <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="34" TopLine="18"/>
+        <Caret Line="47" Column="6" TopLine="24"/>
       </Position12>
       <Position13>
         <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="23" Column="43" TopLine="19"/>
+        <Caret Line="256" Column="5" TopLine="251"/>
       </Position13>
       <Position14>
         <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="316" TopLine="272"/>
+        <Caret Line="47" Column="15" TopLine="26"/>
       </Position14>
       <Position15>
         <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="162" Column="91" TopLine="140"/>
+        <Caret Line="256" Column="5" TopLine="251"/>
       </Position15>
       <Position16>
         <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="176" Column="54" TopLine="154"/>
+        <Caret Line="53" TopLine="25"/>
       </Position16>
       <Position17>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="63" Column="19" TopLine="63"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="326" Column="10" TopLine="305"/>
       </Position17>
       <Position18>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="176" Column="66" TopLine="174"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="56" Column="17" TopLine="34"/>
       </Position18>
       <Position19>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="189" Column="36" TopLine="167"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="64" Column="22" TopLine="50"/>
       </Position19>
       <Position20>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="210" Column="90" TopLine="179"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="173" Column="37" TopLine="136"/>
       </Position20>
       <Position21>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="37"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="66" Column="3" TopLine="42"/>
       </Position21>
       <Position22>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="237" TopLine="234"/>
+        <Filename Value="assistant/codeassistance.pas"/>
+        <Caret Line="118" Column="7" TopLine="87"/>
       </Position22>
       <Position23>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="33" TopLine="20"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="407" Column="6" TopLine="385"/>
       </Position23>
       <Position24>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="197" Column="56" TopLine="174"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="53" Column="6" TopLine="31"/>
       </Position24>
       <Position25>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="207" TopLine="192"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="61" Column="89" TopLine="31"/>
       </Position25>
       <Position26>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="206" Column="34" TopLine="192"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="327" Column="28" TopLine="290"/>
       </Position26>
       <Position27>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="75" Column="14" TopLine="49"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="407" Column="58" TopLine="370"/>
       </Position27>
       <Position28>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="118" Column="50" TopLine="81"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="327" Column="5" TopLine="305"/>
       </Position28>
       <Position29>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="75" Column="7" TopLine="53"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="53" TopLine="39"/>
       </Position29>
       <Position30>
-        <Filename Value="outline/outlineformunit.pas"/>
-        <Caret Line="76" Column="7" TopLine="60"/>
+        <Filename Value="editors/editorMeta.pas"/>
+        <Caret Line="325" TopLine="303"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>

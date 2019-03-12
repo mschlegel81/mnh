@@ -21,7 +21,7 @@ USES  //basic classes
   mnh_plotForm,
   //MNH:
   mnh_doc,
-  outlineFormUnit,
+  outlines,
   mnh_constants, basicTypes, fileWrappers,mnh_settings,
   tokenArray,
   contexts,
@@ -50,7 +50,6 @@ T_editorMeta=object(T_basicEditorMeta)
     end;
     strictlyReadOnly:boolean;
 
-    latestAssistanceReponse:P_codeAssistanceResponse;
     form:TeditForm;
     PROCEDURE guessLanguage(CONST fallback:T_language);
     CONSTRUCTOR create;
@@ -58,7 +57,6 @@ T_editorMeta=object(T_basicEditorMeta)
 
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   public
-    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
     FUNCTION isPseudoFile: boolean; virtual;
@@ -324,7 +322,6 @@ PROCEDURE gotoMarker(markerIndex:longint);
 
 CONSTRUCTOR T_editorMeta.create;
   begin
-    latestAssistanceReponse:=nil;
     paintedWithStateHash:=0;
     form:=TeditForm.create(mainForm);
     editor_:=form.editor;
@@ -404,7 +401,6 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
 DESTRUCTOR T_editorMeta.destroy;
   begin
     inherited destroy;
-    disposeCodeAssistanceResponse(latestAssistanceReponse);
   end;
 
 FUNCTION T_editorMeta.getPath: ansistring;
@@ -432,7 +428,6 @@ PROCEDURE T_editorMeta.activate;
       recentlyActivated.fileClosed(getPath);
       folderHistory.fileClosed(ExtractFileDir(getPath));
       if language_=LANG_MNH then begin
-        outlineGroupBox.visible:=true;
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
         assistanceTabSheet.tabVisible:=true;
@@ -440,7 +435,6 @@ PROCEDURE T_editorMeta.activate;
         completionLogic.assignEditor(editor_,nil);
         runnerModel.firstCallAfterActivation:=true;
       end else begin
-        outlineGroupBox.visible:=false;
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         assistanceSynEdit.clearAll;
         assistanceTabSheet.caption:='';

@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics;
 
 TYPE
   T_ideComponent=(icEditor,
@@ -41,6 +41,11 @@ TYPE
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
+      PROCEDURE fontSettingsChanged(newFont:TFont); virtual; abstract;
+  end;
+
+  T_mnhContainerForm=class(TForm)
+    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); virtual; abstract;
   end;
 
 VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
@@ -55,7 +60,17 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
     {icTable}       cpNone,
     {icVariableView}cpNone,
     {icDebugger}    cpPageControl4);
+
+    mainForm:T_mnhContainerForm=nil;
+
+PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 IMPLEMENTATION
+
+PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
+  begin
+    if mainForm<>nil then mainForm.attachNewForm(newForm);
+  end;
+
 CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
   begin
     inherited create(TheOwner);

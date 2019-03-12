@@ -10,7 +10,7 @@ USES
   Interfaces, // this includes the LCL widgetset
   Forms
   { you can add units after this }, ideMain, serializationUtil, myGenerics,
-  myStringUtil, editorForm, editorMeta, outlineFormUnit;
+  myStringUtil, editorForm, editorMeta, outlines, codeAssistance;
 
 {$R *.res}
 
@@ -19,6 +19,7 @@ begin
   Application.CreateForm(TIdeMainForm, IdeMainForm);
   Application.CreateForm(TeditForm, editForm);
   Application.CreateForm(TOutlineForm, OutlineForm);
+  Application.CreateForm(TAssistanceForm, AssistanceForm);
   Application.run;
 end.
 

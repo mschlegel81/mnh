@@ -1,10 +1,12 @@
 UNIT codeAssistance;
+
+{$mode objfpc}{$H+}
+
 INTERFACE
 
 USES
-  sysutils,
-  SynEdit,
-  myGenerics,
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,ideLayoutUtil,
+    myGenerics,
   basicTypes,
   mnh_constants,
   fileWrappers,
@@ -15,7 +17,17 @@ USES
   contexts,
   recyclers,
   packages;
+
 TYPE
+  TAssistanceForm = class(T_mnhComponentForm)
+    assistanceSynEdit: TSynEdit;
+  private
+
+  public
+    FUNCTION getIdeComponentType:T_ideComponent; virtual;
+    PROCEDURE fontSettingsChanged(newFont:TFont); virtual;
+  end;
+
   T_highlightingData=object
     warnLocations:array of record line,column:longint; isError:boolean; end;
     userRules    :T_setOfString;
@@ -48,12 +60,17 @@ TYPE
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
   end;
 
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
-FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
-PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
-PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+//FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+//FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
+//PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
+//PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
+
 IMPLEMENTATION
+VAR
+  myAssistanceForm: TAssistanceForm;
+
+{$R *.lfm}
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
@@ -92,6 +109,12 @@ VAR codeAssistanceResponse:P_codeAssistanceResponse=nil;
     codeAssistanceCs      :TRTLCriticalSection;
     codeAssistantIsRunning:boolean=false;
     shuttingDown          :boolean=false;
+
+PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+  begin
+    if (r<>nil) and (interlockedDecrement(r^.referenceCount)<=0) then dispose(r,destroy);
+    r:=nil;
+  end;
 
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
   VAR globals:P_evaluationGlobals;
@@ -173,10 +196,14 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
     leaveCriticalSection(codeAssistanceCs);
   end;
 
-PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;
   begin
-    if (r<>nil) and (interlockedDecrement(r^.referenceCount)<=0) then dispose(r,destroy);
-    r:=nil;
+    result:=icAssistance;
+  end;
+
+PROCEDURE TAssistanceForm.fontSettingsChanged(newFont: TFont);
+  begin
+    assistanceSynEdit.Font:=newFont;
   end;
 
 PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: T_highlightingData);
@@ -397,5 +424,6 @@ INITIALIZATION
   initCriticalSection(codeAssistanceCs);
 FINALIZATION
   if not(isFinalized) then finalizeCodeAssistance;
+
 end.
 

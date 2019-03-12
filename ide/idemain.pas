@@ -12,7 +12,7 @@ TYPE
 
   { TIdeMainForm }
 
-  TIdeMainForm = class(TForm)
+  TIdeMainForm = class(T_mnhContainerForm)
     MainMenu: TMainMenu;
     miNew: TMenuItem;
     miSettings: TMenuItem;
@@ -46,7 +46,7 @@ TYPE
     splitterPositions:T_splitterPositions;
     FUNCTION startDock(CONST PageControl:TPageControl):TDragDockObject;
   public
-    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm);
+    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); virtual;
     { public declarations }
   end;
 
@@ -68,6 +68,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     splitterPositions[2]:=10000;
     splitterPositions[3]:=16384;
     splitterPositions[4]:=16384;
+    ideLayoutUtil.mainForm:=self;
   end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);

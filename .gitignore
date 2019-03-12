@@ -33,3 +33,5 @@ core/build_number.inc
 /ide/res_html_template.inc
 /ide/res_removeAssoc.inc
 */backup/*
+/ide/outline/backup/outlineformunit.pas
+/ide/assistant/backup/codeassistance.pas
