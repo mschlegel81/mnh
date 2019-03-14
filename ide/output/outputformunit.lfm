@@ -1,14 +1,15 @@
-object AssistanceForm: TAssistanceForm
+object OutputForm: TOutputForm
   Left = 817
   Height = 360
-  Top = 176
+  Top = 165
   Width = 480
-  Caption = '...'
+  Caption = 'Output'
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  OnCreate = FormCreate
   LCLVersion = '2.0.0.4'
-  inline assistanceSynEdit: TSynEdit
+  inline OutputSynEdit: TSynEdit
     Left = 0
     Height = 360
     Top = 0
@@ -21,8 +22,7 @@ object AssistanceForm: TAssistanceForm
     ParentColor = False
     ParentFont = False
     TabOrder = 0
-    Gutter.Visible = False
-    Gutter.Width = 77
+    Gutter.Width = 17
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -451,9 +451,10 @@ object AssistanceForm: TAssistanceForm
     MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
-      'assistanceSynEdit'
+      'OutputSynEdit'
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
+    ReadOnly = True
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
@@ -473,10 +474,6 @@ object AssistanceForm: TAssistanceForm
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
-      object SynGutterMarks1: TSynGutterMarks
-        Width = 36
-        MouseActions = <>
-      end
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17
         MouseActions = <>
@@ -486,26 +483,6 @@ object AssistanceForm: TAssistanceForm
         ShowOnlyLineNumbersMultiplesOf = 1
         ZeroStart = False
         LeadingZeros = False
-      end
-      object SynGutterChanges1: TSynGutterChanges
-        Width = 6
-        MouseActions = <>
-        ModifiedColor = 59900
-        SavedColor = clGreen
-      end
-      object SynGutterSeparator1: TSynGutterSeparator
-        Width = 3
-        MouseActions = <>
-        MarkupInfo.Background = clWhite
-        MarkupInfo.Foreground = clGray
-      end
-      object SynGutterCodeFolding1: TSynGutterCodeFolding
-        Width = 15
-        MouseActions = <>
-        MarkupInfo.Background = clNone
-        MarkupInfo.Foreground = clGray
-        MouseActionsExpanded = <>
-        MouseActionsCollapsed = <>
       end
     end
   end

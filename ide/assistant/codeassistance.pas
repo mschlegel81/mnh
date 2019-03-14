@@ -19,15 +19,6 @@ USES
   packages;
 
 TYPE
-  TAssistanceForm = class(T_mnhComponentForm)
-    assistanceSynEdit: TSynEdit;
-  private
-
-  public
-    FUNCTION getIdeComponentType:T_ideComponent; virtual;
-    PROCEDURE fontSettingsChanged(newFont:TFont); virtual;
-  end;
-
   T_highlightingData=object
     warnLocations:array of record line,column:longint; isError:boolean; end;
     userRules    :T_setOfString;
@@ -67,10 +58,6 @@ PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 
 IMPLEMENTATION
-VAR
-  myAssistanceForm: TAssistanceForm;
-
-{$R *.lfm}
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
@@ -194,16 +181,6 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
       codeAssistantIsRunning:=true;
     end;
     leaveCriticalSection(codeAssistanceCs);
-  end;
-
-FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;
-  begin
-    result:=icAssistance;
-  end;
-
-PROCEDURE TAssistanceForm.fontSettingsChanged(newFont: TFont);
-  begin
-    assistanceSynEdit.Font:=newFont;
   end;
 
 PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: T_highlightingData);

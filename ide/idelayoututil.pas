@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -39,7 +39,6 @@ TYPE
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
-      //PROCEDURE getMenus(CONST mainMenu:TMainMenu; CONST popupInstead:Tpopupmenu); virtual; abstract;
     public
       DESTRUCTOR destroy; override;
   end;
@@ -80,6 +79,10 @@ PROCEDURE registerSynEdit(VAR edit:TSynEdit);
   begin
     setLength(activeSynEdits,length(activeSynEdits)+1);
     activeSynEdits[length(activeSynEdits)-1]:=edit;
+    if length(activeSynEdits)=0 then begin
+      edit.Font.name:=settings.editor.fontName;
+      edit.Font.size:=settings.editor.fontSize;
+    end else edit.Font:=activeSynEdits[0].Font;
   end;
 
 PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);

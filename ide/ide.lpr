@@ -9,8 +9,9 @@ USES
   {$endif}{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms
-  { you can add units after this }, ideMain, serializationUtil, myGenerics,
-  myStringUtil, fileWrappers, contexts, codeAssistance;
+  { you can add units after this }, ideMain, evalThread, guiOutAdapters,
+  editorMetaBase, fileWrappers,
+  contexts, out_adapters, codeAssistance;
 
 {$R *.res}
 

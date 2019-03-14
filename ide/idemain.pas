@@ -7,14 +7,19 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
-  editorMeta;
+  editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
+  outputFormUnit,debugging;
 
 TYPE
 
   { TIdeMainForm }
 
   TIdeMainForm = class(T_mnhIdeForm)
+    bookmarkImages: TImageList;
+    breakpointImages: TImageList;
     MainMenu: TMainMenu;
+    smAppearance: TMenuItem;
+    miLanguage: TMenuItem;
     miNew: TMenuItem;
     miSettings: TMenuItem;
     smFile: TMenuItem;
@@ -44,6 +49,13 @@ TYPE
     PROCEDURE PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
+
+    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); override;
+    PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); override;
+    PROCEDURE onDebuggerEvent;                                override;
+    PROCEDURE onEndOfEvaluation;                              override;
+    PROCEDURE triggerFastPolling;                             override;
+    PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
   private
     splitterPositions:T_splitterPositions;
     FUNCTION startDock(CONST PageControl:TPageControl):TDragDockObject;
@@ -58,19 +70,30 @@ IMPLEMENTATION
 
 {$R ideMain.lfm}
 
-PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject;
+  CONST FileNames: array of string);
   begin
 
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
+  VAR outputForm:TOutputForm;
   begin
     splitterPositions[1]:=16384;
     splitterPositions[2]:=10000;
     splitterPositions[3]:=16384;
     splitterPositions[4]:=16384;
+    outputForm:=TOutputForm.create(self);
+    attachNewForm(outputForm);
     ideLayoutUtil.mainForm:=self;
-    //setupEditorMetaBase();
+    setupEditorMetaBase(miLanguage);
+    runnerModel.create;
+    initGuiOutAdapters(self,outputForm.OutputSynEdit);
+    initUnit(@guiAdapters);
+    workspace.create(self,
+                     EditorsPageControl,
+                     breakpointImages,
+                     bookmarkImages);
   end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
@@ -83,6 +106,7 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   begin
+    workspace.addEditorMetaForNewFile;
   end;
 
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
@@ -90,11 +114,16 @@ PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
     SettingsForm.ShowModal;
   end;
 
-PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl1); end;
-PROCEDURE TIdeMainForm.PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl2); end;
-PROCEDURE TIdeMainForm.PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl3); end;
-PROCEDURE TIdeMainForm.PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl4); end;
-PROCEDURE TIdeMainForm.EditorsPageControlStartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(EditorsPageControl); end;
+PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject;
+  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl1); end;
+PROCEDURE TIdeMainForm.PageControl2StartDock(Sender: TObject;
+  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl2); end;
+PROCEDURE TIdeMainForm.PageControl3StartDock(Sender: TObject;
+  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl3); end;
+PROCEDURE TIdeMainForm.PageControl4StartDock(Sender: TObject;
+  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl4); end;
+PROCEDURE TIdeMainForm.EditorsPageControlStartDock(Sender: TObject;
+  VAR DragObject: TDragDockObject); begin DragObject:=startDock(EditorsPageControl); end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
@@ -104,7 +133,8 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
     splitterPositions[4]:=PageControl4.width *65535 div  width;
   end;
 
-FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObject;
+FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl
+  ): TDragDockObject;
   VAR control:TControl;
       newForm:T_mnhComponentForm;
   begin
@@ -114,24 +144,6 @@ FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObjec
     //If the sheet is a TForm return it directly
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType) then newForm:=T_mnhComponentForm(control)
     else begin
-      //TODO: CLEANUP!
-      //Wrap the sheet contents in a new form
-      //newForm:=TForm.create(Application);
-      //bounds.topLeft    :=ClientToScreen(control.BoundsRect.topLeft);
-      //bounds.bottomRight:=ClientToScreen(control.BoundsRect.bottomRight);
-      //sheet:=PageControl.activePage;
-      //with newForm do begin
-      //  top     :=bounds.top;
-      //  Left    :=bounds.Left;
-      //  width   :=bounds.width;
-      //  height  :=bounds.height;
-      //  DragKind:= dkDock;
-      //  DragMode:= dmAutomatic;
-      //  caption :=sheet.caption;
-      //  control.parent:=newForm;
-      //  Show;
-      //end;
-      //FreeAndNil(sheet);
       raise Exception.create('Not an mnhComponent form!');
     end;
     writeln('StartDock');
@@ -157,6 +169,37 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     form.Show;
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
+
+PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.onDebuggerEvent;
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.onEndOfEvaluation;
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.triggerFastPolling;
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.activeFileChanged(CONST newCaption: string;
+  CONST isMnhFile: boolean; CONST isPseudoFile: boolean);
+begin
+
+end;
 
 end.
 

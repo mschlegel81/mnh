@@ -87,18 +87,16 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE escapeSelection(CONST unescape:boolean);
   end;
 
-PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn;
-                              CONST languageMenuRoot :TMenuItem);
+PROCEDURE setupEditorMetaBase(CONST languageMenuRoot :TMenuItem);
 VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
       extensions:T_arrayOfString;
       menuItem:TMenuItem;
     end;
-    editorFont:TFont;
     disposeHighlighters:boolean=false;
 IMPLEMENTATION
 
-PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST languageMenuRoot        :TMenuItem);
+PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
   VAR SynBatSyn            : TSynBatSyn            ;
       SynCppSyn            : TSynCppSyn            ;
       SynCssSyn            : TSynCssSyn            ;
@@ -115,6 +113,7 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
       SynUNIXShellScriptSyn: TSynUNIXShellScriptSyn;
       SynVBSyn             : TSynVBSyn             ;
       SynXMLSyn            : TSynXMLSyn            ;
+      outputHighlighter    : TSynMnhSyn;
 
   PROCEDURE initHighlighters;
     begin
@@ -134,6 +133,7 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
       SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(languageMenuRoot);
       SynVBSyn             :=TSynVBSyn             .create(languageMenuRoot);
       SynXMLSyn            :=TSynXMLSyn            .create(languageMenuRoot);
+      outputHighlighter    :=TSynMnhSyn.create(languageMenuRoot,msf_output);
       SynBatSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCppSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCssSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
@@ -474,7 +474,6 @@ PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string;
 
 PROCEDURE T_basicEditorMeta.activate;
   begin
-    editor_.Font:=editorFont;
     if language_=LANG_MNH then editor.highlighter:=highlighter
                           else editor.highlighter:=fileTypeMeta[language_].highlighter;
     completionLogic.assignEditor(editor_,nil);

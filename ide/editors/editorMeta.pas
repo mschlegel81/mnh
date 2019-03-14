@@ -350,7 +350,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
       triggerCheck;
       invalidateWordUnderCursor;
     end;
-    mainForm.activeFileChanged('Unimplemented sheet caption',language_=LANG_MNH,fileInfo.filePath='');
+    mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject;

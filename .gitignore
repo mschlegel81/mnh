@@ -27,13 +27,6 @@ core/build_number.inc
 *.exe
 /demos/oeis/oeis_server.datastore*
 *.bak
-/ide/res_defaultFiles.inc
-/ide/res_ensureAssoc.inc
-/ide/res_examples.inc
-/ide/res_html_template.inc
-/ide/res_removeAssoc.inc
-*/backup/*
-/ide/outline/backup/outlineformunit.pas
-/ide/assistant/backup/codeassistance.pas
-/ide/editors/backup/editorform.pas
-/ide/editors/backup/editorMeta.pas
+/ide/compilates/*
+/ide/res_*.inc
+/ide/*/backup/*
