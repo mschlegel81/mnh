@@ -60,10 +60,10 @@ TYPE
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
   end;
 
-//FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
-//FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
-//PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
-//PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
+PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
+PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 
 IMPLEMENTATION

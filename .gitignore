@@ -35,3 +35,5 @@ core/build_number.inc
 */backup/*
 /ide/outline/backup/outlineformunit.pas
 /ide/assistant/backup/codeassistance.pas
+/ide/editors/backup/editorform.pas
+/ide/editors/backup/editorMeta.pas

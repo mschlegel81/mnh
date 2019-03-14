@@ -6,13 +6,14 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
-  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,editorMeta;
+  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
+  editorMeta;
 
 TYPE
 
   { TIdeMainForm }
 
-  TIdeMainForm = class(T_mnhContainerForm)
+  TIdeMainForm = class(T_mnhIdeForm)
     MainMenu: TMainMenu;
     miNew: TMenuItem;
     miSettings: TMenuItem;
@@ -22,7 +23,7 @@ TYPE
     PageControl1: TPageControl;
     PageControl2: TPageControl;
     PageControl3: TPageControl;
-    PageControl5: TPageControl;
+    EditorsPageControl: TPageControl;
     PageControl4: TPageControl;
     Panel1: TPanel;
     Panel2: TPanel;
@@ -39,14 +40,14 @@ TYPE
     PROCEDURE PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
-    PROCEDURE PageControl5StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
+    PROCEDURE EditorsPageControlStartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
+    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
   private
     splitterPositions:T_splitterPositions;
     FUNCTION startDock(CONST PageControl:TPageControl):TDragDockObject;
   public
-    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); virtual;
     { public declarations }
   end;
 
@@ -69,6 +70,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     splitterPositions[3]:=16384;
     splitterPositions[4]:=16384;
     ideLayoutUtil.mainForm:=self;
+    //setupEditorMetaBase();
   end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
@@ -81,7 +83,6 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   begin
-    attachNewForm(getNewEditor);
   end;
 
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
@@ -93,7 +94,7 @@ PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject; VAR DragObject: TD
 PROCEDURE TIdeMainForm.PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl2); end;
 PROCEDURE TIdeMainForm.PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl3); end;
 PROCEDURE TIdeMainForm.PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl4); end;
-PROCEDURE TIdeMainForm.PageControl5StartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl5); end;
+PROCEDURE TIdeMainForm.EditorsPageControlStartDock(Sender: TObject; VAR DragObject: TDragDockObject); begin DragObject:=startDock(EditorsPageControl); end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
@@ -105,9 +106,7 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
 
 FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObject;
   VAR control:TControl;
-      sheet:TTabSheet;
       newForm:T_mnhComponentForm;
-      bounds:TRect;
   begin
     //Only handle pages with one control
     if PageControl.activePage.ControlCount<>1 then exit(nil);
@@ -115,7 +114,8 @@ FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObjec
     //If the sheet is a TForm return it directly
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType) then newForm:=T_mnhComponentForm(control)
     else begin
-      ////Wrap the sheet contents in a new form
+      //TODO: CLEANUP!
+      //Wrap the sheet contents in a new form
       //newForm:=TForm.create(Application);
       //bounds.topLeft    :=ClientToScreen(control.BoundsRect.topLeft);
       //bounds.bottomRight:=ClientToScreen(control.BoundsRect.bottomRight);
@@ -134,6 +134,7 @@ FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObjec
       //FreeAndNil(sheet);
       raise Exception.create('Not an mnhComponent form!');
     end;
+    writeln('StartDock');
     result:=TDragDockObject.AutoCreate(newForm);
   end;
 
@@ -142,18 +143,18 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
       componentParent:T_componentParent;
   begin
     componentParent:=lastDockLocationFor[form.getIdeComponentType];
-    if componentParent in [cpPageControl1..cpPageControl5] then dockMeta:=TDragDockObject.create(form);
+    if componentParent in [cpPageControl1..cpPageControl4] then dockMeta:=TDragDockObject.create(form);
     case componentParent of
       cpPageControl1: PageControl1.DockDrop(dockMeta,0,0);
       cpPageControl2: PageControl2.DockDrop(dockMeta,0,0);
       cpPageControl3: PageControl3.DockDrop(dockMeta,0,0);
       cpPageControl4: PageControl4.DockDrop(dockMeta,0,0);
-      cpPageControl5: PageControl5.DockDrop(dockMeta,0,0);
       else begin
         form.top :=top +(height-form.height) div 2;
         form.Left:=Left+(width -form.width ) div 2;
       end;
     end;
+    form.Show;
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 

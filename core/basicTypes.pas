@@ -16,6 +16,7 @@ TYPE
     fileName: ansistring;
     line, column: longint;
   end;
+  T_searchTokenLocations=array of T_searchTokenLocation;
 CONST
   C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 TYPE

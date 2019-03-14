@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, ExtCtrls, mySys,funcs, out_adapters, mnh_constants,
-  packages,mnh_settings,mnh_doc,editorMeta;
+  packages,mnh_settings,mnh_doc;
 
 CONST MINIMUM_OUTPUT_LINES=16;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=
@@ -181,7 +181,8 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteDirectory(getDemosRoot   ,false);
     DeleteDirectory(getPackagesRoot,false);
     DeleteFile(settingsFileName);
-    DeleteFile(workspaceFilename);
+    //TODO: Implement this!
+    //DeleteFile(workspaceFilename);
     DeleteFile(settings.lightFlavourLocation);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_BLANK;
@@ -241,7 +242,8 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[1,0]:=getDemosRoot;
     foldersToMove[2,0]:=getPackagesRoot;
     filesToDelete[0]:=settingsFileName;
-    filesToDelete[1]:=workspaceFilename;
+    //TODO: Implement this!
+    //filesToDelete[1]:=workspaceFilename;
     if APP_STYLE=APP_STYLE_NORMAL then begin
       oldWasNormal:=true;
       APP_STYLE:=APP_STYLE_PORTABLE;
@@ -265,7 +267,8 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       else APP_STYLE:=APP_STYLE_PORTABLE;
     end;
     saveSettings;
-    saveWorkspace;
+    //TODO: Implement this!
+    //saveWorkspace;
     ensureDemosAndPackages(nil,nil,false);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
   end;

@@ -15,13 +15,14 @@ USES  //basic classes
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
   //MNH:
+  ideLayoutUtil,
   mnh_constants, basicTypes,
   fileWrappers,
   mnhCompletion;
 
 CONST editCommandToggleComment    =ecUserDefinedFirst;
-      editCommandPageRight        =ecUserDefinedFirst+1;
-      editCommandPageLeft         =ecUserDefinedFirst+2;
+      //editCommandPageRight        =ecUserDefinedFirst+1;
+      //editCommandPageLeft         =ecUserDefinedFirst+2;
       editCommandMoveLineUp       =ecUserDefinedFirst+4;
       editCommandToggleBookmark   =ecUserDefinedFirst+3;
       editCommandMoveLineDown     =ecUserDefinedFirst+5;
@@ -60,8 +61,9 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE setLanguage(CONST languageIndex:T_language);
       FUNCTION currentBlockOrLine:T_lineRange;
     public
-      PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+      PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer); virtual;
       CONSTRUCTOR createWithParent(CONST parent:TWinControl; CONST bookmarkImages:TImageList);
+      CONSTRUCTOR createWithExistingEditor(CONST existingEditor:TSynEdit; CONST bookmarkImages:TImageList);
       DESTRUCTOR destroy; virtual;
       //T_codeProvider:
       FUNCTION getLines: T_arrayOfString; virtual;
@@ -272,8 +274,15 @@ PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
     activate;
   end;
 
-CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
-  CONST bookmarkImages: TImageList);
+CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST bookmarkImages: TImageList);
+  VAR tempEdit:TSynEdit;
+  begin
+    tempEdit:=TSynEdit.create(parent);
+    tempEdit.parent:=parent;
+    createWithExistingEditor(tempEdit,bookmarkImages);
+  end;
+
+CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSynEdit; CONST bookmarkImages:TImageList);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
@@ -298,11 +307,10 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
   VAR style:TSynSelectedColor;
       isRealEditor:boolean;
   begin
+    editor_:=existingEditor;
+    registerSynEdit(editor_);
     isRealEditor:=bookmarkImages<>nil;
-
     completionLogic.create;
-    editor_:=TSynEdit.create(parent);
-    editor_.parent:=parent;
     editor_.Align:=alClient;
     editor_.ScrollBars:=ssAutoBoth;
     editor_.WantTabs:=false;
@@ -335,13 +343,13 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
     addKeystroke(ecSelWordRight      ,scShift+scCtrl+rightArrow);
     addKeystroke(ecPageDown          ,pageDownKey);
     addKeystroke(ecSelPageDown       ,scShift+pageDownKey);
-    if isRealEditor then
-    addKeystroke(editCommandPageRight,scCtrl+pageDownKey);
+    //if isRealEditor then
+    //addKeystroke(editCommandPageRight,scCtrl+pageDownKey);
     addKeystroke(ecSelPageBottom     ,scShift+scCtrl+pageDownKey);
     addKeystroke(ecPageUp            ,pageUpKey);
     addKeystroke(ecSelPageUp         ,scShift + pageUpKey);
-    if isRealEditor then
-    addKeystroke(editCommandPageLeft ,scCtrl + pageUpKey);
+    //if isRealEditor then
+    //addKeystroke(editCommandPageLeft ,scCtrl + pageUpKey);
     addKeystroke(ecSelPageTop        ,scShift + scCtrl + pageUpKey);
     addKeystroke(ecLineStart         ,pos1Key);
     addKeystroke(ecSelLineStart      ,scShift + pos1Key);
@@ -401,7 +409,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
     addKeystroke(editCommandMoveLineDown     ,scAlt  + downArrow);
     addKeystroke(editCommandEscapeSelection  ,scCtrl +           ord('E'));
     addKeystroke(editCommandUnescapeSelection,scCtrl + scShift + ord('E'));
-    highlighter:=TSynMnhSyn.create(parent,msf_input);
+    highlighter:=TSynMnhSyn.create(editor_,msf_input);
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
@@ -409,6 +417,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl;
 
 DESTRUCTOR T_basicEditorMeta.destroy;
   begin
+    unregisterSynEdit(editor_);
     completionLogic.destroy;
   end;
 

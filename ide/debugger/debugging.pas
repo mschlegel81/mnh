@@ -40,9 +40,9 @@ TYPE
       PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack);
       //GUI interaction
       PROCEDURE haltEvaluation;
-      PROCEDURE clearBreakpoints;
-      PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
-      PROCEDURE removeBreakpoint(CONST fileName:string; CONST line:longint);
+      PROCEDURE setBreakpoints(CONST locations:array of T_searchTokenLocation);
+      PROCEDURE addBreakpoint(CONST location:T_searchTokenLocation);
+      PROCEDURE removeBreakpoint(CONST location:T_searchTokenLocation);
       PROCEDURE setState(CONST newState: T_debuggerState);
       FUNCTION paused:boolean;
   end;
@@ -158,30 +158,31 @@ PROCEDURE T_debuggingStepper.haltEvaluation;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.clearBreakpoints;
+PROCEDURE T_debuggingStepper.setBreakpoints(CONST locations:array of T_searchTokenLocation);
+  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    setLength(breakpoints,0);
+    setLength(breakpoints,length(locations));
+    for i:=0 to length(locations)-1 do breakpoints[i]:=locations[i];
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.addBreakpoint(CONST fileName: string; CONST line: longint);
+PROCEDURE T_debuggingStepper.addBreakpoint(CONST location:T_searchTokenLocation);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     i:=length(breakpoints);
     setLength(breakpoints,i+1);
-    breakpoints[i].fileName:=fileName;
-    breakpoints[i].line    :=line;
+    breakpoints[i]:=location;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.removeBreakpoint(CONST fileName:string; CONST line:longint);
+PROCEDURE T_debuggingStepper.removeBreakpoint(CONST location:T_searchTokenLocation);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     i:=0;
-    while (i<length(breakpoints)) and not((breakpoints[i].fileName=fileName) and (breakpoints[i].line=line)) do inc(i);
+    while (i<length(breakpoints)) and not((breakpoints[i]=location)) do inc(i);
     if i<length(breakpoints) then begin
       breakpoints[i]:=breakpoints[length(breakpoints)-1];
       setLength(breakpoints,length(breakpoints)-1);
