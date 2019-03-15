@@ -6,14 +6,20 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,
-  SynHighlighterMnh,ideLayoutUtil;
+  SynHighlighterMnh,ideLayoutUtil,guiOutAdapters;
 
 TYPE
+
+  { TOutputForm }
+
   TOutputForm = class(T_mnhComponentForm)
     OutputSynEdit: TSynEdit;
     outputHighlighter:TSynMnhSyn;
+    PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
+    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performFastUpdate; override;
   private
 
   public
@@ -30,9 +36,24 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     OutputSynEdit.highlighter:=outputHighlighter;
   end;
 
+PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+  begin
+    CanClose:=false;
+  end;
+
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icOutput;
+  end;
+
+PROCEDURE TOutputForm.performSlowUpdate;
+  begin
+
+  end;
+
+PROCEDURE TOutputForm.performFastUpdate;
+  begin
+    guiOutAdapter.flushToGui(true);
   end;
 
 end.

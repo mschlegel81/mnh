@@ -141,7 +141,10 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
     else result:=nil;
 
     for f in FileNames do openSingleFile(f);
-    if result<>nil then result^.activate;
+    if result<>nil then begin
+      inputPageControl.activePage:=result^.tabsheet;
+      result^.activate;
+    end;
   end;
 
 PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
@@ -153,6 +156,7 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
       for k:=0 to meta^.editor.Marks.count-1 do begin
         mark:=meta^.editor.Marks[k];
         if mark.IsBookmark and (mark.BookmarkNumber=index) then begin
+          inputPageControl.activePage:=meta^.tabsheet;
           meta^.activate;
           meta^.editor.CaretY:=mark.line;
           meta^.editor.CaretX:=mark.column;
@@ -170,6 +174,7 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
     if meta=nil then exit(false);
     inputPageControl.activePage:=meta^.tabsheet;
     meta^.setCaret(location);
+    inputPageControl.activePage:=meta^.tabsheet;
     mainForm.ActiveControl:=meta^.editor;
     result:=true;
   end;

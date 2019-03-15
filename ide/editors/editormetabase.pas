@@ -252,6 +252,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
   begin
     initHighlighters;
     initFileTypes;
+    SynHighlighterMnh.initLists;
     disposeHighlighters:=not(Assigned(languageMenuRoot));
   end;
 

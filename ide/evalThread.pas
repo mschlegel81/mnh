@@ -80,8 +80,6 @@ TYPE
       PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
       PROCEDURE onDebuggerEvent;                                virtual; abstract;
       PROCEDURE onEndOfEvaluation;                              virtual; abstract;
-      PROCEDURE triggerFastPolling;                             virtual; abstract;
-      PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); virtual; abstract;
   end;
 
   P_evaluator=^T_evaluator;

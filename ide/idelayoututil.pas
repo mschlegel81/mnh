@@ -39,6 +39,8 @@ TYPE
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
+      PROCEDURE performSlowUpdate; virtual; abstract;
+      PROCEDURE performFastUpdate; virtual; abstract;
     public
       DESTRUCTOR destroy; override;
   end;
@@ -66,6 +68,8 @@ PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 PROCEDURE registerSynEdit(VAR edit:TSynEdit);
 PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
 PROCEDURE propagateEditorFont(newFont:TFont);
+PROCEDURE performSlowUpdates;
+PROCEDURE performFastUpdates;
 IMPLEMENTATION
 VAR activeForms:array of T_mnhComponentForm;
     activeSynEdits:array of TSynEdit;
@@ -79,9 +83,10 @@ PROCEDURE registerSynEdit(VAR edit:TSynEdit);
   begin
     setLength(activeSynEdits,length(activeSynEdits)+1);
     activeSynEdits[length(activeSynEdits)-1]:=edit;
-    if length(activeSynEdits)=0 then begin
+    if length(activeSynEdits)=1 then begin
       edit.Font.name:=settings.editor.fontName;
       edit.Font.size:=settings.editor.fontSize;
+      edit.Font.quality:=fqCleartypeNatural;
     end else edit.Font:=activeSynEdits[0].Font;
   end;
 
@@ -137,6 +142,18 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
     end else writeln('Unexpected dock at component of type ',target.ClassName);
     end else myComponentParent:=cpNone;
     lastDockLocationFor[getIdeComponentType]:=myComponentParent;
+  end;
+
+PROCEDURE performSlowUpdates;
+  VAR f:T_mnhComponentForm;
+  begin
+    for f in activeForms do f.performSlowUpdate;
+  end;
+
+PROCEDURE performFastUpdates;
+  VAR f:T_mnhComponentForm;
+  begin
+    for f in activeForms do f.performFastUpdate;
   end;
 
 INITIALIZATION

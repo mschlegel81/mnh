@@ -12,6 +12,7 @@ object IdeMainForm: TIdeMainForm
   Menu = MainMenu
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
+  OnKeyUp = FormKeyUp
   OnResize = FormResize
   UseDockManager = True
   LCLVersion = '2.0.0.4'
@@ -55,6 +56,7 @@ object IdeMainForm: TIdeMainForm
       Width = 360
       Align = alBottom
       DockSite = True
+      DragKind = dkDock
       DragMode = dmAutomatic
       MultiLine = True
       TabOrder = 0
@@ -111,7 +113,6 @@ object IdeMainForm: TIdeMainForm
         DockSite = True
         MultiLine = True
         TabOrder = 2
-        OnStartDock = EditorsPageControlStartDock
         Options = [nboShowCloseButtons, nboMultiLine]
       end
     end
@@ -502,5 +503,11 @@ object IdeMainForm: TIdeMainForm
     Width = 15
     left = 297
     top = 184
+  end
+  object Timer: TTimer
+    Interval = 10
+    OnTimer = TimerTimer
+    left = 416
+    top = 87
   end
 end

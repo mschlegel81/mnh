@@ -97,7 +97,6 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
       end;
     end;
     if plotSystem.processPendingMessages then include(result,mt_plot_addRow);
-    if plotSystem.requiresFastPolling    then form.triggerFastPolling;
   end;
 
 FINALIZATION

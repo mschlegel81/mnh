@@ -9,9 +9,10 @@ USES
   {$endif}{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms
-  { you can add units after this }, ideMain, evalThread, guiOutAdapters,
-  editorMetaBase, fileWrappers,
-  contexts, out_adapters, codeAssistance;
+  { you can add units after this }, ideMain,
+  mnh_gui_settings, mnh_plotForm, codeAssistance,
+  guiOutAdapters, editorMetaBase, editorMeta, fileWrappers, contexts,
+  out_adapters, packages, mnh_constants, mnh_settings;
 
 {$R *.res}
 

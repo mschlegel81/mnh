@@ -63,7 +63,10 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE clearBookmark(markIndex:longint);
     PROCEDURE toggleBreakpoint;
 
+    //Assistant related
     PROCEDURE triggerCheck;
+    PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
+
     PROCEDURE setFile(CONST fileName:string);
     FUNCTION updateSheetCaption:ansistring;
   public
@@ -81,6 +84,10 @@ T_editorMeta=object(T_basicEditorMeta)
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
 
+    //Externally triggered actions
+    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
+    PROCEDURE pollAssistanceResult;
+
     //PROCEDURE closeEditorWithDialogs;
     //FUNCTION saveAsWithDialog:boolean;
     //FUNCTION saveWithDialog:boolean;
@@ -95,8 +102,6 @@ T_editorMeta=object(T_basicEditorMeta)
     //FUNCTION defaultExtensionByLanguage:ansistring;
     //PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     //FUNCTION resolveImport(CONST text:string):string;
-    //PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
-    //PROCEDURE pollAssistanceResult;
     //PROCEDURE closeEditorQuietly;
     //FUNCTION isFile:boolean;
     //PROCEDURE initForNewFile;
@@ -292,6 +297,19 @@ PROCEDURE T_editorMeta.triggerCheck;
     postCodeAssistanceRequest(@self);
   end;
 
+PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
+  begin
+    disposeCodeAssistanceResponse(latestAssistanceReponse);
+    latestAssistanceReponse:=response;
+    completionLogic.assignEditor(editor_,latestAssistanceReponse);
+    if (paintedWithStateHash<>latestAssistanceReponse^.stateHash) then begin
+      paintedWithStateHash:=latestAssistanceReponse^.stateHash;
+      latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
+      editor.highlighter:=highlighter;
+      editor.Repaint;
+    end;
+  end;
+
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   FUNCTION isDatastore:boolean;
     begin
@@ -350,11 +368,10 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
       triggerCheck;
       invalidateWordUnderCursor;
     end;
-    mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
+    //mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
   end;
 
-PROCEDURE T_editorMeta.processUserCommand(Sender: TObject;
-  VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
 begin
   if command=editCommandToggleBookmark then begin
     toggleBreakpoint;
@@ -395,14 +412,11 @@ PROCEDURE T_editorMeta.activate;
   VAR l:T_language;
   begin
     inherited activate;
-    mainForm.activeFileChanged('Unimplemented sheet caption',language_=LANG_MNH,fileInfo.filePath='');
-
     for l in T_language do if Assigned(fileTypeMeta[l].menuItem) then begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.checked:=(l=language);
     end;
     try
-      //restoreMenuItem.enabled:=isRestorable(getPath)>=0;
       workspace.recentlyActivated.fileClosed(getPath);
       workspace.folderHistory.fileClosed(ExtractFileDir(getPath));
       if language_=LANG_MNH then begin
@@ -429,6 +443,14 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
       if short then result:=extractFileName(fileInfo.filePath)
                else result:=fileInfo.filePath;
     end else result:='<new '+intToStr(metaIndex)+'>';
+  end;
+
+PROCEDURE T_editorMeta.pollAssistanceResult;
+  VAR response:P_codeAssistanceResponse;
+  begin
+    if language_<>LANG_MNH then exit;
+    response:=getLatestAssistanceResponse(@self);
+    if response<>nil then updateAssistanceResponse(response);
   end;
 
 //CONST workspaceSerialVersion=612461341;
@@ -696,28 +718,6 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
 //function T_editorMeta.defaultExtensionByLanguage: ansistring;
 //  begin
 //    result:=fileTypeMeta[language_].extensions[0];
-//  end;
-
-//procedure T_editorMeta.updateAssistanceResponse(
-//  const response: P_codeAssistanceResponse);
-//  begin
-//    disposeCodeAssistanceResponse(latestAssistanceReponse);
-//    latestAssistanceReponse:=response;
-//    completionLogic.assignEditor(editor_,latestAssistanceReponse);
-//    if (paintedWithStateHash<>latestAssistanceReponse^.stateHash) then begin
-//      paintedWithStateHash:=latestAssistanceReponse^.stateHash;
-//      latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
-//      editor.highlighter:=highlighter;
-//      editor.Repaint;
-//    end;
-//  end;
-
-//procedure T_editorMeta.pollAssistanceResult;
-//  VAR response:P_codeAssistanceResponse;
-//  begin
-//    if language_<>LANG_MNH then exit;
-//    response:=getLatestAssistanceResponse(@self);
-//    if response<>nil then updateAssistanceResponse(response);
 //  end;
 
 //function T_editorMeta.changed: boolean;

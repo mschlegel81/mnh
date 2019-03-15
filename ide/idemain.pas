@@ -8,7 +8,7 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging;
+  outputFormUnit,debugging,assistanceFormUnit;
 
 TYPE
 
@@ -37,15 +37,16 @@ TYPE
     Splitter3: TSplitter;
     Splitter4: TSplitter;
     StatusBar1: TStatusBar;
+    timer: TTimer;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE miNewClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
     PROCEDURE PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
-    PROCEDURE EditorsPageControlStartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
@@ -54,9 +55,9 @@ TYPE
     PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); override;
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
-    PROCEDURE triggerFastPolling;                             override;
-    PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
+    PROCEDURE TimerTimer(Sender: TObject);
   private
+    subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
     FUNCTION startDock(CONST PageControl:TPageControl):TDragDockObject;
   public
@@ -70,26 +71,37 @@ IMPLEMENTATION
 
 {$R ideMain.lfm}
 
-PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject;
-  CONST FileNames: array of string);
+PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   begin
-
+    editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
   end;
+
+PROCEDURE TIdeMainForm.FormKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
+begin
+  writeln('FormKeyUp: ',key);
+end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
   VAR outputForm:TOutputForm;
   begin
+    subTimerCounter:=0;
     splitterPositions[1]:=16384;
     splitterPositions[2]:=10000;
     splitterPositions[3]:=16384;
     splitterPositions[4]:=16384;
+    ideLayoutUtil.mainForm:=self;
+
     outputForm:=TOutputForm.create(self);
     attachNewForm(outputForm);
-    ideLayoutUtil.mainForm:=self;
+    attachNewForm(TAssistanceForm.create(self));
+
     setupEditorMetaBase(miLanguage);
     runnerModel.create;
     initGuiOutAdapters(self,outputForm.OutputSynEdit);
+
     initUnit(@guiAdapters);
+
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
@@ -122,8 +134,6 @@ PROCEDURE TIdeMainForm.PageControl3StartDock(Sender: TObject;
   VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl3); end;
 PROCEDURE TIdeMainForm.PageControl4StartDock(Sender: TObject;
   VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl4); end;
-PROCEDURE TIdeMainForm.EditorsPageControlStartDock(Sender: TObject;
-  VAR DragObject: TDragDockObject); begin DragObject:=startDock(EditorsPageControl); end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
@@ -133,8 +143,7 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
     splitterPositions[4]:=PageControl4.width *65535 div  width;
   end;
 
-FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl
-  ): TDragDockObject;
+FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObject;
   VAR control:TControl;
       newForm:T_mnhComponentForm;
   begin
@@ -190,16 +199,28 @@ begin
 
 end;
 
-PROCEDURE TIdeMainForm.triggerFastPolling;
-begin
+PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
+  PROCEDURE slowUpdates; inline;
+    VAR edit:P_editorMeta;
+    begin
+      edit:=workspace.currentEditor;
+      if (edit<>nil) then edit^.pollAssistanceResult;
+      performSlowUpdates;
+    end;
 
-end;
+  PROCEDURE fastUpdates; inline;
+    begin
+      performFastUpdates;
+    end;
 
-PROCEDURE TIdeMainForm.activeFileChanged(CONST newCaption: string;
-  CONST isMnhFile: boolean; CONST isPseudoFile: boolean);
-begin
-
-end;
+  begin
+    fastUpdates;
+    inc(subTimerCounter);
+    if subTimerCounter>100 then begin
+      slowUpdates;
+      subTimerCounter:=0;
+    end;
+  end;
 
 end.
 
