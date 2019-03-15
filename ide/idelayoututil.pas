@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings,debugging;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -17,7 +17,9 @@ TYPE
                   icCustomForm,
                   icTable,
                   icVariableView,
-                  icDebugger);
+                  icDebugger,
+                  icDebuggerVariables,
+                  icDebuggerBreakpoints);
 
   T_componentParent=(cpNone,
                      cpPageControl1,
@@ -59,12 +61,15 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
     {icCustomForm}  cpNone,
     {icTable}       cpNone,
     {icVariableView}cpNone,
-    {icDebugger}    cpPageControl4);
+    {icDebugger}    cpPageControl4,
+    {icDebuggerVari}cpPageControl4,
+    {icDebuggerBrea}cpPageControl4);
 
     mainForm:T_mnhIdeForm=nil;
+    currentSnapshot:P_debuggingSnapshot=nil;
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
-
+FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent):boolean;
 PROCEDURE registerSynEdit(VAR edit:TSynEdit);
 PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
 PROCEDURE propagateEditorFont(newFont:TFont);
@@ -77,6 +82,13 @@ VAR activeForms:array of T_mnhComponentForm;
 PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
   begin
     if mainForm<>nil then mainForm.attachNewForm(newForm);
+  end;
+
+FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent):boolean;
+  VAR f:T_mnhComponentForm;
+  begin
+    result:=false;
+    for f in activeForms do if f.getIdeComponentType=ideComponent then exit(true);
   end;
 
 PROCEDURE registerSynEdit(VAR edit:TSynEdit);

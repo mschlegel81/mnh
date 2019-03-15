@@ -251,16 +251,16 @@ object IdeMainForm: TIdeMainForm
         OnClick = miRunScriptExternallyClick
       end
       object miProfile: TMenuItem
+        AutoCheck = True
         Caption = '&Profile'
-        OnClick = miProfileClick
       end
       object miDebug: TMenuItem
+        AutoCheck = True
         Caption = '&Debug'
-        OnClick = miDebugClick
       end
       object miKeepStackTrace: TMenuItem
+        AutoCheck = True
         Caption = '&Keep stack trace'
-        OnClick = miKeepStackTraceClick
       end
     end
     object smShow: TMenuItem

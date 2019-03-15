@@ -417,8 +417,6 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.checked:=(l=language);
     end;
     try
-      workspace.recentlyActivated.fileClosed(getPath);
-      workspace.folderHistory.fileClosed(ExtractFileDir(getPath));
       if language_=LANG_MNH then begin
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;

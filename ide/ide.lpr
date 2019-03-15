@@ -12,13 +12,29 @@ USES
   { you can add units after this }, ideMain,
   mnh_gui_settings, mnh_plotForm, codeAssistance,
   guiOutAdapters, editorMetaBase, editorMeta, fileWrappers, contexts,
-  out_adapters, packages, mnh_constants, mnh_settings;
+  out_adapters, packages, mnh_constants, mnh_settings,cmdLineInterpretation,
+  ipcModel,mySys, unit1;
 
 {$R *.res}
 
 begin
+  cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
+  Application.title:='MNH5 - GUI';
+  RequireDerivedFormResource := true;
   Application.initialize;
-  Application.CreateForm(TIdeMainForm, IdeMainForm);
-  Application.run;
+  if wantMainLoopAfterParseCmdLine then begin
+    {$ifndef debugMode}
+    hideConsole;
+    {$endif}
+    if reEvaluationWithGUIrequired
+    then halt //Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
+    else if sendParametersToOtherInstance(filesToOpenInEditor)
+    then halt
+    else Application.CreateForm(TIdeMainForm, IdeMainForm);
+  Application.CreateForm(TDebuggerForm, DebuggerForm);
+    Application.run;
+    showConsole;
+    if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then pauseOnce;
+  end;
 end.
 

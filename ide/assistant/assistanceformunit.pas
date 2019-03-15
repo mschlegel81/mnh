@@ -26,11 +26,14 @@ TYPE
 
   end;
 
+PROCEDURE ensureAssistanceForm;
 IMPLEMENTATION
 
 {$R *.lfm}
-
-{ TAssistanceForm }
+PROCEDURE ensureAssistanceForm;
+  begin
+    if not(hasFormOfType(icAssistance)) then dockNewForm(TAssistanceForm.create(Application));
+  end;
 
 PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
   begin
