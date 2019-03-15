@@ -18,6 +18,42 @@ TYPE
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
     MainMenu: TMainMenu;
+    miAbout: TMenuItem;
+    miHelp: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    miKeepStackTrace: TMenuItem;
+    miDebug: TMenuItem;
+    miProfile: TMenuItem;
+    miRunScriptExternally: TMenuItem;
+    miRunScript: TMenuItem;
+    miRunDirect: TMenuItem;
+    miHaltEvaluation: TMenuItem;
+    miEditScriptFile: TMenuItem;
+    miToggleFullscreen: TMenuItem;
+    miDecFontSize: TMenuItem;
+    miIncFontSize: TMenuItem;
+    miRename: TMenuItem;
+    miGotoLine: TMenuItem;
+    miFindPrevious: TMenuItem;
+    miFindNext: TMenuItem;
+    miFind: TMenuItem;
+    miReplace: TMenuItem;
+    smEdit: TMenuItem;
+    smRecent: TMenuItem;
+    smHistory: TMenuItem;
+    miRestore: TMenuItem;
+    miExportToHtml: TMenuItem;
+    miSaveAs: TMenuItem;
+    miSave: TMenuItem;
+    miClose: TMenuItem;
+    miOpenClassical: TMenuItem;
+    miOpen: TMenuItem;
+    miBreakpoints: TMenuItem;
+    miDebugger: TMenuItem;
+    miQuickEval: TMenuItem;
+    miOutline: TMenuItem;
+    miAssistant: TMenuItem;
     smAppearance: TMenuItem;
     miLanguage: TMenuItem;
     miNew: TMenuItem;
@@ -42,8 +78,38 @@ TYPE
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE miAboutClick(Sender: TObject);
+    PROCEDURE miAssistantClick(Sender: TObject);
+    PROCEDURE miBreakpointsClick(Sender: TObject);
+    PROCEDURE miCloseClick(Sender: TObject);
+    PROCEDURE miDebugClick(Sender: TObject);
+    PROCEDURE miDebuggerClick(Sender: TObject);
+    PROCEDURE miDecFontSizeClick(Sender: TObject);
+    PROCEDURE miEditScriptFileClick(Sender: TObject);
+    PROCEDURE miExportToHtmlClick(Sender: TObject);
+    PROCEDURE miFindClick(Sender: TObject);
+    PROCEDURE miFindNextClick(Sender: TObject);
+    PROCEDURE miFindPreviousClick(Sender: TObject);
+    PROCEDURE miGotoLineClick(Sender: TObject);
+    PROCEDURE miHelpClick(Sender: TObject);
+    PROCEDURE miIncFontSizeClick(Sender: TObject);
+    PROCEDURE miKeepStackTraceClick(Sender: TObject);
     PROCEDURE miNewClick(Sender: TObject);
+    PROCEDURE miOpenClassicalClick(Sender: TObject);
+    PROCEDURE miOpenClick(Sender: TObject);
+    PROCEDURE miOutlineClick(Sender: TObject);
+    PROCEDURE miProfileClick(Sender: TObject);
+    PROCEDURE miQuickEvalClick(Sender: TObject);
+    PROCEDURE miRenameClick(Sender: TObject);
+    PROCEDURE miReplaceClick(Sender: TObject);
+    PROCEDURE miRestoreClick(Sender: TObject);
+    PROCEDURE miRunDirectClick(Sender: TObject);
+    PROCEDURE miRunScriptClick(Sender: TObject);
+    PROCEDURE miRunScriptExternallyClick(Sender: TObject);
+    PROCEDURE miSaveAsClick(Sender: TObject);
+    PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
+    PROCEDURE miToggleFullscreenClick(Sender: TObject);
     PROCEDURE PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
     PROCEDURE PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
@@ -116,15 +182,165 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
     PageControl4.width := width*splitterPositions[4] div 65535;
   end;
 
+PROCEDURE TIdeMainForm.miAboutClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miAssistantClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miDebugClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miDebuggerClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miExportToHtmlClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miFindClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miFindNextClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miFindPreviousClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miKeepStackTraceClick(Sender: TObject);
+begin
+
+end;
+
 PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   begin
     workspace.addEditorMetaForNewFile;
   end;
 
+PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miRenameClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miReplaceClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miSaveAsClick(Sender: TObject);
+begin
+
+end;
+
+PROCEDURE TIdeMainForm.miSaveClick(Sender: TObject);
+begin
+
+end;
+
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
   end;
+
+PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
+begin
+
+end;
 
 PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject;
   VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl1); end;
@@ -204,7 +420,9 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     VAR edit:P_editorMeta;
     begin
       edit:=workspace.currentEditor;
-      if (edit<>nil) then edit^.pollAssistanceResult;
+      if (edit<>nil) then begin
+        edit^.pollAssistanceResult;
+      end;
       performSlowUpdates;
     end;
 
@@ -216,7 +434,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
   begin
     fastUpdates;
     inc(subTimerCounter);
-    if subTimerCounter>100 then begin
+    if subTimerCounter>50 then begin
       slowUpdates;
       subTimerCounter:=0;
     end;

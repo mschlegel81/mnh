@@ -155,6 +155,113 @@ object IdeMainForm: TIdeMainForm
         ShortCut = 16462
         OnClick = miNewClick
       end
+      object miOpen: TMenuItem
+        Caption = 'Open'
+        ShortCut = 16463
+        OnClick = miOpenClick
+      end
+      object miOpenClassical: TMenuItem
+        Caption = 'Open (classical dialog)'
+        ShortCut = 24655
+        OnClick = miOpenClassicalClick
+      end
+      object miClose: TMenuItem
+        Caption = 'Close'
+        ShortCut = 16471
+        OnClick = miCloseClick
+      end
+      object miSave: TMenuItem
+        Caption = 'Save'
+        ShortCut = 16467
+        OnClick = miSaveClick
+      end
+      object miSaveAs: TMenuItem
+        Caption = 'Save as'
+        ShortCut = 49235
+        OnClick = miSaveAsClick
+      end
+      object miExportToHtml: TMenuItem
+        Caption = 'Export to html'
+        OnClick = miExportToHtmlClick
+      end
+      object miRestore: TMenuItem
+        Caption = 'Restore from filesystem'
+        OnClick = miRestoreClick
+      end
+      object smHistory: TMenuItem
+        Caption = '&History'
+      end
+      object smRecent: TMenuItem
+        Caption = '&Recent'
+      end
+    end
+    object smEdit: TMenuItem
+      Caption = '&Edit'
+      object miFind: TMenuItem
+        Caption = '&Find'
+        ShortCut = 16454
+        OnClick = miFindClick
+      end
+      object miReplace: TMenuItem
+        Caption = '&Replace'
+        ShortCut = 16466
+        OnClick = miReplaceClick
+      end
+      object miFindNext: TMenuItem
+        Caption = 'Find &next'
+        ShortCut = 114
+        OnClick = miFindNextClick
+      end
+      object miFindPrevious: TMenuItem
+        Caption = 'Find &previous'
+        ShortCut = 8306
+        OnClick = miFindPreviousClick
+      end
+      object miGotoLine: TMenuItem
+        Caption = 'Goto line'
+        ShortCut = 16455
+        OnClick = miGotoLineClick
+      end
+      object miRename: TMenuItem
+        Caption = 'R&ename'
+        ShortCut = 24658
+        OnClick = miRenameClick
+      end
+    end
+    object MenuItem3: TMenuItem
+      Caption = 'E&valuation'
+      object miHaltEvaluation: TMenuItem
+        Caption = 'Halt evaluation(s)'
+        Enabled = False
+        ShortCut = 123
+      end
+      object miRunDirect: TMenuItem
+        Caption = '&Evaluate'
+        ShortCut = 116
+        OnClick = miRunDirectClick
+      end
+      object miRunScript: TMenuItem
+        Caption = '&Run script'
+        ShortCut = 120
+        OnClick = miRunScriptClick
+      end
+      object miRunScriptExternally: TMenuItem
+        Caption = 'Run script e&xternally'
+        ShortCut = 8312
+        OnClick = miRunScriptExternallyClick
+      end
+      object miProfile: TMenuItem
+        Caption = '&Profile'
+        OnClick = miProfileClick
+      end
+      object miDebug: TMenuItem
+        Caption = '&Debug'
+        OnClick = miDebugClick
+      end
+      object miKeepStackTrace: TMenuItem
+        Caption = '&Keep stack trace'
+        OnClick = miKeepStackTraceClick
+      end
     end
     object smShow: TMenuItem
       Caption = '&Show'
@@ -163,11 +270,61 @@ object IdeMainForm: TIdeMainForm
         ShortCut = 16464
         OnClick = miSettingsClick
       end
+      object miAssistant: TMenuItem
+        Caption = '&Assistant'
+        OnClick = miAssistantClick
+      end
+      object miOutline: TMenuItem
+        Caption = '&Outline'
+        OnClick = miOutlineClick
+      end
+      object miHelp: TMenuItem
+        Caption = '&Help'
+        OnClick = miHelpClick
+      end
+      object miQuickEval: TMenuItem
+        Caption = '&Quick evaluation'
+        OnClick = miQuickEvalClick
+      end
+      object miDebugger: TMenuItem
+        Caption = '&Debugger'
+        OnClick = miDebuggerClick
+      end
+      object miBreakpoints: TMenuItem
+        Caption = '&Breakpoints'
+        OnClick = miBreakpointsClick
+      end
+      object miAbout: TMenuItem
+        Caption = 'About'
+        OnClick = miAboutClick
+      end
     end
     object smAppearance: TMenuItem
       Caption = '&Appearance'
       object miLanguage: TMenuItem
         Caption = '&Language'
+      end
+      object miIncFontSize: TMenuItem
+        Caption = '&Increase font size'
+        ShortCut = 16571
+        OnClick = miIncFontSizeClick
+      end
+      object miDecFontSize: TMenuItem
+        Caption = '&Decrease font size'
+        ShortCut = 16573
+        OnClick = miDecFontSizeClick
+      end
+      object miToggleFullscreen: TMenuItem
+        Caption = 'Toggle &fullscreen'
+        ShortCut = 122
+        OnClick = miToggleFullscreenClick
+      end
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'S&cripts'
+      object miEditScriptFile: TMenuItem
+        Caption = 'Edit script file'
+        OnClick = miEditScriptFileClick
       end
     end
   end
