@@ -13,7 +13,7 @@ USES
   mnh_gui_settings, mnh_plotForm, codeAssistance,
   guiOutAdapters, editorMetaBase, editorMeta, fileWrappers, contexts,
   out_adapters, packages, mnh_constants, mnh_settings,cmdLineInterpretation,
-  ipcModel,mySys, unit1;
+  ipcModel,mySys;
 
 {$R *.res}
 
@@ -31,7 +31,6 @@ begin
     else if sendParametersToOtherInstance(filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);
-  Application.CreateForm(TDebuggerForm, DebuggerForm);
     Application.run;
     showConsole;
     if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then pauseOnce;

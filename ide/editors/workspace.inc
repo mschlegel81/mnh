@@ -8,12 +8,16 @@ T_workspace=object(T_serializable)
 
     nextMetaIndex:longint;
 
+    oldMarkers:array of record
+      location:T_searchTokenLocation;
+      markIndex:byte;
+    end;
+
     metas:array of P_editorMeta;
     recentlyActivated:T_fileHistory;
     folderHistory    :T_fileHistory;
     fileHistory      :T_fileHistory;
 
-    FUNCTION getAllBreakpoints:T_searchTokenLocations;
   public
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
@@ -36,28 +40,15 @@ T_workspace=object(T_serializable)
     PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 
     PROCEDURE updateEditorsByGuiStatus;
+
+    FUNCTION getAllBreakpoints:T_searchTokenLocations;
+
+    PROCEDURE closeCurrentFile;
+    FUNCTION saveCurrentFile(CONST meta:P_editorMeta=nil):boolean;
 end;
 {$endif}
 {$ifdef includeImplementation}
-FUNCTION T_workspace.getAllBreakpoints: T_searchTokenLocations;
-  VAR m:P_editorMeta;
-      mark:TSynEditMark;
-      k:longint;
-  begin
-    setLength(result,0);
-    for m in metas do begin
-      for k:=0 to m^.editor.Marks.count-1 do begin
-        mark:=m^.editor.Marks[k];
-        if not(mark.IsBookmark) then begin
-          setLength(result,length(result)+1);
-          result[length(result)-1]:=m^.markLocation(mark.line,mark.column);
-        end;
-      end;
-    end;
-  end;
-
-CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm;
-  CONST pageControlForEditors: TPageControl; CONST breakpointImages,
+CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,
   bookmarkImages: TImageList);
   begin
     mainForm:=ide;
@@ -73,25 +64,30 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm;
   end;
 
 DESTRUCTOR T_workspace.destroy;
-begin
-
-end;
+  VAR k:longint;
+  begin
+    recentlyActivated.destroy;
+    folderHistory.destroy;
+    fileHistory.destroy;
+    for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
+    setLength(metas,0);
+  end;
 
 FUNCTION T_workspace.getSerialVersion: dword;
-begin
-
-end;
+  begin
+    result:=2624113;
+  end;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper
   ): boolean;
-begin
+  begin
 
-end;
+  end;
 
 PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
-begin
+  begin
 
-end;
+  end;
 
 FUNCTION T_workspace.currentEditor: P_editorMeta;
   VAR meta:P_editorMeta;
@@ -113,7 +109,9 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
     result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
   end;
 
-FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
+FUNCTION T_workspace.addOrGetEditorMetaForFiles(
+  CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean
+  ): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
     FUNCTION isPseudoName:boolean;
       begin
@@ -166,7 +164,8 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
     end;
   end;
 
-FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolean;
+FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation
+  ): boolean;
   VAR meta:P_editorMeta;
   begin
     if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
@@ -179,14 +178,16 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
     result:=true;
   end;
 
-PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   VAR caller:TSynEdit;
   begin
     caller:=TSynEdit(Sender);
     if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
   end;
 
-PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject;
+  button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
       caller:TSynEdit;
   begin
@@ -204,4 +205,76 @@ PROCEDURE T_workspace.updateEditorsByGuiStatus;
   begin
     for m in metas do m^.editor.readonly:=runnerModel.areEditorsLocked or m^.strictlyReadOnly;
   end;
+
+FUNCTION T_workspace.getAllBreakpoints: T_searchTokenLocations;
+  VAR m:P_editorMeta;
+      mark:TSynEditMark;
+      k:longint;
+  begin
+    setLength(result,0);
+    for m in metas do begin
+      for k:=0 to m^.editor.Marks.count-1 do begin
+        mark:=m^.editor.Marks[k];
+        if not(mark.IsBookmark) then begin
+          setLength(result,length(result)+1);
+          result[length(result)-1]:=m^.markLocation(mark.line,mark.column);
+        end;
+      end;
+    end;
+    for k:=0 to length(oldMarkers)-1 do if oldMarkers[k].markIndex>9 then begin
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=oldMarkers[k].location;
+    end;
+  end;
+
+PROCEDURE T_workspace.closeCurrentFile;
+  VAR toClose:P_editorMeta;
+      k:longint;
+      answer:integer;
+      mark:TSynEditMark;
+  begin
+    toClose:=currentEditor;
+    if toClose=nil then exit;
+
+    //Ask if editor shall be closed
+    if toClose^.editor.modified then begin
+      answer:=closeDialogForm.showOnClose(toClose^.pseudoName(true));
+      if answer=mrOk then begin
+        if not(saveCurrentFile) then exit
+      end else if answer=mrCancel then exit;
+    end;
+
+    //Editor shall be closed
+    //Copy marks
+    if not(toClose^.isPseudoFile) then
+    for k:=0 to toClose^.editor.Marks.count-1 do begin
+      setLength(oldMarkers,length(oldMarkers)+1);
+      mark:=toClose^.editor.Marks[k];
+      oldMarkers[length(oldMarkers)-1].location:=toClose^.markLocation(mark.line,mark.column);
+      if mark.IsBookmark
+      then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
+      else oldMarkers[length(oldMarkers)-1].markIndex:=10;
+    end;
+
+    //actually close editor...
+    k:=0;
+    while (k<length(metas)) and (metas[k]<>toClose) do inc(k);
+    if k>length(metas) then raise Exception.create('Invalid state; Found editor to close but cannot determine index');
+    dispose(metas[k],destroy);
+    metas[k]:=metas[length(metas)-1];
+    setLength(metas,length(metas)-1);
+
+    toClose:=currentEditor;
+    if toClose<>nil then toClose^.activate;
+  end;
+
+FUNCTION T_workspace.saveCurrentFile(CONST meta:P_editorMeta=nil): boolean;
+  VAR toSave:P_editorMeta;
+  begin
+    if meta=nil then toSave:=currentEditor else toSave:=meta;
+    if toSave=nil then exit(false);
+
+//    ...
+  end;
+
 {$endif}

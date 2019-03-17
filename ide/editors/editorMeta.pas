@@ -368,7 +368,6 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
       triggerCheck;
       invalidateWordUnderCursor;
     end;
-    //mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
