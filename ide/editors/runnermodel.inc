@@ -13,15 +13,16 @@ T_runnerModel=object
     PROCEDURE setDebugMode(CONST value:boolean);
   public
     stackTracing:boolean;
+    profiling:boolean;
     firstCallAfterActivation:boolean;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
     FUNCTION canRun(CONST quickMode:boolean=false):boolean;
-    PROCEDURE customRun(CONST mainCall,profiling:boolean; CONST mainParameters:string='');
+    PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
     PROCEDURE runExternally(CONST mainParameters:string='');
-    PROCEDURE rerun(CONST profiling:boolean);
+    PROCEDURE rerun();
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
@@ -62,7 +63,7 @@ FUNCTION T_runnerModel.canRun(CONST quickMode:boolean=false): boolean;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
   end;
 
-PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST mainParameters: string);
+PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters: string);
   VAR m:P_editorMeta;
       contextType:T_evaluationContextType;
   begin
@@ -120,9 +121,9 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters:string='');
     runCommandAsyncOrPipeless(executor,callParameters,true,folder);
   end;
 
-PROCEDURE T_runnerModel.rerun(CONST profiling:boolean);
+PROCEDURE T_runnerModel.rerun();
   begin
-    customRun(lastStart.mainCall,profiling,lastStart.parameters);
+    customRun(lastStart.mainCall,lastStart.parameters);
   end;
 
 PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);

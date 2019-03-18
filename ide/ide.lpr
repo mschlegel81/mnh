@@ -13,7 +13,7 @@ USES
   mnh_gui_settings, mnh_plotForm, codeAssistance,
   guiOutAdapters, editorMetaBase, editorMeta, fileWrappers, contexts,
   out_adapters, packages, mnh_constants, mnh_settings,cmdLineInterpretation,
-  ipcModel,mySys;
+  ipcModel,mySys,saveFile;
 
 {$R *.res}
 

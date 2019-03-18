@@ -75,6 +75,7 @@ PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
 PROCEDURE propagateEditorFont(newFont:TFont);
 PROCEDURE performSlowUpdates;
 PROCEDURE performFastUpdates;
+FUNCTION focusedEditor:TSynEdit;
 IMPLEMENTATION
 VAR activeForms:array of T_mnhComponentForm;
     activeSynEdits:array of TSynEdit;
@@ -166,6 +167,13 @@ PROCEDURE performFastUpdates;
   VAR f:T_mnhComponentForm;
   begin
     for f in activeForms do f.performFastUpdate;
+  end;
+
+FUNCTION focusedEditor: TSynEdit;
+  VAR e:TSynEdit;
+  begin
+    result:=nil;
+    for e in activeSynEdits do if e.Focused then exit(e);
   end;
 
 INITIALIZATION

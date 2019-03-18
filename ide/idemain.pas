@@ -8,7 +8,7 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,mnh_splash,debuggerForms;
+  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel;
 
 TYPE
 
@@ -76,12 +76,12 @@ TYPE
     timer: TTimer;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
-    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miAssistantClick(Sender: TObject);
     PROCEDURE miBreakpointsClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
+    PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDebuggerClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miEditScriptFileClick(Sender: TObject);
@@ -92,10 +92,12 @@ TYPE
     PROCEDURE miGotoLineClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
+    PROCEDURE miKeepStackTraceClick(Sender: TObject);
     PROCEDURE miNewClick(Sender: TObject);
     PROCEDURE miOpenClassicalClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOutlineClick(Sender: TObject);
+    PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miQuickEvalClick(Sender: TObject);
     PROCEDURE miRenameClick(Sender: TObject);
     PROCEDURE miReplaceClick(Sender: TObject);
@@ -131,17 +133,12 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-
+USES mnh_splash;
 {$R ideMain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   begin
     editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
-  end;
-
-PROCEDURE TIdeMainForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
-  begin
-    writeln('FormKeyUp: ',key);
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
@@ -192,13 +189,18 @@ PROCEDURE TIdeMainForm.miAssistantClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    ensureBreakpointsForm;
   end;
 
 PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    workspace.closeCurrentFile;
   end;
+
+PROCEDURE TIdeMainForm.miDebugClick(Sender: TObject);
+begin
+  runnerModel.debugMode:=miDebug.checked;
+end;
 
 PROCEDURE TIdeMainForm.miDebuggerClick(Sender: TObject);
   begin
@@ -212,27 +214,27 @@ PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    workspace.addOrGetEditorMetaForFiles(utilityScriptFileName,true);
   end;
 
 PROCEDURE TIdeMainForm.miExportToHtmlClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    workspace.exportCurrentFileToHtml;
   end;
 
 PROCEDURE TIdeMainForm.miFindClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    searchReplaceModel.beginFindOrReplace(focusedEditor,true);
   end;
 
 PROCEDURE TIdeMainForm.miFindNextClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    searchReplaceModel.doFindNext(focusedEditor);
   end;
 
 PROCEDURE TIdeMainForm.miFindPreviousClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    searchReplaceModel.doFindPrevious(focusedEditor);
   end;
 
 PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
@@ -250,9 +252,14 @@ PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
     //TODO: Implement me
   end;
 
+PROCEDURE TIdeMainForm.miKeepStackTraceClick(Sender: TObject);
+  begin
+    runnerModel.stackTracing:=miKeepStackTrace.checked;
+  end;
+
 PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   begin
-    workspace.addEditorMetaForNewFile;
+    workspace.createNewFile;
   end;
 
 PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
@@ -270,6 +277,11 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
     //TODO: Implement me
   end;
 
+PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
+begin
+  runnerModel.profiling:=miProfile.checked;
+end;
+
 PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
   begin
     //TODO: Implement me
@@ -277,12 +289,25 @@ PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRenameClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    //TODO: Implement me like:
+      //VAR meta:P_editorMeta;
+      //    id:string;
+      //    idType:T_tokenType;
+      //    renameLocation:T_searchTokenLocation;
+      //    scanOther:boolean;
+      //begin
+      //  meta:=getEditor;
+      //  if (meta<>nil) and
+      //     meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
+      //     (renameForm.showModalFor(id,idType,scanOther)=mrOk) then begin
+      //    meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      //  end;
+      //end;
   end;
 
 PROCEDURE TIdeMainForm.miReplaceClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    searchReplaceModel.beginFindOrReplace(focusedEditor,false);
   end;
 
 PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
@@ -292,12 +317,12 @@ PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    runnerModel.customRun(false);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
   begin
-    runnerModel.customRun(false,miProfile.checked);
+    runnerModel.customRun(false);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
@@ -307,12 +332,12 @@ PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miSaveAsClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    workspace.saveCurrentFile(true);
   end;
 
 PROCEDURE TIdeMainForm.miSaveClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    workspace.saveCurrentFile();
   end;
 
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
@@ -382,7 +407,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
 
 PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
   begin
-
+    //TODO: Implement me
   end;
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
@@ -393,11 +418,12 @@ PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
 
 PROCEDURE TIdeMainForm.onDebuggerEvent;
   begin
-
+    //TODO: Implement me
   end;
 
 PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
+    //TODO: Implement me
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);

@@ -15,10 +15,10 @@ T_workspace=object(T_serializable)
 
     metas:array of P_editorMeta;
     recentlyActivated:T_fileHistory;
-    folderHistory    :T_fileHistory;
     fileHistory      :T_fileHistory;
 
   public
+    folderHistory    :T_fileHistory;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList);
@@ -31,7 +31,10 @@ T_workspace=object(T_serializable)
 
     FUNCTION currentEditor:P_editorMeta;
 
+  private
     FUNCTION addEditorMetaForNewFile:P_editorMeta;
+  public
+    PROCEDURE createNewFile;
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
 
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
@@ -44,7 +47,8 @@ T_workspace=object(T_serializable)
     FUNCTION getAllBreakpoints:T_searchTokenLocations;
 
     PROCEDURE closeCurrentFile;
-    FUNCTION saveCurrentFile(CONST meta:P_editorMeta=nil):boolean;
+    FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
+    PROCEDURE exportCurrentFileToHtml;
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -78,8 +82,7 @@ FUNCTION T_workspace.getSerialVersion: dword;
     result:=2624113;
   end;
 
-FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper
-  ): boolean;
+FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin
 
   end;
@@ -109,9 +112,16 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
     result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
   end;
 
+PROCEDURE T_workspace.createNewFile;
+  VAR meta:P_editorMeta;
+  begin
+    meta:=addEditorMetaForNewFile;
+    inputPageControl.activePage:=meta^.tabsheet;
+    meta^.activate;
+  end;
+
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(
-  CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean
-  ): P_editorMeta;
+  CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
     FUNCTION isPseudoName:boolean;
       begin
@@ -164,8 +174,7 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
     end;
   end;
 
-FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation
-  ): boolean;
+FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolean;
   VAR meta:P_editorMeta;
   begin
     if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
@@ -240,7 +249,7 @@ PROCEDURE T_workspace.closeCurrentFile;
     if toClose^.editor.modified then begin
       answer:=closeDialogForm.showOnClose(toClose^.pseudoName(true));
       if answer=mrOk then begin
-        if not(saveCurrentFile) then exit
+        if not(saveCurrentFile(false,toClose)) then exit
       end else if answer=mrCancel then exit;
     end;
 
@@ -268,13 +277,80 @@ PROCEDURE T_workspace.closeCurrentFile;
     if toClose<>nil then toClose^.activate;
   end;
 
-FUNCTION T_workspace.saveCurrentFile(CONST meta:P_editorMeta=nil): boolean;
+FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil): boolean;
   VAR toSave:P_editorMeta;
+      newName,previousName,path,name,ext:string;
+      lineEndingSetting:byte;
+      arr:T_arrayOfString;
+      i:longint;
   begin
-    if meta=nil then toSave:=currentEditor else toSave:=meta;
+    if meta=nil
+    then toSave:=currentEditor
+    else toSave:=meta;
+    //If nothing to save, then exit
     if toSave=nil then exit(false);
 
-//    ...
+    //If file has no name or "saveAs" has been called, show save dialog
+    previousName:=toSave^.fileInfo.filePath;
+    if (toSave^.isPseudoFile) or forceDialog then begin
+      if toSave^.isPseudoFile then begin
+        path:=GetCurrentDir;
+        name:='';
+        if length(fileTypeMeta[toSave^.language].extensions)>0
+        then ext:='.'+lowercase(fileTypeMeta[toSave^.language].extensions[0])
+        else ext:='';
+      end else begin
+        path:=ExtractFileDir     (toSave^.fileInfo.filePath);
+        name:=ExtractFileNameOnly(toSave^.fileInfo.filePath);
+        ext :=extractFileExt     (toSave^.fileInfo.filePath);
+      end;
+      newName:=safeCallback(path,name,ext);
+      if newName=''
+      then exit(false)
+      else toSave^.fileInfo.filePath:=expandFileName(newName);
+    end;
+
+    //Update history
+    if (previousName<>'') and (previousName<>toSave^.fileInfo.filePath) then begin
+      fileHistory.fileClosed(previousName);
+      folderHistory.fileClosed(ExtractFileDir(previousName));
+    end;
+
+    //Set line ending
+    if previousName<>toSave^.fileInfo.filePath
+    then lineEndingSetting:=settings.newFileLineEnding
+    else lineEndingSetting:=settings.overwriteLineEnding;
+
+    //Save filelines
+    setLength(arr,toSave^.editor.lines.count);
+    for i:=0 to length(arr)-1 do arr[i]:=toSave^.editor.lines[i];
+    with toSave^.fileInfo do begin
+      writeFileLines(filePath,arr,LINE_ENDING[lineEndingSetting],false);
+      fileAge(filePath,fileAccessAge);
+      isChanged:=false;
+      toSave^.editor.modified:=false;
+      toSave^.editor.MarkTextAsSaved;
+      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
+    end;
+  end;
+
+PROCEDURE T_workspace.exportCurrentFileToHtml;
+  VAR SynExporterHTML: TSynExporterHTML;
+      name:string;
+      meta:P_editorMeta;
+  begin
+    meta:=currentEditor;
+    if meta=nil then exit;
+
+    name:=safeCallback(GetCurrentDir,'','.html');
+    if name='' then exit;
+
+    SynExporterHTML:=TSynExporterHTML.create(nil);
+    SynExporterHTML.title:=meta^.pseudoName();
+    SynExporterHTML.highlighter:=meta^.editor.highlighter;
+    SynExporterHTML.ExportAll(meta^.editor.lines);
+    SynExporterHTML.saveToFile(name);
+    SynExporterHTML.free;
   end;
 
 {$endif}
