@@ -8,7 +8,7 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit;
+  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil;
 
 TYPE
 
@@ -75,6 +75,8 @@ TYPE
     Splitter4: TSplitter;
     StatusBar1: TStatusBar;
     timer: TTimer;
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+    PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormResize(Sender: TObject);
@@ -98,7 +100,7 @@ TYPE
     PROCEDURE miOpenClassicalClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOutlineClick(Sender: TObject);
-    procedure miOutputClick(Sender: TObject);
+    PROCEDURE miOutputClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miQuickEvalClick(Sender: TObject);
     PROCEDURE miRenameClick(Sender: TObject);
@@ -145,6 +147,8 @@ PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of 
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
   VAR outputForm:TOutputForm;
+      stream:T_bufferedInputStreamWrapper;
+      activeComponents:T_ideComponentSet;
   begin
     subTimerCounter:=0;
     splitterPositions[1]:=16384;
@@ -155,7 +159,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     outputForm:=TOutputForm.create(self);
     attachNewForm(outputForm);
-    attachNewForm(TAssistanceForm.create(self));
 
     setupEditorMetaBase(miLanguage);
     runnerModel.create;
@@ -169,7 +172,41 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      bookmarkImages);
 
     splashOnStartup;
+    //TODO: Settings file name!
+    stream.createToReadFromFile('ide.settings');
+    if stream.allOkay and loadMainFormLayout(stream,splitterPositions,activeComponents) then begin
+      if icOutline             in activeComponents then ensureOutlineForm;
+      //TODO: add help form
+      //if icHelp                in activeComponents then ensureHelpForm;
+      if icAssistance          in activeComponents then ensureAssistanceForm;
+      //TODO: add quick eval form
+      //if icQuickEval           in activeComponents then ensureQuickEvalForm;
+      if icDebugger            in activeComponents then ensureDebuggerForm;
+      //TODO: add debugVar form
+      //if icDebuggerVariables   in activeComponents then ensureDebugVarForm;
+      if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
+      //Apply splitter positions:
+      FormResize(self);
+      workspace.loadFromStream(stream);
+    end;
+    stream.destroy;
   end;
+
+PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  VAR stream:T_bufferedOutputStreamWrapper;
+  begin
+    //TODO: Settings file name!
+    stream.createToWriteToFile('ide.settings');
+    saveMainFormLayout(stream,splitterPositions);
+    workspace.saveToStream(stream);
+    stream.destroy;
+    workspace.destroy;
+  end;
+
+PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+begin
+
+end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
   begin
@@ -279,7 +316,7 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
     ensureOutlineForm;
   end;
 
-procedure TIdeMainForm.miOutputClick(Sender: TObject);
+PROCEDURE TIdeMainForm.miOutputClick(Sender: TObject);
   begin
     ensureOutputForm;
   end;
@@ -406,7 +443,7 @@ PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
   begin
-    debugging.currentSnapshot:=data;
+    debuggerForms.currentSnapshot:=data;
     ensureDebuggerForm;
   end;
 
@@ -418,6 +455,7 @@ PROCEDURE TIdeMainForm.onDebuggerEvent;
 PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
     workspace.updateEditorsByGuiStatus;
+    ensureOutputForm;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);

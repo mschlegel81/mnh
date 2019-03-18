@@ -54,10 +54,11 @@ object DebuggerForm: TDebuggerForm
     end
   end
   inline SynEdit1: TSynEdit
-    Left = 116
-    Height = 225
-    Top = 147
-    Width = 300
+    Left = 0
+    Height = 321
+    Top = 39
+    Width = 480
+    Align = alClient
     Font.Height = -13
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed

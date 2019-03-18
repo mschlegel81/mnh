@@ -349,7 +349,7 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
       latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
   end;
 
-procedure T_editorMeta.doRename(const ref: T_searchTokenLocation; const oldId, newId: string; const renameInOtherEditors: boolean);
+PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean);
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
@@ -736,7 +736,6 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
 //    result.y:=editor.CaretYPix+editor.LineHeight;
 //    result:=editor.ClientToParent(result,mainForm);
 //  end;
-
 
 //function T_editorMeta.isFile: boolean;
 //  begin

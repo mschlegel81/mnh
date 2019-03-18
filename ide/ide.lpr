@@ -27,7 +27,7 @@ begin
     hideConsole;
     {$endif}
     if reEvaluationWithGUIrequired
-    then halt //Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
+    then halt //TODO: Implement output only form...
     else if sendParametersToOtherInstance(filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);

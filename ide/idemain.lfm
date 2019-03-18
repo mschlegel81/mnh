@@ -10,6 +10,8 @@ object IdeMainForm: TIdeMainForm
   Color = clWhite
   DesignTimePPI = 144
   Menu = MainMenu
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
   OnResize = FormResize

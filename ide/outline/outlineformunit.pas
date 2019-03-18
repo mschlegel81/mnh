@@ -68,7 +68,7 @@ IMPLEMENTATION
 USES codeAssistance;
 PROCEDURE ensureOutlineForm;
   begin
-    if not(hasFormOfType(icOutline)) then dockNewForm(TOutlineForm.create(Application));
+    if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(Application));
   end;
 
 {$R *.lfm}

@@ -1,0 +1,47 @@
+object DebuggerVarForm: TDebuggerVarForm
+  Left = 817
+  Height = 360
+  Top = 165
+  Width = 480
+  Caption = 'DebuggerVarForm'
+  ClientHeight = 360
+  ClientWidth = 480
+  DesignTimePPI = 144
+  LCLVersion = '2.0.0.4'
+  object Splitter1: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 8
+    Top = 150
+    Width = 480
+    Align = alTop
+    ResizeAnchor = akTop
+  end
+  object VariablesTree: TTreeView
+    Left = 0
+    Height = 202
+    Top = 158
+    Width = 480
+    Align = alClient
+    TabOrder = 1
+  end
+  object StackGrid: TStringGrid
+    Left = 0
+    Height = 150
+    Top = 0
+    Width = 480
+    Align = alTop
+    ColCount = 2
+    FixedCols = 0
+    TabOrder = 2
+    Cells = (
+      2
+      0
+      0
+      'Caller'
+      1
+      0
+      'Callee'
+    )
+  end
+end

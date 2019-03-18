@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, ComCtrls, SynEdit,
-  ideLayoutUtil, debuggingVar, debugging;
+  ideLayoutUtil, debuggingVar, debugging, debuggerVarForms;
 
 TYPE
 
@@ -25,19 +25,23 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
-
   private
-
   public
-
   end;
+
+VAR
+  currentSnapshot     : P_debuggingSnapshot=nil;
 
 PROCEDURE ensureDebuggerForm;
 IMPLEMENTATION
 
 PROCEDURE ensureDebuggerForm;
   begin
-    if not(hasFormOfType(icDebugger)) then dockNewForm(TDebuggerForm.create(Application));
+    if not(hasFormOfType(icDebugger,true)) then dockNewForm(TDebuggerForm.create(Application));
+    if currentSnapshot=nil then exit;
+
+    //TODO: Update model in debuggerVarForms
+
   end;
 
 {$R *.lfm}

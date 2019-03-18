@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings,debugging,debuggingVar;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -13,13 +13,14 @@ TYPE
                   icAssistance,
                   icOutput,
                   icQuickEval,
+                  icDebugger,
+                  icDebuggerVariables,
+                  icDebuggerBreakpoints,
                   icPlot,
                   icCustomForm,
                   icTable,
-                  icVariableView,
-                  icDebugger,
-                  icDebuggerVariables,
-                  icDebuggerBreakpoints);
+                  icVariableView);
+  T_ideComponentSet=set of T_ideComponent;
 
   T_componentParent=(cpNone,
                      cpPageControl1,
@@ -28,11 +29,6 @@ TYPE
                      cpPageControl4);
 
   T_splitterPositions=array[1..4] of longint;
-
-  T_componentPosition=record
-    parent:T_componentParent;
-    top,Left,width,height:longint;
-  end;
 
   T_mnhComponentForm=class(TForm)
     private
@@ -57,34 +53,29 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
     {icAssistance}  cpPageControl2,
     {icOutput}      cpPageControl2,
     {icQuickEval}   cpPageControl2,
+    {icDebugger}    cpPageControl4,
+    {icDebuggerVari}cpPageControl4,
+    {icDebuggerBrea}cpPageControl4,
     {icPlot}        cpNone,
     {icCustomForm}  cpNone,
     {icTable}       cpNone,
-    {icVariableView}cpNone,
-    {icDebugger}    cpPageControl4,
-    {icDebuggerVari}cpPageControl4,
-    {icDebuggerBrea}cpPageControl4);
+    {icVariableView}cpNone);
 
     mainForm:T_mnhIdeForm=nil;
-    debuggerData:record
-      currentSnapshot:P_debuggingSnapshot;
-      globalVariableReport,
-      localVariableReport,
-      inlineVariableReport:P_variableTreeEntryCategoryNode;
-    end=(currentSnapshot     :nil;
-         globalVariableReport:nil;
-         localVariableReport :nil;
-         inlineVariableReport:nil);
-
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
-FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent):boolean;
+FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
+FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
 PROCEDURE registerSynEdit(VAR edit:TSynEdit);
 PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
 PROCEDURE propagateEditorFont(newFont:TFont);
 PROCEDURE performSlowUpdates;
 PROCEDURE performFastUpdates;
 FUNCTION focusedEditor:TSynEdit;
+
+PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
+FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
+
 IMPLEMENTATION
 VAR activeForms:array of T_mnhComponentForm;
     activeSynEdits:array of TSynEdit;
@@ -94,11 +85,30 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
     if mainForm<>nil then mainForm.attachNewForm(newForm);
   end;
 
-FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent):boolean;
+FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
   VAR f:T_mnhComponentForm;
   begin
     result:=false;
-    for f in activeForms do if f.getIdeComponentType=ideComponent then exit(true);
+    for f in activeForms do if f.getIdeComponentType=ideComponent then begin
+      if BringToFront then begin
+        if f.parent=nil
+        then f.BringToFront
+        else begin
+          if (f.parent       .ClassName='TTabSheet') and
+             (f.parent.parent.ClassName='TPageControl') then
+            TPageControl(f.parent.parent).activePage:=TTabSheet(f.parent);
+        end;
+        if mainForm<>nil then mainForm.ActiveControl:=f;
+      end;
+      exit(true);
+    end;
+  end;
+
+FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
+  VAR f:T_mnhComponentForm;
+  begin
+    result:=nil;
+    for f in activeForms do if f.getIdeComponentType=ideComponent then exit(f);
   end;
 
 PROCEDURE registerSynEdit(VAR edit:TSynEdit);
@@ -183,6 +193,45 @@ FUNCTION focusedEditor: TSynEdit;
   begin
     result:=nil;
     for e in activeSynEdits do if e.Focused then exit(e);
+  end;
+
+PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR splitters: T_splitterPositions);
+  VAR k:longint;
+      ic:T_ideComponent;
+  begin
+    stream.writeLongint(mainForm.top);
+    stream.writeLongint(mainForm.Left);
+    stream.writeLongint(mainForm.height);
+    stream.writeLongint(mainForm.width);
+    stream.writeByte(byte(mainForm.WindowState));
+
+    for k:=1 to 4 do stream.writeLongint(splitters[k]);
+
+    for ic in T_ideComponent do begin
+      stream.writeByte(byte(lastDockLocationFor[ic]));
+      stream.writeBoolean(hasFormOfType(ic));
+    end;
+  end;
+
+FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
+  VAR k:longint;
+      ic:T_ideComponent;
+  begin
+    mainForm.top   :=stream.readLongint;
+    mainForm.Left  :=stream.readLongint;
+    mainForm.height:=stream.readLongint;
+    mainForm.width :=stream.readLongint;
+    mainForm.WindowState:=TWindowState(stream.readByte);
+
+    for k:=1 to 4 do splitters[k]:=stream.readLongint;
+    result:=true;
+    activeComponents:=[];
+    for ic in T_ideComponent do begin
+      lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
+      if stream.readBoolean then include(activeComponents,ic);
+    end;
+
+    result:=result and stream.allOkay;
   end;
 
 INITIALIZATION

@@ -25,7 +25,14 @@ TYPE
   public
   end;
 
+PROCEDURE ensureOutputForm;
 IMPLEMENTATION
+
+PROCEDURE ensureOutputForm;
+  begin
+    if not(hasFormOfType(icOutput,true))
+    then dockNewForm(TOutputForm.create(Application));
+  end;
 
 {$R *.lfm}
 
