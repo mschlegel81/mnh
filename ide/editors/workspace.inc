@@ -49,6 +49,7 @@ T_workspace=object(T_serializable)
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
     PROCEDURE exportCurrentFileToHtml;
+    PROCEDURE renameWordUnderCursor;
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -187,8 +188,7 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
     result:=true;
   end;
 
-PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
+PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR caller:TSynEdit;
   begin
     caller:=TSynEdit(Sender);
@@ -279,10 +279,8 @@ PROCEDURE T_workspace.closeCurrentFile;
 
 FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil): boolean;
   VAR toSave:P_editorMeta;
-      newName,previousName,path,name,ext:string;
-      lineEndingSetting:byte;
-      arr:T_arrayOfString;
-      i:longint;
+      newName:string='';
+      path,name,ext:string;
   begin
     if meta=nil
     then toSave:=currentEditor
@@ -291,7 +289,6 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
     if toSave=nil then exit(false);
 
     //If file has no name or "saveAs" has been called, show save dialog
-    previousName:=toSave^.fileInfo.filePath;
     if (toSave^.isPseudoFile) or forceDialog then begin
       if toSave^.isPseudoFile then begin
         path:=GetCurrentDir;
@@ -310,28 +307,7 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
       else toSave^.fileInfo.filePath:=expandFileName(newName);
     end;
 
-    //Update history
-    if (previousName<>'') and (previousName<>toSave^.fileInfo.filePath) then begin
-      fileHistory.fileClosed(previousName);
-      folderHistory.fileClosed(ExtractFileDir(previousName));
-    end;
-
-    //Set line ending
-    if previousName<>toSave^.fileInfo.filePath
-    then lineEndingSetting:=settings.newFileLineEnding
-    else lineEndingSetting:=settings.overwriteLineEnding;
-
-    //Save filelines
-    setLength(arr,toSave^.editor.lines.count);
-    for i:=0 to length(arr)-1 do arr[i]:=toSave^.editor.lines[i];
-    with toSave^.fileInfo do begin
-      writeFileLines(filePath,arr,LINE_ENDING[lineEndingSetting],false);
-      fileAge(filePath,fileAccessAge);
-      isChanged:=false;
-      toSave^.editor.modified:=false;
-      toSave^.editor.MarkTextAsSaved;
-      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
-    end;
+    toSave^.saveFile(newName);
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;
@@ -351,6 +327,20 @@ PROCEDURE T_workspace.exportCurrentFileToHtml;
     SynExporterHTML.ExportAll(meta^.editor.lines);
     SynExporterHTML.saveToFile(name);
     SynExporterHTML.free;
+  end;
+
+PROCEDURE T_workspace.renameWordUnderCursor;
+  VAR meta:P_editorMeta;
+      id:string;
+      idType:T_tokenType;
+      renameLocation:T_searchTokenLocation;
+      scanOther:boolean;
+  begin
+    meta:=currentEditor;
+    if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
+    if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
+       (renameForm.showModalFor(id,idType,scanOther)=mrOk)
+    then meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
   end;
 
 {$endif}

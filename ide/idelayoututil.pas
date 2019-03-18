@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings,debugging;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,myGenerics,Menus,SynEdit,evalThread,mnh_settings,debugging,debuggingVar;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -66,7 +66,16 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
     {icDebuggerBrea}cpPageControl4);
 
     mainForm:T_mnhIdeForm=nil;
-    currentSnapshot:P_debuggingSnapshot=nil;
+    debuggerData:record
+      currentSnapshot:P_debuggingSnapshot;
+      globalVariableReport,
+      localVariableReport,
+      inlineVariableReport:P_variableTreeEntryCategoryNode;
+    end=(currentSnapshot     :nil;
+         globalVariableReport:nil;
+         localVariableReport :nil;
+         inlineVariableReport:nil);
+
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent):boolean;

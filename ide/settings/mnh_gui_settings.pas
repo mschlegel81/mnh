@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, ExtCtrls, mySys,funcs, out_adapters, mnh_constants,
-  packages,mnh_settings,mnh_doc;
+  packages,mnh_settings,mnh_doc,ideLayoutUtil;
 
 CONST MINIMUM_OUTPUT_LINES=16;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=
@@ -302,6 +302,7 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
     FontSizeEdit.text := intToStr(value);
     EditorFontDialog.Font.size := value;
     settings.editor.fontSize:=value;
+    propagateEditorFont(EditorFontDialog.Font);
   end;
 
 FUNCTION TSettingsForm.getOutputLimit: longint;

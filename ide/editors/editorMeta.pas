@@ -66,8 +66,13 @@ T_editorMeta=object(T_basicEditorMeta)
     //Assistant related
     PROCEDURE triggerCheck;
     PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
+    FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
+    PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
+    PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
+    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
 
     PROCEDURE setFile(CONST fileName:string);
+    PROCEDURE saveFile(CONST fileName:string='');
     FUNCTION updateSheetCaption:ansistring;
   public
     //Editor events
@@ -95,10 +100,8 @@ T_editorMeta=object(T_basicEditorMeta)
     //PROCEDURE exportToHtml;
     //PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     //FUNCTION caretInMainFormCoordinates:TPoint;
-    //PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
     //PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
-    //FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
-    //PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
+    //
     //FUNCTION defaultExtensionByLanguage:ansistring;
     //PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     //FUNCTION resolveImport(CONST text:string):string;
@@ -149,7 +152,9 @@ VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
     workspace  :T_workspace;
 IMPLEMENTATION
-USES variableTreeViews;
+USES variableTreeViews,
+     renameDialog,
+     recyclers;
 VAR underCursor:T_tokenInfo;
 {$define includeImplementation}
 {$i runnermodel.inc}
@@ -310,6 +315,70 @@ PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistance
     end;
   end;
 
+FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
+                                           OUT tokTyp: T_tokenType;
+                                           OUT ref: T_searchTokenLocation;
+                                           OUT mightBeUsedElsewhere: boolean): boolean;
+  begin
+    if language<>LANG_MNH then exit(false);
+    setUnderCursor(false,true);
+    result   :=underCursor.canRename;
+    orignalId:=underCursor.idWithoutIsPrefix;
+    tokTyp   :=underCursor.tokenType;
+    if tokTyp in [tt_each,tt_parallelEach] then tokTyp:=tt_eachParameter;
+    ref      :=underCursor.location;
+    mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
+  end;
+
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
+  begin
+    setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
+  end;
+
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean; CONST caret: TPoint);
+  VAR m:P_editorMeta;
+      wordUnderCursor:string;
+  begin
+    if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit;
+    wordUnderCursor:=editor.GetWordAtRowCol(caret);
+    if updateMarker then begin
+      for m in workspace.metas do m^.setMarkedWord(wordUnderCursor);
+      editor.Repaint;
+    end;
+    if forHelpOrJump and (latestAssistanceReponse<>nil) then with editor do
+      latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
+  end;
+
+procedure T_editorMeta.doRename(const ref: T_searchTokenLocation; const oldId, newId: string; const renameInOtherEditors: boolean);
+  VAR meta:P_editorMeta;
+      lineIndex:longint;
+      lineTxt:string;
+      recycler:T_recycler;
+  PROCEDURE updateLine;
+    VAR lineStart,lineEnd:TPoint;
+    begin
+      lineStart.y:=lineIndex+1; lineStart.x:=0;
+      lineEnd  .y:=lineIndex+1; lineEnd  .x:=length(editor.lines[lineIndex])+1;
+      editor.SetTextBetweenPoints(lineStart,lineEnd,lineTxt);
+    end;
+
+  begin
+    if (language<>LANG_MNH) then exit;
+    if renameInOtherEditors then saveFile();
+    recycler.initRecycler;
+    updateAssistanceResponse(doCodeAssistanceSynchronously(@self,recycler));
+    recycler.cleanup;
+
+    editor.BeginUpdate(true);
+    with editor do for lineIndex:=0 to lines.count-1 do begin
+      lineTxt:=lines[lineIndex];
+      if latestAssistanceReponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
+    end;
+    editor.EndUpdate;
+
+    if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+  end;
+
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   FUNCTION isDatastore:boolean;
     begin
@@ -347,6 +416,33 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
     end;
     if not(datastore) then guessLanguage(LANG_TXT);
     updateSheetCaption;
+  end;
+
+PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
+  VAR arr:T_arrayOfString;
+      i:longint;
+      previousName:string;
+      lineEndingSetting:byte;
+  begin
+    previousName:=fileInfo.filePath;
+    if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
+    if (previousName<>'') and (previousName<>fileInfo.filePath) then begin
+      workspace.fileHistory.fileClosed(previousName);
+      workspace.folderHistory.fileClosed(ExtractFileDir(previousName));
+    end;
+    if previousName<>fileInfo.filePath
+    then lineEndingSetting:=settings.newFileLineEnding
+    else lineEndingSetting:=settings.overwriteLineEnding;
+    setLength(arr,editor.lines.count);
+    for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
+    with fileInfo do begin
+      writeFileLines(filePath,arr,LINE_ENDING[lineEndingSetting],false);
+      fileAge(filePath,fileAccessAge);
+      isChanged:=false;
+      editor.modified:=false;
+      editor.MarkTextAsSaved;
+      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
+    end;
   end;
 
 FUNCTION T_editorMeta.updateSheetCaption: ansistring;
@@ -641,71 +737,6 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
 //    result:=editor.ClientToParent(result,mainForm);
 //  end;
 
-//procedure T_editorMeta.setUnderCursor(const updateMarker,
-//  forHelpOrJump: boolean; const caret: TPoint);
-//  VAR m:P_editorMeta;
-//      wordUnderCursor:string;
-//  begin
-//    if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit;
-//    wordUnderCursor:=editor.GetWordAtRowCol(caret);
-//    if updateMarker then begin
-//      for m in editorMetaData do m^.setMarkedWord(wordUnderCursor);
-//      editor.Repaint;
-//    end;
-//    if forHelpOrJump and (latestAssistanceReponse<>nil) then with editor do
-//      latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
-//  end;
-
-//procedure T_editorMeta.setUnderCursor(const updateMarker, forHelpOrJump: boolean
-//  );
-//  begin
-//    setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
-//  end;
-
-//function T_editorMeta.canRenameUnderCursor(out orignalId: string; out
-//  tokTyp: T_tokenType; out ref: T_searchTokenLocation; out
-//  mightBeUsedElsewhere: boolean): boolean;
-//  begin
-//    if language<>LANG_MNH then exit(false);
-//    setUnderCursor(false,true);
-//    result   :=underCursor.canRename;
-//    orignalId:=underCursor.idWithoutIsPrefix;
-//    tokTyp   :=underCursor.tokenType;
-//    if tokTyp in [tt_each,tt_parallelEach] then tokTyp:=tt_eachParameter;
-//    ref      :=underCursor.location;
-//    mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
-//  end;
-
-//procedure T_editorMeta.doRename(const ref: T_searchTokenLocation; const oldId,
-//  newId: string; const renameInOtherEditors: boolean);
-//  VAR meta:P_editorMeta;
-//      lineIndex:longint;
-//      lineTxt:string;
-//      recycler:T_recycler;
-//  PROCEDURE updateLine;
-//    VAR lineStart,lineEnd:TPoint;
-//    begin
-//      lineStart.y:=lineIndex+1; lineStart.x:=0;
-//      lineEnd  .y:=lineIndex+1; lineEnd  .x:=length(editor.lines[lineIndex])+1;
-//      editor.SetTextBetweenPoints(lineStart,lineEnd,lineTxt);
-//    end;
-//
-//  begin
-//    if (language<>LANG_MNH) then exit;
-//    if renameInOtherEditors then saveFile();
-//    recycler.initRecycler;
-//    updateAssistanceResponse(doCodeAssistanceSynchronously(@self,recycler));
-//    recycler.cleanup;
-//
-//    editor.BeginUpdate(true);
-//    with editor do for lineIndex:=0 to lines.count-1 do begin
-//      lineTxt:=lines[lineIndex];
-//      if latestAssistanceReponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
-//    end;
-//    editor.EndUpdate;
-//
-//    if renameInOtherEditors then for meta in editorMetaData do if meta<>@self then meta^.doRename(ref,oldId,newId);
-//  end;
 
 //function T_editorMeta.isFile: boolean;
 //  begin

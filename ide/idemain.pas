@@ -18,6 +18,7 @@ TYPE
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
     MainMenu: TMainMenu;
+    miOutput: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
     MenuItem2: TMenuItem;
@@ -97,6 +98,7 @@ TYPE
     PROCEDURE miOpenClassicalClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOutlineClick(Sender: TObject);
+    procedure miOutputClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miQuickEvalClick(Sender: TObject);
     PROCEDURE miRenameClick(Sender: TObject);
@@ -209,7 +211,7 @@ PROCEDURE TIdeMainForm.miDebuggerClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    SettingsForm.fontSize:=SettingsForm.fontSize-1;
   end;
 
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
@@ -249,7 +251,7 @@ PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    SettingsForm.fontSize:=SettingsForm.fontSize+1;
   end;
 
 PROCEDURE TIdeMainForm.miKeepStackTraceClick(Sender: TObject);
@@ -277,10 +279,15 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
     ensureOutlineForm;
   end;
 
+procedure TIdeMainForm.miOutputClick(Sender: TObject);
+  begin
+    ensureOutputForm;
+  end;
+
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
-begin
-  runnerModel.profiling:=miProfile.checked;
-end;
+  begin
+    runnerModel.profiling:=miProfile.checked;
+  end;
 
 PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
   begin
@@ -289,20 +296,7 @@ PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRenameClick(Sender: TObject);
   begin
-    //TODO: Implement me like:
-      //VAR meta:P_editorMeta;
-      //    id:string;
-      //    idType:T_tokenType;
-      //    renameLocation:T_searchTokenLocation;
-      //    scanOther:boolean;
-      //begin
-      //  meta:=getEditor;
-      //  if (meta<>nil) and
-      //     meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
-      //     (renameForm.showModalFor(id,idType,scanOther)=mrOk) then begin
-      //    meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
-      //  end;
-      //end;
+    workspace.renameWordUnderCursor;
   end;
 
 PROCEDURE TIdeMainForm.miReplaceClick(Sender: TObject);
@@ -412,18 +406,18 @@ PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
   begin
-    currentSnapshot:=data;
+    debugging.currentSnapshot:=data;
     ensureDebuggerForm;
   end;
 
 PROCEDURE TIdeMainForm.onDebuggerEvent;
   begin
-    //TODO: Implement me
+    workspace.updateEditorsByGuiStatus;
   end;
 
 PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
-    //TODO: Implement me
+    workspace.updateEditorsByGuiStatus;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);

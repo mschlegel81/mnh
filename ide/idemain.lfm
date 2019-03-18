@@ -274,7 +274,13 @@ object IdeMainForm: TIdeMainForm
       end
       object miAssistant: TMenuItem
         Caption = '&Assistant'
+        ShortCut = 8305
         OnClick = miAssistantClick
+      end
+      object miOutput: TMenuItem
+        Caption = 'Out&put'
+        ShortCut = 113
+        OnClick = miOutputClick
       end
       object miOutline: TMenuItem
         Caption = '&Outline'
@@ -282,10 +288,12 @@ object IdeMainForm: TIdeMainForm
       end
       object miHelp: TMenuItem
         Caption = '&Help'
+        ShortCut = 112
         OnClick = miHelpClick
       end
       object miQuickEval: TMenuItem
         Caption = '&Quick evaluation'
+        ShortCut = 115
         OnClick = miQuickEvalClick
       end
       object miDebugger: TMenuItem
