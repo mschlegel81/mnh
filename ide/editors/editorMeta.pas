@@ -59,7 +59,7 @@ T_editorMeta=object(T_basicEditorMeta)
 
     //Bookmark related
     FUNCTION markLocation(CONST line,column:longint):T_searchTokenLocation;
-    PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
+    PROCEDURE _add_breakpoint_or_bookmark_(CONST lineIndex:longint; CONST columnIndex:longint=1; CONST bookmarkIndex:byte=10);
     PROCEDURE clearBookmark(markIndex:longint);
     PROCEDURE toggleBreakpoint;
 
@@ -179,7 +179,6 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
     createWithParent(tabsheet,workspace.bookmarkImagesList);
     latestAssistanceReponse:=nil;
     paintedWithStateHash:=0;
-    paintedWithStateHash:=0;
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnKeyUp             :=@(workspace.keyUpForJumpToLocation);
@@ -201,62 +200,82 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
     updateSheetCaption;
   end;
 
+CONST editorMetaSerial=2344515;
 CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint; VAR stream: T_bufferedInputStreamWrapper);
+  VAR lineCount:longint=0;
+      markCount:longint=0;
+      i:longint;
+      line,column:longint;
   begin
     create(mIdx);
-    //if not(stream.readDWord=editorMetaSerial) then begin //#0
-    //  stream.logWrongTypeError;
-    //  exit;
-    //end;
-    //with fileInfo do begin
-    //  filePath     :=stream.readAnsiString; //#1
-    //  isChanged    :=stream.readBoolean;    //#2
-    //  strictlyReadOnly:=stream.readBoolean; //#3
-    //  if isChanged then fileAccessAge:=stream.readDouble;  //#4
-    //  ignoreDeleted:=false;
-    //end;
-    //editor.clearAll;
-    //if fileInfo.isChanged
-    //then begin
-    //  editor.lines.clear;
-    //  lineCount:=stream.readNaturalNumber; //#5
-    //  for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
-    //end else setFile(fileInfo.filePath);
-    //markCount:=stream.readNaturalNumber; //#7
-    //for i:=1 to markCount do _add_breakpoint_(stream.readNaturalNumber); //#8
-    //editor.CaretX:=stream.readNaturalNumber; //#9
-    //editor.CaretY:=stream.readNaturalNumber; //#10
-    //language_:=T_language(stream.readByte);  //#11
-    //editor.modified:=fileInfo.isChanged;
-    //updateSheetCaption;
+    if not(stream.readDWord=editorMetaSerial) then begin //#0
+      stream.logWrongTypeError;
+      exit;
+    end;
+
+    metaIndex:=stream.readLongint;
+    with fileInfo do begin
+      filePath     :=stream.readAnsiString; //#1
+      isChanged    :=stream.readBoolean;    //#2
+      strictlyReadOnly:=stream.readBoolean; //#3
+      if isChanged then fileAccessAge:=stream.readDouble;  //#4
+      ignoreDeleted:=false;
+    end;
+    editor.clearAll;
+    if fileInfo.isChanged
+    then begin
+      editor.lines.clear;
+      lineCount:=stream.readNaturalNumber; //#5
+      for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
+    end else setFile(fileInfo.filePath);
+
+    markCount:=stream.readNaturalNumber; //#7
+    for i:=1 to markCount do begin
+      line:=stream.readNaturalNumber;    //#8a
+      column:=stream.readNaturalNumber;  //#8b
+      _add_breakpoint_or_bookmark_(line,column,stream.readByte); //#8c
+    end;
+    editor.CaretX:=stream.readNaturalNumber; //#9
+    editor.CaretY:=stream.readNaturalNumber; //#10
+    language_:=T_language(stream.readByte);  //#11
+    editor.modified:=fileInfo.isChanged;
+    updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
-  //VAR i:longint;
-  //    editorLine:string;
-  //    saveChanged:boolean;
-  //    k:longint;
+  VAR i:longint;
+      editorLine:string;
+      saveChanged:boolean;
+      k:longint;
+      mark:TSynEditMark;
   begin
-    //stream.writeDWord(editorMetaSerial); //#0
-    //if fileInfo.filePath=''
-    //then stream.writeAnsiString(               fileInfo.filePath )  //#1
-    //else stream.writeAnsiString(expandFileName(fileInfo.filePath)); //#1
-    //saveChanged:=changed;
-    //stream.writeBoolean(saveChanged); //#2
-    //stream.writeBoolean(strictlyReadOnly);   //#3
-    //if saveChanged then begin
-    //  stream.writeDouble(fileInfo.fileAccessAge);  //#4
-    //  stream.writeNaturalNumber(editor.lines.count); //#5
-    //  for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
-    //end;
-    //k:=0;
-    //for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then inc(k);
-    //stream.writeNaturalNumber(k); //#7
-    //for i:=0 to editor.Marks.count-1 do if not(editor.Marks[i].IsBookmark) then stream.writeNaturalNumber(editor.Marks[i].line); //#8
-    //
-    //stream.writeNaturalNumber(editor.CaretX); //#9
-    //stream.writeNaturalNumber(editor.CaretY); //#10
-    //stream.writeByte(ord(language));          //#11
+    stream.writeDWord(editorMetaSerial); //#0
+    stream.writeLongint(metaIndex);
+    if fileInfo.filePath=''
+    then stream.writeAnsiString(               fileInfo.filePath )  //#1
+    else stream.writeAnsiString(expandFileName(fileInfo.filePath)); //#1
+    saveChanged:=editor.modified or fileInfo.isChanged;
+    stream.writeBoolean(saveChanged); //#2
+    stream.writeBoolean(strictlyReadOnly);   //#3
+    if saveChanged then begin
+      stream.writeDouble(fileInfo.fileAccessAge);  //#4
+      stream.writeNaturalNumber(editor.lines.count); //#5
+      for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
+    end;
+
+    stream.writeLongint(editor.Marks.count); //#7
+    for i:=0 to editor.Marks.count-1 do begin
+      mark:=editor.Marks[i];
+      stream.writeNaturalNumber(mark.line);   //#8a
+      stream.writeNaturalNumber(mark.column); //#8b
+      if mark.IsBookmark
+      then stream.writeByte(mark.BookmarkNumber) //#8c
+      else stream.writeByte(10);
+    end;
+
+    stream.writeNaturalNumber(editor.CaretX); //#9
+    stream.writeNaturalNumber(editor.CaretY); //#10
+    stream.writeByte(ord(language));          //#11
   end;
 
 FUNCTION T_editorMeta.markLocation(CONST line,column:longint):T_searchTokenLocation;
@@ -266,13 +285,20 @@ FUNCTION T_editorMeta.markLocation(CONST line,column:longint):T_searchTokenLocat
     result.column:=column;
   end;
 
-PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
+PROCEDURE T_editorMeta._add_breakpoint_or_bookmark_(CONST lineIndex: longint; CONST columnIndex:longint=1; CONST bookmarkIndex:byte=10);
   VAR m:TSynEditMark;
   begin
     m:=TSynEditMark.create(editor);
     m.line:=lineIndex;
-    m.ImageList:=workspace.breakpointsImagesList;
-    m.ImageIndex:=0;
+    m.column:=columnIndex;
+    if bookmarkIndex>=10 then begin
+      m.ImageList:=workspace.breakpointsImagesList;
+      m.ImageIndex:=0;
+    end else begin
+      m.ImageList:=workspace.bookmarkImagesList;
+      m.ImageIndex:=bookmarkIndex;
+      m.BookmarkNumber:=bookmarkIndex;
+    end;
     m.visible:=true;
     editor.Marks.add(m);
   end;
@@ -292,9 +318,11 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
       mark:=editor.Marks[i];
       editor_.Marks.remove(editor.Marks[i]);
       mark.free;
+      //TODO: Tell the running evaluation about the removed breakpoint
       exit;
     end;
-    _add_breakpoint_(editor_.CaretY);
+    //TODO: Tell the running evaluation about the added breakpoint
+    _add_breakpoint_or_bookmark_(editor_.CaretY);
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
@@ -467,14 +495,14 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
-begin
-  if command=editCommandToggleBookmark then begin
-    toggleBreakpoint;
-    command:=ecNone;
-  end else if (command>=ecGotoMarker0) and (command<=ecGotoMarker9)
-  then workspace.openBookmarkLocation(command-ecGotoMarker0)
-  else inherited processUserCommand(Sender,command,AChar,data);
-end;
+  begin
+    if command=editCommandToggleBookmark then begin
+      toggleBreakpoint;
+      command:=ecNone;
+    end else if (command>=ecGotoMarker0) and (command<=ecGotoMarker9)
+    then workspace.openBookmarkLocation(command-ecGotoMarker0)
+    else inherited processUserCommand(Sender,command,AChar,data);
+  end;
 
 PROCEDURE T_editorMeta.onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
   begin

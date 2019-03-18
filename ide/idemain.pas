@@ -8,7 +8,7 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil;
+  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm;
 
 TYPE
 
@@ -17,6 +17,10 @@ TYPE
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
+    evaluationStateLabel: TLabel;
+    EditLocationLabel: TLabel;
+    PlotPositionLabel: TLabel;
+    MemoryUsageLabel: TLabel;
     MainMenu: TMainMenu;
     miOutput: TMenuItem;
     miAbout: TMenuItem;
@@ -40,6 +44,9 @@ TYPE
     miFindNext: TMenuItem;
     miFind: TMenuItem;
     miReplace: TMenuItem;
+    MemoryUsageShape: TShape;
+    MemoryUsageFrame: TShape;
+    StatusPanel: TPanel;
     smEdit: TMenuItem;
     smRecent: TMenuItem;
     smHistory: TMenuItem;
@@ -73,7 +80,6 @@ TYPE
     Splitter2: TSplitter;
     Splitter3: TSplitter;
     Splitter4: TSplitter;
-    StatusBar1: TStatusBar;
     timer: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -187,6 +193,16 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
       //Apply splitter positions:
       FormResize(self);
+
+      if WindowState=wsFullScreen
+      then BorderStyle:=bsNone
+      else BorderStyle:=bsSizeable;
+
+      runnerModel.loadFromStream(stream);
+      miDebug         .checked:=runnerModel.debugMode;
+      miProfile       .checked:=runnerModel.profiling;
+      miKeepStackTrace.checked:=runnerModel.stackTracing;
+
       workspace.loadFromStream(stream);
     end;
     stream.destroy;
@@ -195,18 +211,20 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR stream:T_bufferedOutputStreamWrapper;
   begin
+    finalizeCodeAssistance;
     //TODO: Settings file name!
     stream.createToWriteToFile('ide.settings');
     saveMainFormLayout(stream,splitterPositions);
+    runnerModel.saveToStream(stream);
     workspace.saveToStream(stream);
     stream.destroy;
     workspace.destroy;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
-begin
-
-end;
+  begin
+    //TODO: Reject close request if an evaluation is running
+  end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
   begin
@@ -353,12 +371,12 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
   begin
-    runnerModel.customRun(false);
+    if customRunForm(false).ShowModal=mrOk then runnerModel.customRun(true,customRunForm(false).scriptParamEdit.text);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    if customRunForm(true).ShowModal=mrOk then runnerModel.runExternally(customRunForm(true).scriptParamEdit.text);
   end;
 
 PROCEDURE TIdeMainForm.miSaveAsClick(Sender: TObject);
@@ -379,8 +397,13 @@ PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
   begin
     if WindowState=wsFullScreen
-    then WindowState:=wsMaximized
-    else WindowState:=wsFullScreen;
+    then begin
+      BorderStyle:=bsSizeable;
+      WindowState:=wsMaximized;
+    end else begin
+      BorderStyle:=bsNone;
+      WindowState:=wsFullScreen;
+    end;
   end;
 
 PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject;
@@ -459,6 +482,20 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
+  PROCEDURE drawMemoryUsage;
+    VAR fraction:double;
+
+    begin
+      MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
+      if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
+      if fraction<0 then fraction:=0;
+
+      MemoryUsageShape.width:=round(fraction*MemoryUsageFrame.width);
+      MemoryUsageShape.Brush.color:=
+        round(255*max(0,min(1,2-2*fraction))) shl 8 or
+        round(255*max(0,min(1,  2*fraction)));
+    end;
+
   PROCEDURE slowUpdates; inline;
     VAR edit:P_editorMeta;
     begin
@@ -467,11 +504,13 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         edit^.pollAssistanceResult;
       end;
       performSlowUpdates;
+      drawMemoryUsage;
     end;
 
   PROCEDURE fastUpdates; inline;
     begin
       performFastUpdates;
+      guiEventsAdapter.flushToGui;
     end;
 
   begin

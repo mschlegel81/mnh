@@ -1,5 +1,8 @@
 {$ifdef includeInterface}
-T_runnerModel=object
+
+{ T_runnerModel }
+
+T_runnerModel=object(T_serializable)
   private
     lastStart:record
       mainCall:boolean;
@@ -27,6 +30,9 @@ T_runnerModel=object
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
+
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
 {$endif}
 {$ifdef includeImplementation}
@@ -54,7 +60,7 @@ FUNCTION T_runnerModel.areEditorsLocked: boolean;
     result:=(debugMode_ and runEvaluator.evaluationRunning) or (runEvaluator.getRunnerStateInfo.state=es_editRunning);
   end;
 
-FUNCTION T_runnerModel.canRun(CONST quickMode:boolean=false): boolean;
+FUNCTION T_runnerModel.canRun(CONST quickMode: boolean): boolean;
   VAR meta:P_editorMeta;
   begin
     if runEvaluator.evaluationRunning then exit(false);
@@ -63,7 +69,8 @@ FUNCTION T_runnerModel.canRun(CONST quickMode:boolean=false): boolean;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
   end;
 
-PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters: string);
+PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean;
+  CONST mainParameters: string);
   VAR m:P_editorMeta;
       contextType:T_evaluationContextType;
   begin
@@ -98,7 +105,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
     lastStart.parameters:=mainParameters;
   end;
 
-PROCEDURE T_runnerModel.runExternally(CONST mainParameters:string='');
+PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
   VAR callParameters:T_arrayOfString;
       flag:T_cmdLineFlag;
       executor:string='';
@@ -126,7 +133,8 @@ PROCEDURE T_runnerModel.rerun();
     customRun(lastStart.mainCall,lastStart.parameters);
   end;
 
-PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject;
+  line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
     Special:=runEvaluator.globals.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
@@ -143,7 +151,8 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
     end;
   end;
 
-PROCEDURE T_runnerModel.markDebugLine(CONST editor:TSynEdit; CONST line:longint);
+PROCEDURE T_runnerModel.markDebugLine(CONST editor: TSynEdit;
+  CONST line: longint);
   begin
     debugLine.editor:=editor;
     debugLine.line  :=line;
@@ -154,4 +163,19 @@ PROCEDURE T_runnerModel.haltEvaluation;
     runEvaluator.haltEvaluation;
     if debugMode_ then runEvaluator.globals.stepper^.haltEvaluation;
   end;
+
+FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  begin
+    debugMode_  :=stream.readBoolean();
+    stackTracing:=stream.readBoolean();
+    profiling   :=stream.readBoolean();
+  end;
+
+PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  begin
+    stream.writeBoolean(debugMode_  );
+    stream.writeBoolean(stackTracing);
+    stream.writeBoolean(profiling   );
+  end;
+
 {$endif}

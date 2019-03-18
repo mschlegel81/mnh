@@ -14,7 +14,6 @@ T_workspace=object(T_serializable)
     end;
 
     metas:array of P_editorMeta;
-    recentlyActivated:T_fileHistory;
     fileHistory      :T_fileHistory;
 
   public
@@ -63,7 +62,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 
     nextMetaIndex:=1;
     setLength(metas,0);
-    recentlyActivated.create(false);
     folderHistory    .create(true);
     fileHistory      .create(false);
   end;
@@ -71,7 +69,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
-    recentlyActivated.destroy;
     folderHistory.destroy;
     fileHistory.destroy;
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
@@ -84,13 +81,51 @@ FUNCTION T_workspace.getSerialVersion: dword;
   end;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  VAR k,j:longint;
   begin
+    nextMetaIndex:=1;
+    setLength(oldMarkers,stream.readNaturalNumber);
+    for k:=0 to length(oldMarkers)-1 do begin
+      oldMarkers[k].location:=readSearchTokenLocation(stream);
+      oldMarkers[k].markIndex:=stream.readByte;
+    end;
+    if not(stream.allOkay) then begin
+      setLength(oldMarkers,0);
+      exit(false);
+    end;
 
+    setLength(metas,stream.readNaturalNumber);
+    for k:=0 to length(metas)-1 do begin
+      new(metas[k],create(-1,stream));
+      if not(stream.allOkay) then begin
+        for j:=0 to k do dispose(metas[j],destroy);
+        setLength(metas,0);
+        exit(false);
+      end;
+      if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
+    end;
+
+    result:=stream.allOkay and
+    fileHistory  .loadFromStream(stream) and
+    folderHistory.loadFromStream(stream);
   end;
 
 PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR k:longint;
   begin
+    stream.writeNaturalNumber(length(oldMarkers));
+    for k:=0 to length(oldMarkers)-1 do begin
+      writeSearchTokenLocation(stream,oldMarkers[k].location);
+      stream.writeByte(oldMarkers[k].markIndex);
+    end;
 
+    stream.writeNaturalNumber(length(metas));
+    for k:=0 to length(metas)-1 do begin
+      metas[k]^.saveToStream(stream);
+    end;
+
+    fileHistory  .saveToStream(stream);
+    folderHistory.saveToStream(stream);
   end;
 
 FUNCTION T_workspace.currentEditor: P_editorMeta;

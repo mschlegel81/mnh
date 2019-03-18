@@ -21,8 +21,8 @@ USES  //basic classes
   mnhCompletion;
 
 CONST editCommandToggleComment    =ecUserDefinedFirst;
-      //editCommandPageRight        =ecUserDefinedFirst+1;
-      //editCommandPageLeft         =ecUserDefinedFirst+2;
+      editCommandPageRight        =ecUserDefinedFirst+1;
+      editCommandPageLeft         =ecUserDefinedFirst+2;
       editCommandMoveLineUp       =ecUserDefinedFirst+4;
       editCommandToggleBookmark   =ecUserDefinedFirst+3;
       editCommandMoveLineDown     =ecUserDefinedFirst+5;
@@ -344,13 +344,13 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     addKeystroke(ecSelWordRight      ,scShift+scCtrl+rightArrow);
     addKeystroke(ecPageDown          ,pageDownKey);
     addKeystroke(ecSelPageDown       ,scShift+pageDownKey);
-    //if isRealEditor then
-    //addKeystroke(editCommandPageRight,scCtrl+pageDownKey);
+    if isRealEditor then
+    addKeystroke(editCommandPageRight,scCtrl+pageDownKey);
     addKeystroke(ecSelPageBottom     ,scShift+scCtrl+pageDownKey);
     addKeystroke(ecPageUp            ,pageUpKey);
     addKeystroke(ecSelPageUp         ,scShift + pageUpKey);
-    //if isRealEditor then
-    //addKeystroke(editCommandPageLeft ,scCtrl + pageUpKey);
+    if isRealEditor then
+    addKeystroke(editCommandPageLeft ,scCtrl + pageUpKey);
     addKeystroke(ecSelPageTop        ,scShift + scCtrl + pageUpKey);
     addKeystroke(ecLineStart         ,pos1Key);
     addKeystroke(ecSelLineStart      ,scShift + pos1Key);

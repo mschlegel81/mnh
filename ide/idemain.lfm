@@ -19,7 +19,7 @@ object IdeMainForm: TIdeMainForm
   LCLVersion = '2.0.0.4'
   object PageControl1: TPageControl
     Left = 528
-    Height = 387
+    Height = 396
     Top = 0
     Width = 146
     Align = alRight
@@ -33,7 +33,7 @@ object IdeMainForm: TIdeMainForm
   end
   object Splitter1: TSplitter
     Left = 520
-    Height = 387
+    Height = 396
     Top = 0
     Width = 8
     Align = alRight
@@ -42,18 +42,18 @@ object IdeMainForm: TIdeMainForm
   end
   object Panel1: TPanel
     Left = 160
-    Height = 387
+    Height = 396
     Top = 0
     Width = 360
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 387
+    ClientHeight = 396
     ClientWidth = 360
     TabOrder = 2
     object PageControl2: TPageControl
       Left = 0
       Height = 124
-      Top = 263
+      Top = 272
       Width = 360
       Align = alBottom
       DockSite = True
@@ -68,7 +68,7 @@ object IdeMainForm: TIdeMainForm
       Cursor = crVSplit
       Left = 0
       Height = 8
-      Top = 255
+      Top = 264
       Width = 360
       Align = alBottom
       OnMoved = Splitter1Moved
@@ -76,17 +76,17 @@ object IdeMainForm: TIdeMainForm
     end
     object Panel2: TPanel
       Left = 0
-      Height = 255
+      Height = 264
       Top = 0
       Width = 360
       Align = alClient
       BevelOuter = bvNone
-      ClientHeight = 255
+      ClientHeight = 264
       ClientWidth = 360
       TabOrder = 2
       object PageControl3: TPageControl
         Left = 0
-        Height = 255
+        Height = 264
         Top = 0
         Width = 172
         Align = alLeft
@@ -100,14 +100,14 @@ object IdeMainForm: TIdeMainForm
       end
       object Splitter3: TSplitter
         Left = 172
-        Height = 255
+        Height = 264
         Top = 0
         Width = 8
         OnMoved = Splitter1Moved
       end
       object EditorsPageControl: TPageControl
         Left = 180
-        Height = 255
+        Height = 264
         Top = 0
         Width = 180
         Align = alClient
@@ -120,14 +120,14 @@ object IdeMainForm: TIdeMainForm
   end
   object Splitter4: TSplitter
     Left = 152
-    Height = 387
+    Height = 396
     Top = 0
     Width = 8
     OnMoved = Splitter1Moved
   end
   object PageControl4: TPageControl
     Left = 0
-    Height = 387
+    Height = 396
     Top = 0
     Width = 152
     Align = alLeft
@@ -139,12 +139,83 @@ object IdeMainForm: TIdeMainForm
     OnStartDock = PageControl4StartDock
     Options = [nboShowCloseButtons, nboMultiLine]
   end
-  object StatusBar1: TStatusBar
+  object StatusPanel: TPanel
     Left = 0
-    Height = 36
-    Top = 387
+    Height = 27
+    Top = 396
     Width = 674
-    Panels = <>
+    Align = alBottom
+    AutoSize = True
+    ClientHeight = 27
+    ClientWidth = 674
+    TabOrder = 5
+    object evaluationStateLabel: TLabel
+      Left = 1
+      Height = 25
+      Top = 1
+      Width = 200
+      Align = alLeft
+      Constraints.MaxWidth = 200
+      Constraints.MinWidth = 200
+      ParentColor = False
+    end
+    object MemoryUsageShape: TShape
+      AnchorSideLeft.Control = MemoryUsageLabel
+      AnchorSideTop.Control = MemoryUsageLabel
+      AnchorSideBottom.Control = MemoryUsageLabel
+      AnchorSideBottom.Side = asrBottom
+      Left = 201
+      Height = 25
+      Top = 1
+      Width = 150
+      Align = alCustom
+      Anchors = [akTop, akLeft, akBottom]
+      Brush.Color = clSilver
+      Pen.Style = psClear
+    end
+    object MemoryUsageLabel: TLabel
+      Left = 201
+      Height = 25
+      Top = 1
+      Width = 150
+      Align = alLeft
+      Alignment = taCenter
+      Caption = '?'
+      Constraints.MaxWidth = 150
+      Constraints.MinWidth = 150
+      ParentColor = False
+    end
+    object EditLocationLabel: TLabel
+      Left = 351
+      Height = 25
+      Top = 1
+      Width = 1
+      Align = alLeft
+      Alignment = taCenter
+      ParentColor = False
+    end
+    object PlotPositionLabel: TLabel
+      Left = 352
+      Height = 25
+      Top = 1
+      Width = 321
+      Align = alClient
+      ParentColor = False
+    end
+    object MemoryUsageFrame: TShape
+      AnchorSideLeft.Control = MemoryUsageLabel
+      AnchorSideTop.Control = MemoryUsageLabel
+      AnchorSideRight.Control = MemoryUsageLabel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = MemoryUsageLabel
+      AnchorSideBottom.Side = asrBottom
+      Left = 201
+      Height = 25
+      Top = 1
+      Width = 150
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      Brush.Style = bsClear
+    end
   end
   object MainMenu: TMainMenu
     left = 564

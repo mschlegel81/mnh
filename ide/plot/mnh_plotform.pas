@@ -12,12 +12,13 @@ USES
   recyclers,
   mnh_plotData, mnh_settings, out_adapters, litVar, funcs,
   contexts, evalThread, plotstyles, plotMath, EpikTimer,
-  plotExport;
+  plotExport,
+  ideLayoutUtil;
 
 TYPE
   PMouseEvent=PROCEDURE(CONST realPoint:T_point) of object;
 
-  TplotForm = class(TForm)
+  TplotForm = class(T_mnhComponentForm)
     animateCheckBox: TCheckBox;
     cycleCheckbox: TCheckBox;
     AnimationGroupBox: TGroupBox;
@@ -87,6 +88,10 @@ TYPE
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+
+    FUNCTION getIdeComponentType:T_ideComponent; override;
+    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performFastUpdate; override;
   private
     animationFrameIndex:longint;
     fpsSamplingStart:double;
@@ -122,8 +127,9 @@ VAR myPlotForm:TplotForm=nil;
 FUNCTION plotForm: TplotForm;
   begin
     if myPlotForm=nil then begin
-      myPlotForm:=TplotForm.create(nil);
+      myPlotForm:=TplotForm.create(Application);
       myPlotForm.pullPlotSettingsToGui();
+      dockNewForm(myPlotForm);
     end;
     result:=myPlotForm;
   end;
@@ -140,9 +146,6 @@ PROCEDURE resetPlot(CONST hideWindow:boolean);
     myPlotForm.onPlotRescale   :=nil;
     myPlotForm.onPlotMouseClick:=nil;
     myPlotForm.onPlotMouseMove :=nil;
-    if hideWindow then begin
-      myPlotForm.Hide;
-    end;
   end;
 
 {$R *.lfm}
@@ -329,7 +332,8 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   begin
     if ssLeft in Shift then begin
       lastMouseX:=x;
@@ -338,7 +342,8 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: integer);
   VAR p:T_point;
   begin
     if (animationFrameIndex>=0) and (animationFrameIndex<plotSystem.animation.frameCount)
@@ -357,7 +362,8 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     lastMouseY:=y;
   end;
 
-PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   begin
     if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
@@ -374,6 +380,21 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     animateCheckBox.checked:=false;
   end;
 
+FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
+  begin
+    result:=icPlot;
+  end;
+
+PROCEDURE TplotForm.performSlowUpdate;
+  begin
+
+  end;
+
+PROCEDURE TplotForm.performFastUpdate;
+  begin
+    timerTick;
+  end;
+
 FUNCTION TplotForm.getPlotQuality: byte;
   begin
     if      miAntiAliasing4.checked then result:=PLOT_QUALITY_HIGH
@@ -382,7 +403,7 @@ FUNCTION TplotForm.getPlotQuality: byte;
     else                                 result:=PLOT_QUALITY_LOW;
   end;
 
-PROCEDURE TplotForm.pullPlotSettingsToGui;
+PROCEDURE TplotForm.pullPlotSettingsToGui();
   VAR currentScalingOptions:T_scalingOptions;
   begin
     plotSystem.startGuiInteraction;
@@ -401,7 +422,7 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
     miLogscaleY.checked     :=currentScalingOptions.axisTrafo['y'].logscale;
   end;
 
-PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize:double);
+PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize: double);
   VAR currentScalingOptions:T_scalingOptions;
       i:longint;
   begin
@@ -421,7 +442,7 @@ PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize:double);
     plotSystem.doneGuiInteraction;
   end;
 
-PROCEDURE TplotForm.pushSettingsToPlotContainer;
+PROCEDURE TplotForm.pushSettingsToPlotContainer();
   VAR currentScalingOptions:T_scalingOptions;
       i:longint;
   PROCEDURE updateCurrent;
@@ -472,7 +493,6 @@ PROCEDURE TplotForm.doPlot;
     end;
 
   begin
-    if not(showing) then Show;
     plotSystem.startGuiInteraction;
     updateInteractiveSection;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
@@ -487,7 +507,7 @@ PROCEDURE TplotForm.doPlot;
     plotSystem.doneGuiInteraction;
   end;
 
-FUNCTION TplotForm.timerTick:boolean;
+FUNCTION TplotForm.timerTick: boolean;
   FUNCTION frameInterval:longint;
     CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
     begin
