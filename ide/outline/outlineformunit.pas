@@ -1,4 +1,4 @@
-UNIT outlines;
+UNIT outlineFormUnit;
 
 {$mode objfpc}{$H+}
 
@@ -11,14 +11,10 @@ USES
   operators,
   mnh_settings,
   mnh_constants,basicTypes,
-  subrules,rules,packages;
+  subrules,rules,packages,editorMeta;
 
 TYPE
-  T_openLocationCallback=FUNCTION (CONST location:T_searchTokenLocation):boolean of object;
   P_outlineNode=^T_outlineNode;
-
-  { TOutlineForm }
-
   TOutlineForm = class(T_mnhComponentForm)
     outlineGlyphs: TImageList;
     showPrivateCheckbox: TMenuItem;
@@ -34,8 +30,11 @@ TYPE
     PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE checkboxClick(Sender: TObject);
     PROCEDURE treeViewDblClick(Sender: TObject);
+
+    FUNCTION getIdeComponentType:T_ideComponent; override;
+    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performFastUpdate; override;
   private
-    cs:TRTLCriticalSection;
     currentMainPackage:P_package;
 
     packageNodes:array of P_outlineNode;
@@ -43,37 +42,9 @@ TYPE
     PROCEDURE refresh;
     FUNCTION ruleSorting: T_ruleSorting;
 
-  public
-    PROCEDURE update(CONST mainPackage: P_package);
-    FUNCTION getIdeComponentType:T_ideComponent; virtual;
-    PROCEDURE fontSettingsChanged(newFont:TFont); virtual;
+    PROCEDURE updateOutlineTree(CONST mainPackage: P_package);
   end;
 
-VAR openLocation:T_openLocationCallback;
-
-PROCEDURE showOutlineForm;
-IMPLEMENTATION
-VAR myOutlineForm: TOutlineForm=nil;
-PROCEDURE showOutlineForm;
-  begin
-    if myOutlineForm=nil then begin
-      myOutlineForm:=TOutlineForm.create(mainForm);
-      dockNewForm(myOutlineForm);
-    end;
-  end;
-
-{$R *.lfm}
-
-CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
-              {rt_memoized}        0,
-              {rt_mutable}         1,
-              {rt_datastore}       2,
-              {rt_synchronized}    3,
-              {rt_customTypeCheck} 4,
-              {rt_duckTypeCheck}   4,
-              {rt_customTypeCast}  5,
-              {rt_customOperator}  6);
-TYPE
   T_outlineNode=object
     private
       containingModel:TOutlineForm;
@@ -91,6 +62,26 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE refresh;
   end;
+
+PROCEDURE ensureOutlineForm;
+IMPLEMENTATION
+USES codeAssistance;
+PROCEDURE ensureOutlineForm;
+  begin
+    if not(hasFormOfType(icOutline)) then dockNewForm(TOutlineForm.create(Application));
+  end;
+
+{$R *.lfm}
+
+CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
+              {rt_memoized}        0,
+              {rt_mutable}         1,
+              {rt_datastore}       2,
+              {rt_synchronized}    3,
+              {rt_customTypeCheck} 4,
+              {rt_duckTypeCheck}   4,
+              {rt_customTypeCast}  5,
+              {rt_customOperator}  6);
 
 PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleId: string; CONST inMainPackage:boolean);
   begin
@@ -210,29 +201,24 @@ PROCEDURE T_outlineNode.refresh;
 
 PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
   begin
-    initCriticalSection(cs);
     setLength(packageNodes,0);
   end;
 
 PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
   VAR i:longint;
   begin
-    enterCriticalSection(cs);
     for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
     setLength(packageNodes,0);
-    leaveCriticalSection(cs);
-    doneCriticalSection(cs);
   end;
 
 PROCEDURE TOutlineForm.openSelectedLocation;
   begin
-    enterCriticalSection(cs);
     if Assigned(outlineTreeView.Selected) and (outlineTreeView.Selected.data<>nil) then
-    openLocation(P_outlineNode(outlineTreeView.Selected.data)^.location);
-    leaveCriticalSection(cs);
+    workspace.openLocation(P_outlineNode(outlineTreeView.Selected.data)^.location);
   end;
 
-PROCEDURE TOutlineForm.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TOutlineForm.treeViewKeyDown(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   begin
     if key=13 then openSelectedLocation;
   end;
@@ -244,16 +230,13 @@ PROCEDURE TOutlineForm.treeViewDblClick(Sender: TObject);
 
 PROCEDURE TOutlineForm.refresh;
   begin
-    enterCriticalSection(cs);
-    update(currentMainPackage);
-    leaveCriticalSection(cs);
+    updateOutlineTree(currentMainPackage);
   end;
 
-PROCEDURE TOutlineForm.update(CONST mainPackage:P_package);
+PROCEDURE TOutlineForm.updateOutlineTree(CONST mainPackage: P_package);
   VAR imported:T_packageList;
       i:longint;
   begin
-    enterCriticalSection(cs);
     currentMainPackage:=mainPackage;
     if mainPackage=nil then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
@@ -279,7 +262,6 @@ PROCEDURE TOutlineForm.update(CONST mainPackage:P_package);
       visible:=true;
     end;
     if not(showImportedCheckbox.checked) and (length(packageNodes)>0) then packageNodes[0]^.associatedNode.expand(false);
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE TOutlineForm.checkboxClick(Sender: TObject);
@@ -297,7 +279,23 @@ FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
     result:=icOutline;
   end;
 
-FUNCTION TOutlineForm.ruleSorting:T_ruleSorting;
+PROCEDURE TOutlineForm.performSlowUpdate;
+  VAR meta:P_editorMeta;
+      assistanceData:P_codeAssistanceResponse;
+  begin
+    meta:=workspace.currentEditor;
+    if meta=nil then exit;
+    assistanceData:=meta^.getCodeAssistanceData;
+    if assistanceData=nil then exit;
+    updateOutlineTree(assistanceData^.package);
+  end;
+
+PROCEDURE TOutlineForm.performFastUpdate;
+  begin
+
+  end;
+
+FUNCTION TOutlineForm.ruleSorting: T_ruleSorting;
   begin
     result:=rs_none;
     if sortByNameCaseRadio.checked then exit(rs_byNameCaseSensitive);

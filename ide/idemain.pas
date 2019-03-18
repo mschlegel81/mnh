@@ -8,7 +8,7 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel;
+  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit;
 
 TYPE
 
@@ -274,7 +274,7 @@ PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    ensureOutlineForm;
   end;
 
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
