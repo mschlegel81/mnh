@@ -1,7 +1,7 @@
 object plotForm: TplotForm
-  Left = 795
+  Left = 881
   Height = 451
-  Top = 351
+  Top = 224
   Width = 700
   Caption = 'MNH plot'
   ClientHeight = 421
@@ -28,6 +28,7 @@ object plotForm: TplotForm
     OnMouseDown = plotImageMouseDown
     OnMouseMove = plotImageMouseMove
     OnMouseUp = plotImageMouseUp
+    PopupMenu = PopupMenu
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -106,8 +107,8 @@ object plotForm: TplotForm
     end
   end
   object MainMenu: TMainMenu
-    left = 8
-    top = 8
+    left = 40
+    top = 32
     object MenuItem6: TMenuItem
       Caption = '&Plot'
       object miAutoReset: TMenuItem
@@ -229,5 +230,9 @@ object plotForm: TplotForm
         OnClick = miLogscaleYClick
       end
     end
+  end
+  object PopupMenu: TPopupMenu
+    left = 161
+    top = 92
   end
 end

@@ -216,12 +216,17 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR spli
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
   VAR k:longint;
       ic:T_ideComponent;
+      intendedWindowState:TWindowState;
   begin
     mainForm.top   :=stream.readLongint;
     mainForm.Left  :=stream.readLongint;
     mainForm.height:=stream.readLongint;
     mainForm.width :=stream.readLongint;
-    mainForm.WindowState:=TWindowState(stream.readByte);
+    intendedWindowState:=TWindowState(stream.readByte);
+    if intendedWindowState=wsFullScreen
+    then mainForm.BorderStyle:=bsNone
+    else mainForm.BorderStyle:=bsSizeable;
+    mainForm.WindowState:=intendedWindowState;
 
     for k:=1 to 4 do splitters[k]:=stream.readLongint;
     result:=true;

@@ -55,6 +55,7 @@ TYPE
     miAntiAliasing2: TMenuItem;
     miAntiAliasing3: TMenuItem;
     plotImage: TImage;
+    PopupMenu: TPopupMenu;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
@@ -611,7 +612,6 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'postDisplay'      ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
   plotSystem.create(@executePlot)
 FINALIZATION
-  if myPlotForm<>nil then FreeAndNil(myPlotForm);
   plotSystem.destroy;
 
 end.

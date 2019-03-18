@@ -194,10 +194,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       //Apply splitter positions:
       FormResize(self);
 
-      if WindowState=wsFullScreen
-      then BorderStyle:=bsNone
-      else BorderStyle:=bsSizeable;
-
       runnerModel.loadFromStream(stream);
       miDebug         .checked:=runnerModel.debugMode;
       miProfile       .checked:=runnerModel.profiling;
@@ -211,6 +207,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR stream:T_bufferedOutputStreamWrapper;
   begin
+    earlyFinalization;
     finalizeCodeAssistance;
     //TODO: Settings file name!
     stream.createToWriteToFile('ide.settings');
