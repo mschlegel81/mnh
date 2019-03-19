@@ -61,6 +61,7 @@ T_settings=object(T_serializable)
   //Global:
   memoryLimit:int64;
   cpuCount:longint;
+  //TODO: move saveIntervalIdx
   saveIntervalIdx:byte;
   //IDE:
   editor:record
@@ -68,29 +69,38 @@ T_settings=object(T_serializable)
     fontSize        :longint;
     antialiasedFonts:boolean;
   end;
+  //TODO: Remove mainForm
   mainForm:T_formPosition;
+  //TODO: move outline
   outline:record
     showPrivate,showImported,sortByName,sortByNameCaseSen,sortByLoc,
     fullHeight:boolean;
     viewWidth:longint;
   end;
+  //TODO: move outputBehavior
   outputBehavior,
+  //TODO: move quickOutputBehavior
   quickOutputBehavior: T_ideMessageConfig;
+  //TODO: remove outputLinesLimit
   outputLinesLimit:longint;
+  //TODO: move outputLinesLimit
   doResetPlotOnEvaluation: boolean;
   cacheAnimationFrames: boolean;
 
+  //TODO: move htmlDocGeneratedForCodeHash
   htmlDocGeneratedForCodeHash:string;
+  //TODO: move doShowSplashScreen
   doShowSplashScreen:boolean;
   fullFlavourLocation,
   lightFlavourLocation:string;
 
+  //TODO: move externalRunOptions
   externalRunOptions:record
     flags:set of T_cmdLineFlag;
     callLightFlavour:boolean;
     verbosity,customFolder:ansistring;
   end;
-
+  //TODO: move line ending settings
   newFileLineEnding,overwriteLineEnding:byte;
 
   CONSTRUCTOR create;

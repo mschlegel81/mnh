@@ -318,11 +318,11 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
       mark:=editor.Marks[i];
       editor_.Marks.remove(editor.Marks[i]);
       mark.free;
-      //TODO: Tell the running evaluation about the removed breakpoint
+      runEvaluator.globals.stepper^.setBreakpoints(workspace.getAllBreakpoints);
       exit;
     end;
-    //TODO: Tell the running evaluation about the added breakpoint
     _add_breakpoint_or_bookmark_(editor_.CaretY);
+    runEvaluator.globals.stepper^.setBreakpoints(workspace.getAllBreakpoints);
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
@@ -495,7 +495,17 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+  PROCEDURE cycleEditors(CONST tabForward:boolean);
+    begin
+      with workspace.inputPageControl do if tabForward
+      then activePageIndex:=(activePageIndex+          1) mod PageCount
+      else activePageIndex:=(activePageIndex+PageCount-1) mod PageCount;
+      workspace.currentEditor^.activate;
+    end;
+
   begin
+    if command=editCommandPageRight      then begin command:=ecNone; cycleEditors(true ); end else
+    if command=editCommandPageLeft       then begin command:=ecNone; cycleEditors(false); end else
     if command=editCommandToggleBookmark then begin
       toggleBreakpoint;
       command:=ecNone;

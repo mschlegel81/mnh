@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil,math;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -31,15 +31,17 @@ TYPE
   T_splitterPositions=array[1..4] of longint;
 
   T_mnhComponentForm=class(TForm)
-    private
-      myComponentParent:T_componentParent;
     published
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
       PROCEDURE performSlowUpdate; virtual; abstract;
       PROCEDURE performFastUpdate; virtual; abstract;
+      PROCEDURE getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
+      PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+      PROCEDURE showComponent;
     public
+      myComponentParent:T_componentParent;
       DESTRUCTOR destroy; override;
   end;
 
@@ -85,21 +87,53 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
     if mainForm<>nil then mainForm.attachNewForm(newForm);
   end;
 
+PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
+  begin
+    page:=nil;
+    PageControl:=nil;;
+    if (parent<>nil) and (parent.ClassName='TTabSheet') then begin
+      page:=TTabSheet(parent);
+      if (page.parent<>nil) and (page.parent.ClassName='TPageControl')
+      then PageControl:=TPageControl(page.parent);
+    end;
+  end;
+
+PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR page:TTabSheet;
+      PageControl:TPageControl;
+  begin
+    if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
+      getParents(page,PageControl);
+      if PageControl<>nil then begin
+        if key=33
+        then PageControl.activePageIndex:=(PageControl.activePageIndex+1                      ) mod PageControl.PageCount
+        else PageControl.activePageIndex:=(PageControl.activePageIndex+PageControl.PageCount-1) mod PageControl.PageCount;
+        if mainForm<>nil then mainForm.ActiveControl:=PageControl.activePage;
+      end;
+    end;
+  end;
+
+PROCEDURE T_mnhComponentForm.showComponent;
+  VAR page:TTabSheet;
+      PageControl:TPageControl;
+  begin
+    getParents(page,PageControl);
+    if PageControl=nil then begin
+      Show;
+      BringToFront;
+    end else begin
+      PageControl.activePage:=page;
+      if mainForm<>nil then mainForm.ActiveControl:=self;
+    end;
+  end;
+
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
   VAR f:T_mnhComponentForm;
+
   begin
     result:=false;
     for f in activeForms do if f.getIdeComponentType=ideComponent then begin
-      if BringToFront then begin
-        if f.parent=nil
-        then f.BringToFront
-        else begin
-          if (f.parent       .ClassName='TTabSheet') and
-             (f.parent.parent.ClassName='TPageControl') then
-            TPageControl(f.parent.parent).activePage:=TTabSheet(f.parent);
-        end;
-        if mainForm<>nil then mainForm.ActiveControl:=f;
-      end;
+      if BringToFront then f.showComponent;
       exit(true);
     end;
   end;
@@ -164,7 +198,6 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
   begin
     if (target<>nil) then begin
             writeln('Dock @',TComponent(target).name);
-
     if target.ClassNameIs('TPageControl') then begin
       n:=TPageControl(target).name;
       if (n.endsWith('1')) then myComponentParent:=cpPageControl1;
@@ -205,7 +238,7 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR spli
     stream.writeLongint(mainForm.width);
     stream.writeByte(byte(mainForm.WindowState));
 
-    for k:=1 to 4 do stream.writeLongint(splitters[k]);
+    for k:=1 to 4 do stream.writeWord(max(0,min(65535,splitters[k])));
 
     for ic in T_ideComponent do begin
       stream.writeByte(byte(lastDockLocationFor[ic]));
@@ -218,17 +251,17 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
       ic:T_ideComponent;
       intendedWindowState:TWindowState;
   begin
-    mainForm.top   :=stream.readLongint;
-    mainForm.Left  :=stream.readLongint;
-    mainForm.height:=stream.readLongint;
-    mainForm.width :=stream.readLongint;
+    mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
+    mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
+    mainForm.height:=min(max(stream.readLongint,100),screen.height);
+    mainForm.width :=min(max(stream.readLongint,100),screen.width);
     intendedWindowState:=TWindowState(stream.readByte);
     if intendedWindowState=wsFullScreen
     then mainForm.BorderStyle:=bsNone
     else mainForm.BorderStyle:=bsSizeable;
     mainForm.WindowState:=intendedWindowState;
 
-    for k:=1 to 4 do splitters[k]:=stream.readLongint;
+    for k:=1 to 4 do splitters[k]:=stream.readWord;
     result:=true;
     activeComponents:=[];
     for ic in T_ideComponent do begin

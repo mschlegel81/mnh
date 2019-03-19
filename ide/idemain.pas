@@ -166,6 +166,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     outputForm:=TOutputForm.create(self);
     attachNewForm(outputForm);
 
+    mnh_plotForm.mainFormCoordinatesLabel:=PlotPositionLabel;
+
     setupEditorMetaBase(miLanguage);
     runnerModel.create;
     initGuiOutAdapters(self,outputForm.OutputSynEdit);
@@ -452,7 +454,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
         form.Left:=Left+(width -form.width ) div 2;
       end;
     end;
-    form.Show;
+    form.myComponentParent:=componentParent;
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 

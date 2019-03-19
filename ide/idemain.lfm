@@ -111,7 +111,6 @@ object IdeMainForm: TIdeMainForm
         Top = 0
         Width = 180
         Align = alClient
-        DockSite = True
         MultiLine = True
         TabOrder = 2
         Options = [nboShowCloseButtons, nboMultiLine]
