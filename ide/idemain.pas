@@ -458,6 +458,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
       end;
     end;
     form.myComponentParent:=componentParent;
+    form.Show;
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 

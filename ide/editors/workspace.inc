@@ -17,6 +17,7 @@ T_workspace=object(T_serializable)
     fileHistory      :T_fileHistory;
 
   public
+    assistanceResponseForUpdate: P_codeAssistanceResponse;
     folderHistory    :T_fileHistory;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
@@ -57,6 +58,7 @@ end;
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,
   bookmarkImages: TImageList);
   begin
+    assistanceResponseForUpdate:=nil;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;

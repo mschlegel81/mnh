@@ -375,6 +375,7 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
     edit.clearAll;
     edit.lines.clear;
     lengthLimit:=edit.charsInWindow;
+    if lengthLimit<20 then lengthLimit:=20;
     hasErrors:=false;
     hasWarnings:=false;
     addErrors(localErrors);

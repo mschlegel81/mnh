@@ -92,7 +92,6 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
 
     //Externally triggered actions
-    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     PROCEDURE pollAssistanceResult;
 
     //PROCEDURE closeEditorWithDialogs;
@@ -343,7 +342,8 @@ PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistance
       latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
-    end;
+      workspace.assistanceResponseForUpdate:=response;
+    end else workspace.assistanceResponseForUpdate:=nil;
   end;
 
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
@@ -485,7 +485,6 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     if language_=LANG_MNH then begin
       triggerCheck;
-      setUnderCursor(false,true);
     end;
   end;
 
@@ -524,7 +523,7 @@ PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShift
   begin
     //TODO: Jump to declaration
     //TOOD: Update marker...
-    setUnderCursor(false,true);
+//    setUnderCursor(false,true);
   end;
 
 DESTRUCTOR T_editorMeta.destroy;

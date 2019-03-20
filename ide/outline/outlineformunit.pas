@@ -280,14 +280,9 @@ FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TOutlineForm.performSlowUpdate;
-  VAR meta:P_editorMeta;
-      assistanceData:P_codeAssistanceResponse;
   begin
-    meta:=workspace.currentEditor;
-    if meta=nil then exit;
-    assistanceData:=meta^.getCodeAssistanceData;
-    if assistanceData=nil then exit;
-    updateOutlineTree(assistanceData^.package);
+    if workspace.assistanceResponseForUpdate<>nil
+    then updateOutlineTree(workspace.assistanceResponseForUpdate^.package);
   end;
 
 PROCEDURE TOutlineForm.performFastUpdate;

@@ -32,7 +32,7 @@ IMPLEMENTATION
 {$R *.lfm}
 PROCEDURE ensureAssistanceForm;
   begin
-    if not(hasFormOfType(icAssistance)) then dockNewForm(TAssistanceForm.create(Application));
+    if not(hasFormOfType(icAssistance,true)) then dockNewForm(TAssistanceForm.create(Application));
   end;
 
 PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
@@ -57,19 +57,15 @@ PROCEDURE TAssistanceForm.performSlowUpdate;
        (('Assistance','Warnings'),
         ('Errors','Errors and Warnings'));
 
-  VAR edit:P_editorMeta;
-      assistantData:P_codeAssistanceResponse;
-      hasErrors  :boolean=false;
+  VAR hasErrors  :boolean=false;
       hasWarnings:boolean=false;
   begin
-    edit:=workspace.currentEditor;
-    if edit=nil
-    then exit;
-    assistantData:=edit^.getCodeAssistanceData;
-    if assistantData<>nil
-    then assistantData^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
-    caption:=conditionalCaption[hasErrors,hasWarnings];
-    if parent<>nil then parent.caption:=caption;
+    if workspace.assistanceResponseForUpdate<>nil
+    then begin
+      workspace.assistanceResponseForUpdate^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
+      caption:=conditionalCaption[hasErrors,hasWarnings];
+      if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
+    end;
   end;
 
 PROCEDURE TAssistanceForm.performFastUpdate;
