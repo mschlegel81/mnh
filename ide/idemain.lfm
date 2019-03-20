@@ -25,10 +25,9 @@ object IdeMainForm: TIdeMainForm
     Align = alRight
     DockSite = True
     DragKind = dkDock
-    DragMode = dmAutomatic
     MultiLine = True
+    PopupMenu = UndockPopup1
     TabOrder = 0
-    OnStartDock = PageControl1StartDock
     Options = [nboShowCloseButtons, nboMultiLine]
   end
   object Splitter1: TSplitter
@@ -58,10 +57,9 @@ object IdeMainForm: TIdeMainForm
       Align = alBottom
       DockSite = True
       DragKind = dkDock
-      DragMode = dmAutomatic
       MultiLine = True
+      PopupMenu = UndockPopup2
       TabOrder = 0
-      OnStartDock = PageControl2StartDock
       Options = [nboShowCloseButtons, nboMultiLine]
     end
     object Splitter2: TSplitter
@@ -92,10 +90,9 @@ object IdeMainForm: TIdeMainForm
         Align = alLeft
         DockSite = True
         DragKind = dkDock
-        DragMode = dmAutomatic
         MultiLine = True
+        PopupMenu = UndockPopup3
         TabOrder = 0
-        OnStartDock = PageControl3StartDock
         Options = [nboShowCloseButtons, nboMultiLine]
       end
       object Splitter3: TSplitter
@@ -132,10 +129,9 @@ object IdeMainForm: TIdeMainForm
     Align = alLeft
     DockSite = True
     DragKind = dkDock
-    DragMode = dmAutomatic
     MultiLine = True
+    PopupMenu = UndockPopup4
     TabOrder = 4
-    OnStartDock = PageControl4StartDock
     Options = [nboShowCloseButtons, nboMultiLine]
   end
   object StatusPanel: TPanel
@@ -748,5 +744,37 @@ object IdeMainForm: TIdeMainForm
     OnTimer = TimerTimer
     left = 416
     top = 87
+  end
+  object UndockPopup2: TPopupMenu
+    left = 88
+    top = 54
+    object miUndock2: TMenuItem
+      Caption = 'Undock'
+      OnClick = miUndock2Click
+    end
+  end
+  object UndockPopup3: TPopupMenu
+    left = 128
+    top = 94
+    object miUndock3: TMenuItem
+      Caption = 'Undock'
+      OnClick = miUndock3Click
+    end
+  end
+  object UndockPopup4: TPopupMenu
+    left = 168
+    top = 134
+    object miUndock4: TMenuItem
+      Caption = 'Undock'
+      OnClick = miUndock4Click
+    end
+  end
+  object UndockPopup1: TPopupMenu
+    left = 208
+    top = 174
+    object miUndock1: TMenuItem
+      Caption = 'Undock'
+      OnClick = miUndock1Click
+    end
   end
 end

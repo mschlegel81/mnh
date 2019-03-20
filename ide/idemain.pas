@@ -8,7 +8,8 @@ USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm;
+  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
+  helperForms,debuggerVarForms;
 
 TYPE
 
@@ -19,6 +20,10 @@ TYPE
     breakpointImages: TImageList;
     evaluationStateLabel: TLabel;
     EditLocationLabel: TLabel;
+    miUndock2: TMenuItem;
+    miUndock3: TMenuItem;
+    miUndock4: TMenuItem;
+    miUndock1: TMenuItem;
     PlotPositionLabel: TLabel;
     MemoryUsageLabel: TLabel;
     MainMenu: TMainMenu;
@@ -46,6 +51,7 @@ TYPE
     miReplace: TMenuItem;
     MemoryUsageShape: TShape;
     MemoryUsageFrame: TShape;
+    UndockPopup2: TPopupMenu;
     StatusPanel: TPanel;
     smEdit: TMenuItem;
     smRecent: TMenuItem;
@@ -81,6 +87,9 @@ TYPE
     Splitter3: TSplitter;
     Splitter4: TSplitter;
     timer: TTimer;
+    UndockPopup3: TPopupMenu;
+    UndockPopup4: TPopupMenu;
+    UndockPopup1: TPopupMenu;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
@@ -119,10 +128,10 @@ TYPE
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
     PROCEDURE miToggleFullscreenClick(Sender: TObject);
-    PROCEDURE PageControl1StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
-    PROCEDURE PageControl2StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
-    PROCEDURE PageControl3StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
-    PROCEDURE PageControl4StartDock(Sender: TObject; VAR DragObject: TDragDockObject);
+    PROCEDURE miUndock1Click(Sender: TObject);
+    PROCEDURE miUndock2Click(Sender: TObject);
+    PROCEDURE miUndock3Click(Sender: TObject);
+    PROCEDURE miUndock4Click(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
 
@@ -134,7 +143,7 @@ TYPE
   private
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
-    FUNCTION startDock(CONST PageControl:TPageControl):TDragDockObject;
+    PROCEDURE startDock(CONST PageControl:TPageControl);
   public
     { public declarations }
   end;
@@ -184,14 +193,12 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     stream.createToReadFromFile('ide.settings');
     if stream.allOkay and loadMainFormLayout(stream,splitterPositions,activeComponents) then begin
       if icOutline             in activeComponents then ensureOutlineForm;
-      //TODO: add help form
-      //if icHelp                in activeComponents then ensureHelpForm;
+      if icHelp                in activeComponents then ensureHelpForm;
       if icAssistance          in activeComponents then ensureAssistanceForm;
       //TODO: add quick eval form
       //if icQuickEval           in activeComponents then ensureQuickEvalForm;
       if icDebugger            in activeComponents then ensureDebuggerForm;
-      //TODO: add debugVar form
-      //if icDebuggerVariables   in activeComponents then ensureDebugVarForm;
+      if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
       if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
       //Apply splitter positions:
       FormResize(self);
@@ -300,7 +307,7 @@ PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    ensureHelpForm;
   end;
 
 PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
@@ -405,14 +412,10 @@ PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TIdeMainForm.PageControl1StartDock(Sender: TObject;
-  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl1); end;
-PROCEDURE TIdeMainForm.PageControl2StartDock(Sender: TObject;
-  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl2); end;
-PROCEDURE TIdeMainForm.PageControl3StartDock(Sender: TObject;
-  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl3); end;
-PROCEDURE TIdeMainForm.PageControl4StartDock(Sender: TObject;
-  VAR DragObject: TDragDockObject); begin DragObject:=startDock(PageControl4); end;
+PROCEDURE TIdeMainForm.miUndock1Click(Sender: TObject); begin startDock(PageControl1); end;
+PROCEDURE TIdeMainForm.miUndock2Click(Sender: TObject); begin startDock(PageControl2); end;
+PROCEDURE TIdeMainForm.miUndock3Click(Sender: TObject); begin startDock(PageControl3); end;
+PROCEDURE TIdeMainForm.miUndock4Click(Sender: TObject); begin startDock(PageControl4); end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
@@ -422,20 +425,20 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
     splitterPositions[4]:=PageControl4.width *65535 div  width;
   end;
 
-FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl): TDragDockObject;
+PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
   VAR control:TControl;
       newForm:T_mnhComponentForm;
   begin
     //Only handle pages with one control
-    if PageControl.activePage.ControlCount<>1 then exit(nil);
+    if PageControl.activePage.ControlCount<>1 then exit;
     control:=PageControl.activePage.Controls[0];
     //If the sheet is a TForm return it directly
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType) then newForm:=T_mnhComponentForm(control)
     else begin
       raise Exception.create('Not an mnhComponent form!');
     end;
-    writeln('StartDock');
-    result:=TDragDockObject.AutoCreate(newForm);
+    newForm.ManualDock(nil);
+    newForm.BringToFront;
   end;
 
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);

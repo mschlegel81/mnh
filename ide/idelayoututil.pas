@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil,math;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -79,6 +79,7 @@ PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR split
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
 
 IMPLEMENTATION
+USES math;
 VAR activeForms:array of T_mnhComponentForm;
     activeSynEdits:array of TSynEdit;
 
@@ -197,7 +198,6 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
   VAR n:string;
   begin
     if (target<>nil) then begin
-            writeln('Dock @',TComponent(target).name);
     if target.ClassNameIs('TPageControl') then begin
       n:=TPageControl(target).name;
       if (n.endsWith('1')) then myComponentParent:=cpPageControl1;
@@ -207,6 +207,11 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
     end else writeln('Unexpected dock at component of type ',target.ClassName);
     end else myComponentParent:=cpNone;
     lastDockLocationFor[getIdeComponentType]:=myComponentParent;
+
+    if myComponentParent=cpNone then begin
+      if width <100 then width :=100;
+      if height<100 then height:=100;
+    end;
   end;
 
 PROCEDURE performSlowUpdates;

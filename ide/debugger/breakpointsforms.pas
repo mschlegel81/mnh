@@ -42,6 +42,7 @@ FUNCTION TBreakpointsForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TBreakpointsForm.breakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
+
     //TODO: Implement jump
     //TODO: Implement delete
   end;

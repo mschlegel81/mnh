@@ -49,6 +49,8 @@ T_workspace=object(T_serializable)
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
+
+    FUNCTION getMainFormCaption:string;
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -82,6 +84,7 @@ FUNCTION T_workspace.getSerialVersion: dword;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   VAR k,j:longint;
+      meta:P_editorMeta;
   begin
     nextMetaIndex:=1;
     setLength(oldMarkers,stream.readNaturalNumber);
@@ -108,6 +111,11 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     result:=stream.allOkay and
     fileHistory  .loadFromStream(stream) and
     folderHistory.loadFromStream(stream);
+
+    if result then begin
+      for meta in metas do meta^.updateSheetCaption;
+      currentEditor^.activate;
+    end;
   end;
 
 PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
@@ -227,7 +235,10 @@ PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shi
   VAR caller:TSynEdit;
   begin
     caller:=TSynEdit(Sender);
-    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
+    if (key=13) and (ssCtrl in Shift) then begin
+      openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
+      key:=0;
+    end;
   end;
 
 PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject;
@@ -376,6 +387,15 @@ PROCEDURE T_workspace.renameWordUnderCursor;
     if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
     then meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+  end;
+
+FUNCTION T_workspace.getMainFormCaption:string;
+  VAR meta:P_editorMeta;
+  begin
+    meta:=currentEditor;
+    if meta=nil
+    then result:=APP_TITLE                                                                     {$ifdef debugMode}+' [debug]'{$endif}
+    else result:=APP_TITLE+' '+meta^.pseudoName(false)+BoolToStr(meta^.editor.modified,' *',''){$ifdef debugMode}+' [debug]'{$endif};
   end;
 
 {$endif}

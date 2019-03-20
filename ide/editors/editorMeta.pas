@@ -73,18 +73,20 @@ T_editorMeta=object(T_basicEditorMeta)
 
     PROCEDURE setFile(CONST fileName:string);
     PROCEDURE saveFile(CONST fileName:string='');
-    FUNCTION updateSheetCaption:ansistring;
+    PROCEDURE updateSheetCaption;
+
+    PROCEDURE activate;
   public
     //Editor events
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer); virtual;
     PROCEDURE onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
     PROCEDURE onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
+    PROCEDURE editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     //Inherited overrides
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
     FUNCTION isPseudoFile: boolean; virtual;
-    PROCEDURE activate; virtual;
 
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
@@ -147,6 +149,7 @@ T_bookmarkIndex=0..9;
 //
 //FUNCTION getAllBreakpoints:T_searchTokenLocations;
 
+FUNCTION getHelpText:string;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback;
     runnerModel:T_runnerModel;
@@ -181,7 +184,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
     paintedWithStateHash:=0;
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
-    editor_.OnKeyUp             :=@(workspace.keyUpForJumpToLocation);
+    editor_.OnKeyUp             :=@editorKeyUp;
     editor_.OnMouseDown         :=@(workspace.mouseDownForJumpToLocation);
     editor_.OnProcessCommand    :=@processUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
@@ -473,24 +476,16 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
     end;
   end;
 
-FUNCTION T_editorMeta.updateSheetCaption: ansistring;
+PROCEDURE T_editorMeta.updateSheetCaption;
   begin
-    if editor.modified then result:=' *'
-                       else result:='';
-    tabsheet.caption:=pseudoName(true)+result;
-    result:=APP_TITLE+' '+pseudoName(false)+result{$ifdef debugMode}+' [debug]'{$endif};
+    tabsheet.caption:=pseudoName(true)+BoolToStr(editor.modified,' *','');
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
-  PROCEDURE invalidateWordUnderCursor;
-    begin
-      underCursor.location.line:=-1;
-    end;
-
   begin
     if language_=LANG_MNH then begin
       triggerCheck;
-      invalidateWordUnderCursor;
+      setUnderCursor(false,true);
     end;
   end;
 
@@ -525,6 +520,13 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
     for other in workspace.metas do if (other<>@self) then other^.clearBookmark(mark.BookmarkNumber);
   end;
 
+PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    //TODO: Jump to declaration
+    //TOOD: Update marker...
+    setUnderCursor(false,true);
+  end;
+
 DESTRUCTOR T_editorMeta.destroy;
   begin
     inherited destroy;
@@ -544,7 +546,6 @@ FUNCTION T_editorMeta.isPseudoFile: boolean;
 PROCEDURE T_editorMeta.activate;
   VAR l:T_language;
   begin
-    inherited activate;
     for l in T_language do if Assigned(fileTypeMeta[l].menuItem) then begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.checked:=(l=language);
@@ -563,7 +564,6 @@ PROCEDURE T_editorMeta.activate;
       end;
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
-      mainForm.onDebuggerEvent;
       mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
   end;
@@ -582,6 +582,11 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
     if language_<>LANG_MNH then exit;
     response:=getLatestAssistanceResponse(@self);
     if response<>nil then updateAssistanceResponse(response);
+  end;
+
+FUNCTION getHelpText:string;
+  begin
+    result:=underCursor.infoText;
   end;
 
 //CONST workspaceSerialVersion=612461341;

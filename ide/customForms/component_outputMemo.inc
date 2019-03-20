@@ -22,7 +22,6 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
     synMeta.createWithParent(parent^.winControl,nil);
     synMeta.editor.Align:=alTop;
     synMeta.editor.readonly:=true;
-    synMeta.activate;
     state_hlLang:='';
     config_hlLang:=nil;
 
@@ -47,7 +46,6 @@ PROCEDURE T_outputMemoMeta.update;
     synMeta.editor.text:=state.caption;
     synMeta.editor.enabled:=state.enabled;
     synMeta.setLanguage(state_hlLang,synMeta.language);
-    synMeta.activate;
     leaveCriticalSection(elementCs);
   end;
 

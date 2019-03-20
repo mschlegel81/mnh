@@ -31,6 +31,7 @@ T_runnerModel=object(T_serializable)
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
 
+    FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
@@ -162,6 +163,11 @@ PROCEDURE T_runnerModel.haltEvaluation;
   begin
     runEvaluator.haltEvaluation;
     if debugMode_ then runEvaluator.globals.stepper^.haltEvaluation;
+  end;
+
+FUNCTION T_runnerModel.getSerialVersion:dword;
+  begin
+    result:=123235;
   end;
 
 FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;

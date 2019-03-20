@@ -76,8 +76,6 @@ TYPE T_language=(LANG_MNH   = 0,
       PROPERTY editor:TSynEdit read editor_;
       PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:T_language);
 
-      PROCEDURE activate; virtual;
-
       PROCEDURE setCaret(CONST location: T_searchTokenLocation);
       PROCEDURE toggleComment;
       PROCEDURE moveLine(CONST up:boolean);
@@ -270,9 +268,10 @@ PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
 
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
   begin
-    if language_=languageIndex then exit;
     language_:=languageIndex;
-    activate;
+    if language_=LANG_MNH then editor.highlighter:=highlighter
+                          else editor.highlighter:=fileTypeMeta[language_].highlighter;
+    completionLogic.assignEditor(editor_,nil);
   end;
 
 CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST bookmarkImages: TImageList);
@@ -414,6 +413,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
+    setLanguage(LANG_MNH);
   end;
 
 DESTRUCTOR T_basicEditorMeta.destroy;
@@ -471,13 +471,6 @@ PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string;
       exit;
     end;
     setLanguage(fallback);
-  end;
-
-PROCEDURE T_basicEditorMeta.activate;
-  begin
-    if language_=LANG_MNH then editor.highlighter:=highlighter
-                          else editor.highlighter:=fileTypeMeta[language_].highlighter;
-    completionLogic.assignEditor(editor_,nil);
   end;
 
 PROCEDURE T_basicEditorMeta.setCaret(CONST location: T_searchTokenLocation);
