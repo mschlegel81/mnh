@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil,mnh_doc,mnh_constants;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -78,6 +78,7 @@ FUNCTION focusedEditor:TSynEdit;
 PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
 
+VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
 USES math;
 VAR activeForms:array of T_mnhComponentForm;
@@ -249,6 +250,9 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR spli
       stream.writeByte(byte(lastDockLocationFor[ic]));
       stream.writeBoolean(hasFormOfType(ic));
     end;
+
+    stream.writeBoolean(doShowSplashScreen);
+    stream.writeAnsiString(htmlDocGeneratedForCodeHash);
   end;
 
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
@@ -260,7 +264,8 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
     mainForm.width :=min(max(stream.readLongint,100),screen.width);
-    intendedWindowState:=TWindowState(stream.readByte);
+    intendedWindowState:=TWindowState(stream.readByte([byte(low(TWindowState))..byte(high(TWindowState))]));
+    if not(stream.allOkay) then exit(false);
     if intendedWindowState=wsFullScreen
     then mainForm.BorderStyle:=bsNone
     else mainForm.BorderStyle:=bsSizeable;
@@ -274,7 +279,10 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
       if stream.readBoolean then include(activeComponents,ic);
     end;
 
-    result:=result and stream.allOkay;
+    doShowSplashScreen:=stream.readBoolean;
+    htmlDocGeneratedForCodeHash:=stream.readAnsiString;
+
+    result:=result and stream.allOkay and (length(htmlDocGeneratedForCodeHash)=length(CODE_HASH));
   end;
 
 INITIALIZATION

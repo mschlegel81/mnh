@@ -120,7 +120,7 @@ FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessa
 PROCEDURE T_synOutAdapter.startOutput;
   begin
     setLength(linesToWrite,0);
-    outputLinesLimit:=settings.outputLinesLimit;
+    outputLinesLimit:=outputLinesLimit;
     bufferOffset:=0;
     hadDirectPrint:=false;
     wroteToSyn:=false;

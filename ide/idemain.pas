@@ -188,9 +188,15 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      breakpointImages,
                      bookmarkImages);
 
+    outlineSettings.create;
+
     splashOnStartup;
     //TODO: Settings file name!
     stream.createToReadFromFile('ide.settings');
+
+    //TODO: loadOutputSettings(stream)
+    //TODO: outlineSettings.loadFromStream(stream);
+
     if stream.allOkay and loadMainFormLayout(stream,splitterPositions,activeComponents) then begin
       if icOutline             in activeComponents then ensureOutlineForm;
       if icHelp                in activeComponents then ensureHelpForm;

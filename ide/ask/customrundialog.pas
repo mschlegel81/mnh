@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  EditBtn,mnh_settings;
+  EditBtn,mnh_settings, editorMeta;
 
 TYPE
   TCustomRunForm = class(TForm)
@@ -65,7 +65,7 @@ FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
 {$R *.lfm}
 PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
   begin
-    with settings.externalRunOptions do begin
+    with runnerModel.externalRunOptions do begin
       if not(fileExists(settings.lightFlavourLocation)) then begin
         callLightFlavour:=false;
         lightVersionRb.enabled:=false;
@@ -93,59 +93,59 @@ PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
 PROCEDURE TCustomRunForm.customLocRbChange(Sender: TObject);
   begin
     DirectoryEdit.enabled:=customLocRb.checked;
-    if not(customLocRb.checked) then settings.externalRunOptions.customFolder:='';
+    if not(customLocRb.checked) then runnerModel.externalRunOptions.customFolder:='';
   end;
 
 PROCEDURE TCustomRunForm.DirectoryEditChange(Sender: TObject);
   begin
-    settings.externalRunOptions.customFolder:=DirectoryEdit.text;
+    runnerModel.externalRunOptions.customFolder:=DirectoryEdit.text;
   end;
 
 PROCEDURE TCustomRunForm.fullVersionRbChange(Sender: TObject);
   begin
-    settings.externalRunOptions.callLightFlavour:=lightVersionRb.checked;
-    if settings.externalRunOptions.callLightFlavour then begin
+    runnerModel.externalRunOptions.callLightFlavour:=lightVersionRb.checked;
+    if runnerModel.externalRunOptions.callLightFlavour then begin
       guiFlagCb.checked:=false;
       profileFlagCb.checked:=false;
-      settings.externalRunOptions.flags:=settings.externalRunOptions.flags-[clf_GUI,clf_PROFILE];
+      runnerModel.externalRunOptions.flags:=runnerModel.externalRunOptions.flags-[clf_GUI,clf_PROFILE];
     end;
   end;
 
 PROCEDURE TCustomRunForm.guiFlagCbChange(Sender: TObject);
   begin
     if guiFlagCb.checked then begin
-      include(settings.externalRunOptions.flags,clf_GUI);
-      settings.externalRunOptions.callLightFlavour:=false;
+      include(runnerModel.externalRunOptions.flags,clf_GUI);
+      runnerModel.externalRunOptions.callLightFlavour:=false;
       fullVersionRb.checked:=true;
-    end else exclude(settings.externalRunOptions.flags,clf_GUI);
+    end else exclude(runnerModel.externalRunOptions.flags,clf_GUI);
   end;
 
 PROCEDURE TCustomRunForm.profileFlagCbChange(Sender: TObject);
   begin
     if profileFlagCb.checked then begin
-      include(settings.externalRunOptions.flags,clf_PROFILE);
-      exclude(settings.externalRunOptions.flags,clf_QUIET);
+      include(runnerModel.externalRunOptions.flags,clf_PROFILE);
+      exclude(runnerModel.externalRunOptions.flags,clf_QUIET);
       quietFlagCb.checked:=false;
-      settings.externalRunOptions.callLightFlavour:=false;
+      runnerModel.externalRunOptions.callLightFlavour:=false;
       fullVersionRb.checked:=true;
-    end else exclude(settings.externalRunOptions.flags,clf_PROFILE);
+    end else exclude(runnerModel.externalRunOptions.flags,clf_PROFILE);
   end;
 
 PROCEDURE TCustomRunForm.headlessFlagCbChange(Sender: TObject);
   begin
     if headlessFlagCb.checked
-    then include(settings.externalRunOptions.flags,clf_HEADLESS)
-    else exclude(settings.externalRunOptions.flags,clf_HEADLESS);
+    then include(runnerModel.externalRunOptions.flags,clf_HEADLESS)
+    else exclude(runnerModel.externalRunOptions.flags,clf_HEADLESS);
   end;
 
 PROCEDURE TCustomRunForm.quietFlagCbChange(Sender: TObject);
   begin
     if headlessFlagCb.checked
     then begin
-      include(settings.externalRunOptions.flags,clf_QUIET);
-      exclude(settings.externalRunOptions.flags,clf_PROFILE);
+      include(runnerModel.externalRunOptions.flags,clf_QUIET);
+      exclude(runnerModel.externalRunOptions.flags,clf_PROFILE);
       profileFlagCb.checked:=false;
-    end else exclude(settings.externalRunOptions.flags,clf_QUIET);
+    end else exclude(runnerModel.externalRunOptions.flags,clf_QUIET);
   end;
 
 PROCEDURE TCustomRunForm.scriptParamEditKeyPress(Sender: TObject; VAR key: char);
@@ -156,13 +156,13 @@ PROCEDURE TCustomRunForm.scriptParamEditKeyPress(Sender: TObject; VAR key: char)
 PROCEDURE TCustomRunForm.silentFlagCbChange(Sender: TObject);
   begin
     if headlessFlagCb.checked
-    then include(settings.externalRunOptions.flags,clf_SILENT)
-    else exclude(settings.externalRunOptions.flags,clf_SILENT);
+    then include(runnerModel.externalRunOptions.flags,clf_SILENT)
+    else exclude(runnerModel.externalRunOptions.flags,clf_SILENT);
   end;
 
 PROCEDURE TCustomRunForm.verbosityEditChange(Sender: TObject);
   begin
-    settings.externalRunOptions.verbosity:=verbosityEdit.text;
+    runnerModel.externalRunOptions.verbosity:=verbosityEdit.text;
   end;
 
 FINALIZATION

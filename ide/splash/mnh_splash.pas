@@ -10,6 +10,7 @@ USES
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_settings,
+  ideLayoutUtil,
   {$ifdef Windows} packages, {$endif}
   mnh_doc;
 
@@ -38,6 +39,7 @@ TYPE
 
 PROCEDURE splashOnStartup;
 PROCEDURE splashForAbout;
+
 IMPLEMENTATION
 {$R *.lfm}
 VAR splashForm:TSplashForm;
@@ -62,13 +64,13 @@ PROCEDURE splashForAbout;
 
 PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   begin
-    settings.doShowSplashScreen:=CheckBox1.checked;
+    doShowSplashScreen:=CheckBox1.checked;
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
   begin
     {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} prepareDoc;
-    if startupCall and not(settings.doShowSplashScreen) then close;
+    if startupCall and not(doShowSplashScreen) then close;
   end;
 
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -125,7 +127,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
   VAR l:T_arrayOfString;
       i:longint;
   begin
-    CheckBox1.checked:=settings.doShowSplashScreen;
+    CheckBox1.checked:=doShowSplashScreen;
     l:=C_EMPTY_STRING_ARRAY;
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);

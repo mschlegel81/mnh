@@ -9,7 +9,8 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_messages,
      evalThread,
      synOutAdapter,
-     variableTreeViews,mnhCustomForm, askDialog;
+     variableTreeViews,mnhCustomForm, askDialog,
+     serializationUtil;
 
 TYPE
   T_guiEventsAdapter=object(T_collectingOutAdapter)
@@ -22,8 +23,16 @@ VAR guiOutAdapter:    T_synOutAdapter;
     guiEventsAdapter: T_guiEventsAdapter;
     guiAdapters:      T_messagesDistributor;
 
+    outputBehavior,
+    quickOutputBehavior: T_ideMessageConfig;
+    outputLinesLimit:longint;
+
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit);
 FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributor;
+
+FUNCTION  loadOutputSettings(VAR stream:T_bufferedInputStreamWrapper):boolean;
+PROCEDURE saveOutputSettings(VAR stream:T_bufferedOutputStreamWrapper);
+
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit);
@@ -54,6 +63,21 @@ FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributo
     new(guiAd,create(guiOutAdapter.ownerForm,outputEdit));
     new(result,createDistributor);
     result^.addOutAdapter(guiAd,true);
+  end;
+
+FUNCTION loadOutputSettings(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  begin
+    stream.read(outputBehavior,sizeOf(outputBehavior));
+    stream.read(quickOutputBehavior,sizeOf(quickOutputBehavior));
+    outputLinesLimit:=stream.readNaturalNumber;
+    result:=stream.allOkay and (outputLinesLimit>=0)
+  end;
+
+PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
+  begin
+    stream.write(outputBehavior,sizeOf(outputBehavior));
+    stream.write(quickOutputBehavior,sizeOf(quickOutputBehavior));
+    stream.writeLongint(outputLinesLimit);
   end;
 
 CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_abstractMnhForm);

@@ -235,11 +235,12 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint; VAR stream: T_bufferedInputS
     for i:=1 to markCount do begin
       line:=stream.readNaturalNumber;    //#8a
       column:=stream.readNaturalNumber;  //#8b
-      _add_breakpoint_or_bookmark_(line,column,stream.readByte); //#8c
+      _add_breakpoint_or_bookmark_(line,column,stream.readByte([0..10])); //#8c
     end;
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
-    language_:=T_language(stream.readByte);  //#11
+    language_:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
+
     editor.modified:=fileInfo.isChanged;
     updateSheetCaption;
   end;
@@ -462,8 +463,8 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
       workspace.folderHistory.fileClosed(ExtractFileDir(previousName));
     end;
     if previousName<>fileInfo.filePath
-    then lineEndingSetting:=settings.newFileLineEnding
-    else lineEndingSetting:=settings.overwriteLineEnding;
+    then lineEndingSetting:=workspace.newFileLineEnding
+    else lineEndingSetting:=workspace.overwriteLineEnding;
     setLength(arr,editor.lines.count);
     for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
     with fileInfo do begin

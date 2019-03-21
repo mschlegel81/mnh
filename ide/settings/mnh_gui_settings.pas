@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, ExtCtrls, mySys,funcs, out_adapters, mnh_constants,
-  packages,mnh_settings,mnh_doc,ideLayoutUtil;
+  packages,mnh_settings,mnh_doc,ideLayoutUtil,guiOutAdapters,editorMeta;
 
 CONST MINIMUM_OUTPUT_LINES=16;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=
@@ -98,37 +98,25 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     end;
     AntialiasCheckbox.checked := settings.editor.antialiasedFonts;
     setFontSize(settings.editor.fontSize);
-    setOutputLimit(settings.outputLinesLimit);
+    setOutputLimit(guiOutAdapters.outputLinesLimit);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
     FontButton.caption := settings.editor.fontName;
-    with settings.mainForm do begin
-      if top<0  then top := 0;
-      if Left<0 then Left := 0;
-      if height>screen.height-top then height := screen.height-top;
-      if width>screen.width-Left then width := screen.width-Left;
-      if (height<0) or (width<0) then  begin
-        top := 0;
-        Left := 0;
-        width := 480;
-        height := 480;
-      end;
-    end;
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
-    case settings.overwriteLineEnding of
+    case workspace.overwriteLineEnding of
       LINE_ENDING_UNCHANGED: rb_saveNoChange.checked:=true;
       LINE_ENDING_DEFAULT  : rb_saveDefault .checked:=true;
       LINE_ENDING_LINUX    : rb_saveLinux   .checked:=true;
       LINE_ENDING_WINDOWS  : rb_saveWindows .checked:=true;
     end;
-    case settings.newFileLineEnding of
+    case workspace.newFileLineEnding of
       LINE_ENDING_DEFAULT  : rb_saveNewDefault.checked:=true;
       LINE_ENDING_LINUX    : rb_saveNewLinux  .checked:=true;
       LINE_ENDING_WINDOWS  : rb_saveNewWindows.checked:=true;
     end;
-    autosaveComboBox.ItemIndex:=settings.saveIntervalIdx;
+    autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
@@ -161,17 +149,17 @@ PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
   begin
-    if rb_saveNewDefault.checked then settings.newFileLineEnding:=LINE_ENDING_DEFAULT;
-    if rb_saveNewLinux  .checked then settings.newFileLineEnding:=LINE_ENDING_LINUX  ;
-    if rb_saveNewWindows.checked then settings.newFileLineEnding:=LINE_ENDING_WINDOWS;
+    if rb_saveNewDefault.checked then workspace.newFileLineEnding:=LINE_ENDING_DEFAULT;
+    if rb_saveNewLinux  .checked then workspace.newFileLineEnding:=LINE_ENDING_LINUX  ;
+    if rb_saveNewWindows.checked then workspace.newFileLineEnding:=LINE_ENDING_WINDOWS;
   end;
 
 PROCEDURE TSettingsForm.rb_saveDefaultChange(Sender: TObject);
   begin
-    if rb_saveNoChange.checked then settings.overwriteLineEnding:= LINE_ENDING_UNCHANGED;
-    if rb_saveDefault .checked then settings.overwriteLineEnding:= LINE_ENDING_DEFAULT  ;
-    if rb_saveLinux   .checked then settings.overwriteLineEnding:= LINE_ENDING_LINUX    ;
-    if rb_saveWindows .checked then settings.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
+    if rb_saveNoChange.checked then workspace.overwriteLineEnding:= LINE_ENDING_UNCHANGED;
+    if rb_saveDefault .checked then workspace.overwriteLineEnding:= LINE_ENDING_DEFAULT  ;
+    if rb_saveLinux   .checked then workspace.overwriteLineEnding:= LINE_ENDING_LINUX    ;
+    if rb_saveWindows .checked then workspace.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
@@ -289,7 +277,7 @@ PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
 
 PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
   begin
-    settings.saveIntervalIdx:=autosaveComboBox.ItemIndex;
+    workspace.saveIntervalIdx:=autosaveComboBox.ItemIndex;
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;
@@ -317,7 +305,7 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
     then setOutputLimit(MINIMUM_OUTPUT_LINES)
     else begin
       outputSizeLimit.text := intToStr(value);
-      settings.outputLinesLimit:=value;
+      guiOutAdapters.outputLinesLimit:=value;
     end;
   end;
 

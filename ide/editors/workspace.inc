@@ -1,6 +1,8 @@
 {$ifdef includeInterface}
 T_workspace=object(T_serializable)
   private
+    savedAt:double; //nonpersistent
+
     mainForm:T_mnhIdeForm;
     inputPageControl:TPageControl;
     breakpointsImagesList :TImageList;
@@ -17,6 +19,9 @@ T_workspace=object(T_serializable)
     fileHistory      :T_fileHistory;
 
   public
+    saveIntervalIdx:byte;
+    newFileLineEnding,overwriteLineEnding:byte;
+
     assistanceResponseForUpdate: P_codeAssistanceResponse;
     folderHistory    :T_fileHistory;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
@@ -52,12 +57,33 @@ T_workspace=object(T_serializable)
     PROCEDURE renameWordUnderCursor;
 
     FUNCTION getMainFormCaption:string;
+
+    FUNCTION savingRequested:boolean;
 end;
+
+CONST
+  C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
+  ((text:'off';        interval:1E6),
+   (text:'1 minute';   interval: 1/(24*60)),
+   (text:'2 minutes';  interval: 2/(24*60)),
+   (text:'5 minutes';  interval: 5/(24*60)),
+   (text:'10 minutes'; interval:10/(24*60)),
+   (text:'30 minutes'; interval:30/(24*60)),
+   (text:'1 hour';     interval: 1/24));
+  LINE_ENDING_UNCHANGED=0;
+  LINE_ENDING_DEFAULT=1;
+  LINE_ENDING_LINUX=2;
+  LINE_ENDING_WINDOWS=3;
+
+  LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
+
 {$endif}
 {$ifdef includeImplementation}
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,
   bookmarkImages: TImageList);
   begin
+    savedAt:=now+1; //= now + 24h
+
     assistanceResponseForUpdate:=nil;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
@@ -92,7 +118,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     setLength(oldMarkers,stream.readNaturalNumber);
     for k:=0 to length(oldMarkers)-1 do begin
       oldMarkers[k].location:=readSearchTokenLocation(stream);
-      oldMarkers[k].markIndex:=stream.readByte;
+      oldMarkers[k].markIndex:=stream.readByte([0..10]);
     end;
     if not(stream.allOkay) then begin
       setLength(oldMarkers,0);
@@ -110,6 +136,11 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
     end;
 
+    saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
+    doShowSplashScreen :=stream.readBoolean;
+    newFileLineEnding  :=stream.readByte([0..3]);
+    overwriteLineEnding:=stream.readByte([0..3]);
+
     result:=stream.allOkay and
     fileHistory  .loadFromStream(stream) and
     folderHistory.loadFromStream(stream);
@@ -117,6 +148,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
       currentEditor^.activate;
+      savedAt:=now;
     end;
   end;
 
@@ -134,8 +166,15 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
       metas[k]^.saveToStream(stream);
     end;
 
+    stream.writeByte(saveIntervalIdx);
+    stream.writeBoolean(doShowSplashScreen);
+    stream.writeByte(newFileLineEnding);
+    stream.writeByte(overwriteLineEnding);
+
     fileHistory  .saveToStream(stream);
     folderHistory.saveToStream(stream);
+
+    savedAt:=now;
   end;
 
 FUNCTION T_workspace.currentEditor: P_editorMeta;
@@ -398,6 +437,11 @@ FUNCTION T_workspace.getMainFormCaption:string;
     if meta=nil
     then result:=APP_TITLE                                                                     {$ifdef debugMode}+' [debug]'{$endif}
     else result:=APP_TITLE+' '+meta^.pseudoName(false)+BoolToStr(meta^.editor.modified,' *',''){$ifdef debugMode}+' [debug]'{$endif};
+  end;
+
+FUNCTION T_workspace.savingRequested:boolean;
+  begin
+    result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
   end;
 
 {$endif}

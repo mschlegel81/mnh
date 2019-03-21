@@ -11,7 +11,8 @@ USES
   operators,
   mnh_settings,
   mnh_constants,basicTypes,
-  subrules,rules,packages,editorMeta;
+  subrules,rules,packages,editorMeta,
+  serializationUtil;
 
 TYPE
   P_outlineNode=^T_outlineNode;
@@ -63,7 +64,19 @@ TYPE
       PROCEDURE refresh;
   end;
 
+  T_outlineSettings=object(T_serializable)
+    showPrivate,
+    showImported:boolean;
+    ruleSorting:T_ruleSorting;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION getSerialVersion:dword; virtual;
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+  end;
+
 PROCEDURE ensureOutlineForm;
+VAR outlineSettings:T_outlineSettings;
 IMPLEMENTATION
 USES codeAssistance;
 PROCEDURE ensureOutlineForm;
@@ -82,6 +95,44 @@ CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
               {rt_duckTypeCheck}   4,
               {rt_customTypeCast}  5,
               {rt_customOperator}  6);
+
+CONSTRUCTOR T_outlineSettings.create;
+  begin
+    showPrivate:=true;
+    showImported:=false;
+    ruleSorting:=rs_byLocation;
+  end;
+
+DESTRUCTOR T_outlineSettings.destroy;
+  begin
+  end;
+
+FUNCTION T_outlineSettings.getSerialVersion: dword;
+  begin
+    result:=1;
+  end;
+
+FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  begin
+    try
+      showPrivate:=stream.readBoolean;
+      showImported:=stream.readBoolean;
+      ruleSorting:=T_ruleSorting(stream.readByte);
+      result:=stream.allOkay;
+    except
+      showPrivate:=true;
+      showImported:=false;
+      ruleSorting:=rs_byLocation;
+      result:=false;
+    end;
+  end;
+
+PROCEDURE T_outlineSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  begin
+    stream.writeBoolean(showPrivate);
+    stream.writeBoolean(showImported);
+    stream.writeByte(byte(ruleSorting));
+  end;
 
 PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleId: string; CONST inMainPackage:boolean);
   begin
@@ -202,6 +253,13 @@ PROCEDURE T_outlineNode.refresh;
 PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
   begin
     setLength(packageNodes,0);
+    showPrivateCheckbox.checked:=outlineSettings.showPrivate;
+    showImportedCheckbox.checked:=outlineSettings.showImported;
+    case outlineSettings.ruleSorting of
+      rs_byLocation             : sortByLocationRadio.checked:=true;
+      rs_byNameCaseSensitive    : sortByNameCaseRadio.checked:=true;
+      rs_byNameCaseInsensitive  : sortByNameRadio.checked:=true;
+    end;
   end;
 
 PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
@@ -266,11 +324,11 @@ PROCEDURE TOutlineForm.updateOutlineTree(CONST mainPackage: P_package);
 
 PROCEDURE TOutlineForm.checkboxClick(Sender: TObject);
   begin
-    settings.outline.showPrivate      :=showPrivateCheckbox .checked;
-    settings.outline.showImported     :=showImportedCheckbox.checked;
-    settings.outline.sortByNameCaseSen:=sortByNameCaseRadio .checked;
-    settings.outline.sortByName       :=sortByNameRadio     .checked;
-    settings.outline.sortByLoc        :=sortByLocationRadio .checked;
+    outlineSettings.showPrivate      :=showPrivateCheckbox .checked;
+    outlineSettings.showImported     :=showImportedCheckbox.checked;
+    if sortByNameCaseRadio .checked then outlineSettings.ruleSorting:=rs_byNameCaseSensitive;
+    if sortByNameRadio     .checked then outlineSettings.ruleSorting:=rs_byNameCaseInsensitive;
+    if sortByLocationRadio .checked then outlineSettings.ruleSorting:=rs_byLocation;
     refresh;
   end;
 

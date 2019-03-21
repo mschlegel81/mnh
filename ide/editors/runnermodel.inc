@@ -12,9 +12,15 @@ T_runnerModel=object(T_serializable)
       editor:TSynEdit;
       line:longint;
     end;
+
     debugMode_:boolean;
     PROCEDURE setDebugMode(CONST value:boolean);
   public
+    externalRunOptions:record
+      flags:set of T_cmdLineFlag;
+      callLightFlavour:boolean;
+      verbosity,customFolder:ansistring;
+    end;
     stackTracing:boolean;
     profiling:boolean;
     firstCallAfterActivation:boolean;
@@ -113,7 +119,7 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
       folder:string;
   begin
     callParameters:=FLAG_PAUSE_ALWAYS;
-    with settings.externalRunOptions do begin
+    with externalRunOptions do begin
       for flag in flags do
         append(callParameters,FLAG_TEXT[flag]);
       if verbosity<>'' then append(callParameters,'-v'+verbosity);
@@ -175,6 +181,13 @@ FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     debugMode_  :=stream.readBoolean();
     stackTracing:=stream.readBoolean();
     profiling   :=stream.readBoolean();
+    with externalRunOptions do begin
+      stream.read(flags,sizeOf(flags));
+      callLightFlavour:=stream.readBoolean;
+      verbosity   :=stream.readAnsiString;
+      customFolder:=stream.readAnsiString;
+    end;
+    result:=stream.allOkay;
   end;
 
 PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
@@ -182,6 +195,12 @@ PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeBoolean(debugMode_  );
     stream.writeBoolean(stackTracing);
     stream.writeBoolean(profiling   );
+    with externalRunOptions do begin
+      stream.write(flags,sizeOf(flags));
+      stream.writeBoolean   (callLightFlavour);
+      stream.writeAnsiString(verbosity   );
+      stream.writeAnsiString(customFolder);
+    end;
   end;
 
 {$endif}

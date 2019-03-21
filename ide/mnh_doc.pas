@@ -34,6 +34,7 @@ PROCEDURE ensureDemosAndPackages(Application:Tapplication; bar:TProgressBar; CON
 FUNCTION isRestorable(CONST fileName:string):longint;
 PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
+    htmlDocGeneratedForCodeHash:string;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
 
@@ -455,7 +456,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
         with outFile do begin
           if isOpen then close(handle);
           cmdParam:=getHtmlRoot+DirectorySeparator+cmdParam;
-          if not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
+          if not(fileExists(cmdParam)) or (CODE_HASH<>htmlDocGeneratedForCodeHash) then begin
             {$ifdef debugMode} writeln(stdErr,'        DEBUG: creating file ',cmdParam);{$endif}
             ensurePath(cmdParam);
             assign(handle,cmdParam);
@@ -516,7 +517,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
         Application.ProcessMessages;
       end;
     end;
-    settings.htmlDocGeneratedForCodeHash:=CODE_HASH;
+    htmlDocGeneratedForCodeHash:=CODE_HASH;
     with outFile do if isOpen then close(handle);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
   end;
