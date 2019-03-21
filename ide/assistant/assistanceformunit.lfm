@@ -454,9 +454,6 @@ object AssistanceForm: TAssistanceForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
-    Lines.Strings = (
-      'AssistanceEdit'
-    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     SelectedColor.BackPriority = 50

@@ -189,11 +189,14 @@ DESTRUCTOR T_fileHistory.destroy;
     setLength(items,0);
   end;
 
-FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176454893; end;
+FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176493; end;
 
 FUNCTION T_fileHistory.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR i,count:longint;
   begin
+    {$ifdef debugMode}
+    writeln('Loading T_fileHistory @',stream.streamPos);
+    {$endif}
     if not(inherited loadFromStream(stream)) then exit(false);
     setLength(items,0);
     count:=stream.readNaturalNumber;
@@ -206,6 +209,9 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):b
 PROCEDURE T_fileHistory.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   VAR i,count:longint;
   begin
+    {$ifdef debugMode}
+    writeln('Saving T_fileHistory @',stream.streamPos);
+    {$endif}
     inherited saveToStream(stream);
     count:=length(items);
     if count>FILE_HISTORY_MAX_SIZE then count:=FILE_HISTORY_MAX_SIZE;

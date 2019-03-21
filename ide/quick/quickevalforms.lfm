@@ -7,6 +7,8 @@ object QuickEvalForm: TQuickEvalForm
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
@@ -477,6 +479,7 @@ object QuickEvalForm: TQuickEvalForm
     MouseLinkColor.Foreground = clBlue
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
+    OnChange = quickInputEditChange
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17

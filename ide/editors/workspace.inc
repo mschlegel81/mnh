@@ -58,6 +58,7 @@ T_workspace=object(T_serializable)
 
     FUNCTION getMainFormCaption:string;
 
+    PROCEDURE postSaveRequest;
     FUNCTION savingRequested:boolean;
 end;
 
@@ -114,6 +115,10 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
   VAR k,j:longint;
       meta:P_editorMeta;
   begin
+    {$ifdef debugMode}
+    writeln('Loading T_workspace @',stream.streamPos);
+    {$endif}
+
     nextMetaIndex:=1;
     setLength(oldMarkers,stream.readNaturalNumber);
     for k:=0 to length(oldMarkers)-1 do begin
@@ -137,7 +142,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     end;
 
     saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
-    doShowSplashScreen :=stream.readBoolean;
     newFileLineEnding  :=stream.readByte([0..3]);
     overwriteLineEnding:=stream.readByte([0..3]);
 
@@ -147,7 +151,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
 
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
-      currentEditor^.activate;
+      if currentEditor<>nil then currentEditor^.activate;
       savedAt:=now;
     end;
   end;
@@ -155,6 +159,10 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
 PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR k:longint;
   begin
+    {$ifdef debugMode}
+    writeln('Saving T_workspace @',stream.streamPos);
+    {$endif}
+
     stream.writeNaturalNumber(length(oldMarkers));
     for k:=0 to length(oldMarkers)-1 do begin
       writeSearchTokenLocation(stream,oldMarkers[k].location);
@@ -167,7 +175,6 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     end;
 
     stream.writeByte(saveIntervalIdx);
-    stream.writeBoolean(doShowSplashScreen);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
 
@@ -437,6 +444,11 @@ FUNCTION T_workspace.getMainFormCaption:string;
     if meta=nil
     then result:=APP_TITLE                                                                     {$ifdef debugMode}+' [debug]'{$endif}
     else result:=APP_TITLE+' '+meta^.pseudoName(false)+BoolToStr(meta^.editor.modified,' *',''){$ifdef debugMode}+' [debug]'{$endif};
+  end;
+
+PROCEDURE T_workspace.postSaveRequest;
+  begin
+    savedAt:=0;
   end;
 
 FUNCTION T_workspace.savingRequested:boolean;

@@ -453,9 +453,6 @@ object OutputForm: TOutputForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
-    Lines.Strings = (
-      'OutputSynEdit'
-    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     SelectedColor.BackPriority = 50

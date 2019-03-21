@@ -9,9 +9,6 @@ USES
   SynHighlighterMnh,ideLayoutUtil,guiOutAdapters;
 
 TYPE
-
-  { TOutputForm }
-
   TOutputForm = class(T_mnhComponentForm)
     OutputSynEdit: TSynEdit;
     outputHighlighter:TSynMnhSyn;

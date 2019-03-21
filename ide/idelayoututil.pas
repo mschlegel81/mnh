@@ -264,7 +264,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
     mainForm.width :=min(max(stream.readLongint,100),screen.width);
-    intendedWindowState:=TWindowState(stream.readByte([byte(low(TWindowState))..byte(high(TWindowState))]));
+    intendedWindowState:=TWindowState(stream.readByte([byte(wsFullScreen),byte(wsMaximized),byte(wsNormal)]));
     if not(stream.allOkay) then exit(false);
     if intendedWindowState=wsFullScreen
     then mainForm.BorderStyle:=bsNone

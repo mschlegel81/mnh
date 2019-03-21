@@ -169,8 +169,7 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteDirectory(getDemosRoot   ,false);
     DeleteDirectory(getPackagesRoot,false);
     DeleteFile(settingsFileName);
-    //TODO: Implement this!
-    //DeleteFile(workspaceFilename);
+    DeleteFile(workspaceFilename);
     DeleteFile(settings.lightFlavourLocation);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_BLANK;
@@ -230,8 +229,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[1,0]:=getDemosRoot;
     foldersToMove[2,0]:=getPackagesRoot;
     filesToDelete[0]:=settingsFileName;
-    //TODO: Implement this!
-    //filesToDelete[1]:=workspaceFilename;
+    filesToDelete[1]:=workspaceFilename;
     if APP_STYLE=APP_STYLE_NORMAL then begin
       oldWasNormal:=true;
       APP_STYLE:=APP_STYLE_PORTABLE;
@@ -255,8 +253,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       else APP_STYLE:=APP_STYLE_PORTABLE;
     end;
     saveSettings;
-    //TODO: Implement this!
-    //saveWorkspace;
+    workspace.postSaveRequest;
     ensureDemosAndPackages(nil,nil,false);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
   end;

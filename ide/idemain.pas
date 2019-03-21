@@ -9,7 +9,7 @@ USES
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
   outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
-  helperForms,debuggerVarForms;
+  helperForms,debuggerVarForms,mnh_settings,quickEvalForms;
 
 TYPE
 
@@ -145,6 +145,7 @@ TYPE
     splitterPositions:T_splitterPositions;
     PROCEDURE startDock(CONST PageControl:TPageControl);
   public
+    PROCEDURE saveIdeSettings;
     { public declarations }
   end;
 
@@ -191,45 +192,39 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     outlineSettings.create;
 
     splashOnStartup;
-    //TODO: Settings file name!
-    stream.createToReadFromFile('ide.settings');
 
-    //TODO: loadOutputSettings(stream)
-    //TODO: outlineSettings.loadFromStream(stream);
+    stream.createToReadFromFile(workspaceFilename);
 
-    if stream.allOkay and loadMainFormLayout(stream,splitterPositions,activeComponents) then begin
+    if stream.allOkay
+    and loadMainFormLayout(stream,splitterPositions,activeComponents)
+    and loadOutputSettings(stream)
+    and workspace.loadFromStream(stream)
+    and runnerModel.loadFromStream(stream)
+    and outlineSettings.loadFromStream(stream)
+    then begin
       if icOutline             in activeComponents then ensureOutlineForm;
       if icHelp                in activeComponents then ensureHelpForm;
       if icAssistance          in activeComponents then ensureAssistanceForm;
-      //TODO: add quick eval form
-      //if icQuickEval           in activeComponents then ensureQuickEvalForm;
+      if icQuickEval           in activeComponents then ensureQuickEvalForm;
       if icDebugger            in activeComponents then ensureDebuggerForm;
       if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
       if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
       //Apply splitter positions:
       FormResize(self);
 
-      runnerModel.loadFromStream(stream);
       miDebug         .checked:=runnerModel.debugMode;
       miProfile       .checked:=runnerModel.profiling;
       miKeepStackTrace.checked:=runnerModel.stackTracing;
 
-      workspace.loadFromStream(stream);
     end;
     stream.destroy;
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
-  VAR stream:T_bufferedOutputStreamWrapper;
   begin
     earlyFinalization;
     finalizeCodeAssistance;
-    //TODO: Settings file name!
-    stream.createToWriteToFile('ide.settings');
-    saveMainFormLayout(stream,splitterPositions);
-    runnerModel.saveToStream(stream);
-    workspace.saveToStream(stream);
-    stream.destroy;
+    saveIdeSettings;
     workspace.destroy;
   end;
 
@@ -358,7 +353,7 @@ PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    ensureQuickEvalForm;
   end;
 
 PROCEDURE TIdeMainForm.miRenameClick(Sender: TObject);
@@ -447,6 +442,18 @@ PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
     newForm.BringToFront;
   end;
 
+PROCEDURE TIdeMainForm.saveIdeSettings;
+  VAR stream:T_bufferedOutputStreamWrapper;
+  begin
+    stream.createToWriteToFile(workspaceFilename);
+    saveMainFormLayout(stream,splitterPositions);
+    saveOutputSettings(stream);
+    workspace.saveToStream(stream);
+    runnerModel.saveToStream(stream);
+    outlineSettings.saveToStream(stream);
+    stream.destroy;
+  end;
+
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
   VAR dockMeta:TDragDockObject=nil;
       componentParent:T_componentParent;
@@ -508,6 +515,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
     VAR edit:P_editorMeta;
     begin
+      if workspace.savingRequested then saveIdeSettings;
+
       edit:=workspace.currentEditor;
       if (edit<>nil) then begin
         edit^.pollAssistanceResult;

@@ -548,7 +548,7 @@ PROCEDURE T_editorMeta.activate;
   begin
     for l in T_language do if Assigned(fileTypeMeta[l].menuItem) then begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
-      fileTypeMeta[l].menuItem.checked:=(l=language);
+      fileTypeMeta[l].menuItem.checked:=(l=language_);
     end;
     try
       if language_=LANG_MNH then begin

@@ -67,14 +67,20 @@ FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messagesDistributo
 
 FUNCTION loadOutputSettings(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin
+    {$ifdef debugMode}
+    writeln('Loading output settings @',stream.streamPos);
+    {$endif}
     stream.read(outputBehavior,sizeOf(outputBehavior));
     stream.read(quickOutputBehavior,sizeOf(quickOutputBehavior));
-    outputLinesLimit:=stream.readNaturalNumber;
+    outputLinesLimit:=stream.readLongint;
     result:=stream.allOkay and (outputLinesLimit>=0)
   end;
 
 PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
   begin
+    {$ifdef debugMode}
+    writeln('Saving output settings @',stream.streamPos);
+    {$endif}
     stream.write(outputBehavior,sizeOf(outputBehavior));
     stream.write(quickOutputBehavior,sizeOf(quickOutputBehavior));
     stream.writeLongint(outputLinesLimit);

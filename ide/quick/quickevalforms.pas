@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  SynEdit, ideLayoutUtil, SynHighlighterMnh,editorMeta;
+  SynEdit, ideLayoutUtil, SynHighlighterMnh,editorMeta,editorMetaBase;
 
 TYPE
 
@@ -17,21 +17,26 @@ TYPE
     quickInputEdit: TSynEdit;
     Splitter1: TSplitter;
     quickOutputSynEdit: TSynEdit;
-    inputHighlighter,outputHighlighter:TSynMnhSyn;
+    outputHighlighter:TSynMnhSyn;
+    PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE quickInputEditChange(Sender: TObject);
 
   private
-
+    inputMeta:T_basicEditorMeta;
   public
 
   end;
 
-VAR
-  QuickEvalForm: TQuickEvalForm;
-
+PROCEDURE ensureQuickEvalForm;
 IMPLEMENTATION
+PROCEDURE ensureQuickEvalForm;
+  begin
+    if not(hasFormOfType(icQuickEval,true)) then dockNewForm(TQuickEvalForm.create(Application));
+  end;
 
 {$R *.lfm}
 
@@ -40,6 +45,23 @@ IMPLEMENTATION
 FUNCTION TQuickEvalForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icQuickEval;
+  end;
+
+PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
+  begin
+    //TODO: Use "nonbasic" editor meta ?
+    inputMeta.createWithExistingEditor(quickInputEdit,nil);
+    inputMeta.language:=LANG_MNH;
+
+    registerSynEdit(quickOutputSynEdit);
+    outputHighlighter:=TSynMnhSyn.create(self,msf_output);
+    quickOutputSynEdit.highlighter:=outputHighlighter;
+  end;
+
+PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
+  begin
+    inputMeta.destroy;
+    unregisterSynEdit(quickOutputSynEdit);
   end;
 
 PROCEDURE TQuickEvalForm.performSlowUpdate;
@@ -51,6 +73,11 @@ PROCEDURE TQuickEvalForm.performSlowUpdate;
   end;
 
 PROCEDURE TQuickEvalForm.performFastUpdate;
+  begin
+
+  end;
+
+PROCEDURE TQuickEvalForm.quickInputEditChange(Sender: TObject);
   begin
 
   end;
