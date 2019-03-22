@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,ideLayoutUtil,SynHighlighterMnh,
-  editorMeta;
+  editorMeta,mnh_settings;
 
 TYPE
 
@@ -38,14 +38,14 @@ PROCEDURE ensureHelpForm;
 
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
-    registerSynEdit(SynEdit1);
+    registerFontControl(SynEdit1,ctEditor);
     highlighter.create(self,msf_help);
     SynEdit1.highlighter:=highlighter;
   end;
 
 PROCEDURE THelpForm.FormDestroy(Sender: TObject);
   begin
-    unregisterSynEdit(SynEdit1);
+    unregisterFontControl(SynEdit1);
   end;
 
 FUNCTION THelpForm.getIdeComponentType: T_ideComponent;

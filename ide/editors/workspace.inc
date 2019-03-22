@@ -50,6 +50,7 @@ T_workspace=object(T_serializable)
     PROCEDURE updateEditorsByGuiStatus;
 
     FUNCTION getAllBreakpoints:T_searchTokenLocations;
+    PROCEDURE removeBreakpoint(CONST loc:T_searchTokenLocation);
 
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
@@ -80,8 +81,7 @@ CONST
 
 {$endif}
 {$ifdef includeImplementation}
-CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,
-  bookmarkImages: TImageList);
+CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList);
   begin
     savedAt:=now+1; //= now + 24h
 
@@ -131,14 +131,17 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     end;
 
     setLength(metas,stream.readNaturalNumber);
+    for k:=0 to length(metas)-1 do new(metas[k],create(k));
+
+    result:=stream.allOkay;
     for k:=0 to length(metas)-1 do begin
-      new(metas[k],create(-1,stream));
-      if not(stream.allOkay) then begin
-        for j:=0 to k do dispose(metas[j],destroy);
-        setLength(metas,0);
-        exit(false);
-      end;
+      result:=result and metas[k]^.loadFromStream(stream) and stream.allOkay;
       if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
+    end;
+    if not(result) then begin
+      for j:=0 to length(metas)-1 do dispose(metas[j],destroy);
+      setLength(metas,0);
+      exit(false);
     end;
 
     saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
@@ -328,6 +331,20 @@ FUNCTION T_workspace.getAllBreakpoints: T_searchTokenLocations;
       setLength(result,length(result)+1);
       result[length(result)-1]:=oldMarkers[k].location;
     end;
+  end;
+
+PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
+  VAR m:P_editorMeta;
+      k:longint=0;
+      j:longint;
+  begin
+    for m in metas do if m^.getPath=loc.fileName then m^.deleteBreakpointIfExistent(loc.line);
+    while k<length(oldMarkers) do
+    if (oldMarkers[k].location=loc) and (oldMarkers[k].markIndex>=10) then begin
+      for j:=k to length(oldMarkers)-2 do oldMarkers[j]:=oldMarkers[j+1];
+      setLength(oldMarkers,length(oldMarkers)-1);
+    end else inc(k);
+    runEvaluator.globals.stepper^.setBreakpoints(getAllBreakpoints);
   end;
 
 PROCEDURE T_workspace.closeCurrentFile;

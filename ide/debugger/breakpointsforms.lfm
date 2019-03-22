@@ -3,34 +3,24 @@ object BreakpointsForm: TBreakpointsForm
   Height = 360
   Top = 165
   Width = 480
-  Caption = 'BreakpointsForm'
+  Caption = 'Breakpoints'
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
   DragKind = dkDock
   DragMode = dmAutomatic
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
-  object breakpointsGrid: TStringGrid
+  object BreakpointsListBox: TListBox
     Left = 0
     Height = 360
     Top = 0
     Width = 480
     Align = alClient
-    ColCount = 2
-    FixedCols = 0
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
-    RowCount = 2
+    ItemHeight = 0
+    OnDblClick = BreakpointsListBoxDblClick
+    OnKeyDown = BreakpointsListBoxKeyDown
     TabOrder = 0
-    OnDblClick = breakpointsGridDblClick
-    OnKeyUp = breakpointsGridKeyUp
-    Cells = (
-      2
-      0
-      0
-      'File'
-      1
-      0
-      'Line'
-    )
   end
 end

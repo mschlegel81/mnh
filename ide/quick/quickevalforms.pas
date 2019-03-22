@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  SynEdit, ideLayoutUtil, SynHighlighterMnh,editorMeta,editorMetaBase;
+  SynEdit, ideLayoutUtil, SynHighlighterMnh,editorMeta,editorMetaBase,mnh_settings;
 
 TYPE
 
@@ -53,7 +53,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     inputMeta.createWithExistingEditor(quickInputEdit,nil);
     inputMeta.language:=LANG_MNH;
 
-    registerSynEdit(quickOutputSynEdit);
+    registerFontControl(quickOutputSynEdit,ctEditor);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     quickOutputSynEdit.highlighter:=outputHighlighter;
   end;
@@ -61,7 +61,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
 PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
   begin
     inputMeta.destroy;
-    unregisterSynEdit(quickOutputSynEdit);
+    unregisterFontControl(quickOutputSynEdit);
   end;
 
 PROCEDURE TQuickEvalForm.performSlowUpdate;

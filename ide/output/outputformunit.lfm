@@ -13,17 +13,26 @@ object OutputForm: TOutputForm
   OnCreate = FormCreate
   LCLVersion = '2.0.0.4'
   inline OutputSynEdit: TSynEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = cbShowOnOutput
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 360
-    Top = 0
+    Height = 331
+    Top = 29
     Width = 480
-    Align = alClient
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight, akBottom]
     Font.Height = -13
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = OutputPopupMenu
     TabOrder = 0
     Gutter.Width = 17
     Gutter.MouseActions = <>
@@ -483,6 +492,98 @@ object OutputForm: TOutputForm
         ShowOnlyLineNumbersMultiplesOf = 1
         ZeroStart = False
         LeadingZeros = False
+      end
+    end
+  end
+  object cbShowOnOutput: TCheckBox
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideBottom.Control = OutputSynEdit
+    Left = 10
+    Height = 29
+    Top = 0
+    Width = 250
+    Align = alCustom
+    BorderSpacing.Left = 10
+    Caption = 'Show when output changes'
+    Checked = True
+    State = cbChecked
+    TabOrder = 1
+  end
+  object cbFreezeOutput: TCheckBox
+    AnchorSideLeft.Control = cbShowOnOutput
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = cbShowOnOutput
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 260
+    Height = 29
+    Top = 0
+    Width = 220
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    Caption = 'Freeze output'
+    TabOrder = 2
+  end
+  object OutputPopupMenu: TPopupMenu
+    left = 257
+    top = 187
+    object miEchoInput: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &input'
+      OnClick = miEchoDeclarationsClick
+    end
+    object miEchoOutput: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &output'
+      OnClick = miEchoDeclarationsClick
+    end
+    object miEchoDeclarations: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &declarations'
+      OnClick = miEchoDeclarationsClick
+    end
+    object miWrapEcho: TMenuItem
+      AutoCheck = True
+      Caption = '&Wrap echo'
+      OnClick = miEchoDeclarationsClick
+    end
+    object miShowTiming: TMenuItem
+      AutoCheck = True
+      Caption = 'Show &timing info'
+      OnClick = miEchoDeclarationsClick
+    end
+    object MenuItem1: TMenuItem
+      Caption = 'Error &display'
+      object miErrorL1: TMenuItem
+        AutoCheck = True
+        Caption = '&1: Show all'
+        Checked = True
+        RadioItem = True
+        OnClick = miEchoDeclarationsClick
+      end
+      object miErrorL2: TMenuItem
+        AutoCheck = True
+        Caption = '&2: Show warnings and errors'
+        RadioItem = True
+        OnClick = miEchoDeclarationsClick
+      end
+      object miErrorL3: TMenuItem
+        AutoCheck = True
+        Caption = '&3: Show all errors'
+        RadioItem = True
+        OnClick = miEchoDeclarationsClick
+      end
+      object miErrorL4: TMenuItem
+        AutoCheck = True
+        Caption = '&4: Show system errors only'
+        RadioItem = True
+        OnClick = miEchoDeclarationsClick
+      end
+      object miErrorUser: TMenuItem
+        AutoCheck = True
+        Caption = 'Show all &user defined messages'
+        OnClick = miEchoDeclarationsClick
       end
     end
   end

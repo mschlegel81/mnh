@@ -218,10 +218,12 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     end;
     stream.destroy;
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    timer.enabled:=false;
     earlyFinalization;
     finalizeCodeAssistance;
     saveIdeSettings;
@@ -272,8 +274,13 @@ PROCEDURE TIdeMainForm.miDebuggerClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
+  VAR activeType:T_controlType;
   begin
-    SettingsForm.fontSize:=SettingsForm.fontSize-1;
+    activeType:=typeOfFocusedControl;
+    case activeType of
+      ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]-1;
+      ctPlot: plotForm.miDecFontSizeClick(Sender);
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
@@ -312,8 +319,13 @@ PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
+  VAR activeType:T_controlType;
   begin
-    SettingsForm.fontSize:=SettingsForm.fontSize+1;
+    activeType:=typeOfFocusedControl;
+    case activeType of
+      ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]+1;
+      ctPlot: plotForm.miIncFontSizeClick(Sender);
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miKeepStackTraceClick(Sender: TObject);
@@ -461,10 +473,10 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     componentParent:=lastDockLocationFor[form.getIdeComponentType];
     if componentParent in [cpPageControl1..cpPageControl4] then dockMeta:=TDragDockObject.create(form);
     case componentParent of
-      cpPageControl1: PageControl1.DockDrop(dockMeta,0,0);
-      cpPageControl2: PageControl2.DockDrop(dockMeta,0,0);
-      cpPageControl3: PageControl3.DockDrop(dockMeta,0,0);
-      cpPageControl4: PageControl4.DockDrop(dockMeta,0,0);
+      cpPageControl1: begin PageControl1.DockDrop(dockMeta,0,0); if PageControl1.width <100 then PageControl1.width :=100; end;
+      cpPageControl2: begin PageControl2.DockDrop(dockMeta,0,0); if PageControl2.height<100 then PageControl2.height:=100; end;
+      cpPageControl3: begin PageControl3.DockDrop(dockMeta,0,0); if PageControl3.width <100 then PageControl3.width :=100; end;
+      cpPageControl4: begin PageControl4.DockDrop(dockMeta,0,0); if PageControl4.width <100 then PageControl4.width :=100; end;
       else begin
         form.top :=top +(height-form.height) div 2;
         form.Left:=Left+(width -form.width ) div 2;
@@ -495,6 +507,7 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
     workspace.updateEditorsByGuiStatus;
     ensureOutputForm;
+    unfreezeOutput;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);

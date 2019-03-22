@@ -68,21 +68,27 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
 FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
-PROCEDURE registerSynEdit(VAR edit:TSynEdit);
-PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
-PROCEDURE propagateEditorFont(newFont:TFont);
+
+PROCEDURE registerFontControl(control:TWinControl; CONST controlType:T_controlType);
+PROCEDURE unregisterFontControl(control:TWinControl);
+
+PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
 PROCEDURE performSlowUpdates;
 PROCEDURE performFastUpdates;
 FUNCTION focusedEditor:TSynEdit;
+FUNCTION typeOfFocusedControl:T_controlType;
 
 PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
+
+OPERATOR :=(x:byte):TFontStyles;
+OPERATOR :=(x:TFontStyles):byte;
 
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
 USES math;
 VAR activeForms:array of T_mnhComponentForm;
-    activeSynEdits:array of TSynEdit;
+    fontControls:array[T_controlType] of array of TWinControl;
 
 PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
   begin
@@ -147,31 +153,42 @@ FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
     for f in activeForms do if f.getIdeComponentType=ideComponent then exit(f);
   end;
 
-PROCEDURE registerSynEdit(VAR edit:TSynEdit);
+PROCEDURE registerFontControl(control:TWinControl; CONST controlType:T_controlType);
   begin
-    setLength(activeSynEdits,length(activeSynEdits)+1);
-    activeSynEdits[length(activeSynEdits)-1]:=edit;
-    if length(activeSynEdits)=1 then begin
-      edit.Font.name:=settings.editor.fontName;
-      edit.Font.size:=settings.editor.fontSize;
-      edit.Font.quality:=fqCleartypeNatural;
-    end else edit.Font:=activeSynEdits[0].Font;
+    if (controlType=ctEditor) and (control.ClassName<>'TSynEdit') then raise Exception.create('Invalid control for type ctEditor');
+
+    setLength(fontControls[controlType],length(fontControls[controlType])+1);
+    fontControls[controlType][length(fontControls[controlType])-1]:=control;
+    if length(fontControls[controlType])=1 then begin
+      control.Font.name:=settings.Font[controlType].fontName;
+      control.Font.size:=settings.Font[controlType].fontSize;
+      control.Font.style:=settings.Font[controlType].style;
+      control.Font.quality:=fqCleartypeNatural;
+    end else control.Font:=fontControls[controlType][0].Font;
   end;
 
-PROCEDURE unregisterSynEdit(VAR edit:TSynEdit);
+PROCEDURE unregisterFontControl(control:TWinControl);
   VAR k:longint=0;
+      c:T_controlType;
   begin
-    while (k<length(activeSynEdits)) and (activeSynEdits[k]<>edit) do inc(k);
-    if k<length(activeSynEdits) then begin
-      activeSynEdits[k]:=activeSynEdits[length(activeSynEdits)-1];
-      setLength(activeSynEdits,length(activeSynEdits)-1);
+    for c in T_controlType do begin
+      while (k<length(fontControls[c])) and (fontControls[c][k]<>control) do inc(k);
+      if k<length(fontControls[c]) then begin
+        fontControls[c][k]:=fontControls[c][length(fontControls[c])-1];
+        setLength(fontControls[c],length(fontControls[c])-1);
+      end;
     end;
   end;
 
-PROCEDURE propagateEditorFont(newFont:TFont);
-  VAR e:TSynEdit;
+PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
+  VAR e:TControl;
   begin
-    for e in activeSynEdits do e.Font:=newFont;
+    for e in fontControls[controlType] do e.Font:=newFont;
+    settings.Font[controlType].fontName:=newFont.name;
+    settings.Font[controlType].fontSize:=newFont.size;
+    settings.Font[controlType].style:=0;
+    if (fsBold   in newFont.style) and (controlType<>ctEditor) then settings.Font[controlType].style+=FONT_STYLE_BOLD;
+    if (fsItalic in newFont.style) and (controlType<>ctEditor) then settings.Font[controlType].style+=FONT_STYLE_ITALIC;
   end;
 
 CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
@@ -228,10 +245,19 @@ PROCEDURE performFastUpdates;
   end;
 
 FUNCTION focusedEditor: TSynEdit;
-  VAR e:TSynEdit;
+  VAR e:TWinControl;
   begin
     result:=nil;
-    for e in activeSynEdits do if e.Focused then exit(e);
+    for e in fontControls[ctEditor] do if e.Focused then exit(TSynEdit(e));
+  end;
+
+FUNCTION typeOfFocusedControl:T_controlType;
+  VAR e:TWinControl;
+      c:T_controlType;
+  begin
+    result:=ctEditor;
+    for c in T_controlType do
+    for e in fontControls[ctEditor] do if e.Focused then exit(c);
   end;
 
 PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR splitters: T_splitterPositions);
@@ -285,8 +311,25 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     result:=result and stream.allOkay and (length(htmlDocGeneratedForCodeHash)=length(CODE_HASH));
   end;
 
+OPERATOR:=(x: byte): TFontStyles;
+  begin
+    result:=[];
+    if (x and FONT_STYLE_BOLD  >0) then include(result,fsBold);
+    if (x and FONT_STYLE_ITALIC>0) then include(result,fsItalic);
+  end;
+
+OPERATOR:=(x: TFontStyles): byte;
+  begin
+    result:=0;
+    if fsBold   in x then result+=FONT_STYLE_BOLD;
+    if fsItalic in x then result+=FONT_STYLE_ITALIC;
+  end;
+
 INITIALIZATION
   initialize(lastDockLocationFor);
   setLength(activeForms,0);
+  setLength(fontControls[ctEditor ],0);
+  setLength(fontControls[ctTable  ],0);
+  setLength(fontControls[ctGeneral],0);
 end.
 

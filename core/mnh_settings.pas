@@ -7,8 +7,12 @@ USES Classes,sysutils,dateutils,typinfo,
      out_adapters;
 CONST
   FILE_HISTORY_MAX_SIZE=100;
+  FONT_STYLE_BOLD  =1;
+  FONT_STYLE_ITALIC=2;
 
 TYPE
+T_controlType=(ctEditor,ctTable,ctGeneral,ctPlot,ctNoneOrUnknown);
+
 P_fileHistory=^T_fileHistory;
 T_fileHistory=object(T_serializable)
   items: T_arrayOfString;
@@ -32,10 +36,10 @@ T_settings=object(T_serializable)
   memoryLimit:int64;
   cpuCount:longint;
   //IDE:
-  editor,table,tree:record
-    fontName        :string;
-    fontSize        :longint;
-    antialiasedFonts:boolean;
+  Font:array[ctEditor..ctGeneral] of record
+    fontName :string;
+    style    :byte;
+    fontSize :longint;
   end;
   doResetPlotOnEvaluation: boolean;
   cacheAnimationFrames: boolean;
@@ -90,25 +94,16 @@ FUNCTION T_settings.getSerialVersion: dword; begin result:=164423; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
+  VAR c:T_controlType;
   begin
     if not inherited loadFromStream(stream) then cleanExit;
 
     cpuCount:=stream.readLongint;
     if cpuCount<=0 then cpuCount:=getNumberOfCPUs;
-    with editor do begin
+    for c:=low(Font) to high(Font) do with Font[c] do begin
       fontSize:=stream.readLongint;
-      fontName := stream.readAnsiString;
-      antialiasedFonts:=stream.readBoolean;
-    end;
-    with table do begin
-      fontSize:=stream.readLongint;
-      fontName := stream.readAnsiString;
-      antialiasedFonts:=stream.readBoolean;
-    end;
-    with tree do begin
-      fontSize:=stream.readLongint;
-      fontName := stream.readAnsiString;
-      antialiasedFonts:=stream.readBoolean;
+      style   :=stream.readByte([0..3]);
+      fontName:=stream.readAnsiString;
     end;
     doResetPlotOnEvaluation := stream.readBoolean;
     cacheAnimationFrames    := stream.readBoolean;
@@ -119,23 +114,14 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
   end;
 
 PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
+  VAR c:T_controlType;
   begin
     inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
-    with editor do begin
+    for c:=low(Font) to high(Font) do with Font[c] do begin
       stream.writeLongint(fontSize);
+      stream.writeByte(style);
       stream.writeAnsiString(fontName);
-      stream.writeBoolean(antialiasedFonts);
-    end;
-    with table do begin
-      stream.writeLongint(fontSize);
-      stream.writeAnsiString(fontName);
-      stream.writeBoolean(antialiasedFonts);
-    end;
-    with tree do begin
-      stream.writeLongint(fontSize);
-      stream.writeAnsiString(fontName);
-      stream.writeBoolean(antialiasedFonts);
     end;
     stream.writeBoolean(doResetPlotOnEvaluation);
     stream.writeBoolean(cacheAnimationFrames);
@@ -145,12 +131,13 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   end;
 
 PROCEDURE T_settings.initDefaults;
+  VAR c:T_controlType;
   begin
     cpuCount:=getNumberOfCPUs;
-    with editor do begin
-      fontName:='';
-      fontSize:=0;
-      antialiasedFonts:=false;
+    for c:=low(Font) to high(Font) do with Font[c] do begin
+      fontName:='Courier New';
+      style   :=0;
+      fontSize:=10;
     end;
     doResetPlotOnEvaluation:=true;
     cacheAnimationFrames:=true;

@@ -15,6 +15,7 @@ USES  //basic classes
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
   //MNH:
+  mnh_settings,
   ideLayoutUtil,
   mnh_constants, basicTypes,
   fileWrappers,
@@ -308,7 +309,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
       isRealEditor:boolean;
   begin
     editor_:=existingEditor;
-    registerSynEdit(editor_);
+    registerFontControl(editor_,ctEditor);
     isRealEditor:=bookmarkImages<>nil;
     completionLogic.create;
     editor_.Align:=alClient;
@@ -418,7 +419,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
 
 DESTRUCTOR T_basicEditorMeta.destroy;
   begin
-    unregisterSynEdit(editor_);
+    unregisterFontControl(editor_);
     completionLogic.destroy;
   end;
 

@@ -597,6 +597,7 @@ PROCEDURE TplotForm.doPlot;
 
   begin
     updateAttachment;
+    showComponent;
     plotSystem.startGuiInteraction;
     updateInteractiveSection;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);

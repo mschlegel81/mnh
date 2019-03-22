@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,
-  ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta;
+  ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta,mnh_settings;
 
 TYPE
 
@@ -37,14 +37,14 @@ PROCEDURE ensureAssistanceForm;
 
 PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
   begin
-    registerSynEdit(AssistanceEdit);
+    registerFontControl(AssistanceEdit,ctEditor);
     assistanceHighlighter:=TSynMnhSyn.create(self,msf_output);
     AssistanceEdit.highlighter:=assistanceHighlighter;
   end;
 
 PROCEDURE TAssistanceForm.FormDestroy(Sender: TObject);
   begin
-    unregisterSynEdit(AssistanceEdit);
+    unregisterFontControl(AssistanceEdit);
   end;
 
 FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;

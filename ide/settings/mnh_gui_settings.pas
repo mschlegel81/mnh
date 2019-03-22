@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, ExtCtrls, mySys,funcs, out_adapters, mnh_constants,
+  StdCtrls, ExtCtrls, funcs, out_adapters, mnh_constants,
   packages,mnh_settings,mnh_doc,ideLayoutUtil,guiOutAdapters,editorMeta;
 
 CONST MINIMUM_OUTPUT_LINES=16;
@@ -14,9 +14,16 @@ CONST MINIMUM_OUTPUT_LINES=16;
         ('Convert to normal (non-portable) version',
          'Convert to portable version');
 TYPE
+
+  { TSettingsForm }
+
   TSettingsForm = class(TForm)
+    TableFontButton: TButton;
+    GeneralFontButton: TButton;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    Label3: TLabel;
+    Label5: TLabel;
     rb_saveNoChange: TRadioButton;
     rb_saveNewDefault: TRadioButton;
     rb_saveDefault: TRadioButton;
@@ -31,20 +38,14 @@ TYPE
     Panel1: TPanel;
     Panel2: TPanel;
     Panel3: TPanel;
-    Panel4: TPanel;
-    Panel5: TPanel;
-    Panel6: TPanel;
     uninstallButton: TButton;
     outputSizeLimit: TEdit;
     Label7: TLabel;
     memLimitEdit: TEdit;
     Label6: TLabel;
-    FontButton: TButton;
-    AntialiasCheckbox: TCheckBox;
-    FontSizeEdit: TEdit;
+    EditorFontButton: TButton;
     EditorFontDialog: TFontDialog;
     Label2: TLabel;
-    Label3: TLabel;
     PageControl: TPageControl;
     TabSheet_display: TTabSheet;
     TabSheet_install: TTabSheet;
@@ -53,33 +54,33 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
     PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
     PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
     PROCEDURE installButtonClick(Sender: TObject);
-    PROCEDURE FontButtonClick(Sender: TObject);
-    PROCEDURE FontSizeEditEditingDone(Sender: TObject);
+    PROCEDURE EditorFontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
+    PROCEDURE TableFontButtonClick(Sender: TObject);
     PROCEDURE togglePortableButtonClick(Sender: TObject);
     PROCEDURE uninstallButtonClick(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
-    PROCEDURE AntialiasCheckboxChange(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
   private
-    FUNCTION getFontSize: longint;
-    PROCEDURE setFontSize(CONST value: longint);
-    FUNCTION getOutputLimit: longint;
+    FUNCTION  getFontSize(CONST c:T_controlType): longint;
+    FUNCTION  getOutputLimit: longint;
+    PROCEDURE setFontSize(CONST c:T_controlType; CONST value: longint);
     PROCEDURE setOutputLimit(CONST value: longint);
   public
-    PROPERTY fontSize:longint read getFontSize write setFontSize;
-    PROCEDURE ensureFont(CONST editorFont:TFont);
+    PROPERTY fontSize[c:T_controlType]:longint read getFontSize write setFontSize;
   end;
 
 FUNCTION SettingsForm: TSettingsForm;
 IMPLEMENTATION
+USES mySys;
 VAR mySettingsForm: TSettingsForm=nil;
 FUNCTION SettingsForm: TSettingsForm;
   begin
@@ -92,17 +93,29 @@ FUNCTION SettingsForm: TSettingsForm;
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    if settings.editor.fontName<>'' then begin
-      EditorFontDialog.Font.name := settings.editor.fontName;
-      FontButton.Font.name := settings.editor.fontName;
-    end;
-    AntialiasCheckbox.checked := settings.editor.antialiasedFonts;
-    setFontSize(settings.editor.fontSize);
+    EditorFontButton.caption   :=settings.Font[ctEditor].fontName;
+    EditorFontButton.Font.name :=settings.Font[ctEditor].fontName;
+    EditorFontButton.Font.size :=settings.Font[ctEditor].fontSize;
+    EditorFontButton.Font.style:=settings.Font[ctEditor].style;
+
+    TableFontButton.caption   :=settings.Font[ctTable].fontName;
+    TableFontButton.Font.name :=settings.Font[ctTable].fontName;
+    TableFontButton.Font.size :=settings.Font[ctTable].fontSize;
+    TableFontButton.Font.style:=settings.Font[ctTable].style;
+
+    GeneralFontButton.caption   :=settings.Font[ctGeneral].fontName;
+    GeneralFontButton.Font.name :=settings.Font[ctGeneral].fontName;
+    GeneralFontButton.Font.size :=settings.Font[ctGeneral].fontSize;
+    GeneralFontButton.Font.style:=settings.Font[ctGeneral].style;
+
+    //TODO: Remove or implement
+    //setEditorFontSize(settings.editor.fontSize);
     setOutputLimit(guiOutAdapters.outputLinesLimit);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
-    FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.editor.fontName;
+    //TODO: Remove or implement
+    //EditorFontButton.Font.size := getEditorFontSize;
+    //EditorFontButton.caption := settings.editor.fontName;
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     case workspace.overwriteLineEnding of
@@ -119,21 +132,16 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
   end;
 
-PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
+PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
   begin
+    EditorFontDialog.Font:=EditorFontButton.Font;
+    EditorFontDialog.options:=EditorFontDialog.options+[fdFixedPitchOnly];
     if EditorFontDialog.execute then begin
-      setFontSize(EditorFontDialog.Font.size);
-      settings.editor.fontName := EditorFontDialog.Font.name;
-
-      FontButton.Font.name := settings.editor.fontName;
-      FontButton.Font.size := getFontSize;
-      FontButton.caption := settings.editor.fontName;
+      EditorFontButton.caption   := EditorFontDialog.Font.name;
+      EditorFontButton.Font      := EditorFontDialog.Font;
+      EditorFontButton.Font.style:= [];
+      propagateFont(EditorFontButton.Font,ctEditor);
     end;
-  end;
-
-PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
-  begin
-    setFontSize(getFontSize);
   end;
 
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
@@ -162,6 +170,17 @@ PROCEDURE TSettingsForm.rb_saveDefaultChange(Sender: TObject);
     if rb_saveWindows .checked then workspace.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
   end;
 
+PROCEDURE TSettingsForm.GeneralFontButtonClick(Sender: TObject);
+  begin
+    EditorFontDialog.Font:=GeneralFontButton.Font;
+    EditorFontDialog.options:=EditorFontDialog.options-[fdFixedPitchOnly];
+    if EditorFontDialog.execute then begin
+      GeneralFontButton.caption   := EditorFontDialog.Font.name;
+      GeneralFontButton.Font      := EditorFontDialog.Font;
+      propagateFont(GeneralFontButton.Font,ctGeneral);
+    end;
+  end;
+
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
   begin
     sandbox^.runUninstallScript;
@@ -176,17 +195,6 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     deleteMyselfOnExit;
     {$endif}
     halt;
-  end;
-
-PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
-  begin
-    if settings.editor.fontName<>'' then exit;
-    settings.editor.fontName:=editorFont.name;
-    EditorFontDialog.Font.name := settings.editor.fontName;
-    FontButton.Font.name := settings.editor.fontName;
-    setFontSize(editorFont.size);
-    FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.editor.fontName;
   end;
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
@@ -213,6 +221,17 @@ PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
   begin
     setOutputLimit(getOutputLimit);
+  end;
+
+PROCEDURE TSettingsForm.TableFontButtonClick(Sender: TObject);
+  begin
+    EditorFontDialog.Font:=TableFontButton.Font;
+    EditorFontDialog.options:=EditorFontDialog.options-[fdFixedPitchOnly];
+    if EditorFontDialog.execute then begin
+      TableFontButton.caption   := EditorFontDialog.Font.name;
+      TableFontButton.Font      := EditorFontDialog.Font;
+      propagateFont(TableFontButton.Font,ctTable);
+    end;
   end;
 
 PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
@@ -267,27 +286,28 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
                    else settings.cpuCount:=newValue;
   end;
 
-PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
-  begin
-    settings.editor.antialiasedFonts:=AntialiasCheckbox.checked;
-  end;
-
 PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
   begin
     workspace.saveIntervalIdx:=autosaveComboBox.ItemIndex;
   end;
 
-FUNCTION TSettingsForm.getFontSize: longint;
+FUNCTION TSettingsForm.getFontSize(CONST c:T_controlType): longint;
   begin
-    result := StrToInt64Def(trim(FontSizeEdit.text), 12);
+    case c of
+      ctEditor : result := EditorFontButton .Font.size;
+      ctTable  : result := TableFontButton  .Font.size;
+      ctGeneral: result := GeneralFontButton.Font.size;
+      else result:=10;
+    end;
   end;
 
-PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
+PROCEDURE TSettingsForm.setFontSize(CONST c:T_controlType; CONST value: longint);
   begin
-    FontSizeEdit.text := intToStr(value);
-    EditorFontDialog.Font.size := value;
-    settings.editor.fontSize:=value;
-    propagateEditorFont(EditorFontDialog.Font);
+    case c of
+      ctEditor : begin EditorFontButton .Font.size:=value; propagateFont(EditorFontButton .Font,c); end;
+      ctTable  : begin TableFontButton  .Font.size:=value; propagateFont(TableFontButton  .Font,c); end;
+      ctGeneral: begin GeneralFontButton.Font.size:=value; propagateFont(GeneralFontButton.Font,c); end;
+    end;
   end;
 
 FUNCTION TSettingsForm.getOutputLimit: longint;

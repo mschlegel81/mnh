@@ -54,13 +54,14 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE languageMenuItemClick(Sender: TObject);
 
     CONSTRUCTOR create(CONST mIdx:longint);
-    CONSTRUCTOR create(CONST mIdx:longint; VAR stream:T_bufferedInputStreamWrapper);
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
 
     //Bookmark related
     FUNCTION markLocation(CONST line,column:longint):T_searchTokenLocation;
     PROCEDURE _add_breakpoint_or_bookmark_(CONST lineIndex:longint; CONST columnIndex:longint=1; CONST bookmarkIndex:byte=10);
     PROCEDURE clearBookmark(markIndex:longint);
+    PROCEDURE deleteBreakpointIfExistent(CONST lineIndex:longint);
     PROCEDURE toggleBreakpoint;
 
     //Assistant related
@@ -203,16 +204,15 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
   end;
 
 CONST editorMetaSerial=2344515;
-CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint; VAR stream: T_bufferedInputStreamWrapper);
+FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR lineCount:longint=0;
       markCount:longint=0;
       i:longint;
       line,column:longint;
   begin
-    create(mIdx);
     if not(stream.readDWord=editorMetaSerial) then begin //#0
       stream.logWrongTypeError;
-      exit;
+      exit(false);
     end;
 
     metaIndex:=stream.readLongint;
@@ -241,15 +241,17 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint; VAR stream: T_bufferedInputS
     editor.CaretY:=stream.readNaturalNumber; //#10
     language_:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
 
-    editor.modified:=fileInfo.isChanged;
-    updateSheetCaption;
+    result:=result and stream.allOkay;
+    if result then begin
+      editor.modified:=fileInfo.isChanged;
+      updateSheetCaption;
+    end;
   end;
 
 PROCEDURE T_editorMeta.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR i:longint;
       editorLine:string;
       saveChanged:boolean;
-      k:longint;
       mark:TSynEditMark;
   begin
     stream.writeDWord(editorMetaSerial); //#0
@@ -266,7 +268,7 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
       for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
     end;
 
-    stream.writeLongint(editor.Marks.count); //#7
+    stream.writeNaturalNumber(editor.Marks.count); //#7
     for i:=0 to editor.Marks.count-1 do begin
       mark:=editor.Marks[i];
       stream.writeNaturalNumber(mark.line);   //#8a
@@ -311,6 +313,18 @@ PROCEDURE T_editorMeta.clearBookmark(markIndex: longint);
       y:longint=0;
   begin
     if editor_.GetBookMark(markIndex,x,y) then editor_.clearBookmark(markIndex);
+  end;
+
+PROCEDURE T_editorMeta.deleteBreakpointIfExistent(CONST lineIndex:longint);
+  VAR i:longint;
+      mark:TSynEditMark;
+  begin
+    for i:=0 to editor_.Marks.count-1 do if (editor_.Marks[i].line=lineIndex) and not(editor_.Marks[i].IsBookmark) then begin
+      mark:=editor.Marks[i];
+      editor_.Marks.remove(editor.Marks[i]);
+      mark.free;
+      exit;
+    end;
   end;
 
 PROCEDURE T_editorMeta.toggleBreakpoint;

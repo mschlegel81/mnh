@@ -5,17 +5,20 @@ UNIT breakpointsForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Grids,ideLayoutUtil,editorMeta,basicTypes;
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Grids, StdCtrls,
+  ideLayoutUtil, editorMeta, basicTypes, mnh_settings;
 
 TYPE
 
   { TBreakpointsForm }
 
   TBreakpointsForm = class(T_mnhComponentForm)
-    breakpointsGrid: TStringGrid;
-    PROCEDURE breakpointsGridDblClick(Sender: TObject);
-    PROCEDURE breakpointsGridKeyUp(Sender: TObject; VAR key: word;
+    BreakpointsListBox: TListBox;
+    PROCEDURE BreakpointsListBoxDblClick(Sender: TObject);
+    PROCEDURE BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
+    PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
@@ -40,29 +43,42 @@ FUNCTION TBreakpointsForm.getIdeComponentType: T_ideComponent;
     result:=icDebuggerBreakpoints;
   end;
 
-PROCEDURE TBreakpointsForm.breakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TBreakpointsForm.BreakpointsListBoxDblClick(Sender: TObject);
   begin
-
-    //TODO: Implement jump
-    //TODO: Implement delete
+    with BreakpointsListBox do
+    if (ItemIndex>=0) then workspace.openLocation(guessLocationFromString(items[ItemIndex],false));
   end;
 
-PROCEDURE TBreakpointsForm.breakpointsGridDblClick(Sender: TObject);
+PROCEDURE TBreakpointsForm.BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    //TODO: Implement jump
+    if key=46 //delete
+    then begin
+      with BreakpointsListBox do if (ItemIndex>=0) then workspace.removeBreakpoint(guessLocationFromString(items[ItemIndex],false));
+    end else if key=13
+    then begin
+      BreakpointsListBoxDblClick(Sender);
+    end;
+  end;
+
+PROCEDURE TBreakpointsForm.FormCreate(Sender: TObject);
+  begin
+    registerFontControl(BreakpointsListBox,ctGeneral);
+  end;
+
+PROCEDURE TBreakpointsForm.FormDestroy(Sender: TObject);
+  begin
+    unregisterFontControl(BreakpointsListBox);
   end;
 
 PROCEDURE TBreakpointsForm.performSlowUpdate;
-  VAR breakpoints:T_searchTokenLocations;
-      k:longint;
+  VAR oldSelected:longint=-1;
+      loc:T_searchTokenLocation;
   begin
-    breakpoints:=workspace.getAllBreakpoints;
-    breakpointsGrid.RowCount:=length(breakpoints)+1;
-    for k:=0 to length(breakpoints)-1 do begin
-      breakpointsGrid.Cells[0,k+1]:=breakpoints[k].fileName;
-      breakpointsGrid.Cells[1,k+1]:=intToStr(breakpoints[k].line);
-    end;
-    setLength(breakpoints,0);
+    oldSelected:=BreakpointsListBox.ItemIndex;
+    BreakpointsListBox.clear;
+    for loc in workspace.getAllBreakpoints do
+      BreakpointsListBox.items.add(loc);
+    BreakpointsListBox.ItemIndex:=oldSelected;
   end;
 
 PROCEDURE TBreakpointsForm.performFastUpdate;
