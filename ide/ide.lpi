@@ -25,8 +25,78 @@
       <Attributes pvaDebug="True" pvaPreRelease="True" pvaPrivateBuild="True"/>
       <StringTable FileDescription="mnh5 IDE and interpreter" InternalName="mnh5_ide" LegalCopyright="Martin Schlegel 2019" ProductName="mnh"/>
     </VersionInfo>
-    <BuildModes Count="1">
+    <BuildModes Count="3">
       <Item1 Name="default" Default="True"/>
+      <Item2 Name="deployment">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="mnh"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="../core"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
+            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <AllowLabel Value="False"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+            <Optimizations>
+              <OptimizationLevel Value="3"/>
+            </Optimizations>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <GenerateDebugInfo Value="False"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShoLineNum Value="True"/>
+              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
+            </Verbosity>
+            <WriteFPCLogo Value="False"/>
+            <CustomOptions Value="-dfullVersion"/>
+          </Other>
+        </CompilerOptions>
+      </Item2>
+      <Item3 Name="profile">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <Target>
+            <Filename Value="mnh_prof"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="../core"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
+            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <AllowLabel Value="False"/>
+            </SyntaxOptions>
+          </Parsing>
+          <Linking>
+            <Debugging>
+              <UseValgrind Value="True"/>
+            </Debugging>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShoLineNum Value="True"/>
+              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
+            </Verbosity>
+            <WriteFPCLogo Value="False"/>
+            <CustomOptions Value="-dfullVersion
+-dprofilingFlavour"/>
+          </Other>
+        </CompilerOptions>
+      </Item3>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -51,7 +121,7 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="5"/>
         <WindowIndex Value="1"/>
-        <CursorPos X="48" Y="22"/>
+        <CursorPos X="41" Y="22"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -366,11 +436,10 @@
         <ComponentName Value="tableForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="1"/>
         <TopLine Value="114"/>
-        <CursorPos X="29" Y="148"/>
+        <CursorPos X="32" Y="128"/>
         <UsageCount Value="21"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -381,7 +450,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="variableTreeViews"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="1"/>
         <TopLine Value="36"/>
         <CursorPos X="23" Y="51"/>
@@ -522,7 +591,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="outlineFormUnit"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="1"/>
         <TopLine Value="253"/>
         <CursorPos X="60" Y="266"/>
@@ -599,9 +668,12 @@
       <Unit64>
         <Filename Value="../core/mnh_constants.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="1"/>
+        <CursorPos X="42" Y="9"/>
         <UsageCount Value="97"/>
+        <Loaded Value="True"/>
       </Unit64>
       <Unit65>
         <Filename Value="../../lazarus64/components/synedit/synedit.pp"/>
@@ -903,7 +975,7 @@
       </Unit97>
       <Unit98>
         <Filename Value="../../lazarus64/lcl/include/control.inc"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="1"/>
         <TopLine Value="3395"/>
         <CursorPos Y="3417"/>
@@ -1174,7 +1246,6 @@
         <StackChecks Value="True"/>
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
-      <TargetCPU Value="x86_64"/>
       <Optimizations>
         <OptimizationLevel Value="0"/>
       </Optimizations>
