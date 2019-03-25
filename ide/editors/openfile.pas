@@ -101,8 +101,8 @@ FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
   VAR k:longint;
   begin
     searchEdit.text:='';
-    fileList:=folderHistory.findFiles(rootPath);
-    append(fileList,fileHistory.items);
+    fileList:=workspace.folderHistory.findFiles(rootPath);
+    append(fileList,workspace.fileHistory.items);
     sortUnique(fileList);
     for k:=0 to length(fileList)-1 do fileList[k]:=collapseMnhDir(fileList[k]);
     searchResultsListBox.clear;

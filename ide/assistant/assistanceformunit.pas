@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,
-  ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta,mnh_settings;
+  ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta,mnh_settings,basicTypes;
 
 TYPE
 
@@ -21,7 +21,7 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
-
+    paintedWithStateHash:T_hashInt;
   public
 
   end;
@@ -40,6 +40,7 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     registerFontControl(AssistanceEdit,ctEditor);
     assistanceHighlighter:=TSynMnhSyn.create(self,msf_output);
     AssistanceEdit.highlighter:=assistanceHighlighter;
+    paintedWithStateHash:=0;
   end;
 
 PROCEDURE TAssistanceForm.FormDestroy(Sender: TObject);
@@ -59,12 +60,15 @@ PROCEDURE TAssistanceForm.performSlowUpdate;
 
   VAR hasErrors  :boolean=false;
       hasWarnings:boolean=false;
+      codeAssistanceResponse:P_codeAssistanceResponse;
   begin
-    if workspace.assistanceResponseForUpdate<>nil
+    codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
+    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.stateHash<>paintedWithStateHash)
     then begin
-      workspace.assistanceResponseForUpdate^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
+      codeAssistanceResponse^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
       caption:=conditionalCaption[hasErrors,hasWarnings];
       if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
+      paintedWithStateHash:=codeAssistanceResponse^.stateHash;
     end;
   end;
 

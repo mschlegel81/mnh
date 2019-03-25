@@ -49,6 +49,7 @@ TYPE
       FUNCTION  getImportablePackages:T_arrayOfString;
       FUNCTION  resolveImport(CONST id:string):string;
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
+      FUNCTION  rereferenced:P_codeAssistanceResponse;
   end;
 
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
@@ -380,6 +381,12 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
     hasWarnings:=false;
     addErrors(localErrors);
     addErrors(externalErrors);
+  end;
+
+FUNCTION T_codeAssistanceResponse.rereferenced:P_codeAssistanceResponse;
+  begin
+    interLockedIncrement(referenceCount);
+    result:=@self;
   end;
 
 VAR isFinalized:boolean=false;

@@ -18,6 +18,7 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    miSaveBeforeRun: TCheckBox;
     TableFontButton: TButton;
     GeneralFontButton: TButton;
     GroupBox1: TGroupBox;
@@ -55,6 +56,7 @@ TYPE
     Label4: TLabel;
     autosaveComboBox: TComboBox;
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
+    PROCEDURE miSaveBeforeRunChange(Sender: TObject);
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
     PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
     PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
@@ -116,8 +118,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
 
-    autosaveComboBox.items.clear;
-    for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     case workspace.overwriteLineEnding of
       LINE_ENDING_UNCHANGED: rb_saveNoChange.checked:=true;
       LINE_ENDING_DEFAULT  : rb_saveDefault .checked:=true;
@@ -129,7 +129,12 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       LINE_ENDING_LINUX    : rb_saveNewLinux  .checked:=true;
       LINE_ENDING_WINDOWS  : rb_saveNewWindows.checked:=true;
     end;
+
+    autosaveComboBox.items.clear;
+    for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
+
+    miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
   end;
 
 PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
@@ -179,6 +184,11 @@ PROCEDURE TSettingsForm.GeneralFontButtonClick(Sender: TObject);
       GeneralFontButton.Font      := EditorFontDialog.Font;
       propagateFont(GeneralFontButton.Font,ctGeneral);
     end;
+  end;
+
+PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
+  begin
+    workspace.autosaveBeforeEachExecution:=miSaveBeforeRun.checked;
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);

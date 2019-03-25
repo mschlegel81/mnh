@@ -11,6 +11,7 @@ object OutputForm: TOutputForm
   DragMode = dmAutomatic
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnResize = FormResize
   LCLVersion = '2.0.0.4'
   inline OutputSynEdit: TSynEdit
     AnchorSideLeft.Control = Owner

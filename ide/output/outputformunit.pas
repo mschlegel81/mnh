@@ -31,11 +31,13 @@ TYPE
     OutputPopupMenu: TPopupMenu;
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
+    PROCEDURE updateWordWrap;
   public
   end;
 
@@ -64,6 +66,11 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     OutputSynEdit.highlighter:=outputHighlighter;
   end;
 
+PROCEDURE TOutputForm.FormResize(Sender: TObject);
+  begin
+    updateWordWrap;
+  end;
+
 PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   begin
     CanClose:=false;
@@ -72,6 +79,18 @@ PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icOutput;
+  end;
+
+PROCEDURE TOutputForm.updateWordWrap;
+  begin
+    if outputBehavior.echo_wrapping
+    then guiAdapters.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
+    else guiAdapters.preferredEchoLineLength:=-1;
+
+    //TODO: Implement this in quick edit form
+    //if settings.quickOutputBehavior.echo_wrapping
+    //then MnhForm.quick.adapters^.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
+    //else MnhForm.quick.adapters^.preferredEchoLineLength:=-1;
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
@@ -90,7 +109,7 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
     end;
     guiOutAdapter.outputBehavior:=outputBehavior;
     guiOutAdapter.wrapEcho:=outputBehavior.echo_wrapping;
-    //TODO: updateWordWrap;
+    updateWordWrap;
   end;
 
 PROCEDURE TOutputForm.performSlowUpdate;

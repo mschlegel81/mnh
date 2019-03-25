@@ -6,10 +6,10 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
-  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
+  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings, myGenerics,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
   outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
-  helperForms,debuggerVarForms,mnh_settings,quickEvalForms;
+  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel;
 
 TYPE
 
@@ -20,6 +20,10 @@ TYPE
     breakpointImages: TImageList;
     evaluationStateLabel: TLabel;
     EditLocationLabel: TLabel;
+    miClose2: TMenuItem;
+    miClose3: TMenuItem;
+    miClose4: TMenuItem;
+    miClose1: TMenuItem;
     miUndock2: TMenuItem;
     miUndock3: TMenuItem;
     miUndock4: TMenuItem;
@@ -98,6 +102,10 @@ TYPE
     PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miAssistantClick(Sender: TObject);
     PROCEDURE miBreakpointsClick(Sender: TObject);
+    PROCEDURE miClose1Click(Sender: TObject);
+    PROCEDURE miClose2Click(Sender: TObject);
+    PROCEDURE miClose3Click(Sender: TObject);
+    PROCEDURE miClose4Click(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDebuggerClick(Sender: TObject);
@@ -140,6 +148,10 @@ TYPE
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE TimerTimer(Sender: TObject);
+    PROCEDURE UndockPopup1Popup(Sender: TObject);
+    PROCEDURE UndockPopup2Popup(Sender: TObject);
+    PROCEDURE UndockPopup3Popup(Sender: TObject);
+    PROCEDURE UndockPopup4Popup(Sender: TObject);
   private
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
@@ -158,6 +170,7 @@ USES mnh_splash;
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   begin
+    if length(FileNames)=0 then exit;
     editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
   end;
 
@@ -166,6 +179,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       stream:T_bufferedInputStreamWrapper;
       activeComponents:T_ideComponentSet;
   begin
+    initIpcServer(self);
     subTimerCounter:=0;
     splitterPositions[1]:=16384;
     splitterPositions[2]:=10000;
@@ -258,6 +272,29 @@ PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
     ensureBreakpointsForm;
   end;
 
+PROCEDURE closeActivePage(CONST PageControl: TPageControl);
+  VAR active:T_mnhComponentForm;
+  begin
+    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+    then begin
+      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
+      if not(active.CloseQuery) then exit;
+      FreeAndNil(active);
+    end;
+  end;
+
+FUNCTION canCloseActivePage(CONST PageControl: TPageControl):boolean;
+  begin
+    result:=(PageControl.activePage.ControlCount=1)
+      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
+  end;
+
+PROCEDURE TIdeMainForm.miClose1Click(Sender: TObject); begin closeActivePage(PageControl1); end;
+PROCEDURE TIdeMainForm.miClose2Click(Sender: TObject); begin closeActivePage(PageControl2); end;
+PROCEDURE TIdeMainForm.miClose3Click(Sender: TObject); begin closeActivePage(PageControl3); end;
+PROCEDURE TIdeMainForm.miClose4Click(Sender: TObject); begin closeActivePage(PageControl4); end;
+
 PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   begin
     workspace.closeCurrentFile;
@@ -340,12 +377,24 @@ PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
   begin
-    //TODO: Implement me
+    timer.enabled:=false;
+    if (openFileDialog.showClassicDialog=mrOk) and fileExists(openFileDialog.getSelectedFile)
+    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
+  VAR currentEdit:P_editorMeta;
+      currentPath:string;
   begin
-    //TODO: Implement me
+    timer.enabled:=false;
+    currentEdit:=workspace.currentEditor;
+    if (currentEdit=nil) or (currentEdit^.isPseudoFile)
+    then currentPath:=GetCurrentDir
+    else currentPath:=ExtractFileDir(currentEdit^.getPath);
+    if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
+    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
@@ -446,10 +495,9 @@ PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
     if PageControl.activePage.ControlCount<>1 then exit;
     control:=PageControl.activePage.Controls[0];
     //If the sheet is a TForm return it directly
-    if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType) then newForm:=T_mnhComponentForm(control)
-    else begin
-      raise Exception.create('Not an mnhComponent form!');
-    end;
+    if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
+    then newForm:=T_mnhComponentForm(control)
+    else raise Exception.create('Not an mnhComponent form!');
     newForm.ManualDock(nil);
     newForm.BringToFront;
   end;
@@ -538,6 +586,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       end;
       performSlowUpdates;
       drawMemoryUsage;
+
+      FormDropFiles(Sender,ipcModel.getFilesToOpen);
     end;
 
   PROCEDURE fastUpdates; inline;
@@ -553,6 +603,30 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       slowUpdates;
       subTimerCounter:=0;
     end;
+  end;
+
+PROCEDURE TIdeMainForm.UndockPopup1Popup(Sender: TObject);
+  begin
+    miUndock1.enabled:=(PageControl1.activePage<>nil);
+    miClose1 .enabled:=canCloseActivePage(PageControl1);
+  end;
+
+PROCEDURE TIdeMainForm.UndockPopup2Popup(Sender: TObject);
+  begin
+    miUndock2.enabled:=(PageControl2.activePage<>nil);
+    miClose2 .enabled:=canCloseActivePage(PageControl2);
+  end;
+
+PROCEDURE TIdeMainForm.UndockPopup3Popup(Sender: TObject);
+  begin
+    miUndock3.enabled:=(PageControl3.activePage<>nil);
+    miClose3 .enabled:=canCloseActivePage(PageControl3);
+  end;
+
+PROCEDURE TIdeMainForm.UndockPopup4Popup(Sender: TObject);
+  begin
+    miUndock4.enabled:=(PageControl4.activePage<>nil);
+    miClose4 .enabled:=canCloseActivePage(PageControl4);
   end;
 
 end.

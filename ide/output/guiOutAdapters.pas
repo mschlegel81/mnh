@@ -73,7 +73,13 @@ FUNCTION loadOutputSettings(VAR stream: T_bufferedInputStreamWrapper): boolean;
     stream.read(outputBehavior,sizeOf(outputBehavior));
     stream.read(quickOutputBehavior,sizeOf(quickOutputBehavior));
     outputLinesLimit:=stream.readLongint;
-    result:=stream.allOkay and (outputLinesLimit>=0)
+    result:=stream.allOkay and (outputLinesLimit>=0);
+
+    if not(result) then begin
+      outputBehavior     :=C_defaultIdeMessageConfig;
+      quickOutputBehavior:=C_defaultIdeMessageConfig;
+      outputLinesLimit:=maxLongint;
+    end;
   end;
 
 PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
@@ -128,6 +134,11 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
     end;
     if plotSystem.processPendingMessages then include(result,mt_plot_addRow);
   end;
+
+INITIALIZATION
+  outputBehavior:=C_defaultIdeMessageConfig;
+  quickOutputBehavior:=C_defaultIdeMessageConfig;
+  outputLinesLimit:=maxLongint;
 
 FINALIZATION
   if unitIsInitialized then begin

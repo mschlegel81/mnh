@@ -84,6 +84,7 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
     PROCEDURE onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
     PROCEDURE editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     //Inherited overrides
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
@@ -151,7 +152,7 @@ T_bookmarkIndex=0..9;
 
 FUNCTION getHelpText:string;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
-VAR safeCallback:F_safeCallback;
+VAR safeCallback:F_safeCallback=nil;
     runnerModel:T_runnerModel;
     workspace  :T_workspace;
 IMPLEMENTATION
@@ -185,7 +186,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnKeyUp             :=@editorKeyUp;
-    editor_.OnMouseDown         :=@(workspace.mouseDownForJumpToLocation);
+    editor_.OnMouseDown         :=@editorMouseDown;
     editor_.OnProcessCommand    :=@processUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
     editor_.onPlaceBookmark     :=@onPlaceBookmark;
@@ -245,7 +246,13 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
     if result then begin
       editor.modified:=fileInfo.isChanged;
       updateSheetCaption;
-    end;
+      {$ifdef debugMode}
+      writeln('Succressfully restored editor: ',pseudoName());
+      {$endif}
+    end
+    {$ifdef debugMode}
+    else writeln('Failed to restore editor: ',pseudoName())
+    {$endif};
   end;
 
 PROCEDURE T_editorMeta.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
@@ -357,8 +364,7 @@ PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistance
       latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
-      workspace.assistanceResponseForUpdate:=response;
-    end else workspace.assistanceResponseForUpdate:=nil;
+    end;
   end;
 
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
@@ -488,6 +494,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
       editor.modified:=false;
       editor.MarkTextAsSaved;
       if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
+      updateSheetCaption;
     end;
   end;
 
@@ -535,10 +542,23 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
   end;
 
 PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR jump,mark:boolean;
   begin
-    //TODO: Jump to declaration
-    //TOOD: Update marker...
-//    setUnderCursor(false,true);
+    jump:=(key=13) and (ssCtrl in Shift);
+    mark:=(key=13) and (ssAlt  in Shift);
+    if not(jump or mark) then exit;
+    setUnderCursor(mark,jump);
+    if jump then workspace.openLocation(underCursor.location);
+  end;
+
+PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR jump,mark:boolean;
+  begin
+    jump:=ssCtrl in Shift;
+    mark:=ssAlt  in Shift;
+    if not(jump or mark) then exit;
+    setUnderCursor(mark,jump,editor_.PixelsToRowColumn(point(x,y)));
+    if jump then workspace.openLocation(underCursor.location);
   end;
 
 DESTRUCTOR T_editorMeta.destroy;
@@ -564,7 +584,8 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.checked:=(l=language_);
     end;
-    try
+    //TODO: Reactivate try-except block?
+    //try
       if language_=LANG_MNH then begin
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
@@ -579,7 +600,7 @@ PROCEDURE T_editorMeta.activate;
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
       mainForm.ActiveControl:=editor_;
-    except end; //catch and ignore all exceptions
+    //except end; //catch and ignore all exceptions
   end;
 
 FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;

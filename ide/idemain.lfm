@@ -778,35 +778,55 @@ object IdeMainForm: TIdeMainForm
     top = 87
   end
   object UndockPopup2: TPopupMenu
+    OnPopup = UndockPopup2Popup
     left = 88
     top = 54
     object miUndock2: TMenuItem
       Caption = 'Undock'
       OnClick = miUndock2Click
     end
+    object miClose2: TMenuItem
+      Caption = 'Close'
+      OnClick = miClose2Click
+    end
   end
   object UndockPopup3: TPopupMenu
+    OnPopup = UndockPopup3Popup
     left = 128
     top = 94
     object miUndock3: TMenuItem
       Caption = 'Undock'
       OnClick = miUndock3Click
     end
+    object miClose3: TMenuItem
+      Caption = 'Close'
+      OnClick = miClose3Click
+    end
   end
   object UndockPopup4: TPopupMenu
+    OnPopup = UndockPopup4Popup
     left = 168
     top = 134
     object miUndock4: TMenuItem
       Caption = 'Undock'
       OnClick = miUndock4Click
     end
+    object miClose4: TMenuItem
+      Caption = 'Close'
+      OnClick = miClose4Click
+    end
   end
   object UndockPopup1: TPopupMenu
+    OnPopup = UndockPopup1Popup
     left = 208
     top = 174
     object miUndock1: TMenuItem
       Caption = 'Undock'
       OnClick = miUndock1Click
+    end
+    object miClose1: TMenuItem
+      Caption = 'Close'
+      OnClick = miClose1Click
     end
   end
 end

@@ -1,19 +1,19 @@
 PROGRAM ide;
 
 {$mode objfpc}{$H+}
-{$apptype console} // to read debug output on windows
+{apptype console} // to read debug output on windows
 
 USES
   {$ifdef UNIX}{$IFDEF UseCThreads}
   cthreads,
   {$endif}{$endif}
-  Interfaces, // this includes the LCL widgetset
-  Forms
+  Forms, Interfaces
   { you can add units after this }, ideMain,
-  mnh_gui_settings, mnh_plotForm, codeAssistance,
-  guiOutAdapters, editorMetaBase, editorMeta, fileWrappers, contexts,
-  out_adapters, packages, mnh_constants, mnh_settings,cmdLineInterpretation,
-  ipcModel,mySys,saveFile;
+  mnh_plotForm,
+  cmdLineInterpretation,
+  ipcModel,
+  mySys,
+  saveFile; //needed for proper initialization
 
 {$R *.res}
 

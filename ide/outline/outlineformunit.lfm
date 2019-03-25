@@ -18,6 +18,7 @@ object OutlineForm: TOutlineForm
     Top = 0
     Width = 480
     Align = alClient
+    PopupMenu = OutlinePopupMenu
     TabOrder = 0
     OnDblClick = treeViewDblClick
     OnKeyDown = treeViewKeyDown

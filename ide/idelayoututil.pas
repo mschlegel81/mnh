@@ -172,6 +172,7 @@ PROCEDURE unregisterFontControl(control:TWinControl);
       c:T_controlType;
   begin
     for c in T_controlType do begin
+      k:=0;
       while (k<length(fontControls[c])) and (fontControls[c][k]<>control) do inc(k);
       if k<length(fontControls[c]) then begin
         fontControls[c][k]:=fontControls[c][length(fontControls[c])-1];

@@ -505,6 +505,7 @@ object QuickEvalForm: TQuickEvalForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = OutputPopupMenu
     TabOrder = 2
     Gutter.Width = 17
     Gutter.MouseActions = <>
@@ -975,5 +976,67 @@ object QuickEvalForm: TQuickEvalForm
     Width = 480
     Align = alTop
     ResizeAnchor = akTop
+  end
+  object OutputPopupMenu: TPopupMenu
+    left = 257
+    top = 187
+    object miEchoInput: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &input'
+      OnClick = miEchoInputClick
+    end
+    object miEchoOutput: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &output'
+      OnClick = miEchoInputClick
+    end
+    object miEchoDeclarations: TMenuItem
+      AutoCheck = True
+      Caption = 'Echo &declarations'
+      OnClick = miEchoInputClick
+    end
+    object miWrapEcho: TMenuItem
+      AutoCheck = True
+      Caption = '&Wrap echo'
+      OnClick = miEchoInputClick
+    end
+    object miShowTiming: TMenuItem
+      AutoCheck = True
+      Caption = 'Show &timing info'
+      OnClick = miEchoInputClick
+    end
+    object MenuItem1: TMenuItem
+      Caption = 'Error &display'
+      object miErrorL1: TMenuItem
+        AutoCheck = True
+        Caption = '&1: Show all'
+        Checked = True
+        RadioItem = True
+        OnClick = miEchoInputClick
+      end
+      object miErrorL2: TMenuItem
+        AutoCheck = True
+        Caption = '&2: Show warnings and errors'
+        RadioItem = True
+        OnClick = miEchoInputClick
+      end
+      object miErrorL3: TMenuItem
+        AutoCheck = True
+        Caption = '&3: Show all errors'
+        RadioItem = True
+        OnClick = miEchoInputClick
+      end
+      object miErrorL4: TMenuItem
+        AutoCheck = True
+        Caption = '&4: Show system errors only'
+        RadioItem = True
+        OnClick = miEchoInputClick
+      end
+      object miErrorUser: TMenuItem
+        AutoCheck = True
+        Caption = 'Show all &user defined messages'
+        OnClick = miEchoInputClick
+      end
+    end
   end
 end

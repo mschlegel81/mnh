@@ -26,6 +26,7 @@ T_fileHistory=object(T_serializable)
   PROCEDURE fileClosed(CONST fileName:ansistring);
   FUNCTION historyItem(CONST index:longint):ansistring;
   FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
+  PROCEDURE clear;
 end;
 
 T_cmdLineFlag=(clf_GUI,clf_QUIET,clf_SILENT,clf_HEADLESS,clf_PROFILE,clf_PAUSEALWAYS);
@@ -252,6 +253,11 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
       list.free;
     end;
     sortUnique(result);
+  end;
+
+PROCEDURE T_fileHistory.clear;
+  begin
+    setLength(items,0);
   end;
 
 INITIALIZATION

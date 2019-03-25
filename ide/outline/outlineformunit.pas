@@ -8,10 +8,10 @@ USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, ComCtrls, Menus,
   ideLayoutUtil,
   litVar,
-  operators,
   mnh_settings,
   mnh_constants,basicTypes,
   subrules,rules,packages,editorMeta,
+  codeAssistance,
   serializationUtil;
 
 TYPE
@@ -36,14 +36,13 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
-    currentMainPackage:P_package;
+    caResponse:P_codeAssistanceResponse;
 
     packageNodes:array of P_outlineNode;
     PROCEDURE openSelectedLocation;
-    PROCEDURE refresh;
     FUNCTION ruleSorting: T_ruleSorting;
 
-    PROCEDURE updateOutlineTree(CONST mainPackage: P_package);
+    PROCEDURE updateOutlineTree;
   end;
 
   T_outlineNode=object
@@ -78,7 +77,7 @@ TYPE
 PROCEDURE ensureOutlineForm;
 VAR outlineSettings:T_outlineSettings;
 IMPLEMENTATION
-USES codeAssistance;
+USES  operators;
 PROCEDURE ensureOutlineForm;
   begin
     if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(Application));
@@ -261,6 +260,7 @@ PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
       rs_byNameCaseInsensitive  : sortByNameRadio.checked:=true;
     end;
     registerFontControl(outlineTreeView,ctGeneral);
+    caResponse:=nil;
   end;
 
 PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
@@ -268,6 +268,7 @@ PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
   begin
     for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
     setLength(packageNodes,0);
+    if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
     unregisterFontControl(outlineTreeView);
   end;
 
@@ -288,22 +289,16 @@ PROCEDURE TOutlineForm.treeViewDblClick(Sender: TObject);
     openSelectedLocation;
   end;
 
-PROCEDURE TOutlineForm.refresh;
-  begin
-    updateOutlineTree(currentMainPackage);
-  end;
-
-PROCEDURE TOutlineForm.updateOutlineTree(CONST mainPackage: P_package);
+PROCEDURE TOutlineForm.updateOutlineTree;
   VAR imported:T_packageList;
       i:longint;
   begin
-    currentMainPackage:=mainPackage;
-    if mainPackage=nil then begin
+    if (caResponse=nil) or (caResponse^.package=nil) then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
       setLength(packageNodes,0);
       visible:=false;
     end else begin
-      imported:=mainPackage^.usedPackages;
+      imported:=caResponse^.package^.usedPackages;
       //ensure correct node count
       if length(packageNodes)>length(imported)+1 then begin
         for i:=length(imported)+1 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
@@ -317,7 +312,7 @@ PROCEDURE TOutlineForm.updateOutlineTree(CONST mainPackage: P_package);
         end;
       end;
       //update nodes
-      packageNodes[0]^.updateWithPackage(mainPackage,true);
+      packageNodes[0]^.updateWithPackage(caResponse^.package,true);
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
       visible:=true;
     end;
@@ -331,7 +326,7 @@ PROCEDURE TOutlineForm.checkboxClick(Sender: TObject);
     if sortByNameCaseRadio .checked then outlineSettings.ruleSorting:=rs_byNameCaseSensitive;
     if sortByNameRadio     .checked then outlineSettings.ruleSorting:=rs_byNameCaseInsensitive;
     if sortByLocationRadio .checked then outlineSettings.ruleSorting:=rs_byLocation;
-    refresh;
+    updateOutlineTree;
   end;
 
 FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
@@ -340,9 +335,16 @@ FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TOutlineForm.performSlowUpdate;
+  VAR codeAssistanceResponse:P_codeAssistanceResponse;
   begin
-    if workspace.assistanceResponseForUpdate<>nil
-    then updateOutlineTree(workspace.assistanceResponseForUpdate^.package);
+    codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
+    if (codeAssistanceResponse<>caResponse) then begin
+      if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
+      if codeAssistanceResponse=nil
+      then caResponse:=nil
+      else caResponse:=codeAssistanceResponse^.rereferenced;
+      updateOutlineTree;
+    end;
   end;
 
 PROCEDURE TOutlineForm.performFastUpdate;

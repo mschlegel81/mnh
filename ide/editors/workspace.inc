@@ -16,14 +16,14 @@ T_workspace=object(T_serializable)
     end;
 
     metas:array of P_editorMeta;
-    fileHistory      :T_fileHistory;
 
   public
     saveIntervalIdx:byte;
+    autosaveBeforeEachExecution:boolean;
     newFileLineEnding,overwriteLineEnding:byte;
 
-    assistanceResponseForUpdate: P_codeAssistanceResponse;
-    folderHistory    :T_fileHistory;
+    folderHistory,
+    fileHistory:T_fileHistory;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList);
@@ -45,7 +45,6 @@ T_workspace=object(T_serializable)
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
-    PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 
     PROCEDURE updateEditorsByGuiStatus;
 
@@ -61,6 +60,7 @@ T_workspace=object(T_serializable)
 
     PROCEDURE postSaveRequest;
     FUNCTION savingRequested:boolean;
+    FUNCTION getCurrentAssistanceResponse:P_codeAssistanceResponse;
 end;
 
 CONST
@@ -85,7 +85,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
   begin
     savedAt:=now+1; //= now + 24h
 
-    assistanceResponseForUpdate:=nil;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;
@@ -95,6 +94,7 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     setLength(metas,0);
     folderHistory    .create(true);
     fileHistory      .create(false);
+    setLength(oldMarkers,0);
   end;
 
 DESTRUCTOR T_workspace.destroy;
@@ -108,10 +108,19 @@ DESTRUCTOR T_workspace.destroy;
 
 FUNCTION T_workspace.getSerialVersion: dword;
   begin
-    result:=2624113;
+    result:=2624114;
   end;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  PROCEDURE resetWorkspace;
+    begin
+      nextMetaIndex:=1;
+      setLength(metas,0);
+      folderHistory.clear;
+      fileHistory  .clear;
+      setLength(oldMarkers,0);
+    end;
+
   VAR k,j:longint;
       meta:P_editorMeta;
   begin
@@ -134,7 +143,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     for k:=0 to length(metas)-1 do new(metas[k],create(k));
 
     result:=stream.allOkay;
-    for k:=0 to length(metas)-1 do begin
+    for k:=0 to length(metas)-1 do if result then begin
       result:=result and metas[k]^.loadFromStream(stream) and stream.allOkay;
       if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
     end;
@@ -145,6 +154,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     end;
 
     saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
+    autosaveBeforeEachExecution:=stream.readBoolean;
     newFileLineEnding  :=stream.readByte([0..3]);
     overwriteLineEnding:=stream.readByte([0..3]);
 
@@ -178,6 +188,7 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     end;
 
     stream.writeByte(saveIntervalIdx);
+    stream.writeBoolean(autosaveBeforeEachExecution);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
 
@@ -225,15 +236,14 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(
             and (fileName[length(fileName)]='>');
       end;
 
-    VAR filePath:ansistring;
-        meta:P_editorMeta;
+    VAR meta:P_editorMeta;
     begin
       if isPseudoName then begin
         for meta in metas do if meta^.pseudoName=fileName then begin result:=meta; exit; end;
       end else begin
-        for meta in metas do if meta^.fileInfo.filePath=filePath then begin result:=meta; exit; end;
+        for meta in metas do if meta^.fileInfo.filePath=fileName then begin result:=meta; exit; end;
         result:=addEditorMetaForNewFile();
-        result^.setFile(filePath);
+        result^.setFile(fileName);
       end;
     end;
 
@@ -289,20 +299,6 @@ PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shi
     if (key=13) and (ssCtrl in Shift) then begin
       openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
       key:=0;
-    end;
-  end;
-
-PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject;
-  button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  VAR point:TPoint;
-      caller:TSynEdit;
-  begin
-    if (ssCtrl) in Shift then begin
-      caller:=TSynEdit(Sender);
-      point.x:=x;
-      point.y:=y;
-      point:=caller.PixelsToRowColumn(point);
-      openLocation(guessLocationFromString(caller.lines[point.y-1],false));
     end;
   end;
 
@@ -471,6 +467,15 @@ PROCEDURE T_workspace.postSaveRequest;
 FUNCTION T_workspace.savingRequested:boolean;
   begin
     result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
+  end;
+
+FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
+  VAR meta:P_editorMeta;
+  begin
+    meta:=currentEditor;
+    if meta=nil
+    then result:=nil
+    else result:=meta^.latestAssistanceReponse;
   end;
 
 {$endif}

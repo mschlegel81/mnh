@@ -1,14 +1,14 @@
 object SettingsForm: TSettingsForm
   Left = 881
-  Height = 323
+  Height = 305
   Top = 282
-  Width = 455
+  Width = 365
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 323
-  ClientWidth = 455
-  Constraints.MinWidth = 320
+  ClientHeight = 305
+  ClientWidth = 365
+  Constraints.MinWidth = 350
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
@@ -17,17 +17,17 @@ object SettingsForm: TSettingsForm
   LCLVersion = '2.0.0.4'
   object PageControl: TPageControl
     Left = 0
-    Height = 323
+    Height = 305
     Top = 0
-    Width = 455
-    ActivePage = TabSheet_display
+    Width = 365
+    ActivePage = TabSheet_global
     Align = alClient
-    TabIndex = 0
+    TabIndex = 2
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 285
-      ClientWidth = 447
+      ClientHeight = 267
+      ClientWidth = 357
       object Label2: TLabel
         AnchorSideLeft.Control = TabSheet_display
         AnchorSideTop.Control = EditorFontButton
@@ -49,7 +49,7 @@ object SettingsForm: TSettingsForm
         Left = 144
         Height = 35
         Top = 5
-        Width = 303
+        Width = 213
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 5
@@ -79,7 +79,7 @@ object SettingsForm: TSettingsForm
         Left = 144
         Height = 33
         Top = 110
-        Width = 303
+        Width = 213
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 5
@@ -109,7 +109,7 @@ object SettingsForm: TSettingsForm
         Left = 144
         Height = 35
         Top = 40
-        Width = 303
+        Width = 213
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
@@ -139,7 +139,7 @@ object SettingsForm: TSettingsForm
         Left = 144
         Height = 35
         Top = 75
-        Width = 303
+        Width = 213
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
@@ -151,24 +151,24 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_lineEnding: TTabSheet
       Caption = 'line ending'
-      ClientHeight = 285
-      ClientWidth = 333
+      ClientHeight = 267
+      ClientWidth = 357
       object GroupBox1: TGroupBox
         Left = 0
         Height = 117
         Top = 0
-        Width = 333
+        Width = 357
         Align = alTop
         AutoSize = True
         Caption = 'new files'
         ClientHeight = 87
-        ClientWidth = 329
+        ClientWidth = 353
         TabOrder = 0
         object rb_saveNewDefault: TRadioButton
           Left = 0
           Height = 29
           Top = 0
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'System default'
           Checked = True
@@ -180,7 +180,7 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 29
           Top = 29
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'Linux'
           OnChange = rb_saveNewDefaultChange
@@ -190,7 +190,7 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 29
           Top = 58
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'Windows'
           OnChange = rb_saveNewDefaultChange
@@ -201,18 +201,18 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 146
         Top = 117
-        Width = 333
+        Width = 357
         Align = alTop
         AutoSize = True
         Caption = 'existing files'
         ClientHeight = 116
-        ClientWidth = 329
+        ClientWidth = 353
         TabOrder = 1
         object rb_saveDefault: TRadioButton
           Left = 0
           Height = 29
           Top = 29
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'System defult'
           OnChange = rb_saveDefaultChange
@@ -222,7 +222,7 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 29
           Top = 58
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'Linux'
           OnChange = rb_saveDefaultChange
@@ -232,7 +232,7 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 29
           Top = 87
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'Windows'
           OnChange = rb_saveDefaultChange
@@ -242,7 +242,7 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 29
           Top = 0
-          Width = 329
+          Width = 353
           Align = alTop
           Caption = 'Don''t change'
           Checked = True
@@ -254,18 +254,18 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 285
-      ClientWidth = 447
+      ClientHeight = 267
+      ClientWidth = 357
       object Panel1: TPanel
         Left = 0
         Height = 33
         Top = 0
-        Width = 447
+        Width = 357
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
         ClientHeight = 33
-        ClientWidth = 447
+        ClientWidth = 357
         TabOrder = 0
         object Label1: TLabel
           Left = 0
@@ -280,7 +280,7 @@ object SettingsForm: TSettingsForm
           Left = 45
           Height = 33
           Top = 0
-          Width = 402
+          Width = 312
           Align = alClient
           NumbersOnly = True
           OnEditingDone = workerThreadCountEditEditingDone
@@ -292,12 +292,12 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 33
         Top = 33
-        Width = 447
+        Width = 357
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
         ClientHeight = 33
-        ClientWidth = 447
+        ClientWidth = 357
         TabOrder = 1
         object Label6: TLabel
           Left = 0
@@ -313,7 +313,7 @@ object SettingsForm: TSettingsForm
           Height = 33
           Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 292
+          Width = 202
           Align = alClient
           NumbersOnly = True
           OnEditingDone = memLimitEditEditingDone
@@ -327,12 +327,12 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 33
         Top = 66
-        Width = 447
+        Width = 357
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
         ClientHeight = 33
-        ClientWidth = 447
+        ClientWidth = 357
         TabOrder = 2
         object Label4: TLabel
           Left = 0
@@ -347,7 +347,7 @@ object SettingsForm: TSettingsForm
           Left = 78
           Height = 33
           Top = 0
-          Width = 369
+          Width = 279
           Align = alClient
           ItemHeight = 25
           OnChange = autosaveComboBoxChange
@@ -355,16 +355,26 @@ object SettingsForm: TSettingsForm
           TabOrder = 0
         end
       end
+      object miSaveBeforeRun: TCheckBox
+        Left = 0
+        Height = 29
+        Top = 99
+        Width = 357
+        Align = alTop
+        Caption = 'Autosave before each execution'
+        OnChange = miSaveBeforeRunChange
+        TabOrder = 3
+      end
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
       ClientHeight = 285
-      ClientWidth = 447
+      ClientWidth = 345
       object installButton: TButton
         Left = 0
         Height = 35
         Top = 0
-        Width = 447
+        Width = 345
         Align = alTop
         AutoSize = True
         Caption = 'Create file associations'
@@ -375,7 +385,7 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 35
         Top = 35
-        Width = 447
+        Width = 345
         Align = alTop
         AutoSize = True
         Caption = 'Uninstall and quit immediately'
@@ -386,7 +396,7 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 35
         Top = 70
-        Width = 447
+        Width = 345
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
@@ -397,7 +407,7 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 38
         Top = 105
-        Width = 447
+        Width = 345
         Align = alTop
         Caption = 'togglePortableButton'
         OnClick = togglePortableButtonClick

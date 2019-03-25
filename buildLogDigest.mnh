@@ -64,7 +64,8 @@ main('files')->begin
     .unique
     .each(file,existing(file) orElse
                existing('consoles/'&file))
-    .union(allFiles('ide','*.inc'),
+    .union(allFiles('ide',['*.inc','*.lpr']),
+           allFiles('consoles','*.lpr'),
            allFiles('3rd_party','*.inc'),
            allFiles('core','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
     .sort;
