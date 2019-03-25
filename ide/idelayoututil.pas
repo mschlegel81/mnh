@@ -186,9 +186,7 @@ PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
     for e in fontControls[controlType] do e.Font:=newFont;
     settings.Font[controlType].fontName:=newFont.name;
     settings.Font[controlType].fontSize:=newFont.size;
-    settings.Font[controlType].style:=0;
-    if (fsBold   in newFont.style) and (controlType<>ctEditor) then settings.Font[controlType].style+=FONT_STYLE_BOLD;
-    if (fsItalic in newFont.style) and (controlType<>ctEditor) then settings.Font[controlType].style+=FONT_STYLE_ITALIC;
+    settings.Font[controlType].style:=newFont.style;
   end;
 
 CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
@@ -254,10 +252,24 @@ FUNCTION focusedEditor: TSynEdit;
 FUNCTION typeOfFocusedControl:T_controlType;
   VAR e:TWinControl;
       c:T_controlType;
+      active:TWinControl;
   begin
-    result:=ctEditor;
+    result:=ctNoneOrUnknown;
+    if mainForm=nil then exit(ctNoneOrUnknown);
+    active:=mainForm.ActiveControl;
+
+    if active.ClassName='TSynEdit' then exit(ctEditor);
+    if active.ClassName='TTreeView' then exit(ctGeneral);
+    if active.ClassName='TListBox' then exit(ctGeneral);
+    if active.ClassName='TplotForm' then exit(ctPlot);
+//  ctEditor,ctTable,ctGeneral,ctPlot,ctNoneOrUnknown
+
+    {$ifdef debugMode}
+    writeln('Unknown control class ',active.ClassName);
+    {$endif}
+
     for c in T_controlType do
-    for e in fontControls[ctEditor] do if e.Focused then exit(c);
+    for e in fontControls[ctEditor] do if e=mainForm.ActiveControl then exit(c);
   end;
 
 PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR splitters: T_splitterPositions);

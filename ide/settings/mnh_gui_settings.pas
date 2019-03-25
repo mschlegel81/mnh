@@ -108,14 +108,14 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     GeneralFontButton.Font.size :=settings.Font[ctGeneral].fontSize;
     GeneralFontButton.Font.style:=settings.Font[ctGeneral].style;
 
-    //TODO: Remove or implement
-    //setEditorFontSize(settings.editor.fontSize);
+    propagateFont(EditorFontButton .Font,ctEditor);
+    propagateFont(TableFontButton  .Font,ctTable);
+    propagateFont(GeneralFontButton.Font,ctGeneral);
+
     setOutputLimit(guiOutAdapters.outputLinesLimit);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
-    //TODO: Remove or implement
-    //EditorFontButton.Font.size := getEditorFontSize;
-    //EditorFontButton.caption := settings.editor.fontName;
+
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     case workspace.overwriteLineEnding of

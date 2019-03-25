@@ -260,6 +260,7 @@ PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
       rs_byNameCaseSensitive    : sortByNameCaseRadio.checked:=true;
       rs_byNameCaseInsensitive  : sortByNameRadio.checked:=true;
     end;
+    registerFontControl(outlineTreeView,ctGeneral);
   end;
 
 PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
@@ -267,6 +268,7 @@ PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
   begin
     for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
     setLength(packageNodes,0);
+    unregisterFontControl(outlineTreeView);
   end;
 
 PROCEDURE TOutlineForm.openSelectedLocation;

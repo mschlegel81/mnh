@@ -7,14 +7,15 @@ object tableForm: TtableForm
   ClientHeight = 210
   ClientWidth = 320
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
   Menu = tableMenu
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnKeyUp = FormKeyUp
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.0.4'
   object stringGrid: TStringGrid
     Left = 0
     Height = 210
@@ -24,9 +25,9 @@ object tableForm: TtableForm
     BorderStyle = bsNone
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
+    PopupMenu = tableMenu1
     TabOrder = 0
     OnHeaderClick = stringGridHeaderClick
-    OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu
     left = 68
@@ -79,5 +80,40 @@ object tableForm: TtableForm
     FilterIndex = 2
     left = 8
     top = 16
+  end
+  object tableMenu1: TPopupMenu
+    left = 68
+    top = 16
+    object MenuItem3: TMenuItem
+      Caption = '&Display'
+      object mi_transpose1: TMenuItem
+        Caption = 'Transpose'
+        OnClick = mi_transposeClick
+      end
+      object mi_comma1: TMenuItem
+        Caption = 'Comma as decimal separator'
+        OnClick = mi_commaClick
+      end
+    end
+    object MenuItem4: TMenuItem
+      Caption = '&Export'
+      object mi_exportCsvSemicolon1: TMenuItem
+        Caption = 'Export to ";"-separated csv'
+        OnClick = mi_exportCsvSemicolonClick
+      end
+      object mi_exportCsvTab1: TMenuItem
+        Caption = 'Export to tab-separated csv...'
+        OnClick = mi_exportCsvTabClick
+      end
+      object mi_exportText1: TMenuItem
+        Caption = 'Export to text...'
+        OnClick = mi_exportTextClick
+      end
+      object mi_exportIncHeader1: TMenuItem
+        AutoCheck = True
+        Caption = 'Include Header in Export'
+        RadioItem = True
+      end
+    end
   end
 end

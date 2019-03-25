@@ -14,23 +14,37 @@ USES
   out_adapters,
   recyclers,
   fileWrappers,
-  profiling;
+  profiling,
+  mnh_settings,
+  ideLayoutUtil;
 
 TYPE
-  TtableForm = class(TForm)
+
+  { TtableForm }
+
+  TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    mi_comma1: TMenuItem;
+    mi_exportCsvSemicolon1: TMenuItem;
+    mi_exportCsvTab1: TMenuItem;
     mi_exportIncHeader: TMenuItem;
     miIncreaseFontSize: TMenuItem;
     miDecreaseFontSize: TMenuItem;
+    mi_exportIncHeader1: TMenuItem;
     mi_exportText: TMenuItem;
     mi_exportCsvTab: TMenuItem;
     mi_exportCsvSemicolon: TMenuItem;
+    mi_exportText1: TMenuItem;
     mi_transpose: TMenuItem;
     mi_comma: TMenuItem;
+    mi_transpose1: TMenuItem;
     SaveTableDialog: TSaveDialog;
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
+    tableMenu1: TPopupMenu;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -43,6 +57,10 @@ TYPE
     PROCEDURE mi_exportTextClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
     PROCEDURE stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+
+    FUNCTION getIdeComponentType:T_ideComponent; override;
+    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performFastUpdate; override;
   private
     { private declarations }
     literal:P_listLiteral;
@@ -50,7 +68,6 @@ TYPE
     firstIsHeader:boolean;
 
     displayPending:boolean;
-    vacant:boolean;
     sorted:record
       ascending:boolean;
       byColumn:longint;
@@ -60,35 +77,26 @@ TYPE
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
     PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
-    PROCEDURE clearForm;
   end;
 
-PROCEDURE resetTableForms(CONST doDispose:boolean=false);
+PROCEDURE resetTableForms;
 PROCEDURE conditionalShowTables;
 IMPLEMENTATION
 VAR tableForms: array of TtableForm;
     tableFormCs:TRTLCriticalSection;
 
-PROCEDURE resetTableForms(CONST doDispose:boolean=false);
+PROCEDURE resetTableForms;
   VAR i:longint;
   begin
     enterCriticalSection(tableFormCs);
-    for i:=0 to length(tableForms)-1 do begin
-      if doDispose then FreeAndNil(tableForms[i])
-                   else tableForms[i].clearForm;
-    end;
-    if doDispose then setLength(tableForms,0);
+    for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
+    setLength(tableForms,0);
     leaveCriticalSection(tableFormCs);
   end;
 
 FUNCTION newTableForm:TtableForm;
-  VAR i:longint;
   begin
     enterCriticalSection(tableFormCs);
-    for i:=0 to length(tableForms)-1 do if tableForms[i].vacant then begin
-      leaveCriticalSection(tableFormCs);
-      exit(tableForms[i]);
-    end;
     result:=TtableForm.create(nil);
     setLength(tableForms,length(tableForms)+1);
     tableForms[length(tableForms)-1]:=result;
@@ -136,6 +144,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
+    registerFontControl(StringGrid,ctTable);
     //if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
@@ -146,14 +155,7 @@ PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
   begin
     if literal<>nil then disposeLiteral(literal);
-  end;
-
-PROCEDURE TtableForm.clearForm;
-  begin
-    if literal<>nil then disposeLiteral(literal);
-    StringGrid.RowCount:=1;
-    StringGrid.colCount:=1;
-    vacant:=true;
+    unregisterFontControl(StringGrid);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
@@ -179,6 +181,7 @@ PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
     mi_comma.checked:=not(mi_comma.checked);
+    mi_comma1.checked:=mi_comma.checked;
     fillTable;
   end;
 
@@ -215,13 +218,15 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
   begin
     mi_transpose.checked:=not(mi_transpose.checked);
+    mi_transpose1.checked:=mi_transpose.checked;
     newLiteral:=literal^.transpose(@emptyStringSingleton);
     disposeLiteral(literal);
     literal:=newLiteral;
     fillTable;
   end;
 
-PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean;
+  index: integer);
   VAR dummyLocation:T_tokenLocation;
       newLiteral:P_listLiteral;
       i:longint;
@@ -248,7 +253,22 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
     fillTable;
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST firstIsHeader_:boolean);
+FUNCTION TtableForm.getIdeComponentType: T_ideComponent;
+  begin
+    result:=icTable;
+  end;
+
+PROCEDURE TtableForm.performSlowUpdate;
+  begin
+    conditionalDoShow;
+  end;
+
+PROCEDURE TtableForm.performFastUpdate;
+  begin
+  end;
+
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
+  CONST newCaption: string; CONST firstIsHeader_: boolean);
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
@@ -258,6 +278,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
     end;
     firstIsHeader:=firstIsHeader_;
     mi_exportIncHeader.enabled:=firstIsHeader_;
+    mi_exportIncHeader1.enabled:=firstIsHeader_;
     mi_exportIncHeader.checked:=mi_exportIncHeader.checked and firstIsHeader_;
     if firstIsHeader and (L^.size>0) and (L^.value[0]^.literalType in C_listTypes) then begin
       headerLiteral:=P_listLiteral(L^.value[0]);
@@ -273,15 +294,14 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
     end;
 
     displayPending:=true;
-    vacant:=false;
     caption:=newCaption;
   end;
 
 PROCEDURE TtableForm.conditionalDoShow;
   begin
-    if displayPending and not(vacant) then begin
+    if displayPending then begin
       displayPending:=false;
-      Show;
+      dockNewForm(self);
       fillTable;
     end;
   end;
@@ -373,7 +393,7 @@ INITIALIZATION
   initialize(tableFormCs);
   initCriticalSection(tableFormCs);
 FINALIZATION
-  resetTableForms(true);
+  resetTableForms;
   doneCriticalSection(tableFormCs);
 
 end.

@@ -457,6 +457,8 @@ PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
 PROCEDURE TIdeMainForm.saveIdeSettings;
   VAR stream:T_bufferedOutputStreamWrapper;
   begin
+    mnh_settings.saveSettings;
+
     stream.createToWriteToFile(workspaceFilename);
     saveMainFormLayout(stream,splitterPositions);
     saveOutputSettings(stream);

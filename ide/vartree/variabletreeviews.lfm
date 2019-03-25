@@ -7,10 +7,11 @@ object VarTreeViewForm: TVarTreeViewForm
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnKeyUp = FormKeyUp
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.0.4'
   object VarTreeView: TTreeView
     Left = 0
     Height = 360

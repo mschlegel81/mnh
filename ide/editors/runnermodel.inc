@@ -78,8 +78,7 @@ FUNCTION T_runnerModel.canRun(CONST quickMode: boolean): boolean;
 
 PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean;
   CONST mainParameters: string);
-  VAR m:P_editorMeta;
-      contextType:T_evaluationContextType;
+  VAR contextType:T_evaluationContextType;
   begin
     if not(canRun) then exit;
     //adapter reset

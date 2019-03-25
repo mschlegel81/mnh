@@ -5,7 +5,7 @@ UNIT breakpointsForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Grids, StdCtrls,
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls,
   ideLayoutUtil, editorMeta, basicTypes, mnh_settings;
 
 TYPE
