@@ -6,8 +6,14 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, ExtCtrls, funcs, out_adapters, mnh_constants,
-  packages,mnh_settings,mnh_doc,ideLayoutUtil,guiOutAdapters,editorMeta;
+  StdCtrls, ExtCtrls,
+  mnh_constants,
+  mnh_settings,
+  //funcs,
+  packages,//mnh_doc,
+  editorMeta,
+  guiOutAdapters,
+  ideLayoutUtil;
 
 CONST MINIMUM_OUTPUT_LINES=16;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=

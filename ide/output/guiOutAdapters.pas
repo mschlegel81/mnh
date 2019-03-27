@@ -5,11 +5,11 @@ USES SynEdit,SynEditKeyCmds,Forms,
      out_adapters,
      mnh_constants,basicTypes,
      mnh_settings,
-     mnh_plotForm, mnh_tables,
+     mnh_plotForm,
      mnh_messages,
      evalThread,
      synOutAdapter,
-     variableTreeViews,mnhCustomForm, askDialog,
+     mnhCustomForm, askDialog,
      serializationUtil;
 
 TYPE
@@ -95,8 +95,7 @@ PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
 CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_abstractMnhForm);
   begin
     inherited create(at_guiEventsCollector,
-                    [mt_displayTable,
-                     mt_displayVariableTree,
+                    [mt_displayVariableTree,
                      mt_displayCustomForm,
                      mt_endOfEvaluation,
                      mt_guiEdit_done,
@@ -115,8 +114,6 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
       for message in storedMessages do begin
         include(result,message^.messageType);
         case message^.messageType of
-          mt_displayTable:        conditionalShowTables;
-          mt_displayVariableTree: conditionalShowVarTrees;
           mt_displayCustomForm:   showFormsAfter:=true;
           mt_endOfEvaluation:     evaluationEnded:=true;
           mt_guiEdit_done:        form.onEditFinished(P_editScriptTask(message));

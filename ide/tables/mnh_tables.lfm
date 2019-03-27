@@ -10,7 +10,6 @@ object tableForm: TtableForm
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = tableMenu
-  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

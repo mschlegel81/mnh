@@ -7,6 +7,8 @@ object QuickEvalForm: TQuickEvalForm
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'

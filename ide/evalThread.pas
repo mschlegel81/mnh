@@ -2,38 +2,86 @@ UNIT evalThread;
 INTERFACE
 USES sysutils,Classes,
      Forms,
-     mySys,
      myGenerics,myStringUtil,
      mnh_constants,basicTypes,fileWrappers,
      mnh_messages,
      out_adapters,
      litVar,
      funcs,contexts,
-     tokenArray,
      subrules,
      packages,mnh_doc,
      debugging,
      cmdLineInterpretation,
-     recyclers,
-     debuggingVar;
+     debuggingVar,
+     recyclers;
+
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript,er_die);
-  T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning);
-  T_scriptType=(st_edit,st_insert,st_util);
-CONST
-  C_runningStates:set of T_evaluationState=[es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning];
-  C_scriptTypeMeta:array[T_scriptType] of record nameAttribute:string; validResultType:T_literalTypeSet; end=
-    {st_edit} ((nameAttribute:'editScript'  ; validResultType:[lt_emptyList,lt_stringList]),
-    {st_insert}(nameAttribute:'insertScript'; validResultType:[lt_string]),
-    {st_util}  (nameAttribute:'utility';      validResultType:[lt_emptyList,lt_stringList,lt_void]));
-TYPE
-  T_runnerStateInfo=record
-    request:T_evalRequest;
-    state  :T_evaluationState;
-    message:string;
-    hasPendingEditResult:boolean;
+  T_evaluationKind = (ek_normal,ek_quick,ek_editScript);
+  T_evaluationState= (es_pending, es_running,es_debugRunning,es_debugHalted,es_finished,es_stoppedByUser);
+
+  P_abstractEvaluation = ^T_abstractEvaluation;
+  T_abstractEvaluation = object
+    private
+      //global
+      evaluationCs:TRTLCriticalSection;
+      evaluationKind:T_evaluationKind;
+      state:T_evaluationState;
+      stoppedByUser:boolean;
+
+      package:T_package;
+      evalTime:double;
+
+      messages:P_messages;
+      globals:T_evaluationGlobals; //needed for debugging
+
+      PROCEDURE execute(VAR recycler:T_recycler); virtual; abstract;
+    protected
+      CONSTRUCTOR init(CONST kind:T_evaluationKind; CONST messageAdapter:P_messages);
+      PROCEDURE executeInNewThread(CONST debugging:boolean=false);
+    public
+      DESTRUCTOR destroy; virtual;
+      FUNCTION getState:T_evaluationState; virtual; abstract;
+      PROCEDURE haltEvaluation;
+      PROCEDURE postHalt;
   end;
 
+  { T_standardEvaluation }
+
+  T_standardEvaluation = object(T_abstractEvaluation)
+    private
+      evalRequest:record
+        provider:P_codeProvider;
+        paramters:T_arrayOfString;
+        contextType:T_evaluationContextType;
+        callMain:boolean;
+      end;
+      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+    public
+      CONSTRUCTOR create(CONST messageAdapter:P_messages);
+      //TODO: move reEvaluateWithGUI to separate evaluation class
+      PROCEDURE reEvaluateWithGUI;
+      PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
+      PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
+  end;
+
+  T_reevaluationWithGui = object(T_standardEvaluation)
+    private
+      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+    public
+      CONSTRUCTOR create(CONST messageAdapter:P_messages);
+  end;
+
+  T_quickEvaluation = object(T_abstractEvaluation)
+    private
+      parentProvider:P_codeProvider;
+      toEvaluate:T_arrayOfString;
+      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+    public
+      CONSTRUCTOR create(CONST messageAdapter:P_messages);
+      FUNCTION postEvalulation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
+  end;
+
+  T_scriptType     =(st_edit,st_insert,st_util);
   P_scriptMeta=^T_scriptMeta;
   T_scriptMetaArray=array of P_scriptMeta;
   T_scriptMeta=object
@@ -64,16 +112,37 @@ TYPE
     public
       CONSTRUCTOR createForNewEditor(CONST editLines:T_arrayOfString; CONST language:string='mnh');
       DESTRUCTOR destroy; virtual;
-      FUNCTION getOutput:P_literal;
-      FUNCTION getOutputLanguage:string;
+      PROPERTY getOutput:P_literal read output;
+      PROPERTY getOutputLanguage:string read outputLanguage;
       FUNCTION wantNewEditor:boolean;
-      FUNCTION inputIdx:longint;
+      PROPERTY inputIdx:longint read inputEditIndex;
       FUNCTION wantOutput:boolean;
       FUNCTION wantInsert:boolean;
       PROPERTY successful:boolean read succeeded;
       FUNCTION withSuccessFlag(CONST trueWhenOk:boolean):P_editScriptTask;
   end;
 
+  { T_ideScriptEvaluation }
+
+  T_ideScriptEvaluation = object (T_abstractEvaluation)
+    private
+      utilityScriptList:T_scriptMetaArray;
+      evalRequest:P_editScriptTask;
+      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+    public
+      CONSTRUCTOR create(CONST messageAdapter:P_messages);
+      PROCEDURE ensureEditScripts();
+      PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
+  end;
+
+CONST
+  C_runningStates:set of T_evaluationState=[es_running,es_debugRunning,es_debugHalted];
+  C_scriptTypeMeta:array[T_scriptType] of record nameAttribute:string; validResultType:T_literalTypeSet; end=
+    {st_edit} ((nameAttribute:'editScript'  ; validResultType:[lt_emptyList,lt_stringList]),
+    {st_insert}(nameAttribute:'insertScript'; validResultType:[lt_string]),
+    {st_util}  (nameAttribute:'utility';      validResultType:[lt_emptyList,lt_stringList,lt_void]));
+
+TYPE
   T_abstractMnhForm=class(TForm)
     public
       PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); virtual; abstract;
@@ -82,123 +151,108 @@ TYPE
       PROCEDURE onEndOfEvaluation;                              virtual; abstract;
   end;
 
-  P_evaluator=^T_evaluator;
-  T_evaluator=object
-    private
-      //"final" properties
-      cs:TRTLCriticalSection;
-      thread:TThreadFunc;
-      messages:P_messages;
-      //request variables
-      request:T_evalRequest;
+//  P_evaluator=^T_evaluator;
+//  T_evaluator=object
+//    private
+//      //"final" properties
+//      cs:TRTLCriticalSection;
+//      thread:TThreadFunc;
+//      messages:P_messages;
+//      //request variables
+//      request:T_evalRequest;
+//
+//      //internal state variables
+//      state:T_evaluationState;
+//      package:T_package;
+//
+//      haltedByUser:boolean;
+//
+//      PROCEDURE ensureThread;
+//      PROCEDURE threadStopped;
+//      PROCEDURE preEval(VAR recycler:T_recycler); virtual;
+//      PROCEDURE postEval(VAR recycler:T_recycler); virtual;
+//      FUNCTION pendingRequest:T_evalRequest;
+//    public
+//      globals:T_evaluationGlobals;
+//      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
+//      DESTRUCTOR destroy; virtual;
+//      PROCEDURE haltEvaluation; virtual;
+//
+//      FUNCTION evaluationRunning: boolean;
+//      FUNCTION evaluationRunningOrPending: boolean;
+//      FUNCTION getCodeProvider:P_codeProvider;
+//      FUNCTION reportVariables:P_variableTreeEntryCategoryNode;
+//  end;
+//
+//  P_runEvaluator=^T_runEvaluator;
+//  T_runEvaluator=object(T_evaluator)
+//    private
+//      //request variables
+//      requestedContextType:T_evaluationContextType;
+//      mainParameters:T_arrayOfString;
+//      //internal state variables
+//      startOfEvaluation:double;
+//      endOfEvaluationText:ansistring;
+//      utilityScriptPackage:P_package;
+//      utilityScriptList:T_scriptMetaArray;
+//      currentEdit:P_editScriptTask;
+//      editAdapters:P_messagesErrorHolder;
+//
+//      FUNCTION parametersForMainCall:T_arrayOfString;
+//      PROCEDURE preEval(VAR recycler:T_recycler); virtual;
+//      PROCEDURE postEval(VAR recycler:T_recycler); virtual;
+//    public
+//      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
+//      DESTRUCTOR destroy; virtual;
+//      PROCEDURE reEvaluateWithGUI;
+//      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+//      FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider; CONST firstRun:boolean):P_package;
+//      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+//      PROCEDURE ensureEditScripts();
+//      PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
+//      FUNCTION getRunnerStateInfo:T_runnerStateInfo;
+//
+//      FUNCTION getCurrentEdit:P_editScriptTask;
+//      PROCEDURE freeCurrentEdit;
+//      FUNCTION getScripts:T_scriptMetaArray;
+//  end;
+//
+//VAR runEvaluator:T_runEvaluator;
+//
 
-      //internal state variables
-      state:T_evaluationState;
-      package:T_package;
-
-      haltedByUser:boolean;
-
-      PROCEDURE ensureThread;
-      PROCEDURE threadStopped;
-      PROCEDURE preEval(VAR recycler:T_recycler); virtual;
-      PROCEDURE postEval(VAR recycler:T_recycler); virtual;
-      FUNCTION pendingRequest:T_evalRequest;
-    public
-      globals:T_evaluationGlobals;
-      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE haltEvaluation; virtual;
-
-      FUNCTION evaluationRunning: boolean;
-      FUNCTION evaluationRunningOrPending: boolean;
-      FUNCTION getCodeProvider:P_codeProvider;
-      FUNCTION reportVariables:P_variableTreeEntryCategoryNode;
-  end;
-
-  P_runEvaluator=^T_runEvaluator;
-  T_runEvaluator=object(T_evaluator)
-    private
-      //request variables
-      requestedContextType:T_evaluationContextType;
-      mainParameters:T_arrayOfString;
-      //internal state variables
-      startOfEvaluation:double;
-      endOfEvaluationText:ansistring;
-      utilityScriptPackage:P_package;
-      utilityScriptList:T_scriptMetaArray;
-      currentEdit:P_editScriptTask;
-      editAdapters:P_messagesErrorHolder;
-
-      FUNCTION parametersForMainCall:T_arrayOfString;
-      PROCEDURE preEval(VAR recycler:T_recycler); virtual;
-      PROCEDURE postEval(VAR recycler:T_recycler); virtual;
-    public
-      CONSTRUCTOR create(CONST messages_:P_messages; threadFunc:TThreadFunc);
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE reEvaluateWithGUI;
-      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
-      FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider; CONST firstRun:boolean):P_package;
-      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
-      PROCEDURE ensureEditScripts();
-      PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
-      FUNCTION getRunnerStateInfo:T_runnerStateInfo;
-
-      FUNCTION getCurrentEdit:P_editScriptTask;
-      PROCEDURE freeCurrentEdit;
-      FUNCTION getScripts:T_scriptMetaArray;
-  end;
-
-VAR runEvaluator:T_runEvaluator;
-
-PROCEDURE initUnit(CONST guiAdapters:P_messages);
-OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
+//PROCEDURE initUnit(CONST guiAdapters:P_messages);
+//OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
 
-PROCEDURE earlyFinalization;
+//PROCEDURE earlyFinalization;
 IMPLEMENTATION
-VAR unitIsInitialized:boolean=false;
+USES      tokenArray,mySys;
 
-OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
-  begin
-    result:=(x.state=y.state) and (x.request=y.request);
-  end;
+{ T_ideScriptEvaluation }
 
-FUNCTION utilityScriptFileName:string;
-  begin
-    result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDemosAndPackages(nil,nil);
-  end;
-{$WARN 5024 OFF}
-FUNCTION main(p:pointer):ptrint;
-  CONST MAX_SLEEP_TIME=250;
-  VAR sleepTime:longint=0;
-      r:T_evalRequest;
-      recycler:T_recycler;
-
-  PROCEDURE setupEdit(OUT globals:T_evaluationGlobals);
+PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
+  PROCEDURE setupEdit;
     begin
-      P_runEvaluator(p)^.editAdapters^.clear;
-      globals.create(P_runEvaluator(p)^.editAdapters);
+      messages^.clear();
       globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
     end;
 
-  PROCEDURE doneEdit(VAR globals:T_evaluationGlobals);
+  PROCEDURE doneEdit;
     VAR successful:boolean=true;
     begin
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
-      P_runEvaluator(p)^.utilityScriptPackage^.finalize(globals.primaryContext,recycler);
+      package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
       if ([mt_printdirect,mt_printline]*globals.primaryContext.messages^.collectedMessageTypes<>[]) or
          ([FlagError,FlagFatalError   ]*globals.primaryContext.messages^.getFlags<>[]) then begin
-        P_runEvaluator(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-        P_runEvaluator(p)^.messages^.postCustomMessages(P_messagesErrorHolder(globals.primaryContext.messages)^.storedMessages(false));
+        messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+        messages^.postCustomMessages(P_messagesErrorHolder(globals.primaryContext.messages)^.storedMessages(false));
         successful:=false;
       end;
-      if P_runEvaluator(p)^.currentEdit<>nil
-      then P_runEvaluator(p)^.messages^.postCustomMessage(P_runEvaluator(p)^.currentEdit^.withSuccessFlag(successful))
-      else P_runEvaluator(p)^.messages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
-      globals.destroy;
-      P_runEvaluator(p)^.currentEdit:=nil;
+
+      if evalRequest<>nil
+      then messages^.postCustomMessage(evalRequest^.withSuccessFlag(successful))
+      else messages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+      evalRequest:=nil;
     end;
 
   PROCEDURE ensureEditScripts_impl();
@@ -207,19 +261,16 @@ FUNCTION main(p:pointer):ptrint;
         editContext:T_evaluationGlobals;
         scriptType:T_scriptType;
         isValid:boolean;
-    begin with P_runEvaluator(p)^ do begin
-      setupEdit(editContext);
-      if utilityScriptPackage=nil then begin
-        {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating script package'); {$endif}
-        new(utilityScriptPackage,create(newFileCodeProvider(utilityScriptFileName),nil));
-      end else if not(utilityScriptPackage^.codeChanged) then exit;
+    begin
+      if not(package.codeChanged) then exit;
+      setupEdit;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
-      utilityScriptPackage^.load(lu_forImport,editContext,recycler,C_EMPTY_STRING_ARRAY);
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',package.getPath); {$endif}
+      package.load(lu_forImport,editContext,recycler,C_EMPTY_STRING_ARRAY);
       if editContext.primaryContext.messages^.continueEvaluation then begin
         for scriptType in T_scriptType do
-        for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
+        for subRule in package.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
           {$ifdef debugMode} writeln(stdErr,'        DEBUG: Found script: ',subRule^.getId); {$endif}
           new(script,create(subRule,isValid,editContext.primaryContext.messages));
           if isValid then begin
@@ -228,51 +279,196 @@ FUNCTION main(p:pointer):ptrint;
           end else dispose(script,destroy);
         end;
       end;
-      doneEdit(editContext);
-    end; end;
+      doneEdit;
+    end;
 
   PROCEDURE executeEditScript_impl;
     VAR editContext:T_evaluationGlobals;
     begin
-      setupEdit(editContext);
-      P_runEvaluator(p)^.currentEdit^.execute(editContext,recycler);
-      doneEdit(editContext);
+      setupEdit;
+      evalRequest^.execute(editContext,recycler);
+      doneEdit;
     end;
 
-  begin with P_runEvaluator(p)^ do begin
-    result:=0;
-    recycler.initRecycler;
-    repeat
-      r:=pendingRequest;
-      if r in [er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript] then begin
-        sleepTime:=0;
-        preEval(recycler);
-        case r of
-          er_evaluate: package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-          er_callMain: package.load(lu_forCallingMain    ,globals,recycler,parametersForMainCall);
-          er_reEvaluateWithGUI: begin
-            if getFileToInterpretFromCommandLine<>''
-            then begin
-              package.replaceCodeProvider(newFileCodeProvider                                   (getFileToInterpretFromCommandLine));
-              package.load(lu_forCallingMain,globals,recycler,parametersForMainCall);
-            end else begin
-              package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,getCommandToInterpretFromCommandLine));
-              package.load(lu_forDirectExecution,globals,recycler,parametersForMainCall);
-            end;
-          end;
-          er_ensureEditScripts: ensureEditScripts_impl;
-          er_runEditScript: executeEditScript_impl;
-        end;
-        postEval(recycler);
-      end else begin
-        if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
-        sleep(sleepTime);
-      end;
-    until (pendingRequest=er_die);
-    threadStopped;
-    recycler.cleanup;
-  end; end;
+begin
+  if evalRequest=nil
+  then ensureEditScripts_impl
+  else executeEditScript_impl;
+end;
 
+CONSTRUCTOR T_ideScriptEvaluation.create(CONST messageAdapter: P_messages);
+  begin
+    inherited init(ek_editScript,messageAdapter);
+    package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));
+    setLength(utilityScriptList,0);
+  end;
+
+PROCEDURE T_ideScriptEvaluation.ensureEditScripts();
+  begin
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
+      exit;
+    end;
+    evalRequest:=nil;
+    executeInNewThread(false);
+    system.leaveCriticalSection(evaluationCs);
+  end;
+
+PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex, editorIndex: longint; CONST L: TStrings; CONST inputLang: string; CONST editorFileName: string);
+  begin
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
+      exit;
+    end;
+    new(evalRequest,create(utilityScriptList[scriptIndex],editorIndex,editorFileName,L,inputLang));
+    executeInNewThread(false);
+    system.leaveCriticalSection(evaluationCs);
+  end;
+
+PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
+  begin
+    globals.resetForEvaluation(@package,evalRequest.contextType,evalRequest.paramters,recycler);
+    package.load(lu_forCallingMain,globals,recycler,mainParameters);
+    messages^.setExitCode;
+  end;
+
+CONSTRUCTOR T_reevaluationWithGui.create(CONST messageAdapter: P_messages);
+  begin
+    inherited init(ek_quick,messageAdapter);
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
+      exit;
+    end;
+    if cmdLineInterpretation.profilingRun
+    then evalRequest.contextType:=ect_profiling
+    else evalRequest.contextType:=ect_normal;
+    evalRequest.callMain:=true;
+    evalRequest.paramters:=cmdLineInterpretation.mainParameters;
+    state:=es_pending;
+    executeInNewThread(false);
+    system.leaveCriticalSection(evaluationCs);
+  end;
+
+//VAR unitIsInitialized:boolean=false;
+//
+//OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
+//  begin
+//    result:=(x.state=y.state) and (x.request=y.request);
+//  end;
+//
+FUNCTION utilityScriptFileName:string;
+  begin
+    result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
+    if not(fileExists(result)) then ensureDemosAndPackages(nil,nil);
+  end;
+//{$WARN 5024 OFF}
+//FUNCTION main(p:pointer):ptrint;
+//  CONST MAX_SLEEP_TIME=250;
+//  VAR sleepTime:longint=0;
+//      r:T_evalRequest;
+//      recycler:T_recycler;
+//
+//  PROCEDURE setupEdit(OUT globals:T_evaluationGlobals);
+//    begin
+//      P_runEvaluator(p)^.editAdapters^.clear;
+//      globals.create(P_runEvaluator(p)^.editAdapters);
+//      globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+//    end;
+//
+//  PROCEDURE doneEdit(VAR globals:T_evaluationGlobals);
+//    VAR successful:boolean=true;
+//    begin
+//      {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
+//      P_runEvaluator(p)^.utilityScriptPackage^.finalize(globals.primaryContext,recycler);
+//      globals.afterEvaluation(recycler);
+//      if ([mt_printdirect,mt_printline]*globals.primaryContext.messages^.collectedMessageTypes<>[]) or
+//         ([FlagError,FlagFatalError   ]*globals.primaryContext.messages^.getFlags<>[]) then begin
+//        P_runEvaluator(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+//        P_runEvaluator(p)^.messages^.postCustomMessages(P_messagesErrorHolder(globals.primaryContext.messages)^.storedMessages(false));
+//        successful:=false;
+//      end;
+//      if P_runEvaluator(p)^.currentEdit<>nil
+//      then P_runEvaluator(p)^.messages^.postCustomMessage(P_runEvaluator(p)^.currentEdit^.withSuccessFlag(successful))
+//      else P_runEvaluator(p)^.messages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+//      globals.destroy;
+//      P_runEvaluator(p)^.currentEdit:=nil;
+//    end;
+//
+//  PROCEDURE ensureEditScripts_impl();
+//    VAR subRule:P_subruleExpression;
+//        script:P_scriptMeta;
+//        editContext:T_evaluationGlobals;
+//        scriptType:T_scriptType;
+//        isValid:boolean;
+//    begin with P_runEvaluator(p)^ do begin
+//      setupEdit(editContext);
+//      if utilityScriptPackage=nil then begin
+//        {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating script package'); {$endif}
+//        new(utilityScriptPackage,create(newFileCodeProvider(utilityScriptFileName),nil));
+//      end else if not(utilityScriptPackage^.codeChanged) then exit;
+//      for script in utilityScriptList do dispose(script,destroy);
+//      setLength(utilityScriptList,0);
+//      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
+//      utilityScriptPackage^.load(lu_forImport,editContext,recycler,C_EMPTY_STRING_ARRAY);
+//      if editContext.primaryContext.messages^.continueEvaluation then begin
+//        for scriptType in T_scriptType do
+//        for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
+//          {$ifdef debugMode} writeln(stdErr,'        DEBUG: Found script: ',subRule^.getId); {$endif}
+//          new(script,create(subRule,isValid,editContext.primaryContext.messages));
+//          if isValid then begin
+//            setLength(utilityScriptList,length(utilityScriptList)+1);
+//            utilityScriptList[length(utilityScriptList)-1]:=script;
+//          end else dispose(script,destroy);
+//        end;
+//      end;
+//      doneEdit(editContext);
+//    end; end;
+//
+//  PROCEDURE executeEditScript_impl;
+//    VAR editContext:T_evaluationGlobals;
+//    begin
+//      setupEdit(editContext);
+//      P_runEvaluator(p)^.currentEdit^.execute(editContext,recycler);
+//      doneEdit(editContext);
+//    end;
+//
+//  begin with P_runEvaluator(p)^ do begin
+//    result:=0;
+//    recycler.initRecycler;
+//    repeat
+//      r:=pendingRequest;
+//      if r in [er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript] then begin
+//        sleepTime:=0;
+//        preEval(recycler);
+//        case r of
+//          er_evaluate: package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+//          er_callMain: package.load(lu_forCallingMain    ,globals,recycler,parametersForMainCall);
+//          er_reEvaluateWithGUI: begin
+//            if getFileToInterpretFromCommandLine<>''
+//            then begin
+//              package.replaceCodeProvider(newFileCodeProvider                                   (getFileToInterpretFromCommandLine));
+//              package.load(lu_forCallingMain,globals,recycler,parametersForMainCall);
+//            end else begin
+//              package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,getCommandToInterpretFromCommandLine));
+//              package.load(lu_forDirectExecution,globals,recycler,parametersForMainCall);
+//            end;
+//          end;
+//          er_ensureEditScripts: ensureEditScripts_impl;
+//          er_runEditScript: executeEditScript_impl;
+//        end;
+//        postEval(recycler);
+//      end else begin
+//        if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
+//        sleep(sleepTime);
+//      end;
+//    until (pendingRequest=er_die);
+//    threadStopped;
+//    recycler.cleanup;
+//  end; end;
+//
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);
   VAR t:T_scriptType;
   begin
@@ -363,10 +559,7 @@ PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; VAR recycler
     done:=true;
   end;
 
-FUNCTION T_editScriptTask.getOutput:P_literal; begin result:=output; end;
-FUNCTION T_editScriptTask.getOutputLanguage:string; begin result:=outputLanguage; end;
 FUNCTION T_editScriptTask.wantNewEditor:boolean; begin result:=((script=nil) or script^.createNewEditor) and (output<>nil) and (output^.literalType=lt_stringList); end;
-FUNCTION T_editScriptTask.inputIdx:longint; begin result:=inputEditIndex; end;
 FUNCTION T_editScriptTask.wantOutput:boolean; begin result:=((output<>nil) and (output^.literalType=lt_stringList)) and ((script=nil) or (script^.scriptType=st_edit) or script^.createNewEditor); end;
 FUNCTION T_editScriptTask.wantInsert:boolean; begin result:=((output<>nil) and (output^.literalType=lt_string)) and (script<>nil) and (script^.scriptType=st_insert); end;
 FUNCTION T_editScriptTask.withSuccessFlag(CONST trueWhenOk:boolean):P_editScriptTask;
@@ -374,321 +567,532 @@ FUNCTION T_editScriptTask.withSuccessFlag(CONST trueWhenOk:boolean):P_editScript
     succeeded:=trueWhenOk;
     result:=@self;
   end;
+//
+//PROCEDURE T_evaluator.ensureThread;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if state=es_dead then begin
+//      beginThread(thread,@self);
+//      state:=es_idle;
+//    end;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//CONSTRUCTOR T_evaluator.create(CONST messages_:P_messages; threadFunc: TThreadFunc);
+//  begin
+//    system.initCriticalSection(cs);
+//    request:=er_none;
+//    state:=es_dead;
+//    thread:=threadFunc;
+//    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
+//    messages:=messages_;
+//    globals.create(messages);
+//  end;
+//
+//CONSTRUCTOR T_runEvaluator.create(CONST messages_:P_messages; threadFunc:TThreadFunc);
+//  begin
+//    inherited create(messages_,threadFunc);
+//    utilityScriptPackage:=nil;
+//    setLength(utilityScriptList,0);
+//    currentEdit:=nil;
+//    new(editAdapters,createErrorHolder(messages,C_textMessages));
+//    endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
+//  end;
+//
+//DESTRUCTOR T_evaluator.destroy;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if state in C_runningStates then globals.primaryContext.messages^.setStopFlag;
+//    repeat
+//      request:=er_die;
+//      system.leaveCriticalSection(cs);
+//      ThreadSwitch;
+//      sleep(1);
+//      system.enterCriticalSection(cs);
+//    until state=es_dead;
+//    package.destroy;
+//    globals.destroy;
+//    system.leaveCriticalSection(cs);
+//    system.doneCriticalSection(cs);
+//  end;
+//
+//DESTRUCTOR T_runEvaluator.destroy;
+//  VAR i:longint;
+//  begin
+//    if currentEdit<>nil then dispose(currentEdit,destroy);
+//    if utilityScriptPackage<>nil then dispose(utilityScriptPackage,destroy);
+//    for i:=0 to length(utilityScriptList)-1 do dispose(utilityScriptList[i],destroy);
+//    dispose(editAdapters,destroy);
+//    inherited destroy;
+//    setLength(mainParameters,0);
+//  end;
+//
+//PROCEDURE T_evaluator.haltEvaluation;
+//  VAR recycler:T_recycler;
+//  begin
+//    recycler.initRecycler;
+//    system.enterCriticalSection(cs);
+//    haltedByUser:=true;
+//    globals.primaryContext.messages^.setStopFlag;
+//    globals.stepper^.haltEvaluation;
+//    globals.stopWorkers(recycler);
+//    request:=er_none;
+//    system.leaveCriticalSection(cs);
+//    recycler.cleanup;
+//  end;
+//
+//PROCEDURE T_runEvaluator.reEvaluateWithGUI;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if (state in C_runningStates) or (request<>er_none) then begin
+//      system.leaveCriticalSection(cs);
+//      exit;
+//    end;
+//    if cmdLineInterpretation.profilingRun
+//    then requestedContextType:=ect_profiling
+//    else requestedContextType:=ect_normal;
+//    mainParameters:=cmdLineInterpretation.mainParameters;
+//    request:=er_reEvaluateWithGUI;
+//    ensureThread;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+//  begin
+//    system.enterCriticalSection(cs);
+//    if (state in C_runningStates) then begin
+//      system.leaveCriticalSection(cs);
+//      exit;
+//    end;
+//    requestedContextType:=contextType;
+//    request:=er_evaluate;
+//    if firstRun then package.clear(true);
+//    package.replaceCodeProvider(provider);
+//    ensureThread;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvider; CONST firstRun:boolean): P_package;
+//  begin
+//    system.enterCriticalSection(cs);
+//    while state in C_runningStates do begin
+//      system.leaveCriticalSection(cs);
+//      sleep(1); ThreadSwitch;
+//      system.enterCriticalSection(cs);
+//    end;
+//    if firstRun then package.clear(true);
+//    package.replaceCodeProvider(provider);
+//    result:=@package;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+//  VAR sp:longint;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if (state in C_runningStates) or (request<>er_none) then begin
+//      system.leaveCriticalSection(cs);
+//      exit;
+//    end;
+//    requestedContextType:=contextType;
+//    setLength(mainParameters,0);
+//    {$WARN 5092 OFF}
+//    params:=trim(params);
+//    while params<>'' do begin
+//      sp:=pos(' ',params);
+//      if sp<=0 then begin
+//        append(mainParameters,params);
+//        params:='';
+//      end else begin
+//        append(mainParameters,copy(params,1,sp-1));
+//        params:=trim(copy(params,sp+1,length(params)));
+//      end;
+//    end;
+//    if firstRun then package.clear(true);
+//    package.replaceCodeProvider(provider);
+//    request:=er_callMain;
+//    ensureThread;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.ensureEditScripts;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if (state in C_runningStates) or (currentEdit<>nil) then begin
+//      system.leaveCriticalSection(cs);
+//      exit;
+//    end;
+//    request:=er_ensureEditScripts;
+//    ensureThread;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
+//  begin
+//    system.enterCriticalSection(cs);
+//    if (state in C_runningStates) or (currentEdit<>nil) then begin
+//      system.leaveCriticalSection(cs);
+//      exit;
+//    end;
+//    request:=er_runEditScript;
+//    new(currentEdit,create(utilityScriptList[scriptIndex],editorIndex,editorFileName,L,inputLang));
+//    ensureThread;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_runEvaluator.getCurrentEdit: P_editScriptTask;
+//  begin
+//    system.enterCriticalSection(cs);
+//    result:=currentEdit;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.freeCurrentEdit;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if currentEdit<>nil then dispose(currentEdit,destroy);
+//    currentEdit:=nil;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_runEvaluator.getScripts: T_scriptMetaArray;
+//  begin
+//    result:=utilityScriptList;
+//  end;
+//
+//FUNCTION T_evaluator.evaluationRunning: boolean;
+//  begin
+//    result:=state in C_runningStates;
+//  end;
+//
+//FUNCTION T_evaluator.evaluationRunningOrPending: boolean;
+//  begin
+//    result:=(state in C_runningStates) or (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]);
+//  end;
+//
+//FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
+//  begin
+//    system.enterCriticalSection(cs);
+//    result:=package.getCodeProvider;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_evaluator.reportVariables:P_variableTreeEntryCategoryNode;
+//  begin
+//    system.enterCriticalSection(cs);
+//    new(result,create(dvc_global));
+//    package.reportVariables(result^);
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_runEvaluator.getRunnerStateInfo: T_runnerStateInfo;
+//  begin
+//    system.enterCriticalSection(cs);
+//    result.state:=state;
+//    if (globals.isPaused) then result.state:=es_debugHalted;
+//    if (requestedContextType in [ect_debugging,ect_debuggingAndProfiling]) and (result.state=es_running) then result.state:=es_debugRunning;
+//    result.request:=request;
+//    case result.state of
+//      es_running     : result.message:='Evaluating... '+myTimeToStr(now-startOfEvaluation);
+//      es_debugRunning: result.message:='Debugging'+StringOfChar('.',round((now-startOfEvaluation)*24*60*60) mod 4);
+//      es_debugHalted : result.message:='Debugging [HALTED]';
+//      es_editEnsuring,
+//      es_editRunning : result.message:='Edit script... '+myTimeToStr(now-startOfEvaluation);
+//      else             result.message:=endOfEvaluationText;
+//    end;
+//    result.hasPendingEditResult:=(currentEdit<>nil) and (currentEdit^.done);
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_evaluator.pendingRequest: T_evalRequest;
+//  begin
+//    system.enterCriticalSection(cs);
+//    if state=es_idle
+//    then result:=request
+//    else result:=er_none;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_evaluator.threadStopped;
+//  begin
+//    system.enterCriticalSection(cs);
+//    state:=es_dead;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_evaluator.preEval(VAR recycler:T_recycler);
+//  begin
+//    system.enterCriticalSection(cs);
+//    state:=es_running;
+//    haltedByUser:=false;
+//    case request of
+//      er_ensureEditScripts: state:=es_editEnsuring;
+//      er_runEditScript    : state:=es_editRunning;
+//    end;
+//    request:=er_none;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.preEval(VAR recycler:T_recycler);
+//  begin
+//    system.enterCriticalSection(cs);
+//    inherited preEval(recycler);
+//    startOfEvaluation:=now;
+//    globals.resetForEvaluation(@package,requestedContextType,mainParameters,recycler);
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_evaluator.postEval(VAR recycler:T_recycler);
+//  begin
+//    system.enterCriticalSection(cs);
+//    if not(state in [es_editEnsuring,es_editRunning]) then begin
+//      globals.afterEvaluation(recycler);
+//      memoryCleaner.callCleanupMethods;
+//    end;
+//    state:=es_idle;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE T_runEvaluator.postEval(VAR recycler:T_recycler);
+//  begin
+//    system.enterCriticalSection(cs);
+//    inherited postEval(recycler);
+//    if haltedByUser
+//    then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
+//    else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
+//  begin
+//    system.enterCriticalSection(cs);
+//    result:=mainParameters;
+//    system.leaveCriticalSection(cs);
+//  end;
+//
+//PROCEDURE initUnit(CONST guiAdapters:P_messages);
+//  begin
+//    runEvaluator.create(guiAdapters,@main);
+//    unitIsInitialized:=true;
+//  end;
+//
+//PROCEDURE earlyFinalization;
+//  begin
+//    if unitIsInitialized then runEvaluator.destroy;
+//    unitIsInitialized:=false;
+//  end;
 
-PROCEDURE T_evaluator.ensureThread;
-  begin
-    system.enterCriticalSection(cs);
-    if state=es_dead then begin
-      beginThread(thread,@self);
-      state:=es_idle;
-    end;
-    system.leaveCriticalSection(cs);
-  end;
+//FINALIZATION
+//  earlyFinalization;
 
-CONSTRUCTOR T_evaluator.create(CONST messages_:P_messages; threadFunc: TThreadFunc);
-  begin
-    system.initCriticalSection(cs);
-    request:=er_none;
-    state:=es_dead;
-    thread:=threadFunc;
-    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
-    messages:=messages_;
-    globals.create(messages);
-  end;
+{ T_abstractEvaluation }
 
-CONSTRUCTOR T_runEvaluator.create(CONST messages_:P_messages; threadFunc:TThreadFunc);
-  begin
-    inherited create(messages_,threadFunc);
-    utilityScriptPackage:=nil;
-    setLength(utilityScriptList,0);
-    currentEdit:=nil;
-    new(editAdapters,createErrorHolder(messages,C_textMessages));
-    endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
-  end;
-
-DESTRUCTOR T_evaluator.destroy;
-  begin
-    system.enterCriticalSection(cs);
-    if state in C_runningStates then globals.primaryContext.messages^.setStopFlag;
-    repeat
-      request:=er_die;
-      system.leaveCriticalSection(cs);
-      ThreadSwitch;
-      sleep(1);
-      system.enterCriticalSection(cs);
-    until state=es_dead;
-    package.destroy;
-    globals.destroy;
-    system.leaveCriticalSection(cs);
-    system.doneCriticalSection(cs);
-  end;
-
-DESTRUCTOR T_runEvaluator.destroy;
-  VAR i:longint;
-  begin
-    if currentEdit<>nil then dispose(currentEdit,destroy);
-    if utilityScriptPackage<>nil then dispose(utilityScriptPackage,destroy);
-    for i:=0 to length(utilityScriptList)-1 do dispose(utilityScriptList[i],destroy);
-    dispose(editAdapters,destroy);
-    inherited destroy;
-    setLength(mainParameters,0);
-  end;
-
-PROCEDURE T_evaluator.haltEvaluation;
+VAR evaluationThreadsRunning:longint=0;
+FUNCTION evaluationThread(p:pointer):ptrint;
   VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
-    system.enterCriticalSection(cs);
-    haltedByUser:=true;
-    globals.primaryContext.messages^.setStopFlag;
-    globals.stepper^.haltEvaluation;
-    globals.stopWorkers(recycler);
-    request:=er_none;
-    system.leaveCriticalSection(cs);
-    recycler.cleanup;
+    with P_abstractEvaluation(p)^ do begin
+      evalTime:=now;
+      recycler.initRecycler;
+      execute(recycler);
+      recycler.cleanup;
+      enterCriticalSection(evaluationCs);
+      if stoppedByUser
+      then state:=es_stoppedByUser
+      else state:=es_finished;
+      evalTime:=now-evalTime;
+      leaveCriticalSection(evaluationCs);
+    end;
+    interlockedDecrement(evaluationThreadsRunning);
   end;
 
-PROCEDURE T_runEvaluator.reEvaluateWithGUI;
+{ T_quickEvaluation }
+
+PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
+  PROCEDURE interpretInPackage(CONST packageOrNil:P_package; CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
+    VAR lexer:T_lexer;
+        stmt :T_enhancedStatement;
+        tempPackage:P_package;
+    begin
+  //    if packageOrNil<>nil then begin;
+  //      if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
+  //        packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+  //      if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution])
+  //        then P_postEvaluationData(p)^.messages^.raiseSimpleError('Error while loading',packageTokenLocation(packageOrNil))
+  //      else begin
+  //        P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+  //        enterCriticalSection(packageOrNil^.packageCS);
+  //        lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
+  //        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+  //        while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
+  //          packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
+  //          stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+  //        end;
+  //        if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
+  //        leaveCriticalSection(packageOrNil^.packageCS);
+  //        lexer.destroy;
+  //      end;
+  //    end else begin
+  //      tempPackage:=packageFromCode(input,'<quick>');
+  //      tempPackage^.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+  //      dispose(tempPackage,destroy);
+  //    end;
+    end;
+
+  VAR lexer:T_lexer;
+      stmt :T_enhancedStatement;
   begin
-    system.enterCriticalSection(cs);
-    if (state in C_runningStates) or (request<>er_none) then begin
-      system.leaveCriticalSection(cs);
+    if parentProvider=nil then begin
+      package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
+      globals.resetForEvaluation(@package,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+    end else begin
+      if package.getCodeProvider<>parentProvider then package.replaceCodeProvider(parentProvider);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+      lexer.create(toEvaluate,packageTokenLocation(@package),@package);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+      while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
+        package.interpret(stmt,lu_forDirectExecution,globals,recycler);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+      end;
+      if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
+      lexer.destroy;
+    end;
+  end;
+
+CONSTRUCTOR T_quickEvaluation.create(CONST messageAdapter: P_messages);
+  begin
+    inherited init(ek_quick,messageAdapter);
+  end;
+
+FUNCTION T_quickEvaluation.postEvalulation(CONST parent: P_codeProvider; CONST evaluateInParent: boolean; CONST input: T_arrayOfString):boolean;
+  begin
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
+      exit(false);
+    end;
+    if evaluateInParent
+    then parentProvider:=parent
+    else parentProvider:=nil;
+    setLength(toEvaluate,0);
+    append(toEvaluate,input);
+    state:=es_pending;
+    executeInNewThread();
+    result:=true;
+    system.leaveCriticalSection(evaluationCs);
+  end;
+
+PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
+  CONST C_loadMode:array[false..true] of T_packageLoadUsecase=(lu_forDirectExecution,lu_forCallingMain);
+  begin
+    globals.resetForEvaluation(@package,evalRequest.contextType,evalRequest.paramters,recycler);
+    package.load(C_loadMode[evalRequest.callMain],globals,recycler,mainParameters);
+  end;
+
+CONSTRUCTOR T_standardEvaluation.create(CONST messageAdapter: P_messages);
+  begin
+    inherited init(ek_normal,messageAdapter);
+  end;
+
+PROCEDURE T_standardEvaluation.reEvaluateWithGUI;
+  begin
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
       exit;
     end;
     if cmdLineInterpretation.profilingRun
-    then requestedContextType:=ect_profiling
-    else requestedContextType:=ect_normal;
-    mainParameters:=cmdLineInterpretation.mainParameters;
-    request:=er_reEvaluateWithGUI;
-    ensureThread;
-    system.leaveCriticalSection(cs);
+    then evalRequest.contextType:=ect_profiling
+    else evalRequest.contextType:=ect_normal;
+    evalRequest.callMain:=true;
+    evalRequest.paramters:=cmdLineInterpretation.mainParameters;
+    state:=es_pending;
+    executeInNewThread(false);
+    system.leaveCriticalSection(evaluationCs);
   end;
 
-PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST contextType: T_evaluationContextType);
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(evaluationCs);
       exit;
     end;
-    requestedContextType:=contextType;
-    request:=er_evaluate;
-    if firstRun then package.clear(true);
-    package.replaceCodeProvider(provider);
-    ensureThread;
-    system.leaveCriticalSection(cs);
+    evalRequest.contextType:=contextType;
+    evalRequest.paramters:=C_EMPTY_STRING_ARRAY;
+    evalRequest.callMain:=false;
+    state:=es_pending;
+    if provider<>package.getCodeProvider then package.clear(true);
+    executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
+    system.leaveCriticalSection(evaluationCs);
   end;
 
-FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvider; CONST firstRun:boolean): P_package;
+PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType: T_evaluationContextType);
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(evaluationCs);
+    if (state in C_runningStates) then begin
+      system.leaveCriticalSection(evaluationCs);
+      exit;
+    end;
+    evalRequest.contextType:=contextType;
+    evalRequest.paramters:=split(params,' ');
+    evalRequest.callMain:=true;
+    state:=es_pending;
+    if provider<>package.getCodeProvider then package.clear(true);
+    executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
+    system.leaveCriticalSection(evaluationCs);
+  end;
+
+CONSTRUCTOR T_abstractEvaluation.init(CONST kind: T_evaluationKind; CONST messageAdapter: P_messages);
+  begin
+    initCriticalSection(evaluationCs);
+    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
+    globals.create(messageAdapter);
+    evaluationKind:=kind;
+    messages:=messageAdapter;
+    evalTime:=0;
+    state:=es_finished;
+  end;
+
+PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
+  begin
+    enterCriticalSection(evaluationCs);
+    if state=es_pending then begin
+      stoppedByUser:=false;
+      if debugging then state:=es_debugRunning
+                   else state:=es_running;
+      interLockedIncrement(evaluationThreadsRunning);
+      beginThread(@evaluationThread,@self);
+    end;
+    leaveCriticalSection(evaluationCs);
+  end;
+
+DESTRUCTOR T_abstractEvaluation.destroy;
+begin
+  doneCriticalSection(evaluationCs);
+end;
+
+PROCEDURE T_abstractEvaluation.haltEvaluation;
+  begin
+    postHalt;
     while state in C_runningStates do begin
-      system.leaveCriticalSection(cs);
       sleep(1); ThreadSwitch;
-      system.enterCriticalSection(cs);
     end;
-    if firstRun then package.clear(true);
-    package.replaceCodeProvider(provider);
-    result:=@package;
-    system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
-  VAR sp:longint;
+PROCEDURE T_abstractEvaluation.postHalt;
+  VAR recycler:T_recycler;
   begin
-    system.enterCriticalSection(cs);
-    if (state in C_runningStates) or (request<>er_none) then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    requestedContextType:=contextType;
-    setLength(mainParameters,0);
-    {$WARN 5092 OFF}
-    params:=trim(params);
-    while params<>'' do begin
-      sp:=pos(' ',params);
-      if sp<=0 then begin
-        append(mainParameters,params);
-        params:='';
-      end else begin
-        append(mainParameters,copy(params,1,sp-1));
-        params:=trim(copy(params,sp+1,length(params)));
-      end;
-    end;
-    if firstRun then package.clear(true);
-    package.replaceCodeProvider(provider);
-    request:=er_callMain;
-    ensureThread;
-    system.leaveCriticalSection(cs);
+    recycler.initRecycler;
+    system.enterCriticalSection(evaluationCs);
+    globals.primaryContext.messages^.setStopFlag;
+    globals.stepper^.haltEvaluation;
+    globals.stopWorkers(recycler);
+    stoppedByUser:=true;
+    system.leaveCriticalSection(evaluationCs);
+    recycler.cleanup;
   end;
 
-PROCEDURE T_runEvaluator.ensureEditScripts;
-  begin
-    system.enterCriticalSection(cs);
-    if (state in C_runningStates) or (currentEdit<>nil) then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    request:=er_ensureEditScripts;
-    ensureThread;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
-  begin
-    system.enterCriticalSection(cs);
-    if (state in C_runningStates) or (currentEdit<>nil) then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    request:=er_runEditScript;
-    new(currentEdit,create(utilityScriptList[scriptIndex],editorIndex,editorFileName,L,inputLang));
-    ensureThread;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_runEvaluator.getCurrentEdit: P_editScriptTask;
-  begin
-    system.enterCriticalSection(cs);
-    result:=currentEdit;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_runEvaluator.freeCurrentEdit;
-  begin
-    system.enterCriticalSection(cs);
-    if currentEdit<>nil then dispose(currentEdit,destroy);
-    currentEdit:=nil;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_runEvaluator.getScripts: T_scriptMetaArray;
-  begin
-    result:=utilityScriptList;
-  end;
-
-FUNCTION T_evaluator.evaluationRunning: boolean;
-  begin
-    result:=state in C_runningStates;
-  end;
-
-FUNCTION T_evaluator.evaluationRunningOrPending: boolean;
-  begin
-    result:=(state in C_runningStates) or (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]);
-  end;
-
-FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
-  begin
-    system.enterCriticalSection(cs);
-    result:=package.getCodeProvider;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_evaluator.reportVariables:P_variableTreeEntryCategoryNode;
-  begin
-    system.enterCriticalSection(cs);
-    new(result,create(dvc_global));
-    package.reportVariables(result^);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_runEvaluator.getRunnerStateInfo: T_runnerStateInfo;
-  begin
-    system.enterCriticalSection(cs);
-    result.state:=state;
-    if (globals.isPaused) then result.state:=es_debugHalted;
-    if (requestedContextType in [ect_debugging,ect_debuggingAndProfiling]) and (result.state=es_running) then result.state:=es_debugRunning;
-    result.request:=request;
-    case result.state of
-      es_running     : result.message:='Evaluating... '+myTimeToStr(now-startOfEvaluation);
-      es_debugRunning: result.message:='Debugging'+StringOfChar('.',round((now-startOfEvaluation)*24*60*60) mod 4);
-      es_debugHalted : result.message:='Debugging [HALTED]';
-      es_editEnsuring,
-      es_editRunning : result.message:='Edit script... '+myTimeToStr(now-startOfEvaluation);
-      else             result.message:=endOfEvaluationText;
-    end;
-    result.hasPendingEditResult:=(currentEdit<>nil) and (currentEdit^.done);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_evaluator.pendingRequest: T_evalRequest;
-  begin
-    system.enterCriticalSection(cs);
-    if state=es_idle
-    then result:=request
-    else result:=er_none;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_evaluator.threadStopped;
-  begin
-    system.enterCriticalSection(cs);
-    state:=es_dead;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_evaluator.preEval(VAR recycler:T_recycler);
-  begin
-    system.enterCriticalSection(cs);
-    state:=es_running;
-    haltedByUser:=false;
-    case request of
-      er_ensureEditScripts: state:=es_editEnsuring;
-      er_runEditScript    : state:=es_editRunning;
-    end;
-    request:=er_none;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_runEvaluator.preEval(VAR recycler:T_recycler);
-  begin
-    system.enterCriticalSection(cs);
-    inherited preEval(recycler);
-    startOfEvaluation:=now;
-    globals.resetForEvaluation(@package,requestedContextType,mainParameters,recycler);
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_evaluator.postEval(VAR recycler:T_recycler);
-  begin
-    system.enterCriticalSection(cs);
-    if not(state in [es_editEnsuring,es_editRunning]) then begin
-      globals.afterEvaluation(recycler);
-      memoryCleaner.callCleanupMethods;
-    end;
-    state:=es_idle;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_runEvaluator.postEval(VAR recycler:T_recycler);
-  begin
-    system.enterCriticalSection(cs);
-    inherited postEval(recycler);
-    if haltedByUser
-    then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
-    else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
-  begin
-    system.enterCriticalSection(cs);
-    result:=mainParameters;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE initUnit(CONST guiAdapters:P_messages);
-  begin
-    runEvaluator.create(guiAdapters,@main);
-    unitIsInitialized:=true;
-  end;
-
-PROCEDURE earlyFinalization;
-  begin
-    if unitIsInitialized then runEvaluator.destroy;
-    unitIsInitialized:=false;
-  end;
-
-FINALIZATION
-  earlyFinalization;
 end.

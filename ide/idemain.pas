@@ -538,8 +538,23 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
   end;
 
 PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
+  VAR outIdx:longint;
   begin
-    //TODO: Implement me
+    {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
+    if data^.successful then begin
+      if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
+        if data^.wantNewEditor then outIdx:=addEditorMetaForNewFile
+                               else outIdx:=data^.inputIdx;
+        inputPageControl.activePageIndex:=outIdx;
+        getEditor^.setLanguage(data^.getOutputLanguage,LANG_TXT);
+        getEditor^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
+      end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
+        inputPageControl.activePageIndex:=data^.inputIdx;
+        getEditor^.insertText(P_stringLiteral(data^.getOutput)^.value);
+      end;
+    end;
+    disposeMessage(data);
+    updateEditorsByGuiStatus;
   end;
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);

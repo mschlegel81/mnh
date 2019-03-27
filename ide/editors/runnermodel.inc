@@ -1,6 +1,15 @@
 {$ifdef includeInterface}
+T_evaluation=object
+  cs:TRTLCriticalSection;
 
-{ T_runnerModel }
+  running       : boolean;
+  usecase       : T_packageLoadUsecase;
+  mainParameters: T_arrayOfString;
+  contextType   : T_evaluationContextType;
+
+  package:T_package;
+
+end;
 
 T_runnerModel=object(T_serializable)
   private
@@ -23,7 +32,6 @@ T_runnerModel=object(T_serializable)
     end;
     stackTracing:boolean;
     profiling:boolean;
-    firstCallAfterActivation:boolean;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
@@ -76,8 +84,7 @@ FUNCTION T_runnerModel.canRun(CONST quickMode: boolean): boolean;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
   end;
 
-PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean;
-  CONST mainParameters: string);
+PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters: string);
   VAR contextType:T_evaluationContextType;
   begin
     if not(canRun) then exit;

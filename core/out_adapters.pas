@@ -13,6 +13,8 @@ TYPE
                  at_guiSynOutput,
                  at_guiEventsCollector,
                  at_plot,
+                 at_table,
+                 at_treeView,
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -25,6 +27,8 @@ CONST
     {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_displayTable,mt_plot_postDisplay,mt_guiEdit_done,mt_displayVariableTree,mt_displayCustomForm],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
+    {at_table}    [mt_displayTable],
+    {at_treeView} [mt_displayVariableTree],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);

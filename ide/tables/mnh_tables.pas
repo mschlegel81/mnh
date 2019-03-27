@@ -14,8 +14,8 @@ USES
   out_adapters,
   recyclers,
   fileWrappers,
-  profiling,
   mnh_settings,
+  mnh_gui_settings,
   ideLayoutUtil;
 
 TYPE
@@ -45,7 +45,6 @@ TYPE
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
     tableMenu1: TPopupMenu;
-    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
@@ -67,7 +66,6 @@ TYPE
     headerData:T_arrayOfString;
     firstIsHeader:boolean;
 
-    displayPending:boolean;
     sorted:record
       ascending:boolean;
       byColumn:longint;
@@ -75,48 +73,38 @@ TYPE
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
-    PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
   end;
 
+  P_tableDisplayRequest=^T_tableDisplayRequest;
+  T_tableDisplayRequest=object(T_payloadMessage)
+    private
+      tableContent:P_listLiteral;
+      tableCaption:string;
+      firstIsHeader:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
+      DESTRUCTOR destroy; virtual;
+  end;
+
+  T_tableAdapter=object(T_collectingOutAdapter)
+    tableForms: array of TtableForm;
+    defaultCaption:string;
+    CONSTRUCTOR create(CONST defaultCaption_:string);
+    FUNCTION processPendingMessages:boolean;
+  end;
+
 PROCEDURE resetTableForms;
-PROCEDURE conditionalShowTables;
 IMPLEMENTATION
-VAR tableForms: array of TtableForm;
-    tableFormCs:TRTLCriticalSection;
-
-PROCEDURE resetTableForms;
-  VAR i:longint;
-  begin
-    enterCriticalSection(tableFormCs);
-    for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
-    setLength(tableForms,0);
-    leaveCriticalSection(tableFormCs);
-  end;
-
-FUNCTION newTableForm:TtableForm;
-  begin
-    enterCriticalSection(tableFormCs);
-    result:=TtableForm.create(nil);
-    setLength(tableForms,length(tableForms)+1);
-    tableForms[length(tableForms)-1]:=result;
-    leaveCriticalSection(tableFormCs);
-  end;
-
 {$R *.lfm}
 
-PROCEDURE conditionalShowTables;
-  VAR i:longint;
-  begin
-    enterCriticalSection(tableFormCs);
-    for i:=0 to length(tableForms)-1 do tableForms[i].conditionalDoShow;
-    leaveCriticalSection(tableFormCs);
-  end;
-
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
-  VAR caption:string='MNH table';
+  VAR caption:string='';
       header:boolean=false;
       i:longint;
+      Post:P_tableDisplayRequest;
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
     if not(gui_started) then begin
@@ -133,23 +121,74 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
           else exit(nil);
         end;
       end;
-      enterCriticalSection(tableFormCs);
-      newTableForm.initWithLiteral(P_listLiteral(params^.value[0]),caption,header);
-      context.messages^.postSingal(mt_displayTable,C_nilTokenLocation);
-      leaveCriticalSection(tableFormCs);
+      new(Post,create(P_listLiteral(params^.value[0]),caption,header));
+      context.messages^.postCustomMessage(Post,true);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
+  end;
+
+CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_:string);
+  begin
+    inherited create(at_table,[mt_startOfEvaluation,mt_displayTable]);
+    defaultCaption:=defaultCaption_;
+    setLength(tableForms,0);
+  end;
+
+FUNCTION T_tableAdapter.processPendingMessages: boolean;
+  VAR m:P_storedMessage;
+      i:longint;
+      tab:TtableForm;
+      caption:string;
+  begin
+    enterCriticalSection(cs);
+    for m in storedMessages do case m^.messageType of
+      mt_displayTable:
+        begin
+          tab:=TtableForm.create(nil);
+          setLength(tableForms,length(tableForms)+1);
+          tableForms[length(tableForms)-1]:=tab;
+          with P_tableDisplayRequest(m)^ do begin
+            if tableCaption=''
+            then caption:=defaultCaption+' ('+intToStr(length(tableForms)+')'
+            else caption:=tableCaption;
+            tab.initWithLiteral(tableContent,caption,firstIsHeader);
+          end;
+          dockNewForm(tab);
+          tab.fillTable;
+        end;
+      mt_startOfEvaluation:
+        begin
+          for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
+          setLength(tableForms,0);
+        end;
+    end;
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_tableDisplayRequest.internalType: shortstring;
+  begin
+    result:='T_tableDisplayRequest';
+  end;
+
+CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral;
+  CONST newCaption: string; CONST firstIsHeader_: boolean);
+begin
+  tableContent:=L^.rereferenced;
+  tableCaption:=newCaption;
+  firstIsHeader:=firstIsHeader_;
+end;
+
+DESTRUCTOR T_tableDisplayRequest.destroy;
+  begin
+    disposeLiteral(tableContent);
+    inherited destroy;
   end;
 
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
     registerFontControl(StringGrid,ctTable);
-    //if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
-  end;
-
-PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
-  begin
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
@@ -168,13 +207,13 @@ PROCEDURE TtableForm.FormShow(Sender: TObject);
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
   begin
-    StringGrid.Font.size:=StringGrid.Font.size-1;
+    SettingsForm.fontSize[ctTable]:=SettingsForm.fontSize[ctTable]-1;
     StringGrid.AutoSizeColumns;
   end;
 
 PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
   begin
-    StringGrid.Font.size:=StringGrid.Font.size+1;
+    SettingsForm.fontSize[ctTable]:=SettingsForm.fontSize[ctTable]+1;
     StringGrid.AutoSizeColumns;
   end;
 
@@ -260,7 +299,6 @@ FUNCTION TtableForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TtableForm.performSlowUpdate;
   begin
-    conditionalDoShow;
   end;
 
 PROCEDURE TtableForm.performFastUpdate;
@@ -295,15 +333,6 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
 
     displayPending:=true;
     caption:=newCaption;
-  end;
-
-PROCEDURE TtableForm.conditionalDoShow;
-  begin
-    if displayPending then begin
-      displayPending:=false;
-      dockNewForm(self);
-      fillTable;
-    end;
   end;
 
 PROCEDURE TtableForm.fillTable;

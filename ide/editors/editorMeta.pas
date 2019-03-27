@@ -7,14 +7,10 @@ USES  //basic classes
   myGenerics,
   myStringUtil,
   //GUI: LCL components
-  Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
+  Controls, Graphics, Dialogs, Menus, ComCtrls,
   //GUI: SynEdit
   SynEdit, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,SynExportHTML,
-  //GUI: highlighters
-  SynHighlighterMnh,
   closeDialog,
-  mnh_tables,
-  mnh_plotForm,
   //MNH:
   mnh_doc,
   //outlines,
@@ -24,9 +20,9 @@ USES  //basic classes
   litVar,
   funcs,
   debugging,
+  packages,
   cmdLineInterpretation,
   evalThread,
-  packages,
   guiOutAdapters,
   datastores,
   editorMetaBase,
@@ -156,8 +152,7 @@ VAR safeCallback:F_safeCallback=nil;
     runnerModel:T_runnerModel;
     workspace  :T_workspace;
 IMPLEMENTATION
-USES variableTreeViews,
-     renameDialog,
+USES renameDialog,
      recyclers;
 VAR underCursor:T_tokenInfo;
 {$define includeImplementation}

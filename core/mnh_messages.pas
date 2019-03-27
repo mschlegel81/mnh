@@ -67,6 +67,7 @@ TYPE
     mt_profile_call_info,
     mt_timing_info
     {$ifdef fullVersion},
+    mt_startOfEvaluation,
     mt_debugger_breakpoint,
     mt_displayTable,
     mt_plot_addText,
@@ -121,6 +122,7 @@ CONST
 {mt_profile_call_info }  (guiMarker: TIMING_MARKER2; level:-1; mClass:mc_timing;  systemErrorLevel:0),
 {mt_timing_info       }  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
+{mt_startOfEvaluation}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_debugger_breakpoint} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayTable}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_plot_addText}        (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),

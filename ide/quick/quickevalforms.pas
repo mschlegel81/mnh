@@ -75,7 +75,7 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
     //quickA...;
     //guiOutAdapter.outputBehavior:=outputBehavior;
     //guiOutAdapter.wrapEcho:=outputBehavior.echo_wrapping;
-    //updateWordWrap;
+    //TODO: updateWordWrap;
   end;
 
 PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);

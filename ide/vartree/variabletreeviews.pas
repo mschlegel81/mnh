@@ -23,50 +23,69 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
-    displayPending:boolean;
     rootNode:P_variableTreeEntryAnonymousValue;
     model:T_treeModel;
   public
     PROCEDURE initWithLiteral(CONST L:P_literal; CONST newCaption:string);
-    PROCEDURE conditionalDoShow;
   end;
 
-PROCEDURE resetTreeForms;
-PROCEDURE conditionalShowVarTrees;
+  P_treeDisplayRequest=^T_treeDisplayRequest;
+
+  { T_treeDisplayRequest }
+
+  T_treeDisplayRequest=object(T_payloadMessage)
+    private
+      treeContent:P_literal;
+      treeCaption:string;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST L:P_literal; CONST newCaption:string);
+      DESTRUCTOR destroy; virtual;
+  end;
+
+  { T_treeAdapter }
+
+  T_treeAdapter=object(T_collectingOutAdapter)
+    treeForms: array of TVarTreeViewForm;
+    defaultCaption:string;
+    CONSTRUCTOR create(CONST defaultCaption_:string);
+    FUNCTION processPendingMessages:boolean;
+  end;
+
 IMPLEMENTATION
-VAR treeForms: array of TVarTreeViewForm;
-    treeFormCs:TRTLCriticalSection;
 
-PROCEDURE resetTreeForms;
-  VAR i:longint;
-  begin
-    enterCriticalSection(treeFormCs);
-    for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
-    setLength(treeForms,0);
-    leaveCriticalSection(treeFormCs);
-  end;
-
-PROCEDURE conditionalShowVarTrees;
-  VAR i:longint;
-  begin
-    enterCriticalSection(treeFormCs);
-    for i:=0 to length(treeForms)-1 do treeForms[i].conditionalDoShow;
-    leaveCriticalSection(treeFormCs);
-  end;
-
-FUNCTION newTreeForm:TVarTreeViewForm;
-  begin
-    enterCriticalSection(treeFormCs);
-    result:=TVarTreeViewForm.create(nil);
-    setLength(treeForms,length(treeForms)+1);
-    treeForms[length(treeForms)-1]:=result;
-    leaveCriticalSection(treeFormCs);
-  end;
+//PROCEDURE resetTreeForms;
+//  VAR i:longint;
+//  begin
+//    enterCriticalSection(treeFormCs);
+//    for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
+//    setLength(treeForms,0);
+//    leaveCriticalSection(treeFormCs);
+//  end;
+//
+//PROCEDURE conditionalShowVarTrees;
+//  VAR i:longint;
+//  begin
+//    enterCriticalSection(treeFormCs);
+//    for i:=0 to length(treeForms)-1 do treeForms[i].conditionalDoShow;
+//    leaveCriticalSection(treeFormCs);
+//  end;
+//
+//FUNCTION newTreeForm:TVarTreeViewForm;
+//  begin
+//    enterCriticalSection(treeFormCs);
+//    result:=TVarTreeViewForm.create(nil);
+//    setLength(treeForms,length(treeForms)+1);
+//    treeForms[length(treeForms)-1]:=result;
+//    leaveCriticalSection(treeFormCs);
+//  end;
 
 {$R *.lfm}
 
 FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
-  VAR caption:string='MNH variable';
+  VAR caption:string='';
+      Post:P_treeDisplayRequest;
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
     if not(gui_started) then begin
@@ -80,12 +99,69 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
         then caption:=P_stringLiteral(params^.value[1])^.value
         else exit(nil);
       end;
-      enterCriticalSection(treeFormCs);
-      newTreeForm.initWithLiteral(P_listLiteral(params^.value[0]),caption);
-      context.messages^.postSingal(mt_displayVariableTree,C_nilTokenLocation);
-      leaveCriticalSection(treeFormCs);
+      new(Post,create(P_listLiteral(params^.value[0]),caption));
+      context.messages^.postCustomMessage(Post,true);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
+  end;
+
+{ T_treeAdapter }
+
+CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
+  begin
+    inherited create(at_treeView,[mt_startOfEvaluation,mt_displayVariableTree]);
+    defaultCaption:=defaultCaption_;
+    setLength(treeForms,0);
+  end;
+
+FUNCTION T_treeAdapter.processPendingMessages: boolean;
+  VAR m:P_storedMessage;
+      i:longint;
+      tree:TVarTreeViewForm;
+      caption:string;
+  begin
+    enterCriticalSection(cs);
+    for m in storedMessages do case m^.messageType of
+      mt_displayVariableTree:
+        begin
+          tree:=TVarTreeViewForm.create(nil);
+          setLength(treeForms,length(treeForms)+1);
+          treeForms[length(treeForms)-1]:=tree;
+          with P_treeDisplayRequest(m)^ do begin
+            if treeCaption=''
+            then caption:=defaultCaption+' ('+intToStr(length(treeForms))+')'
+            else caption:=treeCaption;
+            tree.initWithLiteral(treeContent,caption)
+          end;
+          dockNewForm(tree);
+        end;
+      mt_startOfEvaluation:
+        begin
+          for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
+          setLength(treeForms,0);
+        end;
+    end;
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+{ T_treeDisplayRequest }
+
+FUNCTION T_treeDisplayRequest.internalType: shortstring;
+  begin
+    result:='T_treeDisplayRequest';
+  end;
+
+CONSTRUCTOR T_treeDisplayRequest.create(CONST L: P_literal; CONST newCaption: string);
+  begin
+    treeCaption:=newCaption;
+    treeContent:=L^.rereferenced;
+  end;
+
+DESTRUCTOR T_treeDisplayRequest.destroy;
+  begin
+    disposeLiteral(treeContent);
+    inherited destroy;
   end;
 
 PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
@@ -101,19 +177,10 @@ FUNCTION TVarTreeViewForm.getIdeComponentType: T_ideComponent;
     result:=icVariableView;
   end;
 
-PROCEDURE TVarTreeViewForm.performSlowUpdate;
-  begin
-    conditionalDoShow;
-  end;
-
-  PROCEDURE TVarTreeViewForm.performFastUpdate;
-  begin
-
-  end;
-
+PROCEDURE TVarTreeViewForm.performSlowUpdate; begin end;
+PROCEDURE TVarTreeViewForm.performFastUpdate; begin end;
 PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
   begin
-    displayPending:=false;
     model.create(VarTreeView);
     rootNode:=nil;
     registerFontControl(VarTreeView,ctGeneral);
@@ -131,25 +198,10 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
     node:=VarTreeView.items.add(nil,rootNode^.toString);
     node.data:=rootNode;
     model.addChildren(node);
-    displayPending:=true;
     caption:=newCaption;
-  end;
-
-PROCEDURE TVarTreeViewForm.conditionalDoShow;
-  begin
-    if displayPending then begin
-      displayPending:=false;
-      dockNewForm(self);
-    end;
   end;
 
 INITIALIZATION
   registerRule(GUI_NAMESPACE,'showVariable',@showVariable_impl,ak_variadic_1,'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a table with given caption');
-  setLength(treeForms,0);
-  initialize(treeFormCs);
-  initCriticalSection(treeFormCs);
-FINALIZATION
-  resetTreeForms;
-  doneCriticalSection(treeFormCs);
 end.
 
