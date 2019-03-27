@@ -15,6 +15,7 @@ TYPE
                  at_plot,
                  at_table,
                  at_treeView,
+                 at_customForm,
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -25,10 +26,11 @@ CONST
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
     {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
-    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_displayTable,mt_plot_postDisplay,mt_guiEdit_done,mt_displayVariableTree,mt_displayCustomForm],
-    {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
-    {at_table}    [mt_displayTable],
-    {at_treeView} [mt_displayVariableTree],
+    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done],
+    {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
+    {at_table}    [mt_startOfEvaluation,mt_displayTable],
+    {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
+    {at_custom...}[mt_startOfEvaluation,mt_displayCustomForm,mt_endOfEvaluation],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -72,6 +74,11 @@ TYPE
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
     PROCEDURE removeDuplicateStoredMessages;
     PROCEDURE clear; virtual;
+  end;
+
+  P_abstractGuiOutAdapter = ^T_abstractGuiOutAdapter;
+  T_abstractGuiOutAdapter = object(T_collectingOutAdapter)
+    FUNCTION flushToGui:T_messageTypeSet; virtual; abstract;
   end;
 
   {$ifdef fullVersion}
@@ -160,6 +167,15 @@ TYPE
       FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
+  end;
+
+  P_guiMessagesDistributor = ^T_guiMessagesDistributor;
+
+  { T_guiMessagesDistributor }
+
+  T_guiMessagesDistributor = object(T_messagesDistributor)
+    CONSTRUCTOR createGuiMessagesDistributor();
+    FUNCTION flushToGui:T_messageTypeSet;
   end;
 
   P_messagesRedirector=^T_messagesRedirector;
@@ -300,6 +316,25 @@ OPERATOR :=(s:string):T_messageTypeSet;
         end;
       end;
     end;
+  end;
+
+{ T_guiMessagesDistributor }
+
+CONSTRUCTOR T_guiMessagesDistributor.createGuiMessagesDistributor();
+  begin
+    inherited createDistributor();
+  end;
+
+FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
+  VAR a:T_flaggedAdapter;
+  begin
+    result:=[];
+    for a in adapters do if a.adapter^.adapterType in
+    [at_guiSynOutput,
+     at_guiEventsCollector,
+     at_plot,
+     at_table,
+     at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui;
   end;
 
 CONSTRUCTOR T_messagesRedirector.createRedirector();

@@ -23,7 +23,7 @@ CONST
                                               mt_timing_info];
 TYPE
   P_synOutAdapter=^T_synOutAdapter;
-  T_synOutAdapter=object(T_collectingOutAdapter)
+  T_synOutAdapter=object(T_abstractGuiOutAdapter)
     private
       id:longint;
 
@@ -44,6 +44,7 @@ TYPE
       PROCEDURE doneOutput(CONST jumpDown:boolean);
     public
       wrapEcho:boolean;
+      jumpToEnd:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
                          CONST messageTypesToInclude:T_messageTypeSet=[mt_clearConsole,
                                                                        mt_printline,
@@ -57,7 +58,7 @@ TYPE
                                                                        mt_echo_declaration,
                                                                        mt_echo_continued,
                                                                        mt_endOfEvaluation]);
-      FUNCTION flushToGui(CONST jumpToEnd:boolean):T_messageTypeSet;
+      FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROPERTY ownerForm:TForm read synOwnerForm;
       PROCEDURE flushClear;
@@ -301,7 +302,7 @@ CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdi
     lastWasDirectPrint:=false;
   end;
 
-FUNCTION T_synOutAdapter.flushToGui(CONST jumpToEnd:boolean):T_messageTypeSet;
+FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
     system.enterCriticalSection(cs);

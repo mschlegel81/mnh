@@ -30,7 +30,6 @@ FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR 
 
 PROCEDURE T_secondaryOutputMemoMeta.update;
   begin
-    collector^.flushToGui(true);
   end;
 
 PROCEDURE T_secondaryOutputMemoMeta.connect;

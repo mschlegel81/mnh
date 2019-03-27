@@ -11,6 +11,7 @@ object plotForm: TplotForm
   DragMode = dmAutomatic
   Menu = MainMenu
   OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyPress = FormKeyPress

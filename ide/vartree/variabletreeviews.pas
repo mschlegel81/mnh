@@ -30,9 +30,6 @@ TYPE
   end;
 
   P_treeDisplayRequest=^T_treeDisplayRequest;
-
-  { T_treeDisplayRequest }
-
   T_treeDisplayRequest=object(T_payloadMessage)
     private
       treeContent:P_literal;
@@ -44,13 +41,11 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  { T_treeAdapter }
-
-  T_treeAdapter=object(T_collectingOutAdapter)
+  T_treeAdapter=object(T_abstractGuiOutAdapter)
     treeForms: array of TVarTreeViewForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
-    FUNCTION processPendingMessages:boolean;
+    FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
 IMPLEMENTATION

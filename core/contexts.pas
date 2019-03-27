@@ -350,6 +350,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       childCount:=0;
     end;
     {$ifdef fullVersion}
+    primaryContext.messages^.postSingal(mt_startOfEvaluation,C_nilTokenLocation);
     primaryContext.callStack.clear;
     primaryContext.parentCustomForm:=nil;
     {$endif}

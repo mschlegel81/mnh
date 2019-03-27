@@ -3,8 +3,6 @@ INTERFACE
 USES sysutils,
      math,
      Interfaces, Classes, ExtCtrls, Graphics, types,
-     FPReadBMP,FPWriteBMP,
-     IntfGraphics,
      mySys,myGenerics,
      basicTypes, mnh_constants,
      mnh_settings,
@@ -175,29 +173,28 @@ TYPE
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
-  F_execPlotCallback=PROCEDURE;
+  F_execPlotCallback=PROCEDURE of object;
   F_pullSettingsToGuiCallback=PROCEDURE of object;
   P_plotSystem=^T_plotSystem;
-  T_plotSystem=object(T_collectingOutAdapter)
+  T_plotSystem=object(T_abstractGuiOutAdapter)
+    protected
+      pullSettingsToGui:F_pullSettingsToGuiCallback;
     private
       plotChangedSinceLastDisplay:boolean;
       displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
-      pullSettingsToGui:F_pullSettingsToGuiCallback;
-      isProcessingMessage:boolean;
+      sandboxed:boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage);
     public
       currentPlot:T_plot;
       animation:T_plotSeries;
 
-      CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback);
+      CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
       FUNCTION requiresFastPolling:boolean;
       FUNCTION processPendingMessages:boolean;
-      PROCEDURE resetOnEvaluationStart(CONST startedFromSandbox:boolean);
       PROCEDURE logPlotDone;
-      PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
@@ -205,6 +202,8 @@ TYPE
 
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 IMPLEMENTATION
+USES FPReadBMP,FPWriteBMP,IntfGraphics;
+
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
   begin
@@ -1354,8 +1353,14 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfSt
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   begin
-    isProcessingMessage:=true;
     case message^.messageType of
+      mt_startOfEvaluation: begin
+        if settings.doResetPlotOnEvaluation or sandboxed
+        then currentPlot.setDefaults
+        else currentPlot.clear;
+        animation.clear;
+        if pullSettingsToGui<>nil then pullSettingsToGui();
+      end;
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);
       mt_plot_addRow : begin
@@ -1392,7 +1397,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
     end;
     plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
       (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
-    isProcessingMessage:=false;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;
@@ -1429,10 +1433,10 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
     leaveCriticalSection(cs);
   end;
 
-CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback);
+CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
   begin
     inherited create(at_plot,C_includableMessages[at_plot]);
-    isProcessingMessage:=false;
+    sandboxed:=isSandboxSystem;
     plotChangedSinceLastDisplay:=false;
     currentPlot.createWithDefaults;
     doPlot:=executePlotCallback;
@@ -1451,6 +1455,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
   begin
     enterCriticalSection(cs);
     case message^.messageType of
+      mt_startOfEvaluation,
       mt_plot_addText,
       mt_plot_addRow,
       mt_plot_dropRow,
@@ -1508,26 +1513,10 @@ FUNCTION T_plotSystem.processPendingMessages:boolean;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plotSystem.resetOnEvaluationStart(CONST startedFromSandbox:boolean);
-  begin
-    if settings.doResetPlotOnEvaluation or startedFromSandbox
-    then currentPlot.setDefaults
-    else currentPlot.clear;
-    animation.clear;
-    if pullSettingsToGui<>nil then pullSettingsToGui();
-  end;
-
 PROCEDURE T_plotSystem.logPlotDone;
   begin
     enterCriticalSection(cs);
     plotChangedSinceLastDisplay:=false;
-    leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_plotSystem.registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
-  begin
-    enterCriticalSection(cs);
-    pullSettingsToGui:=pullSetingsToGuiCB;
     leaveCriticalSection(cs);
   end;
 

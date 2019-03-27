@@ -384,7 +384,7 @@ CONSTRUCTOR T_sandbox.create;
     initCriticalSection(cs);
     messages.createRedirector();
     {$ifdef fullVersion}
-    plotSystem.create(nil);
+    plotSystem.create(nil,true);
     messages.addOutAdapter(@plotSystem,false);
     {$endif}
     globals.create(@messages);
@@ -408,9 +408,6 @@ DESTRUCTOR T_sandbox.destroy;
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed: dword): T_storedMessages;
   begin
     messages.clear;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
@@ -427,9 +424,6 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
   begin
     errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
     globals.primaryContext.messages:=@errorHolder;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
     globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
@@ -460,9 +454,6 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     if connectLevel=0 then callContextType:=ect_silent
                       else callContextType:=ect_normal;
     messages.clear;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
     messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);

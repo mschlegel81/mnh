@@ -20,7 +20,8 @@ USES
   editorMetaBase,
   mnh_plotForm,
   plotMath,
-  synOutAdapter;
+  synOutAdapter,
+  ideLayoutUtil;
 
 TYPE
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
@@ -79,7 +80,7 @@ TYPE
     FUNCTION getName:string; virtual; abstract;
   end;
 
-  TscriptedForm = class(TForm)
+  TscriptedForm = class(T_mnhComponentForm)
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -102,8 +103,25 @@ TYPE
     PROCEDURE conditionalShow(CONST messages:P_messages);
   end;
 
-PROCEDURE freeScriptedForms;
-PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
+  P_customFormRequest=^T_customFormRequest;
+  T_customFormRequest=object(T_payloadMessage)
+    private
+      tableContent:P_listLiteral;
+      tableCaption:string;
+      firstIsHeader:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation);
+      DESTRUCTOR destroy; virtual;
+  end;
+
+  T_customFormAdapter = object(T_abstractGuiOutAdapter)
+
+  end;
+
+//PROCEDURE freeScriptedForms;
+//PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
 IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
     scriptedForms: array of TscriptedForm;

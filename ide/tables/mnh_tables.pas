@@ -89,11 +89,11 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  T_tableAdapter=object(T_collectingOutAdapter)
+  T_tableAdapter=object(T_abstractGuiOutAdapter)
     tableForms: array of TtableForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
-    FUNCTION processPendingMessages:boolean;
+    FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
 PROCEDURE resetTableForms;
@@ -134,7 +134,7 @@ CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_:string);
     setLength(tableForms,0);
   end;
 
-FUNCTION T_tableAdapter.processPendingMessages: boolean;
+FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tab:TtableForm;
