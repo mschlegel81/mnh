@@ -132,6 +132,8 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     end;
   VAR recycler:T_recycler;
   begin
+    //TODO: Can this be simplified? We just need all messages...
+
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings);
     new(globals,create(@adapters));

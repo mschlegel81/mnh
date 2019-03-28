@@ -75,6 +75,7 @@ PROCEDURE T_ideStdOutAdapter.ensureForm;
       outputForm:=TOutputForm.create(Application);
       synOwnerForm:=outputForm;
       syn         :=outputForm.OutputSynEdit;
+      outputForm.associatedAdapter:=@self;
       dockNewForm(outputForm);
     end;
   end;
@@ -153,6 +154,7 @@ PROCEDURE TOutputForm.performSlowUpdate;
 PROCEDURE TOutputForm.performFastUpdate;
   VAR oldActive:TWinControl;
   begin
+    associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
     if not(cbFreezeOutput.checked) then begin
       if (associatedAdapter^.flushToGui<>[])
       and (cbShowOnOutput.checked)

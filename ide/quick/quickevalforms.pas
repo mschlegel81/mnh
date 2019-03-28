@@ -10,7 +10,7 @@ USES
   mnh_settings,guiOutAdapters;
 
 TYPE
-
+//TODO: This form has it's own evaluator!
   { TQuickEvalForm }
 
   TQuickEvalForm = class(T_mnhComponentForm)
@@ -27,10 +27,10 @@ TYPE
     miShowTiming: TMenuItem;
     miWrapEcho: TMenuItem;
     OutputPopupMenu: TPopupMenu;
-    quickInputEdit: TSynEdit;
     Splitter1: TSplitter;
     quickOutputSynEdit: TSynEdit;
     outputHighlighter:TSynMnhSyn;
+    quickInputEdit: TSynEdit;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;

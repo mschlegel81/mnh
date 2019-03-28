@@ -9,9 +9,6 @@ USES
   ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta,mnh_settings,basicTypes;
 
 TYPE
-
-  { TAssistanceForm }
-
   TAssistanceForm = class(T_mnhComponentForm)
     AssistanceEdit: TSynEdit;
     assistanceHighlighter:TSynMnhSyn;
@@ -55,8 +52,8 @@ FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TAssistanceForm.performSlowUpdate;
   CONST conditionalCaption:array[false..true,false..true] of string=
-       (('Assistance','Warnings'),
-        ('Errors','Errors and Warnings'));
+       (('Assistance','Warnings'           ),
+        ('Errors'    ,'Errors and Warnings'));
 
   VAR hasErrors  :boolean=false;
       hasWarnings:boolean=false;

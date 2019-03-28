@@ -148,6 +148,9 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view')       ,true);
     messages.addOutAdapter(newCustomFormAdapter('MNH custom form')     ,true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
+    {$ifdef debugMode}
+    messages.addConsoleOutAdapter('v');
+    {$endif}
   end;
 
 CONSTRUCTOR T_quickEvaluation.create(CONST outputOwner:TForm; CONST outputEdit:TSynEdit);
@@ -400,6 +403,7 @@ PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST co
     evalRequest.callMain:=false;
     state:=es_pending;
     if provider<>package.getCodeProvider then package.clear(true);
+    package.replaceCodeProvider(provider);
     executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
     system.leaveCriticalSection(evaluationCs);
   end;
@@ -417,6 +421,7 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider;
     evalRequest.callMain:=true;
     state:=es_pending;
     if provider<>package.getCodeProvider then package.clear(true);
+    package.replaceCodeProvider(provider);
     executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
     system.leaveCriticalSection(evaluationCs);
   end;

@@ -6,10 +6,11 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
-  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings, myGenerics,
-  editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
-  outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
-  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages;
+  ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
+  editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
+  debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
+  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages,
+  closeDialog;
 
 TYPE
 
@@ -153,6 +154,7 @@ TYPE
     PROCEDURE UndockPopup3Popup(Sender: TObject);
     PROCEDURE UndockPopup4Popup(Sender: TObject);
   private
+    quitPosted:boolean;
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
     PROCEDURE startDock(CONST PageControl:TPageControl);
@@ -179,6 +181,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
+    quitPosted:=false;
     subTimerCounter:=0;
     splitterPositions[1]:=16384;
     splitterPositions[2]:=10000;
@@ -186,7 +189,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     splitterPositions[4]:=16384;
     ideLayoutUtil.mainForm:=self;
 
-    mnh_plotForm.mainFormCoordinatesLabel:=PlotPositionLabel;
+    initializePlotForm(PlotPositionLabel);
 
     setupEditorMetaBase(miLanguage);
     runnerModel.create(self);
@@ -236,9 +239,22 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
     workspace.destroy;
   end;
 
-PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+FUNCTION anyEvaluationRunning:boolean;
   begin
-    //TODO: Reject close request if an evaluation is running
+    //TODO: also consider quick evaluation
+    result:=runnerModel.anyRunning;
+  end;
+
+PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+  VAR mr:integer=mrClose;
+  begin
+    if anyEvaluationRunning
+    then mr:=closeDialogForm.showOnQuitWhileEvaluating;
+
+    if mr<>mrClose then begin
+      quitPosted:=(mr=mrOk);
+      if anyEvaluationRunning then CanClose:=false;
+    end;
   end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
@@ -530,8 +546,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
   end;
 
 PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
-  VAR outIdx:longint;
-      target:P_editorMeta;
+  VAR target:P_editorMeta;
   begin
     {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
     if data^.successful then begin
@@ -595,6 +610,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       drawMemoryUsage;
 
       FormDropFiles(Sender,ipcModel.getFilesToOpen);
+
+      if quitPosted and not(anyEvaluationRunning) then close;
     end;
 
   PROCEDURE fastUpdates; inline;

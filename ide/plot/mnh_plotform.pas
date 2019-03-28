@@ -4,18 +4,13 @@ UNIT mnh_plotForm;
 
 INTERFACE
 {$WARN 5024 OFF}
-USES
-  Classes, sysutils, FileUtil,
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, StdCtrls,
-  mnh_constants, basicTypes,
-  mnh_messages,
-  recyclers,
-  mnh_plotData, mnh_settings, out_adapters, litVar, funcs,
-  contexts, plotstyles, plotMath, EpikTimer,
-  plotExport,
-  ideLayoutUtil,
-  editScripts;
-
+USES Classes,
+     Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, StdCtrls,
+     EpikTimer,
+     mnh_plotData,
+     myGenerics,
+     plotMath,
+     ideLayoutUtil;
 TYPE
   TplotForm = class;
 
@@ -104,6 +99,7 @@ TYPE
     miAntiAliasing3: TMenuItem;
     miYTics1: TMenuItem;
     plotImage: TImage;
+    SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
@@ -156,6 +152,7 @@ TYPE
     attachedToMainForm:boolean;
     relatedPlot:P_guiPlotSystem;
     FUNCTION getPlotQuality:byte;
+    PROCEDURE createScriptEditOrFile(CONST contents:T_arrayOfString);
   public
     onPlotRescale:TNotifyEvent;
     onPlotMouseMove,
@@ -172,11 +169,19 @@ TYPE
 //FUNCTION plotForm: TplotForm;
 //FUNCTION plotFormIsInitialized:boolean;
 //PROCEDURE resetPlot(CONST hideWindow:boolean);
-//PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
-VAR mainFormCoordinatesLabel:TLabel;
-    primaryPlotAdapters:T_guiPlotSystem;
-    main:T_mnhIdeForm;
+
+PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
 IMPLEMENTATION
+USES sysutils, FileUtil,
+     mnh_constants, basicTypes,
+     mnh_messages,
+     recyclers,
+     mnh_settings, out_adapters, litVar, funcs,
+     contexts, plotstyles,
+     plotExport,
+     editScripts,
+     fileWrappers;
+VAR mainFormCoordinatesLabel:TLabel;
 
 { T_guiPlotSystem }
 
@@ -402,18 +407,27 @@ PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
     miScriptFromAnimation1.enabled:=relatedPlot^.animation.frameCount>0;
   end;
 
-PROCEDURE TplotForm.miScriptFromAnimationClick(Sender: TObject);
+PROCEDURE TplotForm.createScriptEditOrFile(CONST contents:T_arrayOfString);
   VAR task:P_editScriptTask;
   begin
-    new(task,createForNewEditor(relatedPlot^.getPlotStatement(-1)));
-    main.onEditFinished(task);
+    if mainForm=nil then begin
+      if SaveDialog.execute then begin
+        writeFileLines(SaveDialog.fileName,contents,LineEnding,false);
+      end;
+    end else begin
+      new(task,createForNewEditor(contents));
+      mainForm.onEditFinished(task);
+    end;
+  end;
+
+PROCEDURE TplotForm.miScriptFromAnimationClick(Sender: TObject);
+  begin
+    createScriptEditOrFile(relatedPlot^.getPlotStatement(-1));
   end;
 
 PROCEDURE TplotForm.miScriptFromFrameClick(Sender: TObject);
-  VAR task:P_editScriptTask;
   begin
-    new(task,createForNewEditor(relatedPlot^.getPlotStatement(animationFrameIndex)));
-    main.onEditFinished(task);
+    createScriptEditOrFile(relatedPlot^.getPlotStatement(animationFrameIndex));
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
@@ -751,16 +765,15 @@ FUNCTION uninitialized_fallback intFuncSignature;
     result:=nil;
   end;
 
-//TODO: Who calls this?!?
-PROCEDURE initializePlotForm(CONST mainForm:T_mnhIdeForm);
+PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   begin
+    mainFormCoordinatesLabel:=coordLabel;
     //TODO: Reimplement plotClosed ?
     //reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
     reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      );
-    main:=mainForm;
   end;
 
 INITIALIZATION
