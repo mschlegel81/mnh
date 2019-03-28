@@ -80,22 +80,27 @@ TYPE
     FUNCTION getName:string; virtual; abstract;
   end;
 
+  { TscriptedForm }
+
   TscriptedForm = class(T_mnhComponentForm)
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    FUNCTION getIdeComponentType:T_ideComponent; override;
+    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performFastUpdate; override;
   private
     markedForCleanup:boolean;
-    setupParam:P_literal;
-    setupLocation:T_tokenLocation;
-    setupContext:P_context;
+    //setupParam:P_literal;
+    //setupLocation:T_tokenLocation;
+    //setupContext:P_context;
     meta:array of P_guiElementMeta;
     metaForUpdate:T_setOfPointer;
     plotLink:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
-    PROCEDURE initialize();
+    PROCEDURE initialize(CONST setupParam:P_literal; CONST setupLocation:T_tokenLocation; CONST setupContext:P_context);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
@@ -104,20 +109,32 @@ TYPE
   end;
 
   P_customFormRequest=^T_customFormRequest;
+
+  { T_customFormRequest }
+
   T_customFormRequest=object(T_payloadMessage)
     private
-      tableContent:P_listLiteral;
-      tableCaption:string;
-      firstIsHeader:boolean;
+      setupTitle:string;
+      setupDef  :P_literal;
+      setupContext:P_context;
+      setupLocation:T_tokenLocation;
+
+      createdForm: TscriptedForm;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR create(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation);
+      FUNCTION getCreatedForm(CONST messages:P_messages):TscriptedForm;
+      PROCEDURE setCreatedForm(form:TscriptedForm);
       DESTRUCTOR destroy; virtual;
   end;
 
-  T_customFormAdapter = object(T_abstractGuiOutAdapter)
+  { T_customFormAdapter }
 
+  P_customFormAdapter = ^T_customFormAdapter;
+  T_customFormAdapter = object(T_abstractGuiOutAdapter)
+    CONSTRUCTOR createCustomFormAdapter;
+    FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
 //PROCEDURE freeScriptedForms;
@@ -172,38 +189,40 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
     {$I component_outputRedirect.inc}
 {$I component_plotConnector.inc}
 {$I component_worker.inc}
-PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
-  VAR index:longint=0;
-      k:longint;
-  begin
-    enterCriticalSection(scriptedFormCs);
-    while index<length(scriptedForms) do begin
-      if scriptedForms[index].markedForCleanup then begin
-        FreeAndNil(    scriptedForms[index]);
-        for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
-        setLength(scriptedForms,length(scriptedForms)-1);
-      end else begin
-        scriptedForms[index].conditionalShow(messages);
-        inc(index);
-      end;
-    end;
-    leaveCriticalSection(scriptedFormCs);
-  end;
+//TODO: Move to T_customFormAdapter
+//PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
+//  VAR index:longint=0;
+//      k:longint;
+//  begin
+//    enterCriticalSection(scriptedFormCs);
+//    while index<length(scriptedForms) do begin
+//      if scriptedForms[index].markedForCleanup then begin
+//        FreeAndNil(    scriptedForms[index]);
+//        for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
+//        setLength(scriptedForms,length(scriptedForms)-1);
+//      end else begin
+//        scriptedForms[index].conditionalShow(messages);
+//        inc(index);
+//      end;
+//    end;
+//    leaveCriticalSection(scriptedFormCs);
+//  end;
 
-FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation):TscriptedForm;
-  begin
-    enterCriticalSection(scriptedFormCs);
-    result:=TscriptedForm.create(nil);
-    result.setupLocation:=errorLocation;
-    result.setupParam:=definition;
-    result.setupContext:=context;
-    result.caption:=title;
-    definition^.rereferenced;
-    result.displayPending:=true;
-    setLength(scriptedForms,length(scriptedForms)+1);
-    scriptedForms[length(scriptedForms)-1]:=result;
-    leaveCriticalSection(scriptedFormCs);
-  end;
+//TODO: Move to T_customFormAdapter
+//FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation):TscriptedForm;
+//  begin
+//    enterCriticalSection(scriptedFormCs);
+//    result:=TscriptedForm.create(nil);
+//    result.setupLocation:=errorLocation;
+//    result.setupParam:=definition;
+//    result.setupContext:=context;
+//    result.caption:=title;
+//    definition^.rereferenced;
+//    result.displayPending:=true;
+//    setLength(scriptedForms,length(scriptedForms)+1);
+//    scriptedForms[length(scriptedForms)-1]:=result;
+//    leaveCriticalSection(scriptedFormCs);
+//  end;
 
 PROCEDURE freeScriptedForms;
   VAR k:longint;
@@ -429,7 +448,8 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
 PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
-PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
+  );
   begin
     if tryEnterCriticalsection(lock)=0
     then CloseAction:=caNone
@@ -463,7 +483,23 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
     doneCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.initialize();
+FUNCTION TscriptedForm.getIdeComponentType: T_ideComponent;
+begin
+
+end;
+
+PROCEDURE TscriptedForm.performSlowUpdate;
+begin
+
+end;
+
+PROCEDURE TscriptedForm.performFastUpdate;
+begin
+
+end;
+
+PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
+  CONST setupLocation: T_tokenLocation; CONST setupContext: P_context);
   TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid);
   CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid');
 
@@ -595,7 +631,8 @@ PROCEDURE TscriptedForm.hideAndDisconnectAll;
     for m in meta do m^.disconnect;
   end;
 
-FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
+FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
+  VAR context: T_context; VAR recycler: T_recycler): boolean;
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
@@ -621,7 +658,7 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
   end;
 
-PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
+PROCEDURE TscriptedForm.conditionalShow(CONST messages: P_messages);
   PROCEDURE updateComponents;
     VAR metaPointer:pointer;
     begin
@@ -637,15 +674,15 @@ PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
       messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
       exit;
     end;
-    if displayPending and messages^.continueEvaluation then begin
-      if (setupParam<>nil) and (setupContext<>nil) then begin
-        initialize();
-        disposeLiteral(setupParam);
-        setupContext:=nil;
-      end;
-      Show;
-      displayPending:=false;
-    end;
+    //if displayPending and messages^.continueEvaluation then begin
+    //  if (setupParam<>nil) and (setupContext<>nil) then begin
+    //    initialize();
+    //    disposeLiteral(setupParam);
+    //    setupContext:=nil;
+    //  end;
+    //  Show;
+    //  displayPending:=false;
+    //end;
     updateComponents;
     leaveCriticalSection(lock);
   end;
@@ -653,6 +690,7 @@ PROCEDURE TscriptedForm.conditionalShow(CONST messages:P_messages);
 FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR form:TscriptedForm;
       sleepTime:longint=0;
+      formRequest:P_customFormRequest;
   begin
     result:=nil;
     if not(gui_started) then begin
@@ -660,14 +698,13 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       exit(nil);
     end;
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
-      form:=
-      createScriptedForm(P_stringLiteral(params^.value[0])^.value,
+      new(formRequest,create(P_stringLiteral(params^.value[0])^.value,
                          P_mapLiteral(params^.value[1]),
                          @context,
-                         location);
-      context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);;
-      while (form.setupContext<>nil) and (context.messages^.continueEvaluation) do sleep(10);
-
+                         location));
+      context.messages^.postCustomMessage(@formRequest,false);
+      form:=formRequest^.getCreatedForm(context.messages);
+      disposeMessage(formRequest);
       if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
       while not(form.markedForCleanup) and (context.messages^.continueEvaluation) do begin
         if form.processPendingEvents(location,context,recycler)

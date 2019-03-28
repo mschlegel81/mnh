@@ -193,13 +193,14 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
       FUNCTION requiresFastPolling:boolean;
-      FUNCTION processPendingMessages:boolean;
+      FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROCEDURE logPlotDone;
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   end;
 
+FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 IMPLEMENTATION
 USES FPReadBMP,FPWriteBMP,IntfGraphics;
@@ -1444,6 +1445,11 @@ CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CO
     animation.create;
   end;
 
+FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
+  begin
+    new(result,create(nil,true));
+  end;
+
 DESTRUCTOR T_plotSystem.destroy;
   begin
     inherited destroy;
@@ -1491,24 +1497,26 @@ FUNCTION T_plotSystem.requiresFastPolling:boolean;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plotSystem.processPendingMessages:boolean;
+FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
   begin
     enterCriticalSection(cs);
-    result:=length(storedMessages)>0;
+    result:=[];
     //it does not make sense to render multiple plots in one run
     //Lookup the last display request;
     lastDisplayIndex:=-1;
     for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
     //process messages
-    for i:=0 to length(storedMessages)-1 do
-    if storedMessages[i]^.messageType=mt_plot_postDisplay
-    then begin
-      if i=lastDisplayIndex
-      then processMessage(storedMessages[i])
-      else P_plotDisplayRequest(storedMessages[i])^.markExecuted;
-    end else processMessage(storedMessages[i]);
+    for i:=0 to length(storedMessages)-1 do begin
+      include(result,storedMessages[i]^.messageType);
+      if storedMessages[i]^.messageType=mt_plot_postDisplay
+      then begin
+        if i=lastDisplayIndex
+        then processMessage(storedMessages[i])
+        else P_plotDisplayRequest(storedMessages[i])^.markExecuted;
+      end else processMessage(storedMessages[i]);
+    end;
     clear;
     leaveCriticalSection(cs);
   end;

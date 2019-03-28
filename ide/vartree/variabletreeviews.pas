@@ -41,6 +41,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
+  P_treeAdapter=^T_treeAdapter;
   T_treeAdapter=object(T_abstractGuiOutAdapter)
     treeForms: array of TVarTreeViewForm;
     defaultCaption:string;
@@ -109,7 +110,7 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
     setLength(treeForms,0);
   end;
 
-FUNCTION T_treeAdapter.processPendingMessages: boolean;
+FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tree:TVarTreeViewForm;

@@ -508,6 +508,7 @@ object OutputForm: TOutputForm
     BorderSpacing.Left = 10
     Caption = 'Show when output changes'
     Checked = True
+    OnChange = cbShowOnOutputChange
     State = cbChecked
     TabOrder = 1
   end

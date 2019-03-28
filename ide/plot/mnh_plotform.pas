@@ -11,9 +11,10 @@ USES
   mnh_messages,
   recyclers,
   mnh_plotData, mnh_settings, out_adapters, litVar, funcs,
-  contexts, evalThread, plotstyles, plotMath, EpikTimer,
+  contexts, plotstyles, plotMath, EpikTimer,
   plotExport,
-  ideLayoutUtil;
+  ideLayoutUtil,
+  editScripts;
 
 TYPE
   TplotForm = class;
@@ -25,8 +26,9 @@ TYPE
   T_guiPlotSystem = object(T_plotSystem)
     private
       myPlotForm:TplotForm;
+      cap:string;
     public
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST plotFormCaption:string='MNH plot');
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
   end;
@@ -173,14 +175,15 @@ TYPE
 //PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
 VAR mainFormCoordinatesLabel:TLabel;
     primaryPlotAdapters:T_guiPlotSystem;
-    main:T_abstractMnhForm;
+    main:T_mnhIdeForm;
 IMPLEMENTATION
 
 { T_guiPlotSystem }
 
-CONSTRUCTOR T_guiPlotSystem.create;
+CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption:string='MNH plot');
   begin
     inherited create(@doPlot,false);
+    cap:=plotFormCaption;
     myPlotForm:=nil;
   end;
 
@@ -189,6 +192,7 @@ PROCEDURE T_guiPlotSystem.doPlot;
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(Application);
       myPlotForm.pullPlotSettingsToGui();
+      myPlotForm.caption:=cap;
       dockNewForm(myPlotForm);
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm.relatedPlot:=@self;
@@ -747,7 +751,8 @@ FUNCTION uninitialized_fallback intFuncSignature;
     result:=nil;
   end;
 
-PROCEDURE initializePlotForm(CONST mainForm:T_abstractMnhForm);
+//TODO: Who calls this?!?
+PROCEDURE initializePlotForm(CONST mainForm:T_mnhIdeForm);
   begin
     //TODO: Reimplement plotClosed ?
     //reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);

@@ -7,15 +7,17 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_settings,
      mnh_plotForm,
      mnh_messages,
-     evalThread,
      synOutAdapter,
      mnhCustomForm, askDialog,
-     serializationUtil;
+     serializationUtil,
+     ideLayoutUtil,
+     editScripts;
 
 TYPE
+  P_guiEventsAdapter=^T_guiEventsAdapter;
   T_guiEventsAdapter=object(T_abstractGuiOutAdapter)
-    form:T_abstractMnhForm;
-    CONSTRUCTOR create(CONST guiForm:T_abstractMnhForm);
+    form:T_mnhIdeForm;
+    CONSTRUCTOR create(CONST guiForm:T_mnhIdeForm);
     FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
@@ -92,12 +94,10 @@ PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeLongint(outputLinesLimit);
   end;
 
-CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_abstractMnhForm);
+CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
   begin
     inherited create(at_guiEventsCollector,
-                    [mt_displayVariableTree,
-                     mt_displayCustomForm,
-                     mt_endOfEvaluation,
+                    [mt_endOfEvaluation,
                      mt_guiEdit_done,
                      mt_debugger_breakpoint]);
     form:=guiForm;
@@ -114,18 +114,13 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
         case message^.messageType of
           mt_guiEdit_done:        form.onEditFinished(P_editScriptTask(message));
           mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(message));
+          mt_endOfEvaluation    : form.onEndOfEvaluation;
         end;
       end;
       if length(storedMessages)>0 then clear;
     finally
       system.leaveCriticalSection(cs);
-      if showFormsAfter then conditionalShowCustomForms(@guiAdapters);
-      if evaluationEnded then begin
-        freeScriptedForms;
-        form.onEndOfEvaluation;
-      end;
     end;
-    if plotSystem.processPendingMessages then include(result,mt_plot_addRow);
   end;
 
 INITIALIZATION

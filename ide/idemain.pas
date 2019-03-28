@@ -9,7 +9,7 @@ USES
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings, myGenerics,
   editorMeta,editorMetaBase,evalThread,guiOutAdapters,codeAssistance,
   outputFormUnit,debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
-  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel;
+  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages;
 
 TYPE
 
@@ -175,8 +175,7 @@ PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of 
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
-  VAR outputForm:TOutputForm;
-      stream:T_bufferedInputStreamWrapper;
+  VAR stream:T_bufferedInputStreamWrapper;
       activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
@@ -187,17 +186,10 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     splitterPositions[4]:=16384;
     ideLayoutUtil.mainForm:=self;
 
-    outputForm:=TOutputForm.create(self);
-    attachNewForm(outputForm);
-
     mnh_plotForm.mainFormCoordinatesLabel:=PlotPositionLabel;
 
     setupEditorMetaBase(miLanguage);
-    runnerModel.create;
-    initGuiOutAdapters(self,outputForm.OutputSynEdit);
-
-    initUnit(@guiAdapters);
-
+    runnerModel.create(self);
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
@@ -238,7 +230,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     timer.enabled:=false;
-    earlyFinalization;
+    runnerModel.destroy;
     finalizeCodeAssistance;
     saveIdeSettings;
     workspace.destroy;
@@ -316,7 +308,7 @@ PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
     activeType:=typeOfFocusedControl;
     case activeType of
       ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]-1;
-      ctPlot: plotForm.miDecFontSizeClick(Sender);
+      ctPlot: TplotForm(mainForm.ActiveControl).miDecFontSizeClick(Sender);
     end;
   end;
 
@@ -361,7 +353,7 @@ PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
     activeType:=typeOfFocusedControl;
     case activeType of
       ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]+1;
-      ctPlot: plotForm.miIncFontSizeClick(Sender);
+      ctPlot: TplotForm(mainForm.ActiveControl).miIncFontSizeClick(Sender);
     end;
   end;
 
@@ -404,7 +396,7 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOutputClick(Sender: TObject);
   begin
-    ensureOutputForm;
+    runnerModel.showOutputForm;
   end;
 
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
@@ -539,22 +531,24 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
 
 PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
   VAR outIdx:longint;
+      target:P_editorMeta;
   begin
     {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
     if data^.successful then begin
       if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
-        if data^.wantNewEditor then outIdx:=addEditorMetaForNewFile
-                               else outIdx:=data^.inputIdx;
-        inputPageControl.activePageIndex:=outIdx;
-        getEditor^.setLanguage(data^.getOutputLanguage,LANG_TXT);
-        getEditor^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
+        if data^.wantNewEditor then target:=workspace.createNewFile
+                               else target:=workspace.addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+        if target<>nil then begin
+          target^.setLanguage(data^.getOutputLanguage,LANG_TXT);
+          target^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
+        end;
       end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
-        inputPageControl.activePageIndex:=data^.inputIdx;
-        getEditor^.insertText(P_stringLiteral(data^.getOutput)^.value);
+        target:=workspace.addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+        if target<>nil then target^.insertText(P_stringLiteral(data^.getOutput)^.value);
       end;
     end;
     disposeMessage(data);
-    updateEditorsByGuiStatus;
+    workspace.updateEditorsByGuiStatus;
   end;
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
@@ -571,8 +565,6 @@ PROCEDURE TIdeMainForm.onDebuggerEvent;
 PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
     workspace.updateEditorsByGuiStatus;
-    ensureOutputForm;
-    unfreezeOutput;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
@@ -608,7 +600,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
   PROCEDURE fastUpdates; inline;
     begin
       performFastUpdates;
-      guiEventsAdapter.flushToGui;
+      runnerModel.flushMessages;
     end;
 
   begin

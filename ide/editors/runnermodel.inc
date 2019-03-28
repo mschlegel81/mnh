@@ -1,18 +1,9 @@
 {$ifdef includeInterface}
-T_evaluation=object
-  cs:TRTLCriticalSection;
-
-  running       : boolean;
-  usecase       : T_packageLoadUsecase;
-  mainParameters: T_arrayOfString;
-  contextType   : T_evaluationContextType;
-
-  package:T_package;
-
-end;
-
 T_runnerModel=object(T_serializable)
   private
+    evaluation:T_standardEvaluation;
+    scriptEval:T_ideScriptEvaluation;
+
     lastStart:record
       mainCall:boolean;
       parameters:string;
@@ -32,11 +23,11 @@ T_runnerModel=object(T_serializable)
     end;
     stackTracing:boolean;
     profiling:boolean;
-    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
-    FUNCTION canRun(CONST quickMode:boolean=false):boolean;
+    FUNCTION canRun:boolean;
     PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
     PROCEDURE runExternally(CONST mainParameters:string='');
     PROCEDURE rerun();
@@ -44,6 +35,9 @@ T_runnerModel=object(T_serializable)
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
+    FUNCTION anyRunning:boolean;
+    PROCEDURE showOutputForm;
+    PROCEDURE flushMessages;
 
     FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
@@ -55,31 +49,35 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
   begin
     if value=debugMode_ then exit;
     debugMode_:=value;
-    if (runEvaluator.evaluationRunning) and not(runEvaluator.getRunnerStateInfo.state=es_editRunning) then runEvaluator.haltEvaluation;
+    if evaluation.isRunning then evaluation.postHalt;
   end;
 
-CONSTRUCTOR T_runnerModel.create;
+CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm);
   begin
     debugMode_:=false;
     stackTracing:=false;
     with lastStart do begin mainCall:=false; parameters:=''; end;
+
+    evaluation.create(mainForm);
+    scriptEval.create(evaluation.StdOut,
+                      mainForm);
   end;
 
 DESTRUCTOR T_runnerModel.destroy;
   begin
-
+    evaluation.destroy;
+    scriptEval.destroy;
   end;
 
 FUNCTION T_runnerModel.areEditorsLocked: boolean;
   begin
-    result:=(debugMode_ and runEvaluator.evaluationRunning) or (runEvaluator.getRunnerStateInfo.state=es_editRunning);
+    result:=(debugMode_ and evaluation.isRunning) or scriptEval.isRunning;
   end;
 
-FUNCTION T_runnerModel.canRun(CONST quickMode: boolean): boolean;
+FUNCTION T_runnerModel.canRun: boolean;
   VAR meta:P_editorMeta;
   begin
-    if runEvaluator.evaluationRunning then exit(false);
-    if quickMode then exit(true);
+    if evaluation.isRunning then exit(false);
     meta:=workspace.currentEditor;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
   end;
@@ -88,19 +86,10 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
   VAR contextType:T_evaluationContextType;
   begin
     if not(canRun) then exit;
-    //adapter reset
-    guiAdapters.clear;
-    guiOutAdapter.flushClear;
-    plotSystem.resetOnEvaluationStart(false);
-    guiOutAdapter.flushToGui(false);
-    //dynamic forms reset
-    resetPlot(mainCall);
-    resetTableForms;
-    resetTreeForms;
     //environment and options
     if debugMode then begin
       workspace.updateEditorsByGuiStatus;
-      runEvaluator.globals.stepper^.setBreakpoints(workspace.getAllBreakpoints);
+      evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
     end;
     if profiling then begin
       if debugMode_ then contextType:=ect_debuggingAndProfiling
@@ -111,9 +100,8 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
                            else contextType:=ect_normal;
     end;
 
-    if mainCall then runEvaluator.callMain(workspace.currentEditor,mainParameters,contextType,firstCallAfterActivation)
-                else runEvaluator.evaluate(workspace.currentEditor,               contextType,firstCallAfterActivation);
-    firstCallAfterActivation:=false;
+    if mainCall then evaluation.callMain(workspace.currentEditor,mainParameters,contextType)
+                else evaluation.evaluate(workspace.currentEditor,               contextType);
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
   end;
@@ -146,16 +134,15 @@ PROCEDURE T_runnerModel.rerun();
     customRun(lastStart.mainCall,lastStart.parameters);
   end;
 
-PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject;
-  line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runEvaluator.globals.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=evaluation.isPaused and evaluation.isRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
   VAR meta:P_editorMeta;
   begin
-    runEvaluator.globals.stepper^.setState(newState);
+    evaluation.stepper^.setState(newState);
     mainForm.onDebuggerEvent;
     meta:=workspace.currentEditor;
     if meta<>nil then with meta^ do begin
@@ -173,8 +160,24 @@ PROCEDURE T_runnerModel.markDebugLine(CONST editor: TSynEdit;
 
 PROCEDURE T_runnerModel.haltEvaluation;
   begin
-    runEvaluator.haltEvaluation;
-    if debugMode_ then runEvaluator.globals.stepper^.haltEvaluation;
+    evaluation.haltEvaluation;
+    scriptEval.haltEvaluation;
+  end;
+
+FUNCTION T_runnerModel.anyRunning:boolean;
+  begin
+    result:=evaluation.isRunning or scriptEval.isRunning;
+  end;
+
+PROCEDURE T_runnerModel.showOutputForm;
+  begin
+    evaluation.StdOut^.showForm;
+  end;
+
+PROCEDURE T_runnerModel.flushMessages;
+  begin
+    evaluation.flushMessages;
+    if not(evaluation.isRunning) then scriptEval.flushMessages;
   end;
 
 FUNCTION T_runnerModel.getSerialVersion:dword;

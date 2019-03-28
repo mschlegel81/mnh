@@ -5,13 +5,11 @@ UNIT outputFormUnit;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
-  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters, mnh_messages,mnh_settings;
+  sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
+  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages;
 
 TYPE
-
-  { TOutputForm }
-
+  P_ideStdOutAdapter=^T_ideStdOutAdapter;
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;
@@ -29,6 +27,7 @@ TYPE
     OutputSynEdit: TSynEdit;
     outputHighlighter:TSynMnhSyn;
     OutputPopupMenu: TPopupMenu;
+    PROCEDURE cbShowOnOutputChange(Sender: TObject);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormResize(Sender: TObject);
@@ -37,27 +36,54 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
+    associatedAdapter:P_ideStdOutAdapter;
     PROCEDURE updateWordWrap;
   public
   end;
 
-PROCEDURE ensureOutputForm;
-PROCEDURE unfreezeOutput;
+  T_ideStdOutAdapter=object(T_synOutAdapter)
+    private
+      parent:P_messages;
+    public
+      CONSTRUCTOR create(CONST parent_:P_messages);
+      FUNCTION flushToGui:T_messageTypeSet; virtual;
+      PROCEDURE ensureForm;
+      PROCEDURE showForm;
+  end;
+
 IMPLEMENTATION
-
-PROCEDURE ensureOutputForm;
-  begin
-    if not(hasFormOfType(icOutput,true))
-    then dockNewForm(TOutputForm.create(Application));
-  end;
-
-PROCEDURE unfreezeOutput;
-  begin
-    TOutputForm(getFormOfType(icOutput)).
-    cbFreezeOutput.checked:=false;
-  end;
-
 {$R *.lfm}
+
+{ T_ideStdOutAdapter }
+
+CONSTRUCTOR T_ideStdOutAdapter.create(CONST parent_: P_messages);
+  begin
+    parent:=parent_;
+    inherited create(nil,nil);
+  end;
+
+FUNCTION T_ideStdOutAdapter.flushToGui: T_messageTypeSet;
+  begin
+    ensureForm;
+    result:=inherited flushToGui;
+  end;
+
+PROCEDURE T_ideStdOutAdapter.ensureForm;
+  VAR outputForm:TOutputForm;
+  begin
+    if synOwnerForm=nil then begin
+      outputForm:=TOutputForm.create(Application);
+      synOwnerForm:=outputForm;
+      syn         :=outputForm.OutputSynEdit;
+      dockNewForm(outputForm);
+    end;
+  end;
+
+PROCEDURE T_ideStdOutAdapter.showForm;
+  begin
+    ensureForm;
+    TOutputForm(synOwnerForm).showComponent;
+  end;
 
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
   begin
@@ -76,6 +102,11 @@ PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     CanClose:=false;
   end;
 
+PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
+  begin
+    associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
+  end;
+
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icOutput;
@@ -84,8 +115,8 @@ FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
 PROCEDURE TOutputForm.updateWordWrap;
   begin
     if outputBehavior.echo_wrapping
-    then guiAdapters.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
-    else guiAdapters.preferredEchoLineLength:=-1;
+    then associatedAdapter^.parent^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
+    else associatedAdapter^.parent^.preferredEchoLineLength:=-1;
 
     //TODO: Implement this in quick edit form
     //if settings.quickOutputBehavior.echo_wrapping
@@ -107,8 +138,8 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    guiOutAdapter.outputBehavior:=outputBehavior;
-    guiOutAdapter.wrapEcho:=outputBehavior.echo_wrapping;
+    associatedAdapter^.outputBehavior:=outputBehavior;
+    associatedAdapter^.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 
@@ -123,7 +154,7 @@ PROCEDURE TOutputForm.performFastUpdate;
   VAR oldActive:TWinControl;
   begin
     if not(cbFreezeOutput.checked) then begin
-      if (guiOutAdapter.flushToGui(cbShowOnOutput.checked)<>[])
+      if (associatedAdapter^.flushToGui<>[])
       and (cbShowOnOutput.checked)
       then begin
         if mainForm<>nil

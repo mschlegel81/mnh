@@ -20,14 +20,14 @@ USES  //basic classes
   litVar,
   funcs,
   debugging,
-  packages,
   cmdLineInterpretation,
   evalThread,
   guiOutAdapters,
   datastores,
   editorMetaBase,
   codeAssistance,
-  ideLayoutUtil;
+  ideLayoutUtil,
+  editScripts;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -102,7 +102,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
     //
     //FUNCTION defaultExtensionByLanguage:ansistring;
-    //PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
+    PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     //FUNCTION resolveImport(CONST text:string):string;
     //PROCEDURE closeEditorQuietly;
     //FUNCTION isFile:boolean;
@@ -337,11 +337,11 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
       mark:=editor.Marks[i];
       editor_.Marks.remove(editor.Marks[i]);
       mark.free;
-      runEvaluator.globals.stepper^.setBreakpoints(workspace.getAllBreakpoints);
+      runnerModel.evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
       exit;
     end;
     _add_breakpoint_or_bookmark_(editor_.CaretY);
-    runEvaluator.globals.stepper^.setBreakpoints(workspace.getAllBreakpoints);
+    runnerModel.evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
@@ -488,7 +488,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
       isChanged:=false;
       editor.modified:=false;
       editor.MarkTextAsSaved;
-      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
+      if (filePath=utilityScriptFileName) then runnerModel.scriptEval.ensureEditScripts();
       updateSheetCaption;
     end;
   end;
@@ -586,7 +586,6 @@ PROCEDURE T_editorMeta.activate;
         paintedWithStateHash:=0;
         triggerCheck;
         completionLogic.assignEditor(editor_,nil);
-        runnerModel.firstCallAfterActivation:=true;
       end else begin
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
@@ -866,21 +865,20 @@ FUNCTION getHelpText:string;
 //    result:=currentFileAge<>fileInfo.fileAccessAge;
 //  end;
 
-//procedure T_editorMeta.updateContentAfterEditScript(
-//  const stringListLiteral: P_listLiteral);
-//  VAR concatenatedText:ansistring='';
-//      i:longint;
-//  begin
-//    if stringListLiteral^.literalType<>lt_stringList then exit;
-//    for i:=0 to stringListLiteral^.size-1 do begin
-//      if i>0 then concatenatedText:=concatenatedText+LineEnding;
-//      concatenatedText:=concatenatedText+P_stringLiteral(stringListLiteral^.value[i])^.value;
-//    end;
-//    editor.BeginUndoBlock;
-//    editor.SelectAll;
-//    editor.SelText:=concatenatedText;
-//    editor.EndUndoBlock;
-//  end;
+PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_listLiteral);
+  VAR concatenatedText:ansistring='';
+      i:longint;
+  begin
+    if stringListLiteral^.literalType<>lt_stringList then exit;
+    for i:=0 to stringListLiteral^.size-1 do begin
+      if i>0 then concatenatedText:=concatenatedText+LineEnding;
+      concatenatedText:=concatenatedText+P_stringLiteral(stringListLiteral^.value[i])^.value;
+    end;
+    editor.BeginUndoBlock;
+    editor.SelectAll;
+    editor.SelText:=concatenatedText;
+    editor.EndUndoBlock;
+  end;
 
 //function T_editorMeta.resolveImport(const text: string): string;
 //  begin

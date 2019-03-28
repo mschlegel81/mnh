@@ -18,7 +18,6 @@ USES
 {$R *.res}
 
 begin
-  cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
   Application.title:='MNH5 - GUI';
   RequireDerivedFormResource := true;
   Application.initialize;

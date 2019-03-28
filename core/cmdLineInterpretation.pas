@@ -5,7 +5,7 @@ USES sysutils,
      mnh_constants,
      fileWrappers,
      mnh_messages,
-     out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
+     out_adapters,consoleAsk,{$ifdef fullVersion}mnh_plotData,mnh_doc,{$endif}mnh_settings,
      funcs_mnh,
      contexts,
      packages,
@@ -42,10 +42,13 @@ VAR mainParameters:T_arrayOfString;
     pauseAtEnd:boolean=false;
     pauseOnError:boolean=false;
     {$ifdef fullVersion}
-    plotAdapters:P_abstractOutAdapter=nil;
     profilingRun:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
     {$endif}
+
+CONST DEF_VERBOSITY_STRING='';
+VAR verbosityString:string=DEF_VERBOSITY_STRING;
+
 PROCEDURE pauseOnce;
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -130,12 +133,10 @@ PROCEDURE displayHelp;
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
-CONST DEF_VERBOSITY_STRING='';
   VAR consoleAdapters:T_messagesDistributor;
       wantHelpDisplay:boolean=false;
       headless:boolean=false;
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
-      verbosityString:string=DEF_VERBOSITY_STRING;
       quitImmediate:boolean=false;
       memCheckerStarted:boolean=false;
       {$ifdef UNIX}
@@ -249,7 +250,7 @@ CONST DEF_VERBOSITY_STRING='';
     begin
       recycler.initRecycler;
       globals.create(@consoleAdapters);
-      {$ifdef fullVersion} consoleAdapters.addOutAdapter(plotAdapters,false); {$endif}
+      {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
       if wantHelpDisplay then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);

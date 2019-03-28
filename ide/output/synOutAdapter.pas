@@ -27,7 +27,6 @@ TYPE
     private
       id:longint;
 
-      synOwnerForm:TForm;
       linesToWrite:T_arrayOfString;
       bufferOffset:longint;
 
@@ -37,6 +36,7 @@ TYPE
       PROCEDURE flushBuffer;
     protected
       syn:TSynEdit;
+      synOwnerForm:TForm;
       outputLinesLimit:longint;
       PROCEDURE appendInternal(CONST s:string);
       PROCEDURE startOutput;
@@ -57,6 +57,7 @@ TYPE
                                                                        mt_echo_output,
                                                                        mt_echo_declaration,
                                                                        mt_echo_continued,
+                                                                       mt_startOfEvaluation,
                                                                        mt_endOfEvaluation]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;

@@ -15,7 +15,6 @@ USES
   recyclers,
   fileWrappers,
   mnh_settings,
-  mnh_gui_settings,
   ideLayoutUtil;
 
 TYPE
@@ -89,6 +88,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
+  P_tableAdapter=^T_tableAdapter;
   T_tableAdapter=object(T_abstractGuiOutAdapter)
     tableForms: array of TtableForm;
     defaultCaption:string;
@@ -96,7 +96,6 @@ TYPE
     FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
-PROCEDURE resetTableForms;
 IMPLEMENTATION
 {$R *.lfm}
 
@@ -149,7 +148,7 @@ FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
           tableForms[length(tableForms)-1]:=tab;
           with P_tableDisplayRequest(m)^ do begin
             if tableCaption=''
-            then caption:=defaultCaption+' ('+intToStr(length(tableForms)+')'
+            then caption:=defaultCaption+' ('+intToStr(length(tableForms))+')'
             else caption:=tableCaption;
             tab.initWithLiteral(tableContent,caption,firstIsHeader);
           end;
@@ -174,7 +173,7 @@ FUNCTION T_tableDisplayRequest.internalType: shortstring;
 CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral;
   CONST newCaption: string; CONST firstIsHeader_: boolean);
 begin
-  tableContent:=L^.rereferenced;
+  tableContent:=P_listLiteral(L^.rereferenced);
   tableCaption:=newCaption;
   firstIsHeader:=firstIsHeader_;
 end;
@@ -207,13 +206,13 @@ PROCEDURE TtableForm.FormShow(Sender: TObject);
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
   begin
-    SettingsForm.fontSize[ctTable]:=SettingsForm.fontSize[ctTable]-1;
+    setFontSize(ctTable,getFontSize(ctTable)-1);
     StringGrid.AutoSizeColumns;
   end;
 
 PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
   begin
-    SettingsForm.fontSize[ctTable]:=SettingsForm.fontSize[ctTable]+1;
+    setFontSize(ctTable,getFontSize(ctTable)+1);
     StringGrid.AutoSizeColumns;
   end;
 
@@ -331,7 +330,6 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
       literal:=P_listLiteral(L^.rereferenced);
     end;
 
-    displayPending:=true;
     caption:=newCaption;
   end;
 
@@ -418,12 +416,6 @@ PROCEDURE TtableForm.fillTable;
 
 INITIALIZATION
   registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#showTable(L:list,caption:string);//Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.');
-  setLength(tableForms,0);
-  initialize(tableFormCs);
-  initCriticalSection(tableFormCs);
-FINALIZATION
-  resetTableForms;
-  doneCriticalSection(tableFormCs);
 
 end.
 

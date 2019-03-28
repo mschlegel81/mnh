@@ -12,6 +12,7 @@ object SettingsForm: TSettingsForm
   DesignTimePPI = 144
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
   LCLVersion = '2.0.0.4'

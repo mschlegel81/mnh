@@ -36,10 +36,9 @@ T_workspace=object(T_serializable)
 
     FUNCTION currentEditor:P_editorMeta;
 
-  private
     FUNCTION addEditorMetaForNewFile:P_editorMeta;
   public
-    PROCEDURE createNewFile;
+    FUNCTION createNewFile:P_editorMeta;
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
 
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
@@ -218,12 +217,11 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
     result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
   end;
 
-PROCEDURE T_workspace.createNewFile;
-  VAR meta:P_editorMeta;
+FUNCTION T_workspace.createNewFile:P_editorMeta;
   begin
-    meta:=addEditorMetaForNewFile;
-    inputPageControl.activePage:=meta^.tabsheet;
-    meta^.activate;
+    result:=addEditorMetaForNewFile;
+    inputPageControl.activePage:=result^.tabsheet;
+    result^.activate;
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(
@@ -340,7 +338,7 @@ PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
       for j:=k to length(oldMarkers)-2 do oldMarkers[j]:=oldMarkers[j+1];
       setLength(oldMarkers,length(oldMarkers)-1);
     end else inc(k);
-    runEvaluator.globals.stepper^.setBreakpoints(getAllBreakpoints);
+    runnerModel.evaluation.stepper^.setBreakpoints(getAllBreakpoints);
   end;
 
 PROCEDURE T_workspace.closeCurrentFile;

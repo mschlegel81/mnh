@@ -16,6 +16,73 @@ TYPE
     FUNCTION getName:string; virtual;
   end;
 
+{ T_customFormAdapter }
+
+CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter;
+  begin
+    inherited create(at_customForm,[mt_displayCustomForm,mt_endOfEvaluation]);
+  end;
+
+FUNCTION T_customFormAdapter.flushToGui: T_messageTypeSet;
+  VAR m:P_storedMessage;
+  begin
+    result:=[];
+    enterCriticalSection(cs);
+    for m in storedMessages do case m^.messageType of
+      mt_endOfEvaluation: begin
+        //TODO: Clear all custom forms associated with this adapter here!
+
+      end;
+      mt_displayCustomForm: begin
+        //TODO: create and show custom form here!
+      end;
+    end;
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+{ T_customFormRequest }
+
+FUNCTION T_customFormRequest.internalType: shortstring;
+  begin
+    result:='T_customFormRequest';
+  end;
+
+CONSTRUCTOR T_customFormRequest.create(CONST title: string;
+  CONST definition: P_literal; CONST context: P_context;
+  CONST errorLocation: T_tokenLocation);
+begin
+  inherited create(mt_displayCustomForm);
+  setupTitle:=title;
+  setupDef:=definition;
+  setupContext:=context;
+  setupLocation:=errorLocation;
+  createdForm:=nil;
+end;
+
+FUNCTION T_customFormRequest.getCreatedForm(CONST messages:P_messages): TscriptedForm;
+  begin
+    repeat
+      enterCriticalSection(messageCs);
+      result:=createdForm;
+      leaveCriticalSection(messageCs);
+      ThreadSwitch;
+    until (result<>nil) or not(messages^.continueEvaluation);
+  end;
+
+PROCEDURE T_customFormRequest.setCreatedForm(form:TscriptedForm);
+  begin
+    enterCriticalSection(messageCs);
+    createdForm:=form;
+    leaveCriticalSection(messageCs);
+  end;
+
+DESTRUCTOR T_customFormRequest.destroy;
+  begin
+    inherited destroy;
+    disposeLiteral(setupDef);
+  end;
+
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
                                CONST location: T_tokenLocation; VAR context: T_context;
                                CONST consideredKeys:T_definingMapKeys);

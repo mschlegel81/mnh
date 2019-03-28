@@ -61,6 +61,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE miSaveBeforeRunChange(Sender: TObject);
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
@@ -78,21 +79,21 @@ TYPE
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
   private
-    FUNCTION  getFontSize(CONST c:T_controlType): longint;
     FUNCTION  getOutputLimit: longint;
-    PROCEDURE setFontSize(CONST c:T_controlType; CONST value: longint);
     PROCEDURE setOutputLimit(CONST value: longint);
   public
+    FUNCTION  getFontSize(CONST c:T_controlType): longint;
+    PROCEDURE setFontSize(CONST c:T_controlType; CONST value: longint);
     PROPERTY fontSize[c:T_controlType]:longint read getFontSize write setFontSize;
   end;
 
 FUNCTION SettingsForm: TSettingsForm;
 IMPLEMENTATION
-USES mySys;
+USES mySys,mnh_doc;
 VAR mySettingsForm: TSettingsForm=nil;
 FUNCTION SettingsForm: TSettingsForm;
   begin
-    if mySettingsForm=nil then mySettingsForm:=TSettingsForm.create(nil);
+    if mySettingsForm=nil then mySettingsForm:=TSettingsForm.create(Application);
     result:=mySettingsForm;
   end;
 
@@ -101,6 +102,9 @@ FUNCTION SettingsForm: TSettingsForm;
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
+    ideLayoutUtil.getFontSize_callback:=@getFontSize;
+    ideLayoutUtil.setFontSize_callback:=@setFontSize;
+
     EditorFontButton.caption   :=settings.Font[ctEditor].fontName;
     EditorFontButton.Font.name :=settings.Font[ctEditor].fontName;
     EditorFontButton.Font.size :=settings.Font[ctEditor].fontSize;
@@ -190,6 +194,12 @@ PROCEDURE TSettingsForm.GeneralFontButtonClick(Sender: TObject);
       GeneralFontButton.Font      := EditorFontDialog.Font;
       propagateFont(GeneralFontButton.Font,ctGeneral);
     end;
+  end;
+
+PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
+  begin
+    ideLayoutUtil.setFontSize_callback:=nil;
+    ideLayoutUtil.getFontSize_callback:=nil;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
@@ -341,8 +351,5 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
       guiOutAdapters.outputLinesLimit:=value;
     end;
   end;
-
-FINALIZATION
-  if mySettingsForm<>nil then FreeAndNil(mySettingsForm);
 
 end.

@@ -25,12 +25,12 @@ CONST
     {at_textFile} [mt_printline   ..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
-    {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info,mt_startOfEvaluation],
     {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done],
     {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_table}    [mt_startOfEvaluation,mt_displayTable],
     {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
-    {at_custom...}[mt_startOfEvaluation,mt_displayCustomForm,mt_endOfEvaluation],
+    {at_custom...}[                     mt_displayCustomForm,mt_endOfEvaluation],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -74,6 +74,7 @@ TYPE
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
     PROCEDURE removeDuplicateStoredMessages;
     PROCEDURE clear; virtual;
+    FUNCTION typesOfStoredMessages:T_messageTypeSet;
   end;
 
   P_abstractGuiOutAdapter = ^T_abstractGuiOutAdapter;
@@ -895,6 +896,15 @@ PROCEDURE T_collectingOutAdapter.clear;
     inherited clear;
     for m in storedMessages do disposeMessage(m);
     setLength(storedMessages,0);
+    system.leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_collectingOutAdapter.typesOfStoredMessages:T_messageTypeSet;
+  VAR m:P_storedMessage;
+  begin
+    system.enterCriticalSection(cs);
+    result:=[];
+    for m in storedMessages do include(result,m^.messageType);
     system.leaveCriticalSection(cs);
   end;
 //=======================================================:T_collectingOutAdapter

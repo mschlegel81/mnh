@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,evalThread,mnh_settings,serializationUtil,mnh_doc,mnh_constants;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,editScripts;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -45,8 +45,12 @@ TYPE
       DESTRUCTOR destroy; override;
   end;
 
-  T_mnhIdeForm=class(T_abstractMnhForm)
-    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); virtual; abstract;
+  T_mnhIdeForm=class(TForm)
+    PROCEDURE attachNewForm(CONST form:T_mnhComponentForm);   virtual; abstract;
+    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); virtual; abstract;
+    PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
+    PROCEDURE onDebuggerEvent;                                virtual; abstract;
+    PROCEDURE onEndOfEvaluation;                              virtual; abstract;
   end;
 
 VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
@@ -71,18 +75,25 @@ FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
 
 PROCEDURE registerFontControl(control:TWinControl; CONST controlType:T_controlType);
 PROCEDURE unregisterFontControl(control:TWinControl);
-
 PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
+FUNCTION getFontSize(CONST c:T_controlType): longint;
+PROCEDURE setFontSize (CONST c:T_controlType; CONST value: longint);
+
 PROCEDURE performSlowUpdates;
 PROCEDURE performFastUpdates;
-FUNCTION focusedEditor:TSynEdit;
-FUNCTION typeOfFocusedControl:T_controlType;
+FUNCTION  focusedEditor:TSynEdit;
+FUNCTION  typeOfFocusedControl:T_controlType;
 
 PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
 
 OPERATOR :=(x:byte):TFontStyles;
 OPERATOR :=(x:TFontStyles):byte;
+
+TYPE F_getFontSize= FUNCTION (CONST c:T_controlType): longint of object;
+     F_setFontSize= PROCEDURE (CONST c:T_controlType; CONST value: longint) of object;
+VAR getFontSize_callback:F_getFontSize=nil;
+    setFontSize_callback:F_setFontSize=nil;
 
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
@@ -188,6 +199,24 @@ PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
     settings.Font[controlType].fontName:=newFont.name;
     settings.Font[controlType].fontSize:=newFont.size;
     settings.Font[controlType].style:=newFont.style;
+  end;
+
+FUNCTION getFontSize(CONST c: T_controlType): longint;
+  begin
+    if getFontSize_callback<>nil
+    then exit(getFontSize_callback(c))
+    else result:=settings.Font[c].fontSize;
+  end;
+
+PROCEDURE setFontSize(CONST c: T_controlType; CONST value: longint);
+  VAR e:TControl;
+  begin
+    if setFontSize_callback<>nil
+    then begin setFontSize_callback(c,value); exit; end
+    else begin
+      for e in fontControls[c] do e.Font.size:=value;
+      settings.Font[c].fontSize:=value;
+    end;
   end;
 
 CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
