@@ -100,7 +100,7 @@ TYPE
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
-    PROCEDURE initialize(CONST setupParam:P_literal; CONST setupLocation:T_tokenLocation; CONST setupContext:P_context);
+    PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
@@ -129,19 +129,16 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  { T_customFormAdapter }
-
   P_customFormAdapter = ^T_customFormAdapter;
   T_customFormAdapter = object(T_abstractGuiOutAdapter)
-    CONSTRUCTOR createCustomFormAdapter;
+    scriptedForms: array of TscriptedForm;
+    relatedPlotAdapter:P_guiPlotSystem;
+    CONSTRUCTOR createCustomFormAdapter(CONST plot:P_guiPlotSystem);
     FUNCTION flushToGui:T_messageTypeSet; virtual;
+    DESTRUCTOR destroy; virtual;
   end;
 
-//PROCEDURE freeScriptedForms;
-//PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
 IMPLEMENTATION
-VAR scriptedFormCs:TRTLCriticalSection;
-    scriptedForms: array of TscriptedForm;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -189,51 +186,6 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
     {$I component_outputRedirect.inc}
 {$I component_plotConnector.inc}
 {$I component_worker.inc}
-//TODO: Move to T_customFormAdapter
-//PROCEDURE conditionalShowCustomForms(CONST messages:P_messages);
-//  VAR index:longint=0;
-//      k:longint;
-//  begin
-//    enterCriticalSection(scriptedFormCs);
-//    while index<length(scriptedForms) do begin
-//      if scriptedForms[index].markedForCleanup then begin
-//        FreeAndNil(    scriptedForms[index]);
-//        for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
-//        setLength(scriptedForms,length(scriptedForms)-1);
-//      end else begin
-//        scriptedForms[index].conditionalShow(messages);
-//        inc(index);
-//      end;
-//    end;
-//    leaveCriticalSection(scriptedFormCs);
-//  end;
-
-//TODO: Move to T_customFormAdapter
-//FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation):TscriptedForm;
-//  begin
-//    enterCriticalSection(scriptedFormCs);
-//    result:=TscriptedForm.create(nil);
-//    result.setupLocation:=errorLocation;
-//    result.setupParam:=definition;
-//    result.setupContext:=context;
-//    result.caption:=title;
-//    definition^.rereferenced;
-//    result.displayPending:=true;
-//    setLength(scriptedForms,length(scriptedForms)+1);
-//    scriptedForms[length(scriptedForms)-1]:=result;
-//    leaveCriticalSection(scriptedFormCs);
-//  end;
-
-PROCEDURE freeScriptedForms;
-  VAR k:longint;
-  begin
-    enterCriticalSection(scriptedFormCs);
-    for k:=0 to length(scriptedForms)-1 do begin
-      FreeAndNil(scriptedForms[k]);
-    end;
-    setLength(scriptedForms,0);
-    leaveCriticalSection(scriptedFormCs);
-  end;
 
 CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
                                     CONST location: T_tokenLocation; VAR context: T_context;
@@ -484,22 +436,21 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
   end;
 
 FUNCTION TscriptedForm.getIdeComponentType: T_ideComponent;
-begin
-
-end;
+  begin
+    result:=icCustomForm;
+  end;
 
 PROCEDURE TscriptedForm.performSlowUpdate;
-begin
+  begin
 
-end;
+  end;
 
 PROCEDURE TscriptedForm.performFastUpdate;
-begin
+  begin
 
-end;
+  end;
 
-PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
-  CONST setupLocation: T_tokenLocation; CONST setupContext: P_context);
+PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
   TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid);
   CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid');
 
@@ -567,7 +518,7 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
         tc_console:      begin new(consoleMeta ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
         tc_worker:       begin new(workerMeta  ,create(          P_mapLiteral(def),setupLocation,setupContext^)); addMeta(workerMeta); end;
         tc_plot:         if plotLink=nil then begin;
-          new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
+          new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
           addMeta(plotLink);
         end else setupContext^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_panel:begin
@@ -720,14 +671,52 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
     end;
   end;
 
+CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter(CONST plot:P_guiPlotSystem);
+  begin
+    inherited create(at_customForm,[mt_displayCustomForm,mt_endOfEvaluation]);
+    setLength(scriptedForms,0);
+    relatedPlotAdapter:=plot;
+  end;
+
+FUNCTION T_customFormAdapter.flushToGui: T_messageTypeSet;
+  VAR m:P_storedMessage;
+      k:longint;
+      newForm:TscriptedForm;
+  begin
+    result:=[];
+    enterCriticalSection(cs);
+    for m in storedMessages do case m^.messageType of
+      mt_endOfEvaluation: begin
+        for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
+        setLength(scriptedForms,0);
+        include(result,m^.messageType);
+      end;
+      mt_displayCustomForm: with P_customFormRequest(m)^ do begin
+        newForm:=TscriptedForm.create(Application);
+        newForm.displayPending:=true;
+        newForm.caption:=setupTitle;
+        setLength(scriptedForms,length(scriptedForms)+1);
+        scriptedForms[length(scriptedForms)-1]:=newForm;
+        newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
+        setCreatedForm(newForm);
+        include(result,m^.messageType);
+      end;
+    end;
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_customFormAdapter.destroy;
+  VAR k:longint;
+  begin
+    enterCriticalSection(cs);
+    for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
+    setLength(scriptedForms,0);
+    leaveCriticalSection(cs);
+  end;
+
 INITIALIZATION
-  initialize(scriptedFormCs);
-  initCriticalSection(scriptedFormCs);
-  setLength(scriptedForms,0);
   registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
 
-FINALIZATION
-  freeScriptedForms;
-  doneCriticalSection(scriptedFormCs);
 end.
 

@@ -16,33 +16,6 @@ TYPE
     FUNCTION getName:string; virtual;
   end;
 
-{ T_customFormAdapter }
-
-CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter;
-  begin
-    inherited create(at_customForm,[mt_displayCustomForm,mt_endOfEvaluation]);
-  end;
-
-FUNCTION T_customFormAdapter.flushToGui: T_messageTypeSet;
-  VAR m:P_storedMessage;
-  begin
-    result:=[];
-    enterCriticalSection(cs);
-    for m in storedMessages do case m^.messageType of
-      mt_endOfEvaluation: begin
-        //TODO: Clear all custom forms associated with this adapter here!
-
-      end;
-      mt_displayCustomForm: begin
-        //TODO: create and show custom form here!
-      end;
-    end;
-    clear;
-    leaveCriticalSection(cs);
-  end;
-
-{ T_customFormRequest }
-
 FUNCTION T_customFormRequest.internalType: shortstring;
   begin
     result:='T_customFormRequest';

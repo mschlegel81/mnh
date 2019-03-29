@@ -54,8 +54,6 @@ TYPE
 IMPLEMENTATION
 {$R *.lfm}
 
-{ T_ideStdOutAdapter }
-
 CONSTRUCTOR T_ideStdOutAdapter.create(CONST parent_: P_messages);
   begin
     parent:=parent_;

@@ -22,10 +22,14 @@ TYPE
     private
       myPlotForm:TplotForm;
       cap:string;
+      connected:boolean;
+      PROCEDURE ensureForm;
     public
       CONSTRUCTOR create(CONST plotFormCaption:string='MNH plot');
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
+      FUNCTION plotFormForConnecting:TplotForm;
+      PROCEDURE disconnect;
   end;
 
   PMouseEvent=PROCEDURE(CONST realPoint:T_point) of object;
@@ -185,14 +189,7 @@ VAR mainFormCoordinatesLabel:TLabel;
 
 { T_guiPlotSystem }
 
-CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption:string='MNH plot');
-  begin
-    inherited create(@doPlot,false);
-    cap:=plotFormCaption;
-    myPlotForm:=nil;
-  end;
-
-PROCEDURE T_guiPlotSystem.doPlot;
+PROCEDURE T_guiPlotSystem.ensureForm;
   begin
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(Application);
@@ -202,6 +199,19 @@ PROCEDURE T_guiPlotSystem.doPlot;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm.relatedPlot:=@self;
     end;
+  end;
+
+CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);
+  begin
+    inherited create(@doPlot,false);
+    cap:=plotFormCaption;
+    myPlotForm:=nil;
+    connected:=false;
+  end;
+
+PROCEDURE T_guiPlotSystem.doPlot;
+  begin
+    ensureForm;
     myPlotForm.doPlot;
   end;
 
@@ -211,32 +221,21 @@ PROCEDURE T_guiPlotSystem.formDestroyed;
     myPlotForm:=nil;
   end;
 
-//VAR //myPlotForm:TplotForm=nil;
-//    main:T_abstractMnhForm;
+FUNCTION T_guiPlotSystem.plotFormForConnecting: TplotForm;
+  begin
+    connected:=true;
+    ensureForm;
+    result:=myPlotForm;
+  end;
 
-//FUNCTION plotForm: TplotForm;
-//  begin
-//    if myPlotForm=nil then begin
-//      myPlotForm:=TplotForm.create(Application);
-//      myPlotForm.pullPlotSettingsToGui();
-//      dockNewForm(myPlotForm);
-//    end;
-//    result:=myPlotForm;
-//  end;
-//
-//FUNCTION plotFormIsInitialized:boolean;
-//  begin
-//    result:=myPlotForm<>nil;
-//  end;
-//
-//PROCEDURE resetPlot(CONST hideWindow:boolean);
-//  begin
-//    if myPlotForm=nil then exit;
-//    myPlotForm.closedByUser:=false;
-//    myPlotForm.onPlotRescale   :=nil;
-//    myPlotForm.onPlotMouseClick:=nil;
-//    myPlotForm.onPlotMouseMove :=nil;
-//  end;
+PROCEDURE T_guiPlotSystem.disconnect;
+  begin
+    connected:=false;
+    if myPlotForm=nil then exit;
+    myPlotForm.onPlotRescale:=nil;
+    myPlotForm.onPlotMouseClick:=nil;
+    myPlotForm.onPlotMouseMove:=nil;
+  end;
 
 {$R *.lfm}
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
@@ -265,7 +264,6 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
-//    plotSystem.registerPlotForm(@pullPlotSettingsToGui);
     eTimer:=TEpikTimer.create(self);
     eTimer.clear;
     eTimer.start;

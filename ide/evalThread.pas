@@ -113,7 +113,7 @@ FUNCTION newConsoleAdapter   (CONST owner:TForm; CONST outputEdit:TSynEdit):P_sy
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem; begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
-FUNCTION newCustomFormAdapter(CONST caption:string      ):P_customFormAdapter;  begin new(result,createCustomFormAdapter); end;
+FUNCTION newCustomFormAdapter(CONST plot:P_guiPlotSystem):P_customFormAdapter;  begin new(result,createCustomFormAdapter(plot)); end;
 FUNCTION newGuiEventsAdapter (CONST guiForm:T_mnhIdeForm):P_guiEventsAdapter;   begin new(result,create(guiForm)); end;
 
 CONSTRUCTOR T_abstractEvaluation.init(CONST kind: T_evaluationKind);
@@ -139,28 +139,32 @@ DESTRUCTOR T_abstractEvaluation.destroy;
   end;
 
 CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
+  VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_normal);
     new(standardOutput,create(@self));
-    messages.addOutAdapter(standardOutput                              ,true);
-    messages.addOutAdapter(newPlotAdapter      ('MNH plot')            ,true);
-    messages.addOutAdapter(newTableAdapter     ('MNH table')           ,true);
-    messages.addOutAdapter(newTreeAdapter      ('MNH tree view')       ,true);
-    messages.addOutAdapter(newCustomFormAdapter('MNH custom form')     ,true);
-    messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
+    messages.addOutAdapter(standardOutput                       ,true);
+    plot:=                 newPlotAdapter      ('MNH plot');
+    messages.addOutAdapter(newCustomFormAdapter(           plot),true);
+    messages.addOutAdapter(                                plot ,true);
+    messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
+    messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+    messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
     {$ifdef debugMode}
     messages.addConsoleOutAdapter('v');
     {$endif}
   end;
 
 CONSTRUCTOR T_quickEvaluation.create(CONST outputOwner:TForm; CONST outputEdit:TSynEdit);
+  VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_quick);
     messages.addOutAdapter(newConsoleAdapter   (outputOwner,outputEdit),true);
-    messages.addOutAdapter(newPlotAdapter      ('Quick plot')          ,true);
+    plot:=                 newPlotAdapter      ('Quick plot') ;
+    messages.addOutAdapter(newCustomFormAdapter(                  plot),true);
+    messages.addOutAdapter(                                       plot ,true);
     messages.addOutAdapter(newTableAdapter     ('Quick table')         ,true);
     messages.addOutAdapter(newTreeAdapter      ('Quick tree view')     ,true);
-    messages.addOutAdapter(newCustomFormAdapter('Quick custom form')   ,true);
   end;
 
 CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_ideStdOutAdapter; CONST mainForm:T_mnhIdeForm);
@@ -173,13 +177,15 @@ CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_ideStdOutAdapter; 
   end;
 
 CONSTRUCTOR T_reevaluationWithGui.create();
+  VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_quick);
     messages.addConsoleOutAdapter(cmdLineInterpretation.verbosityString);
-    messages.addOutAdapter(newPlotAdapter      ('MNH plot')            ,true);
-    messages.addOutAdapter(newTableAdapter     ('MNH table')           ,true);
-    messages.addOutAdapter(newTreeAdapter      ('MNH tree view')       ,true);
-    messages.addOutAdapter(newCustomFormAdapter('MNH custom form')     ,true);
+    plot:=                 newPlotAdapter      ('MNH plot');
+    messages.addOutAdapter(newCustomFormAdapter(           plot),true);
+    messages.addOutAdapter(                                plot ,true);
+    messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
+    messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     system.enterCriticalSection(evaluationCs);
     if cmdLineInterpretation.profilingRun
     then evalRequest.contextType:=ect_profiling
