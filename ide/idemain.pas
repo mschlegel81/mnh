@@ -605,12 +605,13 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       edit:=workspace.currentEditor;
       if (edit<>nil) then begin
         edit^.pollAssistanceResult;
-      end;
+        EditLocationLabel.caption:=edit^.caretLabel;
+      end else EditLocationLabel.caption:='';
       performSlowUpdates;
       drawMemoryUsage;
 
       FormDropFiles(Sender,ipcModel.getFilesToOpen);
-
+      evaluationStateLabel.caption:=runnerModel.getStateLabel;
       if quitPosted and not(anyEvaluationRunning) then close;
     end;
 

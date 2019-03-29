@@ -1500,6 +1500,7 @@ FUNCTION T_plotSystem.requiresFastPolling:boolean;
 FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
+      m:P_storedMessage;
   begin
     enterCriticalSection(cs);
     result:=[];
@@ -1508,14 +1509,14 @@ FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
     lastDisplayIndex:=-1;
     for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
     //process messages
-    for i:=0 to length(storedMessages)-1 do begin
-      include(result,storedMessages[i]^.messageType);
-      if storedMessages[i]^.messageType=mt_plot_postDisplay
+    for m in storedMessages do begin
+      include(result,m^.messageType);
+      if m^.messageType=mt_plot_postDisplay
       then begin
         if i=lastDisplayIndex
-        then processMessage(storedMessages[i])
-        else P_plotDisplayRequest(storedMessages[i])^.markExecuted;
-      end else processMessage(storedMessages[i]);
+        then processMessage(m)
+        else P_plotDisplayRequest(m)^.markExecuted;
+      end else processMessage(m);
     end;
     clear;
     leaveCriticalSection(cs);

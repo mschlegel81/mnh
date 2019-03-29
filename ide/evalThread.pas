@@ -28,6 +28,17 @@ TYPE
   T_evaluationKind = (ek_normal,ek_quick,ek_editScript);
   T_evaluationState= (es_pending, es_running,es_debugRunning,es_debugHalted,es_finished,es_stoppedByUser);
 
+CONST
+  C_evaluationState:array [T_evaluationState] of record
+    txt: string;
+    showTime: byte; //0: no, 1: yes, difference, 2: yes, absolute
+  end={es_pending}     ((txt: 'Pending execution...'; showTime:0),
+      {es_running}      (txt: 'Evaluating ';          showTime:1),
+      {es_debugRunning} (txt: 'Debugging ';           showTime:1),
+      {es_debugHalted}  (txt: 'HALTED ';              showTime:1),
+      {es_finished}     (txt: 'Finished after ';      showTime:2),
+      {es_stoppedByUser}(txt: 'Abortet after ';       showTime:2));
+TYPE
   P_abstractEvaluation = ^T_abstractEvaluation;
   T_abstractEvaluation = object
     private
@@ -52,6 +63,7 @@ TYPE
       PROCEDURE postHalt;
       FUNCTION isRunning:boolean;
       FUNCTION flushMessages:T_messageTypeSet;
+      FUNCTION stateString:string;
   end;
 
   T_standardEvaluation = object(T_abstractEvaluation)
@@ -211,6 +223,7 @@ FUNCTION evaluationThread(p:pointer):ptrint;
       then state:=es_stoppedByUser
       else state:=es_finished;
       evalTime:=now-evalTime;
+      messages.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
       leaveCriticalSection(evaluationCs);
     end;
     interlockedDecrement(evaluationThreadsRunning);
@@ -449,6 +462,17 @@ FUNCTION T_abstractEvaluation.flushMessages:T_messageTypeSet;
   begin
     enterCriticalSection(evaluationCs);
     result:=messages.flushToGui;
+    leaveCriticalSection(evaluationCs);
+  end;
+
+FUNCTION T_abstractEvaluation.stateString:string;
+  begin
+    enterCriticalSection(evaluationCs);
+    result:=C_evaluationState[state].txt;
+    case C_evaluationState[state].showTime of
+      1: result+=myTimeToStr(now-evalTime);
+      2: result+=myTimeToStr(    evalTime);
+    end;
     leaveCriticalSection(evaluationCs);
   end;
 

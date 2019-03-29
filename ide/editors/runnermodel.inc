@@ -38,6 +38,7 @@ T_runnerModel=object(T_serializable)
     FUNCTION anyRunning:boolean;
     PROCEDURE showOutputForm;
     PROCEDURE flushMessages;
+    FUNCTION getStateLabel:string;
 
     FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
@@ -178,6 +179,11 @@ PROCEDURE T_runnerModel.flushMessages;
   begin
     evaluation.flushMessages;
     if not(evaluation.isRunning) then scriptEval.flushMessages;
+  end;
+
+FUNCTION T_runnerModel.getStateLabel:string;
+  begin
+    result:=evaluation.stateString;
   end;
 
 FUNCTION T_runnerModel.getSerialVersion:dword;
