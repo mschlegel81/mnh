@@ -116,10 +116,12 @@ FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
       tree:TVarTreeViewForm;
       caption:string;
   begin
+    result:=[];
     enterCriticalSection(cs);
     for m in storedMessages do case m^.messageType of
       mt_displayVariableTree:
         begin
+          include(result,m^.messageType);
           tree:=TVarTreeViewForm.create(nil);
           setLength(treeForms,length(treeForms)+1);
           treeForms[length(treeForms)-1]:=tree;
@@ -133,6 +135,7 @@ FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
         end;
       mt_startOfEvaluation:
         begin
+          include(result,m^.messageType);
           for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
           setLength(treeForms,0);
         end;

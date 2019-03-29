@@ -5,8 +5,8 @@ UNIT debuggerForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, ComCtrls, SynEdit,
-  ideLayoutUtil, debuggingVar, debugging, debuggerVarForms;
+  sysutils, Forms, Controls, ComCtrls, SynEdit,
+  ideLayoutUtil, debugging;
 
 TYPE
 

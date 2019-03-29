@@ -170,14 +170,13 @@ TYPE
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
 
+  {$ifdef fullVersion}
   P_guiMessagesDistributor = ^T_guiMessagesDistributor;
-
-  { T_guiMessagesDistributor }
-
   T_guiMessagesDistributor = object(T_messagesDistributor)
     CONSTRUCTOR createGuiMessagesDistributor();
     FUNCTION flushToGui:T_messageTypeSet;
   end;
+  {$endif}
 
   P_messagesRedirector=^T_messagesRedirector;
   T_messagesRedirector=object(T_messagesDistributor)
@@ -319,8 +318,7 @@ OPERATOR :=(s:string):T_messageTypeSet;
     end;
   end;
 
-{ T_guiMessagesDistributor }
-
+{$ifdef fullVersion}
 CONSTRUCTOR T_guiMessagesDistributor.createGuiMessagesDistributor();
   begin
     inherited createDistributor();
@@ -333,10 +331,12 @@ FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
     for a in adapters do if a.adapter^.adapterType in
     [at_guiSynOutput,
      at_guiEventsCollector,
+     at_customForm,
      at_plot,
      at_table,
      at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui;
   end;
+{$endif}
 
 CONSTRUCTOR T_messagesRedirector.createRedirector();
   begin

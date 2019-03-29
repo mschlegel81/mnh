@@ -139,10 +139,12 @@ FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
       tab:TtableForm;
       caption:string;
   begin
+    result:=[];
     enterCriticalSection(cs);
     for m in storedMessages do case m^.messageType of
       mt_displayTable:
         begin
+          include(result,m^.messageType);
           tab:=TtableForm.create(nil);
           setLength(tableForms,length(tableForms)+1);
           tableForms[length(tableForms)-1]:=tab;
@@ -157,6 +159,7 @@ FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
         end;
       mt_startOfEvaluation:
         begin
+          include(result,m^.messageType);
           for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
           setLength(tableForms,0);
         end;

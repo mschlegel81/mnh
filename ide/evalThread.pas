@@ -48,7 +48,6 @@ TYPE
       PROCEDURE executeInNewThread(CONST debugging:boolean=false);
     public
       DESTRUCTOR destroy; virtual;
-      FUNCTION getState:T_evaluationState; virtual; abstract;
       PROCEDURE haltEvaluation;
       PROCEDURE postHalt;
       FUNCTION isRunning:boolean;
