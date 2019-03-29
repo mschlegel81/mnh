@@ -153,6 +153,7 @@ FUNCTION T_treeDisplayRequest.internalType: shortstring;
 
 CONSTRUCTOR T_treeDisplayRequest.create(CONST L: P_literal; CONST newCaption: string);
   begin
+    inherited create(mt_displayVariableTree);
     treeCaption:=newCaption;
     treeContent:=L^.rereferenced;
   end;

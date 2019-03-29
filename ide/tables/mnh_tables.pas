@@ -103,7 +103,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
   VAR caption:string='';
       header:boolean=false;
       i:longint;
-      Post:P_tableDisplayRequest;
+      tableDisplayRequest:P_tableDisplayRequest;
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
     if not(gui_started) then begin
@@ -120,9 +120,11 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
           else exit(nil);
         end;
       end;
-      new(Post,create(P_listLiteral(params^.value[0]),caption,header));
-      context.messages^.postCustomMessage(Post,true);
-      if gui_started then result:=newVoidLiteral else result:=nil;
+      if gui_started then begin
+        new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,header));
+        context.messages^.postCustomMessage(tableDisplayRequest,true);
+        result:=newVoidLiteral;
+      end else result:=nil;
     end else result:=nil;
   end;
 
@@ -176,6 +178,7 @@ FUNCTION T_tableDisplayRequest.internalType: shortstring;
 CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral;
   CONST newCaption: string; CONST firstIsHeader_: boolean);
 begin
+  inherited create(mt_displayTable);
   tableContent:=P_listLiteral(L^.rereferenced);
   tableCaption:=newCaption;
   firstIsHeader:=firstIsHeader_;

@@ -26,6 +26,7 @@ TYPE
       PROCEDURE ensureForm;
     public
       CONSTRUCTOR create(CONST plotFormCaption:string='MNH plot');
+      DESTRUCTOR destroy; virtual;
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
       FUNCTION plotFormForConnecting:TplotForm;
@@ -170,10 +171,6 @@ TYPE
     FUNCTION wantTimerInterval:longint;
   end;
 
-//FUNCTION plotForm: TplotForm;
-//FUNCTION plotFormIsInitialized:boolean;
-//PROCEDURE resetPlot(CONST hideWindow:boolean);
-
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
 IMPLEMENTATION
 USES sysutils, FileUtil,
@@ -193,11 +190,11 @@ PROCEDURE T_guiPlotSystem.ensureForm;
   begin
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(Application);
-      myPlotForm.pullPlotSettingsToGui();
       myPlotForm.caption:=cap;
-      dockNewForm(myPlotForm);
-      pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm.relatedPlot:=@self;
+      pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
+      myPlotForm                    .pullPlotSettingsToGui();
+      dockNewForm(myPlotForm);
     end;
   end;
 
@@ -206,6 +203,16 @@ CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);
     inherited create(@doPlot,false);
     cap:=plotFormCaption;
     myPlotForm:=nil;
+    connected:=false;
+  end;
+
+DESTRUCTOR T_guiPlotSystem.destroy;
+  begin
+    if myPlotForm<>nil then begin
+      disconnect;
+      myPlotForm.relatedPlot:=nil;
+      FreeAndNil(myPlotForm);
+    end;
     connected:=false;
   end;
 
@@ -276,7 +283,7 @@ PROCEDURE TplotForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
   begin
-    relatedPlot^.formDestroyed;
+    if relatedPlot<>nil then relatedPlot^.formDestroyed;
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
@@ -290,9 +297,6 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
     miIncFontSize.ShortCut:=16605;
     {$endif}
     position:=poDefault;
-    //if anyFormShowing(ft_main)
-    //then ShowInTaskBar:=stDefault
-    //else ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
@@ -665,6 +669,7 @@ PROCEDURE TplotForm.doPlot;
     end;
 
   begin
+    if relatedPlot=nil then exit;
     updateAttachment;
     showComponent;
     relatedPlot^.startGuiInteraction;
@@ -689,6 +694,7 @@ FUNCTION TplotForm.timerTick: boolean;
     end;
 
   begin
+    if relatedPlot=nil then exit;
     result:=false;
     relatedPlot^.startGuiInteraction;
     if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin

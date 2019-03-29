@@ -118,7 +118,8 @@ CONST
   C_runningStates:set of T_evaluationState=[es_running,es_debugRunning,es_debugHalted];
 
 IMPLEMENTATION
-USES tokenArray;
+USES mnh_constants,
+     tokenArray;
 
 FUNCTION newConsoleAdapter   (CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;      begin new(result,create(owner,outputEdit)); end;
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem; begin new(result,create(caption)); end;
@@ -201,7 +202,8 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     if cmdLineInterpretation.profilingRun
     then evalRequest.contextType:=ect_profiling
     else evalRequest.contextType:=ect_normal;
-    //TODO: Take headless options etc. from command line into account
+    if cmdLineInterpretation.headless
+    then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
     evalRequest.callMain:=true;
     evalRequest.paramters:=cmdLineInterpretation.mainParameters;
     state:=es_pending;

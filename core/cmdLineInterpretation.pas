@@ -41,6 +41,7 @@ VAR mainParameters:T_arrayOfString;
     reEvaluationWithGUIrequired:boolean=false;
     pauseAtEnd:boolean=false;
     pauseOnError:boolean=false;
+    headless:boolean=false;
     {$ifdef fullVersion}
     profilingRun:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
@@ -135,7 +136,6 @@ PROCEDURE displayHelp;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_messagesDistributor;
       wantHelpDisplay:boolean=false;
-      headless:boolean=false;
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit)=pst_initial;
       quitImmediate:boolean=false;
       memCheckerStarted:boolean=false;

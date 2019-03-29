@@ -167,7 +167,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash;
+USES mnh_splash,out_adapters;
 {$R ideMain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -228,6 +228,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
+    gui_started:=true;
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -598,15 +599,9 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     end;
 
   PROCEDURE slowUpdates; inline;
-    VAR edit:P_editorMeta;
     begin
       if workspace.savingRequested then saveIdeSettings;
 
-      edit:=workspace.currentEditor;
-      if (edit<>nil) then begin
-        edit^.pollAssistanceResult;
-        EditLocationLabel.caption:=edit^.caretLabel;
-      end else EditLocationLabel.caption:='';
       performSlowUpdates;
       drawMemoryUsage;
 
@@ -616,7 +611,14 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     end;
 
   PROCEDURE fastUpdates; inline;
+    VAR edit:P_editorMeta;
     begin
+      edit:=workspace.currentEditor;
+      if (edit<>nil) then begin
+        edit^.pollAssistanceResult;
+        EditLocationLabel.caption:=edit^.caretLabel;
+      end else EditLocationLabel.caption:='';
+
       performFastUpdates;
       runnerModel.flushMessages;
     end;
