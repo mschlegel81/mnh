@@ -1,0 +1,57 @@
+object GotoLineDialog: TGotoLineDialog
+  Left = 799
+  Height = 360
+  Top = 176
+  Width = 480
+  AutoSize = True
+  Caption = 'Goto Line'
+  ClientHeight = 360
+  ClientWidth = 480
+  DesignTimePPI = 144
+  LCLVersion = '2.0.0.4'
+  object lineNumberEdit: TEdit
+    Left = 0
+    Height = 33
+    Top = 0
+    Width = 480
+    Align = alTop
+    NumbersOnly = True
+    OnKeyPress = lineNumberEditKeyPress
+    TabOrder = 0
+  end
+  object okButton: TButton
+    AnchorSideLeft.Control = lineNumberEdit
+    AnchorSideTop.Control = lineNumberEdit
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = cancelButton
+    Left = 0
+    Height = 35
+    Top = 33
+    Width = 403
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = True
+    Caption = 'Go'
+    ModalResult = 1
+    TabOrder = 1
+  end
+  object cancelButton: TButton
+    AnchorSideLeft.Control = okButton
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = lineNumberEdit
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = lineNumberEdit
+    AnchorSideRight.Side = asrBottom
+    Left = 403
+    Height = 35
+    Top = 33
+    Width = 77
+    Align = alCustom
+    Anchors = [akTop, akRight]
+    AutoSize = True
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 2
+  end
+end

@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="46">
+    <Units Count="47">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -371,6 +371,14 @@
         <Filename Value="../core/funcs_strings.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit45>
+      <Unit46>
+        <Filename Value="editors/gotolinedialogs.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="GotoLineDialog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="gotoLineDialogs"/>
+      </Unit46>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -10,7 +10,7 @@ USES
   editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages,
-  closeDialog;
+  closeDialog, gotoLineDialogs,SynEdit;
 
 TYPE
 
@@ -355,8 +355,14 @@ PROCEDURE TIdeMainForm.miFindPreviousClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
+  VAR meta:P_editorMeta;
   begin
-    //TODO: Implement me
+    if (ActiveControl.ClassName='TSynEdit')
+    then gotoLineByDialog(TSynEdit(ActiveControl))
+    else begin
+      meta:=workspace.currentEditor;
+      if meta<>nil then gotoLineByDialog(meta^.editor);
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
