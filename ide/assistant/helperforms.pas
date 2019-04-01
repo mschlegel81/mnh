@@ -5,8 +5,8 @@ UNIT helperForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,ideLayoutUtil,SynHighlighterMnh,
-  editorMeta,mnh_settings;
+  sysutils, Forms, Controls, Dialogs, SynEdit,ideLayoutUtil,SynHighlighterMnh,
+  editorMeta, mnh_settings;
 
 TYPE
 
@@ -14,7 +14,7 @@ TYPE
 
   THelpForm = class(T_mnhComponentForm)
     SynEdit1: TSynEdit;
-    highlighter:TSynMnhSyn;
+    helpHighlighter:TSynMnhSyn;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -28,6 +28,7 @@ TYPE
 
 PROCEDURE ensureHelpForm;
 IMPLEMENTATION
+USES editorMetaBase;
 
 PROCEDURE ensureHelpForm;
   begin
@@ -38,9 +39,11 @@ PROCEDURE ensureHelpForm;
 
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
+    //TODO: Can we add a link to the html documentation ?
+    //Example: openUrl('file:///C:/Users/Martin%20Schlegel/AppData/Local/MNH/doc/builtin.html#math.argMin');
     registerFontControl(SynEdit1,ctEditor);
-    highlighter.create(self,msf_help);
-    SynEdit1.highlighter:=highlighter;
+    helpHighlighter:=TSynMnhSyn.create(self,msf_help);
+    SynEdit1.highlighter:=helpHighlighter;
   end;
 
 PROCEDURE THelpForm.FormDestroy(Sender: TObject);
@@ -54,7 +57,12 @@ FUNCTION THelpForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE THelpForm.performSlowUpdate;
+  VAR meta:P_editorMeta;
   begin
+    if not(showing) then exit;
+    meta:=workspace.currentEditor;
+    if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
+    meta^.setUnderCursor(false,true);
     SynEdit1.text:=getHelpText;
   end;
 

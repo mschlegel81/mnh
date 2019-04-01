@@ -64,7 +64,9 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE triggerCheck;
     PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
+  public
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
+  private
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
     PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
 
