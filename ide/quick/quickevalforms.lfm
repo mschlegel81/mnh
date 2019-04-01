@@ -21,7 +21,16 @@ object QuickEvalForm: TQuickEvalForm
     Caption = 'evaluate in current package'
     TabOrder = 0
   end
-  inline quickInputEdit: TSynEdit
+  object Splitter1: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 8
+    Top = 254
+    Width = 480
+    Align = alTop
+    ResizeAnchor = akTop
+  end
+  inline quickInputSynEdit: TSynEdit
     Left = 0
     Height = 225
     Top = 29
@@ -33,8 +42,8 @@ object QuickEvalForm: TQuickEvalForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
-    TabOrder = 1
-    Gutter.Width = 17
+    TabOrder = 2
+    Gutter.Width = 77
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -462,6 +471,9 @@ object QuickEvalForm: TQuickEvalForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
+    Lines.Strings = (
+      'quickInputSynEdit'
+    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
@@ -481,8 +493,11 @@ object QuickEvalForm: TQuickEvalForm
     MouseLinkColor.Foreground = clBlue
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
-    OnChange = quickInputEditChange
     inline SynLeftGutterPartList1: TSynGutterPartList
+      object SynGutterMarks1: TSynGutterMarks
+        Width = 36
+        MouseActions = <>
+      end
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17
         MouseActions = <>
@@ -492,6 +507,26 @@ object QuickEvalForm: TQuickEvalForm
         ShowOnlyLineNumbersMultiplesOf = 1
         ZeroStart = False
         LeadingZeros = False
+      end
+      object SynGutterChanges1: TSynGutterChanges
+        Width = 6
+        MouseActions = <>
+        ModifiedColor = 59900
+        SavedColor = clGreen
+      end
+      object SynGutterSeparator1: TSynGutterSeparator
+        Width = 3
+        MouseActions = <>
+        MarkupInfo.Background = clWhite
+        MarkupInfo.Foreground = clGray
+      end
+      object SynGutterCodeFolding1: TSynGutterCodeFolding
+        Width = 15
+        MouseActions = <>
+        MarkupInfo.Background = clNone
+        MarkupInfo.Foreground = clGray
+        MouseActionsExpanded = <>
+        MouseActionsCollapsed = <>
       end
     end
   end
@@ -508,8 +543,8 @@ object QuickEvalForm: TQuickEvalForm
     ParentColor = False
     ParentFont = False
     PopupMenu = OutputPopupMenu
-    TabOrder = 2
-    Gutter.Width = 17
+    TabOrder = 3
+    Gutter.Width = 77
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -937,6 +972,9 @@ object QuickEvalForm: TQuickEvalForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
+    Lines.Strings = (
+      'quickOutputSynEdit'
+    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     SelectedColor.BackPriority = 50
@@ -958,6 +996,10 @@ object QuickEvalForm: TQuickEvalForm
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
+      object SynGutterMarks1: TSynGutterMarks
+        Width = 36
+        MouseActions = <>
+      end
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17
         MouseActions = <>
@@ -968,16 +1010,27 @@ object QuickEvalForm: TQuickEvalForm
         ZeroStart = False
         LeadingZeros = False
       end
+      object SynGutterChanges1: TSynGutterChanges
+        Width = 6
+        MouseActions = <>
+        ModifiedColor = 59900
+        SavedColor = clGreen
+      end
+      object SynGutterSeparator1: TSynGutterSeparator
+        Width = 3
+        MouseActions = <>
+        MarkupInfo.Background = clWhite
+        MarkupInfo.Foreground = clGray
+      end
+      object SynGutterCodeFolding1: TSynGutterCodeFolding
+        Width = 15
+        MouseActions = <>
+        MarkupInfo.Background = clNone
+        MarkupInfo.Foreground = clGray
+        MouseActionsExpanded = <>
+        MouseActionsCollapsed = <>
+      end
     end
-  end
-  object Splitter1: TSplitter
-    Cursor = crVSplit
-    Left = 0
-    Height = 8
-    Top = 254
-    Width = 480
-    Align = alTop
-    ResizeAnchor = akTop
   end
   object OutputPopupMenu: TPopupMenu
     left = 257

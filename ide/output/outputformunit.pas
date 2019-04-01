@@ -41,6 +41,8 @@ TYPE
   public
   end;
 
+  { T_ideStdOutAdapter }
+
   T_ideStdOutAdapter=object(T_synOutAdapter)
     private
       parent:P_messages;
@@ -49,6 +51,7 @@ TYPE
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROCEDURE ensureForm;
       PROCEDURE showForm;
+      DESTRUCTOR destroy;
   end;
 
 IMPLEMENTATION
@@ -84,6 +87,11 @@ PROCEDURE T_ideStdOutAdapter.showForm;
     TOutputForm(synOwnerForm).showComponent;
   end;
 
+DESTRUCTOR T_ideStdOutAdapter.destroy;
+  begin
+    if synOwnerForm<>nil then TOutputForm(synOwnerForm).associatedAdapter:=nil;
+  end;
+
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(OutputSynEdit,ctEditor);
@@ -103,6 +111,7 @@ PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
 
 PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
   begin
+    if associatedAdapter<>nil then
     associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
   end;
 
@@ -113,7 +122,7 @@ FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TOutputForm.updateWordWrap;
   begin
-    if outputBehavior.echo_wrapping
+    if (associatedAdapter<>nil) and outputBehavior.echo_wrapping
     then associatedAdapter^.parent^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
     else associatedAdapter^.parent^.preferredEchoLineLength:=-1;
 
@@ -137,6 +146,7 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
+    if associatedAdapter=nil then exit;
     associatedAdapter^.outputBehavior:=outputBehavior;
     associatedAdapter^.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
@@ -152,6 +162,7 @@ PROCEDURE TOutputForm.performSlowUpdate;
 PROCEDURE TOutputForm.performFastUpdate;
   VAR oldActive:TWinControl;
   begin
+    if associatedAdapter=nil then exit;
     associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
     if not(cbFreezeOutput.checked) then begin
       if (associatedAdapter^.flushToGui<>[])

@@ -7,12 +7,9 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
   Menus, SynEdit, ideLayoutUtil, SynHighlighterMnh, editorMeta, editorMetaBase,
-  mnh_settings,guiOutAdapters;
+  mnh_settings,guiOutAdapters,evalThread,codeAssistance;
 
 TYPE
-//TODO: This form has it's own evaluator!
-  { TQuickEvalForm }
-
   TQuickEvalForm = class(T_mnhComponentForm)
     cbEvaluateInCurrentPackage: TCheckBox;
     MenuItem1: TMenuItem;
@@ -28,9 +25,9 @@ TYPE
     miWrapEcho: TMenuItem;
     OutputPopupMenu: TPopupMenu;
     Splitter1: TSplitter;
-    quickOutputSynEdit: TSynEdit;
     outputHighlighter:TSynMnhSyn;
-    quickInputEdit: TSynEdit;
+    quickInputSynEdit: TSynEdit;
+    quickOutputSynEdit: TSynEdit;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -41,6 +38,7 @@ TYPE
 
   private
     inputMeta:T_basicEditorMeta;
+    quickEvaluation:T_quickEvaluation;
   public
 
   end;
@@ -81,16 +79,20 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
 PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
   begin
     //TODO: Use "nonbasic" editor meta ?
-    inputMeta.createWithExistingEditor(quickInputEdit,nil);
+    //TODO: Use autocompletion of "reused" package
+    inputMeta.createWithExistingEditor(quickInputSynEdit,nil);
     inputMeta.language:=LANG_MNH;
+    inputMeta.editor.OnChange:=@quickInputEditChange;
 
     registerFontControl(quickOutputSynEdit,ctEditor);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     quickOutputSynEdit.highlighter:=outputHighlighter;
+    quickEvaluation.create(self,quickOutputSynEdit);
   end;
 
 PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
   begin
+    quickEvaluation.destroy;
     inputMeta.destroy;
     unregisterFontControl(quickOutputSynEdit);
   end;
@@ -100,6 +102,7 @@ PROCEDURE TQuickEvalForm.performSlowUpdate;
   begin
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
+    inputMeta.updateAssistanceResponse(meta^.assistanceResponse);
 
   end;
 
