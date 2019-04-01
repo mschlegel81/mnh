@@ -128,10 +128,4 @@ INITIALIZATION
   quickOutputBehavior:=C_defaultIdeMessageConfig;
   outputLinesLimit:=maxLongint;
 
-//FINALIZATION
-//  if unitIsInitialized then begin
-//    guiAdapters.destroy;
-//    guiOutAdapter.destroy;
-//    guiEventsAdapter.destroy;
-//  end;
 end.

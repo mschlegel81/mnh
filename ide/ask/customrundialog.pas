@@ -54,7 +54,7 @@ VAR myCustomRunForm:TCustomRunForm=nil;
 FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
   begin
     if myCustomRunForm=nil then begin
-      myCustomRunForm:=TCustomRunForm.create(nil);
+      myCustomRunForm:=TCustomRunForm.create(Application);
     end;
     result:=myCustomRunForm;
     result.GroupBox2.enabled:=externalRun;
@@ -164,9 +164,6 @@ PROCEDURE TCustomRunForm.verbosityEditChange(Sender: TObject);
   begin
     runnerModel.externalRunOptions.verbosity:=verbosityEdit.text;
   end;
-
-FINALIZATION
-  if myCustomRunForm<>nil then FreeAndNil(myCustomRunForm);
 
 end.
 

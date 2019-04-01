@@ -99,8 +99,6 @@ PROCEDURE TOutputForm.updateWordWrap;
     if outputBehavior.echo_wrapping
     then adapter.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
     else adapter.parentMessages^.preferredEchoLineLength:=-1;
-
-    //TODO: Implement this in quick edit form
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);

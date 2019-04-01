@@ -1,34 +1,15 @@
 UNIT mnh_settings;
 INTERFACE
-USES Classes,sysutils,dateutils,typinfo,
-     myGenerics,serializationUtil,mySys,
+USES sysutils,
+     serializationUtil,mySys,
      fileWrappers,
-     mnh_constants,mnh_messages,
-     out_adapters;
+     mnh_constants;
 CONST
-  FILE_HISTORY_MAX_SIZE=100;
   FONT_STYLE_BOLD  =1;
   FONT_STYLE_ITALIC=2;
 
 TYPE
 T_controlType=(ctEditor,ctTable,ctGeneral,ctPlot,ctNoneOrUnknown);
-
-P_fileHistory=^T_fileHistory;
-T_fileHistory=object(T_serializable)
-  items: T_arrayOfString;
-  isFolderHistory:boolean;
-  CONSTRUCTOR create(CONST forFolders:boolean);
-  DESTRUCTOR destroy;
-  FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
-  FUNCTION polishHistory: boolean;
-  PROCEDURE fileClosed(CONST fileName:ansistring);
-  FUNCTION historyItem(CONST index:longint):ansistring;
-  FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
-  PROCEDURE clear;
-end;
-
 T_cmdLineFlag=(clf_GUI,clf_QUIET,clf_SILENT,clf_HEADLESS,clf_PROFILE,clf_PAUSEALWAYS);
 
 P_Settings=^T_settings;
@@ -62,7 +43,6 @@ FUNCTION workspaceFilename:string;
 PROCEDURE saveSettings;
 VAR settings:T_settings;
 IMPLEMENTATION
-USES FileUtil;
 
 FUNCTION settingsFileName: string;
   begin
@@ -164,100 +144,6 @@ PROCEDURE T_settings.fixLocations;
       if not(fileExists(lightFlavourLocation)) then lightFlavourLocation:='';
     end;
     {$else} lightFlavourLocation:=paramStr(0);{$endif};
-  end;
-
-CONSTRUCTOR T_fileHistory.create(CONST forFolders:boolean);
-  begin
-    items:=C_EMPTY_STRING_ARRAY;
-    isFolderHistory:=forFolders;
-  end;
-
-DESTRUCTOR T_fileHistory.destroy;
-  begin
-    setLength(items,0);
-  end;
-
-FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176493; end;
-
-FUNCTION T_fileHistory.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
-  VAR i,count:longint;
-  begin
-    {$ifdef debugMode}
-    writeln('Loading T_fileHistory @',stream.streamPos);
-    {$endif}
-    if not(inherited loadFromStream(stream)) then exit(false);
-    setLength(items,0);
-    count:=stream.readNaturalNumber;
-    if count>FILE_HISTORY_MAX_SIZE then exit(false);
-    setLength(items,count);
-    for i:=0 to count-1 do items[i]:=stream.readAnsiString;
-    result:=stream.allOkay;
-  end;
-
-PROCEDURE T_fileHistory.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
-  VAR i,count:longint;
-  begin
-    {$ifdef debugMode}
-    writeln('Saving T_fileHistory @',stream.streamPos);
-    {$endif}
-    inherited saveToStream(stream);
-    count:=length(items);
-    if count>FILE_HISTORY_MAX_SIZE then count:=FILE_HISTORY_MAX_SIZE;
-    stream.writeNaturalNumber(count);
-    for i:=0 to count-1 do stream.writeAnsiString(items[i]);
-  end;
-
-FUNCTION T_fileHistory.polishHistory: boolean;
-  VAR i, j: longint;
-  begin
-    result := false;
-    for i:=0 to length(items)-1 do
-    if not(isFolderHistory) and not(fileExists     (items[i])) or
-           isFolderHistory  and not(DirectoryExists(items[i])) then begin
-      items[i]:='';
-      result:=true;
-    end;
-    for i:=1 to length(items)-1 do
-    if (items[i]<>'') then for j:=0 to i-1 do
-    if (expandFileName(items[i])=expandFileName(items[j])) then begin
-      items[i]:='';
-      result:=true;
-    end;
-    dropValues(items,'');
-  end;
-
-PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
-  begin
-    prepend(items,fileName);
-    polishHistory;
-  end;
-
-FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
-  begin
-    if (index>=0) and (index<length(items))
-    then result:=items[index]
-    else result:='';
-  end;
-
-FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
-  VAR allPathsToScan:T_arrayOfString;
-      fileName:string;
-      pathToScan:string;
-      list:TStringList;
-  begin
-    allPathsToScan:=items;
-    result:=listScriptFileNames(rootPath);
-    for pathToScan in allPathsToScan do begin
-      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.mnh',false);
-      for fileName in list do append(result,fileName);
-      list.free;
-    end;
-    sortUnique(result);
-  end;
-
-PROCEDURE T_fileHistory.clear;
-  begin
-    setLength(items,0);
   end;
 
 INITIALIZATION

@@ -103,7 +103,6 @@ VAR fileTypeMeta:array[T_language] of record
       extensions:T_arrayOfString;
       menuItem:TMenuItem;
     end;
-    disposeHighlighters:boolean=false;
 IMPLEMENTATION
 
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
@@ -127,23 +126,23 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
 
   PROCEDURE initHighlighters;
     begin
-      SynBatSyn            :=TSynBatSyn            .create(languageMenuRoot);
-      SynCppSyn            :=TSynCppSyn            .create(languageMenuRoot);
-      SynCssSyn            :=TSynCssSyn            .create(languageMenuRoot);
-      SynDiffSyn           :=TSynDiffSyn           .create(languageMenuRoot);
-      SynFreePascalSyn     :=TSynFreePascalSyn     .create(languageMenuRoot);
-      SynHTMLSyn           :=TSynHTMLSyn           .create(languageMenuRoot);
-      SynIniSyn            :=TSynIniSyn            .create(languageMenuRoot);
-      SynJScriptSyn        :=TSynJScriptSyn        .create(languageMenuRoot);
-      SynJavaSyn           :=TSynJavaSyn           .create(languageMenuRoot);
-      SynPHPSyn            :=TSynPHPSyn            .create(languageMenuRoot);
-      SynPerlSyn           :=TSynPerlSyn           .create(languageMenuRoot);
-      SynPythonSyn         :=TSynPythonSyn         .create(languageMenuRoot);
-      SynSQLSyn            :=TSynSQLSyn            .create(languageMenuRoot);
-      SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(languageMenuRoot);
-      SynVBSyn             :=TSynVBSyn             .create(languageMenuRoot);
-      SynXMLSyn            :=TSynXMLSyn            .create(languageMenuRoot);
-      outputHighlighter    :=TSynMnhSyn.create(languageMenuRoot,msf_output);
+      SynBatSyn            :=TSynBatSyn            .create(Application);
+      SynCppSyn            :=TSynCppSyn            .create(Application);
+      SynCssSyn            :=TSynCssSyn            .create(Application);
+      SynDiffSyn           :=TSynDiffSyn           .create(Application);
+      SynFreePascalSyn     :=TSynFreePascalSyn     .create(Application);
+      SynHTMLSyn           :=TSynHTMLSyn           .create(Application);
+      SynIniSyn            :=TSynIniSyn            .create(Application);
+      SynJScriptSyn        :=TSynJScriptSyn        .create(Application);
+      SynJavaSyn           :=TSynJavaSyn           .create(Application);
+      SynPHPSyn            :=TSynPHPSyn            .create(Application);
+      SynPerlSyn           :=TSynPerlSyn           .create(Application);
+      SynPythonSyn         :=TSynPythonSyn         .create(Application);
+      SynSQLSyn            :=TSynSQLSyn            .create(Application);
+      SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(Application);
+      SynVBSyn             :=TSynVBSyn             .create(Application);
+      SynXMLSyn            :=TSynXMLSyn            .create(Application);
+      outputHighlighter    :=TSynMnhSyn.create(Application,msf_output);
       SynBatSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCppSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCssSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
@@ -263,7 +262,6 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
     initHighlighters;
     initFileTypes;
     SynHighlighterMnh.initLists;
-    disposeHighlighters:=not(Assigned(languageMenuRoot));
   end;
 
 CONSTRUCTOR T_quickEvalEditorMeta.create(CONST existingEditor: TSynEdit);
@@ -748,24 +746,5 @@ PROCEDURE T_basicEditorMeta.escapeSelection(CONST unescape:boolean);
     editor.SelectionMode:=oldMode;
   end;
 
-FINALIZATION
-  if disposeHighlighters then begin
-    fileTypeMeta[LANG_CPP   ].highlighter.destroy;
-    fileTypeMeta[LANG_CSS   ].highlighter.destroy;
-    fileTypeMeta[LANG_DIFF  ].highlighter.destroy;
-    fileTypeMeta[LANG_HTML  ].highlighter.destroy;
-    fileTypeMeta[LANG_INI   ].highlighter.destroy;
-    fileTypeMeta[LANG_JAVA  ].highlighter.destroy;
-    fileTypeMeta[LANG_JS    ].highlighter.destroy;
-    fileTypeMeta[LANG_PAS   ].highlighter.destroy;
-    fileTypeMeta[LANG_PERL  ].highlighter.destroy;
-    fileTypeMeta[LANG_PHP   ].highlighter.destroy;
-    fileTypeMeta[LANG_PYTHON].highlighter.destroy;
-    fileTypeMeta[LANG_SHELL ].highlighter.destroy;
-    fileTypeMeta[LANG_SQL   ].highlighter.destroy;
-    fileTypeMeta[LANG_VB    ].highlighter.destroy;
-    fileTypeMeta[LANG_BAT   ].highlighter.destroy;
-    fileTypeMeta[LANG_XML   ].highlighter.destroy;
-  end;
 end.
 

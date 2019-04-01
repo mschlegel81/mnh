@@ -1,7 +1,7 @@
 PROGRAM ide;
 
 {$mode objfpc}{$H+}
-{apptype console} // to read debug output on windows
+{$apptype console} // to read debug output on windows
 
 USES
   {$ifdef UNIX}{$IFDEF UseCThreads}
@@ -9,9 +9,9 @@ USES
   {$endif}{$endif}
   Forms, Interfaces
   { you can add units after this }, ideMain,
-  mnh_plotForm,
   cmdLineInterpretation,
-  ipcModel,
+  ipcModel, mnh_doc,
+  askDialog,funcs,mnh_constants,
   mySys,
   saveFile; //needed for proper initialization
 
@@ -25,8 +25,9 @@ begin
     {$ifndef debugMode}
     hideConsole;
     {$endif}
+    initAskForm;
     if reEvaluationWithGUIrequired
-    then halt //TODO: Implement output only form...
+    then halt(9) //TODO: Implement output only form...
     else if sendParametersToOtherInstance(filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);

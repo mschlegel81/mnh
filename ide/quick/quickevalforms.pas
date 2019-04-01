@@ -112,7 +112,6 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
     evaluatedFor:=0;
-
   end;
 
 PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);

@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="47">
+    <Units Count="51">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -379,6 +379,27 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="gotoLineDialogs"/>
       </Unit46>
+      <Unit47>
+        <Filename Value="splash/mnh_splash.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="SplashForm"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="mnh_doc.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="ask/askdialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="askForm"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="askDialog"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="editors/fileHistory.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit50>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

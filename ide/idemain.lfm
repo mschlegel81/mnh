@@ -258,9 +258,6 @@ object IdeMainForm: TIdeMainForm
       object smHistory: TMenuItem
         Caption = '&History'
       end
-      object smRecent: TMenuItem
-        Caption = '&Recent'
-      end
     end
     object smEdit: TMenuItem
       Caption = '&Edit'

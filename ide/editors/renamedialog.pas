@@ -34,7 +34,7 @@ VAR
 
 FUNCTION renameForm: TrenameForm;
   begin
-    if myRenameForm=nil then myRenameForm:=TrenameForm.create(nil);
+    if myRenameForm=nil then myRenameForm:=TrenameForm.create(Application);
     result:=myRenameForm;
   end;
 
@@ -67,7 +67,5 @@ FUNCTION TrenameForm.newId: string;
     result:=NewNameEdit.text;
   end;
 
-FINALIZATION
-  if myRenameForm<>nil then FreeAndNil(myRenameForm);
 end.
 

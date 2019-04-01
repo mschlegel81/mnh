@@ -22,11 +22,11 @@ T_workspace=object(T_serializable)
     autosaveBeforeEachExecution:boolean;
     newFileLineEnding,overwriteLineEnding:byte;
 
-    folderHistory,
     fileHistory:T_fileHistory;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
-                       CONST breakpointImages,bookmarkImages:TImageList);
+                       CONST breakpointImages,bookmarkImages:TImageList;
+                       CONST historyRootItem:TMenuItem);
     DESTRUCTOR destroy;
 
     //From T_serializable:
@@ -80,7 +80,7 @@ CONST
 
 {$endif}
 {$ifdef includeImplementation}
-CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList);
+CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem:TMenuItem);
   begin
     savedAt:=now+1; //= now + 24h
 
@@ -91,15 +91,13 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 
     nextMetaIndex:=1;
     setLength(metas,0);
-    folderHistory    .create(true);
-    fileHistory      .create(false);
+    fileHistory.create(historyRootItem);
     setLength(oldMarkers,0);
   end;
 
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
-    folderHistory.destroy;
     fileHistory.destroy;
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
     setLength(metas,0);
@@ -115,7 +113,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     begin
       nextMetaIndex:=1;
       setLength(metas,0);
-      folderHistory.clear;
       fileHistory  .clear;
       setLength(oldMarkers,0);
     end;
@@ -158,9 +155,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     overwriteLineEnding:=stream.readByte([0..3]);
 
     result:=stream.allOkay and
-    fileHistory  .loadFromStream(stream) and
-    folderHistory.loadFromStream(stream);
-
+    fileHistory  .loadFromStream(stream);
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
       if currentEditor<>nil then currentEditor^.activate;
@@ -192,8 +187,6 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeByte(overwriteLineEnding);
 
     fileHistory  .saveToStream(stream);
-    folderHistory.saveToStream(stream);
-
     savedAt:=now;
   end;
 

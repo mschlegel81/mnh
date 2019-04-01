@@ -41,7 +41,7 @@ VAR mySaveFileDialog: TSaveFileDialog=nil;
 FUNCTION saveFileDialog:TSaveFileDialog;
   begin
     if mySaveFileDialog=nil then
-      mySaveFileDialog:=TSaveFileDialog.create(nil);
+      mySaveFileDialog:=TSaveFileDialog.create(Application);
     result:=mySaveFileDialog;
   end;
 
@@ -95,7 +95,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     extEdit.text:=ext;
     //directory
     dirComboBox.items.clear;
-    for s in workspace.folderHistory.items do dirComboBox.items.add(collapseMnhDir(s));
+    for s in workspace.fileHistory.folderItems do dirComboBox.items.add(collapseMnhDir(s));
     addItemIfNew(rootPath            );
     addItemIfNew(configDir+'packages');
     addItemIfNew(configDir+'demos'   );
@@ -122,7 +122,5 @@ FUNCTION saveFile(CONST rootPath,fname,ext: string): string;
 
 INITIALIZATION
   editorMeta.safeCallback:=@saveFile;
-FINALIZATION
-  if mySaveFileDialog<>nil then FreeAndNil(mySaveFileDialog);
 end.
 

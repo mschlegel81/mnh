@@ -10,10 +10,11 @@ USES
   editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages,
-  closeDialog, gotoLineDialogs,SynEdit,outputFormUnit;
+  closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
-
+  //TODO: Update history menu by model in workspace
+  //TODO: Update script menu by model in workspace
   { TIdeMainForm }
 
   TIdeMainForm = class(T_mnhIdeForm)
@@ -59,7 +60,6 @@ TYPE
     UndockPopup2: TPopupMenu;
     StatusPanel: TPanel;
     smEdit: TMenuItem;
-    smRecent: TMenuItem;
     smHistory: TMenuItem;
     miRestore: TMenuItem;
     miExportToHtml: TMenuItem;
@@ -196,7 +196,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
-                     bookmarkImages);
+                     bookmarkImages,
+                     smHistory);
 
     outlineSettings.create;
 
@@ -225,6 +226,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       miProfile       .checked:=runnerModel.profiling;
       miKeepStackTrace.checked:=runnerModel.stackTracing;
 
+      workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
     timer.enabled:=true;
@@ -630,6 +632,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       end else EditLocationLabel.caption:='';
       performFastUpdates;
       runnerModel.flushMessages;
+
+      if askForm.displayPending then askForm.Show;
     end;
 
   begin

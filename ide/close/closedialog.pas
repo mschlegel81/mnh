@@ -27,7 +27,7 @@ VAR
 
 FUNCTION closeDialogForm:TcloseDialogForm;
   begin
-    if myCloseDialogForm=nil then myCloseDialogForm:=TcloseDialogForm.create(nil);
+    if myCloseDialogForm=nil then myCloseDialogForm:=TcloseDialogForm.create(Application);
     result:=myCloseDialogForm;
   end;
 
@@ -89,9 +89,6 @@ FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating:integer;
     ButtonPanel1.CloseButton.caption:= 'Cancel evaluation and quit';
     result:=ShowModal;
   end;
-
-FINALIZATION
-  if myCloseDialogForm<>nil then FreeAndNil(myCloseDialogForm);
 
 end.
 

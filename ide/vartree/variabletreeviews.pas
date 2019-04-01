@@ -42,11 +42,15 @@ TYPE
   end;
 
   P_treeAdapter=^T_treeAdapter;
+
+  { T_treeAdapter }
+
   T_treeAdapter=object(T_abstractGuiOutAdapter)
     treeForms: array of TVarTreeViewForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
     FUNCTION flushToGui:T_messageTypeSet; virtual;
+    DESTRUCTOR destroy; virtual;
   end;
 
 IMPLEMENTATION
@@ -110,7 +114,7 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
     setLength(treeForms,0);
   end;
 
-FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
+FUNCTION T_treeAdapter.flushToGui: T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tree:TVarTreeViewForm;
@@ -132,6 +136,7 @@ FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
             tree.initWithLiteral(treeContent,caption)
           end;
           dockNewForm(tree);
+          tree.showComponent;
         end;
       mt_startOfEvaluation:
         begin
@@ -144,7 +149,12 @@ FUNCTION T_treeAdapter.flushToGui:T_messageTypeSet;
     leaveCriticalSection(cs);
   end;
 
-{ T_treeDisplayRequest }
+DESTRUCTOR T_treeAdapter.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
+    setLength(treeForms,0);
+  end;
 
 FUNCTION T_treeDisplayRequest.internalType: shortstring;
   begin

@@ -49,7 +49,7 @@ VAR myExportPlotForm: TExportPlotForm=nil;
 
 FUNCTION exportPlotForm: TExportPlotForm;
   begin
-    if myExportPlotForm=nil then myExportPlotForm:=TExportPlotForm.create(nil);
+    if myExportPlotForm=nil then myExportPlotForm:=TExportPlotForm.create(Application);
     result:=myExportPlotForm;
   end;
 
@@ -187,9 +187,6 @@ FUNCTION TExportPlotForm.animationFileName(CONST frameIndex, framesTotal: longin
     while length(idx)<digits do idx:='0'+idx;
     result:=ChangeFileExt(OutputFileNameEdit.caption,'_'+idx+'.png');
   end;
-
-FINALIZATION
-  if myExportPlotForm<>nil then FreeAndNil(myExportPlotForm);
 
 end.
 

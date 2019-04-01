@@ -44,7 +44,7 @@ VAR myOpenFileDialog: TopenFileDialog=nil;
 FUNCTION openFileDialog:TopenFileDialog;
   begin
     if myOpenFileDialog=nil then
-      myOpenFileDialog:=TopenFileDialog.create(nil);
+      myOpenFileDialog:=TopenFileDialog.create(Application);
     result:=myOpenFileDialog;
   end;
 
@@ -101,8 +101,9 @@ FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
   VAR k:longint;
   begin
     searchEdit.text:='';
-    fileList:=workspace.folderHistory.findFiles(rootPath);
-    append(fileList,workspace.fileHistory.items);
+    fileList:=workspace.fileHistory.findFiles(rootPath);
+    //TODO: Check if this is obsolete:
+    //append(fileList,workspace.fileHistory.items);
     sortUnique(fileList);
     for k:=0 to length(fileList)-1 do fileList[k]:=collapseMnhDir(fileList[k]);
     searchResultsListBox.clear;
@@ -117,9 +118,6 @@ FUNCTION TopenFileDialog.showClassicDialog:longint;
       result:=mrOk;
     end else result:=mrCancel;
   end;
-
-FINALIZATION
-  if myOpenFileDialog<>nil then FreeAndNil(myOpenFileDialog);
 
 end.
 

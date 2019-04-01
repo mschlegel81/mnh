@@ -89,11 +89,15 @@ TYPE
   end;
 
   P_tableAdapter=^T_tableAdapter;
+
+  { T_tableAdapter }
+
   T_tableAdapter=object(T_abstractGuiOutAdapter)
     tableForms: array of TtableForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
     FUNCTION flushToGui:T_messageTypeSet; virtual;
+    DESTRUCTOR destroy; virtual;
   end;
 
 IMPLEMENTATION
@@ -128,14 +132,14 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
     end else result:=nil;
   end;
 
-CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_:string);
+CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_: string);
   begin
     inherited create(at_table,[mt_startOfEvaluation,mt_displayTable]);
     defaultCaption:=defaultCaption_;
     setLength(tableForms,0);
   end;
 
-FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
+FUNCTION T_tableAdapter.flushToGui: T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tab:TtableForm;
@@ -158,6 +162,7 @@ FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
           end;
           dockNewForm(tab);
           tab.fillTable;
+          tab.showComponent;
         end;
       mt_startOfEvaluation:
         begin
@@ -168,6 +173,14 @@ FUNCTION T_tableAdapter.flushToGui:T_messageTypeSet;
     end;
     clear;
     leaveCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_tableAdapter.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
+    setLength(tableForms,0);
+    inherited destroy;
   end;
 
 FUNCTION T_tableDisplayRequest.internalType: shortstring;

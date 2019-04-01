@@ -1,7 +1,7 @@
 UNIT editorMeta;
 INTERFACE
 USES  //basic classes
-  Classes, sysutils, LazUTF8, LCLType, types, LazFileUtils,
+  Classes, sysutils, LazUTF8, LCLType, types, LazFileUtils,FileUtil,
   //my utilities:
   serializationUtil,
   myGenerics,
@@ -121,6 +121,7 @@ T_bookmarkIndex=0..9;
 
 {$define includeInterface}
 {$i runnermodel.inc}
+{$i fileHistory.inc}
 {$i workspace.inc}
 {$undef includeInterface}
 
@@ -162,6 +163,7 @@ USES renameDialog,
 VAR underCursor:T_tokenInfo;
 {$define includeImplementation}
 {$i runnermodel.inc}
+{$i fileHistory.inc}
 {$i workspace.inc}
 {$undef includeImplementation}
 
@@ -478,10 +480,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-    if (previousName<>'') and (previousName<>fileInfo.filePath) then begin
-      workspace.fileHistory.fileClosed(previousName);
-      workspace.folderHistory.fileClosed(ExtractFileDir(previousName));
-    end;
+    if (previousName<>'') and (previousName<>fileInfo.filePath) then workspace.fileHistory.fileClosed(previousName);
     if previousName<>fileInfo.filePath
     then lineEndingSetting:=workspace.newFileLineEnding
     else lineEndingSetting:=workspace.overwriteLineEnding;
@@ -584,7 +583,6 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.checked:=(l=language_);
     end;
-    //TODO: Reactivate try-except block?
     //try
       if language_=LANG_MNH then begin
         editor.highlighter:=highlighter;

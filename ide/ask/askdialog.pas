@@ -56,19 +56,13 @@ TYPE
     PROCEDURE setButtons(CONST enable:boolean; CONST options: T_arrayOfString);
   end;
 
-FUNCTION askForm: TaskForm;
 {$i func_defines.inc}
 
+PROCEDURE initAskForm;
 FUNCTION ask_impl intFuncSignature;
+VAR askForm:TaskForm;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
-    myAskForm:TaskForm=nil;
-
-FUNCTION askForm:TaskForm;
-  begin
-    if myAskForm=nil then myAskForm:=TaskForm.create(nil);
-    result:=myAskForm;
-  end;
 
 {$R *.lfm}
 
@@ -97,9 +91,6 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
     position:=poDefault;
     AutoSize:=false;
     AutoSize:=true;
-    //if anyFormShowing(ft_main)
-    //then ShowInTaskBar:=stDefault
-    //else ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TaskForm.ButtonClick(Sender: TObject);
@@ -226,6 +217,14 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
     AutoSize:=true;
   end;
 
+PROCEDURE initAskForm;
+  begin
+    askForm:=TaskForm.create(nil);
+    reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@askDialog.ask_impl);
+    initialize(cs);
+    system.initCriticalSection(cs);
+  end;
+
 FUNCTION ask_impl intFuncSignature;
   VAR opt: T_arrayOfString;
       i: longint;
@@ -252,12 +251,9 @@ FUNCTION ask_impl intFuncSignature;
     end;
   end;
 
-INITIALIZATION
-  initialize(cs);
-  system.initCriticalSection(cs);
-
 FINALIZATION
-  system.doneCriticalSection(cs);
-  if myAskForm<>nil then FreeAndNil(myAskForm);
-
+  if askForm<>nil then begin
+    FreeAndNil(askForm);
+    system.doneCriticalSection(cs);
+  end;
 end.
