@@ -20,6 +20,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     synMeta.setLanguage(state_hlLang,synMeta.language);
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);
     new(collector,create(parent^.containedInForm,synMeta.editor));
+    collector^.parentMessages:=adaptersHoldingCollector;
     connect;
   end;
 

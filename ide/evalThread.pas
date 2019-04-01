@@ -74,13 +74,11 @@ TYPE
         contextType:T_evaluationContextType;
         callMain:boolean;
       end;
-      standardOutput:P_ideStdOutAdapter;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
+      CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
       PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
       PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
-      PROPERTY StdOut:P_ideStdOutAdapter read standardOutput;
       //Debugger support:
       FUNCTION isPaused:boolean;
       FUNCTION stepper:P_debuggingStepper;
@@ -99,7 +97,7 @@ TYPE
       toEvaluate:T_arrayOfString;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST outputOwner:TForm; CONST outputEdit:TSynEdit);
+      CONSTRUCTOR create(CONST quickStdout:P_synOutAdapter);
       FUNCTION postEvalulation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
   end;
 
@@ -109,7 +107,7 @@ TYPE
       evalRequest:P_editScriptTask;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST sharedStdout:P_ideStdOutAdapter; CONST mainForm:T_mnhIdeForm);
+      CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
   end;
@@ -120,8 +118,6 @@ CONST
 IMPLEMENTATION
 USES mnh_constants,
      tokenArray;
-
-FUNCTION newConsoleAdapter   (CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;      begin new(result,create(owner,outputEdit)); end;
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem; begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
@@ -150,12 +146,13 @@ DESTRUCTOR T_abstractEvaluation.destroy;
     doneCriticalSection(evaluationCs);
   end;
 
-CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
+CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
   VAR plot:P_guiPlotSystem;
+      outputForm:TOutputForm;
   begin
     inherited init(ek_normal);
-    new(standardOutput,create(@self));
-    messages.addOutAdapter(standardOutput                       ,true);
+    messages.addOutAdapter(sharedStdout,false);
+    sharedStdout^.parentMessages:=@messages;
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
@@ -167,11 +164,12 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     {$endif}
   end;
 
-CONSTRUCTOR T_quickEvaluation.create(CONST outputOwner:TForm; CONST outputEdit:TSynEdit);
+CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_synOutAdapter);
   VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_quick);
-    messages.addOutAdapter(newConsoleAdapter   (outputOwner,outputEdit),true);
+    messages.addOutAdapter(quickStdout,false);
+    quickStdout^.parentMessages:=@messages;
     plot:=                 newPlotAdapter      ('Quick plot') ;
     messages.addOutAdapter(newCustomFormAdapter(                  plot),true);
     messages.addOutAdapter(                                       plot ,true);
@@ -179,7 +177,7 @@ CONSTRUCTOR T_quickEvaluation.create(CONST outputOwner:TForm; CONST outputEdit:T
     messages.addOutAdapter(newTreeAdapter      ('Quick tree view')     ,true);
   end;
 
-CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_ideStdOutAdapter; CONST mainForm:T_mnhIdeForm);
+CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_editScript);
     messages.addOutAdapter(sharedStdout,false);
@@ -398,7 +396,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
     end else begin
       if package.getCodeProvider<>parentProvider then package.replaceCodeProvider(parentProvider);
-      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.resetForEvaluation(@package,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});

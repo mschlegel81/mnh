@@ -1,5 +1,6 @@
 
 TYPE
+  //TODO: Maybe refactor this, so that a new plot adapter becomes part of the custom form.
   P_plotConnectorMeta=^T_plotConnectorMeta;
   T_plotConnectorMeta=object(T_guiElementMeta)
     plotConfig:record

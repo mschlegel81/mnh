@@ -9,7 +9,6 @@ USES
   SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages;
 
 TYPE
-  P_ideStdOutAdapter=^T_ideStdOutAdapter;
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;
@@ -36,67 +35,42 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
   private
-    associatedAdapter:P_ideStdOutAdapter;
     PROCEDURE updateWordWrap;
   public
+    adapter:T_synOutAdapter;
   end;
 
-  { T_ideStdOutAdapter }
-
-  T_ideStdOutAdapter=object(T_synOutAdapter)
-    private
-      parent:P_messages;
-    public
-      CONSTRUCTOR create(CONST parent_:P_messages);
-      FUNCTION flushToGui:T_messageTypeSet; virtual;
-      PROCEDURE ensureForm;
-      PROCEDURE showForm;
-      DESTRUCTOR destroy;
-  end;
-
+FUNCTION ensureStdOutAdapter:TOutputForm;
 IMPLEMENTATION
+
+FUNCTION ensureStdOutAdapter: TOutputForm;
+  begin
+    if not(hasFormOfType(icOutput,true)) then begin
+      result:=TOutputForm.create(Application);
+      dockNewForm(result);
+    end else result:=TOutputForm(getFormOfType(icOutput));
+  end;
+
 {$R *.lfm}
-
-CONSTRUCTOR T_ideStdOutAdapter.create(CONST parent_: P_messages);
-  begin
-    parent:=parent_;
-    inherited create(nil,nil);
-  end;
-
-FUNCTION T_ideStdOutAdapter.flushToGui: T_messageTypeSet;
-  begin
-    ensureForm;
-    result:=inherited flushToGui;
-  end;
-
-PROCEDURE T_ideStdOutAdapter.ensureForm;
-  VAR outputForm:TOutputForm;
-  begin
-    if synOwnerForm=nil then begin
-      outputForm:=TOutputForm.create(Application);
-      synOwnerForm:=outputForm;
-      syn         :=outputForm.OutputSynEdit;
-      outputForm.associatedAdapter:=@self;
-      dockNewForm(outputForm);
-    end;
-  end;
-
-PROCEDURE T_ideStdOutAdapter.showForm;
-  begin
-    ensureForm;
-    TOutputForm(synOwnerForm).showComponent;
-  end;
-
-DESTRUCTOR T_ideStdOutAdapter.destroy;
-  begin
-    if synOwnerForm<>nil then TOutputForm(synOwnerForm).associatedAdapter:=nil;
-  end;
 
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(OutputSynEdit,ctEditor);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     OutputSynEdit.highlighter:=outputHighlighter;
+    with outputBehavior do begin
+      miEchoDeclarations .checked:=echo_declaration     ;
+      miEchoInput        .checked:=echo_input           ;
+      miEchoOutput       .checked:=echo_output          ;
+      miWrapEcho         .checked:=echo_wrapping        ;
+      miShowTiming       .checked:=show_timing          ;
+      miErrorUser        .checked:=show_all_userMessages;
+      miErrorL1.checked:=suppressWarningsUnderLevel=1;
+      miErrorL2.checked:=suppressWarningsUnderLevel=2;
+      miErrorL3.checked:=suppressWarningsUnderLevel=3;
+      miErrorL4.checked:=suppressWarningsUnderLevel=4;
+    end;
+    adapter.create(self,OutputSynEdit,outputBehavior);
   end;
 
 PROCEDURE TOutputForm.FormResize(Sender: TObject);
@@ -111,8 +85,7 @@ PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
 
 PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
   begin
-    if associatedAdapter<>nil then
-    associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
+    adapter.jumpToEnd:=cbShowOnOutput.checked;
   end;
 
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
@@ -122,14 +95,12 @@ FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TOutputForm.updateWordWrap;
   begin
-    if (associatedAdapter<>nil) and outputBehavior.echo_wrapping
-    then associatedAdapter^.parent^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
-    else associatedAdapter^.parent^.preferredEchoLineLength:=-1;
+    if adapter.parentMessages=nil then exit;
+    if outputBehavior.echo_wrapping
+    then adapter.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
+    else adapter.parentMessages^.preferredEchoLineLength:=-1;
 
     //TODO: Implement this in quick edit form
-    //if settings.quickOutputBehavior.echo_wrapping
-    //then MnhForm.quick.adapters^.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
-    //else MnhForm.quick.adapters^.preferredEchoLineLength:=-1;
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
@@ -146,9 +117,8 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    if associatedAdapter=nil then exit;
-    associatedAdapter^.outputBehavior:=outputBehavior;
-    associatedAdapter^.wrapEcho:=outputBehavior.echo_wrapping;
+    adapter.outputBehavior:=outputBehavior;
+    adapter.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 
@@ -162,10 +132,9 @@ PROCEDURE TOutputForm.performSlowUpdate;
 PROCEDURE TOutputForm.performFastUpdate;
   VAR oldActive:TWinControl;
   begin
-    if associatedAdapter=nil then exit;
-    associatedAdapter^.jumpToEnd:=cbShowOnOutput.checked;
+    adapter.jumpToEnd:=cbShowOnOutput.checked;
     if not(cbFreezeOutput.checked) then begin
-      if (associatedAdapter^.flushToGui<>[])
+      if (adapter.flushToGui<>[])
       and (cbShowOnOutput.checked)
       then begin
         if mainForm<>nil

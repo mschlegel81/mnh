@@ -10,7 +10,7 @@ USES
   editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages,
-  closeDialog, gotoLineDialogs,SynEdit;
+  closeDialog, gotoLineDialogs,SynEdit,outputFormUnit;
 
 TYPE
 
@@ -192,7 +192,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     initializePlotForm(PlotPositionLabel);
 
     setupEditorMetaBase(miLanguage);
-    runnerModel.create(self);
+    runnerModel.create(self,@ensureStdOutAdapter.adapter);
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
@@ -242,8 +242,7 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
 
 FUNCTION anyEvaluationRunning:boolean;
   begin
-    //TODO: also consider quick evaluation
-    result:=runnerModel.anyRunning;
+    result:=runnerModel.anyRunning or isQuickEvaluationRunning;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -419,7 +418,7 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOutputClick(Sender: TObject);
   begin
-    runnerModel.showOutputForm;
+    ensureStdOutAdapter;
   end;
 
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);

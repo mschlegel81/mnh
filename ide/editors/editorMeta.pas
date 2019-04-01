@@ -27,7 +27,8 @@ USES  //basic classes
   editorMetaBase,
   codeAssistance,
   ideLayoutUtil,
-  editScripts;
+  editScripts,
+  synOutAdapter;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -101,7 +102,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //FUNCTION saveWithDialog:boolean;
     //
     //PROCEDURE exportToHtml;
-    //PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
+    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     //FUNCTION caretInMainFormCoordinates:TPoint;
     //PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
     //

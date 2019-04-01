@@ -23,7 +23,7 @@ T_runnerModel=object(T_serializable)
     end;
     stackTracing:boolean;
     profiling:boolean;
-    CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
+    CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm; CONST stdOutAdapter:P_synOutAdapter);
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
@@ -36,7 +36,6 @@ T_runnerModel=object(T_serializable)
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
     FUNCTION anyRunning:boolean;
-    PROCEDURE showOutputForm;
     PROCEDURE flushMessages;
     FUNCTION getStateLabel:string;
 
@@ -53,15 +52,14 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
     if evaluation.isRunning then evaluation.postHalt;
   end;
 
-CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm);
+CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm; CONST stdOutAdapter:P_synOutAdapter);
   begin
     debugMode_:=false;
     stackTracing:=false;
     with lastStart do begin mainCall:=false; parameters:=''; end;
 
-    evaluation.create(mainForm);
-    scriptEval.create(evaluation.StdOut,
-                      mainForm);
+    evaluation.create(stdOutAdapter,mainForm);
+    scriptEval.create(stdOutAdapter,mainForm);
   end;
 
 DESTRUCTOR T_runnerModel.destroy;
@@ -168,11 +166,6 @@ PROCEDURE T_runnerModel.haltEvaluation;
 FUNCTION T_runnerModel.anyRunning:boolean;
   begin
     result:=evaluation.isRunning or scriptEval.isRunning;
-  end;
-
-PROCEDURE T_runnerModel.showOutputForm;
-  begin
-    evaluation.StdOut^.showForm;
   end;
 
 PROCEDURE T_runnerModel.flushMessages;

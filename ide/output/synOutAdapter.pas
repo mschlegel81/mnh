@@ -43,6 +43,7 @@ TYPE
       FUNCTION singleMessageOut(CONST m:P_storedMessage):boolean;
       PROCEDURE doneOutput(CONST jumpDown:boolean);
     public
+      parentMessages:P_messages;
       wrapEcho:boolean;
       jumpToEnd:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
@@ -72,10 +73,16 @@ TYPE
 
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
+FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;
+
 IMPLEMENTATION
 VAR lastSynOutId:longint=0;
     redirectors:array of P_synOutAdapter;
     redirected:T_messageTypeSet=[];
+FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;
+  begin
+    new(result,create(owner,outputEdit));
+  end;
 
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
   VAR k:longint;
@@ -222,6 +229,7 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
   begin
     result:=true;
     case m^.messageType of
+      mt_startOfEvaluation,
       mt_clearConsole: clearSynAndBuffer;
       mt_printline:
         begin
@@ -294,6 +302,7 @@ PROCEDURE T_synOutAdapter.doneOutput(CONST jumpDown:boolean);
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
     inherited create(at_guiSynOutput,messageTypesToInclude);
+    parentMessages:=nil;
     wrapEcho:=false;
     id:=interLockedIncrement(lastSynOutId);
     synOwnerForm:=owner;

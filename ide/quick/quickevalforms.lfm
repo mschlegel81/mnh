@@ -11,6 +11,7 @@ object QuickEvalForm: TQuickEvalForm
   DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnResize = FormResize
   LCLVersion = '2.0.0.4'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
@@ -471,9 +472,6 @@ object QuickEvalForm: TQuickEvalForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
-    Lines.Strings = (
-      'quickInputSynEdit'
-    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
@@ -972,9 +970,6 @@ object QuickEvalForm: TQuickEvalForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
-    Lines.Strings = (
-      'quickOutputSynEdit'
-    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     SelectedColor.BackPriority = 50

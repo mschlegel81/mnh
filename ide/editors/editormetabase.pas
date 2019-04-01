@@ -19,7 +19,8 @@ USES  //basic classes
   ideLayoutUtil,
   mnh_constants, basicTypes,
   fileWrappers,
-  mnhCompletion;
+  mnhCompletion,
+  codeAssistance;
 
 CONST editCommandToggleComment    =ecUserDefinedFirst;
       editCommandPageRight        =ecUserDefinedFirst+1;
@@ -84,6 +85,16 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE setMarkedWord(CONST wordText:string);
       PROCEDURE upperLowerCaseBlock(CONST upper:boolean);
       PROCEDURE escapeSelection(CONST unescape:boolean);
+  end;
+
+  T_quickEvalEditorMeta=object(T_basicEditorMeta)
+    private
+      latestAssistanceResponse:P_codeAssistanceResponse;
+      paintedWithStateHash:T_hashInt;
+    public
+      CONSTRUCTOR create(CONST existingEditor:TSynEdit);
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
   end;
 
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot :TMenuItem);
@@ -255,6 +266,42 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
     disposeHighlighters:=not(Assigned(languageMenuRoot));
   end;
 
+CONSTRUCTOR T_quickEvalEditorMeta.create(CONST existingEditor: TSynEdit);
+  begin
+    latestAssistanceResponse:=nil;
+    paintedWithStateHash:=0;
+    inherited createWithExistingEditor(existingEditor,nil);
+  end;
+
+DESTRUCTOR T_quickEvalEditorMeta.destroy;
+  begin
+    inherited destroy;
+    disposeCodeAssistanceResponse(latestAssistanceResponse);
+  end;
+
+PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
+  begin
+    disposeCodeAssistanceResponse(latestAssistanceResponse);
+    if response=nil
+    then latestAssistanceResponse:=nil
+    else latestAssistanceResponse:=response^.rereferenced;
+    completionLogic.assignEditor(editor_,latestAssistanceResponse,true);
+    if (latestAssistanceResponse= nil) and (paintedWithStateHash<>0) or
+       (latestAssistanceResponse<>nil) and (paintedWithStateHash<>latestAssistanceResponse^.stateHash) then begin
+      if latestAssistanceResponse=nil
+      then paintedWithStateHash:=0
+      else paintedWithStateHash:=latestAssistanceResponse^.stateHash;
+      if latestAssistanceResponse=nil
+      then highlighter.highlightingData.clear
+      else begin
+        latestAssistanceResponse^.updateHighlightingData(highlighter.highlightingData);
+        highlighter.highlightingData.localIdInfos.clear; //local id infos are not applicable to quick evaluation editor
+      end;
+      editor.highlighter:=highlighter;
+      editor.Repaint;
+    end;
+  end;
+
 PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
   VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
@@ -280,6 +327,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl; CONST 
   begin
     tempEdit:=TSynEdit.create(parent);
     tempEdit.parent:=parent;
+    tempEdit.Align:=alClient;
     createWithExistingEditor(tempEdit,bookmarkImages);
   end;
 
@@ -312,7 +360,6 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     registerFontControl(editor_,ctEditor);
     isRealEditor:=bookmarkImages<>nil;
     completionLogic.create;
-    editor_.Align:=alClient;
     editor_.ScrollBars:=ssAutoBoth;
     editor_.WantTabs:=false;
     editor_.Gutter.MarksPart.visible:=Assigned(bookmarkImages);
