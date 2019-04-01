@@ -443,8 +443,10 @@ PROCEDURE TIdeMainForm.miReplaceClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
+  VAR meta:P_editorMeta;
   begin
-    //TODO: Implement me
+    meta:=workspace.currentEditor;
+    if meta<>nil then meta^.reloadFile;
   end;
 
 PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
@@ -623,8 +625,10 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       if (edit<>nil) then begin
         edit^.pollAssistanceResult;
         EditLocationLabel.caption:=edit^.caretLabel;
+        if edit^.isPseudoFile
+        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName(true);
       end else EditLocationLabel.caption:='';
-
       performFastUpdates;
       runnerModel.flushMessages;
     end;

@@ -91,6 +91,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
     FUNCTION caretLabel:string;
+    PROCEDURE reloadFile();
 
     //Externally triggered actions
     PROCEDURE pollAssistanceResult;
@@ -98,7 +99,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //PROCEDURE closeEditorWithDialogs;
     //FUNCTION saveAsWithDialog:boolean;
     //FUNCTION saveWithDialog:boolean;
-    //PROCEDURE reloadFile(CONST fileName:string);
+    //
     //PROCEDURE exportToHtml;
     //PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     //FUNCTION caretInMainFormCoordinates:TPoint;
@@ -798,17 +799,16 @@ FUNCTION getHelpText:string;
 //    closeEditorQuietly;
 //  end;
 
-//procedure T_editorMeta.reloadFile(const fileName: string);
-//  begin
-//    if (fileInfo.filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
-//      editor.lines.loadFromFile(fileInfo.filePath);
-//      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
-//      editor.modified:=false;
-//      fileInfo.isChanged:=false;
-//      mainForm.activeFileChanged('Unimplemented sheet caption',language_=LANG_MNH,fileInfo.filePath='');
-//      if language_=LANG_MNH then triggerCheck;
-//    end;
-//  end;
+PROCEDURE T_editorMeta.reloadFile;
+  begin
+    if not(isPseudoFile) and fileExists(fileInfo.filePath) then begin
+      editor.lines.loadFromFile(fileInfo.filePath);
+      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
+      editor.modified:=false;
+      fileInfo.isChanged:=false;
+      if language_=LANG_MNH then triggerCheck;
+    end;
+  end;
 
 //function T_editorMeta.caretInMainFormCoordinates: TPoint;
 //  begin
