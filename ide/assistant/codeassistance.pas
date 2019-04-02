@@ -166,7 +166,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider): P_codeAssistanceResponse;
   begin
     enterCriticalSection(codeAssistanceCs);
-    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider=source) then begin
+    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath) then begin
       result:=codeAssistanceResponse;
       interLockedIncrement(result^.referenceCount);
     end else result:=nil;
@@ -176,7 +176,9 @@ FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider): P_codeAssista
 PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
   begin
     enterCriticalSection(codeAssistanceCs);
-    codeAssistanceRequest:=source;
+    if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
+    then dispose(codeAssistanceRequest,destroy);
+    codeAssistanceRequest:=newVirtualFileCodeProvider(source);
     if not(codeAssistantIsRunning) then begin
       beginThread(@codeAssistanceThread);
       codeAssistantIsRunning:=true;

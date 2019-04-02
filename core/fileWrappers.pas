@@ -51,7 +51,7 @@ TYPE
 
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
-
+FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
@@ -188,6 +188,9 @@ FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;
 
 FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_arrayOfString): P_virtualFileCodeProvider;
   begin new(result,create(path,lineData)); end;
+
+FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
+  begin if provider=nil then result:=nil else new(result,create(provider^.getPath,provider^.getLines)); end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
