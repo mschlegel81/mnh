@@ -31,6 +31,7 @@ T_runnerModel=object(T_serializable)
     PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
     PROCEDURE runExternally(CONST mainParameters:string='');
     PROCEDURE rerun();
+    PROCEDURE ensureEditScripts;
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
@@ -76,7 +77,7 @@ FUNCTION T_runnerModel.areEditorsLocked: boolean;
 FUNCTION T_runnerModel.canRun: boolean;
   VAR meta:P_editorMeta;
   begin
-    if evaluation.isRunning then exit(false);
+    if evaluation.isRunning or scriptEval.isRunning then exit(false);
     meta:=workspace.currentEditor;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
   end;
@@ -131,6 +132,11 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
 PROCEDURE T_runnerModel.rerun();
   begin
     customRun(lastStart.mainCall,lastStart.parameters);
+  end;
+
+PROCEDURE T_runnerModel.ensureEditScripts;
+  begin
+    if canRun then scriptEval.ensureEditScripts();
   end;
 
 PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);

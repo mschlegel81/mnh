@@ -81,6 +81,7 @@ TYPE
     mt_plot_addAnimationFrame,
     mt_plot_postDisplay,
     mt_guiEdit_done,
+    mt_guiEditScriptsLoaded,
     mt_displayVariableTree,
     mt_displayCustomForm
     {$endif});
@@ -136,6 +137,7 @@ CONST
 {mt_plot_addAnimation...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_postDisplay}    (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_guiEdit_done}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_guiEditScriptsLoaded}(guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayVariableTree} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayCustomForm}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});

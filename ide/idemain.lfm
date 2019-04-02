@@ -395,7 +395,7 @@ object IdeMainForm: TIdeMainForm
         OnClick = miToggleFullscreenClick
       end
     end
-    object MenuItem2: TMenuItem
+    object smScripts: TMenuItem
       Caption = 'S&cripts'
       object miEditScriptFile: TMenuItem
         Caption = 'Edit script file'

@@ -9,14 +9,10 @@ USES
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
   editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
-  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,mnh_constants,litVar,mnh_messages,
+  helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,litVar,mnh_messages,
   closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
-  //TODO: Update history menu by model in workspace
-  //TODO: Update script menu by model in workspace
-  { TIdeMainForm }
-
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
@@ -36,7 +32,7 @@ TYPE
     miOutput: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
-    MenuItem2: TMenuItem;
+    smScripts: TMenuItem;
     MenuItem3: TMenuItem;
     miKeepStackTrace: TMenuItem;
     miDebug: TMenuItem;
@@ -144,7 +140,7 @@ TYPE
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
 
-    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); override;
+    PROCEDURE onEditFinished(CONST data:P_storedMessage    ); override;
     PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); override;
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
@@ -197,7 +193,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      EditorsPageControl,
                      breakpointImages,
                      bookmarkImages,
-                     smHistory);
+                     smHistory,
+                     smScripts);
 
     outlineSettings.create;
 
@@ -231,6 +228,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     stream.destroy;
     timer.enabled:=true;
     gui_started:=true;
+
+    runnerModel.ensureEditScripts;
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -555,25 +554,9 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 
-PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_editScriptTask);
-  VAR target:P_editorMeta;
+PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_storedMessage);
   begin
-    {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
-    if data^.successful then begin
-      if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
-        if data^.wantNewEditor then target:=workspace.createNewFile
-                               else target:=workspace.addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
-        if target<>nil then begin
-          target^.setLanguage(data^.getOutputLanguage,LANG_TXT);
-          target^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
-        end;
-      end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
-        target:=workspace.addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
-        if target<>nil then target^.insertText(P_stringLiteral(data^.getOutput)^.value);
-      end;
-    end;
-    disposeMessage(data);
-    workspace.updateEditorsByGuiStatus;
+    workspace.processEditScriptMessage(data);
   end;
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);

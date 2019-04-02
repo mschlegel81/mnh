@@ -26,7 +26,7 @@ CONST
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
     {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info,mt_startOfEvaluation],
-    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done],
+    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done,mt_guiEditScriptsLoaded],
     {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_table}    [mt_startOfEvaluation,mt_displayTable],
     {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],

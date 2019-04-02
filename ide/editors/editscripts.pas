@@ -43,7 +43,7 @@ T_editScriptTask=object(T_payloadMessage)
     done  :boolean;
     succeeded:boolean;
   public
-    CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
+    CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputEditFile:string; CONST input_:T_arrayOfString; CONST inputLang:string);
     CONSTRUCTOR createForNewEditor(CONST editLines:T_arrayOfString; CONST language:string='mnh');
     DESTRUCTOR destroy; virtual;
     PROCEDURE execute(VAR globals:T_evaluationGlobals; VAR recycler:T_recycler);
@@ -111,15 +111,15 @@ DESTRUCTOR T_scriptMeta.destroy;
   begin
   end;
 
-CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
-  VAR i:longint;
+CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditFile:string; CONST input_:T_arrayOfString; CONST inputLang:string);
+  VAR s:string;
   begin
     inherited create(mt_guiEdit_done);
     script:=script_;
     inputEditName:=inputEditFile;
     if script^.scriptType=st_edit then begin
-      input:=newListLiteral(input_.count);
-      for i:=0 to input_.count-1 do P_listLiteral(input)^.appendString(input_[i]);
+      input:=newListLiteral(length(input_));
+      for s in input_ do P_listLiteral(input)^.appendString(s);
     end else input:=newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;

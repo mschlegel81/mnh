@@ -28,7 +28,9 @@ USES  //basic classes
   codeAssistance,
   ideLayoutUtil,
   editScripts,
-  synOutAdapter;
+  synOutAdapter,
+  menuUtil,
+  mnh_messages;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -492,7 +494,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
       isChanged:=false;
       editor.modified:=false;
       editor.MarkTextAsSaved;
-      if (filePath=utilityScriptFileName) then runnerModel.scriptEval.ensureEditScripts();
+      if (filePath=utilityScriptFileName) then runnerModel.ensureEditScripts();
       updateSheetCaption;
     end;
   end;

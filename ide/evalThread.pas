@@ -21,7 +21,6 @@ USES sysutils,Classes,
      mnh_tables,
      mnhCustomForm,
      guiOutAdapters,
-     outputFormUnit,
      editScripts;
 
 TYPE
@@ -108,8 +107,10 @@ TYPE
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
+      DESTRUCTOR destroy; virtual;
       PROCEDURE ensureEditScripts();
-      PROCEDURE runUtilScript    (CONST scriptIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
+      PROCEDURE runUtilScript    (CONST scriptIndex:longint; CONST L:T_arrayOfString; CONST inputLang:string; CONST editorFileName:string);
+      PROPERTY getScripts:T_scriptMetaArray read utilityScriptList;
   end;
 
 CONST
@@ -148,7 +149,6 @@ DESTRUCTOR T_abstractEvaluation.destroy;
 
 CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
   VAR plot:P_guiPlotSystem;
-      outputForm:TOutputForm;
   begin
     inherited init(ek_normal);
     messages.addOutAdapter(sharedStdout,false);
@@ -184,6 +184,14 @@ CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_synOutAdapter; CON
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
     package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));
     setLength(utilityScriptList,0);
+  end;
+
+DESTRUCTOR T_ideScriptEvaluation.destroy;
+  VAR script:P_scriptMeta;
+  begin
+    for script in utilityScriptList do dispose(script,destroy);
+    setLength(utilityScriptList,0);
+    inherited destroy;
   end;
 
 CONSTRUCTOR T_reevaluationWithGui.create();
@@ -258,11 +266,12 @@ PROCEDURE T_ideScriptEvaluation.ensureEditScripts();
       exit;
     end;
     evalRequest:=nil;
+    state:=es_pending;
     executeInNewThread(false);
     system.leaveCriticalSection(evaluationCs);
   end;
 
-PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST L: TStrings; CONST inputLang: string; CONST editorFileName: string);
+PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST L: T_arrayOfString; CONST inputLang: string; CONST editorFileName: string);
   begin
     system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
@@ -270,6 +279,7 @@ PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST 
       exit;
     end;
     new(evalRequest,create(utilityScriptList[scriptIndex],editorFileName,L,inputLang));
+    state:=es_pending;
     executeInNewThread(false);
     system.leaveCriticalSection(evaluationCs);
   end;
@@ -286,16 +296,9 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
     begin
       package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
-      if ([mt_printdirect,mt_printline]*globals.primaryContext.messages^.collectedMessageTypes<>[]) or
-         ([FlagError,FlagFatalError   ]*globals.primaryContext.messages^.getFlags<>[]) then begin
-        messages.postSingal(mt_clearConsole,C_nilTokenLocation);
-        messages.postCustomMessages(P_messagesErrorHolder(globals.primaryContext.messages)^.storedMessages(false));
-        successful:=false;
-      end;
-
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(successful))
-      else messages.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+      else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
     end;
 

@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,editScripts;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,editScripts,mnh_messages;
 
 TYPE
   T_ideComponent=(icOutline,
@@ -47,7 +47,7 @@ TYPE
 
   T_mnhIdeForm=class(TForm)
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm);   virtual; abstract;
-    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); virtual; abstract;
+    PROCEDURE onEditFinished(CONST data:P_storedMessage    ); virtual; abstract;
     PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
     PROCEDURE onDebuggerEvent;                                virtual; abstract;
     PROCEDURE onEndOfEvaluation;                              virtual; abstract;

@@ -2,13 +2,14 @@
 T_workspace=object(T_serializable)
   private
     savedAt:double; //nonpersistent
+    scriptMenu:T_submenuModel; //nonpersistent
 
-    mainForm:T_mnhIdeForm;
-    inputPageControl:TPageControl;
-    breakpointsImagesList :TImageList;
-    bookmarkImagesList    :TImageList;
+    mainForm:T_mnhIdeForm; //nonpersistent
+    inputPageControl:TPageControl; //nonpersistent
+    breakpointsImagesList :TImageList; //nonpersistent
+    bookmarkImagesList    :TImageList; //nonpersistent
 
-    nextMetaIndex:longint;
+    nextMetaIndex:longint; //nonpersistent
 
     oldMarkers:array of record
       location:T_searchTokenLocation;
@@ -26,7 +27,7 @@ T_workspace=object(T_serializable)
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList;
-                       CONST historyRootItem:TMenuItem);
+                       CONST historyRootItem,scriptMenuRootItem:TMenuItem);
     DESTRUCTOR destroy;
 
     //From T_serializable:
@@ -60,7 +61,10 @@ T_workspace=object(T_serializable)
     PROCEDURE postSaveRequest;
     FUNCTION savingRequested:boolean;
     FUNCTION getCurrentAssistanceResponse:P_codeAssistanceResponse;
-end;
+    //Scripts:
+    PROCEDURE miRunCustomUtilScript(Sender: TObject);
+    PROCEDURE processEditScriptMessage(CONST message:P_storedMessage);
+  end;
 
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
@@ -80,7 +84,7 @@ CONST
 
 {$endif}
 {$ifdef includeImplementation}
-CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem:TMenuItem);
+CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     savedAt:=now+1; //= now + 24h
 
@@ -93,6 +97,8 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     setLength(metas,0);
     fileHistory.create(historyRootItem);
     setLength(oldMarkers,0);
+
+    scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
   end;
 
 DESTRUCTOR T_workspace.destroy;
@@ -101,6 +107,7 @@ DESTRUCTOR T_workspace.destroy;
     fileHistory.destroy;
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
     setLength(metas,0);
+    scriptMenu.destroy;
   end;
 
 FUNCTION T_workspace.getSerialVersion: dword;
@@ -352,15 +359,18 @@ PROCEDURE T_workspace.closeCurrentFile;
     end;
 
     //Editor shall be closed
-    //Copy marks
-    if not(toClose^.isPseudoFile) then
-    for k:=0 to toClose^.editor.Marks.count-1 do begin
-      setLength(oldMarkers,length(oldMarkers)+1);
-      mark:=toClose^.editor.Marks[k];
-      oldMarkers[length(oldMarkers)-1].location:=toClose^.markLocation(mark.line,mark.column);
-      if mark.IsBookmark
-      then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
-      else oldMarkers[length(oldMarkers)-1].markIndex:=10;
+    if not(toClose^.isPseudoFile) then begin
+      //Copy marks
+      for k:=0 to toClose^.editor.Marks.count-1 do begin
+        setLength(oldMarkers,length(oldMarkers)+1);
+        mark:=toClose^.editor.Marks[k];
+        oldMarkers[length(oldMarkers)-1].location:=toClose^.markLocation(mark.line,mark.column);
+        if mark.IsBookmark
+        then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
+        else oldMarkers[length(oldMarkers)-1].markIndex:=10;
+      end;
+      //Update history:
+      fileHistory.fileClosed(toClose^.getPath);
     end;
 
     //actually close editor...
@@ -467,6 +477,59 @@ FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
     if meta=nil
     then result:=nil
     else result:=meta^.latestAssistanceReponse;
+  end;
+
+PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
+  VAR meta:P_editorMeta;
+  begin
+    if not(runnerModel.canRun) then exit;
+    meta:=currentEditor;
+    if meta=nil then exit;
+    runnerModel.scriptEval.runUtilScript(
+      TMenuItem(Sender).Tag,
+      meta^.getLines,
+      fileTypeMeta[meta^.language].extensions[0],
+      meta^.pseudoName());
+    updateEditorsByGuiStatus;
+  end;
+
+PROCEDURE T_workspace.processEditScriptMessage(CONST message:P_storedMessage);
+  PROCEDURE processEditScriptResponse(CONST data:P_editScriptTask);
+    VAR target:P_editorMeta;
+    begin
+      {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
+      if data^.successful then begin
+        if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
+          if data^.wantNewEditor then target:=createNewFile
+                                 else target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+          if target<>nil then begin
+            target^.setLanguage(data^.getOutputLanguage,LANG_TXT);
+            target^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
+          end;
+        end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
+          target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+          if target<>nil then target^.insertText(P_stringLiteral(data^.getOutput)^.value);
+        end;
+      end;
+      updateEditorsByGuiStatus;
+      disposeMessage(data);
+    end;
+
+  PROCEDURE updateScriptMenu;
+    VAR i:longint;
+        scriptList:T_scriptMetaArray;
+    begin
+      scriptMenu.clear;
+      scriptList:=runnerModel.scriptEval.getScripts;
+      for i:=0 to length(scriptList)-1 do scriptMenu.addItem(scriptList[i]^.getName,i);
+    end;
+
+  begin
+    case message^.messageType of
+      mt_guiEditScriptsLoaded: updateScriptMenu;
+      mt_guiEdit_done: processEditScriptResponse(P_editScriptTask(message));
+      else raise Exception.create('Invalid message type handed to workspace.processEditScriptMessage()');
+    end;
   end;
 
 {$endif}

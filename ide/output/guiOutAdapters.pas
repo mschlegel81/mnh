@@ -99,6 +99,7 @@ CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
     inherited create(at_guiEventsCollector,
                     [mt_endOfEvaluation,
                      mt_guiEdit_done,
+                     mt_guiEditScriptsLoaded,
                      mt_debugger_breakpoint]);
     form:=guiForm;
   end;
@@ -112,7 +113,8 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
       for message in storedMessages do begin
         include(result,message^.messageType);
         case message^.messageType of
-          mt_guiEdit_done:        form.onEditFinished(P_editScriptTask(message));
+          mt_guiEditScriptsLoaded,
+          mt_guiEdit_done:        form.onEditFinished(message);
           mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(message));
           mt_endOfEvaluation    : form.onEndOfEvaluation;
         end;
