@@ -31,8 +31,8 @@ CONST
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
   {$ifdef fullVersion}
   {ect_profiling}             [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,eco_profiling],
-  {ect_debugging}             [                                       eco_beepOnError,eco_stackTrace,              eco_debugging],
-  {ect_debuggingAndProfiling} [                                       eco_beepOnError,eco_stackTrace,eco_profiling,eco_debugging],
+  {ect_debugging}             [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,              eco_debugging],
+  {ect_debuggingAndProfiling} [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,eco_profiling,eco_debugging],
   {ect_stackTracing}          [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace],
   {$endif}
   {ect_silent}                [eco_spawnWorker,eco_createDetachedTask]);
