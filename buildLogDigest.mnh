@@ -63,7 +63,9 @@ main('files')->begin
     .trim
     .unique
     .each(file,existing(file) orElse
-               existing('consoles/'&file))
+               existing('consoles/'&file) orElse
+               existing('ide/'&file))
+    .replace('/./','/')
     .union(allFiles('ide',['*.inc','*.lpr']),
            allFiles('consoles','*.lpr'),
            allFiles('3rd_party','*.inc'),
