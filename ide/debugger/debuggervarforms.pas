@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, ExtCtrls, ComCtrls,
-  Grids,ideLayoutUtil,debuggingVar,debugging, treeUtil,mnh_settings,basicTypes;
+  Grids,ideLayoutUtil,debuggingVar,debugging, treeUtil;
 
 TYPE
   TDebuggerVarForm = class(T_mnhComponentForm)
@@ -31,6 +31,7 @@ VAR
 
 PROCEDURE ensureDebuggerVarForm;
 IMPLEMENTATION
+USES mnh_settings,basicTypes;
 
 PROCEDURE ensureDebuggerVarForm;
   begin
@@ -38,9 +39,6 @@ PROCEDURE ensureDebuggerVarForm;
   end;
 
 {$R *.lfm}
-
-{ TDebuggerVarForm }
-
 FUNCTION TDebuggerVarForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icDebuggerVariables;
@@ -89,6 +87,7 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
       firstRow.Left:=0;
       firstRow.Right:=1;
       if StackGrid.RowCount>1 then StackGrid.selection:=firstRow;
+      StackGridSelection(nil,0,1);
     end;
 
   begin
@@ -113,22 +112,15 @@ PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol, aRow: integ
 
   begin
     if currentSnapshot=nil then exit;
-    stackIdx:=currentSnapshot^.callStack^.size-1-aRow;
-
+    stackIdx:=currentSnapshot^.callStack^.size-aRow;
     VariablesTree.items.clear;
+    if (stackIdx<0) or (stackIdx>=currentSnapshot^.callStack^.size) then exit;
 
-    //TODO: This only has to be done once!
     if currentSnapshot^.globalVariableReport<>nil
     then addCategoryNode(currentSnapshot^.globalVariableReport,false);
          addCategoryNode(currentSnapshot^.callStack^[stackIdx].parameters);
-    //TODO: This only has to be done once!
     if currentSnapshot^.localVariableReport<>nil
     then addCategoryNode(currentSnapshot^.localVariableReport);
-    //updateExpressionMemo;
-    //TODO: This only has to be done when the expression memo changes...
-    //TODO: Is this the right place for inline variables? Corresponds more to the current expression than to the Variables view.
-    //if currentSnapshot^.inlineVariableReport<>nil
-    //then addCategoryNode(currentSnapshot^.inlineVariableReport);
   end;
 
 end.

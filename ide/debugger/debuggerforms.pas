@@ -110,44 +110,8 @@ PROCEDURE TDebuggerForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TDebuggerForm.performSlowUpdate;
   begin
-    //currentSnapshot:=...;
   end;
-{
 
-  PROCEDURE clearStackView;
-    VAR i:longint;
-    begin
-      variablesTreeView.items.clear;
-      for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';
-
-      callStackList.items.clear;
-      for i:=currentSnapshot^.callStack^.size-1 downto 0 do
-      callStackList.items.add(currentSnapshot^.callStack^[i].calleeId);
-      callStackList.ItemIndex:=0;
-    end;
-
-  begin
-    if not(runnerModel.debugMode) or (data=nil) then exit;
-    onDebuggerEvent;
-
-    currentSnapshot:=P_debuggingSnapshot(data);
-
-    if debuggerData.globalVariableReport<>nil then dispose(debuggerData.globalVariableReport,destroy);
-    debuggerData.globalVariableReport:=runEvaluator.reportVariables;
-
-    if debuggerData.localVariableReport<>nil then debuggerData.localVariableReport^.clear
-                                             else new(debuggerData.localVariableReport,create(dvc_local));
-    runEvaluator.globals.primaryContext.reportVariables(debuggerData.localVariableReport^);
-
-    if debuggerData.inlineVariableReport<>nil then debuggerData.inlineVariableReport^.clear
-                                              else new(debuggerData.inlineVariableReport,create(dvc_inline));
-
-    jumpToFile;
-    clearStackView;
-    callStackListSelectionChange(nil,false);
-
-    outputPageControl.activePage:=debugTabSheet;
-  end;}
 PROCEDURE TDebuggerForm.performFastUpdate;
   VAR running:boolean;
       halted:boolean;
@@ -173,7 +137,6 @@ PROCEDURE TDebuggerForm.performFastUpdate;
 PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
   begin
     runnerModel.postHalt;
-    //TODO: Use "disposeMessage" instead ?
     disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
   end;
@@ -192,6 +155,7 @@ PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
   begin
     if runnerModel.canRun then begin
       runnerModel.debugMode:=true;
+      mainForm.onDebuggerEvent;
       runnerModel.rerun();
     end
     else if runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil)
@@ -200,9 +164,9 @@ PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
   end;
 
 PROCEDURE TDebuggerForm.tbMicroStepClick(Sender: TObject); begin if tbMicroStep.enabled then delegateDebuggerAction(breakSoonest     ); end;
-PROCEDURE TDebuggerForm.tbStepClick(Sender: TObject); begin if tbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
-PROCEDURE TDebuggerForm.tbStepInClick(Sender: TObject); begin if tbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
-PROCEDURE TDebuggerForm.tbStepOutClick(Sender: TObject); begin if tbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
+PROCEDURE TDebuggerForm.tbStepClick     (Sender: TObject); begin if tbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
+PROCEDURE TDebuggerForm.tbStepInClick   (Sender: TObject); begin if tbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
+PROCEDURE TDebuggerForm.tbStepOutClick  (Sender: TObject); begin if tbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
 
 PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
   VAR lines,chars:longint;
@@ -221,17 +185,11 @@ PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
       lines:=1;
       chars:=50;
     end;
-
-    //stackIdx:=currentSnapshot^.callStack^.size-1-currentSnapshot^.callStackList.ItemIndex;
-    //if (stackIdx>=0) and (stackIdx<currentSnapshot^.callStack^.size)
-    //then parameterInfo:=currentSnapshot^.callStack^[stackIdx].parameters;
-
     parameterInfo:=currentSnapshot^.callStack^[currentSnapshot^.callStack^.size-1].parameters;
 
     tokens:=currentSnapshot^.tokenStack^
             .toDebuggerString(currentSnapshot^.first,
                               round(lines*chars*0.9),
-                              //TODO: Fill parameter info based on call stack selection(?)
                               parameterInfo,
                               currentSnapshot^.localVariableReport,
                               currentSnapshot^.globalVariableReport,

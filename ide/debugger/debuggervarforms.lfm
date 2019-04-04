@@ -7,6 +7,8 @@ object DebuggerVarForm: TDebuggerVarForm
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
@@ -33,8 +35,11 @@ object DebuggerVarForm: TDebuggerVarForm
     Top = 0
     Width = 480
     Align = alTop
+    AutoAdvance = aaDown
     ColCount = 2
+    ExtendedSelect = False
     FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
     TabOrder = 2
     OnSelection = StackGridSelection
     Cells = (
