@@ -104,6 +104,8 @@ TYPE
     private
       utilityScriptList:T_scriptMetaArray;
       evalRequest:P_editScriptTask;
+      collector:T_collectingOutAdapter;
+      StdOut:P_synOutAdapter;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
@@ -177,10 +179,13 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_synOutAdapter);
     messages.addOutAdapter(newTreeAdapter      ('Quick tree view')     ,true);
   end;
 
+CONST C_messagesForwardedToOutput:T_messageTypeSet=[mt_clearConsole,mt_printdirect,mt_printline,mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError];
 CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_editScript);
-    messages.addOutAdapter(sharedStdout,false);
+    StdOut:=sharedStdout;
+    collector.create(at_console,C_messagesForwardedToOutput);
+    messages.addOutAdapter(@collector,false);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
     package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));
     setLength(utilityScriptList,0);
@@ -192,6 +197,7 @@ DESTRUCTOR T_ideScriptEvaluation.destroy;
     for script in utilityScriptList do dispose(script,destroy);
     setLength(utilityScriptList,0);
     inherited destroy;
+    collector.destroy;
   end;
 
 CONSTRUCTOR T_reevaluationWithGui.create();
@@ -300,6 +306,10 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(successful))
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
+
+      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then
+      StdOut^.appendAll(collector.storedMessages);
+      collector.clear;
     end;
 
   PROCEDURE ensureEditScripts_impl();
