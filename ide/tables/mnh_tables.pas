@@ -44,6 +44,7 @@ TYPE
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
     tableMenu1: TPopupMenu;
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
@@ -207,6 +208,11 @@ PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
     registerFontControl(StringGrid,ctTable);
+  end;
+
+PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    CloseAction:=caFree;
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);

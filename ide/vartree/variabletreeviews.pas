@@ -16,6 +16,7 @@ TYPE
 
   TVarTreeViewForm = class(T_mnhComponentForm)
     VarTreeView: TTreeView;
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
 
@@ -194,6 +195,11 @@ PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
     model.create(VarTreeView);
     rootNode:=nil;
     registerFontControl(VarTreeView,ctGeneral);
+  end;
+
+PROCEDURE TVarTreeViewForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    CloseAction:=caFree;
   end;
 
 PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;

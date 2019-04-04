@@ -218,7 +218,9 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
     evalRequest.callMain:=true;
     evalRequest.paramters:=cmdLineInterpretation.mainParameters;
-    package.replaceCodeProvider(newFileCodeProvider(getFileToInterpretFromCommandLine));
+    if getFileToInterpretFromCommandLine<>''
+    then package.replaceCodeProvider(newFileCodeProvider(getFileToInterpretFromCommandLine))
+    else package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,getCommandToInterpretFromCommandLine));
     state:=es_pending;
     executeInNewThread(false);
     system.leaveCriticalSection(evaluationCs);

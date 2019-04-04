@@ -400,8 +400,7 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
 PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
-PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
-  );
+PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if tryEnterCriticalsection(lock)=0
     then CloseAction:=caNone
@@ -409,6 +408,7 @@ PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
       if processingEvents then CloseAction:=caNone
                           else markedForCleanup:=(CloseAction in [caFree,caHide]);
       leaveCriticalSection(lock);
+      CloseAction:=caFree;
     end;
   end;
 

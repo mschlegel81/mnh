@@ -9,6 +9,7 @@ object VarTreeViewForm: TVarTreeViewForm
   DesignTimePPI = 144
   DragKind = dkDock
   DragMode = dmAutomatic
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
