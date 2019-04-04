@@ -153,20 +153,29 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     if not(result) then begin
       for j:=0 to length(metas)-1 do dispose(metas[j],destroy);
       setLength(metas,0);
-      exit(false);
+    end else begin
+      saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
+      autosaveBeforeEachExecution:=stream.readBoolean;
+      newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);
+      overwriteLineEnding:=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS,LINE_ENDING_UNCHANGED]);
+      result:=stream.allOkay and
+      fileHistory  .loadFromStream(stream);
     end;
-
-    saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
-    autosaveBeforeEachExecution:=stream.readBoolean;
-    newFileLineEnding  :=stream.readByte([0..3]);
-    overwriteLineEnding:=stream.readByte([0..3]);
-
-    result:=stream.allOkay and
-    fileHistory  .loadFromStream(stream);
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
       if currentEditor<>nil then currentEditor^.activate;
       savedAt:=now;
+    end else begin
+      nextMetaIndex:=1;
+      for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
+      setLength(metas,0);
+      fileHistory.clear;
+      setLength(oldMarkers,0);
+
+      saveIntervalIdx:=0;
+      autosaveBeforeEachExecution:=false;
+      newFileLineEnding:=0;
+      overwriteLineEnding:=0;
     end;
   end;
 

@@ -154,12 +154,8 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
   VAR meta:P_editorMeta;
   begin
     evaluation.stepper^.setState(newState);
-    mainForm.onDebuggerEvent;
+    mainForm.onDebuggerEvent; //sets editors to readonly...
     meta:=workspace.currentEditor;
-    if meta<>nil then with meta^ do begin //TODO: This is obsolete.
-      editor.Gutter.MarksPart.visible:=true;
-      editor.readonly:=areEditorsLocked or strictlyReadOnly;
-    end;
   end;
 
 PROCEDURE T_runnerModel.markDebugLine(CONST editor: TSynEdit;
@@ -204,6 +200,7 @@ FUNCTION T_runnerModel.getSerialVersion:dword;
 
 FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin
+    if not stream.allOkay then exit(false);
     debugMode_  :=stream.readBoolean();
     stackTracing:=stream.readBoolean();
     profiling   :=stream.readBoolean();
@@ -214,6 +211,17 @@ FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       customFolder:=stream.readAnsiString;
     end;
     result:=stream.allOkay;
+    if not(result) then begin
+      debugMode_:=false;
+      stackTracing:=false;
+      profiling:=false;
+      with externalRunOptions do begin
+        flags:=[];
+        callLightFlavour:=false;
+        verbosity:='';
+        customFolder:='';
+      end;
+    end;
   end;
 
 PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);

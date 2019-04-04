@@ -119,10 +119,12 @@ FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapp
       ruleSorting:=T_ruleSorting(stream.readByte);
       result:=stream.allOkay;
     except
+      result:=false;
+    end;
+    if not(result) then begin
       showPrivate:=true;
       showImported:=false;
       ruleSorting:=rs_byLocation;
-      result:=false;
     end;
   end;
 

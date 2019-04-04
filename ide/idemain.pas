@@ -13,11 +13,15 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
+
+  { TIdeMainForm }
+
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
     evaluationStateLabel: TLabel;
     EditLocationLabel: TLabel;
+    miDebuggerVar: TMenuItem;
     miClose2: TMenuItem;
     miClose3: TMenuItem;
     miClose4: TMenuItem;
@@ -106,6 +110,7 @@ TYPE
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDebuggerClick(Sender: TObject);
+    PROCEDURE miDebuggerVarClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miEditScriptFileClick(Sender: TObject);
     PROCEDURE miExportToHtmlClick(Sender: TObject);
@@ -180,10 +185,10 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     initIpcServer(self);
     quitPosted:=false;
     subTimerCounter:=0;
-    splitterPositions[1]:=16384;
-    splitterPositions[2]:=10000;
-    splitterPositions[3]:=16384;
-    splitterPositions[4]:=16384;
+    splitterPositions[1]:=0;
+    splitterPositions[2]:=0;
+    splitterPositions[3]:=0;
+    splitterPositions[4]:=0;
     ideLayoutUtil.mainForm:=self;
 
     initializePlotForm(PlotPositionLabel);
@@ -226,7 +231,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
       workspace.fileHistory.updateHistoryMenu;
     end;
-    //TODO: Fallback mit Default-Werten
     stream.destroy;
     timer.enabled:=true;
     gui_started:=true;
@@ -312,13 +316,18 @@ PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miDebugClick(Sender: TObject);
-begin
-  runnerModel.debugMode:=miDebug.checked;
-end;
+  begin
+    runnerModel.debugMode:=miDebug.checked;
+  end;
 
 PROCEDURE TIdeMainForm.miDebuggerClick(Sender: TObject);
   begin
     ensureDebuggerForm;
+  end;
+
+PROCEDURE TIdeMainForm.miDebuggerVarClick(Sender: TObject);
+  begin
+    ensureDebuggerVarForm;
   end;
 
 PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
@@ -369,7 +378,7 @@ PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miHaltEvaluationClick(Sender: TObject);
   begin
-    runnerModel.haltEvaluation;
+    runnerModel.postHalt;
     //TODO: Also halt quick evaluation.
   end;
 
@@ -575,6 +584,7 @@ PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
 PROCEDURE TIdeMainForm.onDebuggerEvent;
   begin
     workspace.updateEditorsByGuiStatus;
+    miDebug.checked:=runnerModel.debugMode;
   end;
 
 PROCEDURE TIdeMainForm.onEndOfEvaluation;

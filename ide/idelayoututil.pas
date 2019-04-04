@@ -292,7 +292,7 @@ FUNCTION typeOfFocusedControl:T_controlType;
     if active.ClassName='TTreeView' then exit(ctGeneral);
     if active.ClassName='TListBox' then exit(ctGeneral);
     if active.ClassName='TplotForm' then exit(ctPlot);
-//  ctEditor,ctTable,ctGeneral,ctPlot,ctNoneOrUnknown
+    if active.ClassName='TStringGrid' then exit(ctTable);
 
     {$ifdef debugMode}
     writeln('Unknown control class ',active.ClassName);
@@ -351,6 +351,13 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
 
     result:=result and stream.allOkay and (length(htmlDocGeneratedForCodeHash)=length(CODE_HASH));
+    if not(result) then begin
+      mainForm.BorderStyle:=bsSizeable;
+      mainForm.WindowState:=wsMaximized;
+      for k:=1 to 4 do splitters[k]:=0;
+      doShowSplashScreen:=true;
+      htmlDocGeneratedForCodeHash:='';
+    end;
   end;
 
 OPERATOR:=(x: byte): TFontStyles;

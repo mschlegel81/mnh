@@ -366,6 +366,10 @@ object IdeMainForm: TIdeMainForm
         Caption = '&Debugger'
         OnClick = miDebuggerClick
       end
+      object miDebuggerVar: TMenuItem
+        Caption = 'Debugger &variables'
+        OnClick = miDebuggerVarClick
+      end
       object miBreakpoints: TMenuItem
         Caption = '&Breakpoints'
         OnClick = miBreakpointsClick

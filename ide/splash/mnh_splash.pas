@@ -69,7 +69,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
   begin
-    {$ifdef Windows}if APP_STYLE<>APP_STYLE_BLANK then{$endif} prepareDoc;
+    if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then prepareDoc;
     if startupCall and not(doShowSplashScreen) then close;
   end;
 
