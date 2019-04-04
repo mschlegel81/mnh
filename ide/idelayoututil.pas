@@ -103,7 +103,12 @@ VAR activeForms:array of T_mnhComponentForm;
 
 PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
   begin
-    if mainForm<>nil then mainForm.attachNewForm(newForm) else newForm.Show;
+    if mainForm<>nil then mainForm.attachNewForm(newForm)
+    else begin
+      newForm.DragKind:=dkDrag;
+      newForm.DragMode:=dmManual;
+      newForm.Show;
+    end;
   end;
 
 PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);

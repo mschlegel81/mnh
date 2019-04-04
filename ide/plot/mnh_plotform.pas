@@ -214,6 +214,7 @@ DESTRUCTOR T_guiPlotSystem.destroy;
       FreeAndNil(myPlotForm);
     end;
     connected:=false;
+    inherited destroy;
   end;
 
 PROCEDURE T_guiPlotSystem.doPlot;

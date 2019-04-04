@@ -224,7 +224,7 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_profile_call_info,mt_endOfEvaluation,mt_startOfEvaluation,mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_profile_call_info,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ,mt_echo_continued];
     if x.echo_output      then result+=[mt_echo_output     ,mt_echo_continued];
     if x.echo_declaration then result+=[mt_echo_declaration,mt_echo_continued];
