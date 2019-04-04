@@ -298,6 +298,7 @@ object IdeMainForm: TIdeMainForm
         Caption = 'Halt evaluation(s)'
         Enabled = False
         ShortCut = 123
+        OnClick = miHaltEvaluationClick
       end
       object miRunDirect: TMenuItem
         Caption = '&Evaluate'

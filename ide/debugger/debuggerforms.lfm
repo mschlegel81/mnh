@@ -1,18 +1,23 @@
 object DebuggerForm: TDebuggerForm
   Left = 904
-  Height = 360
-  Top = 201
+  Height = 234
+  Top = 327
   Width = 480
-  Caption = 'DebuggerForm'
-  ClientHeight = 360
+  Caption = 'Debugger'
+  ClientHeight = 234
   ClientWidth = 480
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
   object DebuggerToolbar: TToolBar
     Left = 0
-    Height = 39
+    Height = 35
     Top = 0
     Width = 480
+    AutoSize = True
     Caption = 'DebuggerToolbar'
     Images = DebuggerIcons
     TabOrder = 0
@@ -21,42 +26,48 @@ object DebuggerForm: TDebuggerForm
       Top = 2
       Caption = 'tbRunContinue'
       ImageIndex = 0
+      OnClick = tbRunContinueClick
     end
     object tbStepIn: TToolButton
       Left = 36
       Top = 2
       Caption = 'tbStepIn'
       ImageIndex = 6
+      OnClick = tbStepInClick
     end
     object tbStep: TToolButton
       Left = 71
       Top = 2
       Caption = 'tbStep'
       ImageIndex = 4
+      OnClick = tbStepClick
     end
     object tbMicrostep: TToolButton
       Left = 106
       Top = 2
       Caption = 'tbMicrostep'
       ImageIndex = 10
+      OnClick = tbMicrostepClick
     end
     object tbStepOut: TToolButton
       Left = 141
       Top = 2
       Caption = 'tbStepOut'
       ImageIndex = 8
+      OnClick = tbStepOutClick
     end
     object tbHalt: TToolButton
       Left = 176
       Top = 2
       Caption = 'tbHalt'
       ImageIndex = 2
+      OnClick = tbHaltClick
     end
   end
-  inline SynEdit1: TSynEdit
+  inline currentExpressionEdit: TSynEdit
     Left = 0
-    Height = 321
-    Top = 39
+    Height = 101
+    Top = 35
     Width = 480
     Align = alClient
     Font.Height = -13
@@ -495,9 +506,6 @@ object DebuggerForm: TDebuggerForm
     MouseActions = <>
     MouseTextActions = <>
     MouseSelActions = <>
-    Lines.Strings = (
-      'SynEdit1'
-    )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     SelectedColor.BackPriority = 50
@@ -520,6 +528,23 @@ object DebuggerForm: TDebuggerForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
     end
+  end
+  object inlineVariablesTreeView: TTreeView
+    Left = 0
+    Height = 90
+    Top = 144
+    Width = 480
+    Align = alBottom
+    TabOrder = 2
+  end
+  object Splitter1: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 8
+    Top = 136
+    Width = 480
+    Align = alBottom
+    ResizeAnchor = akBottom
   end
   object DebuggerIcons: TImageList
     Height = 30

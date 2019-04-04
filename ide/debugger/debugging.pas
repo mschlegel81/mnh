@@ -6,14 +6,22 @@ USES sysutils,
      tokens,
      mnh_messages,
      out_adapters,
+     debuggingVar,
      tokenStack;
 TYPE
   P_debuggingSnapshot=^T_debuggingSnapshot;
+
+  { T_debuggingSnapshot }
+
   T_debuggingSnapshot=object(T_payloadMessage)
     tokenStack:P_tokenStack;
     first:P_token;
     callStack:P_callStack;
-    CONSTRUCTOR create(CONST tokens_:P_tokenStack; CONST first_:P_token; CONST stack_:P_callStack);
+    globalVariableReport,
+    localVariableReport : P_variableTreeEntryCategoryNode;
+    CONSTRUCTOR create(CONST tokens_:P_tokenStack; CONST first_:P_token; CONST stack_:P_callStack;
+                       CONST globals,locals:P_variableTreeEntryCategoryNode);
+    DESTRUCTOR destroy; virtual;
   end;
 
   T_debuggerState=(breakSoonest,
@@ -32,12 +40,13 @@ TYPE
       lastBreakLine:T_tokenLocation;
       lastBreakLevel:longint;
       adapters:P_messages;
+      packageVar:F_fillCategoryNode;
       cs:TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST parentAdapters:P_messages);
       DESTRUCTOR destroy;
-      PROCEDURE resetForDebugging(CONST inPackage:P_objectWithPath);
-      PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack);
+      PROCEDURE resetForDebugging(CONST inPackage:P_objectWithPath; CONST packageVar_:F_fillCategoryNode);
+      PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack; CONST contextVar:F_fillCategoryNode);
       //GUI interaction
       PROCEDURE haltEvaluation;
       PROCEDURE setBreakpoints(CONST locations:array of T_searchTokenLocation);
@@ -49,7 +58,9 @@ TYPE
 
 IMPLEMENTATION
 
-CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_: P_token; CONST stack_: P_callStack);
+CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack;
+  CONST first_: P_token; CONST stack_: P_callStack; CONST globals,
+  locals: P_variableTreeEntryCategoryNode);
   begin
     inherited create(mt_debugger_breakpoint);
     first:=first_;
@@ -60,6 +71,14 @@ CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_
       line:=1;
       column:=1;
     end else location:=first^.location;
+    globalVariableReport:=globals;
+    localVariableReport :=locals ;
+  end;
+
+DESTRUCTOR T_debuggingSnapshot.destroy;
+  begin
+    if globalVariableReport<>nil then dispose(globalVariableReport,destroy);
+    if localVariableReport <>nil then dispose(localVariableReport ,destroy);
   end;
 
 CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messages);
@@ -68,6 +87,7 @@ CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messages);
     adapters:=parentAdapters;
     state:=dontBreakAtAll;
     setLength(breakpoints,0);
+    packageVar:=nil;
   end;
 
 DESTRUCTOR T_debuggingStepper.destroy;
@@ -78,17 +98,18 @@ DESTRUCTOR T_debuggingStepper.destroy;
     doneCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.resetForDebugging(CONST inPackage:P_objectWithPath);
+PROCEDURE T_debuggingStepper.resetForDebugging(CONST inPackage:P_objectWithPath; CONST packageVar_:F_fillCategoryNode);
   begin
     enterCriticalSection(cs);
     state:=runUntilBreakpoint;
     lastBreakLevel:=-1;
     lastBreakLine.line:=-1;
     lastBreakLine.package:=inPackage;
+    packageVar:=packageVar_;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_tokenStack; CONST callStack:P_callStack);
+PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_tokenStack; CONST callStack:P_callStack; CONST contextVar:F_fillCategoryNode);
   FUNCTION isEqualLine(CONST loc1,loc2:T_tokenLocation):boolean; inline;
     begin
       result:=(loc1.package=loc2.package) and
@@ -109,6 +130,8 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
     end;
 
   VAR snapshot:P_debuggingSnapshot;
+      globalVariableReport,
+      localVariableReport :P_variableTreeEntryCategoryNode;
   begin
     if (state=dontBreakAtAll) then exit;
     system.enterCriticalSection(cs);
@@ -138,7 +161,13 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
 
       lastBreakLine:=first^.location;
       lastBreakLevel:=callStack^.size;
-      new(snapshot,create(stack,first,callStack));
+
+      new(globalVariableReport,create(dvc_global));
+      if packageVar<>nil then packageVar(globalVariableReport^);
+      new(localVariableReport,create(dvc_local));
+      contextVar(localVariableReport^);
+
+      new(snapshot,create(stack,first,callStack,globalVariableReport,localVariableReport));
       adapters^.postCustomMessage(snapshot);
       while state=waitingForGUI do begin
         system.leaveCriticalSection(cs);
@@ -146,7 +175,6 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         sleep(1);
         system.enterCriticalSection(cs);
       end;
-      disposeMessage(snapshot);
     end;
     system.leaveCriticalSection(cs);
   end;

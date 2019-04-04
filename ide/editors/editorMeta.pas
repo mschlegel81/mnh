@@ -228,6 +228,10 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
       if isChanged then fileAccessAge:=stream.readDouble;  //#4
       ignoreDeleted:=false;
     end;
+    {$ifdef debugMode}
+    writeln('Read file info. ok=',stream.allOkay);
+    {$endif}
+
     editor.clearAll;
     if fileInfo.isChanged
     then begin
@@ -235,6 +239,9 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
       lineCount:=stream.readNaturalNumber; //#5
       for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
     end else setFile(fileInfo.filePath);
+    {$ifdef debugMode}
+    writeln('Read file lines. ok=',stream.allOkay);
+    {$endif}
 
     markCount:=stream.readNaturalNumber; //#7
     for i:=1 to markCount do begin
@@ -242,9 +249,16 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
       column:=stream.readNaturalNumber;  //#8b
       _add_breakpoint_or_bookmark_(line,column,stream.readByte([0..10])); //#8c
     end;
+    {$ifdef debugMode}
+    writeln('Read marks. ok=',stream.allOkay);
+    {$endif}
+
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
     language_:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
+    {$ifdef debugMode}
+    writeln('Read language. ok=',stream.allOkay);
+    {$endif}
 
     result:=result and stream.allOkay;
     if result then begin

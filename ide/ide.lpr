@@ -11,7 +11,7 @@ USES
   { you can add units after this }, ideMain,
   cmdLineInterpretation,
   ipcModel, mnh_doc,
-  askDialog,funcs,mnh_constants,
+  askDialog,funcs,mnh_constants, evaluation,
   mySys,
   saveFile; //needed for proper initialization
 

@@ -3,10 +3,12 @@ object DebuggerVarForm: TDebuggerVarForm
   Height = 360
   Top = 165
   Width = 480
-  Caption = 'DebuggerVarForm'
+  Caption = 'Debugger - Variables'
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   LCLVersion = '2.0.0.4'
   object Splitter1: TSplitter
     Cursor = crVSplit
@@ -34,6 +36,7 @@ object DebuggerVarForm: TDebuggerVarForm
     ColCount = 2
     FixedCols = 0
     TabOrder = 2
+    OnSelection = StackGridSelection
     Cells = (
       2
       0

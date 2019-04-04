@@ -9,9 +9,6 @@ USES
   ideLayoutUtil, editorMeta, basicTypes, mnh_settings;
 
 TYPE
-
-  { TBreakpointsForm }
-
   TBreakpointsForm = class(T_mnhComponentForm)
     BreakpointsListBox: TListBox;
     PROCEDURE BreakpointsListBoxDblClick(Sender: TObject);

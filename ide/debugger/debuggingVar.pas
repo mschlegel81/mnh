@@ -53,6 +53,8 @@ TYPE
       PROCEDURE clear;
   end;
 
+  F_fillCategoryNode=PROCEDURE(VAR cn:T_variableTreeEntryCategoryNode) of object;
+
 IMPLEMENTATION
 CONSTRUCTOR T_variableTreeEntryCategoryNode.create(CONST category_: T_debuggerVariableCategory);
   begin

@@ -77,6 +77,7 @@ TYPE
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
+      //TODO: Do we need a packageCS?
       packageCS:TRTLCriticalSection;
 
       pseudoCallees:T_packageProfilingCalls;
@@ -250,7 +251,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
     messages.clear;
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
@@ -264,7 +265,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
   begin
     errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
     globals.primaryContext.messages:=@errorHolder;
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
     result:=errorHolder.storedMessages(true);
@@ -299,7 +300,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(fileName));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
     finally
       globals.afterEvaluation(recycler);

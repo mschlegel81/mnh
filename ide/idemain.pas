@@ -113,6 +113,7 @@ TYPE
     PROCEDURE miFindNextClick(Sender: TObject);
     PROCEDURE miFindPreviousClick(Sender: TObject);
     PROCEDURE miGotoLineClick(Sender: TObject);
+    PROCEDURE miHaltEvaluationClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miKeepStackTraceClick(Sender: TObject);
@@ -225,6 +226,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
       workspace.fileHistory.updateHistoryMenu;
     end;
+    //TODO: Fallback mit Default-Werten
     stream.destroy;
     timer.enabled:=true;
     gui_started:=true;
@@ -363,6 +365,12 @@ PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
       meta:=workspace.currentEditor;
       if meta<>nil then gotoLineByDialog(meta^.editor);
     end;
+  end;
+
+PROCEDURE TIdeMainForm.miHaltEvaluationClick(Sender: TObject);
+  begin
+    runnerModel.haltEvaluation;
+    //TODO: Also halt quick evaluation.
   end;
 
 PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
@@ -561,8 +569,7 @@ PROCEDURE TIdeMainForm.onEditFinished(CONST data: P_storedMessage);
 
 PROCEDURE TIdeMainForm.onBreakpoint(CONST data: P_debuggingSnapshot);
   begin
-    debuggerForms.currentSnapshot:=data;
-    ensureDebuggerForm;
+    ensureDebuggerForm(data);
   end;
 
 PROCEDURE TIdeMainForm.onDebuggerEvent;
@@ -588,6 +595,22 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       MemoryUsageShape.Brush.color:=
         round(255*max(0,min(1,2-2*fraction))) shl 8 or
         round(255*max(0,min(1,  2*fraction)));
+    end;
+
+  PROCEDURE enableItems;
+    VAR unlocked:boolean;
+        canRun:boolean;
+    begin
+      miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
+      canRun:=runnerModel.canRun;
+      unlocked:=not(runnerModel.areEditorsLocked);
+      miRunDirect.enabled:=canRun;
+      miRunScript.enabled:=canRun;
+      miSave     .enabled:=unlocked;
+      miSaveAs   .enabled:=unlocked;
+      miRestore  .enabled:=unlocked;
+      smScripts  .enabled:=unlocked;
+      miReplace  .enabled:=unlocked;
     end;
 
   PROCEDURE slowUpdates; inline;
@@ -617,6 +640,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       runnerModel.flushMessages;
 
       if askForm.displayPending then askForm.Show;
+      enableItems;
     end;
 
   begin

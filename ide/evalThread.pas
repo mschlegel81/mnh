@@ -253,7 +253,7 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
 
 PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
   begin
-    globals.resetForEvaluation(@package,evalRequest.contextType,evalRequest.paramters,recycler);
+    globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.paramters,recycler);
     package.load(lu_forCallingMain,globals,recycler,mainParameters);
     messages.setExitCode;
   end;
@@ -288,7 +288,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
   PROCEDURE setupEdit;
     begin
       messages.clear();
-      globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+      globals.resetForEvaluation(nil,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
     end;
 
   PROCEDURE doneEdit;
@@ -395,11 +395,11 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
   begin
     if parentProvider=nil then begin
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
-      globals.resetForEvaluation(@package,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+      globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
     end else begin
       if package.getCodeProvider<>parentProvider then package.replaceCodeProvider(parentProvider);
-      globals.resetForEvaluation(@package,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
@@ -450,7 +450,7 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider;
 PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
   CONST C_loadMode:array[false..true] of T_packageLoadUsecase=(lu_forDirectExecution,lu_forCallingMain);
   begin
-    globals.resetForEvaluation(@package,evalRequest.contextType,evalRequest.paramters,recycler);
+    globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.paramters,recycler);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,mainParameters);
   end;
 
@@ -471,6 +471,8 @@ FUNCTION T_abstractEvaluation.flushMessages:T_messageTypeSet;
 FUNCTION T_abstractEvaluation.stateString:string;
   begin
     enterCriticalSection(evaluationCs);
+    if (state=es_debugRunning) and      globals.isPaused  then state:=es_debugHalted else
+    if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
     result:=C_evaluationState[state].txt;
     case C_evaluationState[state].showTime of
       1: result+=myTimeToStr(now-evalTime);
@@ -481,7 +483,11 @@ FUNCTION T_abstractEvaluation.stateString:string;
 
 FUNCTION T_standardEvaluation.isPaused:boolean;
   begin
+    enterCriticalSection(evaluationCs);
+    if (state=es_debugRunning) and      globals.isPaused  then state:=es_debugHalted else
+    if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
     result:=globals.isPaused;
+    leaveCriticalSection(evaluationCs);
   end;
 
 FUNCTION T_standardEvaluation.stepper:P_debuggingStepper;
@@ -503,7 +509,7 @@ PROCEDURE T_abstractEvaluation.postHalt;
     recycler.initRecycler;
     system.enterCriticalSection(evaluationCs);
     globals.primaryContext.messages^.setStopFlag;
-    globals.stepper^.haltEvaluation;
+    if eco_debugging in globals.options then globals.stepper^.haltEvaluation;
     globals.stopWorkers(recycler);
     stoppedByUser:=true;
     system.leaveCriticalSection(evaluationCs);

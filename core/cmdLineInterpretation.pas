@@ -251,7 +251,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       recycler.initRecycler;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
       if wantHelpDisplay then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
         writeln(package^.getHelpOnMain);

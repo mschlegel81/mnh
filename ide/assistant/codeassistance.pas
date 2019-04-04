@@ -78,7 +78,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
     end;
     new(package,create(source,nil));
     initialStateHash:=source^.stateHash;
-    globals^.resetForEvaluation(package,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals^.resetForEvaluation(package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     new(localIdInfos,create);
     package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(false)

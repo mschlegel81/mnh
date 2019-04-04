@@ -27,6 +27,7 @@ T_runnerModel=object(T_serializable)
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
+    FUNCTION isMainEvaluationPaused:boolean;
     FUNCTION canRun:boolean;
     PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
     PROCEDURE runExternally(CONST mainParameters:string='');
@@ -36,7 +37,8 @@ T_runnerModel=object(T_serializable)
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
-    FUNCTION anyRunning:boolean;
+    PROCEDURE postHalt;
+    FUNCTION anyRunning(CONST considerScriptEval:boolean=true):boolean;
     PROCEDURE flushMessages;
     FUNCTION getStateLabel:string;
 
@@ -74,6 +76,11 @@ FUNCTION T_runnerModel.areEditorsLocked: boolean;
     result:=(debugMode_ and evaluation.isRunning) or scriptEval.isRunning;
   end;
 
+FUNCTION T_runnerModel.isMainEvaluationPaused:boolean;
+  begin
+    result:=evaluation.isPaused;
+  end;
+
 FUNCTION T_runnerModel.canRun: boolean;
   VAR meta:P_editorMeta;
   begin
@@ -99,7 +106,6 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
       else if stackTracing then contextType:=ect_stackTracing
                            else contextType:=ect_normal;
     end;
-
     if mainCall then evaluation.callMain(workspace.currentEditor,mainParameters,contextType)
                 else evaluation.evaluate(workspace.currentEditor,               contextType);
     lastStart.mainCall:=mainCall;
@@ -150,7 +156,7 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
     evaluation.stepper^.setState(newState);
     mainForm.onDebuggerEvent;
     meta:=workspace.currentEditor;
-    if meta<>nil then with meta^ do begin
+    if meta<>nil then with meta^ do begin //TODO: This is obsolete.
       editor.Gutter.MarksPart.visible:=true;
       editor.readonly:=areEditorsLocked or strictlyReadOnly;
     end;
@@ -169,9 +175,15 @@ PROCEDURE T_runnerModel.haltEvaluation;
     scriptEval.haltEvaluation;
   end;
 
-FUNCTION T_runnerModel.anyRunning:boolean;
+PROCEDURE T_runnerModel.postHalt;
   begin
-    result:=evaluation.isRunning or scriptEval.isRunning;
+    evaluation.postHalt;
+    scriptEval.postHalt;
+  end;
+
+FUNCTION T_runnerModel.anyRunning(CONST considerScriptEval:boolean=true):boolean;
+  begin
+    result:=evaluation.isRunning or considerScriptEval and scriptEval.isRunning;
   end;
 
 PROCEDURE T_runnerModel.flushMessages;
