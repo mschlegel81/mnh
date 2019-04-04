@@ -477,4 +477,18 @@ object HelpForm: THelpForm
     inline SynLeftGutterPartList1: TSynGutterPartList
     end
   end
+  object openHtmlButton: TButton
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 322
+    Height = 35
+    Top = 0
+    Width = 158
+    Anchors = [akTop, akRight]
+    AutoSize = True
+    Caption = 'Show in browser'
+    OnClick = openHtmlButtonClick
+    TabOrder = 1
+  end
 end

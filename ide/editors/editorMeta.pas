@@ -154,7 +154,7 @@ T_bookmarkIndex=0..9;
 //
 //FUNCTION getAllBreakpoints:T_searchTokenLocations;
 
-FUNCTION getHelpText:string;
+FUNCTION getHelpText(OUT helpLink:string):string;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback=nil;
     runnerModel:T_runnerModel;
@@ -260,7 +260,7 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
     writeln('Read language. ok=',stream.allOkay);
     {$endif}
 
-    result:=result and stream.allOkay;
+    result:=stream.allOkay;
     if result then begin
       editor.modified:=fileInfo.isChanged;
       updateSheetCaption;
@@ -639,9 +639,10 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
     if response<>nil then updateAssistanceResponse(response);
   end;
 
-FUNCTION getHelpText:string;
+FUNCTION getHelpText(OUT helpLink:string):string;
   begin
     result:=underCursor.infoText;
+    helpLink:=underCursor.linkToHelp;
   end;
 
 //CONST workspaceSerialVersion=612461341;

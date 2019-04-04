@@ -23,10 +23,12 @@ TYPE
     FUNCTION getHtml:ansistring;
     FUNCTION getPlainText(CONST lineSplitter:string):ansistring;
     PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
+    FUNCTION getHtmlLink:string;
   end;
 
 PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
+FUNCTION getDocIndexLinkForBrowser:ansistring;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
@@ -93,6 +95,11 @@ PROCEDURE restoreDefaultFile(CONST fileName:string);
 FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
 FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
+
+FUNCTION getDocIndexLinkForBrowser:ansistring;
+  begin
+    result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'),'\','/');
+  end;
 
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
   VAR newDoc:P_intrinsicFunctionDocumentation;
@@ -315,6 +322,11 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       for i:=0 to length(htmlExample)-1 do result:=result+LineEnding+htmlExample[i];
       result:=result+'</code>';
     end;
+  end;
+
+FUNCTION T_intrinsicFunctionDocumentation.getHtmlLink:string;
+  begin
+    result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/builtin.html#'),'\','/')+id;
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
