@@ -21,6 +21,7 @@ TYPE
     breakpointImages: TImageList;
     evaluationStateLabel: TLabel;
     EditLocationLabel: TLabel;
+    FindDialog1: TFindDialog;
     miDebuggerVar: TMenuItem;
     miClose2: TMenuItem;
     miClose3: TMenuItem;
@@ -36,6 +37,7 @@ TYPE
     miOutput: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
+    ReplaceDialog1: TReplaceDialog;
     smScripts: TMenuItem;
     MenuItem3: TMenuItem;
     miKeepStackTrace: TMenuItem;
@@ -238,6 +240,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
+    searchReplaceModel.create(FindDialog1,ReplaceDialog1);
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -247,6 +250,7 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
     saveIdeSettings;
     runnerModel.destroy;
     workspace.destroy;
+    searchReplaceModel.destroy;
   end;
 
 FUNCTION anyEvaluationRunning:boolean;

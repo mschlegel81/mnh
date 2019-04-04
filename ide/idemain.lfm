@@ -831,4 +831,13 @@ object IdeMainForm: TIdeMainForm
       OnClick = miClose1Click
     end
   end
+  object FindDialog1: TFindDialog
+    left = 391
+    top = 152
+  end
+  object ReplaceDialog1: TReplaceDialog
+    Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
+    left = 473
+    top = 184
+  end
 end
