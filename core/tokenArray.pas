@@ -372,7 +372,6 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     end;
   begin
     result.linkToHelp:=getDocIndexLinkForBrowser;
-    //TODO: Add custom links for specific token types...
     result.infoText:='(eol)';
     result.location:=C_nilTokenLocation;
     result.startLoc:=C_nilTokenLocation;
@@ -383,6 +382,9 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.tokenType:=tt_EOL;
     if token=nil then exit;
     result.tokenType    :=token^.tokType;
+    if C_tokenInfo[result.tokenType].helpLink<>''
+    then result.linkToHelp:=getDocIndexLinkForBrowser(C_tokenInfo[result.tokenType].helpLink);
+
     result.location     :=references;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;

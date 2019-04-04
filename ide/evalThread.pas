@@ -370,36 +370,6 @@ FUNCTION T_quickEvaluation.postEvalulation(CONST parent: P_codeProvider; CONST e
   end;
 
 PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
-  //PROCEDURE interpretInPackage(CONST packageOrNil:P_package; CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
-  //  VAR lexer:T_lexer;
-  //      stmt :T_enhancedStatement;
-  //      tempPackage:P_package;
-  //  begin
-  //    if packageOrNil<>nil then begin;
-  //      if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
-  //        packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-  //      if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution])
-  //        then P_postEvaluationData(p)^.messages^.raiseSimpleError('Error while loading',packageTokenLocation(packageOrNil))
-  //      else begin
-  //        P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-  //        enterCriticalSection(packageOrNil^.packageCS);
-  //        lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
-  //        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-  //        while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
-  //          packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
-  //          stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-  //        end;
-  //        if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
-  //        leaveCriticalSection(packageOrNil^.packageCS);
-  //        lexer.destroy;
-  //      end;
-  //    end else begin
-  //      tempPackage:=packageFromCode(input,'<quick>');
-  //      tempPackage^.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-  //      dispose(tempPackage,destroy);
-  //    end;
-  //  end;
-
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
   begin

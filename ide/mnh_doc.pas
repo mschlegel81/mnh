@@ -28,7 +28,7 @@ TYPE
 
 PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
-FUNCTION getDocIndexLinkForBrowser:ansistring;
+FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
@@ -96,9 +96,11 @@ FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
 FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
 
-FUNCTION getDocIndexLinkForBrowser:ansistring;
+FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
   begin
-    result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'),'\','/');
+    if suffix=''
+    then result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'),'\','/')
+    else result:='file:///'+replaceAll(expandFileName(getHtmlRoot              ),'\','/')+suffix;
   end;
 
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
