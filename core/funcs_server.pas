@@ -236,18 +236,11 @@ PROCEDURE T_microserver.killQuickly;
     while up do sleep(1);
   end;
 
-FUNCTION percentCode(CONST c:byte):string;
-  CONST hexDigit:array[0..15] of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
-  begin
-    result:='%'+hexDigit[c shr 4]+hexDigit[c and 15];
-  end;
-
 FUNCTION extractParameters_impl intFuncSignature;
   VAR parameters:P_mapLiteral;
   PROCEDURE addParameterPair(CONST pair:string);
 
     VAR keyAndValue:T_arrayOfString;
-        c:byte;
         i:longint;
         value:P_stringLiteral;
         castValue:P_literal;
@@ -255,8 +248,7 @@ FUNCTION extractParameters_impl intFuncSignature;
       keyAndValue:=split(pair,'=');
       while length(keyAndValue)<2 do append(keyAndValue,'');
       for i:=0 to length(keyAndValue)-1 do begin
-        keyAndValue[i]:=replaceAll(keyAndValue[i],'+',' ');
-        for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],percentCode(c),chr(c));
+        keyAndValue[i]:=percentDecode(replaceAll(keyAndValue[i],'+',' '));
       end;
       value:=newStringLiteral(keyAndValue[1]);
       castValue:=value^.softCast;
@@ -305,13 +297,6 @@ FUNCTION encodeRequest_impl intFuncSignature;
     begin
       if L^.literalType=lt_string then result:=P_stringLiteral(L)^.value
                                   else result:=L^.toString();
-    end;
-
-  FUNCTION percentEncode(CONST s:string):string;
-    VAR c:char;
-    begin
-      result:='';
-      for c in s do if c in ['A'..'Z','a'..'z','0'..'9','-','_'] then result:=result+c else result:=result+percentCode(ord(c));
     end;
 
   VAR address:string='';
