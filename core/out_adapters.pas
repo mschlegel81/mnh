@@ -501,7 +501,8 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
     for a in adapters do if a.adapter^.append(message) then appended:=true;
     if appended then include(collected,message^.messageType);
     {$ifdef fullVersion}
-    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
+    then raiseUnhandledError(message);
     {$endif}
     leaveCriticalSection(messagesCs);
     if disposeAfterPosting then disposeMessage(message);

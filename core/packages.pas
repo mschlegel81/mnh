@@ -77,9 +77,6 @@ TYPE
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
-      //TODO: Do we need a packageCS?
-      packageCS:TRTLCriticalSection;
-
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
@@ -1018,9 +1015,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
 
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
-    {$ifdef fullVersion}
-    enterCriticalSection(packageCS);
-    {$endif}
     commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
@@ -1061,7 +1055,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
-      leaveCriticalSection(packageCS);
       {$endif}
       exit;
     end;
@@ -1072,9 +1065,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then finalize(globals.primaryContext,recycler);
-    {$ifdef fullVersion}
-    leaveCriticalSection(packageCS)
-    {$endif}
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1085,9 +1075,6 @@ PROCEDURE disposeRule(VAR rule:P_rule);
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_: P_package);
   begin
     inherited create(provider);
-    {$ifdef fullVersion}
-    initCriticalSection(packageCS);
-    {$endif}
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
@@ -1108,7 +1095,6 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     {$ifdef fullVersion}
     anyCalled:=false;
     suppressAllUnusedWarnings:=false;
-    enterCriticalSection(packageCS);
     {$endif}
     for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
     setLength(runAfter,0);
@@ -1123,9 +1109,6 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
-    {$ifdef fullVersion}
-    leaveCriticalSection(packageCS);
-    {$endif}
   end;
 
 PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
@@ -1199,7 +1182,6 @@ DESTRUCTOR T_package.destroy;
     importedRules.destroy;
     {$ifdef fullVersion}
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
-    doneCriticalSection(packageCS);
     {$endif}
     inherited destroy;
   end;
