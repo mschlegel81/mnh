@@ -169,7 +169,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters;
+USES mnh_splash,out_adapters,cmdLineInterpretation;
 {$R ideMain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -236,6 +236,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     gui_started:=true;
 
     runnerModel.ensureEditScripts;
+
+    FormDropFiles(Sender,filesToOpenInEditor);
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
