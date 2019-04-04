@@ -153,7 +153,9 @@ PROCEDURE T_mnhComponentForm.showComponent;
   end;
 
 FUNCTION hasAnyForm:boolean;
+  {$ifdef debugMode}
   VAR f:T_mnhComponentForm;
+  {$endif}
   begin
     result:=length(activeForms)>0;
     {$ifdef debugMode}

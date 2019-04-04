@@ -241,9 +241,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     timer.enabled:=false;
-    runnerModel.destroy;
     finalizeCodeAssistance;
     saveIdeSettings;
+    runnerModel.destroy;
     workspace.destroy;
   end;
 
