@@ -151,11 +151,9 @@ PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: intege
   end;
 
 PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
-  VAR meta:P_editorMeta;
   begin
     evaluation.stepper^.setState(newState);
     mainForm.onDebuggerEvent; //sets editors to readonly...
-    meta:=workspace.currentEditor;
   end;
 
 PROCEDURE T_runnerModel.markDebugLine(CONST editor: TSynEdit;

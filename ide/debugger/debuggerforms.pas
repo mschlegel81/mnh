@@ -173,7 +173,6 @@ PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
       tokens:T_arrayOfString;
       txt:ansistring;
       k:longint=0;
-      stackIdx:longint;
       firstInLine:boolean;
   begin
     currentExpressionEdit.lines.clear;

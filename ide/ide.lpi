@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="53">
+    <Units Count="54">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -408,6 +408,14 @@
         <Filename Value="../core/funcs_server.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit52>
+      <Unit53>
+        <Filename Value="reevaluationforms.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="reevaluationForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="reevaluationForms"/>
+      </Unit53>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

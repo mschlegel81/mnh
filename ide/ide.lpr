@@ -1,3 +1,4 @@
+{$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM ide;
 
 {$mode objfpc}{$H+}
@@ -8,7 +9,7 @@ USES
   cthreads,
   {$endif}{$endif}
   Forms, Interfaces
-  { you can add units after this }, ideMain,
+  { you can add units after this }, ideMain, reevaluationForms,
   cmdLineInterpretation,
   ipcModel, mnh_doc,
   askDialog,funcs,mnh_constants, evaluation,
@@ -27,7 +28,7 @@ begin
     {$endif}
     initAskForm;
     if reEvaluationWithGUIrequired
-    then halt(9) //TODO: Implement output only form...
+    then Application.CreateForm(TreevaluationForm,reevaluationForm)
     else if sendParametersToOtherInstance(filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);

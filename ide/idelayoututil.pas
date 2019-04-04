@@ -70,6 +70,7 @@ VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
     mainForm:T_mnhIdeForm=nil;
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
+FUNCTION hasAnyForm:boolean;
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
 FUNCTION getFormOfType(CONST ideComponent:T_ideComponent):T_mnhComponentForm;
 
@@ -151,9 +152,19 @@ PROCEDURE T_mnhComponentForm.showComponent;
     end;
   end;
 
+FUNCTION hasAnyForm:boolean;
+  VAR f:T_mnhComponentForm;
+  begin
+    result:=length(activeForms)>0;
+    {$ifdef debugMode}
+    write('Active Forms:');
+    for f in activeForms do write(f.getIdeComponentType,' ');
+    writeln;
+    {$endif}
+  end;
+
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
   VAR f:T_mnhComponentForm;
-
   begin
     result:=false;
     for f in activeForms do if f.getIdeComponentType=ideComponent then begin

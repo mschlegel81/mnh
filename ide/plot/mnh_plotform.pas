@@ -150,7 +150,6 @@ TYPE
     animationFrameIndex:longint;
     fpsSamplingStart:double;
     framesSampled:longint;
-    closedByUser:boolean;
     eTimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
@@ -268,7 +267,6 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     miCacheFrames1.checked:=settings.cacheAnimationFrames;
     fpsSamplingStart:=now;
     framesSampled:=0;
-    closedByUser:=false;
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
@@ -530,8 +528,10 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    closedByUser:=true;
+    //TODO: set flag in corresponding adapter
+    //closedByUser:=true;
     animateCheckBox.checked:=false;
+    CloseAction:=caFree;
   end;
 
 FUNCTION TplotForm.getIdeComponentType: T_ideComponent;

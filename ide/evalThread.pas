@@ -203,7 +203,7 @@ DESTRUCTOR T_ideScriptEvaluation.destroy;
 CONSTRUCTOR T_reevaluationWithGui.create();
   VAR plot:P_guiPlotSystem;
   begin
-    inherited init(ek_quick);
+    inherited init(ek_normal);
     messages.addConsoleOutAdapter(cmdLineInterpretation.verbosityString);
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
@@ -218,6 +218,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
     evalRequest.callMain:=true;
     evalRequest.paramters:=cmdLineInterpretation.mainParameters;
+    package.replaceCodeProvider(newFileCodeProvider(getFileToInterpretFromCommandLine));
     state:=es_pending;
     executeInNewThread(false);
     system.leaveCriticalSection(evaluationCs);
