@@ -14,6 +14,9 @@ TYPE
                  at_guiEventsCollector,
                  at_plot,
                  at_imig,
+                 at_table,
+                 at_treeView,
+                 at_customForm,
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -23,10 +26,13 @@ CONST
     {at_textFile} [mt_printline   ..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
-    {at_guiSyn...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
-    {at_guiEve...}[mt_endOfEvaluation,mt_debugger_breakpoint,mt_displayTable,mt_plot_postDisplay,mt_guiEdit_done,mt_displayVariableTree,mt_displayCustomForm],
-    {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
+    {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_guiEve...}[mt_startOfEvaluation,mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done,mt_guiEditScriptsLoaded],
+    {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_imig}     [mt_image_postDisplay..mt_image_obtainDimensions],
+    {at_table}    [mt_startOfEvaluation,mt_displayTable],
+    {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
+    {at_custom...}[                     mt_displayCustomForm,mt_endOfEvaluation],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -70,6 +76,12 @@ TYPE
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
     PROCEDURE removeDuplicateStoredMessages;
     PROCEDURE clear; virtual;
+    FUNCTION typesOfStoredMessages:T_messageTypeSet;
+  end;
+
+  P_abstractGuiOutAdapter = ^T_abstractGuiOutAdapter;
+  T_abstractGuiOutAdapter = object(T_collectingOutAdapter)
+    FUNCTION flushToGui:T_messageTypeSet; virtual; abstract;
   end;
 
   {$ifdef fullVersion}
@@ -159,6 +171,14 @@ TYPE
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
+
+  {$ifdef fullVersion}
+  P_guiMessagesDistributor = ^T_guiMessagesDistributor;
+  T_guiMessagesDistributor = object(T_messagesDistributor)
+    CONSTRUCTOR createGuiMessagesDistributor();
+    FUNCTION flushToGui:T_messageTypeSet;
+  end;
+  {$endif}
 
   P_messagesRedirector=^T_messagesRedirector;
   T_messagesRedirector=object(T_messagesDistributor)
@@ -299,6 +319,27 @@ OPERATOR :=(s:string):T_messageTypeSet;
       end;
     end;
   end;
+
+{$ifdef fullVersion}
+CONSTRUCTOR T_guiMessagesDistributor.createGuiMessagesDistributor();
+  begin
+    inherited createDistributor();
+  end;
+
+FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
+  VAR a:T_flaggedAdapter;
+  begin
+    result:=[];
+    for a in adapters do if a.adapter^.adapterType in
+    [at_guiSynOutput,
+     at_guiEventsCollector,
+     at_customForm,
+     at_plot,
+     at_imig,
+     at_table,
+     at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui;
+  end;
+{$endif}
 
 CONSTRUCTOR T_messagesRedirector.createRedirector();
   begin
@@ -463,7 +504,8 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
     for a in adapters do if a.adapter^.append(message) then appended:=true;
     if appended then include(collected,message^.messageType);
     {$ifdef fullVersion}
-    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
+    then raiseUnhandledError(message);
     {$endif}
     leaveCriticalSection(messagesCs);
     if disposeAfterPosting then disposeMessage(message);
@@ -858,6 +900,15 @@ PROCEDURE T_collectingOutAdapter.clear;
     inherited clear;
     for m in storedMessages do disposeMessage(m);
     setLength(storedMessages,0);
+    system.leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_collectingOutAdapter.typesOfStoredMessages:T_messageTypeSet;
+  VAR m:P_storedMessage;
+  begin
+    system.enterCriticalSection(cs);
+    result:=[];
+    for m in storedMessages do include(result,m^.messageType);
     system.leaveCriticalSection(cs);
   end;
 //=======================================================:T_collectingOutAdapter

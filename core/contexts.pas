@@ -31,8 +31,8 @@ CONST
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
   {$ifdef fullVersion}
   {ect_profiling}             [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,eco_profiling],
-  {ect_debugging}             [                                       eco_beepOnError,eco_stackTrace,              eco_debugging],
-  {ect_debuggingAndProfiling} [                                       eco_beepOnError,eco_stackTrace,eco_profiling,eco_debugging],
+  {ect_debugging}             [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,              eco_debugging],
+  {ect_debuggingAndProfiling} [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,eco_profiling,eco_debugging],
   {ect_stackTracing}          [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace],
   {$endif}
   {ect_silent}                [eco_spawnWorker,eco_createDetachedTask]);
@@ -173,10 +173,11 @@ TYPE
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_messages);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
+      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
+                                  CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
       PROCEDURE stopWorkers(VAR recycler:T_recycler);
       PROCEDURE afterEvaluation(VAR recycler:T_recycler);
-
+      PROPERTY options:T_evaluationContextOptions read globalOptions;
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
       PROCEDURE resolveMainParameter(VAR first:P_token);
@@ -300,7 +301,8 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     primaryContext.destroy;
   end;
 
-PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
+PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
+                                                 CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
   VAR pc:T_profileCategory;
       i:longint;
   begin
@@ -322,7 +324,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     //prepare or dispose stepper:
     if eco_debugging in globalOptions then begin
       if debuggingStepper=nil then new(debuggingStepper,create(@primaryContext.messages));
-      debuggingStepper^.resetForDebugging(package);
+      debuggingStepper^.resetForDebugging(package,packageVar_);
     end else if debuggingStepper<>nil then begin
       dispose(debuggingStepper,destroy);
       debuggingStepper:=nil;
@@ -350,6 +352,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       childCount:=0;
     end;
     {$ifdef fullVersion}
+    primaryContext.messages^.postSingal(mt_startOfEvaluation,C_nilTokenLocation);
     primaryContext.callStack.clear;
     primaryContext.parentCustomForm:=nil;
     {$endif}
@@ -492,16 +495,16 @@ PROCEDURE T_context.callStackPop(CONST first: P_token);
     end;
   end;
 
-FUNCTION T_context.stepping(CONST first: P_token;
-  CONST stack: P_tokenStack): boolean;
+FUNCTION T_context.stepping(CONST first: P_token; CONST stack: P_tokenStack): boolean;
   begin
     if (related.evaluation=nil) or (related.evaluation^.debuggingStepper=nil) then exit(false);
-    if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack);
+    //TODO give callbacks for querying package-global and context-local variables
+
+    if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack,@reportVariables);
     result:=true;
   end;
 
-PROCEDURE T_context.reportVariables(
-  VAR variableReport: T_variableTreeEntryCategoryNode);
+PROCEDURE T_context.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
   begin
     if related.parent<>nil then related.parent^.reportVariables(variableReport);
     if valueScope<>nil then valueScope^.reportVariables(variableReport);

@@ -80,6 +80,7 @@ TYPE
     canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
     idWithoutIsPrefix:string;
+    linkToHelp:string;
   end;
 
   T_enhancedToken=object
@@ -359,7 +360,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   VAR i:longint;
       tokenText:string;
-  FUNCTION getBuiltinRuleInfo:string;
+  FUNCTION getBuiltinRuleInfo(OUT link:string):string;
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
       if (length(tokenText)>1) and (tokenText[1]='.')
@@ -367,8 +368,10 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       else doc:=functionDocMap.get(tokenText);
       if doc=nil then exit('');
       result:='builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+      link:=doc^.getHtmlLink;
     end;
   begin
+    result.linkToHelp:=getDocIndexLinkForBrowser;
     result.infoText:='(eol)';
     result.location:=C_nilTokenLocation;
     result.startLoc:=C_nilTokenLocation;
@@ -379,6 +382,9 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.tokenType:=tt_EOL;
     if token=nil then exit;
     result.tokenType    :=token^.tokType;
+    if C_tokenInfo[result.tokenType].helpLink<>''
+    then result.linkToHelp:=getDocIndexLinkForBrowser(C_tokenInfo[result.tokenType].helpLink);
+
     result.location     :=references;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
@@ -414,14 +420,14 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
 
     case token^.tokType of
       tt_intrinsicRule:
-        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo;
+        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
       tt_blockLocalVariable, tt_parameterIdentifier, tt_eachParameter, tt_eachIndex:
         result.infoText+=C_lineBreakChar+'Declared '+ansistring(references);
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
-         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo;
+         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_type,tt_typeCheck:
         result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);

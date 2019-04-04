@@ -77,8 +77,6 @@ TYPE
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
-      packageCS:TRTLCriticalSection;
-
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
@@ -87,8 +85,9 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
+      public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
-
+      private
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
       PROCEDURE complainAboutUnused(CONST messages:P_messages);
@@ -121,23 +120,7 @@ TYPE
     end;
 
   {$ifdef fullVersion}
-  T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
-
-  P_postEvaluationData=^T_postEvaluationData;
-  T_postEvaluationData=object
-    private
-      editor              :P_codeProvider;
-      packageForPostEval  :P_package;
-      messages            :P_messages;
-      currentlyProcessing :boolean;
-      cs                  :TRTLCriticalSection;
-    public
-      CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters: P_messages);
-      DESTRUCTOR destroy;
-      PROCEDURE triggerUpdate(CONST package:P_package);
-      PROCEDURE ensureStop;
-      FUNCTION processing:boolean;
-  end;
+  //T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
   {$endif}
 
   P_sandbox=^T_sandbox;
@@ -234,156 +217,12 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
-{$ifdef fullVersion}
-CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_messages);
-  begin
-    editor:=quickEdit;
-    messages:=quickAdapters;
-    packageForPostEval:=nil;
-    currentlyProcessing:=false;
-    initCriticalSection(cs);
-  end;
-
-DESTRUCTOR T_postEvaluationData.destroy;
-  begin
-    ensureStop;
-    doneCriticalSection(cs);
-  end;
-
-FUNCTION postEvalThread(p:pointer):ptrint;
-  VAR evaluationContext:T_evaluationGlobals;
-      sleepCount:longint=0;
-      lastEvaluatedPackage:string='';
-      lastInput:T_arrayOfString;
-      recycler:T_recycler;
-
-  FUNCTION inputChanged:boolean;
-    VAR currPackage:string;
-        currInput  :T_arrayOfString;
-    begin
-      currInput  :=P_postEvaluationData(p)^.editor^.getLines;
-      if P_postEvaluationData(p)^.packageForPostEval=nil
-      then currPackage:=''
-      else currPackage:=P_postEvaluationData(p)^.packageForPostEval^.getPath+'#'+
-               IntToHex(P_postEvaluationData(p)^.packageForPostEval^.getCodeState,8);
-      if arrEquals(currInput,lastInput) and (currPackage=lastEvaluatedPackage)
-      then result:=false
-      else begin
-        result:=true;
-        lastInput:=currInput;
-        lastEvaluatedPackage:=currPackage;
-      end;
-    end;
-
-  PROCEDURE interpretInPackage(CONST packageOrNil:P_package; CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
-    VAR lexer:T_lexer;
-        stmt :T_enhancedStatement;
-        tempPackage:P_package;
-    begin
-      if packageOrNil<>nil then begin;
-        if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (packageOrNil^.codeChanged) then
-          packageOrNil^.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-        if not(packageOrNil^.readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution])
-          then P_postEvaluationData(p)^.messages^.raiseSimpleError('Error while loading',packageTokenLocation(packageOrNil))
-        else begin
-          P_postEvaluationData(p)^.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-          enterCriticalSection(packageOrNil^.packageCS);
-          lexer.create(input,packageTokenLocation(packageOrNil),packageOrNil);
-          stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-          while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
-            packageOrNil^.interpret(stmt,lu_forDirectExecution,globals,recycler);
-            stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-          end;
-          if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
-          leaveCriticalSection(packageOrNil^.packageCS);
-          lexer.destroy;
-        end;
-      end else begin
-        tempPackage:=packageFromCode(input,'<quick>');
-        tempPackage^.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-        dispose(tempPackage,destroy);
-      end;
-    end;
-
-  begin
-    initialize(lastInput);
-    recycler.initRecycler;
-    with P_postEvaluationData(p)^ do begin
-      enterCriticalSection(cs);
-      currentlyProcessing:=true;
-      evaluationContext.create(messages);
-      messages^.clear();
-      evaluationContext.primaryContext.setAllowedSideEffectsReturningPrevious([
-                se_output,
-                se_sleep,
-                se_detaching,
-                se_readPackageState,
-                se_readFile]);
-      while (sleepCount<1000) and evaluationContext.primaryContext.messages^.continueEvaluation do begin
-        while inputChanged do begin
-          sleepCount:=0;
-          leaveCriticalSection(cs);
-          evaluationContext.resetForEvaluation(packageForPostEval,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-          messages^.clear(false);
-          messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-          interpretInPackage(packageForPostEval,lastInput,evaluationContext);
-          evaluationContext.afterEvaluation(recycler);
-          enterCriticalSection(cs);
-        end;
-        leaveCriticalSection(cs);
-        sleep(10);
-        inc(sleepCount);
-        enterCriticalSection(cs);
-      end;
-      evaluationContext.destroy;
-      currentlyProcessing:=false;
-      leaveCriticalSection(cs);
-    end;
-    result:=0;
-    recycler.cleanup;
-  end;
-
-PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
-  begin
-    enterCriticalSection(cs);
-    packageForPostEval:=package;
-    if currentlyProcessing then begin
-      leaveCriticalSection(cs);
-      exit;
-    end;
-    currentlyProcessing:=true;
-    beginThread(@postEvalThread,@self);
-    leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_postEvaluationData.ensureStop;
-  begin
-    enterCriticalSection(cs);
-    messages^.setStopFlag;
-    while currentlyProcessing do begin
-      leaveCriticalSection(cs);
-      ThreadSwitch;
-      sleep(1);
-      enterCriticalSection(cs);
-    end;
-    leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_postEvaluationData.processing:boolean;
-  begin
-    enterCriticalSection(cs);
-    result:=currentlyProcessing;
-    leaveCriticalSection(cs);
-  end;
-
-{$endif}
-
 CONSTRUCTOR T_sandbox.create;
   begin
     initCriticalSection(cs);
     messages.createRedirector();
     {$ifdef fullVersion}
-    plotSystem.create(nil);
+    plotSystem.create(nil,true);
     messages.addOutAdapter(@plotSystem,false);
     {$endif}
     globals.create(@messages);
@@ -407,12 +246,9 @@ DESTRUCTOR T_sandbox.destroy;
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed: dword): T_storedMessages;
   begin
     messages.clear;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
@@ -426,10 +262,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
   begin
     errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
     globals.primaryContext.messages:=@errorHolder;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
-    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
     globals.afterEvaluation(recycler);
     result:=errorHolder.storedMessages(true);
@@ -459,15 +292,12 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     if connectLevel=0 then callContextType:=ect_silent
                       else callContextType:=ect_normal;
     messages.clear;
-    {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart(true);
-    {$endif}
     messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(fileName));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}callContextType,mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
     finally
       globals.afterEvaluation(recycler);
@@ -1185,9 +1015,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
 
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
-    {$ifdef fullVersion}
-    enterCriticalSection(packageCS);
-    {$endif}
     commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
@@ -1228,7 +1055,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
-      leaveCriticalSection(packageCS);
       {$endif}
       exit;
     end;
@@ -1239,9 +1065,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then finalize(globals.primaryContext,recycler);
-    {$ifdef fullVersion}
-    leaveCriticalSection(packageCS)
-    {$endif}
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1252,9 +1075,6 @@ PROCEDURE disposeRule(VAR rule:P_rule);
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_: P_package);
   begin
     inherited create(provider);
-    {$ifdef fullVersion}
-    initCriticalSection(packageCS);
-    {$endif}
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
@@ -1275,7 +1095,6 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     {$ifdef fullVersion}
     anyCalled:=false;
     suppressAllUnusedWarnings:=false;
-    enterCriticalSection(packageCS);
     {$endif}
     for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
     setLength(runAfter,0);
@@ -1290,9 +1109,6 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
-    {$ifdef fullVersion}
-    leaveCriticalSection(packageCS);
-    {$endif}
   end;
 
 PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
@@ -1366,7 +1182,6 @@ DESTRUCTOR T_package.destroy;
     importedRules.destroy;
     {$ifdef fullVersion}
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
-    doneCriticalSection(packageCS);
     {$endif}
     inherited destroy;
   end;

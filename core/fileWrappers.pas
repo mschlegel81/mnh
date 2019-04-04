@@ -51,7 +51,7 @@ TYPE
 
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
-
+FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
@@ -64,7 +64,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
 FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
 IMPLEMENTATION
@@ -188,6 +188,9 @@ FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;
 
 FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_arrayOfString): P_virtualFileCodeProvider;
   begin new(result,create(path,lineData)); end;
+
+FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
+  begin if provider=nil then result:=nil else new(result,create(provider^.getPath,provider^.getLines)); end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
@@ -387,7 +390,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
     sysutils.findClose(info);
   end;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string): int64;
   VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
@@ -395,6 +398,7 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
     try
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
+      if customFolder<>'' then tempProcess.CurrentDirectory:=customFolder;
       if asynch or not(isConsoleShowing) then tempProcess.options:=tempProcess.options +[poNewConsole];
       if not(asynch)                     then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);

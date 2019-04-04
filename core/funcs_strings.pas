@@ -86,7 +86,7 @@ FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
     byteIndex:=1;
     for charIndex:=1 to UTF8Length(txt) do begin
       sub:='';
-      for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+      for i:=0 to UTF8CodepointSize(@txt[byteIndex])-1 do begin
         sub:=sub+txt[byteIndex];
         inc(byteIndex)
       end;
@@ -147,7 +147,7 @@ FUNCTION charSet_imp intFuncSignature;
         byteIndex:=1;
         for charIndex:=1 to UTF8Length(txt) do begin
           sub:='';
-          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+          for i:=0 to UTF8CodepointSize(@txt[byteIndex])-1 do begin
             sub:=sub+txt[byteIndex];
             inc(byteIndex)
           end;
@@ -442,7 +442,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         byteIndex:=1;
         for charIndex:=1 to UTF8Length(input) do begin
           cUtf8:='';
-          for i:=0 to UTF8CharacterLength(@input[byteIndex])-1 do begin
+          for i:=0 to UTF8CodepointSize(@input[byteIndex])-1 do begin
             cUtf8:=cUtf8+input[byteIndex];
             inc(byteIndex)
           end;
@@ -518,7 +518,7 @@ FUNCTION reverseString_impl intFuncSignature;
         byteIndex:=1;
         for charIndex:=1 to UTF8Length(txt) do begin
           sub:='';
-          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+          for i:=0 to UTF8CodepointSize(@txt[byteIndex])-1 do begin
             sub:=sub+txt[byteIndex];
             inc(byteIndex)
           end;

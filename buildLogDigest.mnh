@@ -7,7 +7,7 @@ ignoredCodes:=[1002,1008,1021,1022,1023,
 alwaysIgnoredCodes:=[1023,1022,1021,1008,3104,9022,9015,1002];
 
 ignoredPatterns:=['3rd_party',
-                  '/gui/.*\(5024\)',
+                  '/ide/.*\(5024\)',
                   '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
                   '/core/func_defines\.inc.*\(5024\)',
                   '/core/operators.*\(5059\)',
@@ -64,9 +64,13 @@ main('files')->begin
     .trim
     .unique
     .each(file,existing(file) orElse
-               existing('gui/'&file) orElse
-               existing('consoles/'&file))
-    .union(allFiles('','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
+               existing('consoles/'&file) orElse
+               existing('ide/'&file))
+    .replace('/./','/')
+    .union(allFiles('ide',['*.inc','*.lpr']),
+           allFiles('consoles','*.lpr'),
+           allFiles('3rd_party','*.inc'),
+           allFiles('core','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
     .sort;
 
   newList.escape

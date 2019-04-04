@@ -5,10 +5,7 @@ tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 private needBuild(B)->B['canBuild'] AND (!(B['targetDest'].fileExists) OR !([B['targetDest'].flavour,B['targetDest'].codeVersion]==[B['flavour'],ensureCodeHash]));
 
 private delp->(isLinux ? 'delp' : DelpPath).exec(
-       ['gui/lib/i386-win32',
-        'gui/lib/x86_64-linux',
-        'gui/lib/x86_64-win64',
-        'core',
+       ['core',
         'common',
         '3rd_party',
         'consoles/lib/i386-win32',
@@ -33,7 +30,7 @@ private ensureDefaultFilesSource->begin
   local header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
   code:=header|code.each(f,f&(index=code.size-1 ? ');':','));
 
-  local filename:='gui/res_defaultFiles.inc';
+  local filename:='ide/res_defaultFiles.inc';
   fileExists(filename) AND fileLines(filename)==code
   ? void
   : writeFileLines(filename,code);
@@ -50,10 +47,10 @@ currentCodeHash:=begin
   : void;
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
-  templateToInc('resources/examples.txt'                   ,'gui/res_examples.inc');
-  templateToInc('resources/html_template.txt'              ,'gui/res_html_template.inc');
-  templateToInc('resources/ensureAssoc.mnh'                ,'gui/res_ensureAssoc.inc');
-  templateToInc('resources/removeAssoc.mnh'                ,'gui/res_removeAssoc.inc');
+  templateToInc('resources/examples.txt'                   ,'ide/res_examples.inc');
+  templateToInc('resources/html_template.txt'              ,'ide/res_html_template.inc');
+  templateToInc('resources/ensureAssoc.mnh'                ,'ide/res_ensureAssoc.inc');
+  templateToInc('resources/removeAssoc.mnh'                ,'ide/res_removeAssoc.inc');
   ensureDefaultFilesSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
@@ -167,8 +164,8 @@ private cleanup->begin
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
    allFiles('consoles/lib')|
-   allFiles('gui/lib')|
-   files('gui/res_*.inc')|
+   allFiles('ide/compilates')|
+   files('ide/res_*.inc')|
    files('regTest/testFailures.log')|
    allFiles('versions')|
    allFiles('demos/inputs','*.txt')|

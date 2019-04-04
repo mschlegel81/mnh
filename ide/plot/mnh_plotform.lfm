@@ -1,0 +1,362 @@
+object plotForm: TplotForm
+  Left = 881
+  Height = 451
+  Top = 224
+  Width = 700
+  Caption = 'MNH plot'
+  ClientHeight = 421
+  ClientWidth = 700
+  DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
+  Menu = MainMenu
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnKeyPress = FormKeyPress
+  OnKeyUp = tabNextKeyHandling
+  OnResize = FormResize
+  OnShow = FormShow
+  Position = poScreenCenter
+  LCLVersion = '2.0.0.4'
+  object plotImage: TImage
+    Cursor = crCross
+    Left = 0
+    Height = 317
+    Top = 68
+    Width = 700
+    Align = alClient
+    OnMouseDown = plotImageMouseDown
+    OnMouseMove = plotImageMouseMove
+    OnMouseUp = plotImageMouseUp
+    PopupMenu = MainMenu1
+  end
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 36
+    Top = 385
+    Width = 700
+    Panels = <>
+  end
+  object AnimationGroupBox: TGroupBox
+    Left = 0
+    Height = 68
+    Top = 0
+    Width = 700
+    Align = alTop
+    Anchors = []
+    AutoSize = True
+    Caption = 'Animation'
+    ClientHeight = 38
+    ClientWidth = 696
+    TabOrder = 1
+    OnKeyUp = tabNextKeyHandling
+    object animateCheckBox: TCheckBox
+      Left = 0
+      Height = 38
+      Top = 0
+      Width = 93
+      Align = alLeft
+      Caption = 'animate'
+      OnKeyUp = tabNextKeyHandling
+      TabOrder = 0
+    end
+    object animationSpeedTrackbar: TTrackBar
+      Left = 161
+      Height = 38
+      Top = 0
+      Width = 100
+      Position = 6
+      Align = alLeft
+      OnKeyUp = tabNextKeyHandling
+      TabOrder = 2
+    end
+    object animationFPSLabel: TLabel
+      Left = 261
+      Height = 38
+      Top = 0
+      Width = 25
+      Align = alLeft
+      Caption = '     '
+      ParentColor = False
+    end
+    object frameTrackBar: TTrackBar
+      Left = 286
+      Height = 38
+      Top = 0
+      Width = 400
+      Frequency = 5
+      OnChange = frameTrackBarChange
+      Position = 0
+      Align = alClient
+      OnKeyUp = tabNextKeyHandling
+      TabOrder = 3
+    end
+    object cycleCheckbox: TCheckBox
+      Left = 93
+      Height = 38
+      Top = 0
+      Width = 68
+      Align = alLeft
+      Caption = 'cycle'
+      OnKeyUp = tabNextKeyHandling
+      TabOrder = 1
+    end
+    object frameIndexLabel: TLabel
+      Left = 686
+      Height = 38
+      Top = 0
+      Width = 10
+      Align = alRight
+      Caption = '0'
+      ParentColor = False
+    end
+  end
+  object MainMenu: TMainMenu
+    left = 40
+    top = 32
+    object MenuItem6: TMenuItem
+      Caption = '&Plot'
+      object miAutoReset: TMenuItem
+        Caption = 'Reset plot options on evaluation'
+        OnClick = miAutoResetClick
+      end
+      object miIncFontSize: TMenuItem
+        Caption = 'Increase Font Size'
+        ShortCut = 16571
+        OnClick = miIncFontSizeClick
+      end
+      object miDecFontSize: TMenuItem
+        Caption = 'Decrease Font Size'
+        ShortCut = 16573
+        OnClick = miDecFontSizeClick
+      end
+      object miRenderToFile: TMenuItem
+        Caption = 'Render to file...'
+        OnClick = miRenderToFileClick
+      end
+      object miCreateScript: TMenuItem
+        Caption = 'Create script...'
+        OnClick = miCreateScriptClick
+        object miScriptFromAnimation: TMenuItem
+          Caption = 'Animation'
+          OnClick = miScriptFromAnimationClick
+        end
+        object miScriptFromFrame: TMenuItem
+          Caption = 'Current frame only'
+          OnClick = miScriptFromFrameClick
+        end
+      end
+      object miCacheFrames: TMenuItem
+        Caption = 'Cache animation Frames'
+        OnClick = miCacheFramesClick
+      end
+    end
+    object MenuItem1: TMenuItem
+      Caption = '&Quality'
+      object miAntiAliasing1: TMenuItem
+        Caption = '&Low'
+        Checked = True
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing2: TMenuItem
+        Caption = 'Medium (&1)'
+        RadioItem = True
+        OnClick = miAntiAliasing2Click
+      end
+      object miAntiAliasing3: TMenuItem
+        Caption = 'Medium (&2)'
+        RadioItem = True
+        OnClick = miAntiAliasing3Click
+      end
+      object miAntiAliasing4: TMenuItem
+        Caption = '&High'
+        RadioItem = True
+        OnClick = miAntiAliasing4Click
+      end
+    end
+    object MenuItem2: TMenuItem
+      Caption = '&Grid'
+      object MenuItem3: TMenuItem
+        Caption = '&x'
+        object miXGrid: TMenuItem
+          Caption = '&Coarse Grid'
+          OnClick = miXGridClick
+        end
+        object miXFinerGrid: TMenuItem
+          Caption = '&Fine Grid'
+          OnClick = miXFinerGridClick
+        end
+        object miXTics: TMenuItem
+          Caption = '&Tics'
+          OnClick = miXTicsClick
+        end
+      end
+      object MenuItem4: TMenuItem
+        Caption = '&y'
+        object miYGrid: TMenuItem
+          Caption = '&Coarse Grid'
+          OnClick = miYGridClick
+        end
+        object miYFinerGrid: TMenuItem
+          Caption = '&Fine Grid'
+          OnClick = miYFinerGridClick
+        end
+        object miYTics: TMenuItem
+          Caption = '&Tics'
+          OnClick = miYTicsClick
+        end
+      end
+    end
+    object MenuItem5: TMenuItem
+      Caption = '&Scaling'
+      object miPreserveAspect: TMenuItem
+        Caption = '&Preserve aspect ratio'
+        OnClick = miPreserveAspectClick
+      end
+      object miAutoscaleX: TMenuItem
+        Caption = 'Autoscale &x'
+        OnClick = miAutoscaleXClick
+      end
+      object miAutoscaleY: TMenuItem
+        Caption = 'Autoscale &y'
+        OnClick = miAutoscaleYClick
+      end
+      object miLogscaleX: TMenuItem
+        Caption = 'Logscale x'
+        OnClick = miLogscaleXClick
+      end
+      object miLogscaleY: TMenuItem
+        Caption = '&Logscale y'
+        OnClick = miLogscaleYClick
+      end
+    end
+  end
+  object MainMenu1: TPopupMenu
+    left = 40
+    top = 32
+    object MenuItem7: TMenuItem
+      Caption = '&Plot'
+      object miAutoReset1: TMenuItem
+        Caption = 'Reset plot options on evaluation'
+        OnClick = miAutoResetClick
+      end
+      object miIncFontSize1: TMenuItem
+        Caption = 'Increase Font Size'
+        ShortCut = 16571
+        OnClick = miIncFontSizeClick
+      end
+      object miDecFontSize1: TMenuItem
+        Caption = 'Decrease Font Size'
+        ShortCut = 16573
+        OnClick = miDecFontSizeClick
+      end
+      object miRenderToFile1: TMenuItem
+        Caption = 'Render to file...'
+        OnClick = miRenderToFileClick
+      end
+      object miCreateScript1: TMenuItem
+        Caption = 'Create script...'
+        OnClick = miCreateScriptClick
+        object miScriptFromAnimation1: TMenuItem
+          Caption = 'Animation'
+          OnClick = miScriptFromAnimationClick
+        end
+        object miScriptFromFrame1: TMenuItem
+          Caption = 'Current frame only'
+          OnClick = miScriptFromFrameClick
+        end
+      end
+      object miCacheFrames1: TMenuItem
+        Caption = 'Cache animation Frames'
+        OnClick = miCacheFramesClick
+      end
+    end
+    object MenuItem8: TMenuItem
+      Caption = '&Quality'
+      object miAntiAliasing5: TMenuItem
+        Caption = '&Low'
+        Checked = True
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing6: TMenuItem
+        Caption = 'Medium (&1)'
+        RadioItem = True
+        OnClick = miAntiAliasing2Click
+      end
+      object miAntiAliasing7: TMenuItem
+        Caption = 'Medium (&2)'
+        RadioItem = True
+        OnClick = miAntiAliasing3Click
+      end
+      object miAntiAliasing8: TMenuItem
+        Caption = '&High'
+        RadioItem = True
+        OnClick = miAntiAliasing4Click
+      end
+    end
+    object MenuItem9: TMenuItem
+      Caption = '&Grid'
+      object MenuItem10: TMenuItem
+        Caption = '&x'
+        object miXGrid1: TMenuItem
+          Caption = '&Coarse Grid'
+          OnClick = miXGridClick
+        end
+        object miXFinerGrid1: TMenuItem
+          Caption = '&Fine Grid'
+          OnClick = miXFinerGridClick
+        end
+        object miXTics1: TMenuItem
+          Caption = '&Tics'
+          OnClick = miXTicsClick
+        end
+      end
+      object MenuItem11: TMenuItem
+        Caption = '&y'
+        object miYGrid1: TMenuItem
+          Caption = '&Coarse Grid'
+          OnClick = miYGridClick
+        end
+        object miYFinerGrid1: TMenuItem
+          Caption = '&Fine Grid'
+          OnClick = miYFinerGridClick
+        end
+        object miYTics1: TMenuItem
+          Caption = '&Tics'
+          OnClick = miYTicsClick
+        end
+      end
+    end
+    object MenuItem12: TMenuItem
+      Caption = '&Scaling'
+      object miPreserveAspect1: TMenuItem
+        Caption = '&Preserve aspect ratio'
+        OnClick = miPreserveAspectClick
+      end
+      object miAutoscaleX1: TMenuItem
+        Caption = 'Autoscale &x'
+        OnClick = miAutoscaleXClick
+      end
+      object miAutoscaleY1: TMenuItem
+        Caption = 'Autoscale &y'
+        OnClick = miAutoscaleYClick
+      end
+      object miLogscaleX1: TMenuItem
+        Caption = 'Logscale x'
+        OnClick = miLogscaleXClick
+      end
+      object miLogscaleY1: TMenuItem
+        Caption = '&Logscale y'
+        OnClick = miLogscaleYClick
+      end
+    end
+  end
+  object SaveDialog: TSaveDialog
+    left = 95
+    top = 166
+  end
+end

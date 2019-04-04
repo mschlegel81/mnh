@@ -1,6 +1,6 @@
 UNIT basicTypes;
 INTERFACE
-USES sysutils;
+USES sysutils,serializationUtil;
 TYPE
   T_hashInt  = dword;
   T_idString = ansistring;
@@ -16,6 +16,7 @@ TYPE
     fileName: ansistring;
     line, column: longint;
   end;
+  T_searchTokenLocations=array of T_searchTokenLocation;
 CONST
   C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 TYPE
@@ -41,6 +42,9 @@ OPERATOR < (CONST x,y:T_tokenLocation):boolean;
 FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION positionIsBeforeLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
+
+PROCEDURE writeSearchTokenLocation(VAR stream:T_bufferedOutputStreamWrapper; CONST loc:T_searchTokenLocation);
+FUNCTION readSearchTokenLocation(VAR stream:T_bufferedInputStreamWrapper):T_searchTokenLocation;
 IMPLEMENTATION
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
   begin
@@ -144,6 +148,20 @@ FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithout
     while (i1<=length(s)) and (i2<=length(s)) and (s[i2] in ['0'..'9']) do inc(i2);
     result.line  :=strToIntDef(copy(s,i0+1,i1-i0-1),0);
     result.column:=strToIntDef(copy(s,i1+1,i2-i1-1),0);
+  end;
+
+PROCEDURE writeSearchTokenLocation(VAR stream:T_bufferedOutputStreamWrapper; CONST loc:T_searchTokenLocation);
+  begin
+    stream.writeAnsiString(loc.fileName);
+    stream.writeLongint   (loc.line);
+    stream.writeLongint   (loc.column);
+  end;
+
+FUNCTION readSearchTokenLocation(VAR stream:T_bufferedInputStreamWrapper):T_searchTokenLocation;
+  begin
+    result.fileName:=stream.readAnsiString;
+    result.line    :=stream.readLongint;
+    result.column  :=stream.readLongint;
   end;
 
 end.

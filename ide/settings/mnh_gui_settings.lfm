@@ -1,0 +1,429 @@
+object SettingsForm: TSettingsForm
+  Left = 881
+  Height = 305
+  Top = 282
+  Width = 365
+  AutoSize = True
+  BorderIcons = [biSystemMenu]
+  Caption = 'MNH - Settings'
+  ClientHeight = 305
+  ClientWidth = 365
+  Constraints.MinWidth = 350
+  DesignTimePPI = 144
+  FormStyle = fsStayOnTop
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  Position = poMainFormCenter
+  LCLVersion = '2.0.0.4'
+  object PageControl: TPageControl
+    Left = 0
+    Height = 305
+    Top = 0
+    Width = 365
+    ActivePage = TabSheet_global
+    Align = alClient
+    TabIndex = 2
+    TabOrder = 0
+    object TabSheet_display: TTabSheet
+      Caption = 'display'
+      ClientHeight = 267
+      ClientWidth = 357
+      object Label2: TLabel
+        AnchorSideLeft.Control = TabSheet_display
+        AnchorSideTop.Control = EditorFontButton
+        Left = 5
+        Height = 25
+        Top = 5
+        Width = 92
+        Align = alCustom
+        BorderSpacing.Left = 5
+        Caption = 'Editor Font:'
+        ParentColor = False
+      end
+      object EditorFontButton: TButton
+        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = TabSheet_display
+        AnchorSideRight.Control = TabSheet_display
+        AnchorSideRight.Side = asrBottom
+        Left = 144
+        Height = 35
+        Top = 5
+        Width = 213
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        Caption = 'EditorFontButton'
+        OnClick = EditorFontButtonClick
+        TabOrder = 0
+      end
+      object Label7: TLabel
+        AnchorSideLeft.Control = Label2
+        AnchorSideTop.Control = outputSizeLimit
+        Left = 5
+        Height = 25
+        Top = 110
+        Width = 134
+        Align = alCustom
+        Caption = 'Output size limit:'
+        ParentColor = False
+      end
+      object outputSizeLimit: TEdit
+        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = GeneralFontButton
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = TabSheet_display
+        AnchorSideRight.Side = asrBottom
+        Left = 144
+        Height = 33
+        Top = 110
+        Width = 213
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 5
+        NumbersOnly = True
+        OnEditingDone = outputSizeLimitEditingDone
+        TabOrder = 1
+        Text = 'outputSizeLimit'
+      end
+      object Label3: TLabel
+        AnchorSideLeft.Control = Label2
+        AnchorSideTop.Control = GeneralFontButton
+        Left = 5
+        Height = 25
+        Top = 75
+        Width = 104
+        Align = alCustom
+        Caption = 'General Font:'
+        ParentColor = False
+      end
+      object TableFontButton: TButton
+        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = EditorFontButton
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = TabSheet_display
+        AnchorSideRight.Side = asrBottom
+        Left = 144
+        Height = 35
+        Top = 40
+        Width = 213
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = True
+        BorderSpacing.Left = 5
+        Caption = 'TableFontButton'
+        OnClick = TableFontButtonClick
+        TabOrder = 2
+      end
+      object Label5: TLabel
+        AnchorSideLeft.Control = Label2
+        AnchorSideTop.Control = TableFontButton
+        Left = 5
+        Height = 25
+        Top = 40
+        Width = 85
+        Align = alCustom
+        Caption = 'Table Font:'
+        ParentColor = False
+      end
+      object GeneralFontButton: TButton
+        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = TableFontButton
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = TabSheet_display
+        AnchorSideRight.Side = asrBottom
+        Left = 144
+        Height = 35
+        Top = 75
+        Width = 213
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = True
+        BorderSpacing.Left = 5
+        Caption = 'GeneralFontButton'
+        OnClick = GeneralFontButtonClick
+        TabOrder = 3
+      end
+    end
+    object TabSheet_lineEnding: TTabSheet
+      Caption = 'line ending'
+      ClientHeight = 267
+      ClientWidth = 357
+      object GroupBox1: TGroupBox
+        Left = 0
+        Height = 117
+        Top = 0
+        Width = 357
+        Align = alTop
+        AutoSize = True
+        Caption = 'new files'
+        ClientHeight = 87
+        ClientWidth = 353
+        TabOrder = 0
+        object rb_saveNewDefault: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 0
+          Width = 353
+          Align = alTop
+          Caption = 'System default'
+          Checked = True
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 2
+          TabStop = True
+        end
+        object rb_saveNewLinux: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 29
+          Width = 353
+          Align = alTop
+          Caption = 'Linux'
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 0
+        end
+        object rb_saveNewWindows: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 58
+          Width = 353
+          Align = alTop
+          Caption = 'Windows'
+          OnChange = rb_saveNewDefaultChange
+          TabOrder = 1
+        end
+      end
+      object GroupBox2: TGroupBox
+        Left = 0
+        Height = 146
+        Top = 117
+        Width = 357
+        Align = alTop
+        AutoSize = True
+        Caption = 'existing files'
+        ClientHeight = 116
+        ClientWidth = 353
+        TabOrder = 1
+        object rb_saveDefault: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 29
+          Width = 353
+          Align = alTop
+          Caption = 'System defult'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 2
+        end
+        object rb_saveLinux: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 58
+          Width = 353
+          Align = alTop
+          Caption = 'Linux'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 0
+        end
+        object rb_saveWindows: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 87
+          Width = 353
+          Align = alTop
+          Caption = 'Windows'
+          OnChange = rb_saveDefaultChange
+          TabOrder = 1
+        end
+        object rb_saveNoChange: TRadioButton
+          Left = 0
+          Height = 29
+          Top = 0
+          Width = 353
+          Align = alTop
+          Caption = 'Don''t change'
+          Checked = True
+          OnChange = rb_saveDefaultChange
+          TabOrder = 3
+          TabStop = True
+        end
+      end
+    end
+    object TabSheet_global: TTabSheet
+      Caption = 'global'
+      ClientHeight = 267
+      ClientWidth = 357
+      object Panel1: TPanel
+        Left = 0
+        Height = 33
+        Top = 0
+        Width = 357
+        Align = alTop
+        AutoSize = True
+        BevelOuter = bvNone
+        ClientHeight = 33
+        ClientWidth = 357
+        TabOrder = 0
+        object Label1: TLabel
+          Left = 0
+          Height = 33
+          Top = 0
+          Width = 45
+          Align = alLeft
+          Caption = 'CPUs:'
+          ParentColor = False
+        end
+        object workerThreadCountEdit: TEdit
+          Left = 45
+          Height = 33
+          Top = 0
+          Width = 312
+          Align = alClient
+          NumbersOnly = True
+          OnEditingDone = workerThreadCountEditEditingDone
+          TabOrder = 0
+          Text = '1'
+        end
+      end
+      object Panel2: TPanel
+        Left = 0
+        Height = 33
+        Top = 33
+        Width = 357
+        Align = alTop
+        AutoSize = True
+        BevelOuter = bvNone
+        ClientHeight = 33
+        ClientWidth = 357
+        TabOrder = 1
+        object Label6: TLabel
+          Left = 0
+          Height = 33
+          Top = 0
+          Width = 155
+          Align = alLeft
+          Caption = 'Memory Limit (MB):'
+          ParentColor = False
+        end
+        object memLimitEdit: TEdit
+          Left = 155
+          Height = 33
+          Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
+          Top = 0
+          Width = 202
+          Align = alClient
+          NumbersOnly = True
+          OnEditingDone = memLimitEditEditingDone
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 0
+          Text = 'memLimitEdit'
+        end
+      end
+      object Panel3: TPanel
+        Left = 0
+        Height = 33
+        Top = 66
+        Width = 357
+        Align = alTop
+        AutoSize = True
+        BevelOuter = bvNone
+        ClientHeight = 33
+        ClientWidth = 357
+        TabOrder = 2
+        object Label4: TLabel
+          Left = 0
+          Height = 33
+          Top = 0
+          Width = 78
+          Align = alLeft
+          Caption = 'Autosave:'
+          ParentColor = False
+        end
+        object autosaveComboBox: TComboBox
+          Left = 78
+          Height = 33
+          Top = 0
+          Width = 279
+          Align = alClient
+          ItemHeight = 25
+          OnChange = autosaveComboBoxChange
+          Style = csDropDownList
+          TabOrder = 0
+        end
+      end
+      object miSaveBeforeRun: TCheckBox
+        Left = 0
+        Height = 29
+        Top = 99
+        Width = 357
+        Align = alTop
+        Caption = 'Autosave before each execution'
+        OnChange = miSaveBeforeRunChange
+        TabOrder = 3
+      end
+    end
+    object TabSheet_install: TTabSheet
+      Caption = 'installation'
+      ClientHeight = 285
+      ClientWidth = 345
+      object installButton: TButton
+        Left = 0
+        Height = 35
+        Top = 0
+        Width = 345
+        Align = alTop
+        AutoSize = True
+        Caption = 'Create file associations'
+        OnClick = installButtonClick
+        TabOrder = 0
+      end
+      object uninstallButton: TButton
+        Left = 0
+        Height = 35
+        Top = 35
+        Width = 345
+        Align = alTop
+        AutoSize = True
+        Caption = 'Uninstall and quit immediately'
+        OnClick = uninstallButtonClick
+        TabOrder = 1
+      end
+      object restorePacksAndDemosButton: TButton
+        Left = 0
+        Height = 35
+        Top = 70
+        Width = 345
+        Align = alTop
+        AutoSize = True
+        Caption = 'Restore default packages and demos'
+        OnClick = restorePacksAndDemosButtonClick
+        TabOrder = 2
+      end
+      object togglePortableButton: TButton
+        Left = 0
+        Height = 38
+        Top = 105
+        Width = 345
+        Align = alTop
+        Caption = 'togglePortableButton'
+        OnClick = togglePortableButtonClick
+        TabOrder = 3
+      end
+    end
+  end
+  object EditorFontDialog: TFontDialog
+    Title = 'Select Font'
+    Font.Height = -13
+    Font.Name = 'Monospace'
+    MinFontSize = 0
+    MaxFontSize = 0
+    Options = [fdFixedPitchOnly, fdForceFontExist, fdNoFaceSel, fdNoSizeSel, fdWysiwyg]
+    left = 208
+    top = 184
+  end
+end
