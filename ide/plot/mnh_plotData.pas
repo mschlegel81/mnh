@@ -8,7 +8,8 @@ USES sysutils,
      mnh_settings,
      mnh_messages,
      out_adapters,
-     plotstyles,plotMath;
+     plotstyles,plotMath,
+     EpikTimer;
 TYPE
   T_plotQuality=0..3;
 CONST
@@ -18,6 +19,11 @@ CONST
   PLOT_QUALITY_HIGH    =3;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
+  T_timedPlotExecution=object
+    timer:TEpikTimer;
+    timeout:double;
+    PROCEDURE wait;
+  end;
 
   P_addRowMessage=^T_addRowMessage;
   T_addRowMessage=object(T_payloadMessage)
@@ -148,7 +154,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE invalidate;
       PROCEDURE clearImage(CONST doDump:boolean=false);
-      PROCEDURE obtainImage(VAR target:TImage; CONST quality:byte);
+      PROCEDURE obtainImage(VAR target:TImage; CONST quality:byte; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint; CONST quality:byte);
       PROCEDURE postPreparation(CONST width,height:longint; CONST quality:byte);
   end;
@@ -166,7 +172,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       FUNCTION frameCount:longint;
-      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST quality:byte);
+      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST quality:byte; CONST timing:T_timedPlotExecution);
       PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
@@ -202,8 +208,14 @@ TYPE
 
 FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
+FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
 USES FPReadBMP,FPWriteBMP,IntfGraphics;
+FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
+  begin
+    result.timer:=timer;
+    result.timeout:=timeout;
+  end;
 
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
@@ -227,6 +239,12 @@ FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
     messages^.postCustomMessage(request);
     result:=request^.getOptionsWaiting(messages);
     disposeMessage(request);
+  end;
+
+PROCEDURE T_timedPlotExecution.wait;
+  begin
+    if timer=nil then exit;
+    while timer.elapsed<timeout do sleep(round(900*(timeout-timer.elapsed)));
   end;
 
 CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
@@ -354,10 +372,11 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST qu
     leaveCriticalSection(frameCS);
   end;
 
-PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte);
+PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte; CONST timing:T_timedPlotExecution);
   begin
     enterCriticalSection(frameCS);
     prepareImage(target.width,target.height,quality);
+    timing.wait;
     target.Canvas.draw(0,0,image.picture.Bitmap);
     leaveCriticalSection(frameCS);
   end;
@@ -562,7 +581,7 @@ FUNCTION T_plotSeries.frameCount: longint;
     leaveCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST quality: byte);
+PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST quality: byte; CONST timing:T_timedPlotExecution);
   VAR current:P_plotSeriesFrame;
 
   PROCEDURE handleImagesToFree;
@@ -597,7 +616,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     try
       current:=frame[frameIndex];
       handleImagesToFree;
-      current^.obtainImage(target,quality);
+      current^.obtainImage(target,quality,timing);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -617,7 +636,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
 
     storeImage:=TImage.create(nil);
     storeImage.SetInitialBounds(0,0,width,height);
-    frame[index]^.obtainImage(storeImage,quality);
+    frame[index]^.obtainImage(storeImage,quality,timedPlotExecution(nil,0));
     storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;

@@ -304,7 +304,7 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
     if animationFrameIndex=frameTrackBar.position then exit;
     animationFrameIndex:=frameTrackBar.position;
     relatedPlot^.startGuiInteraction;
-    relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+    relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
     relatedPlot^.doneGuiInteraction;
     animateCheckBox.checked:=false;
   end;
@@ -677,7 +677,7 @@ PROCEDURE TplotForm.doPlot;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
 
     if relatedPlot^.animation.frameCount<>0 then begin
-      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
       relatedPlot^.doneGuiInteraction;
       exit;
     end;
@@ -687,10 +687,10 @@ PROCEDURE TplotForm.doPlot;
   end;
 
 FUNCTION TplotForm.timerTick: boolean;
-  FUNCTION frameInterval:longint;
-    CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
+  FUNCTION frameInterval:double;
+    CONST intendedSecPerFrame:array[0..10] of double=(1,0.5,0.2,0.1,0.07,0.05,0.03,0.025,0.020,0.015,0.010);
     begin
-      result:=intendedMsPerFrame[animationSpeedTrackbar.position];
+      result:=intendedSecPerFrame[animationSpeedTrackbar.position];
     end;
 
   begin
@@ -698,10 +698,15 @@ FUNCTION TplotForm.timerTick: boolean;
     result:=false;
     relatedPlot^.startGuiInteraction;
     if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
-      if animateCheckBox.checked and (round(eTimer.elapsed*1000)>=frameInterval) and relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
+
+      if animateCheckBox.checked and
+         //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
+         (frameInterval-eTimer.elapsed<0.02) and
+         relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
+      then begin
+        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
         eTimer.clear;
         eTimer.start;
-        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
           animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
