@@ -50,6 +50,7 @@ TYPE
 
 PROCEDURE ensureQuickEvalForm;
 FUNCTION isQuickEvaluationRunning:boolean;
+PROCEDURE stopQuickEvaluation;
 IMPLEMENTATION
 PROCEDURE ensureQuickEvalForm;
   begin
@@ -61,6 +62,13 @@ FUNCTION isQuickEvaluationRunning:boolean;
   begin
     form:=getFormOfType(icQuickEval);
     result:=(form<>nil) and TQuickEvalForm(form).quickEvaluation.isRunning;
+  end;
+
+PROCEDURE stopQuickEvaluation;
+  VAR form:T_mnhComponentForm;
+  begin
+    form:=getFormOfType(icQuickEval);
+    if (form<>nil) then TQuickEvalForm(form).quickEvaluation.haltEvaluation;
   end;
 
 {$R *.lfm}
@@ -98,6 +106,8 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(self,quickOutputSynEdit,quickOutputBehavior);
+    quickOutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);
     with quickOutputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;

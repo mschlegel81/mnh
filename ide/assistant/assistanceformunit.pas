@@ -37,6 +37,8 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     registerFontControl(AssistanceEdit,ctEditor);
     assistanceHighlighter:=TSynMnhSyn.create(self,msf_output);
     AssistanceEdit.highlighter:=assistanceHighlighter;
+    AssistanceEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    AssistanceEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     paintedWithStateHash:=0;
   end;
 

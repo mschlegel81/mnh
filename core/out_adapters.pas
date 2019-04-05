@@ -22,11 +22,11 @@ TYPE
                  at_printTextFileAtRuntime);
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
-    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
-    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
-    {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
+    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
+    {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
     {$ifdef fullVersion}
-    {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info,mt_profile_call_info1,mt_profile_call_info2],
     {at_guiEve...}[mt_startOfEvaluation,mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done,mt_guiEditScriptsLoaded],
     {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_imig}     [mt_image_postDisplay..mt_image_obtainDimensions],
@@ -302,8 +302,8 @@ OPERATOR :=(s:string):T_messageTypeSet;
       'D': result:=result-[mt_echo_declaration];
       'o': result:=result+[mt_echo_output];
       'O': result:=result-[mt_echo_output];
-      't': result:=result+[mt_timing_info,mt_profile_call_info];
-      'T': result:=result-[mt_timing_info,mt_profile_call_info];
+      't': result:=result+[mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
+      'T': result:=result-[mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
       'e': result:=result+[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'E': result:=result-[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'n': result:=result+[mt_el1_note,mt_el1_userNote];

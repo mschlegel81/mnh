@@ -9,9 +9,6 @@ USES
   SynHighlighterMnh, editorMeta, mnh_settings, Classes,mnh_doc;
 
 TYPE
-
-  { THelpForm }
-
   THelpForm = class(T_mnhComponentForm)
     openHtmlButton: TButton;
     SynEdit1: TSynEdit;
@@ -45,6 +42,8 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
     registerFontControl(SynEdit1,ctEditor);
     helpHighlighter:=TSynMnhSyn.create(self,msf_help);
     SynEdit1.highlighter:=helpHighlighter;
+    SynEdit1.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    SynEdit1.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     currentLink:=getDocIndexLinkForBrowser;
   end;
 

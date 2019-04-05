@@ -25,6 +25,7 @@ TYPE
     tbStepOut: TToolButton;
     tbHalt: TToolButton;
     inlineVariablesTreeView: TTreeView;
+    PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -98,6 +99,11 @@ PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
     registerFontControl(inlineVariablesTreeView,ctGeneral);
     currentExpressionHighlighter:=TSynMnhSyn.create(currentExpressionEdit,msf_debug);
     currentExpressionEdit.highlighter:=currentExpressionHighlighter;
+  end;
+
+PROCEDURE TDebuggerForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+  begin
+    CanClose:=currentSnapshot<>nil;
   end;
 
 PROCEDURE TDebuggerForm.FormDestroy(Sender: TObject);

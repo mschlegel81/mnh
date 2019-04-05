@@ -234,8 +234,8 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
       adapters^.postTextMessage(mt_printline,C_nilTokenLocation,'Profiling output:');
       for txt in lines do begin
         if (length(txt)=0) or (txt[1]=' ') or (copy(txt,1,9)='called at')
-        then adapters^.postTextMessage(mt_profile_call_info,C_nilTokenLocation,txt)
-        else adapters^.postTextMessage(mt_timing_info      ,C_nilTokenLocation,txt);
+        then adapters^.postTextMessage(mt_profile_call_info2,C_nilTokenLocation,txt)
+        else adapters^.postTextMessage(mt_profile_call_info1,C_nilTokenLocation,txt);
       end;
     finally
       leaveCriticalSection(cs);

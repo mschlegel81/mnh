@@ -45,6 +45,7 @@ T_workspace=object(T_serializable)
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 
     PROCEDURE updateEditorsByGuiStatus;
 
@@ -302,10 +303,19 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
 PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR caller:TSynEdit;
   begin
-    caller:=TSynEdit(Sender);
     if (key=13) and (ssCtrl in Shift) then begin
+      caller:=TSynEdit(Sender);
       openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
       key:=0;
+    end;
+  end;
+
+PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR caller:TSynEdit;
+  begin
+    if (ssCtrl in Shift) and (button=mbLeft) then begin
+      caller:=TSynEdit(Sender);
+      openLocation(guessLocationFromString(caller.lines[caller.PixelsToRowColumn(point(x,y)).y-1],false));
     end;
   end;
 
@@ -355,6 +365,7 @@ PROCEDURE T_workspace.closeCurrentFile;
       k:longint;
       answer:integer;
       mark:TSynEditMark;
+      sheetToDestroy:TTabSheet;
   begin
     toClose:=currentEditor;
     if toClose=nil then exit;
@@ -386,7 +397,9 @@ PROCEDURE T_workspace.closeCurrentFile;
     k:=0;
     while (k<length(metas)) and (metas[k]<>toClose) do inc(k);
     if k>length(metas) then raise Exception.create('Invalid state; Found editor to close but cannot determine index');
+    sheetToDestroy:=metas[k]^.tabsheet;
     dispose(metas[k],destroy);
+    FreeAndNil(sheetToDestroy);
     metas[k]:=metas[length(metas)-1];
     setLength(metas,length(metas)-1);
 

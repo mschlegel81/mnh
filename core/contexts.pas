@@ -332,6 +332,10 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     {$endif}
     //timing:
     with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
+    //Ensure there is a wallclock if it is needed
+    if (wallClock=nil) and ((eco_profiling in globalOptions) or (eco_timing in globalOptions))
+    then wallClock:=TEpikTimer.create(nil);
+
     if wallClock<>nil then begin;
       wallClock.clear;
       wallClock.start;
