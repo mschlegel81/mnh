@@ -24,6 +24,7 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    CloseButton: TButton;
     miSaveBeforeRun: TCheckBox;
     TableFontButton: TButton;
     GeneralFontButton: TButton;

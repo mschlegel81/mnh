@@ -18,7 +18,7 @@ object SettingsForm: TSettingsForm
   LCLVersion = '2.0.0.4'
   object PageControl: TPageControl
     Left = 0
-    Height = 305
+    Height = 295
     Top = 0
     Width = 365
     ActivePage = TabSheet_global
@@ -255,7 +255,7 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 267
+      ClientHeight = 257
       ClientWidth = 357
       object Panel1: TPanel
         Left = 0
@@ -415,6 +415,17 @@ object SettingsForm: TSettingsForm
         TabOrder = 3
       end
     end
+  end
+  object closeButton: TButton
+    Left = 0
+    Height = 10
+    Top = 295
+    Width = 365
+    Align = alBottom
+    AutoSize = True
+    Cancel = True
+    ModalResult = 1
+    TabOrder = 1
   end
   object EditorFontDialog: TFontDialog
     Title = 'Select Font'
