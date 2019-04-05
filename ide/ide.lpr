@@ -5,11 +5,11 @@ PROGRAM ide;
 {$apptype console} // to read debug output on windows
 
 USES
-  {$ifdef UNIX}{$IFDEF UseCThreads}
+  {$ifdef UNIX}
   cthreads,
-  {$endif}{$endif}
+  {$endif}
   Forms, Interfaces
-  { you can add units after this }, ideMain, reevaluationForms,
+  { you can add units after this }, idemain, reevaluationForms,
   cmdLineInterpretation,
   ipcModel, mnh_doc,
   askDialog,funcs,mnh_constants, evaluation,

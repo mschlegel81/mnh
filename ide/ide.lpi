@@ -103,16 +103,9 @@
       <Version Value="2"/>
     </PublishOptions>
     <RunParams>
-      <local>
-        <CommandLineParams Value="C:/dev/mnh5/demos/doublePendulum.mnh"/>
-      </local>
       <FormatVersion Value="2"/>
       <Modes Count="1">
-        <Mode0 Name="default">
-          <local>
-            <CommandLineParams Value="C:/dev/mnh5/demos/doublePendulum.mnh"/>
-          </local>
-        </Mode0>
+        <Mode0 Name="default"/>
       </Modes>
     </RunParams>
     <RequiredPackages Count="2">
@@ -134,7 +127,6 @@
         <ComponentName Value="IdeMainForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="ideMain"/>
       </Unit1>
       <Unit2>
         <Filename Value="idelayoututil.pas"/>
