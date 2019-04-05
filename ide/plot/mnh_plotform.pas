@@ -10,19 +10,38 @@ USES Classes,
      mnh_plotData,
      myGenerics,
      plotMath,
-     ideLayoutUtil;
+     ideLayoutUtil,
+     mnh_messages,
+     out_adapters;
 TYPE
   TplotForm = class;
+
+  P_queryPlotClosedMessage=^T_queryPlotClosedMessage;
+
+  T_queryPlotClosedMessage=object(T_payloadMessage)
+    private
+      response:boolean;
+      retrieved:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR createRetrieveRequest;
+      PROCEDURE setResponse(CONST r:boolean);
+      FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages):boolean;
+  end;
 
   P_guiPlotSystem= ^T_guiPlotSystem;
 
   { T_guiPlotSystem }
 
   T_guiPlotSystem = object(T_plotSystem)
+    protected
+      PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
       myPlotForm:TplotForm;
       cap:string;
       connected:boolean;
+      formWasClosedByUser:boolean;
       PROCEDURE ensureForm;
     public
       CONSTRUCTOR create(CONST plotFormCaption:string='MNH plot');
@@ -34,9 +53,6 @@ TYPE
   end;
 
   PMouseEvent=PROCEDURE(CONST realPoint:T_point) of object;
-
-  { TplotForm }
-
   TplotForm = class(T_mnhComponentForm)
     animateCheckBox: TCheckBox;
     cycleCheckbox: TCheckBox;
@@ -174,16 +190,53 @@ PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
 IMPLEMENTATION
 USES sysutils, FileUtil,
      mnh_constants, basicTypes,
-     mnh_messages,
      recyclers,
-     mnh_settings, out_adapters, litVar, funcs,
+     mnh_settings, litVar, funcs,
      contexts, plotstyles,
      plotExport,
      editScripts,
      fileWrappers;
 VAR mainFormCoordinatesLabel:TLabel;
 
-{ T_guiPlotSystem }
+{ T_queryPlotClosedMessage }
+
+FUNCTION T_queryPlotClosedMessage.internalType: shortstring;
+begin
+  result:='T_queryPlotClosedMessage';
+end;
+
+CONSTRUCTOR T_queryPlotClosedMessage.createRetrieveRequest;
+  begin
+    inherited create(mt_plot_queryClosedByUser);
+    retrieved:=false;
+  end;
+
+PROCEDURE T_queryPlotClosedMessage.setResponse(CONST r: boolean);
+  begin
+    enterCriticalSection(messageCs);
+    retrieved:=true;
+    response:=r;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_messages): boolean;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=response;
+    leaveCriticalSection(messageCs);
+  end;
+
+PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
+  begin
+    if message^.messageType=mt_plot_queryClosedByUser then begin
+      P_queryPlotClosedMessage(message)^.setResponse((myPlotForm=nil) and formWasClosedByUser);
+    end else inherited processMessage(message);
+  end;
 
 PROCEDURE T_guiPlotSystem.ensureForm;
   begin
@@ -193,6 +246,7 @@ PROCEDURE T_guiPlotSystem.ensureForm;
       myPlotForm.relatedPlot:=@self;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm                    .pullPlotSettingsToGui();
+      formWasClosedByUser:=false;
       dockNewForm(myPlotForm);
     end;
   end;
@@ -528,8 +582,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    //TODO: set flag in corresponding adapter
-    //closedByUser:=true;
+    if relatedPlot<>nil then relatedPlot^.formWasClosedByUser:=true;
     animateCheckBox.checked:=false;
     CloseAction:=caFree;
   end;
@@ -733,11 +786,14 @@ FUNCTION TplotForm.wantTimerInterval: longint;
   end;
 
 {$i func_defines.inc}
-//TODO: Reimplement plotClosed ?
-//FUNCTION plotClosedByUser_impl intFuncSignature;
-//  begin if (params=nil) or (params^.size=0) then begin
-//    result:=newBoolLiteral((myPlotForm<>nil) and myPlotForm.closedByUser);
-//  end else result:=nil; end;
+FUNCTION plotClosedByUser_impl intFuncSignature;
+  VAR closedRequest:P_queryPlotClosedMessage;
+  begin if (params=nil) or (params^.size=0) then begin
+    new(closedRequest,createRetrieveRequest);
+    context.messages^.postCustomMessage(closedRequest);
+    result:=newBoolLiteral(closedRequest^.getResponseWaiting(context.messages));
+    disposeMessage(closedRequest);
+  end else result:=nil; end;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
@@ -778,8 +834,7 @@ FUNCTION uninitialized_fallback intFuncSignature;
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   begin
     mainFormCoordinatesLabel:=coordLabel;
-    //TODO: Reimplement plotClosed ?
-    //reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
+    reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );

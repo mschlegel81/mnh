@@ -185,12 +185,12 @@ TYPE
   T_plotSystem=object(T_abstractGuiOutAdapter)
     protected
       pullSettingsToGui:F_pullSettingsToGuiCallback;
+      PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
       plotChangedSinceLastDisplay:boolean;
       displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       sandboxed:boolean;
-      PROCEDURE processMessage(CONST message:P_storedMessage);
     public
       currentPlot:T_plot;
       animation:T_plotSeries;
@@ -1455,7 +1455,9 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
 
 CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
   begin
-    inherited create(at_plot,C_includableMessages[at_plot]);
+    if executePlotCallback=nil
+    then inherited create(at_plot,C_includableMessages[at_plot]-[mt_plot_queryClosedByUser,mt_plot_addAnimationFrame,mt_plot_clearAnimation,mt_plot_postDisplay])
+    else inherited create(at_plot,C_includableMessages[at_plot]);
     sandboxed:=isSandboxSystem;
     plotChangedSinceLastDisplay:=false;
     currentPlot.createWithDefaults;
