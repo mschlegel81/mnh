@@ -52,11 +52,13 @@ IMPLEMENTATION
 VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
+  CONST formCaption:array[false..true] of string=('Run','Run externally');
   begin
     if myCustomRunForm=nil then begin
       myCustomRunForm:=TCustomRunForm.create(Application);
     end;
     result:=myCustomRunForm;
+    result.caption:=formCaption[externalRun];
     result.GroupBox2.enabled:=externalRun;
     result.GroupBox3.enabled:=externalRun;
     result.GroupBox4.enabled:=externalRun;
