@@ -42,7 +42,7 @@ TYPE
 
 FUNCTION ensureStdOutAdapter:TOutputForm;
 IMPLEMENTATION
-
+USES editorMeta;
 FUNCTION ensureStdOutAdapter: TOutputForm;
   begin
     if not(hasFormOfType(icOutput,true)) then begin
@@ -58,6 +58,8 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     registerFontControl(OutputSynEdit,ctEditor);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     OutputSynEdit.highlighter:=outputHighlighter;
+    OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     with outputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
       miEchoInput        .checked:=echo_input           ;
@@ -103,7 +105,7 @@ PROCEDURE TOutputForm.updateWordWrap;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
   begin
-    with outputBehavior do begin
+    with guiOutAdapters.outputBehavior do begin
       echo_declaration     :=miEchoDeclarations .checked;
       echo_input           :=miEchoInput        .checked;
       echo_output          :=miEchoOutput       .checked;
@@ -115,7 +117,7 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    adapter.outputBehavior:=outputBehavior;
+    adapter.outputBehavior:=guiOutAdapters.outputBehavior;
     adapter.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
   end;

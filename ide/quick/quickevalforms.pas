@@ -98,6 +98,8 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(self,quickOutputSynEdit,quickOutputBehavior);
+    quickOutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);
     with quickOutputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
