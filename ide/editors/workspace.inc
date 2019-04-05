@@ -365,6 +365,7 @@ PROCEDURE T_workspace.closeCurrentFile;
       k:longint;
       answer:integer;
       mark:TSynEditMark;
+      sheetToDestroy:TTabSheet;
   begin
     toClose:=currentEditor;
     if toClose=nil then exit;
@@ -396,7 +397,9 @@ PROCEDURE T_workspace.closeCurrentFile;
     k:=0;
     while (k<length(metas)) and (metas[k]<>toClose) do inc(k);
     if k>length(metas) then raise Exception.create('Invalid state; Found editor to close but cannot determine index');
+    sheetToDestroy:=metas[k]^.tabsheet;
     dispose(metas[k],destroy);
+    FreeAndNil(sheetToDestroy);
     metas[k]:=metas[length(metas)-1];
     setLength(metas,length(metas)-1);
 
