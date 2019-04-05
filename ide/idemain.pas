@@ -1,4 +1,4 @@
-UNIT ideMain;
+UNIT idemain;
 
 {$mode objfpc}{$H+}
 
@@ -172,7 +172,7 @@ VAR
 
 IMPLEMENTATION
 USES mnh_splash,out_adapters,cmdLineInterpretation;
-{$R ideMain.lfm}
+{$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   begin
@@ -295,11 +295,13 @@ PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
 
 PROCEDURE closeActivePage(CONST PageControl: TPageControl);
   VAR active:T_mnhComponentForm;
+      CloseAction:TCloseAction=caFree;
   begin
     if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
     then begin
       active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
       if not(active.CloseQuery) then exit;
+      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
       FreeAndNil(active);
     end;
   end;

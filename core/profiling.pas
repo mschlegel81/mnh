@@ -24,6 +24,7 @@ TYPE
     FUNCTION getLocation:T_tokenLocation; virtual;
   end;
 
+  {$ifdef fullVersion}
   T_callerEntry=record
     timeSpent_inclusive,
     timeSpent_exclusive:double;
@@ -63,6 +64,7 @@ TYPE
       PROCEDURE add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
       PROCEDURE logInfo(CONST adapters:P_messages);
   end;
+  {$endif}
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 VAR mnhSysPseudopackagePrefix :string='';
@@ -72,7 +74,7 @@ FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   begin
     for p in T_profileCategory do result[p]:=nil;
   end;
-
+{$ifdef fullVersion}
 PROCEDURE disposeEntry(VAR entry:P_calleeEntry);
   begin
     dispose(entry,destroy);
@@ -241,6 +243,7 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
       leaveCriticalSection(cs);
     end;
   end;
+{$endif}
 
 CONSTRUCTOR T_packageProfilingCall.create(CONST package_: P_objectWithPath; CONST category_: T_profileCategory);
   begin

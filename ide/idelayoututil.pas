@@ -110,6 +110,7 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
     else begin
       newForm.DragKind:=dkDrag;
       newForm.DragMode:=dmManual;
+      newForm.ShowInTaskBar:=stAlways;
       newForm.Show;
     end;
   end;

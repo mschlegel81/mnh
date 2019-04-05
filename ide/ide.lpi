@@ -37,7 +37,7 @@
           <SearchPaths>
             <IncludeFiles Value="../core"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc"/>
-            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+            <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -66,7 +66,7 @@
           </Other>
         </CompilerOptions>
       </Item2>
-      <Item3 Name="profile">
+      <Item3 Name="profiling">
         <CompilerOptions>
           <Version Value="11"/>
           <Target>
@@ -75,7 +75,7 @@
           <SearchPaths>
             <IncludeFiles Value="../core"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc"/>
-            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+            <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -127,7 +127,6 @@
         <ComponentName Value="IdeMainForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="ideMain"/>
       </Unit1>
       <Unit2>
         <Filename Value="idelayoututil.pas"/>
@@ -433,7 +432,7 @@
     <SearchPaths>
       <IncludeFiles Value="../core"/>
       <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc"/>
-      <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+      <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
