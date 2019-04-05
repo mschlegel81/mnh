@@ -37,7 +37,7 @@
           <SearchPaths>
             <IncludeFiles Value="../core"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
-            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+            <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -66,7 +66,7 @@
           </Other>
         </CompilerOptions>
       </Item2>
-      <Item3 Name="profile">
+      <Item3 Name="profiling">
         <CompilerOptions>
           <Version Value="11"/>
           <Target>
@@ -75,7 +75,7 @@
           <SearchPaths>
             <IncludeFiles Value="../core"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
-            <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+            <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -103,9 +103,16 @@
       <Version Value="2"/>
     </PublishOptions>
     <RunParams>
+      <local>
+        <CommandLineParams Value="C:/dev/mnh5/demos/doublePendulum.mnh"/>
+      </local>
       <FormatVersion Value="2"/>
       <Modes Count="1">
-        <Mode0 Name="default"/>
+        <Mode0 Name="default">
+          <local>
+            <CommandLineParams Value="C:/dev/mnh5/demos/doublePendulum.mnh"/>
+          </local>
+        </Mode0>
       </Modes>
     </RunParams>
     <RequiredPackages Count="2">
@@ -116,7 +123,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="54">
+    <Units Count="55">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -416,6 +423,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="reevaluationForms"/>
       </Unit53>
+      <Unit54>
+        <Filename Value="plot/funcs_plot.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit54>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -426,7 +437,7 @@
     <SearchPaths>
       <IncludeFiles Value="../core"/>
       <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
-      <UnitOutputDirectory Value="C:/dev/mnh5/ide/compilates"/>
+      <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
