@@ -75,6 +75,7 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
 
 PROCEDURE TreevaluationForm.FormDestroy(Sender: TObject);
   begin
+    runner.haltEvaluation;
     timer.enabled:=false;
     runner.destroy;
   end;

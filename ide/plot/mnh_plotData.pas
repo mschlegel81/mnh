@@ -198,7 +198,6 @@ TYPE
       CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      FUNCTION requiresFastPolling:boolean;
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROCEDURE logPlotDone;
       PROCEDURE startGuiInteraction;
@@ -1491,6 +1490,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
       mt_plot_clearAnimation,
       mt_plot_retrieveOptions,
       mt_plot_renderRequest,
+      mt_plot_queryClosedByUser,
       mt_plot_addAnimationFrame: begin
         result:=true;
         //if there are pending tasks then store else process
@@ -1511,13 +1511,6 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plotSystem.requiresFastPolling:boolean;
-  begin
-    enterCriticalSection(cs);
-    result:=displayImmediate or (animation.frameCount<>0);
-    leaveCriticalSection(cs);
-  end;
-
 FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
@@ -1530,7 +1523,8 @@ FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
     lastDisplayIndex:=-1;
     for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
     //process messages
-    for m in storedMessages do begin
+    for i:=0 to length(storedMessages)-1 do begin
+      m:=storedMessages[i];
       include(result,m^.messageType);
       if m^.messageType=mt_plot_postDisplay
       then begin

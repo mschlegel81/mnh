@@ -31,9 +31,6 @@ TYPE
   end;
 
   P_guiPlotSystem= ^T_guiPlotSystem;
-
-  { T_guiPlotSystem }
-
   T_guiPlotSystem = object(T_plotSystem)
     protected
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
@@ -197,9 +194,6 @@ USES sysutils, FileUtil,
      editScripts,
      fileWrappers;
 VAR mainFormCoordinatesLabel:TLabel;
-
-{ T_queryPlotClosedMessage }
-
 FUNCTION T_queryPlotClosedMessage.internalType: shortstring;
 begin
   result:='T_queryPlotClosedMessage';
@@ -233,9 +227,17 @@ FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_
 
 PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
   begin
-    if message^.messageType=mt_plot_queryClosedByUser then begin
-      P_queryPlotClosedMessage(message)^.setResponse((myPlotForm=nil) and formWasClosedByUser);
-    end else inherited processMessage(message);
+    case message^.messageType of
+      mt_startOfEvaluation: begin
+        formWasClosedByUser:=false;
+        inherited processMessage(message);
+      end;
+      mt_plot_queryClosedByUser: begin
+        P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser);
+        formWasClosedByUser:=false;
+      end;
+      else inherited processMessage(message);
+    end;
   end;
 
 PROCEDURE T_guiPlotSystem.ensureForm;
@@ -246,7 +248,6 @@ PROCEDURE T_guiPlotSystem.ensureForm;
       myPlotForm.relatedPlot:=@self;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm                    .pullPlotSettingsToGui();
-      formWasClosedByUser:=false;
       dockNewForm(myPlotForm);
     end;
   end;
@@ -582,6 +583,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    //TODO: This is not triggered by the popup menu!
     if relatedPlot<>nil then relatedPlot^.formWasClosedByUser:=true;
     animateCheckBox.checked:=false;
     CloseAction:=caFree;
@@ -725,7 +727,6 @@ PROCEDURE TplotForm.doPlot;
   begin
     if relatedPlot=nil then exit;
     updateAttachment;
-    showComponent;
     relatedPlot^.startGuiInteraction;
     updateInteractiveSection;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
