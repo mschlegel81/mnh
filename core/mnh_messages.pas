@@ -64,9 +64,10 @@ TYPE
     mt_el3_userDefined,
     mt_el4_systemError,
     mt_endOfEvaluation,
-    mt_profile_call_info,
     mt_timing_info
     {$ifdef fullVersion},
+    mt_profile_call_info1,
+    mt_profile_call_info2,
     mt_startOfEvaluation,
     mt_debugger_breakpoint,
     mt_displayTable,
@@ -76,6 +77,7 @@ TYPE
     mt_plot_renderRequest,
     mt_plot_retrieveOptions,
     mt_plot_setOptions,
+    mt_plot_queryClosedByUser,
     mt_plot_clear,
     mt_plot_clearAnimation,
     mt_plot_addAnimationFrame,
@@ -96,7 +98,7 @@ TYPE
   T_messageTypeSet=set of T_messageType;
 
 CONST
-  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
+  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messageTypeMeta:array[T_messageType] of record
     guiMarker:string[3];
@@ -120,9 +122,10 @@ CONST
 {mt_el3_userDefined   }  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:2),
 {mt_el4_systemError   }  (guiMarker: ERROR_MARKER  ; level: 4; mClass:mc_fatal;   systemErrorLevel:5),
 {mt_endOfEvaluation   }  (guiMarker: NOTE_MARKER   ; level:-1; mClass:mc_note;    systemErrorLevel:0),
-{mt_profile_call_info }  (guiMarker: TIMING_MARKER2; level:-1; mClass:mc_timing;  systemErrorLevel:0),
 {mt_timing_info       }  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
+{mt_profile_call_info1}  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0),
+{mt_profile_call_info2}  (guiMarker: TIMING_MARKER2; level:-1; mClass:mc_timing;  systemErrorLevel:0),
 {mt_startOfEvaluation}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_debugger_breakpoint} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayTable}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
@@ -132,6 +135,7 @@ CONST
 {mt_plot_renderRequest}  (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_retrieveOptions}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_setOptions}     (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_queryClosedB...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_clear}          (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_clearAnimation} (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_plot_addAnimation...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
@@ -224,7 +228,7 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_profile_call_info,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation,mt_profile_call_info1,mt_profile_call_info2{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ,mt_echo_continued];
     if x.echo_output      then result+=[mt_echo_output     ,mt_echo_continued];
     if x.echo_declaration then result+=[mt_echo_declaration,mt_echo_continued];

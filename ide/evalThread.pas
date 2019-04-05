@@ -264,6 +264,7 @@ PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
     package.load(lu_forCallingMain,globals,recycler,mainParameters);
+    globals.afterEvaluation(recycler);
     messages.setExitCode;
   end;
 
@@ -301,12 +302,11 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
     end;
 
   PROCEDURE doneEdit;
-    VAR successful:boolean=true;
     begin
       package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
       if evalRequest<>nil
-      then messages.postCustomMessage(evalRequest^.withSuccessFlag(successful))
+      then messages.postCustomMessage(evalRequest^.withSuccessFlag(collector.typesOfStoredMessages*C_errorMessageTypes[3]=[]))
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
 
@@ -380,6 +380,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
       globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.afterEvaluation(recycler);
     end else begin
       if package.getCodeProvider<>parentProvider then package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
@@ -392,6 +393,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       end;
       if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
       lexer.destroy;
+      globals.afterEvaluation(recycler);
     end;
   end;
 
@@ -435,6 +437,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
+    globals.afterEvaluation(recycler);
   end;
 
 FUNCTION T_abstractEvaluation.isRunning: boolean;

@@ -266,7 +266,8 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
       mt_el3_noMatchingMain,
       mt_el3_userDefined,
       mt_el4_systemError,
-      mt_profile_call_info,
+      mt_profile_call_info1,
+      mt_profile_call_info2,
       mt_timing_info: for s in m^.toString(true) do appendInternal(s);
       mt_echo_input,
       mt_echo_declaration,
