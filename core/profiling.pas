@@ -2,7 +2,9 @@ UNIT profiling;
 INTERFACE
 USES sysutils,
      //my libraries
+     {$ifdef fullVersion}
      myGenerics,myStringUtil,
+     {$endif}
      //MNH:
      basicTypes,
      mnh_messages,
