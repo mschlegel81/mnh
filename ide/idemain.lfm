@@ -110,6 +110,7 @@ object IdeMainForm: TIdeMainForm
         Align = alClient
         MultiLine = True
         TabOrder = 2
+        OnChange = EditorsPageControlChange
         Options = [nboShowCloseButtons, nboMultiLine]
       end
     end

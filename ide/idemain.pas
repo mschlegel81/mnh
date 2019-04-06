@@ -97,6 +97,7 @@ TYPE
     UndockPopup3: TPopupMenu;
     UndockPopup4: TPopupMenu;
     UndockPopup1: TPopupMenu;
+    PROCEDURE EditorsPageControlChange(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
@@ -251,6 +252,13 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
     runnerModel.destroy;
     workspace.destroy;
     searchReplaceModel.destroy;
+  end;
+
+PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
+  VAR meta:P_editorMeta;
+  begin
+    meta:=workspace.currentEditor;
+    if meta<>nil then meta^.activate;
   end;
 
 FUNCTION anyEvaluationRunning:boolean;
