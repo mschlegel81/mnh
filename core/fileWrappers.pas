@@ -30,6 +30,7 @@ TYPE
   T_virtualFileCodeProvider=object(T_fileCodeProvider)
     private
       lines:T_arrayOfString;
+      mimicActualFile:boolean;
     public
       CONSTRUCTOR create(CONST path:ansistring; CONST lineData:T_arrayOfString);
       DESTRUCTOR destroy;                 virtual;
@@ -46,7 +47,6 @@ TYPE
     FUNCTION getPath: ansistring;       virtual;
     FUNCTION stateHash:T_hashInt;       virtual;
     FUNCTION isPseudoFile:boolean;      virtual;
-    FUNCTION disposeOnPackageDestruction:boolean; virtual;
   end;
 
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
@@ -190,7 +190,14 @@ FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_ar
   begin new(result,create(path,lineData)); end;
 
 FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
-  begin if provider=nil then result:=nil else new(result,create(provider^.getPath,provider^.getLines)); end;
+  begin
+    if provider=nil
+    then result:=nil
+    else begin
+      new(result,create(provider^.getPath,provider^.getLines));
+      if not(provider^.isPseudoFile) then result^.mimicActualFile:=true;
+    end;
+  end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
@@ -422,11 +429,11 @@ FUNCTION T_blankCodeProvider.getLines: T_arrayOfString; begin result:=C_EMPTY_ST
 FUNCTION T_blankCodeProvider.getPath: ansistring; begin result:='-'; end;
 FUNCTION T_blankCodeProvider.stateHash: T_hashInt; begin result:=1; end;
 FUNCTION T_blankCodeProvider.isPseudoFile: boolean; begin result:=true; end;
-FUNCTION T_blankCodeProvider.disposeOnPackageDestruction: boolean; begin result:=true; end;
 
 CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin
     inherited create(path);
+    mimicActualFile:=false;
     lines:=lineData;
   end;
 
@@ -486,7 +493,7 @@ FUNCTION T_fileCodeProvider.isPseudoFile: boolean;
 
 FUNCTION T_virtualFileCodeProvider.isPseudoFile: boolean;
   begin
-    result:=true;
+    result:=not(mimicActualFile);
   end;
 
 FUNCTION T_codeProvider.disposeOnPackageDestruction: boolean;
