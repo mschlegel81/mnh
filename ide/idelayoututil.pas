@@ -98,7 +98,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
 
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
-USES math;
+USES math,litVar,recyclers,basicTypes,contexts,funcs;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 
@@ -393,11 +393,20 @@ OPERATOR:=(x: TFontStyles): byte;
     if fsItalic in x then result+=FONT_STYLE_ITALIC;
   end;
 
+{$i func_defines.inc}
+FUNCTION anyFormShowing_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=newBoolLiteral(hasAnyForm);
+  end;
+
 INITIALIZATION
   initialize(lastDockLocationFor);
   setLength(activeForms,0);
   setLength(fontControls[ctEditor ],0);
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
+
 end.
 
