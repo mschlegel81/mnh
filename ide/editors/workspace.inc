@@ -85,6 +85,28 @@ CONST
 
 {$endif}
 {$ifdef includeImplementation}
+{$i func_defines.inc}
+FUNCTION editors_impl intFuncSignature;
+  VAR meta:P_editorMeta;
+  begin
+    result:=newListLiteral();
+    for meta in workspace.metas do listResult^.appendString(meta^.pseudoName());
+  end;
+
+FUNCTION editorContent_impl intFuncSignature;
+  VAR m   :P_editorMeta;
+      meta:P_editorMeta=nil;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      for m in workspace.metas do if m^.pseudoName()=str0^.value then meta:=m;
+      if meta=nil then exit(newVoidLiteral);
+      result:=newListLiteral(meta^.editor.lines.count);
+      for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(meta^.editor.lines[i]);
+    end;
+  end;
+
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     savedAt:=now+1; //= now + 24h
@@ -100,6 +122,9 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     setLength(oldMarkers,0);
 
     scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
+
+    registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors');
+    registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
   end;
 
 DESTRUCTOR T_workspace.destroy;

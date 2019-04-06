@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="55">
+    <Units Count="57">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -422,6 +422,14 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit54>
+      <Unit55>
+        <Filename Value="editors/workspace.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit55>
+      <Unit56>
+        <Filename Value="../core/profiling.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit56>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

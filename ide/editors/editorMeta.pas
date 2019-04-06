@@ -76,9 +76,9 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE setFile(CONST fileName:string);
     PROCEDURE saveFile(CONST fileName:string='');
     PROCEDURE updateSheetCaption;
-
-    PROCEDURE activate;
   public
+    PROCEDURE activate;
+
     //Editor events
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer); virtual;
@@ -99,25 +99,8 @@ T_editorMeta=object(T_basicEditorMeta)
     //Externally triggered actions
     PROCEDURE pollAssistanceResult;
 
-    //PROCEDURE closeEditorWithDialogs;
-    //FUNCTION saveAsWithDialog:boolean;
-    //FUNCTION saveWithDialog:boolean;
-    //
-    //PROCEDURE exportToHtml;
     PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
-    //FUNCTION caretInMainFormCoordinates:TPoint;
-    //PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
-    //
-    //FUNCTION defaultExtensionByLanguage:ansistring;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
-    //FUNCTION resolveImport(CONST text:string):string;
-    //PROCEDURE closeEditorQuietly;
-    //FUNCTION isFile:boolean;
-    //PROCEDURE initForNewFile;
-    //FUNCTION changed:boolean;
-    //FUNCTION saveFile(CONST fileName:string=''):string;
-    //FUNCTION fileIsDeleted:boolean;
-    //FUNCTION fileIsModifiedOnFileSystem:boolean;
 end;
 T_bookmarkIndex=0..9;
 
@@ -126,33 +109,6 @@ T_bookmarkIndex=0..9;
 {$i fileHistory.inc}
 {$i workspace.inc}
 {$undef includeInterface}
-
-//PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
-//                    CONST p_breakpointsImagesList :TImageList;
-//                    CONST p_bookmarkImagesList    :TImageList;
-//                    CONST outputHighlighter       :TSynMnhSyn;
-//                    CONST languageMenuRoot        :TMenuItem;
-//                    CONST p_EditKeyUp             :TKeyEvent;
-//                    CONST p_EditMouseDown         :TMouseEvent;
-//                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
-//FUNCTION hasEditor:boolean;
-//FUNCTION getEditor:P_editorMeta;
-//FUNCTION addEditorMetaForNewFile:P_editorMeta;
-//FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
-//FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
-//
-//FUNCTION getHelpPopupText:string;
-//FUNCTION getHelpLocation:T_searchTokenLocation;
-//PROCEDURE updateEditorsByGuiStatus;
-//PROCEDURE closeAllEditorsButCurrent;
-//PROCEDURE closeAllUnmodifiedEditors;
-//PROCEDURE checkForFileChanges;
-//PROCEDURE finalizeEditorMeta;
-//PROCEDURE saveWorkspace;
-//FUNCTION currentlyOpenFiles:T_arrayOfString;
-//FUNCTION workspaceFilename:string;
-//
-//FUNCTION getAllBreakpoints:T_searchTokenLocations;
 
 FUNCTION getHelpText(OUT helpLink:string):string;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
@@ -643,178 +599,6 @@ FUNCTION getHelpText(OUT helpLink:string):string;
     helpLink:=underCursor.linkToHelp;
   end;
 
-//CONST workspaceSerialVersion=612461341;
-//FUNCTION loadWorkspace:boolean;
-//  VAR stream:T_bufferedInputStreamWrapper;
-//      i:longint;
-//  begin
-//    stream.createToReadFromFile(workspaceFilename);
-//    fileHistory.create(false);
-//    folderHistory.create(true);
-//    if not(stream.readDWord=workspaceSerialVersion) then begin
-//      stream.destroy;
-//      exit(false);
-//    end;
-//    if not(fileHistory  .loadFromStream(stream)) then exit(false);
-//    if not(folderHistory.loadFromStream(stream)) then exit(false);
-//    setLength(editorMetaData,stream.readNaturalNumber);
-//    if not(stream.allOkay) then begin
-//      setLength(editorMetaData,0);
-//      stream.destroy;
-//      exit(false);
-//    end;
-//    result:=true;
-//    for i:=0 to length(editorMetaData)-1 do begin
-//      new(editorMetaData[i],create(stream));
-//      result:=result and stream.allOkay;
-//    end;
-//    result:=result and stream.allOkay;
-//    //if not(result) then setLength(editorMetaData,validMetaCount) else begin
-//    //  if length(filesToOpenInEditor)=0
-//    //  then inputPageControl.activePageIndex:=stream.readLongint
-//    //  else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
-//    //end;
-//    //for i:=0 to 9 do begin
-//    //  globalBookmarks[i].editorIndex:=stream.readInteger;
-//    //  globalBookmarks[i].lineIndex  :=stream.readInteger;
-//    //  globalBookmarks[i].columnIndex:=stream.readInteger;
-//    //  if (globalBookmarks[i].editorIndex>=0) and (globalBookmarks[i].editorIndex<length(editorMetaData)) and
-//    //     (globalBookmarks[i].lineIndex  >=0) then begin
-//    //    editorMetaData[globalBookmarks[i].editorIndex]^.editor.SetBookMark(i,globalBookmarks[i].columnIndex,globalBookmarks[i].lineIndex);
-//    //  end else globalBookmarks[i].editorIndex:=-1;
-//    //end;
-//    stream.destroy;
-//  end;
-
-//PROCEDURE saveWorkspace;
-//  VAR stream:T_bufferedOutputStreamWrapper;
-//      i,k:longint;
-//      editorIndexAfterLoading:T_arrayOfLongint;
-//  begin
-//    stream.createToWriteToFile(workspaceFilename);
-//    stream.writeDWord(workspaceSerialVersion);
-//    fileHistory.saveToStream(stream);
-//    folderHistory.saveToStream(stream);
-//    stream.writeNaturalNumber(length(editorMetaData));
-//    setLength(editorIndexAfterLoading,length(editorMetaData));
-//    k:=0;
-//    for i:=0 to length(editorMetaData)-1 do begin
-//      editorIndexAfterLoading[i]:=k; inc(k);
-//      editorMetaData[i]^.saveToStream(stream);
-//    end;
-//    //for i:=0 to 9 do if globalBookmarks[i].editorIndex<0 then begin
-//    //  stream.writeInteger(-1);
-//    //  stream.writeInteger(-1);
-//    //  stream.writeInteger(-1);
-//    //end else begin
-//    //  stream.writeInteger(editorIndexAfterLoading[globalBookmarks[i].editorIndex]);
-//    //  stream.writeInteger(globalBookmarks[i].lineIndex  );
-//    //  stream.writeInteger(globalBookmarks[i].columnIndex);
-//    //end;
-//    stream.destroy;
-//  end;
-
-//PROCEDURE initNewWorkspace;
-//  VAR i:longint;
-//  begin
-//    for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
-//    setLength(fileHistory.items,0);
-//    setLength(folderHistory.items,0);
-//  end;
-//
-//PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
-//                    CONST p_breakpointsImagesList :TImageList;
-//                    CONST p_bookmarkImagesList    :TImageList;
-//                    CONST outputHighlighter       :TSynMnhSyn;
-//                    CONST languageMenuRoot        :TMenuItem;
-//                    CONST p_EditKeyUp             :TKeyEvent;
-//                    CONST p_EditMouseDown         :TMouseEvent;
-//                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
-//
-//  begin
-//    setupEditorMetaBase(outputHighlighter,languageMenuRoot);
-//
-//    mainForm              :=p_mainForm              ;
-//    breakpointsImagesList :=p_breakpointsImagesList ;
-//    bookmarkImagesList    :=p_bookmarkImagesList    ;
-//    EditMouseDown         :=p_EditMouseDown         ;
-//    EditProcessUserCommand:=p_EditProcessUserCommand;
-//
-//    if not(loadWorkspace) then initNewWorkspace;
-//  end;
-
-//PROCEDURE gotoMarker(markerIndex:longint);
-//  VAR currentEdit:P_editorMeta;
-//      i:longint;
-//  begin
-//    if (markerIndex<0) or (markerIndex>=length(globalBookmarks)) then exit;
-//    if globalBookmarks[markerIndex].editorIndex<0 then exit;
-//    currentEdit:=getEditor;
-//    if currentEdit^.index=globalBookmarks[markerIndex].editorIndex then exit;
-//    for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.enabled) and (editorMetaData[i]^.index=globalBookmarks[markerIndex].editorIndex) then begin
-//      inputPageControl.activePageIndex:=i;
-//      editorMetaData[i]^.editor.CaretY:=globalBookmarks[markerIndex].lineIndex;
-//      editorMetaData[i]^.editor.CaretX:=globalBookmarks[markerIndex].columnIndex;
-//      mainForm.ActiveControl:=editorMetaData[i]^.editor;
-//    end;
-//  end;
-
-//function T_editorMeta.saveAsWithDialog: boolean;
-//  VAR path,name,ext:string;
-//  begin
-//    if isFile then begin
-//      path:=ExtractFileDir(fileInfo.filePath);
-//      name:=ExtractFileNameOnly(fileInfo.filePath);
-//      ext :=extractFileExt(fileInfo.filePath);
-//    end else begin
-//      path:=GetCurrentDir;
-//      name:='';
-//      if length(fileTypeMeta[language].extensions)>0
-//      then ext:='.'+lowercase(fileTypeMeta[language].extensions[0])
-//      else ext:='';
-//    end;
-//    name:=safeCallback(path,name,ext);
-//    if name<>'' then begin
-//      mainForm.activeFileChanged(saveFile(name),language_=LANG_MNH,fileInfo.filePath='');
-//      result:=true;
-//    end else result:=false;
-//  end;
-
-//function T_editorMeta.saveWithDialog: boolean;
-//  begin
-//    if isFile then begin
-//      mainForm.activeFileChanged(saveFile(),language_=LANG_MNH,fileInfo.filePath='');
-//      result:=true;
-//    end else result:=saveAsWithDialog;
-//  end;
-
-//procedure T_editorMeta.closeEditorQuietly;
-//  begin
-//    editor.clearAll;
-//    with fileInfo do begin
-//      filePath:='';
-//      isChanged:=false;
-//      ignoreDeleted:=false;
-//    end;
-//    editor.modified:=false;
-//    strictlyReadOnly:=false;
-//  end;
-
-//procedure T_editorMeta.closeEditorWithDialogs;
-//  VAR mr:longint;
-//  begin
-//    if changed then begin
-//      mr:=closeDialogForm.showOnClose(pseudoName(true));
-//      if mr=mrOk then if not(saveWithDialog) then exit;
-//      if mr=mrCancel then exit;
-//    end;
-//    if isFile then begin
-//      fileHistory.fileClosed(fileInfo.filePath);
-//      folderHistory.fileClosed(ExtractFileDir(fileInfo.filePath));
-//    end;
-//    closeEditorQuietly;
-//  end;
-
 PROCEDURE T_editorMeta.reloadFile;
   begin
     if not(isPseudoFile) and fileExists(fileInfo.filePath) then begin
@@ -825,69 +609,6 @@ PROCEDURE T_editorMeta.reloadFile;
       if language_=LANG_MNH then triggerCheck;
     end;
   end;
-
-//function T_editorMeta.caretInMainFormCoordinates: TPoint;
-//  begin
-//    result.x:=editor.CaretXPix;
-//    result.y:=editor.CaretYPix+editor.LineHeight;
-//    result:=editor.ClientToParent(result,mainForm);
-//  end;
-
-//function T_editorMeta.isFile: boolean;
-//  begin
-//    result:=fileInfo.filePath<>'';
-//  end;
-
-//function T_editorMeta.defaultExtensionByLanguage: ansistring;
-//  begin
-//    result:=fileTypeMeta[language_].extensions[0];
-//  end;
-
-//function T_editorMeta.changed: boolean;
-//  begin
-//    result:=fileInfo.isChanged or editor.modified;
-//  end;
-
-//function T_editorMeta.saveFile(const fileName: string): string;
-//  VAR arr:T_arrayOfString;
-//      i:longint;
-//      previousName:string;
-//      lineEndingSetting:byte;
-//  begin
-//    previousName:=fileInfo.filePath;
-//    if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-//    if (previousName<>'') and (previousName<>fileInfo.filePath) then begin
-//      fileHistory.fileClosed(previousName);
-//      folderHistory.fileClosed(ExtractFileDir(previousName));
-//    end;
-//    if previousName<>fileInfo.filePath
-//    then lineEndingSetting:=settings.newFileLineEnding
-//    else lineEndingSetting:=settings.overwriteLineEnding;
-//    setLength(arr,editor.lines.count);
-//    for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
-//    with fileInfo do begin
-//      writeFileLines(filePath,arr,LINE_ENDING[lineEndingSetting],false);
-//      fileAge(filePath,fileAccessAge);
-//      isChanged:=false;
-//      editor.modified:=false;
-//      editor.MarkTextAsSaved;
-//      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
-//    end;
-//    //result:=updateSheetCaption;
-//  end;
-
-//function T_editorMeta.fileIsDeleted: boolean;
-//  begin
-//    result:=isFile and not(fileExists(fileInfo.filePath));
-//  end;
-
-//function T_editorMeta.fileIsModifiedOnFileSystem: boolean;
-//  VAR currentFileAge:double;
-//  begin
-//    if not(isFile) or changed then exit(false);
-//    fileAge(fileInfo.filePath,currentFileAge);
-//    result:=currentFileAge<>fileInfo.fileAccessAge;
-//  end;
 
 PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_listLiteral);
   VAR concatenatedText:ansistring='';
@@ -903,106 +624,5 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
   end;
-
-//function T_editorMeta.resolveImport(const text: string): string;
-//  begin
-//    if latestAssistanceReponse=nil then result:='' else result:=latestAssistanceReponse^.resolveImport(text);
-//  end;
-
-//procedure T_editorMeta.exportToHtml;
-//  VAR SynExporterHTML: TSynExporterHTML;
-//      name:string;
-//  begin
-//    name:=safeCallback(GetCurrentDir,'','.html');
-//    if name='' then exit;
-//    SynExporterHTML:=TSynExporterHTML.create(nil);
-//    SynExporterHTML.title:=pseudoName();
-//    SynExporterHTML.highlighter:=editor.highlighter;
-//    SynExporterHTML.ExportAll(editor.lines);
-//    SynExporterHTML.saveToFile(name);
-//    SynExporterHTML.free;
-//  end;
-
-//==================================================================
-//FUNCTION hasEditor:boolean;
-//  begin
-//    result:=length(editorMetaData)>0;
-//  end;
-
-//FUNCTION allPseudoNames:T_arrayOfString;
-//  VAR m:P_editorMeta;
-//  begin
-//    setLength(result,0);
-//    for m in editorMetaData do if m^.enabled then append(result,m^.pseudoName);
-//  end;
-
-//FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
-//  VAR m:P_editorMeta;
-//  begin
-//    result:=nil;
-//    for m in editorMetaData do if (m^.pseudoName()=nameOrPseudoName) then exit(m);
-//  end;
-
-//FUNCTION getHelpPopupText:string;
-//  begin
-//    result:=underCursor.infoText;
-//  end;
-//
-//FUNCTION getHelpLocation:T_searchTokenLocation;
-//  begin
-//    {$ifdef debugMode} writeln(stdErr,'        DEBUG: getHelpLocation filename="',underCursor.location.fileName,'"; line=',underCursor.location.line,'; column=',underCursor.location.column); {$endif}
-//    result:=underCursor.location;
-//  end;
-
-//PROCEDURE closeAllEditorsButCurrent;
-//  VAR m:P_editorMeta;
-//  begin
-//    if not(hasEditor) then exit;
-//    for m in editorMetaData do if (m^.tabsheet<>inputPageControl.activePage) then m^.closeEditorWithDialogs;
-//  end;
-
-//PROCEDURE closeAllUnmodifiedEditors;
-//  VAR m:P_editorMeta;
-//  begin
-//    for m in editorMetaData do if not(m^.changed) then m^.closeEditorWithDialogs;
-//  end;
-
-//VAR doNotCheckFileBefore:double;
-//PROCEDURE checkForFileChanges;
-//  VAR m:P_editorMeta;
-//      modalRes:longint;
-//  begin
-//    if now<doNotCheckFileBefore then exit;
-//    doNotCheckFileBefore:=now+1;
-//    for m in editorMetaData do with m^ do
-//    if fileIsDeleted and not(fileInfo.ignoreDeleted) then begin
-//      modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
-//      if modalRes=mrOk then closeEditorQuietly;
-//      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else begin
-//        fileInfo.ignoreDeleted:=true;
-//        fileInfo.isChanged:=true;
-//        updateSheetCaption;
-//      end;
-//      continue;
-//    end else if fileIsModifiedOnFileSystem then begin
-//      modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
-//      if modalRes=mrOk then reloadFile(fileInfo.filePath);
-//      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
-//      fileInfo.isChanged:=true;
-//    end;
-//    doNotCheckFileBefore:=now+ONE_SECOND;
-//  end;
-
-//PROCEDURE finalizeEditorMeta;
-//  VAR i:longint;
-//  begin
-//    finalizeCodeAssistance;
-//    //if outlineModel<>nil then begin
-//    //  dispose(outlineModel,destroy);
-//    //  outlineModel:=nil;
-//    //end;
-//    for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
-//    setLength(editorMetaData,0);
-//  end;
 
 end.
