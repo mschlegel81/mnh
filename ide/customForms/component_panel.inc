@@ -24,14 +24,14 @@ FUNCTION T_customFormRequest.internalType: shortstring;
 CONSTRUCTOR T_customFormRequest.create(CONST title: string;
   CONST definition: P_literal; CONST context: P_context;
   CONST errorLocation: T_tokenLocation);
-begin
-  inherited create(mt_displayCustomForm);
-  setupTitle:=title;
-  setupDef:=definition;
-  setupContext:=context;
-  setupLocation:=errorLocation;
-  createdForm:=nil;
-end;
+  begin
+    inherited create(mt_displayCustomForm);
+    setupTitle:=title;
+    setupDef:=definition^.rereferenced;
+    setupContext:=context;
+    setupLocation:=errorLocation;
+    createdForm:=nil;
+  end;
 
 FUNCTION T_customFormRequest.getCreatedForm(CONST messages:P_messages): TscriptedForm;
   begin

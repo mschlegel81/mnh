@@ -20,7 +20,6 @@ USES
   editorMetaBase,
   mnh_plotForm,
   plotMath,
-  synOutAdapter,
   ideLayoutUtil;
 
 TYPE
@@ -80,8 +79,7 @@ TYPE
     FUNCTION getName:string; virtual; abstract;
   end;
 
-  { TscriptedForm }
-
+  P_customFormAdapter = ^T_customFormAdapter;
   TscriptedForm = class(T_mnhComponentForm)
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -91,27 +89,21 @@ TYPE
     PROCEDURE performFastUpdate; override;
   private
     markedForCleanup:boolean;
-    //setupParam:P_literal;
-    //setupLocation:T_tokenLocation;
-    //setupContext:P_context;
     meta:array of P_guiElementMeta;
     metaForUpdate:T_setOfPointer;
     plotLink:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
+    adapter:P_customFormAdapter;
     PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
-    PROCEDURE conditionalShow(CONST messages:P_messages);
   end;
 
   P_customFormRequest=^T_customFormRequest;
-
-  { T_customFormRequest }
-
   T_customFormRequest=object(T_payloadMessage)
     private
       setupTitle:string;
@@ -129,7 +121,6 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  P_customFormAdapter = ^T_customFormAdapter;
   T_customFormAdapter = object(T_abstractGuiOutAdapter)
     scriptedForms: array of TscriptedForm;
     relatedPlotAdapter:P_guiPlotSystem;
@@ -139,6 +130,7 @@ TYPE
   end;
 
 IMPLEMENTATION
+USES synOutAdapter;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -405,10 +397,9 @@ PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
     if tryEnterCriticalsection(lock)=0
     then CloseAction:=caNone
     else begin
-      if processingEvents then CloseAction:=caNone
-                          else markedForCleanup:=(CloseAction in [caFree,caHide]);
+      if processingEvents then CloseAction:=caNone;
+      markedForCleanup:=(CloseAction in [caFree,caHide]);
       leaveCriticalSection(lock);
-      CloseAction:=caFree;
     end;
   end;
 
@@ -431,6 +422,14 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
     setLength(meta,0);
     displayPending:=false;
     metaForUpdate.destroy;
+    if adapter<>nil then with adapter^ do begin
+      k:=0;
+      while (k<length(scriptedForms)) and (scriptedForms[k]<>self) do inc(k);
+      if k<length(scriptedForms) then begin
+        scriptedForms[k]:=scriptedForms[length(scriptedForms)-1];
+        setLength(        scriptedForms,length(scriptedForms)-1);
+      end;
+    end;
     leaveCriticalSection(lock);
     doneCriticalSection(lock);
   end;
@@ -446,8 +445,15 @@ PROCEDURE TscriptedForm.performSlowUpdate;
   end;
 
 PROCEDURE TscriptedForm.performFastUpdate;
+  VAR metaPointer:pointer;
   begin
-
+    if markedForCleanup or (tryEnterCriticalsection(lock)=0) then exit;
+    if processingEvents
+    then propagateCursor(self,crHourGlass)
+    else propagateCursor(self,crDefault);
+    for metaPointer in metaForUpdate.values do P_guiElementMeta(metaPointer)^.update;
+    metaForUpdate.clear;
+    leaveCriticalSection(lock);
   end;
 
 PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
@@ -605,37 +611,8 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
-    if result then context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
+    //if result then context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
     {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
-  end;
-
-PROCEDURE TscriptedForm.conditionalShow(CONST messages: P_messages);
-  PROCEDURE updateComponents;
-    VAR metaPointer:pointer;
-    begin
-      if processingEvents
-      then propagateCursor(self,crHourGlass)
-      else propagateCursor(self,crDefault);
-      for metaPointer in metaForUpdate.values do P_guiElementMeta(metaPointer)^.update;
-      metaForUpdate.clear;
-    end;
-
-  begin
-    if tryEnterCriticalsection(lock)=0 then begin
-      messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
-      exit;
-    end;
-    //if displayPending and messages^.continueEvaluation then begin
-    //  if (setupParam<>nil) and (setupContext<>nil) then begin
-    //    initialize();
-    //    disposeLiteral(setupParam);
-    //    setupContext:=nil;
-    //  end;
-    //  Show;
-    //  displayPending:=false;
-    //end;
-    updateComponents;
-    leaveCriticalSection(lock);
   end;
 
 FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
@@ -653,7 +630,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
                          P_mapLiteral(params^.value[1]),
                          @context,
                          location));
-      context.messages^.postCustomMessage(@formRequest,false);
+      context.messages^.postCustomMessage(formRequest,false);
       form:=formRequest^.getCreatedForm(context.messages);
       disposeMessage(formRequest);
       if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
@@ -687,18 +664,24 @@ FUNCTION T_customFormAdapter.flushToGui: T_messageTypeSet;
     enterCriticalSection(cs);
     for m in storedMessages do case m^.messageType of
       mt_endOfEvaluation: begin
-        for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
+        for k:=0 to length(scriptedForms)-1 do begin
+          scriptedForms[k].adapter:=nil;
+          FreeAndNil(scriptedForms[k]);
+        end;
         setLength(scriptedForms,0);
         include(result,m^.messageType);
       end;
       mt_displayCustomForm: with P_customFormRequest(m)^ do begin
-        newForm:=TscriptedForm.create(Application);
+        newForm:=TscriptedForm.create(nil);
         newForm.displayPending:=true;
         newForm.caption:=setupTitle;
         setLength(scriptedForms,length(scriptedForms)+1);
         scriptedForms[length(scriptedForms)-1]:=newForm;
         newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
+        newForm.adapter:=@self;
         setCreatedForm(newForm);
+        dockNewForm(newForm);
+        newForm.showComponent;
         include(result,m^.messageType);
       end;
     end;

@@ -310,7 +310,7 @@ PROCEDURE closeActivePage(CONST PageControl: TPageControl);
       active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
       if not(active.CloseQuery) then exit;
       if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
-      FreeAndNil(active);
+      if CloseAction=caFree then FreeAndNil(active);
     end;
   end;
 
