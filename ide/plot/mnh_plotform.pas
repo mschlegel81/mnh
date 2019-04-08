@@ -743,7 +743,7 @@ PROCEDURE TplotForm.doPlot;
 
 FUNCTION TplotForm.timerTick: boolean;
   FUNCTION frameInterval:double;
-    CONST intendedSecPerFrame:array[0..10] of double=(1,0.5,0.2,0.1,0.07,0.05,0.03,0.025,0.020,0.015,0.010);
+    CONST intendedSecPerFrame:array[0..10] of double=(1,1/2,1/5,1/10,1/15,1/20,1/25,1/30,1/40,1/50,0);
     begin
       result:=intendedSecPerFrame[animationSpeedTrackbar.position];
     end;

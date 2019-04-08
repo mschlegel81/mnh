@@ -1228,6 +1228,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
     end;
 
   begin
+    if (plotImage.width<5) or (plotImage.height<5) then exit;
     initialize(gridTics);
     system.enterCriticalSection(cs);
     try

@@ -5,6 +5,8 @@ object scriptedForm: TscriptedForm
   Width = 480
   Caption = 'scriptedForm'
   DesignTimePPI = 144
+  DragKind = dkDock
+  DragMode = dmAutomatic
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy

@@ -100,7 +100,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
 
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
-USES math;
+USES math,litVar,recyclers,basicTypes,contexts,funcs;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 
@@ -354,11 +354,12 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
     mainForm.width :=min(max(stream.readLongint,100),screen.width);
     intendedWindowState:=TWindowState(stream.readByte([byte(wsFullScreen),byte(wsMaximized),byte(wsNormal)]));
-    if not(stream.allOkay) then exit(false);
-    if intendedWindowState=wsFullScreen
-    then mainForm.BorderStyle:=bsNone
-    else mainForm.BorderStyle:=bsSizeable;
-    mainForm.WindowState:=intendedWindowState;
+    if stream.allOkay then begin
+      if intendedWindowState=wsFullScreen
+      then mainForm.BorderStyle:=bsNone
+      else mainForm.BorderStyle:=bsSizeable;
+      mainForm.WindowState:=intendedWindowState;
+    end;
 
     for k:=1 to 4 do splitters[k]:=stream.readWord;
     result:=true;
@@ -370,8 +371,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
 
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
-
-    result:=result and stream.allOkay and (length(htmlDocGeneratedForCodeHash)=length(CODE_HASH));
+    result:=stream.allOkay;
     if not(result) then begin
       mainForm.BorderStyle:=bsSizeable;
       mainForm.WindowState:=wsMaximized;
@@ -395,11 +395,20 @@ OPERATOR:=(x: TFontStyles): byte;
     if fsItalic in x then result+=FONT_STYLE_ITALIC;
   end;
 
+{$i func_defines.inc}
+FUNCTION anyFormShowing_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=newBoolLiteral(hasAnyForm);
+  end;
+
 INITIALIZATION
   initialize(lastDockLocationFor);
   setLength(activeForms,0);
   setLength(fontControls[ctEditor ],0);
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
+
 end.
 

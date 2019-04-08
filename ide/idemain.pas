@@ -163,6 +163,10 @@ TYPE
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
     PROCEDURE startDock(CONST PageControl:TPageControl);
+    PROCEDURE fixPageControl1Size;
+    PROCEDURE fixPageControl2Size;
+    PROCEDURE fixPageControl3Size;
+    PROCEDURE fixPageControl4Size;
   public
     PROCEDURE saveIdeSettings;
     { public declarations }
@@ -310,7 +314,7 @@ PROCEDURE closeActivePage(CONST PageControl: TPageControl);
       active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
       if not(active.CloseQuery) then exit;
       if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
-      FreeAndNil(active);
+      if CloseAction=caFree then FreeAndNil(active);
     end;
   end;
 
@@ -321,10 +325,10 @@ FUNCTION canCloseActivePage(CONST PageControl: TPageControl):boolean;
       and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
   end;
 
-PROCEDURE TIdeMainForm.miClose1Click(Sender: TObject); begin closeActivePage(PageControl1); end;
-PROCEDURE TIdeMainForm.miClose2Click(Sender: TObject); begin closeActivePage(PageControl2); end;
-PROCEDURE TIdeMainForm.miClose3Click(Sender: TObject); begin closeActivePage(PageControl3); end;
-PROCEDURE TIdeMainForm.miClose4Click(Sender: TObject); begin closeActivePage(PageControl4); end;
+PROCEDURE TIdeMainForm.miClose1Click(Sender: TObject); begin closeActivePage(PageControl1); fixPageControl1Size; end;
+PROCEDURE TIdeMainForm.miClose2Click(Sender: TObject); begin closeActivePage(PageControl2); fixPageControl2Size; end;
+PROCEDURE TIdeMainForm.miClose3Click(Sender: TObject); begin closeActivePage(PageControl3); fixPageControl3Size; end;
+PROCEDURE TIdeMainForm.miClose4Click(Sender: TObject); begin closeActivePage(PageControl4); fixPageControl4Size; end;
 
 PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   begin
@@ -524,10 +528,10 @@ PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TIdeMainForm.miUndock1Click(Sender: TObject); begin startDock(PageControl1); end;
-PROCEDURE TIdeMainForm.miUndock2Click(Sender: TObject); begin startDock(PageControl2); end;
-PROCEDURE TIdeMainForm.miUndock3Click(Sender: TObject); begin startDock(PageControl3); end;
-PROCEDURE TIdeMainForm.miUndock4Click(Sender: TObject); begin startDock(PageControl4); end;
+PROCEDURE TIdeMainForm.miUndock1Click(Sender: TObject); begin startDock(PageControl1); fixPageControl1Size; end;
+PROCEDURE TIdeMainForm.miUndock2Click(Sender: TObject); begin startDock(PageControl2); fixPageControl2Size; end;
+PROCEDURE TIdeMainForm.miUndock3Click(Sender: TObject); begin startDock(PageControl3); fixPageControl3Size; end;
+PROCEDURE TIdeMainForm.miUndock4Click(Sender: TObject); begin startDock(PageControl4); fixPageControl4Size; end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
@@ -552,6 +556,50 @@ PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
     newForm.BringToFront;
   end;
 
+PROCEDURE TIdeMainForm.fixPageControl1Size;
+  begin
+    if PageControl1.PageCount=0 then begin
+      PageControl1.width:=0;
+      splitterPositions[1]:=0;
+    end else if PageControl1.width=0 then begin
+      PageControl1.width:=round(0.1*width);
+      splitterPositions[1]:=6554;
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.fixPageControl2Size;
+  begin
+    if PageControl2.PageCount=0 then begin
+      PageControl2.height:=0;
+      splitterPositions[2]:=0;
+    end else if PageControl2.height=0 then begin
+      PageControl2.height:=round(0.1*height);
+      splitterPositions[2]:=6554;
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.fixPageControl3Size;
+  begin
+    if PageControl3.PageCount=0 then begin
+      PageControl3.width:=0;
+      splitterPositions[3]:=0;
+    end else if PageControl3.width=0 then begin
+      PageControl3.width:=round(0.1*width);
+      splitterPositions[3]:=6554;
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.fixPageControl4Size;
+  begin
+    if PageControl4.PageCount=0 then begin
+      PageControl4.width:=0;
+      splitterPositions[4]:=0;
+    end else if PageControl4.width=0 then begin
+      PageControl4.width:=round(0.1*width);
+      splitterPositions[4]:=6554;
+    end;
+  end;
+
 PROCEDURE TIdeMainForm.saveIdeSettings;
   VAR stream:T_bufferedOutputStreamWrapper;
   begin
@@ -573,10 +621,10 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     componentParent:=lastDockLocationFor[form.getIdeComponentType];
     if componentParent in [cpPageControl1..cpPageControl4] then dockMeta:=TDragDockObject.create(form);
     case componentParent of
-      cpPageControl1: begin PageControl1.DockDrop(dockMeta,0,0); if PageControl1.width <100 then PageControl1.width :=100; end;
-      cpPageControl2: begin PageControl2.DockDrop(dockMeta,0,0); if PageControl2.height<100 then PageControl2.height:=100; end;
-      cpPageControl3: begin PageControl3.DockDrop(dockMeta,0,0); if PageControl3.width <100 then PageControl3.width :=100; end;
-      cpPageControl4: begin PageControl4.DockDrop(dockMeta,0,0); if PageControl4.width <100 then PageControl4.width :=100; end;
+      cpPageControl1: begin PageControl1.DockDrop(dockMeta,0,0); fixPageControl1Size; end;
+      cpPageControl2: begin PageControl2.DockDrop(dockMeta,0,0); fixPageControl2Size; end;
+      cpPageControl3: begin PageControl3.DockDrop(dockMeta,0,0); fixPageControl3Size; end;
+      cpPageControl4: begin PageControl4.DockDrop(dockMeta,0,0); fixPageControl4Size; end;
       else begin
         form.top :=top +(height-form.height) div 2;
         form.Left:=Left+(width -form.width ) div 2;
