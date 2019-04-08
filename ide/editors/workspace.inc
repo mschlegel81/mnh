@@ -36,7 +36,7 @@ T_workspace=object(T_serializable)
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
 
     FUNCTION currentEditor:P_editorMeta;
-
+    FUNCTION getExistingEditorForPath(CONST pathOrPseudoName:string):P_editorMeta;
     FUNCTION addEditorMetaForNewFile:P_editorMeta;
   public
     FUNCTION createNewFile:P_editorMeta;
@@ -94,13 +94,12 @@ FUNCTION editors_impl intFuncSignature;
   end;
 
 FUNCTION editorContent_impl intFuncSignature;
-  VAR m   :P_editorMeta;
-      meta:P_editorMeta=nil;
+  VAR meta:P_editorMeta=nil;
       i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      for m in workspace.metas do if m^.pseudoName()=str0^.value then meta:=m;
+      meta:=workspace.getExistingEditorForPath(str0^.value);
       if meta=nil then exit(newVoidLiteral);
       result:=newListLiteral(meta^.editor.lines.count);
       for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(meta^.editor.lines[i]);
@@ -115,6 +114,9 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;
     bookmarkImagesList   :=bookmarkImages;
+
+    newFileLineEnding:=LINE_ENDING_DEFAULT;
+    overwriteLineEnding:=LINE_ENDING_UNCHANGED;
 
     nextMetaIndex:=1;
     setLength(metas,0);
@@ -152,10 +154,13 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
 
   VAR k,j:longint;
       meta:P_editorMeta;
+      sheetToDestroy:TTabSheet;
+      currentFile:string;
   begin
     {$ifdef debugMode}
     writeln('Loading T_workspace @',stream.streamPos);
     {$endif}
+    if not(inherited loadFromStream(stream)) then exit(false);
 
     nextMetaIndex:=1;
     setLength(oldMarkers,stream.readNaturalNumber);
@@ -169,6 +174,9 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     end;
 
     setLength(metas,stream.readNaturalNumber);
+    {$ifdef debugMode}
+    writeln('T_workspace: Attempting to load ',length(metas),' editors @',stream.streamPos);
+    {$endif}
     for k:=0 to length(metas)-1 do new(metas[k],create(k));
 
     result:=stream.allOkay;
@@ -176,10 +184,8 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       result:=result and metas[k]^.loadFromStream(stream) and stream.allOkay;
       if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
     end;
-    if not(result) then begin
-      for j:=0 to length(metas)-1 do dispose(metas[j],destroy);
-      setLength(metas,0);
-    end else begin
+    if result then begin
+      currentFile:=stream.readAnsiString;
       saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
       autosaveBeforeEachExecution:=stream.readBoolean;
       newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);
@@ -191,26 +197,46 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       for meta in metas do meta^.updateSheetCaption;
       if currentEditor<>nil then currentEditor^.activate;
       savedAt:=now;
+      if currentFile<>'' then begin
+        meta:=getExistingEditorForPath(currentFile);
+        if meta<>nil then begin
+          inputPageControl.activePage:=meta^.tabsheet;
+          meta^.activate;
+        end;
+      end;
+      {$ifdef debugMode}
+      writeln('T_workspace loaded successfully @',stream.streamPos);
+      {$endif}
     end else begin
-      nextMetaIndex:=1;
-      for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
+      for j:=0 to length(metas)-1 do begin
+        sheetToDestroy:=metas[j]^.tabsheet;
+        dispose(metas[j],destroy);
+        FreeAndNil(sheetToDestroy);
+      end;
       setLength(metas,0);
+
+      nextMetaIndex:=1;
       fileHistory.clear;
       setLength(oldMarkers,0);
 
       saveIntervalIdx:=0;
       autosaveBeforeEachExecution:=false;
-      newFileLineEnding:=0;
-      overwriteLineEnding:=0;
+      newFileLineEnding:=LINE_ENDING_DEFAULT;
+      overwriteLineEnding:=LINE_ENDING_UNCHANGED;
+      {$ifdef debugMode}
+      writeln('Loading T_workspace failed @',stream.streamPos);
+      {$endif}
     end;
   end;
 
 PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR k:longint;
+      active:P_editorMeta;
   begin
     {$ifdef debugMode}
     writeln('Saving T_workspace @',stream.streamPos);
     {$endif}
+    inherited saveToStream(stream);
 
     stream.writeNaturalNumber(length(oldMarkers));
     for k:=0 to length(oldMarkers)-1 do begin
@@ -219,9 +245,9 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     end;
 
     stream.writeNaturalNumber(length(metas));
-    for k:=0 to length(metas)-1 do begin
-      metas[k]^.saveToStream(stream);
-    end;
+    for k:=0 to length(metas)-1 do metas[k]^.saveToStream(stream);
+    active:=currentEditor;
+    if active=nil then stream.writeAnsiString('') else stream.writeAnsiString(active^.pseudoName());
 
     stream.writeByte(saveIntervalIdx);
     stream.writeBoolean(autosaveBeforeEachExecution);
@@ -259,6 +285,13 @@ FUNCTION T_workspace.createNewFile:P_editorMeta;
     result^.activate;
   end;
 
+FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_editorMeta;
+  VAR meta:P_editorMeta;
+  begin
+    result:=nil;
+    for meta in metas do if meta^.pseudoName=pathOrPseudoName then exit(meta);
+  end;
+
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(
   CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
@@ -277,6 +310,8 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(
         for meta in metas do if meta^.fileInfo.filePath=fileName then begin result:=meta; exit; end;
         result:=addEditorMetaForNewFile();
         result^.setFile(fileName);
+        //Update history:
+        fileHistory.fileClosed(fileName);
       end;
     end;
 
@@ -414,8 +449,6 @@ PROCEDURE T_workspace.closeCurrentFile;
         then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
         else oldMarkers[length(oldMarkers)-1].markIndex:=10;
       end;
-      //Update history:
-      fileHistory.fileClosed(toClose^.getPath);
     end;
 
     //actually close editor...
