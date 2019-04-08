@@ -352,11 +352,12 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
     mainForm.width :=min(max(stream.readLongint,100),screen.width);
     intendedWindowState:=TWindowState(stream.readByte([byte(wsFullScreen),byte(wsMaximized),byte(wsNormal)]));
-    if not(stream.allOkay) then exit(false);
-    if intendedWindowState=wsFullScreen
-    then mainForm.BorderStyle:=bsNone
-    else mainForm.BorderStyle:=bsSizeable;
-    mainForm.WindowState:=intendedWindowState;
+    if stream.allOkay then begin
+      if intendedWindowState=wsFullScreen
+      then mainForm.BorderStyle:=bsNone
+      else mainForm.BorderStyle:=bsSizeable;
+      mainForm.WindowState:=intendedWindowState;
+    end;
 
     for k:=1 to 4 do splitters[k]:=stream.readWord;
     result:=true;
@@ -368,8 +369,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
 
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
-
-    result:=result and stream.allOkay and (length(htmlDocGeneratedForCodeHash)=length(CODE_HASH));
+    result:=stream.allOkay;
     if not(result) then begin
       mainForm.BorderStyle:=bsSizeable;
       mainForm.WindowState:=wsMaximized;
