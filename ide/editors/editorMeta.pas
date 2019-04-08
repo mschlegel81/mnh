@@ -89,6 +89,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //Inherited overrides
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
+    FUNCTION getFolder:ansistring;
     FUNCTION isPseudoFile: boolean; virtual;
 
     //Misc. queries
@@ -541,6 +542,12 @@ DESTRUCTOR T_editorMeta.destroy;
 FUNCTION T_editorMeta.getPath: ansistring;
   begin
     result:=pseudoName(false);
+  end;
+
+FUNCTION T_editorMeta.getFolder:ansistring;
+  begin
+    if fileInfo.filePath='' then result:=ExtractFileDir(paramStr(0))
+                            else result:=ExtractFileDir(fileInfo.filePath);
   end;
 
 FUNCTION T_editorMeta.isPseudoFile: boolean;
