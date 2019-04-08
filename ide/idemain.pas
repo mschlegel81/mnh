@@ -708,7 +708,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         EditLocationLabel.caption:=edit^.caretLabel;
         if edit^.isPseudoFile
         then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName(true);
+        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
       end else EditLocationLabel.caption:='';
       performFastUpdates;
       runnerModel.flushMessages;

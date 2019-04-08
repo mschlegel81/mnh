@@ -94,7 +94,7 @@ OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 
 OPERATOR = (CONST x,y:T_searchTokenLocation):boolean;
   begin
-    result:=(x.fileName=y.fileName) and (x.line=y.line) and (x.column=y.column);
+    result:= SameFileName(x.fileName,y.fileName) and (x.line=y.line) and (x.column=y.column);
   end;
 
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;

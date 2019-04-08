@@ -464,7 +464,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
       isChanged:=false;
       editor.modified:=false;
       editor.MarkTextAsSaved;
-      if (filePath=utilityScriptFileName) then runnerModel.ensureEditScripts();
+        if SameFileName(filePath,utilityScriptFileName) then runnerModel.ensureEditScripts();
       updateSheetCaption;
     end;
   end;

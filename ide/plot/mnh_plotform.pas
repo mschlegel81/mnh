@@ -749,7 +749,7 @@ FUNCTION TplotForm.timerTick: boolean;
     end;
 
   begin
-    if relatedPlot=nil then exit;
+    if relatedPlot=nil then exit(false);
     result:=false;
     relatedPlot^.startGuiInteraction;
     if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
