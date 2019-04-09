@@ -351,6 +351,7 @@ object IdeMainForm: TIdeMainForm
       end
       object miOutline: TMenuItem
         Caption = '&Outline'
+        ShortCut = 8304
         OnClick = miOutlineClick
       end
       object miHelp: TMenuItem
@@ -365,19 +366,33 @@ object IdeMainForm: TIdeMainForm
       end
       object miDebugger: TMenuItem
         Caption = '&Debugger'
+        ShortCut = 16452
         OnClick = miDebuggerClick
       end
       object miDebuggerVar: TMenuItem
         Caption = 'Debugger &variables'
+        ShortCut = 24644
         OnClick = miDebuggerVarClick
       end
       object miBreakpoints: TMenuItem
         Caption = '&Breakpoints'
+        ShortCut = 16450
         OnClick = miBreakpointsClick
       end
       object miAbout: TMenuItem
         Caption = 'About'
         OnClick = miAboutClick
+      end
+      object MenuItem1: TMenuItem
+        Caption = '-'
+      end
+      object miUndockAll: TMenuItem
+        Caption = '&Undock all'
+        OnClick = miUndockAllClick
+      end
+      object miDockAll: TMenuItem
+        Caption = 'Dock all'
+        OnClick = miDockAllClick
       end
     end
     object smAppearance: TMenuItem

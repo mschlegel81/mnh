@@ -22,6 +22,9 @@ TYPE
     evaluationStateLabel: TLabel;
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
+    MenuItem1: TMenuItem;
+    miUndockAll: TMenuItem;
+    miDockAll: TMenuItem;
     miDebuggerVar: TMenuItem;
     miClose2: TMenuItem;
     miClose3: TMenuItem;
@@ -115,6 +118,7 @@ TYPE
     PROCEDURE miDebuggerClick(Sender: TObject);
     PROCEDURE miDebuggerVarClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
+    PROCEDURE miDockAllClick(Sender: TObject);
     PROCEDURE miEditScriptFileClick(Sender: TObject);
     PROCEDURE miExportToHtmlClick(Sender: TObject);
     PROCEDURE miFindClick(Sender: TObject);
@@ -146,6 +150,7 @@ TYPE
     PROCEDURE miUndock2Click(Sender: TObject);
     PROCEDURE miUndock3Click(Sender: TObject);
     PROCEDURE miUndock4Click(Sender: TObject);
+    PROCEDURE miUndockAllClick(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
 
@@ -162,7 +167,7 @@ TYPE
     quitPosted:boolean;
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
-    PROCEDURE startDock(CONST PageControl:TPageControl);
+    FUNCTION startDock(CONST PageControl:TPageControl):boolean;
     PROCEDURE fixPageControl1Size;
     PROCEDURE fixPageControl2Size;
     PROCEDURE fixPageControl3Size;
@@ -360,6 +365,15 @@ PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
     end;
   end;
 
+PROCEDURE TIdeMainForm.miDockAllClick(Sender: TObject);
+  begin
+    dockAllForms;
+    fixPageControl1Size;
+    fixPageControl2Size;
+    fixPageControl3Size;
+    fixPageControl4Size;
+  end;
+
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
   begin
     workspace.addOrGetEditorMetaForFiles(utilityScriptFileName,true);
@@ -533,6 +547,15 @@ PROCEDURE TIdeMainForm.miUndock2Click(Sender: TObject); begin startDock(PageCont
 PROCEDURE TIdeMainForm.miUndock3Click(Sender: TObject); begin startDock(PageControl3); fixPageControl3Size; end;
 PROCEDURE TIdeMainForm.miUndock4Click(Sender: TObject); begin startDock(PageControl4); fixPageControl4Size; end;
 
+PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
+  begin
+    while startDock(PageControl1) do; fixPageControl1Size;
+    while startDock(PageControl2) do; fixPageControl2Size;
+    while startDock(PageControl3) do; fixPageControl3Size;
+    while startDock(PageControl4) do; fixPageControl4Size;
+    lastDockLocationFor:=C_dockSetupUnDockAll;
+  end;
+
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   begin
     splitterPositions[1]:=PageControl1.width *65535 div  width;
@@ -541,12 +564,13 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
     splitterPositions[4]:=PageControl4.width *65535 div  width;
   end;
 
-PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
+FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl):boolean;
   VAR control:TControl;
       newForm:T_mnhComponentForm;
   begin
+    if PageControl.PageCount<=0 then exit(false);
     //Only handle pages with one control
-    if PageControl.activePage.ControlCount<>1 then exit;
+    if PageControl.activePage.ControlCount<>1 then exit(false);
     control:=PageControl.activePage.Controls[0];
     //If the sheet is a TForm return it directly
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
@@ -554,6 +578,8 @@ PROCEDURE TIdeMainForm.startDock(CONST PageControl: TPageControl);
     else raise Exception.create('Not an mnhComponent form!');
     newForm.ManualDock(nil);
     newForm.BringToFront;
+    newForm.ShowInTaskBar:=stAlways;
+    result:=true;
   end;
 
 PROCEDURE TIdeMainForm.fixPageControl1Size;
