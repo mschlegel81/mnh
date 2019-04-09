@@ -98,7 +98,7 @@ FUNCTION T_fileHistory.polishHistory: boolean;
     end;
     for i:=1 to length(fileItems)-1 do
     if (fileItems[i]<>'') then for j:=0 to i-1 do
-    if (expandFileName(fileItems[i])=expandFileName(fileItems[j])) then begin
+    if SameFileName(expandFileName(fileItems[i]),expandFileName(fileItems[j])) then begin
       fileItems[i]:='';
       result:=true;
     end;
@@ -111,7 +111,7 @@ FUNCTION T_fileHistory.polishHistory: boolean;
     end;
     for i:=1 to length(folderItems)-1 do
     if (folderItems[i]<>'') then for j:=0 to i-1 do
-    if (expandFileName(folderItems[i])=expandFileName(folderItems[j])) then begin
+    if SameFileName(expandFileName(folderItems[i]),expandFileName(folderItems[j])) then begin
       folderItems[i]:='';
       result:=true;
     end;

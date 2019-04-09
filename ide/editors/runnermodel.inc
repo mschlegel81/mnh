@@ -15,6 +15,7 @@ T_runnerModel=object(T_serializable)
 
     debugMode_:boolean;
     PROCEDURE setDebugMode(CONST value:boolean);
+    FUNCTION executionDir(CONST provider:P_editorMeta):string;
   public
     externalRunOptions:record
       flags:set of T_cmdLineFlag;
@@ -53,6 +54,13 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
     if value=debugMode_ then exit;
     debugMode_:=value;
     if evaluation.isRunning then evaluation.postHalt;
+  end;
+
+FUNCTION T_runnerModel.executionDir(CONST provider:P_editorMeta):string;
+  begin
+    if externalRunOptions.customFolder=''
+    then result:=provider^.getFolder
+    else result:=externalRunOptions.customFolder;
   end;
 
 CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm; CONST stdOutAdapter:P_synOutAdapter);
@@ -106,8 +114,8 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
       else if stackTracing then contextType:=ect_stackTracing
                            else contextType:=ect_normal;
     end;
-    if mainCall then evaluation.callMain(workspace.currentEditor,mainParameters,contextType)
-                else evaluation.evaluate(workspace.currentEditor,               contextType);
+    if mainCall then evaluation.callMain(workspace.currentEditor,mainParameters,contextType,executionDir(workspace.currentEditor))
+                else evaluation.evaluate(workspace.currentEditor,               contextType,executionDir(workspace.currentEditor));
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
   end;
@@ -116,23 +124,19 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
   VAR callParameters:T_arrayOfString;
       flag:T_cmdLineFlag;
       executor:string='';
-      folder:string;
   begin
     callParameters:=FLAG_PAUSE_ALWAYS;
     with externalRunOptions do begin
       for flag in flags do
         append(callParameters,FLAG_TEXT[flag]);
       if verbosity<>'' then append(callParameters,'-v'+verbosity);
-      if customFolder=''
-      then folder:=ExtractFileDir(workspace.currentEditor^.getPath)
-      else folder:=customFolder;
       if callLightFlavour then executor:=settings.lightFlavourLocation
                           else executor:=paramStr(0);
     end;
 
     append(callParameters,workspace.currentEditor^.getPath);
     append(callParameters,splitCommandLine(trim(mainParameters)));
-    runCommandAsyncOrPipeless(executor,callParameters,true,folder);
+    runCommandAsyncOrPipeless(executor,callParameters,true,executionDir(workspace.currentEditor));
   end;
 
 PROCEDURE T_runnerModel.rerun();

@@ -54,20 +54,48 @@ TYPE
     PROCEDURE onEndOfEvaluation;                              virtual; abstract;
   end;
 
-VAR lastDockLocationFor:array[T_ideComponent] of T_componentParent
+TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
+CONST C_dockSetupDockAll:T_dockSetup
     {icOutline}   =(cpPageControl3,
     {icHelp}        cpPageControl2,
     {icAssistance}  cpPageControl2,
     {icOutput}      cpPageControl2,
     {icQuickEval}   cpPageControl2,
-    {icDebugger}    cpPageControl4,
-    {icDebuggerVari}cpPageControl4,
-    {icDebuggerBrea}cpPageControl4,
-    {icPlot}        cpNone,
+    {icDebugger}    cpPageControl2,
+    {icDebuggerVari}cpPageControl1,
+    {icDebuggerBrea}cpPageControl1,
+    {icPlot}        cpPageControl1,
+    {icCustomForm}  cpPageControl1,
+    {icTable}       cpPageControl1,
+    {icVariableView}cpPageControl1);
+  C_dockSetupUnDockAll:T_dockSetup
+     {icOutline}   =(cpNone,
+     {icHelp}        cpNone,
+     {icAssistance}  cpNone,
+     {icOutput}      cpNone,
+     {icQuickEval}   cpNone,
+     {icDebugger}    cpNone,
+     {icDebuggerVari}cpNone,
+     {icDebuggerBrea}cpNone,
+     {icPlot}        cpNone,
     {icImage}       cpNone,
-    {icCustomForm}  cpNone,
-    {icTable}       cpNone,
-    {icVariableView}cpNone);
+     {icCustomForm}  cpNone,
+     {icTable}       cpNone,
+     {icVariableView}cpNone);
+
+VAR lastDockLocationFor:T_dockSetup
+    {icOutline}   =(cpPageControl3,
+    {icHelp}        cpPageControl2,
+    {icAssistance}  cpPageControl2,
+    {icOutput}      cpPageControl2,
+    {icQuickEval}   cpPageControl2,
+    {icDebugger}    cpPageControl2,
+    {icDebuggerVari}cpPageControl1,
+    {icDebuggerBrea}cpPageControl1,
+    {icPlot}        cpPageControl1,
+    {icCustomForm}  cpPageControl1,
+    {icTable}       cpPageControl1,
+    {icVariableView}cpPageControl1);
 
     mainForm:T_mnhIdeForm=nil;
 
@@ -89,6 +117,7 @@ FUNCTION  typeOfFocusedControl:T_controlType;
 
 PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
+PROCEDURE dockAllForms;
 
 OPERATOR :=(x:byte):TFontStyles;
 OPERATOR :=(x:TFontStyles):byte;
@@ -113,6 +142,14 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
       newForm.ShowInTaskBar:=stAlways;
       newForm.Show;
     end;
+  end;
+
+PROCEDURE dockAllForms;
+  VAR f:T_mnhComponentForm;
+  begin
+    lastDockLocationFor:=C_dockSetupDockAll;
+    for f in activeForms do dockNewForm(f);
+    lastDockLocationFor:=C_dockSetupDockAll;
   end;
 
 PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);

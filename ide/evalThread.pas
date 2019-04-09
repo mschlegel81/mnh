@@ -72,13 +72,14 @@ TYPE
         provider:P_codeProvider;
         parameters:T_arrayOfString;
         contextType:T_evaluationContextType;
+        folder:string;
         callMain:boolean;
       end;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
-      PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
-      PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
+      PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
+      PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
       //Debugger support:
       FUNCTION isPaused:boolean;
       FUNCTION stepper:P_debuggingStepper;
@@ -402,7 +403,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
     end;
   end;
 
-PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST contextType: T_evaluationContextType);
+PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
   begin
     system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
@@ -412,6 +413,7 @@ PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST co
     evalRequest.contextType:=contextType;
     evalRequest.parameters:=C_EMPTY_STRING_ARRAY;
     evalRequest.callMain:=false;
+    evalRequest.folder:=executeInFolder;
     state:=es_pending;
     if provider<>package.getCodeProvider then package.clear(true);
     package.replaceCodeProvider(provider);
@@ -419,8 +421,7 @@ PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST co
     system.leaveCriticalSection(evaluationCs);
   end;
 
-PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider;
-  params: ansistring; CONST contextType: T_evaluationContextType);
+PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
   begin
     system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
@@ -430,6 +431,7 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider;
     evalRequest.contextType:=contextType;
     evalRequest.parameters:=splitCommandLine(trim(params));
     evalRequest.callMain:=true;
+    evalRequest.folder:=executeInFolder;
     state:=es_pending;
     if provider<>package.getCodeProvider then package.clear(true);
     package.replaceCodeProvider(provider);
@@ -441,6 +443,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
   CONST C_loadMode:array[false..true] of T_packageLoadUsecase=(lu_forDirectExecution,lu_forCallingMain);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
+    SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
     globals.afterEvaluation(recycler);
   end;

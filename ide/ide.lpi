@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="58">
+    <Units Count="61">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -434,6 +434,22 @@
         <Filename Value="../core/rules.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit57>
+      <Unit58>
+        <Filename Value="ask/customrundialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="CustomRunForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="customRunDialog"/>
+      </Unit58>
+      <Unit59>
+        <Filename Value="editors/runnermodel.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit59>
+      <Unit60>
+        <Filename Value="../core/basicTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit60>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

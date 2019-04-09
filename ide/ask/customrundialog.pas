@@ -60,7 +60,6 @@ FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
     result:=myCustomRunForm;
     result.caption:=formCaption[externalRun];
     result.GroupBox2.enabled:=externalRun;
-    result.GroupBox3.enabled:=externalRun;
     result.GroupBox4.enabled:=externalRun;
   end;
 

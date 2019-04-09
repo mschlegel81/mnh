@@ -417,10 +417,10 @@ FUNCTION T_packageReference.hasIdOrPath(CONST idOrPath:string; CONST importingPa
     if id  =idOrPath then exit(true);
     p:=unescapeString(idOrPath,1,dummy);
     if (              path =               p ) or
-      (expandFileName(path)=expandFileName(p)) then exit(true);
+      SameFileName(expandFileName(path),expandFileName(p)) then exit(true);
     p:=extractFilePath(importingPackage^.getPath)+p;
     result:=(         path =               p ) or
-      (expandFileName(path)=expandFileName(p));
+      SameFileName(expandFileName(path),expandFileName(p));
   end;
 {$endif}
 
@@ -584,8 +584,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         end else if first^.tokType<>tt_separatorComma then
           globals.primaryContext.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
         if (j>0) then for i:=0 to j-1 do
-          if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
-                         or (packageUses[i].id   =               packageUses[j].id)
+          if SameFileName(expandFileName(packageUses[i].path),expandFileName(packageUses[j].path))
+                                     or (packageUses[i].id   =               packageUses[j].id)
           then globals.primaryContext.messages^.postTextMessage(mt_el2_warning,first^.location,'Duplicate import: '+newId);
         first:=recycler.disposeToken(first);
       end;

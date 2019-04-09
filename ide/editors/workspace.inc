@@ -155,7 +155,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
   VAR k,j:longint;
       meta:P_editorMeta;
       sheetToDestroy:TTabSheet;
-      currentFile:string;
+      currentFile:string='';
   begin
     {$ifdef debugMode}
     writeln('Loading T_workspace @',stream.streamPos);
@@ -289,7 +289,7 @@ FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_e
   VAR meta:P_editorMeta;
   begin
     result:=nil;
-    for meta in metas do if meta^.pseudoName=pathOrPseudoName then exit(meta);
+    for meta in metas do if SameFileName(meta^.pseudoName,pathOrPseudoName) then exit(meta);
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(
@@ -307,7 +307,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(
       if isPseudoName then begin
         for meta in metas do if meta^.pseudoName=fileName then begin result:=meta; exit; end;
       end else begin
-        for meta in metas do if meta^.fileInfo.filePath=fileName then begin result:=meta; exit; end;
+        for meta in metas do if SameFileName(meta^.fileInfo.filePath,fileName) then begin result:=meta; exit; end;
         result:=addEditorMetaForNewFile();
         result^.setFile(fileName);
         //Update history:
@@ -411,7 +411,7 @@ PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
       k:longint=0;
       j:longint;
   begin
-    for m in metas do if m^.getPath=loc.fileName then m^.deleteBreakpointIfExistent(loc.line);
+    for m in metas do if SameFileName(m^.getPath,loc.fileName) then m^.deleteBreakpointIfExistent(loc.line);
     while k<length(oldMarkers) do
     if (oldMarkers[k].location=loc) and (oldMarkers[k].markIndex>=10) then begin
       for j:=k to length(oldMarkers)-2 do oldMarkers[j]:=oldMarkers[j+1];
@@ -496,6 +496,7 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
     end;
 
     toSave^.saveFile(newName);
+    result:=true;
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;

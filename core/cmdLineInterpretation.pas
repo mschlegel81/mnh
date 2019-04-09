@@ -72,8 +72,8 @@ PROCEDURE addFileToOpen(CONST pathOrPattern:string);
   VAR info:T_fileInfo;
   begin
     if containsPlaceholder(pathOrPattern) then begin
-      for info in findFileInfo(pathOrPattern) do if (info.size>0) and not(aDirectory in info.attributes) then append(filesToOpenInEditor,info.filePath);
-    end else append(filesToOpenInEditor,pathOrPattern);
+      for info in findFileInfo(pathOrPattern) do if (info.size>0) and not(aDirectory in info.attributes) then append(filesToOpenInEditor,expandFileName(info.filePath));
+    end else append(filesToOpenInEditor,expandFileName(pathOrPattern));
   end;
 
 FUNCTION getCommandToInterpretFromCommandLine:ansistring; begin if     directExecutionMode  then result:=fileOrCommandToInterpret else result:=''; end;
