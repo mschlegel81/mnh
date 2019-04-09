@@ -65,6 +65,7 @@ CONST C_dockSetupDockAll:T_dockSetup
     {icDebuggerVari}cpPageControl1,
     {icDebuggerBrea}cpPageControl1,
     {icPlot}        cpPageControl1,
+                    cpPageControl1,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1);
@@ -78,7 +79,7 @@ CONST C_dockSetupDockAll:T_dockSetup
      {icDebuggerVari}cpNone,
      {icDebuggerBrea}cpNone,
      {icPlot}        cpNone,
-    {icImage}       cpNone,
+                     cpNone,
      {icCustomForm}  cpNone,
      {icTable}       cpNone,
      {icVariableView}cpNone);
@@ -93,6 +94,7 @@ VAR lastDockLocationFor:T_dockSetup
     {icDebuggerVari}cpPageControl1,
     {icDebuggerBrea}cpPageControl1,
     {icPlot}        cpPageControl1,
+                    cpNone,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1);
