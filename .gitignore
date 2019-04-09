@@ -30,3 +30,4 @@ core/build_number.inc
 /ide/compilates/*
 /ide/res_*.inc
 /ide/*/backup/*
+/ide/mnh_debug

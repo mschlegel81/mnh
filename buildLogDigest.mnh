@@ -8,6 +8,7 @@ alwaysIgnoredCodes:=[1023,1022,1021,1008,3104,9022,9015,1002];
 
 ignoredPatterns:=['3rd_party',
                   '/ide/.*\(5024\)',
+                  '\(5066\).*Symbol "UTF8CharacterLength" is deprecated: "Use UTF8CodepointSize instead."',
                   '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
                   '/core/func_defines\.inc.*\(5024\)',
                   '/core/operators.*\(5059\)',
@@ -29,7 +30,8 @@ end;
 
 private currentViolations(doFilter:Boolean)->'build.log'.fileLines
   .pEach(line,line.matches('\('&(doFilter ? ignoredCodes : alwaysIgnoredCodes)&'\)').agg(OR) ? void : line)
-  .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory.replace('/','\')],'').replace('\','/'))
+  .replace('\','/')
+  .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory],'').replace('\','/'))
   .{doFilter ? $L.pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line) : $L}
   .map(::splitMessage)
   .elementFrequency
