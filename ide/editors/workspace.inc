@@ -90,8 +90,10 @@ CONST
 {$endif}
 {$ifdef includeImplementation}
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
+  VAR proxy:P_editorMetaProxy;
   begin
-    new(P_editorMetaProxy(result),create(fileName));
+    new(proxy,create(fileName));
+    result:=proxy;
   end;
 
 {$i func_defines.inc}
@@ -556,7 +558,7 @@ PROCEDURE T_workspace.checkForFileChanges;
   FUNCTION fileIsModifiedOnFileSystem: boolean;
     VAR currentFileAge:double;
     begin
-      if (m^.fileInfo.filePath='') or (m^.editor.Modified) or (m^.fileInfo.isChanged) then exit(false);
+      if (m^.fileInfo.filePath='') or (m^.editor.modified) or (m^.fileInfo.isChanged) then exit(false);
       fileAge(m^.fileInfo.filePath,currentFileAge);
       result:=currentFileAge<>m^.fileInfo.fileAccessAge;
     end;

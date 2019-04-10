@@ -34,7 +34,7 @@ USES  //basic classes
 
 TYPE
 P_editorMetaProxy=^T_editorMetaProxy;
-T_editorMetaProxy=object(T_fileCodeProvider)
+T_editorMetaProxy=object(T_codeProvider)
   private
     //TODO: Use link to meta for performance tuning.
     filePath: ansistring;
