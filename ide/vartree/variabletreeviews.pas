@@ -43,9 +43,6 @@ TYPE
   end;
 
   P_treeAdapter=^T_treeAdapter;
-
-  { T_treeAdapter }
-
   T_treeAdapter=object(T_abstractGuiOutAdapter)
     treeForms: array of TVarTreeViewForm;
     defaultCaption:string;
@@ -55,33 +52,6 @@ TYPE
   end;
 
 IMPLEMENTATION
-
-//PROCEDURE resetTreeForms;
-//  VAR i:longint;
-//  begin
-//    enterCriticalSection(treeFormCs);
-//    for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
-//    setLength(treeForms,0);
-//    leaveCriticalSection(treeFormCs);
-//  end;
-//
-//PROCEDURE conditionalShowVarTrees;
-//  VAR i:longint;
-//  begin
-//    enterCriticalSection(treeFormCs);
-//    for i:=0 to length(treeForms)-1 do treeForms[i].conditionalDoShow;
-//    leaveCriticalSection(treeFormCs);
-//  end;
-//
-//FUNCTION newTreeForm:TVarTreeViewForm;
-//  begin
-//    enterCriticalSection(treeFormCs);
-//    result:=TVarTreeViewForm.create(nil);
-//    setLength(treeForms,length(treeForms)+1);
-//    treeForms[length(treeForms)-1]:=result;
-//    leaveCriticalSection(treeFormCs);
-//  end;
-
 {$R *.lfm}
 
 FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;

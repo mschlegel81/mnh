@@ -3,7 +3,6 @@ T_workspace=object(T_serializable)
   private
     savedAt:double; //nonpersistent
     scriptMenu:T_submenuModel; //nonpersistent
-    checkingForFileChanges:boolean; //nonpersistent
 
     mainForm:T_mnhIdeForm; //nonpersistent
     inputPageControl:TPageControl; //nonpersistent
@@ -135,7 +134,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     setLength(oldMarkers,0);
 
     scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
-    checkingForFileChanges:=false;
 
     registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors');
     registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
@@ -564,8 +562,6 @@ PROCEDURE T_workspace.checkForFileChanges;
     end;
 
   begin
-    if checkingForFileChanges then exit;
-    checkingForFileChanges:=true;
     while (metaIndex>=0) and (metaIndex<length(metas)) do begin
       m:=metas[metaIndex];
       with m^ do
@@ -585,7 +581,6 @@ PROCEDURE T_workspace.checkForFileChanges;
       end;
       inc(metaIndex);
     end;
-    checkingForFileChanges:=false;
   end;
 
 FUNCTION T_workspace.getMainFormCaption:string;

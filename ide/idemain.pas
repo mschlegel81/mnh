@@ -165,6 +165,8 @@ TYPE
     PROCEDURE UndockPopup3Popup(Sender: TObject);
     PROCEDURE UndockPopup4Popup(Sender: TObject);
   private
+    fastUpdating,
+    slowUpdating,
     quitPosted:boolean;
     subTimerCounter:longint;
     splitterPositions:T_splitterPositions;
@@ -197,6 +199,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
   begin
     initIpcServer(self);
     quitPosted:=false;
+    slowUpdating:=false;
+    fastUpdating:=false;
     subTimerCounter:=0;
     splitterPositions[1]:=0;
     splitterPositions[2]:=0;
@@ -712,6 +716,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     VAR unlocked:boolean;
         canRun:boolean;
     begin
+      if fastUpdating then exit;
+      fastUpdating:=true;
       miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
       canRun:=runnerModel.canRun;
       unlocked:=not(runnerModel.areEditorsLocked);
@@ -722,10 +728,13 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       miRestore  .enabled:=unlocked;
       smScripts  .enabled:=unlocked;
       miReplace  .enabled:=unlocked;
+      fastUpdating:=false;
     end;
 
   PROCEDURE slowUpdates; inline;
     begin
+      if slowUpdating then exit;
+      slowUpdating:=true;
       if workspace.savingRequested then saveIdeSettings;
 
       performSlowUpdates;
@@ -735,6 +744,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       evaluationStateLabel.caption:=runnerModel.getStateLabel;
       if quitPosted and not(anyEvaluationRunning) then close;
       workspace.checkForFileChanges;
+      slowUpdating:=false;
     end;
 
   PROCEDURE fastUpdates; inline;
