@@ -3,7 +3,7 @@ INTERFACE
 USES //FPC/LCL libraries
      sysutils,
      //3rd party libraries
-     EpikTimer, RegExpr,
+     EpikTimer,
      //my libraries
      myGenerics,mySys,myStringUtil,
      //MNH:

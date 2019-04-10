@@ -7,7 +7,7 @@ TYPE
     DESTRUCTOR destroy;                 virtual; abstract;
     FUNCTION getLines: T_arrayOfString; virtual; abstract;
     FUNCTION getPath: ansistring;       virtual; abstract;
-    FUNCTION stateHash:T_hashInt;       virtual; abstract;
+    FUNCTION stateHash:T_hashInt;       virtual;
     FUNCTION isPseudoFile:boolean;      virtual; abstract;
     FUNCTION disposeOnPackageDestruction:boolean; virtual;
     FUNCTION id:      ansistring;
@@ -30,12 +30,10 @@ TYPE
   T_virtualFileCodeProvider=object(T_fileCodeProvider)
     private
       lines:T_arrayOfString;
-      mimicActualFile:boolean;
     public
       CONSTRUCTOR create(CONST path:ansistring; CONST lineData:T_arrayOfString);
       DESTRUCTOR destroy;                 virtual;
       FUNCTION getLines: T_arrayOfString; virtual;
-      FUNCTION stateHash:T_hashInt;       virtual;
       FUNCTION isPseudoFile:boolean;      virtual;
   end;
 
@@ -49,9 +47,10 @@ TYPE
     FUNCTION isPseudoFile:boolean;      virtual;
   end;
 
-FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
+  F_newCodeProvider=FUNCTION (CONST path:ansistring):P_codeProvider;
+
+FUNCTION newFileCodeProvider(CONST path:ansistring):P_codeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
-FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
@@ -67,6 +66,7 @@ FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
+
 IMPLEMENTATION
 VAR fileByIDCache:specialize G_stringKeyMap<string>;
     lastFileCacheWorkingDir:string='';
@@ -183,21 +183,11 @@ FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
     recursePath(extractFilePath(paramStr(0)));
   end;
 
-FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;
-  begin new(result,create(path)); end;
+FUNCTION newFileCodeProvider(CONST path: ansistring): P_codeProvider;
+  begin new(P_fileCodeProvider(result),create(path)); end;
 
 FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_arrayOfString): P_virtualFileCodeProvider;
   begin new(result,create(path,lineData)); end;
-
-FUNCTION newVirtualFileCodeProvider(CONST provider:P_codeProvider):P_virtualFileCodeProvider;
-  begin
-    if provider=nil
-    then result:=nil
-    else begin
-      new(result,create(provider^.getPath,provider^.getLines));
-      if not(provider^.isPseudoFile) then result^.mimicActualFile:=true;
-    end;
-  end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
@@ -433,7 +423,6 @@ FUNCTION T_blankCodeProvider.isPseudoFile: boolean; begin result:=true; end;
 CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin
     inherited create(path);
-    mimicActualFile:=false;
     lines:=lineData;
   end;
 
@@ -476,10 +465,12 @@ FUNCTION T_fileCodeProvider.stateHash:T_hashInt;
     if result=0 then result:=1;
   end;
 
-FUNCTION T_virtualFileCodeProvider.stateHash:T_hashInt;
+FUNCTION T_codeProvider.stateHash:T_hashInt;
   VAR s:ansistring;
+      lines:T_arrayOfString;
   begin
     {$Q-}{$R-}
+    lines:=getLines;
     result:=length(lines);
     for s in lines do result:=result*31+hashOfAnsiString(s);
     {$Q+}{$R+}
@@ -493,7 +484,7 @@ FUNCTION T_fileCodeProvider.isPseudoFile: boolean;
 
 FUNCTION T_virtualFileCodeProvider.isPseudoFile: boolean;
   begin
-    result:=not(mimicActualFile);
+    result:=true;
   end;
 
 FUNCTION T_codeProvider.disposeOnPackageDestruction: boolean;

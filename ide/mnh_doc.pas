@@ -4,7 +4,6 @@ USES sysutils,base64,
      myStringUtil, myGenerics, serializationUtil,
      fileWrappers,
      mnh_messages,
-     mnh_settings,
      basicTypes, mnh_constants,recyclers,
      Forms,ComCtrls,
      litVar, mnh_html;

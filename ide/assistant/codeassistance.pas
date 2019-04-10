@@ -5,7 +5,7 @@ UNIT codeAssistance;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,ideLayoutUtil,
+  Classes, sysutils, Controls, Graphics, Dialogs, SynEdit,
     myGenerics,
   basicTypes,
   mnh_constants,
@@ -178,7 +178,7 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
     enterCriticalSection(codeAssistanceCs);
     if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
     then dispose(codeAssistanceRequest,destroy);
-    codeAssistanceRequest:=newVirtualFileCodeProvider(source);
+    codeAssistanceRequest:=source;
     if not(codeAssistantIsRunning) then begin
       beginThread(@codeAssistanceThread);
       codeAssistantIsRunning:=true;

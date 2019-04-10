@@ -350,7 +350,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     end;
     {$WARN 5092 OFF}
     case token^.tokType of
-      tt_each,tt_parallelEach: newName:=C_tokenInfo[token^.tokType].defaultId+'('+newName+',';
+      tt_each,tt_parallelEach: newName:=C_tokenDefaultId[token^.tokType]+'('+newName+',';
       else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
     end;
     result:=true;
@@ -382,8 +382,8 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.tokenType:=tt_EOL;
     if token=nil then exit;
     result.tokenType    :=token^.tokType;
-    if C_tokenInfo[result.tokenType].helpLink<>''
-    then result.linkToHelp:=getDocIndexLinkForBrowser(C_tokenInfo[result.tokenType].helpLink);
+    if C_tokenDoc[result.tokenType].helpLink<>''
+    then result.linkToHelp:=getDocIndexLinkForBrowser(C_tokenDoc[result.tokenType].helpLink);
 
     result.location     :=references;
     result.startLoc     :=token^.location;
@@ -413,7 +413,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       end;
     end;
     result.infoText+=C_lineBreakChar
-                    +replaceAll(C_tokenInfo[token^.tokType].helpText,'#',C_lineBreakChar);
+                    +replaceAll(C_tokenDoc[token^.tokType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
       if C_specialWordInfo[i].txt=tokenText then
       result.infoText+=C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
@@ -454,10 +454,10 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       i:=inputLocation.column;
       while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_']) do inc(i);
       parsedLength:=i-inputLocation.column+1;
-      for tt:=low(T_tokenType) to high(T_tokenType) do if length(C_tokenInfo[tt].defaultId)=parsedLength then begin
+      for tt:=low(T_tokenType) to high(T_tokenType) do if length(C_tokenDefaultId[tt])=parsedLength then begin
         match:=true;
-        for i:=0 to parsedLength-1 do match:=match and (line[inputLocation.column+i]=C_tokenInfo[tt].defaultId[i+1]);
-        if match then exit(C_tokenInfo[tt].defaultId);
+        for i:=0 to parsedLength-1 do match:=match and (line[inputLocation.column+i]=C_tokenDefaultId[tt][i+1]);
+        if match then exit(C_tokenDefaultId[tt]);
       end;
       result:=copy(line,inputLocation.column,parsedLength);
     end;
@@ -467,11 +467,11 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
   FUNCTION startsWith(CONST prefix:string):boolean;  inline;
     begin result:=copy(line,inputLocation.column,length(prefix))=prefix; end;
   FUNCTION startsWith(CONST t:T_tokenType):boolean; inline;
-    begin result:=copy(line,inputLocation.column,length(C_tokenInfo[t].defaultId))=C_tokenInfo[t].defaultId; end;
+    begin result:=copy(line,inputLocation.column,length(C_tokenDefaultId[t]))=C_tokenDefaultId[t]; end;
   PROCEDURE apply(CONST t:T_tokenType); inline;
     begin
       result^.tokType:=t;
-      parsedLength:=length(C_tokenInfo[t].defaultId);
+      parsedLength:=length(C_tokenDefaultId[t]);
     end;
   PROCEDURE apply(CONST len:longint; CONST t:T_tokenType); inline;
     begin
@@ -591,7 +591,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
         result^.txt:=leadingId;
         result^.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
-        if result^.txt=C_tokenInfo[tt].defaultId then result^.tokType:=tt;
+        if result^.txt=C_tokenDefaultId[tt] then result^.tokType:=tt;
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
@@ -1018,7 +1018,7 @@ FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackag
       result:=result or (customOperatorRules[op]<>nil);
     end else if (importedPackage^.customOperatorRules[op]<>nil) and (importedPackage^.customOperatorRules[op]<>customOperatorRules[op]) then begin
       connector^.postTextMessage(mt_el2_warning,customOperatorRules[op]^.getLocation,
-        'Custom operator '+C_tokenInfo[op].defaultId+' hides operator defined '
+        'Custom operator '+C_tokenDefaultId[op]+' hides operator defined '
         + ansistring(importedPackage^.customOperatorRules[op]^.getLocation));
     end;
   end;

@@ -2,10 +2,8 @@ UNIT caches;
 INTERFACE
 USES sysutils,
      myGenerics,mySys,
-     mnh_constants,basicTypes,
-     mnh_settings,
-     litVar,
-     out_adapters;
+     basicTypes,
+     litVar;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=1;
 

@@ -4,12 +4,10 @@ USES sysutils,
      //my libraries
      {$ifdef fullVersion}
      myGenerics,myStringUtil,
+     mnh_messages,out_adapters,
      {$endif}
      //MNH:
-     basicTypes,
-     mnh_messages,
-     out_adapters,
-     litVar;
+     basicTypes;
 
 TYPE
   T_profileCategory=(pc_importing,pc_tokenizing,pc_declaration,pc_interpretation,pc_unknown,pc_total);

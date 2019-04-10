@@ -5,7 +5,7 @@ UNIT renameDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  sysutils, Forms, Controls, Dialogs, ExtCtrls,
   StdCtrls,
   mnh_constants;
 
@@ -54,7 +54,7 @@ PROCEDURE TrenameForm.NewNameEditChange(Sender: TObject);
 
 FUNCTION TrenameForm.showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
   begin
-    caption:='Rename '+C_tokenInfo[tokenType].helpText;
+    caption:='Rename '+C_tokenDoc[tokenType].helpText;
     OriginalNameEdit.text:=id;
     NewNameEdit.text:=id;
     checkAllEditorsCheckBox.enabled:=enableScanOther;

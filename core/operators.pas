@@ -1,8 +1,6 @@
 UNIT operators;
 INTERFACE
-USES sysutils,
-     bigint,
-     mnh_constants,
+USES mnh_constants,
      basicTypes,
      mnh_messages,
      out_adapters,
@@ -73,6 +71,9 @@ FUNCTION operator_StrConcat intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
 IMPLEMENTATION
+USES sysutils,
+     bigint;
+
 TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
      P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;
@@ -195,10 +196,10 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
     end;
     result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
     if result=nil then begin
-      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
     end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       disposeLiteral(result);
       result:=newVoidLiteral;
     end;
@@ -232,10 +233,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end;
     result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
     if result=nil then begin
-      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
     end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       disposeLiteral(result);
       result:=newVoidLiteral;
     end;
@@ -466,7 +467,7 @@ FUNCTION outerFunc_id intFuncSignature;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -513,7 +514,7 @@ boolIntOperator;
     end;
     if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -971,7 +972,7 @@ genericOuter;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -1062,15 +1063,15 @@ genericOuter;
 PROCEDURE registerOperator(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_op);
   begin
     OP_IMPL[op]:=internal;
-    intFuncForOperator[op]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_binary,
-      operatorName[op]+'(x,y);//Function wrapper for operator '+C_tokenInfo[op].defaultId);
+    intFuncForOperator[op]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_binary{$ifdef fullVersion},
+      operatorName[op]+'(x,y);//Function wrapper for operator '+C_tokenDefaultId[op]{$endif});
   end;
 
 PROCEDURE registerUnary(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_unary);
   begin
     UN_IMPL[op]:=internal;
-    registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_unary,
-      operatorName[op]+'(x,y);//Function wrapper for '+C_tokenInfo[op].helpText);
+    registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_unary{$ifdef fullVersion},
+      operatorName[op]+'(x,y);//Function wrapper for '+C_tokenDoc[op].helpText{$endif});
   end;
 
 INITIALIZATION

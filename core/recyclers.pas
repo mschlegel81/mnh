@@ -3,10 +3,12 @@ INTERFACE
 USES sysutils,
      myGenerics, myStringUtil,
      basicTypes, mnh_constants,
-     mnh_messages,
      out_adapters,
      valueStore,
      litVar,
+     {$ifdef fullVersion}
+     mnh_messages,
+     {$endif}
      tokens;
 TYPE
   P_recycler=^T_recycler;

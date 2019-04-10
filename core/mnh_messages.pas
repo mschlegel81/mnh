@@ -3,7 +3,6 @@ INTERFACE
 USES sysutils,
      typinfo,
      myGenerics,
-     mnh_constants,
      basicTypes;
 
 TYPE

@@ -33,6 +33,19 @@ USES  //basic classes
   mnh_messages;
 
 TYPE
+P_editorMetaProxy=^T_editorMetaProxy;
+T_editorMetaProxy=object(T_fileCodeProvider)
+  private
+    //TODO: Use link to meta for performance tuning.
+    filePath: ansistring;
+  public
+    CONSTRUCTOR create(CONST path:ansistring);
+    DESTRUCTOR destroy;                 virtual;
+    FUNCTION getLines: T_arrayOfString; virtual;
+    FUNCTION getPath: ansistring;       virtual;
+    FUNCTION isPseudoFile:boolean;      virtual;
+end;
+
 P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_basicEditorMeta)
   private
@@ -120,6 +133,42 @@ IMPLEMENTATION
 USES renameDialog,
      recyclers;
 VAR underCursor:T_tokenInfo;
+CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
+  begin
+    filePath:=path;
+  end;
+
+DESTRUCTOR T_editorMetaProxy.destroy;
+  begin
+  end;
+
+FUNCTION T_editorMetaProxy.getLines: T_arrayOfString;
+  VAR meta:P_editorMeta;
+      accessed:boolean;
+  begin
+    meta:=workspace.getExistingEditorForPath(filePath);
+    if meta=nil then begin
+      result:=fileLines(filePath,accessed);
+      if not(accessed) then exit(C_EMPTY_STRING_ARRAY);
+    end else result:=meta^.getLines;
+  end;
+
+FUNCTION T_editorMetaProxy.getPath: ansistring;
+  begin
+    result:=filePath;
+  end;
+
+FUNCTION T_editorMetaProxy.isPseudoFile: boolean;
+  VAR meta:P_editorMeta;
+  begin
+    meta:=workspace.getExistingEditorForPath(filePath);
+    if meta=nil then begin
+      result:=not(fileExists(filePath))
+    end else begin
+      result:=meta^.isPseudoFile;
+    end;
+  end;
+
 {$define includeImplementation}
 {$i runnermodel.inc}
 {$i fileHistory.inc}
@@ -326,7 +375,7 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
 
 PROCEDURE T_editorMeta.triggerCheck;
   begin
-    postCodeAssistanceRequest(@self);
+    postCodeAssistanceRequest(newFileProxy(pseudoName));
   end;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
@@ -391,6 +440,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
 
   begin
     if (language<>LANG_MNH) then exit;
+    //TODO: Is this really necessary if we use proxies?
     if renameInOtherEditors then saveFile();
     recycler.initRecycler;
     updateAssistanceResponse(doCodeAssistanceSynchronously(@self,recycler));
@@ -402,7 +452,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
       if latestAssistanceReponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
     end;
     editor.EndUpdate;
-
+    InputEditChange(nil);
     if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
   end;
 
@@ -477,9 +527,8 @@ PROCEDURE T_editorMeta.updateSheetCaption;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
-    if language_=LANG_MNH then begin
-      triggerCheck;
-    end;
+    if language_=LANG_MNH then triggerCheck;
+    updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
@@ -562,7 +611,7 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.checked:=(l=language_);
     end;
-    //try
+    try
       if language_=LANG_MNH then begin
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
@@ -573,10 +622,9 @@ PROCEDURE T_editorMeta.activate;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
         completionLogic.assignEditor(editor_,nil);
       end;
-      editor.Gutter.MarksPart.visible:=true;
       editor.readonly                :=runnerModel.areEditorsLocked;
       mainForm.ActiveControl:=editor_;
-    //except end; //catch and ignore all exceptions
+    except end; //catch and ignore all exceptions
   end;
 
 FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
@@ -613,7 +661,7 @@ PROCEDURE T_editorMeta.reloadFile;
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
       fileInfo.isChanged:=false;
-      if language_=LANG_MNH then triggerCheck;
+      InputEditChange(nil);
     end;
   end;
 

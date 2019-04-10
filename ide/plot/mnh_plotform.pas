@@ -583,7 +583,6 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    //TODO: This is not triggered by the popup menu!
     if relatedPlot<>nil then relatedPlot^.formWasClosedByUser:=true;
     animateCheckBox.checked:=false;
     CloseAction:=caFree;

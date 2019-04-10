@@ -191,7 +191,7 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
       //  out  : {f(x,$y)}
       tempToken      :=recycler.newToken(callLocation,getId,ruleTokenType,@self);
       tempToken^.next:=getParametersForUncurrying(givenParameters,commonArity,callLocation,context,recycler);
-      new(tempInline,createFromInline(tempToken,context,recycler,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+      new(tempInline,createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
       firstRep:=recycler.newToken(callLocation,'',tt_literal,tempInline);
       lastRep:=firstRep;
       result:=true;
@@ -750,7 +750,7 @@ FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycl
     end;
     tempToken      :=recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context,recycler);
-    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
   end;
 
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
@@ -766,7 +766,7 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context:T_context; V
     end;
     tempToken            :=recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context,recycler);
-    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
   end;
 
 FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
@@ -774,7 +774,7 @@ FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_context; VAR recycler:T
   begin
     tempToken            :=recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(1,false,location,context,recycler);
-    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
   end;
 
 FUNCTION T_mutableRule.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
@@ -783,7 +783,7 @@ FUNCTION T_mutableRule.getFunctionPointer(VAR context:T_context; VAR recycler:T_
     tempToken            :=recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=recycler.newToken(location,'',tt_braceOpen );
     tempToken^.next^.next:=recycler.newToken(location,'',tt_braceClose);
-    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
   end;
 
 {$ifdef fullVersion}

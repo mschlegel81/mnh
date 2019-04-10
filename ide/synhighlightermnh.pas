@@ -2,13 +2,12 @@ UNIT SynHighlighterMnh;
 INTERFACE
 
 USES
-  sysutils, Classes, FileUtil, Controls, Graphics,
+  sysutils, Classes, Controls, Graphics,
   SynEditTypes, SynEditHighlighter,
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_messages,
   funcs,
-  packages,
   codeAssistance;
 
 TYPE
@@ -488,7 +487,7 @@ PROCEDURE initLists;
   begin
     if listsAreInitialized then exit;
     tokenTypeMap.create();
-    for tt:=low(T_tokenType) to high(T_tokenType) do with C_tokenInfo[tt] do put(reservedWordClass,defaultId);
+    for tt:=low(T_tokenType) to high(T_tokenType) do put(C_tokenDoc[tt].reservedWordClass,C_tokenDefaultId[tt]);
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
     for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);
     for md in T_modifier do put(rwc_modifier,C_modifierInfo[md].name);

@@ -70,7 +70,6 @@ TYPE T_language=(LANG_MNH   = 0,
       //T_codeProvider:
       FUNCTION getLines: T_arrayOfString; virtual;
       FUNCTION getPath: ansistring;                                    virtual;
-      FUNCTION stateHash:T_hashInt;                                    virtual;
       FUNCTION disposeOnPackageDestruction:boolean;                    virtual;
       FUNCTION isPseudoFile:boolean;                                   virtual;
 
@@ -478,20 +477,6 @@ FUNCTION T_basicEditorMeta.getLines: T_arrayOfString;
 FUNCTION T_basicEditorMeta.getPath: ansistring;
   begin
     result:='';
-  end;
-
-FUNCTION T_basicEditorMeta.stateHash: T_hashInt;
-  VAR s:ansistring;
-  begin
-    {$Q-}{$R-}
-    try
-      result:=editor_.lines.count;
-      for s in editor_.lines do result:=result*31+hashOfAnsiString(s);
-    except
-      exit(0);
-    end;
-    {$Q+}{$R+}
-    if result=0 then result:=1;
   end;
 
 FUNCTION T_basicEditorMeta.disposeOnPackageDestruction: boolean;

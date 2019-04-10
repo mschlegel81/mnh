@@ -13,7 +13,6 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
-
   { TIdeMainForm }
 
   TIdeMainForm = class(T_mnhIdeForm)
@@ -23,6 +22,7 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    miFocusEditor: TMenuItem;
     miUndockAll: TMenuItem;
     miDockAll: TMenuItem;
     miDebuggerVar: TMenuItem;
@@ -124,6 +124,7 @@ TYPE
     PROCEDURE miFindClick(Sender: TObject);
     PROCEDURE miFindNextClick(Sender: TObject);
     PROCEDURE miFindPreviousClick(Sender: TObject);
+    PROCEDURE miFocusEditorClick(Sender: TObject);
     PROCEDURE miGotoLineClick(Sender: TObject);
     PROCEDURE miHaltEvaluationClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
@@ -251,6 +252,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     FormDropFiles(Sender,filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
+    {$ifdef LINUX}
+    miIncFontSize.ShortCut:=16605;
+    {$endif}
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -397,6 +401,13 @@ PROCEDURE TIdeMainForm.miFindNextClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miFindPreviousClick(Sender: TObject);
   begin
     searchReplaceModel.doFindPrevious(focusedEditor);
+  end;
+
+PROCEDURE TIdeMainForm.miFocusEditorClick(Sender: TObject);
+  VAR meta:P_editorMeta;
+  begin
+    meta:=workspace.currentEditor;
+    if meta<>nil then ActiveControl:=meta^.editor;
   end;
 
 PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
@@ -723,6 +734,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       FormDropFiles(Sender,ipcModel.getFilesToOpen);
       evaluationStateLabel.caption:=runnerModel.getStateLabel;
       if quitPosted and not(anyEvaluationRunning) then close;
+      workspace.checkForFileChanges;
     end;
 
   PROCEDURE fastUpdates; inline;

@@ -142,8 +142,8 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
   {$ifdef debugMode}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
-    if (tokenText='') and (C_tokenInfo[tokenType].defaultId<>'')
-      then txt:=C_tokenInfo[tokenType].defaultId
+    if (tokenText='') and (C_tokenDefaultId[tokenType]<>'')
+      then txt:=C_tokenDefaultId[tokenType]
       else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
@@ -207,9 +207,9 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
     idLike:=false;
     case tokType of
       tt_each, tt_parallelEach: begin
-        result:=C_tokenInfo[tokType].defaultId;
+        result:=C_tokenDefaultId[tokType];
         if txt<>'' then result:=result+'('+txt+','
-                   else result:=C_tokenInfo[tt_agg].defaultId+'(';
+                   else result:=C_tokenDefaultId[tt_agg]+'(';
         if data<>nil then result:=result+P_literal(data)^.toString(limit-6)+',';
       end;
       tt_customTypeCheck: result:=':'+txt;
@@ -218,10 +218,10 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_parList_constructor: result:=toParameterListString(P_listLiteral(data),false,limit);
       tt_parList            : result:=toParameterListString(P_listLiteral(data),true ,limit);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
-      tt_assignNewBlockLocal: result:=C_modifierInfo[modifier_local].name+' '+txt+C_tokenInfo[tokType].defaultId;
-      tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
-      tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
-      tt_mutate, tt_assignExistingBlockLocal..tt_mut_nestedDrop: result:=txt+C_tokenInfo[tokType].defaultId;
+      tt_assignNewBlockLocal: result:=C_modifierInfo[modifier_local].name+' '+txt+C_tokenDefaultId[tokType];
+      tt_beginRule,tt_beginExpression:result:=C_tokenDefaultId[tt_beginBlock]+'* ';
+      tt_endRule  ,tt_endExpression  :result:=C_tokenDefaultId[tt_endBlock  ]+'* ';
+      tt_mutate, tt_assignExistingBlockLocal..tt_mut_nestedDrop: result:=txt+C_tokenDefaultId[tokType];
       tt_type:      result:=    C_typeCheckInfo[getTypeCheck].name;
       tt_typeCheck: result:=':'+C_typeCheckInfo[getTypeCheck].name;
       tt_modifier : result:=C_modifierInfo[getModifier].name;
@@ -238,7 +238,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_blank: result:=txt;
       tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
       tt_docComment      :result:=COMMENT_PREFIX+txt;
-      else result:=C_tokenInfo[tokType].defaultId;
+      else result:=C_tokenDefaultId[tokType];
     end;
     if length(result)<1 then begin
       idLike:=false; exit(result);
@@ -308,7 +308,7 @@ FUNCTION T_token.areBracketsPlausible(CONST adaptersForComplaints: P_messages): 
         exit(false);
       end;
       if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenDefaultId[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]]+'")',bracketStack[length(bracketStack)-1]^.location);
         adaptersForComplaints^.raiseSimpleError('Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
         exit(false);
       end;

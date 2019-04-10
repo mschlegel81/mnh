@@ -21,7 +21,6 @@ USES sysutils,
      contexts,
      funcs,
      operators,
-     funcs_mnh,
      funcs_math,
      funcs_list,
      funcs_types,
@@ -574,7 +573,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             end;
           end;
         end else if tokType in C_operators then begin
-          txt:=C_tokenInfo[tokType].defaultId;
+          txt:=C_tokenDefaultId[tokType];
           data:=intFuncForOperator[tokType];
           tokType:=tt_intrinsicRule;
           ruleIdResolved:=true;
@@ -692,7 +691,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             stack.push(first);
             didSubstitution:=true;
           end;
-        else context.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',errorLocation);
+        else context.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next){$ifdef fullVersion}+' ('+C_tokenDoc[cTokType[1]].helpText+')'{$endif},errorLocation);
       end;
     end;
 
@@ -845,7 +844,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             first^.tokType:=tt_literal;
             resolveElementAccess;
           end else begin
-            context.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
+            context.raiseError('Cannot resolve variable '+first^.txt{$ifdef fullVresion}+' ('+C_tokenDoc[first^.tokType].helpText+')'{$endif},first^.location);
             didSubstitution:=false;
           end;
         end;
@@ -1354,13 +1353,13 @@ FUNCTION future_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1{$ifdef fullVersion},
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1,
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1{$ifdef fullVersion},
                'localAsync(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1,
+               'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1{$ifdef fullVersion},
                'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.');
+               'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif});
 end.

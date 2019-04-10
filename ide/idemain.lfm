@@ -383,6 +383,11 @@ object IdeMainForm: TIdeMainForm
         Caption = 'About'
         OnClick = miAboutClick
       end
+      object miFocusEditor: TMenuItem
+        Caption = 'Focus &editor'
+        ShortCut = 16453
+        OnClick = miFocusEditorClick
+      end
       object MenuItem1: TMenuItem
         Caption = '-'
       end

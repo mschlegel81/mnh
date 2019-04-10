@@ -1,10 +1,8 @@
 UNIT valueStore;
 INTERFACE
 USES sysutils,
-     mySys,
      basicTypes,
      mnh_constants,
-     mnh_messages,
      out_adapters,
      litVar
      {$ifdef fullVersion},

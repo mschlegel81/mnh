@@ -3,9 +3,7 @@ INTERFACE
 USES sysutils,
      FileUtil,
      myStringUtil,
-     mnh_constants,basicTypes,
-     out_adapters,
-     litVar,
+     mnh_constants,
      tokens;
 TYPE
   T_rawTokenizeCallback=FUNCTION(CONST inputString:ansistring):T_rawTokenArray;
@@ -43,7 +41,7 @@ FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
         tt_literal: if (length(txt)>0) and (txt[1] in ['''','"','#'])
                     then result:=result+span('stringLiteral',txt)
                     else result:=result+span('literal'      ,txt);
-        else result:=result+span(C_tokenInfo[tokType].defaultHtmlSpan,escapeHtml(txt));
+        else result:=result+span(C_tokenDoc[tokType].defaultHtmlSpan,escapeHtml(txt));
       end;
     end;
     result:=replaceOne(
