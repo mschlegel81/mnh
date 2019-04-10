@@ -5,7 +5,7 @@ UNIT renameDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  sysutils, Forms, Controls, Dialogs, ExtCtrls,
   StdCtrls,
   mnh_constants;
 

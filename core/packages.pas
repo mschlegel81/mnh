@@ -10,7 +10,6 @@ USES //basic classes
      mnh_messages,
      out_adapters,
      litVar,
-     caches,
      tokens, contexts,
      profiling,
      {$ifdef fullVersion}
@@ -26,11 +25,8 @@ USES //basic classes
      {$endif}
      funcs,
      operators,
-     funcs_mnh,   funcs_types, funcs_math,  funcs_strings,
-     funcs_list,  funcs_system, funcs_files,
      funcs_format,
-     funcs_regex, funcs_xml, funcs_ipc, funcs_server,
-     builtinGenerators,
+     funcs_ipc, funcs_server,
      patterns,
      subrules,
      rules,

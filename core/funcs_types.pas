@@ -1,19 +1,18 @@
 UNIT funcs_types;
 INTERFACE
+USES funcs;
 {$WARN 5024 OFF}
+VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
+
+IMPLEMENTATION
 USES sysutils,
      bigint,
      mnh_constants,
      basicTypes,
      mnh_messages,
-     out_adapters,
      litVar,
-     funcs,
      recyclers,
      contexts;
-VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
-
-IMPLEMENTATION
 {$i func_defines.inc}
 
 FUNCTION softCast_imp intFuncSignature;

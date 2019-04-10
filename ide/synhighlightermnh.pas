@@ -2,13 +2,12 @@ UNIT SynHighlighterMnh;
 INTERFACE
 
 USES
-  sysutils, Classes, FileUtil, Controls, Graphics,
+  sysutils, Classes, Controls, Graphics,
   SynEditTypes, SynEditHighlighter,
   myGenerics,myStringUtil,
   mnh_constants,
   mnh_messages,
   funcs,
-  packages,
   codeAssistance;
 
 TYPE

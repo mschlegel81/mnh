@@ -3,9 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      myGenerics,
-     myStringUtil,
      basicTypes,mnh_constants,
-     out_adapters,
      litVar,
      recyclers,
      contexts,

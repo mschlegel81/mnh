@@ -1,8 +1,6 @@
 UNIT operators;
 INTERFACE
-USES sysutils,
-     bigint,
-     mnh_constants,
+USES mnh_constants,
      basicTypes,
      mnh_messages,
      out_adapters,
@@ -73,6 +71,9 @@ FUNCTION operator_StrConcat intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
 IMPLEMENTATION
+USES sysutils,
+     bigint;
+
 TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
      P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;

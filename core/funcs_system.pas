@@ -3,10 +3,9 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      bigint,
-     Classes,FileUtil,LazFileUtils,LazUTF8,
+     Classes,LazFileUtils,LazUTF8,
      myGenerics,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,
      basicTypes,mnh_constants,
-     out_adapters,
      litVar,
      funcs,
      recyclers,

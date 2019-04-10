@@ -5,7 +5,7 @@ UNIT codeAssistance;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,ideLayoutUtil,
+  Classes, sysutils, Controls, Graphics, Dialogs, SynEdit,
     myGenerics,
   basicTypes,
   mnh_constants,

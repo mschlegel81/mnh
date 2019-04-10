@@ -5,12 +5,11 @@ USES sysutils,
      mnh_constants,
      fileWrappers,
      mnh_messages,
-     out_adapters,consoleAsk,{$ifdef fullVersion}mnh_plotData,mnh_doc,{$endif}mnh_settings,
+     out_adapters,{$ifdef fullVersion}mnh_plotData,mnh_doc,{$endif}mnh_settings,
      funcs_mnh,
      contexts,
      packages,
-     recyclers,
-     evaluation;
+     recyclers;
 
 CONST
   FLAG_GUI          ='-GUI';
@@ -52,6 +51,22 @@ VAR verbosityString:string=DEF_VERBOSITY_STRING;
 
 PROCEDURE pauseOnce;
 IMPLEMENTATION
+//GLUE USES: Do not remove!
+USES evaluation,
+     funcs_files,
+     funcs_format,
+     funcs_ipc,
+     funcs_list,
+     funcs_math,
+     funcs_regex,
+     funcs_server,
+     funcs_strings,
+     funcs_system,
+     funcs_types,
+     funcs_xml,
+     builtinGenerators,
+     consoleAsk;
+
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
     directExecutionMode:boolean=false;

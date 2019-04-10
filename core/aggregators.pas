@@ -2,7 +2,6 @@ UNIT aggregators;
 INTERFACE
 USES funcs,
      mnh_constants, basicTypes,
-     out_adapters,
      contexts,
      litVar,
      recyclers,

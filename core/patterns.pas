@@ -3,13 +3,12 @@ INTERFACE
 USES sysutils,
      math,
      {$ifdef fullVersion}
-     myGenerics,
+     myGenerics,mnh_messages,
      {$endif}
      basicTypes,mnh_constants,
      recyclers,
      litVar,
      tokens,
-     mnh_messages,
      contexts;
 TYPE
   T_patternElement=object

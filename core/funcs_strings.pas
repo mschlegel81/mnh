@@ -8,7 +8,6 @@ USES sysutils,math,
      myGenerics,myStringUtil,myCrypto,bigint,
      basicTypes,
      mnh_constants,
-     mnh_messages,
      out_adapters,
      recyclers,
      litVar,funcs,contexts;

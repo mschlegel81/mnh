@@ -18,7 +18,7 @@ USES //basic classes
      debuggingVar,
      profiling,
      {$endif}
-     funcs,funcs_math,funcs_mnh, funcs_strings,
+     funcs,
      mnh_messages,
      patterns;
 TYPE
