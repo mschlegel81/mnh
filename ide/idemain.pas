@@ -13,7 +13,6 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
-
   { TIdeMainForm }
 
   TIdeMainForm = class(T_mnhIdeForm)
@@ -251,6 +250,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     FormDropFiles(Sender,filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
+    {$ifdef LINUX}
+    miIncFontSize.ShortCut:=16605;
+    {$endif}
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
