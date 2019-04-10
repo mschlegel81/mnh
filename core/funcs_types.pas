@@ -237,51 +237,51 @@ FUNCTION typeOf_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(TYPECAST_NAMESPACE,'softCast'      ,@softCast_imp  ,ak_unary,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
-  registerRule(TYPECAST_NAMESPACE,'toBuiltin'     ,@toBuiltin_imp ,ak_unary,'toBuiltin(X);#Returns X without custom type info');
-  registerRule(TYPECAST_NAMESPACE,'toString'      ,@toString_imp  ,ak_unary,'toString(X);#Casts X to string');
-  registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,ak_unary,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,ak_unary,'toInt(X);#Casts X to int or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toReal'        ,@toReal_imp    ,ak_unary,'toReal(X);#Casts X to real or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'softCast'      ,@softCast_imp  ,ak_unary{$ifdef fullVersion},'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toBuiltin'     ,@toBuiltin_imp ,ak_unary{$ifdef fullVersion},'toBuiltin(X);#Returns X without custom type info'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toString'      ,@toString_imp  ,ak_unary{$ifdef fullVersion},'toString(X);#Casts X to string'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,ak_unary{$ifdef fullVersion},'toBoolean(X);#Casts X to boolean or throws an error if not possible'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,ak_unary{$ifdef fullVersion},'toInt(X);#Casts X to int or throws an error if not possible'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toReal'        ,@toReal_imp    ,ak_unary{$ifdef fullVersion},'toReal(X);#Casts X to real or throws an error if not possible'{$endif});
   BUILTIN_TOLIST:=
-  registerRule(TYPECAST_NAMESPACE,'toList'        ,@toList_imp    ,ak_unary,'toList(X);#Casts X to list or wraps a scalar in a list');
+  registerRule(TYPECAST_NAMESPACE,'toList'        ,@toList_imp    ,ak_unary{$ifdef fullVersion},'toList(X);#Casts X to list or wraps a scalar in a list'{$endif});
   BUILTIN_TOSET:=
-  registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,ak_unary,'toSet(X);#Casts X to set or wraps a scalar in a set');
-  registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,ak_unary,'toMap(X:Collection);#Casts X to map or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,ak_unary{$ifdef fullVersion},'toSet(X);#Casts X to set or wraps a scalar in a set'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,ak_unary{$ifdef fullVersion},'toMap(X:Collection);#Casts X to map or throws an error if not possible'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
-  registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary,'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'),
-                                                                            ak_unary,'toGenerator(e:Expression(0));#Alias for toIteratableExpression');
-  registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,ak_unary,'typeOf(x); //Returns a description of x''s type');
-  registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,ak_unary     ,'isVoid(x); //Returns true if x is void (or no arguments were given)');
-  registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,ak_unary     ,'isScalar(x); //Returns true if x is a scalar');
-  registerRule(TYPECAST_NAMESPACE,'isList'             ,@isList             ,ak_variadic_1,'isList(x); //Returns true if x is a list. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isSet'              ,@isSet              ,ak_variadic_1,'isSet(x); //Returns true if x is a set. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isCollection'       ,@isCollection       ,ak_variadic_1,'isCollection(x); //Returns true if x is a collection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isBoolean'          ,@isBoolean          ,ak_unary     ,'isBoolean(x); //Returns true if x is a boolean');
-  registerRule(TYPECAST_NAMESPACE,'isBooleanList'      ,@isBooleanList      ,ak_variadic_1,'isBooleanList(x); //Returns true if x is a booleanList. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isBooleanSet'       ,@isBooleanSet       ,ak_variadic_1,'isBooleanSet(x); //Returns true if x is a booleanSet. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isBooleanCollection',@isBooleanCollection,ak_variadic_1,'isBooleanCollection(x); //Returns true if x is a booleanCollection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isInt'              ,@isInt              ,ak_unary     ,'isInt(x); //Returns true if x is a int');
-  registerRule(TYPECAST_NAMESPACE,'isIntList'          ,@isIntList          ,ak_variadic_1,'isIntList(x); //Returns true if x is a intList. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isIntSet'           ,@isIntSet           ,ak_variadic_1,'isIntSet(x); //Returns true if x is a intSet. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isIntCollection'    ,@isIntCollection    ,ak_variadic_1,'isIntCollection(x); //Returns true if x is a intCollection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isReal'             ,@isReal             ,ak_unary     ,'isReal(x); //Returns true if x is a real');
-  registerRule(TYPECAST_NAMESPACE,'isRealList'         ,@isRealList         ,ak_variadic_1,'isRealList(x); //Returns true if x is a realList. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isRealSet'          ,@isRealSet          ,ak_variadic_1,'isRealSet(x); //Returns true if x is a realSet. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isRealCollection'   ,@isRealCollection   ,ak_variadic_1,'isRealCollection(x); //Returns true if x is a realCollection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isString'           ,@isString           ,ak_unary     ,'isString(x); //Returns true if x is a string');
-  registerRule(TYPECAST_NAMESPACE,'isStringList'       ,@isStringList       ,ak_variadic_1,'isStringList(x); //Returns true if x is a stringList. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isStringSet'        ,@isStringSet        ,ak_variadic_1,'isStringSet(x); //Returns true if x is a stringSet. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isStringCollection' ,@isStringCollection ,ak_variadic_1,'isStringCollection(x); //Returns true if x is a stringCollection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isNumeric'          ,@isNumeric          ,ak_unary     ,'isNumeric(x); //Returns true if x is a numeric');
-  registerRule(TYPECAST_NAMESPACE,'isNumericList'      ,@isNumericList      ,ak_variadic_1,'isNumericList(x); //Returns true if x is a numericList. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isNumericSet'       ,@isNumericSet       ,ak_variadic_1,'isNumericSet(x); //Returns true if x is a numericSet. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isNumericCollection',@isNumericCollection,ak_variadic_1,'isNumericCollection(x); //Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isMap'              ,@isMap              ,ak_variadic_1,'isMap(x); //Returns true if x is a map. Specify an additional int parameter to additionally check the size.');
-  registerRule(TYPECAST_NAMESPACE,'isExpression'       ,@isExpression       ,ak_variadic_1,'isExpression(x); //Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-  registerRule(TYPECAST_NAMESPACE,'isStatelessExpression' ,@isStatelessExpression ,ak_variadic_1,'isStatelessExpression(x); //Returns true if x is a stateless expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-  registerRule(TYPECAST_NAMESPACE,'isStatefulExpression'  ,@isStatefulExpression  ,ak_variadic_1,'isStatefulExpression(x); //Returns true if x is a stateful expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-  registerRule(TYPECAST_NAMESPACE,'isIteratableExpression',@isIteratableExpression,ak_unary     ,'isIteratableExpression(x); //Returns true if x is an iteratable expression.');
-  registerRule(TYPECAST_NAMESPACE,'isIteratable'          ,@isIteratable          ,ak_unary     ,'isIteratable(x); //Returns true if x is an iteratable expression, a collection or a map.');
+  registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
+                                                                            ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'typeOf'             ,@typeOf_imp         ,ak_unary     {$ifdef fullVersion},'typeOf(x); //Returns a description of x''s type'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,ak_unary     {$ifdef fullVersion},'isVoid(x); //Returns true if x is void (or no arguments were given)'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,ak_unary     {$ifdef fullVersion},'isScalar(x); //Returns true if x is a scalar'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isList'             ,@isList             ,ak_variadic_1{$ifdef fullVersion},'isList(x); //Returns true if x is a list. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isSet'              ,@isSet              ,ak_variadic_1{$ifdef fullVersion},'isSet(x); //Returns true if x is a set. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isCollection'       ,@isCollection       ,ak_variadic_1{$ifdef fullVersion},'isCollection(x); //Returns true if x is a collection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isBoolean'          ,@isBoolean          ,ak_unary     {$ifdef fullVersion},'isBoolean(x); //Returns true if x is a boolean'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isBooleanList'      ,@isBooleanList      ,ak_variadic_1{$ifdef fullVersion},'isBooleanList(x); //Returns true if x is a booleanList. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isBooleanSet'       ,@isBooleanSet       ,ak_variadic_1{$ifdef fullVersion},'isBooleanSet(x); //Returns true if x is a booleanSet. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isBooleanCollection',@isBooleanCollection,ak_variadic_1{$ifdef fullVersion},'isBooleanCollection(x); //Returns true if x is a booleanCollection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isInt'              ,@isInt              ,ak_unary     {$ifdef fullVersion},'isInt(x); //Returns true if x is a int'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isIntList'          ,@isIntList          ,ak_variadic_1{$ifdef fullVersion},'isIntList(x); //Returns true if x is a intList. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isIntSet'           ,@isIntSet           ,ak_variadic_1{$ifdef fullVersion},'isIntSet(x); //Returns true if x is a intSet. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isIntCollection'    ,@isIntCollection    ,ak_variadic_1{$ifdef fullVersion},'isIntCollection(x); //Returns true if x is a intCollection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isReal'             ,@isReal             ,ak_unary     {$ifdef fullVersion},'isReal(x); //Returns true if x is a real'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isRealList'         ,@isRealList         ,ak_variadic_1{$ifdef fullVersion},'isRealList(x); //Returns true if x is a realList. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isRealSet'          ,@isRealSet          ,ak_variadic_1{$ifdef fullVersion},'isRealSet(x); //Returns true if x is a realSet. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isRealCollection'   ,@isRealCollection   ,ak_variadic_1{$ifdef fullVersion},'isRealCollection(x); //Returns true if x is a realCollection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isString'           ,@isString           ,ak_unary     {$ifdef fullVersion},'isString(x); //Returns true if x is a string'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isStringList'       ,@isStringList       ,ak_variadic_1{$ifdef fullVersion},'isStringList(x); //Returns true if x is a stringList. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isStringSet'        ,@isStringSet        ,ak_variadic_1{$ifdef fullVersion},'isStringSet(x); //Returns true if x is a stringSet. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isStringCollection' ,@isStringCollection ,ak_variadic_1{$ifdef fullVersion},'isStringCollection(x); //Returns true if x is a stringCollection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isNumeric'          ,@isNumeric          ,ak_unary     {$ifdef fullVersion},'isNumeric(x); //Returns true if x is a numeric'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isNumericList'      ,@isNumericList      ,ak_variadic_1{$ifdef fullVersion},'isNumericList(x); //Returns true if x is a numericList. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isNumericSet'       ,@isNumericSet       ,ak_variadic_1{$ifdef fullVersion},'isNumericSet(x); //Returns true if x is a numericSet. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isNumericCollection',@isNumericCollection,ak_variadic_1{$ifdef fullVersion},'isNumericCollection(x); //Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isMap'              ,@isMap              ,ak_variadic_1{$ifdef fullVersion},'isMap(x); //Returns true if x is a map. Specify an additional int parameter to additionally check the size.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isExpression'       ,@isExpression       ,ak_variadic_1{$ifdef fullVersion},'isExpression(x); //Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isStatelessExpression' ,@isStatelessExpression ,ak_variadic_1{$ifdef fullVersion},'isStatelessExpression(x); //Returns true if x is a stateless expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isStatefulExpression'  ,@isStatefulExpression  ,ak_variadic_1{$ifdef fullVersion},'isStatefulExpression(x); //Returns true if x is a stateful expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isIteratableExpression',@isIteratableExpression,ak_unary     {$ifdef fullVersion},'isIteratableExpression(x); //Returns true if x is an iteratable expression.'{$endif});
+  registerRule(TYPECAST_NAMESPACE,'isIteratable'          ,@isIteratable          ,ak_unary     {$ifdef fullVersion},'isIteratable(x); //Returns true if x is an iteratable expression, a collection or a map.'{$endif});
 
 end.

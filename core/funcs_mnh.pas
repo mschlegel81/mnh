@@ -86,40 +86,6 @@ FUNCTION listBuiltin_imp intFuncSignature;
     end;
   end;
 
-FUNCTION listKeywords_imp intFuncSignature;
-  VAR i:longint;
-      tt:T_tokenType;
-      tc:T_typeCheck;
-      md:T_modifier;
-      subList:array[T_reservedWordClass] of P_listLiteral;
-      rc:T_reservedWordClass;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      for rc:=low(T_reservedWordClass) to high(T_reservedWordClass) do subList[rc]:=newListLiteral;
-      for tc in T_typeCheck do subList[rwc_type]^.appendString(C_typeCheckInfo[tc].name);
-      for md in T_modifier do subList[rwc_modifier]^.appendString(C_modifierInfo[md].name);
-      for tt:=low(T_tokenType) to high(T_tokenType) do
-      if isIdentifier(C_tokenInfo[tt].defaultId,false) or
-         ((copy(C_tokenInfo[tt].defaultId,1,1)='.') or (copy(C_tokenInfo[tt].defaultId,1,1)=':')) and
-         isIdentifier(copy(C_tokenInfo[tt].defaultId,2,length(C_tokenInfo[tt].defaultId)-1),false)
-      then subList[C_tokenInfo[tt].reservedWordClass]^.appendString(C_tokenInfo[tt].defaultId);
-      for i:=0 to length(C_specialWordInfo)-1 do subList[C_specialWordInfo[i].reservedWordClass]^.appendString(C_specialWordInfo[i].txt);
-      disposeLiteral(subList[rwc_not_reserved]);
-      result:=newListLiteral^
-        .append(newListLiteral^.appendString('specialLiterals')^
-                .append(subList[rwc_specialLiteral],false),false)^
-        .append(newListLiteral^.appendString('specialConstructs')^
-                .append(subList[rwc_specialConstruct],false),false)^
-        .append(newListLiteral^.appendString('operators')^
-                .append(subList[rwc_operator],false),false)^
-        .append(newListLiteral^.appendString('types')^
-                .append(subList[rwc_type],false),false)^
-        .append(newListLiteral^.appendString('modifiers')^
-                .append(subList[rwc_modifier],false),false);
-    end;
-  end;
-
 FUNCTION listSideEffects_imp intFuncSignature;
   VAR se:T_sideEffect;
   begin
@@ -201,15 +167,14 @@ FUNCTION getMnhInfo:T_arrayOfString;
   end;
 
 INITIALIZATION
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  ,'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  ,'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  {$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  {$ifdef fullVersion},'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value'{$endif});
   BUILTIN_MYPATH:=
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary,'myPath;//returns the path to the current package');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,ak_nullary,'listKeywords;//Returns a list of all keywords by category');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listSideEffects',@listSideEffects_imp,ak_nullary,'listSideEffects;//Returns a list of all side effects, e.g. as parameters for interpret');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary{$ifdef fullVersion},'myPath;//returns the path to the current package'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary{$ifdef fullVersion},'executor;//returns the path to the currently executing instance of MNH'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,ak_unary  {$ifdef fullVersion},'hash(x);//Returns the builtin hash for the given literal'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listSideEffects',@listSideEffects_imp,ak_nullary{$ifdef fullVersion},'listSideEffects;//Returns a list of all side effects, e.g. as parameters for interpret'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,ak_unary  {$ifdef fullVersion},'ord(x);//Returns the ordinal value of x'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,ak_nullary{$ifdef fullVersion},'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH'{$endif});
 end.

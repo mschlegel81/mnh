@@ -207,20 +207,20 @@ FUNCTION changeDirectory_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  ,'resetRandom(seed:Int);//Resets internal PRNG with the given seed');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1,'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   ,'systime;//Returns the current time as a real number');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  ,'beep;//Makes a beep');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep'{$endif});
   {$ifdef Windows}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   ,'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif});
   {$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,'changeDirectory(folder:String);//Sets the working directory');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   {$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif});
   {$ifdef fullVersion}timeLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
+               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
 
 end.

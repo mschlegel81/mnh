@@ -156,7 +156,7 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
       result:='';
       if rule^.getRuleType=rt_customOperator then begin
         for tt:=low(operatorName) to high(operatorName) do if
-        operatorName[tt]=rule^.getId then exit(C_tokenInfo[tt].defaultId);
+        operatorName[tt]=rule^.getId then exit(C_tokenDefaultId[tt]);
       end else result:=rule^.getId;
     end;
 

@@ -53,10 +53,10 @@ PROCEDURE initIntrinsicRuleList;
         intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(id,ID_QUALIFY_CHARACTER)[1]);
       end;
     end;
-    for tt in T_tokenType do if isIdentifier(C_tokenInfo[tt].defaultId,false) then
-      intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''))
-    else if (copy(C_tokenInfo[tt].defaultId,1,1)='.') and isIdentifier(copy(C_tokenInfo[tt].defaultId,2,1000),false) then
-      intrinsicRulesForCompletion.put(C_tokenInfo[tt].defaultId);
+    for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
+      intrinsicRulesForCompletion.put(replaceAll(C_tokenDefaultId[tt],'.',''))
+    else if (copy(C_tokenDefaultId[tt],1,1)='.') and isIdentifier(copy(C_tokenDefaultId[tt],2,1000),false) then
+      intrinsicRulesForCompletion.put(C_tokenDefaultId[tt]);
     for tc in T_typeCheck do
       intrinsicRulesForCompletion.put(C_typeCheckInfo[tc].name);
     for m in T_modifier do
@@ -89,8 +89,8 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
     wordsInEditor.clear;
     if assistanceResponse<>nil then begin
       //Completion for assistant...
-      isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
-                or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
+      isUseClause:=(pos(C_tokenDefaultId[tt_use    ],editor.lines[caret.y-1])>0)
+                or (pos(C_tokenDefaultId[tt_include],editor.lines[caret.y-1])>0);
       if isUseClause
       then wordsInEditor.put(assistanceResponse^.getImportablePackages)
       else begin

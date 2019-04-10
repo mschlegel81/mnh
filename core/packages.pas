@@ -1255,12 +1255,12 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         then begin
           if op in overridableOperators then begin
             customOperatorRules[op]:=result;
-            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenInfo[op].defaultId);
+            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenDefaultId[op]);
             result^.allowCurrying:=false;
             {$ifdef fullVersion}
             result^.setIdResolved;
             {$endif}
-          end else messages^.raiseSimpleError('Operator '+C_tokenInfo[op].defaultId+' cannot be overridden',ruleDeclarationStart);
+          end else messages^.raiseSimpleError('Operator '+C_tokenDefaultId[op]+' cannot be overridden',ruleDeclarationStart);
           exit(result);
         end;
         result^.hiddenRule:=hidden;

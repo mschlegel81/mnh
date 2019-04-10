@@ -567,11 +567,11 @@ INITIALIZATION
   initialize(cachedFormatCS);
   system.initCriticalSection(cachedFormatCS);
   {$ifdef fullVersion}printfLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1,'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   {$ifdef fullVersion}formatLoc:={$endif}
-  registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1,'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    ,'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    {$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    {$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   memoryCleaner.registerCleanupMethod(@clearCachedFormats)
 
 FINALIZATION

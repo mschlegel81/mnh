@@ -1,12 +1,12 @@
 #!/usr/bin/mnh_light
-ignoredCodes:=[1002,1008,1021,1022,1023,
+IGNORED_CODES:=[1002,1008,1021,1022,1023,
                3018,3019,3100,3104,
                4056,4035,4055,
                5036,5044,
                9015,9022];
-alwaysIgnoredCodes:=[1023,1022,1021,1008,3104,9022,9015,1002];
+ALWAYS_IGNORED_CODES:=[1023,1022,1021,1008,3104,9022,9015,1002];
 
-ignoredPatterns:=['3rd_party',
+IGNORED_PATTERNS:=['3rd_party',
                   '/ide/.*\(5024\)',
                   '\(5066\).*Symbol "UTF8CharacterLength" is deprecated: "Use UTF8CodepointSize instead."',
                   '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
@@ -29,10 +29,10 @@ splitMessage(message:String)->begin
 end;
 
 private currentViolations(doFilter:Boolean)->'build.log'.fileLines
-  .pEach(line,line.matches('\('&(doFilter ? ignoredCodes : alwaysIgnoredCodes)&'\)').agg(OR) ? void : line)
+  .pEach(line,line.matches('\('&(doFilter ? IGNORED_CODES: ALWAYS_IGNORED_CODES)&'\)').agg(OR) ? void : line)
   .replace('\','/')
   .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory],'').replace('\','/'))
-  .{doFilter ? $L.pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line) : $L}
+  .{doFilter ? $L.pEach(line,line.matches(IGNORED_PATTERNS).agg(OR) ? void : line) : $L}
   .map(::splitMessage)
   .elementFrequency
   .map({$x[1]|"\vx\t"|$x[0]})

@@ -3186,7 +3186,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         exit(nil);
       end else mutateNested;
       else begin
-        context^.raiseError('Unimplemented mutation '+C_tokenInfo[mutation].defaultId,location);
+        context^.raiseError('Unimplemented mutation '+C_tokenDefaultId[mutation],location);
       end;
     end;
     result:=returnValue;

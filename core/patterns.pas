@@ -143,17 +143,17 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_comparatorLeq,
       tt_comparatorGeq,
       tt_comparatorLss,
-      tt_comparatorGrt: if restrictionId='' then result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionValue^.toString)
-                                            else result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
+      tt_comparatorGrt: if restrictionId='' then result:=(id+C_tokenDefaultId[restrictionType]+restrictionValue^.toString)
+                                            else result:=(id+C_tokenDefaultId[restrictionType]+restrictionId);
       tt_comparatorEq,
       tt_comparatorListEq: begin
         if restrictionId=''
         then result:=restrictionValue^.toString
         else result:=restrictionId;
-        if id<>'' then result:=id+C_tokenInfo[restrictionType].defaultId+result;
+        if id<>'' then result:=id+C_tokenDefaultId[restrictionType]+result;
       end;
-      tt_operatorIn: if restrictionId='' then result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
-                                         else result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
+      tt_operatorIn: if restrictionId='' then result:=(id+' '+C_tokenDefaultId[restrictionType]+' '+restrictionValue^.toString)
+                                         else result:=(id+' '+C_tokenDefaultId[restrictionType]+' '+restrictionId);
       else result:=result+id;
     end;
   end;

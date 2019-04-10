@@ -528,7 +528,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               then remaining:=newListLiteral
               else remaining:=param^.tail(pattern.arity);
               {$ifdef fullVersion}
-              if parametersNode<>nil then parametersNode^.addEntry(C_tokenInfo[tt_optionalParameters].defaultId,remaining,true);
+              if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
               {$endif}
               remaining^.unreference;
             end;
@@ -920,7 +920,7 @@ CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation; 
 FUNCTION T_inlineExpression.toString(CONST lengthLimit: longint): ansistring;
   begin result:=toDocString(true,lengthLimit); end;
 FUNCTION T_expression.toString(CONST lengthLimit: longint): ansistring;
-  begin result:=C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId; end;
+  begin result:=C_tokenDefaultId[tt_pseudoFuncPointer]+getId; end;
 
 FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST lengthLimit: longint): ansistring;
   VAR i,remainingLength:longint;
@@ -938,7 +938,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
     if      typ in C_inlineExpressionTypes
                             then result:=                 '{'+result+'}'
     else if typ=et_eachBody then result:=pattern.toString+'{'+result+'}'
-    else                         result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
+    else                         result:=pattern.toString+C_tokenDefaultId[tt_declare]+result;
   end;
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
@@ -1658,9 +1658,9 @@ INITIALIZATION
   {$endif}
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
-  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary{$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary{$ifdef fullVersion},'parameterNames(e:expression);//Returns the IDs of named parameters of e'{$endif});
+  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1{$ifdef fullVersion},'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>'{$endif});
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary{$ifdef fullVersion},'toExpression(S);//Returns an expression parsed from string or list S'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary{$ifdef fullVersion},'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.'{$endif});
 end.

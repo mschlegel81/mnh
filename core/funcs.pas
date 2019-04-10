@@ -50,7 +50,7 @@ VAR
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
   makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
@@ -63,7 +63,7 @@ VAR builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
 
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; {$ifdef fullVersion}CONST explanation: ansistring;{$endif} CONST fullNameOnly: boolean):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
@@ -301,12 +301,12 @@ INITIALIZATION
   builtinMetaMap.create;
   builtinExpressionMap.create(@disposeIdentifiedInternalFunction);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,'clearPrint;//Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic,'printDirect(...);//Prints out the given string without pretty printing or line breaks');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
   system.initCriticalSection(print_cs);
 FINALIZATION
   builtinExpressionMap.destroy;
