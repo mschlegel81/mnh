@@ -1,22 +1,24 @@
 object closeDialogForm: TcloseDialogForm
   Left = 420
-  Height = 53
+  Height = 80
   Top = 240
-  Width = 383
+  Width = 574
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'The current file has been changed'
-  ClientHeight = 53
-  ClientWidth = 383
+  ClientHeight = 80
+  ClientWidth = 574
+  DesignTimePPI = 144
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.2.2.0'
+  LCLVersion = '2.0.0.4'
   object ButtonPanel1: TButtonPanel
-    Left = 6
-    Height = 41
-    Top = 6
-    Width = 371
+    Left = 9
+    Height = 62
+    Top = 9
+    Width = 556
     Align = alClient
+    BorderSpacing.Around = 9
     OKButton.Name = 'OKButton'
     OKButton.DefaultCaption = True
     HelpButton.Name = 'HelpButton'

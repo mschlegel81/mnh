@@ -3,6 +3,7 @@ T_workspace=object(T_serializable)
   private
     savedAt:double; //nonpersistent
     scriptMenu:T_submenuModel; //nonpersistent
+    checkingForFileChanges:boolean; //nonpersistent
 
     mainForm:T_mnhIdeForm; //nonpersistent
     inputPageControl:TPageControl; //nonpersistent
@@ -51,11 +52,14 @@ T_workspace=object(T_serializable)
 
     FUNCTION getAllBreakpoints:T_searchTokenLocations;
     PROCEDURE removeBreakpoint(CONST loc:T_searchTokenLocation);
-
+  private
+    PROCEDURE closeQuietly(CONST toClose:P_editorMeta);
+  public
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
+    PROCEDURE checkForFileChanges;
 
     FUNCTION getMainFormCaption:string;
 
@@ -129,6 +133,7 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     setLength(oldMarkers,0);
 
     scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
+    checkingForFileChanges:=false;
 
     registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors');
     registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
@@ -426,24 +431,12 @@ PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
     runnerModel.evaluation.stepper^.setBreakpoints(getAllBreakpoints);
   end;
 
-PROCEDURE T_workspace.closeCurrentFile;
-  VAR toClose:P_editorMeta;
-      k:longint;
-      answer:integer;
-      mark:TSynEditMark;
+PROCEDURE T_workspace.closeQuietly(CONST toClose:P_editorMeta);
+  VAR k:longint;
       sheetToDestroy:TTabSheet;
+      newCurrent:P_editorMeta;
+      mark:TSynEditMark;
   begin
-    toClose:=currentEditor;
-    if toClose=nil then exit;
-
-    //Ask if editor shall be closed
-    if toClose^.editor.modified then begin
-      answer:=closeDialogForm.showOnClose(toClose^.pseudoName(true));
-      if answer=mrOk then begin
-        if not(saveCurrentFile(false,toClose)) then exit
-      end else if answer=mrCancel then exit;
-    end;
-
     //Editor shall be closed
     if not(toClose^.isPseudoFile) then begin
       //Copy marks
@@ -467,8 +460,26 @@ PROCEDURE T_workspace.closeCurrentFile;
     metas[k]:=metas[length(metas)-1];
     setLength(metas,length(metas)-1);
 
+    newCurrent:=currentEditor;
+    if newCurrent<>nil then newCurrent^.activate;
+  end;
+
+PROCEDURE T_workspace.closeCurrentFile;
+  VAR toClose:P_editorMeta;
+      answer:integer;
+  begin
     toClose:=currentEditor;
-    if toClose<>nil then toClose^.activate;
+    if toClose=nil then exit;
+
+    //Ask if editor shall be closed
+    if toClose^.editor.modified then begin
+      answer:=closeDialogForm.showOnClose(toClose^.pseudoName(true));
+      if answer=mrOk then begin
+        if not(saveCurrentFile(false,toClose)) then exit
+      end else if answer=mrCancel then exit;
+    end;
+
+    closeQuietly(toClose);
   end;
 
 FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil): boolean;
@@ -536,6 +547,43 @@ PROCEDURE T_workspace.renameWordUnderCursor;
     if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
     then meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+  end;
+
+PROCEDURE T_workspace.checkForFileChanges;
+  VAR metaIndex:longint=0;
+      m:P_editorMeta;
+      modalRes:longint;
+  FUNCTION fileIsModifiedOnFileSystem: boolean;
+    VAR currentFileAge:double;
+    begin
+      if (m^.fileInfo.filePath='') or (m^.editor.Modified) or (m^.fileInfo.isChanged) then exit(false);
+      fileAge(m^.fileInfo.filePath,currentFileAge);
+      result:=currentFileAge<>m^.fileInfo.fileAccessAge;
+    end;
+
+  begin
+    if checkingForFileChanges then exit;
+    checkingForFileChanges:=true;
+    while (metaIndex>=0) and (metaIndex<length(metas)) do begin
+      m:=metas[metaIndex];
+      with m^ do
+      if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
+        modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
+        if modalRes=mrOk then begin closeQuietly(m); dec(metaIndex); end;
+        if modalRes=mrClose then begin if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true; end else begin
+          fileInfo.ignoreDeleted:=true;
+          fileInfo.isChanged:=true;
+          updateSheetCaption;
+        end;
+      end else if fileIsModifiedOnFileSystem then begin
+        modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
+        if modalRes=mrOk then reloadFile();
+        if modalRes=mrClose then begin if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true; end else
+        fileInfo.isChanged:=true;
+      end;
+      inc(metaIndex);
+    end;
+    checkingForFileChanges:=false;
   end;
 
 FUNCTION T_workspace.getMainFormCaption:string;

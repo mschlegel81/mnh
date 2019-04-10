@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="65">
+    <Units Count="66">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -463,6 +463,14 @@
         <Filename Value="../core/operators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit64>
+      <Unit65>
+        <Filename Value="close/closedialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="closeDialogForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="closeDialog"/>
+      </Unit65>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

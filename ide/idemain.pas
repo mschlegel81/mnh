@@ -734,6 +734,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       FormDropFiles(Sender,ipcModel.getFilesToOpen);
       evaluationStateLabel.caption:=runnerModel.getStateLabel;
       if quitPosted and not(anyEvaluationRunning) then close;
+      workspace.checkForFileChanges;
     end;
 
   PROCEDURE fastUpdates; inline;
