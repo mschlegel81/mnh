@@ -85,6 +85,11 @@ CONST
 
 {$endif}
 {$ifdef includeImplementation}
+FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
+  begin
+    new(P_editorMetaProxy(result),create(fileName));
+  end;
+
 {$i func_defines.inc}
 FUNCTION editors_impl intFuncSignature;
   VAR meta:P_editorMeta;
@@ -195,7 +200,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     end;
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
-      if currentEditor<>nil then currentEditor^.activate;
       savedAt:=now;
       if currentFile<>'' then begin
         meta:=getExistingEditorForPath(currentFile);
@@ -203,7 +207,9 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
           inputPageControl.activePage:=meta^.tabsheet;
           meta^.activate;
         end;
-      end;
+      end else meta:=nil;
+      if meta=nil then meta:=currentEditor;
+      if meta<>nil then meta^.activate;
       {$ifdef debugMode}
       writeln('T_workspace loaded successfully @',stream.streamPos);
       {$endif}

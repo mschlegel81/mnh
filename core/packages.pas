@@ -149,6 +149,7 @@ TYPE
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
 FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
+VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
 VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
@@ -295,7 +296,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);
-    package.replaceCodeProvider(newFileCodeProvider(fileName));
+    package.replaceCodeProvider(newCodeProvider(fileName));
     try
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
@@ -378,7 +379,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
             exit;
           end;
         end;
-      new(pack,create(newFileCodeProvider(path),containingPackage^.mainPackage));
+      new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
       pack^.load(usecase[forCodeAssistance],globals,recycler,C_EMPTY_STRING_ARRAY);
@@ -477,7 +478,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         exit;
       end;
       recycler.cascadeDisposeToken(first);
-      new(importWrapper,create(newFileCodeProvider(helperUse.path),@self));
+      new(importWrapper,create(newCodeProvider(helperUse.path),@self));
       setLength(extendedPackages,length(extendedPackages)+1);
       extendedPackages[length(extendedPackages)-1]:=importWrapper;
 
@@ -1542,6 +1543,7 @@ FUNCTION T_package.getExtended(CONST idOrPath:string):P_abstractPackage;
 
 {$undef include_implementation}
 INITIALIZATION
+  newCodeProvider:=@fileWrappers.newFileCodeProvider;
   setupSandboxes;
 {$define include_initialization}
   {$ifdef fullVersion}
