@@ -363,7 +363,7 @@ CONST
 {tt_endRule}                    (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:''; helpLink:''), {No default ID, because tokenizer shall not produce this token}
 {tt_endExpression}              (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:''; helpLink:''), {No default ID, because tokenizer shall not produce this token}
 {tt_save}                       (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: save#Saves the current value store for future function calls'; helpLink:'/functions.html#beginSaveEnd'),
-{tt_return}                     (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: return#Returns from the current function with the given result value'; helpLink:''), //TODO: Write doc entry and link here
+{tt_return}                     (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: return#Returns from the current function with the given result value'; helpLink:'/specials.html#return'),
 {tt_pseudoFuncPointer}          (defaultHtmlSpan:'operator';   reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'; helpLink:'/operators.html#funcToExp'),
 {tt_braceOpen}                  (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Opening round bracket#Used as in default mathematical syntax.'; helpLink:''),
 {tt_braceClose}                 (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Closing round bracket#Used as in default mathematical syntax.'; helpLink:''),
@@ -378,8 +378,8 @@ CONST
 {tt_iifCheck}                   (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'; helpLink:'/operators.html#iifOps'),
 {tt_iifElse}                    (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'; helpLink:'/operators.html#iifOps'),
 {tt_separatorComma}             (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator comma'; helpLink:''),
-{tt_separatorCnt}               (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator ..#Used for constructing ranges and only allowed in that context'; helpLink:''), //TODO: Write doc entry and link here
-{tt_separatorMapItem}           (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator =>#Used for constructing key-value-pairs'; helpLink:''), //TODO: Write doc entry and link here
+{tt_separatorCnt}               (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator ..#Used for constructing ranges and only allowed in that context'; helpLink:'/types.html#lists'),
+{tt_separatorMapItem}           (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator =>#Used for constructing key-value-pairs'; helpLink:'/types.html#maps'),
 {tt_comparatorEq}               (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'; helpLink:'/operators.html#compOps'),
 {tt_comparatorNeq}              (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Not-equals operator#Returns true if the scalar comparands are type-compatible#and not equal#For list operands a list of booleans is returned'; helpLink:'/operators.html#compOps'),
 {tt_comparatorLeq}              (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Lesser-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser or equal to the right hand side#For list operands a list of booleans is returned'; helpLink:'/operators.html#compOps'),
@@ -437,11 +437,11 @@ CONST
 {tt_optionalParameters}         (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'; helpLink:'/functions.html#variadic'),
 {tt_modifier}                   (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier'; helpLink:'/functions.html#modifiers'),
 {tt_EOL}                        (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'; helpLink:''),
-{tt_docComment}                 (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'; helpLink:''), //TODO: Write doc entry and link here
-{tt_attributeComment}           (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'; helpLink:''), //TODO: Write doc entry and link here
+{tt_docComment}                 (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'; helpLink:'/packages.html#comments'),
+{tt_attributeComment}           (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'; helpLink:'packages.html#attributes'),
 {tt_use}                        (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'; helpLink:'/packages.html#importing'),
 {tt_include}                    (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'; helpLink:'/packages.html#including'),
-{tt_nameOf}                     (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Returns the name of the argument or the blank string if there is none'; helpLink:''), //TODO: Write doc entry and link here
+{tt_nameOf}                     (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Returns the name of the argument or the blank string if there is none'; helpLink:'/specials.html#nameof'),
 {tt_blank}                      (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'; helpLink:''));
 {$endif}
 TYPE
