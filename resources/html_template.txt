@@ -184,11 +184,11 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
 
 <h4><br><a name="attributes">Attributes</a></h4>
-An attribute is a comment starting with <code>//@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
+An attribute is a comment starting with <code>@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
 Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
 <!--mnh-->
-  //@key=value
-  //@keyWithoutValue 
+  @key=value
+  @keyWithoutValue 
 <!--end-->
 </code>
 <br>
@@ -779,7 +779,8 @@ used as a fallback.
       <li><h5><a href="#plainMod">plain</a></h5></li>
       <li><h5><a href="#localMod">local</a></h5></li>
       <li><h5><a href="#typeMod">(duck)type</a></h5></li>
-	  <li><h5><a href="#curryMod">curry</a></h5></li></ul></li></ul>
+	    <li><h5><a href="#curryMod">curry</a></h5></li></ul></li>
+  </ul>
   <li><h3><a href="specials.html">Special constructs</a></h3></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
@@ -852,7 +853,7 @@ The declaration may be preceded by <a href="#modifiers">modifiers</a>, the patte
   f(x)->sin(1/x);
 <!--end-->
 </code>
-Patterns may consist of any number of elements:<code>
+Patterns may consist of any number of elements (actually, there probably is a limit somewhere around 4 million elements):<code>
 <!--mnh-->
   g(a,b,c,d,e,f,g)->a+b*c/d^e-f*g;
   randomDigit->floor(random*10);
@@ -1358,12 +1359,30 @@ out> [2,5,8]
 </code>
 
 <h3><br><a name="sets">Sets</a></h3>
-Sets are internally represented as hash maps. Like lists they can be iterated using the <a href="specials.html#each">each</a> construct.<br>
+Sets are internally represented as hash maps. Like lists they can be iterated e.g. using the <a href="specials.html#each">each</a> construct.<br>
+Maps are constructed as lists (where each element is a key-value-pair) and then converted to a map:<code>
+<!--mnh-->
+   in> [1..5, 11..15].toSet;
+  out> [1,2,3,4,5,11,12,13,14,15].toSet
+<!--end-->
+</code>
 Unlike lists, access via index or boolean mask is not possible.<br>
 If a set is cast to a list the list will be sorted. If a list is cast to a set, naturally, duplicates will be lost.
 
 <h3><br><a name="maps">Maps</a></h3>
-Maps are internally represented as hash maps. Their entry-sets can be iterated using the <a href="specials.html#each">each</a> construct.<br>
+Maps are internally represented as hash maps. Their entry-sets can be iterated e.g. using the <a href="specials.html#each">each</a> construct.<br>
+Maps are constructed as lists (where each element is a key-value-pair) and then converted to a map. For convenience, there is the <code>=&gt;</code> operator 
+which constructs a key-value-pair (or generally speaking a list of two elements):<code>
+<!--mnh-->
+   in> 1 => 2;
+  out> [1,2]
+   in> ['A'=>1,'B'=>2,'C'=>3].toMap;
+  out> ['A'=>1,
+   ..>  'B'=>2,
+   ..>  'C'=>3].toMap
+<!--end-->
+</code>
+
 Element access by key is possible (and encouraged for performance reasons). For maps, the following statements will return the same result:<code>
 <!--mnh-->
   map.get(key);
@@ -1400,6 +1419,8 @@ For compound accesses there also is the getAll method, whose behavior is like th
 </ul>
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
+<li><h4><a href="#return">return</a></h4></li>
+<li><h4><a href="#nameof">nameOf</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h3></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
@@ -1571,6 +1592,42 @@ Where <code>condition</code> is an expression returning a boolean value and body
  in> greatestCommonDivisor(12,102);
 out> 6
 <!--end-->
+</code>
+
+<h3><br><a name="return">return</a></h3>
+The <code>return</code> construct can be used for early exit from a code block:<code>
+<!--mnh-->
+  begin
+    return 5;
+    //This will never be executed
+    void;
+  end;
+<!--end-->
+</code>
+It is also possible to use <code>return</code> to return a result value from inside of a <a href="#while"><code>while</code></a> or <a href="#each"><code>each</code></a> construct:<code>
+<!--mnh-->
+  randomPrime(randomSeed:Int)->
+    intRandomGenerator(2^60,randomSeed)
+    .each(i,i.isPrime ? return i : void);
+<!--end-->
+</code>
+
+
+<h3><br><a name="nameof">nameOf</a></h3>
+The <code>nameOf</code> construct can be used for returning the name of a variable.<code>
+<!--mnh-->
+   in> begin local a:=3; nameOf a; end;
+  out> 'a'
+  
+   in> X :=3;
+   in> nameOf X;
+  out> ''
+  
+   in> nameOf :: X;
+  out> 'X'
+  
+   in> nameOf{$1+2};
+  out> 'inline_expression'<!--end-->
 </code>
 
 </div>

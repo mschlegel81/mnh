@@ -5,7 +5,7 @@ UNIT codeAssistance;
 INTERFACE
 
 USES
-  Classes, sysutils, Controls, Graphics, Dialogs, SynEdit,
+  Classes, Controls, Graphics, Dialogs, SynEdit,
     myGenerics,
   basicTypes,
   mnh_constants,
@@ -37,11 +37,12 @@ TYPE
       referenceCount:longint;
       localErrors,externalErrors:T_storedMessages;
       localIdInfos:P_localIdInfos;
+      responseStateHash:T_hashInt;
       CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos);
       DESTRUCTOR destroy;
     public
       package:P_package;
-      stateHash:T_hashInt;
+      PROPERTY stateHash:T_hashInt read responseStateHash;
       FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
@@ -59,6 +60,7 @@ PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 
 IMPLEMENTATION
+USES sysutils;
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
@@ -125,8 +127,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       enterCriticalSection(codeAssistanceCs);
       result:=shuttingDown or
               (codeAssistanceRequest<>nil) and
-              ((codeAssistanceResponse=nil) or
-               (codeAssistanceResponse^.package^.getCodeProvider<>codeAssistanceRequest) or
+              ((codeAssistanceResponse^.package^.getCodeProvider<>codeAssistanceRequest) or
                (codeAssistanceResponse^.stateHash<>codeAssistanceRequest^.stateHash));
       leaveCriticalSection(codeAssistanceCs);
     end;
@@ -254,7 +255,7 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
   begin
     referenceCount:=1;
     package:=package_;
-    stateHash:=stateHash_;
+    responseStateHash:=stateHash_;
     localIdInfos:=localIdInfos_;
 
     setLength(localErrors,0);

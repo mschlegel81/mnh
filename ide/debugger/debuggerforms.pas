@@ -103,7 +103,9 @@ PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
 
 PROCEDURE TDebuggerForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   begin
-    CanClose:=currentSnapshot<>nil;
+    CanClose:=not(runnerModel.anyRunning(false)) or
+              not(runnerModel.debugMode) or
+              (currentSnapshot=nil);
   end;
 
 PROCEDURE TDebuggerForm.FormDestroy(Sender: TObject);
