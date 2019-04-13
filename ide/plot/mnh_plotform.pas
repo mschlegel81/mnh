@@ -535,6 +535,7 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 
 PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
+    performSlowUpdate;
     if attachedToMainForm then mainForm.ActiveControl:=self;
     if ssLeft in Shift then begin
       lastMouseX:=x;

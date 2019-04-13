@@ -593,6 +593,7 @@ FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl):boolean;
     else raise Exception.create('Not an mnhComponent form!');
     newForm.ManualDock(nil);
     newForm.BringToFront;
+    newForm.myComponentParent:=cpNone;
     newForm.ShowInTaskBar:=stAlways;
     result:=true;
   end;
@@ -672,7 +673,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
       end;
     end;
     form.myComponentParent:=componentParent;
-    form.Show;
+    form.showComponent;
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 
