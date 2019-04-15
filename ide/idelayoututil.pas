@@ -189,6 +189,7 @@ PROCEDURE T_mnhComponentForm.showComponent;
       Show;
       BringToFront;
     end else begin
+      Show;
       PageControl.activePage:=page;
       if mainForm<>nil then mainForm.ActiveControl:=self;
     end;

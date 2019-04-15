@@ -15,7 +15,6 @@ USES Classes,
      out_adapters;
 TYPE
   TplotForm = class;
-
   P_queryPlotClosedMessage=^T_queryPlotClosedMessage;
 
   T_queryPlotClosedMessage=object(T_payloadMessage)
@@ -179,8 +178,6 @@ TYPE
     PROCEDURE pushSettingsToPlotContainer();
     PROCEDURE pushFontSizeToPlotContainer(CONST newSize:double);
     PROCEDURE doPlot;
-    FUNCTION timerTick:boolean;
-    FUNCTION wantTimerInterval:longint;
   end;
 
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
@@ -538,6 +535,8 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 
 PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
+    performSlowUpdate;
+    if attachedToMainForm then mainForm.ActiveControl:=self;
     if ssLeft in Shift then begin
       lastMouseX:=x;
       lastMouseY:=y;
@@ -594,13 +593,55 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TplotForm.performSlowUpdate;
+  PROCEDURE updateAttachment;
+    begin
+      if myComponentParent=cpNone then begin
+        attachedToMainForm:=false;
+        StatusBar.visible:=true;
+      end else begin
+        attachedToMainForm:=true;
+        StatusBar.visible:=false;
+      end;
+    end;
   begin
-
+    updateAttachment;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
+  FUNCTION frameInterval:double;
+    CONST intendedSecPerFrame:array[0..10] of double=(1,1/2,1/5,1/10,1/15,1/20,1/25,1/30,1/40,1/50,0);
+    begin
+      result:=intendedSecPerFrame[animationSpeedTrackbar.position];
+    end;
+
   begin
-    timerTick;
+    if relatedPlot=nil then exit;
+    relatedPlot^.startGuiInteraction;
+    if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
+
+      if animateCheckBox.checked and
+         //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
+         (frameInterval-eTimer.elapsed<0.02) and
+         relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
+      then begin
+        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
+        eTimer.clear;
+        eTimer.start;
+        inc(framesSampled);
+        if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
+          animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
+          fpsSamplingStart:=now;
+          framesSampled:=0;
+        end;
+      end;
+      frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
+      frameTrackBar.position:=animationFrameIndex;
+      frameIndexLabel.caption:=intToStr(animationFrameIndex);
+      if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
+      if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
+                              else frameTrackBar.frequency:= 1;
+    end;
+    relatedPlot^.doneGuiInteraction;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;
@@ -712,20 +753,8 @@ PROCEDURE TplotForm.doPlot;
       end;
     end;
 
-  PROCEDURE updateAttachment;
-    begin
-      if myComponentParent=cpNone then begin
-        attachedToMainForm:=false;
-        StatusBar.visible:=true;
-      end else begin
-        attachedToMainForm:=true;
-        StatusBar.visible:=false;
-      end;
-    end;
-
   begin
     if relatedPlot=nil then exit;
-    updateAttachment;
     relatedPlot^.startGuiInteraction;
     updateInteractiveSection;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
@@ -738,51 +767,6 @@ PROCEDURE TplotForm.doPlot;
     relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
     relatedPlot^.logPlotDone;
     relatedPlot^.doneGuiInteraction;
-  end;
-
-FUNCTION TplotForm.timerTick: boolean;
-  FUNCTION frameInterval:double;
-    CONST intendedSecPerFrame:array[0..10] of double=(1,1/2,1/5,1/10,1/15,1/20,1/25,1/30,1/40,1/50,0);
-    begin
-      result:=intendedSecPerFrame[animationSpeedTrackbar.position];
-    end;
-
-  begin
-    if relatedPlot=nil then exit(false);
-    result:=false;
-    relatedPlot^.startGuiInteraction;
-    if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
-
-      if animateCheckBox.checked and
-         //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
-         (frameInterval-eTimer.elapsed<0.02) and
-         relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
-      then begin
-        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
-        eTimer.clear;
-        eTimer.start;
-        inc(framesSampled);
-        if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
-          animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
-          fpsSamplingStart:=now;
-          framesSampled:=0;
-        end;
-        result:=true;
-      end;
-      frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
-      frameTrackBar.position:=animationFrameIndex;
-      frameIndexLabel.caption:=intToStr(animationFrameIndex);
-      if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
-      if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
-                              else frameTrackBar.frequency:= 1;
-    end else result:=false;
-    relatedPlot^.doneGuiInteraction;
-  end;
-
-FUNCTION TplotForm.wantTimerInterval: longint;
-  begin
-    if animateCheckBox.checked then result:=1
-                               else result:=50;
   end;
 
 {$i func_defines.inc}
