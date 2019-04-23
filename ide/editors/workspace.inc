@@ -86,6 +86,7 @@ CONST
 
   LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
 
+FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
 {$endif}
 {$ifdef includeImplementation}
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
