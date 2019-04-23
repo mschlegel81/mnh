@@ -114,6 +114,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
       else if stackTracing then contextType:=ect_stackTracing
                            else contextType:=ect_normal;
     end;
+    if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     if mainCall then evaluation.callMain(workspace.currentEditor,mainParameters,contextType,executionDir(workspace.currentEditor))
                 else evaluation.evaluate(workspace.currentEditor,               contextType,executionDir(workspace.currentEditor));
     lastStart.mainCall:=mainCall;
@@ -133,7 +134,7 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
       if callLightFlavour then executor:=settings.lightFlavourLocation
                           else executor:=paramStr(0);
     end;
-
+    if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     append(callParameters,workspace.currentEditor^.getPath);
     append(callParameters,splitCommandLine(trim(mainParameters)));
     runCommandAsyncOrPipeless(executor,callParameters,true,executionDir(workspace.currentEditor));
