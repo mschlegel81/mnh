@@ -27,7 +27,7 @@ object SettingsForm: TSettingsForm
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 267
+      ClientHeight = 257
       ClientWidth = 357
       object Label2: TLabel
         AnchorSideLeft.Control = TabSheet_display
@@ -152,7 +152,7 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_lineEnding: TTabSheet
       Caption = 'line ending'
-      ClientHeight = 267
+      ClientHeight = 257
       ClientWidth = 357
       object GroupBox1: TGroupBox
         Left = 0
@@ -369,13 +369,13 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 285
-      ClientWidth = 345
+      ClientHeight = 257
+      ClientWidth = 357
       object installButton: TButton
         Left = 0
         Height = 35
         Top = 0
-        Width = 345
+        Width = 357
         Align = alTop
         AutoSize = True
         Caption = 'Create file associations'
@@ -386,7 +386,7 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 35
         Top = 35
-        Width = 345
+        Width = 357
         Align = alTop
         AutoSize = True
         Caption = 'Uninstall and quit immediately'
@@ -397,7 +397,7 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 35
         Top = 70
-        Width = 345
+        Width = 357
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
@@ -408,11 +408,43 @@ object SettingsForm: TSettingsForm
         Left = 0
         Height = 38
         Top = 105
-        Width = 345
+        Width = 357
         Align = alTop
         Caption = 'togglePortableButton'
         OnClick = togglePortableButtonClick
         TabOrder = 3
+      end
+      object Label8: TLabel
+        AnchorSideLeft.Control = togglePortableButton
+        AnchorSideTop.Control = togglePortableButton
+        AnchorSideTop.Side = asrBottom
+        Left = 0
+        Height = 25
+        Top = 143
+        Width = 103
+        Align = alCustom
+        Caption = 'light location'
+        ParentColor = False
+      end
+      object FileNameEdit1: TFileNameEdit
+        AnchorSideLeft.Control = Label8
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = togglePortableButton
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = TabSheet_install
+        AnchorSideRight.Side = asrBottom
+        Left = 103
+        Height = 33
+        Top = 143
+        Width = 254
+        FilterIndex = 0
+        HideDirectories = False
+        ButtonWidth = 34
+        NumGlyphs = 1
+        Anchors = [akTop, akLeft, akRight]
+        MaxLength = 0
+        TabOrder = 4
+        OnEditingDone = FileNameEdit1EditingDone
       end
     end
   end
