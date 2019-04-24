@@ -181,6 +181,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
+    gui_started:=true;
     new(dockSites[cpNone        ],create(cpNone        ,nil         ,nil      ,nil     ,nil         ));
     new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1,miUndock1,miClose1,UndockPopup1));
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2,miUndock2,miClose2,UndockPopup2));
@@ -190,7 +191,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
-    subTimerCounter:=999;
+    subTimerCounter:=0;
     ideLayoutUtil.mainForm:=self;
 
     initializePlotForm(PlotPositionLabel);
@@ -235,7 +236,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
-    gui_started:=true;
 
     runnerModel.ensureEditScripts;
 
