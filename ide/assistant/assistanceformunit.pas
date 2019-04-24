@@ -69,6 +69,7 @@ PROCEDURE TAssistanceForm.performSlowUpdate;
       if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
       paintedWithStateHash:=codeAssistanceResponse^.stateHash;
     end;
+    disposeCodeAssistanceResponse(codeAssistanceResponse);
   end;
 
 PROCEDURE TAssistanceForm.performFastUpdate;
