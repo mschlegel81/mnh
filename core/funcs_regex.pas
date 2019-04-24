@@ -269,7 +269,9 @@ FUNCTION regexReplace_imp intFuncSignature;
     end;
   end;
 
+{$ifdef fullVersion}
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/en/regexp_syntax.html">the used library''s website.</a>';
+{$endif}
 INITIALIZATION
   funcs.registerRule(REGEX_NAMESPACE,'validateRegex' ,@regexValidate_imp      ,ak_variadic_1{$ifdef fullVersion},'validateRegex(regex:String);//Returns true iff regex is valid, false otherwise#validateRegex(regex:String,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise'{$endif});
   funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,ak_binary    {$ifdef fullVersion},'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif});

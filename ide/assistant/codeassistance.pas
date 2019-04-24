@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, Controls, Graphics, Dialogs, SynEdit,
-    myGenerics,
+  myGenerics,
   basicTypes,
   mnh_constants,
   fileWrappers,
@@ -72,8 +72,8 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
       loadMessages:T_storedMessages;
   begin
     if givenGlobals=nil then begin
-      new(globals,create(@adapters));
       adapters.createErrorHolder(nil,C_errorsAndWarnings);
+      new(globals,create(@adapters));
     end else begin
       globals:=givenGlobals;
       givenAdapters^.clear;
@@ -127,8 +127,8 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       enterCriticalSection(codeAssistanceCs);
       result:=shuttingDown or
               (codeAssistanceRequest<>nil) and
-              ((codeAssistanceResponse^.package^.getCodeProvider<>codeAssistanceRequest) or
-               (codeAssistanceResponse^.stateHash<>codeAssistanceRequest^.stateHash));
+              ((codeAssistanceResponse^.package^.getCodeProvider^.getPath<>codeAssistanceRequest^.getPath) or
+               (codeAssistanceResponse^.stateHash                        <>codeAssistanceRequest^.stateHash));
       leaveCriticalSection(codeAssistanceCs);
     end;
   VAR recycler:T_recycler;
@@ -180,8 +180,8 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
     then dispose(codeAssistanceRequest,destroy);
     codeAssistanceRequest:=source;
     if not(codeAssistantIsRunning) then begin
-      beginThread(@codeAssistanceThread);
       codeAssistantIsRunning:=true;
+      beginThread(@codeAssistanceThread);
     end;
     leaveCriticalSection(codeAssistanceCs);
   end;

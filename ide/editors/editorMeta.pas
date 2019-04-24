@@ -585,6 +585,7 @@ PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Sh
 DESTRUCTOR T_editorMeta.destroy;
   begin
     inherited destroy;
+    fileInfo.filePath:='';
     disposeCodeAssistanceResponse(latestAssistanceReponse);
   end;
 

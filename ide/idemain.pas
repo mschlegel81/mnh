@@ -594,7 +594,7 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
-  PROCEDURE slowUpdates; inline;
+  PROCEDURE slowUpdates;
     PROCEDURE drawMemoryUsage;
       VAR fraction:double;
 
@@ -621,7 +621,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         if edit^.isPseudoFile
         then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
         else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-      end else EditLocationLabel.caption:='';
+      end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
 
       performSlowUpdates;
       drawMemoryUsage;
@@ -633,12 +633,12 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       slowUpdating:=false;
     end;
 
-  PROCEDURE fastUpdates; inline;
+  PROCEDURE fastUpdates;
     PROCEDURE enableItems;
       VAR unlocked:boolean;
           canRun:boolean;
       begin
-        miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
+        miHaltEvaluation.enabled:=runnerModel.anyRunning();
         canRun:=runnerModel.canRun;
         unlocked:=not(runnerModel.areEditorsLocked);
         miRunDirect.enabled:=canRun;
