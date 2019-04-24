@@ -618,7 +618,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       edit:=workspace.currentEditor;
       if (edit<>nil) then begin
         edit^.pollAssistanceResult;
-        EditLocationLabel.caption:=edit^.caretLabel;
         if edit^.isPseudoFile
         then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
         else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
@@ -650,11 +649,19 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         smScripts  .enabled:=unlocked;
         miReplace  .enabled:=unlocked;
       end;
+
+    FUNCTION caretLabel(edit:TSynEdit):string;
+      begin
+        result:=intToStr(edit.CaretY)+','+intToStr(edit.CaretX);
+      end;
+
     begin
       if fastUpdating then exit;
       fastUpdating:=true;
       performFastUpdates;
       runnerModel.flushMessages;
+
+      if ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 
       if askForm.displayPending then askForm.Show;
       enableItems;

@@ -192,20 +192,22 @@ object IdeMainForm: TIdeMainForm
       ParentFont = False
     end
     object EditLocationLabel: TLabel
-      Left = 234
+      Left = 254
       Height = 15
       Top = 1
       Width = 1
       Align = alLeft
       Alignment = taCenter
+      BorderSpacing.Left = 20
+      BorderSpacing.Right = 20
       ParentColor = False
       ParentFont = False
     end
     object PlotPositionLabel: TLabel
-      Left = 235
+      Left = 275
       Height = 15
       Top = 1
-      Width = 213
+      Width = 173
       Align = alClient
       ParentColor = False
       ParentFont = False

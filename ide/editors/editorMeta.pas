@@ -107,7 +107,6 @@ T_editorMeta=object(T_basicEditorMeta)
 
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
-    FUNCTION caretLabel:string;
     PROCEDURE reloadFile();
 
     //Externally triggered actions
@@ -634,11 +633,6 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
       if short then result:=extractFileName(fileInfo.filePath)
                else result:=fileInfo.filePath;
     end else result:='<new '+intToStr(metaIndex)+'>';
-  end;
-
-FUNCTION T_editorMeta.caretLabel:string;
-  begin
-    result:=intToStr(editor_.CaretY)+','+intToStr(editor_.CaretX);
   end;
 
 PROCEDURE T_editorMeta.pollAssistanceResult;
