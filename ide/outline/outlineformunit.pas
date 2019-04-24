@@ -344,7 +344,7 @@ PROCEDURE TOutlineForm.performSlowUpdate;
       if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
       caResponse:=codeAssistanceResponse;
       updateOutlineTree;
-    end;
+    end else disposeCodeAssistanceResponse(codeAssistanceResponse);
   end;
 
 PROCEDURE TOutlineForm.performFastUpdate;
