@@ -47,7 +47,7 @@ TYPE
     treeForms: array of TVarTreeViewForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
-    FUNCTION flushToGui:T_messageTypeSet; virtual;
+    FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -85,7 +85,7 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
     setLength(treeForms,0);
   end;
 
-FUNCTION T_treeAdapter.flushToGui: T_messageTypeSet;
+FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tree:TVarTreeViewForm;

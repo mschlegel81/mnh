@@ -133,8 +133,9 @@ PROCEDURE TOutputForm.performFastUpdate;
   VAR oldActive:TWinControl;
   begin
     adapter.jumpToEnd:=cbShowOnOutput.checked;
+    adapter.autoflush:=not(cbFreezeOutput.checked);
     if not(cbFreezeOutput.checked) then begin
-      if (adapter.flushToGui<>[])
+      if (adapter.flushToGui(true)<>[])
       and (cbShowOnOutput.checked)
       then begin
         if mainForm<>nil

@@ -18,7 +18,7 @@ TYPE
   T_guiEventsAdapter=object(T_abstractGuiOutAdapter)
     form:T_mnhIdeForm;
     CONSTRUCTOR create(CONST guiForm:T_mnhIdeForm);
-    FUNCTION flushToGui:T_messageTypeSet; virtual;
+    FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
   end;
 
 VAR outputBehavior,
@@ -66,7 +66,7 @@ CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
     form:=guiForm;
   end;
 
-FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
+FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR message:P_storedMessage;
   begin
     system.enterCriticalSection(cs);

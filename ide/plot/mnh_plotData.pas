@@ -198,7 +198,7 @@ TYPE
       CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      FUNCTION flushToGui:T_messageTypeSet; virtual;
+      FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROCEDURE logPlotDone;
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
@@ -1512,7 +1512,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plotSystem.flushToGui:T_messageTypeSet;
+FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
       m:P_storedMessage;
