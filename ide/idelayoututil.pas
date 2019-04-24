@@ -8,6 +8,7 @@ USES
   Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages;
 
 TYPE
+  T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
   T_ideComponent=(icOutline,
                   icHelp,
                   icAssistance,
@@ -85,6 +86,7 @@ TYPE
     PROCEDURE onDebuggerEvent;                                virtual; abstract;
     PROCEDURE onEndOfEvaluation;                              virtual; abstract;
     protected
+      windowStateForUpdate:T_windowStateForUpdate;
       dockSites:array[T_componentParent] of P_mnhDockSiteModel;
   end;
 
@@ -529,7 +531,11 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeLongint(mainForm.Left);
     stream.writeLongint(mainForm.height);
     stream.writeLongint(mainForm.width);
-    stream.writeByte(byte(mainForm.WindowState));
+    case mainForm.WindowState of
+      wsMaximized   :  stream.writeByte(byte(wsfuMaximized));
+      wsfuFullscreen:  stream.writeByte(byte(wsfuFullscreen));
+      else             stream.writeByte(byte(wsfuNormal));
+    end;
 
     for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
 
@@ -545,19 +551,12 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
   VAR cp:T_componentParent;
       ic:T_ideComponent;
-      intendedWindowState:TWindowState;
   begin
     mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
     mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
     mainForm.width :=min(max(stream.readLongint,100),screen.width);
-    intendedWindowState:=TWindowState(stream.readByte([byte(wsFullScreen),byte(wsMaximized),byte(wsNormal)]));
-    if stream.allOkay then begin
-      if intendedWindowState=wsFullScreen
-      then mainForm.BorderStyle:=bsNone
-      else mainForm.BorderStyle:=bsSizeable;
-      mainForm.WindowState:=intendedWindowState;
-    end;
+    mainForm.windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
 
     for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
     result:=true;
@@ -571,8 +570,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT active
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     result:=stream.allOkay;
     if not(result) then begin
-      mainForm.BorderStyle:=bsSizeable;
-      mainForm.WindowState:=wsMaximized;
+      mainForm.windowStateForUpdate:=wsfuNone;
       for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
       doShowSplashScreen:=true;
       htmlDocGeneratedForCodeHash:='';

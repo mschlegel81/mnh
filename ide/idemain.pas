@@ -187,7 +187,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2,miUndock2,miClose2,UndockPopup2));
     new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3,miUndock3,miClose3,UndockPopup3));
     new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4,miUndock4,miClose4,UndockPopup4));
-
+    windowStateForUpdate:=wsfuNone;
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
@@ -244,6 +244,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     {$ifdef LINUX}
     miIncFontSize.ShortCut:=16605;
     {$endif}
+    miFocusEditorClick(Sender);
   end;
 
 PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
@@ -513,13 +514,8 @@ PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
   begin
     if WindowState=wsFullScreen
-    then begin
-      BorderStyle:=bsSizeable;
-      WindowState:=wsMaximized;
-    end else begin
-      BorderStyle:=bsNone;
-      WindowState:=wsFullScreen;
-    end;
+    then windowStateForUpdate:=wsfuMaximized
+    else windowStateForUpdate:=wsfuFullscreen;
   end;
 
 PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
@@ -655,6 +651,15 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         result:=intToStr(edit.CaretY)+','+intToStr(edit.CaretX);
       end;
 
+    PROCEDURE processPendingResize;
+      begin
+        case windowStateForUpdate of
+          wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     windowStateForUpdate:=wsfuNone; end;
+          wsfuMaximized : begin BorderStyle:=bsSizeable; WindowState:=wsMaximized;  windowStateForUpdate:=wsfuNone; end;
+          wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; windowStateForUpdate:=wsfuNone; end;
+        end;
+      end;
+
     begin
       if fastUpdating then exit;
       fastUpdating:=true;
@@ -665,6 +670,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
       if askForm.displayPending then askForm.Show;
       enableItems;
+      processPendingResize;
       fastUpdating:=false;
     end;
 
