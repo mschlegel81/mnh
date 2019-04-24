@@ -382,6 +382,7 @@
         <Filename Value="splash/mnh_splash.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="SplashForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit47>
       <Unit48>
