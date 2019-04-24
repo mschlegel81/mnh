@@ -38,6 +38,7 @@ TYPE
     PROCEDURE updateWordWrap;
   public
     adapter:T_synOutAdapter;
+    PROCEDURE updateAfterSettingsRestore;
   end;
 
 FUNCTION ensureStdOutAdapter:TOutputForm;
@@ -53,14 +54,9 @@ FUNCTION ensureStdOutAdapter: TOutputForm;
 
 {$R *.lfm}
 
-PROCEDURE TOutputForm.FormCreate(Sender: TObject);
+PROCEDURE TOutputForm.updateAfterSettingsRestore;
   begin
-    registerFontControl(OutputSynEdit,ctEditor);
-    outputHighlighter:=TSynMnhSyn.create(self,msf_output);
-    OutputSynEdit.highlighter:=outputHighlighter;
-    OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
-    OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
-    with outputBehavior do begin
+    with guiOutAdapters.outputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
       miEchoInput        .checked:=echo_input           ;
       miEchoOutput       .checked:=echo_output          ;
@@ -72,6 +68,16 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
       miErrorL3.checked:=suppressWarningsUnderLevel=3;
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
+    adapter.outputBehavior:=guiOutAdapters.outputBehavior;
+  end;
+
+PROCEDURE TOutputForm.FormCreate(Sender: TObject);
+  begin
+    registerFontControl(OutputSynEdit,ctEditor);
+    outputHighlighter:=TSynMnhSyn.create(self,msf_output);
+    OutputSynEdit.highlighter:=outputHighlighter;
+    OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
+    OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     adapter.create(self,OutputSynEdit,outputBehavior);
   end;
 

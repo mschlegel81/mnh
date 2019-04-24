@@ -236,7 +236,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
-
+    ensureStdOutAdapter.updateAfterSettingsRestore;
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
