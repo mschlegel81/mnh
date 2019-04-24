@@ -593,44 +593,36 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
-  PROCEDURE drawMemoryUsage;
-    VAR fraction:double;
-
-    begin
-      MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
-      if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
-      if fraction<0 then fraction:=0;
-
-      MemoryUsageShape.width:=round(fraction*MemoryUsageFrame.width);
-      MemoryUsageShape.Brush.color:=
-        round(255*max(0,min(1,2-2*fraction))) shl 8 or
-        round(255*max(0,min(1,  2*fraction)));
-    end;
-
-  PROCEDURE enableItems;
-    VAR unlocked:boolean;
-        canRun:boolean;
-    begin
-      if fastUpdating then exit;
-      fastUpdating:=true;
-      miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
-      canRun:=runnerModel.canRun;
-      unlocked:=not(runnerModel.areEditorsLocked);
-      miRunDirect.enabled:=canRun;
-      miRunScript.enabled:=canRun;
-      miSave     .enabled:=unlocked;
-      miSaveAs   .enabled:=unlocked;
-      miRestore  .enabled:=unlocked;
-      smScripts  .enabled:=unlocked;
-      miReplace  .enabled:=unlocked;
-      fastUpdating:=false;
-    end;
 
   PROCEDURE slowUpdates; inline;
+    PROCEDURE drawMemoryUsage;
+      VAR fraction:double;
+
+      begin
+        MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
+        if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
+        if fraction<0 then fraction:=0;
+
+        MemoryUsageShape.width:=round(fraction*MemoryUsageFrame.width);
+        MemoryUsageShape.Brush.color:=
+          round(255*max(0,min(1,2-2*fraction))) shl 8 or
+          round(255*max(0,min(1,  2*fraction)));
+      end;
+
+    VAR edit:P_editorMeta;
     begin
       if slowUpdating then exit;
       slowUpdating:=true;
       if workspace.savingRequested then saveIdeSettings;
+
+      edit:=workspace.currentEditor;
+      if (edit<>nil) then begin
+        edit^.pollAssistanceResult;
+        EditLocationLabel.caption:=edit^.caretLabel;
+        if edit^.isPseudoFile
+        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+      end else EditLocationLabel.caption:='';
 
       performSlowUpdates;
       drawMemoryUsage;
@@ -643,21 +635,30 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     end;
 
   PROCEDURE fastUpdates; inline;
-    VAR edit:P_editorMeta;
+    PROCEDURE enableItems;
+      VAR unlocked:boolean;
+          canRun:boolean;
+      begin
+        miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
+        canRun:=runnerModel.canRun;
+        unlocked:=not(runnerModel.areEditorsLocked);
+        miRunDirect.enabled:=canRun;
+        miRunScript.enabled:=canRun;
+        miSave     .enabled:=unlocked;
+        miSaveAs   .enabled:=unlocked;
+        miRestore  .enabled:=unlocked;
+        smScripts  .enabled:=unlocked;
+        miReplace  .enabled:=unlocked;
+      end;
     begin
-      edit:=workspace.currentEditor;
-      if (edit<>nil) then begin
-        edit^.pollAssistanceResult;
-        EditLocationLabel.caption:=edit^.caretLabel;
-        if edit^.isPseudoFile
-        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-      end else EditLocationLabel.caption:='';
+      if fastUpdating then exit;
+      fastUpdating:=true;
       performFastUpdates;
       runnerModel.flushMessages;
 
       if askForm.displayPending then askForm.Show;
       enableItems;
+      fastUpdating:=false;
     end;
 
   begin

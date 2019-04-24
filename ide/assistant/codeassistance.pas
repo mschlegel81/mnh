@@ -167,10 +167,9 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider): P_codeAssistanceResponse;
   begin
     enterCriticalSection(codeAssistanceCs);
-    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath) then begin
-      result:=codeAssistanceResponse;
-      interLockedIncrement(result^.referenceCount);
-    end else result:=nil;
+    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath)
+    then result:=codeAssistanceResponse^.rereferenced
+    else result:=nil;
     leaveCriticalSection(codeAssistanceCs);
   end;
 
