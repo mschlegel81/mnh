@@ -112,7 +112,7 @@ T_editorMeta=object(T_basicEditorMeta)
     //Externally triggered actions
     PROCEDURE pollAssistanceResult;
 
-    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
+    FUNCTION getCodeAssistanceDataRereferenced:P_codeAssistanceResponse;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
 end;
 T_bookmarkIndex=0..9;
@@ -185,7 +185,7 @@ PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
     setLanguage(T_language(TMenuItem(Sender).Tag));
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST mIdx:longint);
+CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
   begin
     metaIndex:=mIdx;
     tabsheet:=TTabSheet.create(workspace.inputPageControl);
@@ -380,6 +380,7 @@ PROCEDURE T_editorMeta.triggerCheck;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
   begin
+    if response=nil then exit;
     disposeCodeAssistanceResponse(latestAssistanceReponse);
     latestAssistanceReponse:=response;
     completionLogic.assignEditor(editor_,latestAssistanceReponse);
@@ -438,22 +439,22 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
       editor.SetTextBetweenPoints(lineStart,lineEnd,lineTxt);
     end;
 
+  VAR tempAssistanceResponse:P_codeAssistanceResponse;
   begin
     if (language<>LANG_MNH) then exit;
-    //TODO: Is this really necessary if we use proxies?
-    if renameInOtherEditors then saveFile();
+    if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+
     recycler.initRecycler;
-    updateAssistanceResponse(doCodeAssistanceSynchronously(@self,recycler));
+    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFileProxy(pseudoName),recycler);
     recycler.cleanup;
 
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to lines.count-1 do begin
       lineTxt:=lines[lineIndex];
-      if latestAssistanceReponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
+      if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
     end;
     editor.EndUpdate;
-    InputEditChange(nil);
-    if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+    disposeCodeAssistanceResponse(tempAssistanceResponse);
   end;
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
@@ -642,6 +643,13 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
     if language_<>LANG_MNH then exit;
     response:=getLatestAssistanceResponse(@self);
     if response<>nil then updateAssistanceResponse(response);
+  end;
+
+FUNCTION T_editorMeta.getCodeAssistanceDataRereferenced: P_codeAssistanceResponse;
+  begin
+    if latestAssistanceReponse=nil
+    then exit(nil)
+    else exit(latestAssistanceReponse^.rereferenced);
   end;
 
 FUNCTION getHelpText(OUT helpLink:string):string;

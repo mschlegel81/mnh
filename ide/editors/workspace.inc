@@ -610,8 +610,7 @@ FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
     meta:=currentEditor;
     if meta=nil
     then result:=nil
-    else result:=meta^.latestAssistanceReponse;
-    if result<>nil then result^.rereferenced;
+    else result:=meta^.getCodeAssistanceDataRereferenced;
   end;
 
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
