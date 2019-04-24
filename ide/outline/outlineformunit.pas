@@ -342,11 +342,9 @@ PROCEDURE TOutlineForm.performSlowUpdate;
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
     if (codeAssistanceResponse<>caResponse) then begin
       if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
-      if codeAssistanceResponse=nil
-      then caResponse:=nil
-      else caResponse:=codeAssistanceResponse^.rereferenced;
+      caResponse:=codeAssistanceResponse;
       updateOutlineTree;
-    end;
+    end else disposeCodeAssistanceResponse(codeAssistanceResponse);
   end;
 
 PROCEDURE TOutlineForm.performFastUpdate;

@@ -143,6 +143,7 @@ PROCEDURE TQuickEvalForm.performSlowUpdate;
 
 PROCEDURE TQuickEvalForm.performFastUpdate;
   VAR meta:P_editorMeta;
+      proxy:P_editorMetaProxy;
   begin
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
@@ -152,7 +153,8 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
 
     quickEvaluation.flushMessages;
     if evaluatedFor<>stateHash then begin
-      quickEvaluation.postEvalulation(meta,
+      if meta=nil then proxy:=nil else proxy:=P_editorMetaProxy(newFileProxy(meta^.getPath));
+      quickEvaluation.postEvalulation(proxy,
                                       cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked,
                                       inputMeta.getLines);
       evaluatedFor:=stateHash;

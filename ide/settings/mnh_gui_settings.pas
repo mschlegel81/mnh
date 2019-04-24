@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, ExtCtrls,
+  StdCtrls, ExtCtrls, EditBtn,
   mnh_constants,
   mnh_settings,
   //funcs,
@@ -25,6 +25,8 @@ TYPE
 
   TSettingsForm = class(TForm)
     CloseButton: TButton;
+    FileNameEdit1: TFileNameEdit;
+    Label8: TLabel;
     miSaveBeforeRun: TCheckBox;
     TableFontButton: TButton;
     GeneralFontButton: TButton;
@@ -62,6 +64,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE miSaveBeforeRunChange(Sender: TObject);
@@ -145,6 +148,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
 
+    FileNameEdit1.fileName:=settings.lightFlavourLocation;
+
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
   end;
 
@@ -201,6 +206,11 @@ PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
   begin
     ideLayoutUtil.setFontSize_callback:=nil;
     ideLayoutUtil.getFontSize_callback:=nil;
+  end;
+
+PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
+  begin
+    settings.lightFlavourLocation:=FileNameEdit1.fileName;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
@@ -339,7 +349,7 @@ PROCEDURE TSettingsForm.setFontSize(CONST c:T_controlType; CONST value: longint)
 
 FUNCTION TSettingsForm.getOutputLimit: longint;
   begin
-    result := StrToInt64Def(trim(outputSizeLimit.text), maxLongint);
+    result := strToIntDef(trim(outputSizeLimit.text), maxLongint);
     if result<MINIMUM_OUTPUT_LINES then result:=MINIMUM_OUTPUT_LINES;
   end;
 

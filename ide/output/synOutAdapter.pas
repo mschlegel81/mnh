@@ -76,6 +76,7 @@ PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
 FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;
 
 IMPLEMENTATION
+USES guiOutAdapters;
 VAR lastSynOutId:longint=0;
     redirectors:array of P_synOutAdapter;
     redirected:T_messageTypeSet=[];
@@ -129,7 +130,7 @@ FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessa
 PROCEDURE T_synOutAdapter.startOutput;
   begin
     setLength(linesToWrite,0);
-    outputLinesLimit:=outputLinesLimit;
+    outputLinesLimit:=guiOutAdapters.outputLinesLimit;
     bufferOffset:=0;
     hadDirectPrint:=false;
     wroteToSyn:=false;

@@ -28,9 +28,9 @@ TYPE
                      cpPageControl2,
                      cpPageControl3,
                      cpPageControl4);
-
-  T_splitterPositions=array[1..4] of longint;
-
+CONST
+  PAGES:set of T_componentParent=[cpPageControl1..cpPageControl4];
+TYPE
   T_mnhComponentForm=class(TForm)
     published
       CONSTRUCTOR create(TheOwner: TComponent); override;
@@ -46,12 +46,47 @@ TYPE
       DESTRUCTOR destroy; override;
   end;
 
+  P_mnhDockSiteModel=^T_mnhDockSiteModel;
+  T_mnhDockSiteModel=object
+    private
+      PageControl:TPageControl;
+      undockMi,closeMi:TMenuItem;
+      undockMenu:TPopupMenu;
+      canScaleWidth:boolean;
+      dockId:T_componentParent;
+      relativeSize:word;
+      FUNCTION getAbsSize:longint;
+      PROCEDURE setAbsSize(CONST value:longint);
+      FUNCTION getFormSize:longint;
+
+      FUNCTION canCloseActivePage:boolean;
+      PROCEDURE closeActivePage;
+    public
+      CONSTRUCTOR create(CONST dockId_:T_componentParent;
+                         CONST pageControl_:TPageControl;
+                         CONST undockMi_,closeMi_:TMenuItem;
+                         CONST undockMenu_:TPopupMenu);
+      DESTRUCTOR destroy;
+      PROPERTY absSize:longint read getAbsSize write setAbsSize;
+      PROCEDURE updateAbsSizeByRelSize;
+      PROCEDURE updateRelSizeByAbsSize;
+      PROCEDURE fixSize;
+
+      PROCEDURE menuPopup(Sender:TObject);
+      PROCEDURE closeClick(Sender:TObject);
+      FUNCTION  undockCurrent:boolean;
+      PROCEDURE undockClick(Sender:TObject);
+      PROCEDURE undockAll;
+  end;
+
   T_mnhIdeForm=class(TForm)
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm);   virtual; abstract;
     PROCEDURE onEditFinished(CONST data:P_storedMessage    ); virtual; abstract;
     PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
     PROCEDURE onDebuggerEvent;                                virtual; abstract;
     PROCEDURE onEndOfEvaluation;                              virtual; abstract;
+    protected
+      dockSites:array[T_componentParent] of P_mnhDockSiteModel;
   end;
 
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -117,8 +152,8 @@ PROCEDURE performFastUpdates;
 FUNCTION  focusedEditor:TSynEdit;
 FUNCTION  typeOfFocusedControl:T_controlType;
 
-PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper; VAR splitters:T_splitterPositions);
-FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
+PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper);
+FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
 PROCEDURE dockAllForms;
 
 OPERATOR :=(x:byte):TFontStyles;
@@ -152,6 +187,133 @@ PROCEDURE dockAllForms;
     lastDockLocationFor:=C_dockSetupDockAll;
     for f in activeForms do dockNewForm(f);
     lastDockLocationFor:=C_dockSetupDockAll;
+  end;
+
+FUNCTION T_mnhDockSiteModel.getAbsSize: longint;
+  begin
+    if PageControl=nil then exit(0);
+    if canScaleWidth
+    then result:=PageControl.width
+    else result:=PageControl.height;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.setAbsSize(CONST value: longint);
+  begin
+    if PageControl=nil then exit;
+    if canScaleWidth
+    then PageControl.width :=value
+    else PageControl.height:=value;
+  end;
+
+FUNCTION T_mnhDockSiteModel.getFormSize: longint;
+  begin
+    if canScaleWidth
+    then result:=mainForm.width
+    else result:=mainForm.height;
+  end;
+
+FUNCTION T_mnhDockSiteModel.canCloseActivePage: boolean;
+  begin
+    result:=(PageControl.activePage.ControlCount=1)
+      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.closeActivePage;
+  VAR active:T_mnhComponentForm;
+      CloseAction:TCloseAction=caFree;
+  begin
+    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+    then begin
+      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
+      if not(active.CloseQuery) then exit;
+      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
+      if CloseAction=caFree then FreeAndNil(active);
+    end;
+  end;
+
+CONSTRUCTOR T_mnhDockSiteModel.create(CONST dockId_: T_componentParent;
+                                      CONST pageControl_: TPageControl;
+                                      CONST undockMi_, closeMi_: TMenuItem;
+                                      CONST undockMenu_: TPopupMenu);
+  begin
+    dockId       :=dockId_;
+    canScaleWidth:=dockId<>cpPageControl2;
+    PageControl  :=pageControl_;
+    undockMenu   :=undockMenu_;
+    undockMi     :=undockMi_;
+    closeMi      :=closeMi_;
+    if dockId=cpNone then exit;
+    undockMenu.OnPopup:=@menuPopup;
+    closeMi.OnClick:=@closeClick;
+    undockMi.OnClick:=@undockClick;
+  end;
+
+DESTRUCTOR T_mnhDockSiteModel.destroy; begin end;
+
+PROCEDURE T_mnhDockSiteModel.updateAbsSizeByRelSize;
+  begin
+    absSize:=relativeSize*getFormSize div 65535;
+    fixSize;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.updateRelSizeByAbsSize;
+  begin
+    relativeSize:=absSize*65535 div getFormSize;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.fixSize;
+  begin
+    if PageControl.PageCount=0 then begin
+      absSize     :=0;
+      relativeSize:=0;
+    end else if absSize<0.05*getFormSize then begin
+      absSize     :=round(0.2*getFormSize);
+      relativeSize:=13107; //=0.2*65535
+    end;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.menuPopup(Sender: TObject);
+  begin
+    undockMi.enabled:=(PageControl.activePage<>nil);
+    closeMi .enabled:=canCloseActivePage;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.closeClick(Sender: TObject);
+  begin
+    closeActivePage;
+    fixSize;
+  end;
+
+FUNCTION T_mnhDockSiteModel.undockCurrent: boolean;
+  VAR control:TControl;
+      newForm:T_mnhComponentForm;
+  begin
+    if PageControl.PageCount<=0 then exit(false);
+    //Only handle pages with one control
+    if PageControl.activePage.ControlCount<>1 then exit(false);
+    control:=PageControl.activePage.Controls[0];
+    //If the sheet is a TForm return it directly
+    if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
+    then newForm:=T_mnhComponentForm(control)
+    else raise Exception.create('Not an mnhComponent form!');
+    newForm.ManualDock(nil);
+    newForm.BringToFront;
+    newForm.myComponentParent:=cpNone;
+    newForm.ShowInTaskBar:=stAlways;
+    result:=true;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.undockClick(Sender: TObject);
+  begin
+    if undockCurrent then fixSize;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.undockAll;
+  VAR needSizeFix:boolean=false;
+  begin
+    while undockCurrent do needSizeFix:=true;
+    if needSizeFix then fixSize;
   end;
 
 PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
@@ -363,9 +525,9 @@ FUNCTION typeOfFocusedControl:T_controlType;
     for e in fontControls[ctEditor] do if e=mainForm.ActiveControl then exit(c);
   end;
 
-PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR splitters: T_splitterPositions);
-  VAR k:longint;
-      ic:T_ideComponent;
+PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR ic:T_ideComponent;
+      cp:T_componentParent;
   begin
     stream.writeLongint(mainForm.top);
     stream.writeLongint(mainForm.Left);
@@ -373,7 +535,7 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR spli
     stream.writeLongint(mainForm.width);
     stream.writeByte(byte(mainForm.WindowState));
 
-    for k:=1 to 4 do stream.writeWord(max(0,min(65535,splitters[k])));
+    for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
 
     for ic in T_ideComponent do if ic<>icPlot then begin
       stream.writeByte(byte(lastDockLocationFor[ic]));
@@ -384,8 +546,8 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper; VAR spli
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
   end;
 
-FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitters: T_splitterPositions; OUT activeComponents:T_ideComponentSet):boolean;
-  VAR k:longint;
+FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
+  VAR cp:T_componentParent;
       ic:T_ideComponent;
       intendedWindowState:TWindowState;
   begin
@@ -401,7 +563,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
       mainForm.WindowState:=intendedWindowState;
     end;
 
-    for k:=1 to 4 do splitters[k]:=stream.readWord;
+    for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
     result:=true;
     activeComponents:=[];
     for ic in T_ideComponent do if ic<>icPlot then begin
@@ -415,7 +577,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; VAR splitt
     if not(result) then begin
       mainForm.BorderStyle:=bsSizeable;
       mainForm.WindowState:=wsMaximized;
-      for k:=1 to 4 do splitters[k]:=0;
+      for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
       doShowSplashScreen:=true;
       htmlDocGeneratedForCodeHash:='';
     end;

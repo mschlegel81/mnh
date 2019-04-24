@@ -104,15 +104,12 @@ TYPE
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miAssistantClick(Sender: TObject);
     PROCEDURE miBreakpointsClick(Sender: TObject);
-    PROCEDURE miClose1Click(Sender: TObject);
-    PROCEDURE miClose2Click(Sender: TObject);
-    PROCEDURE miClose3Click(Sender: TObject);
-    PROCEDURE miClose4Click(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDebuggerClick(Sender: TObject);
@@ -147,10 +144,6 @@ TYPE
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
     PROCEDURE miToggleFullscreenClick(Sender: TObject);
-    PROCEDURE miUndock1Click(Sender: TObject);
-    PROCEDURE miUndock2Click(Sender: TObject);
-    PROCEDURE miUndock3Click(Sender: TObject);
-    PROCEDURE miUndock4Click(Sender: TObject);
     PROCEDURE miUndockAllClick(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
@@ -160,21 +153,11 @@ TYPE
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE TimerTimer(Sender: TObject);
-    PROCEDURE UndockPopup1Popup(Sender: TObject);
-    PROCEDURE UndockPopup2Popup(Sender: TObject);
-    PROCEDURE UndockPopup3Popup(Sender: TObject);
-    PROCEDURE UndockPopup4Popup(Sender: TObject);
   private
     fastUpdating,
     slowUpdating,
     quitPosted:boolean;
     subTimerCounter:longint;
-    splitterPositions:T_splitterPositions;
-    FUNCTION startDock(CONST PageControl:TPageControl):boolean;
-    PROCEDURE fixPageControl1Size;
-    PROCEDURE fixPageControl2Size;
-    PROCEDURE fixPageControl3Size;
-    PROCEDURE fixPageControl4Size;
   public
     PROCEDURE saveIdeSettings;
     { public declarations }
@@ -198,14 +181,17 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
+    gui_started:=true;
+    new(dockSites[cpNone        ],create(cpNone        ,nil         ,nil      ,nil     ,nil         ));
+    new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1,miUndock1,miClose1,UndockPopup1));
+    new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2,miUndock2,miClose2,UndockPopup2));
+    new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3,miUndock3,miClose3,UndockPopup3));
+    new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4,miUndock4,miClose4,UndockPopup4));
+
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
     subTimerCounter:=0;
-    splitterPositions[1]:=0;
-    splitterPositions[2]:=0;
-    splitterPositions[3]:=0;
-    splitterPositions[4]:=0;
     ideLayoutUtil.mainForm:=self;
 
     initializePlotForm(PlotPositionLabel);
@@ -226,7 +212,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     stream.createToReadFromFile(workspaceFilename);
 
     if stream.allOkay
-    and loadMainFormLayout(stream,splitterPositions,activeComponents)
+    and loadMainFormLayout(stream,activeComponents)
     and loadOutputSettings(stream)
     and workspace.loadFromStream(stream)
     and runnerModel.loadFromStream(stream)
@@ -250,7 +236,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
-    gui_started:=true;
 
     runnerModel.ensureEditScripts;
 
@@ -259,6 +244,15 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     {$ifdef LINUX}
     miIncFontSize.ShortCut:=16605;
     {$endif}
+  end;
+
+PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
+  begin
+    dispose(dockSites[cpNone        ],destroy);
+    dispose(dockSites[cpPageControl1],destroy);
+    dispose(dockSites[cpPageControl2],destroy);
+    dispose(dockSites[cpPageControl3],destroy);
+    dispose(dockSites[cpPageControl4],destroy);
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -296,11 +290,9 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   end;
 
 PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
+  VAR cp:T_componentParent;
   begin
-    PageControl1.width := width*splitterPositions[1] div 65535;
-    PageControl2.height:=height*splitterPositions[2] div 65535;
-    PageControl3.width := width*splitterPositions[3] div 65535;
-    PageControl4.width := width*splitterPositions[4] div 65535;
+    for cp in PAGES do dockSites[cp]^.updateAbsSizeByRelSize;
   end;
 
 PROCEDURE TIdeMainForm.miAboutClick(Sender: TObject);
@@ -317,31 +309,6 @@ PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
   begin
     ensureBreakpointsForm;
   end;
-
-PROCEDURE closeActivePage(CONST PageControl: TPageControl);
-  VAR active:T_mnhComponentForm;
-      CloseAction:TCloseAction=caFree;
-  begin
-    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-    then begin
-      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
-      if not(active.CloseQuery) then exit;
-      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
-      if CloseAction=caFree then FreeAndNil(active);
-    end;
-  end;
-
-FUNCTION canCloseActivePage(CONST PageControl: TPageControl):boolean;
-  begin
-    result:=(PageControl.activePage.ControlCount=1)
-      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
-  end;
-
-PROCEDURE TIdeMainForm.miClose1Click(Sender: TObject); begin closeActivePage(PageControl1); fixPageControl1Size; end;
-PROCEDURE TIdeMainForm.miClose2Click(Sender: TObject); begin closeActivePage(PageControl2); fixPageControl2Size; end;
-PROCEDURE TIdeMainForm.miClose3Click(Sender: TObject); begin closeActivePage(PageControl3); fixPageControl3Size; end;
-PROCEDURE TIdeMainForm.miClose4Click(Sender: TObject); begin closeActivePage(PageControl4); fixPageControl4Size; end;
 
 PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   begin
@@ -374,12 +341,10 @@ PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miDockAllClick(Sender: TObject);
+  VAR cp:T_componentParent;
   begin
     dockAllForms;
-    fixPageControl1Size;
-    fixPageControl2Size;
-    fixPageControl3Size;
-    fixPageControl4Size;
+    for cp in PAGES do dockSites[cp]^.fixSize;
   end;
 
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
@@ -557,89 +522,17 @@ PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TIdeMainForm.miUndock1Click(Sender: TObject); begin startDock(PageControl1); fixPageControl1Size; end;
-PROCEDURE TIdeMainForm.miUndock2Click(Sender: TObject); begin startDock(PageControl2); fixPageControl2Size; end;
-PROCEDURE TIdeMainForm.miUndock3Click(Sender: TObject); begin startDock(PageControl3); fixPageControl3Size; end;
-PROCEDURE TIdeMainForm.miUndock4Click(Sender: TObject); begin startDock(PageControl4); fixPageControl4Size; end;
-
 PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
+  VAR cp:T_componentParent;
   begin
-    while startDock(PageControl1) do; fixPageControl1Size;
-    while startDock(PageControl2) do; fixPageControl2Size;
-    while startDock(PageControl3) do; fixPageControl3Size;
-    while startDock(PageControl4) do; fixPageControl4Size;
+    for cp in PAGES do dockSites[cp]^.undockAll;
     lastDockLocationFor:=C_dockSetupUnDockAll;
   end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
+  VAR cp:T_componentParent;
   begin
-    splitterPositions[1]:=PageControl1.width *65535 div  width;
-    splitterPositions[2]:=PageControl2.height*65535 div height;
-    splitterPositions[3]:=PageControl3.width *65535 div  width;
-    splitterPositions[4]:=PageControl4.width *65535 div  width;
-  end;
-
-FUNCTION TIdeMainForm.startDock(CONST PageControl: TPageControl):boolean;
-  VAR control:TControl;
-      newForm:T_mnhComponentForm;
-  begin
-    if PageControl.PageCount<=0 then exit(false);
-    //Only handle pages with one control
-    if PageControl.activePage.ControlCount<>1 then exit(false);
-    control:=PageControl.activePage.Controls[0];
-    //If the sheet is a TForm return it directly
-    if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
-    then newForm:=T_mnhComponentForm(control)
-    else raise Exception.create('Not an mnhComponent form!');
-    newForm.ManualDock(nil);
-    newForm.BringToFront;
-    newForm.myComponentParent:=cpNone;
-    newForm.ShowInTaskBar:=stAlways;
-    result:=true;
-  end;
-
-PROCEDURE TIdeMainForm.fixPageControl1Size;
-  begin
-    if PageControl1.PageCount=0 then begin
-      PageControl1.width:=0;
-      splitterPositions[1]:=0;
-    end else if PageControl1.width=0 then begin
-      PageControl1.width:=round(0.1*width);
-      splitterPositions[1]:=6554;
-    end;
-  end;
-
-PROCEDURE TIdeMainForm.fixPageControl2Size;
-  begin
-    if PageControl2.PageCount=0 then begin
-      PageControl2.height:=0;
-      splitterPositions[2]:=0;
-    end else if PageControl2.height=0 then begin
-      PageControl2.height:=round(0.1*height);
-      splitterPositions[2]:=6554;
-    end;
-  end;
-
-PROCEDURE TIdeMainForm.fixPageControl3Size;
-  begin
-    if PageControl3.PageCount=0 then begin
-      PageControl3.width:=0;
-      splitterPositions[3]:=0;
-    end else if PageControl3.width=0 then begin
-      PageControl3.width:=round(0.1*width);
-      splitterPositions[3]:=6554;
-    end;
-  end;
-
-PROCEDURE TIdeMainForm.fixPageControl4Size;
-  begin
-    if PageControl4.PageCount=0 then begin
-      PageControl4.width:=0;
-      splitterPositions[4]:=0;
-    end else if PageControl4.width=0 then begin
-      PageControl4.width:=round(0.1*width);
-      splitterPositions[4]:=6554;
-    end;
+    for cp in PAGES do dockSites[cp]^.updateRelSizeByAbsSize;
   end;
 
 PROCEDURE TIdeMainForm.saveIdeSettings;
@@ -648,7 +541,7 @@ PROCEDURE TIdeMainForm.saveIdeSettings;
     mnh_settings.saveSettings;
 
     stream.createToWriteToFile(workspaceFilename);
-    saveMainFormLayout(stream,splitterPositions);
+    saveMainFormLayout(stream);
     saveOutputSettings(stream);
     workspace.saveToStream(stream);
     runnerModel.saveToStream(stream);
@@ -663,15 +556,16 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     componentParent:=lastDockLocationFor[form.getIdeComponentType];
     if componentParent in [cpPageControl1..cpPageControl4] then dockMeta:=TDragDockObject.create(form);
     case componentParent of
-      cpPageControl1: begin PageControl1.DockDrop(dockMeta,0,0); fixPageControl1Size; end;
-      cpPageControl2: begin PageControl2.DockDrop(dockMeta,0,0); fixPageControl2Size; end;
-      cpPageControl3: begin PageControl3.DockDrop(dockMeta,0,0); fixPageControl3Size; end;
-      cpPageControl4: begin PageControl4.DockDrop(dockMeta,0,0); fixPageControl4Size; end;
+      cpPageControl1: PageControl1.DockDrop(dockMeta,0,0);
+      cpPageControl2: PageControl2.DockDrop(dockMeta,0,0);
+      cpPageControl3: PageControl3.DockDrop(dockMeta,0,0);
+      cpPageControl4: PageControl4.DockDrop(dockMeta,0,0);
       else begin
         form.top :=top +(height-form.height) div 2;
         form.Left:=Left+(width -form.width ) div 2;
       end;
     end;
+    dockSites[componentParent]^.fixSize;
     form.myComponentParent:=componentParent;
     form.showComponent;
     if dockMeta<>nil then FreeAndNil(dockMeta);
@@ -699,44 +593,35 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
-  PROCEDURE drawMemoryUsage;
-    VAR fraction:double;
-
-    begin
-      MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
-      if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
-      if fraction<0 then fraction:=0;
-
-      MemoryUsageShape.width:=round(fraction*MemoryUsageFrame.width);
-      MemoryUsageShape.Brush.color:=
-        round(255*max(0,min(1,2-2*fraction))) shl 8 or
-        round(255*max(0,min(1,  2*fraction)));
-    end;
-
-  PROCEDURE enableItems;
-    VAR unlocked:boolean;
-        canRun:boolean;
-    begin
-      if fastUpdating then exit;
-      fastUpdating:=true;
-      miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
-      canRun:=runnerModel.canRun;
-      unlocked:=not(runnerModel.areEditorsLocked);
-      miRunDirect.enabled:=canRun;
-      miRunScript.enabled:=canRun;
-      miSave     .enabled:=unlocked;
-      miSaveAs   .enabled:=unlocked;
-      miRestore  .enabled:=unlocked;
-      smScripts  .enabled:=unlocked;
-      miReplace  .enabled:=unlocked;
-      fastUpdating:=false;
-    end;
 
   PROCEDURE slowUpdates; inline;
+    PROCEDURE drawMemoryUsage;
+      VAR fraction:double;
+
+      begin
+        MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
+        if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
+        if fraction<0 then fraction:=0;
+
+        MemoryUsageShape.width:=round(fraction*MemoryUsageFrame.width);
+        MemoryUsageShape.Brush.color:=
+          round(255*max(0,min(1,2-2*fraction))) shl 8 or
+          round(255*max(0,min(1,  2*fraction)));
+      end;
+
+    VAR edit:P_editorMeta;
     begin
       if slowUpdating then exit;
       slowUpdating:=true;
       if workspace.savingRequested then saveIdeSettings;
+
+      edit:=workspace.currentEditor;
+      if (edit<>nil) then begin
+        edit^.pollAssistanceResult;
+        if edit^.isPseudoFile
+        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+      end else EditLocationLabel.caption:='';
 
       performSlowUpdates;
       drawMemoryUsage;
@@ -749,21 +634,38 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     end;
 
   PROCEDURE fastUpdates; inline;
-    VAR edit:P_editorMeta;
+    PROCEDURE enableItems;
+      VAR unlocked:boolean;
+          canRun:boolean;
+      begin
+        miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
+        canRun:=runnerModel.canRun;
+        unlocked:=not(runnerModel.areEditorsLocked);
+        miRunDirect.enabled:=canRun;
+        miRunScript.enabled:=canRun;
+        miSave     .enabled:=unlocked;
+        miSaveAs   .enabled:=unlocked;
+        miRestore  .enabled:=unlocked;
+        smScripts  .enabled:=unlocked;
+        miReplace  .enabled:=unlocked;
+      end;
+
+    FUNCTION caretLabel(edit:TSynEdit):string;
+      begin
+        result:=intToStr(edit.CaretY)+','+intToStr(edit.CaretX);
+      end;
+
     begin
-      edit:=workspace.currentEditor;
-      if (edit<>nil) then begin
-        edit^.pollAssistanceResult;
-        EditLocationLabel.caption:=edit^.caretLabel;
-        if edit^.isPseudoFile
-        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-      end else EditLocationLabel.caption:='';
+      if fastUpdating then exit;
+      fastUpdating:=true;
       performFastUpdates;
       runnerModel.flushMessages;
 
+      if ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
+
       if askForm.displayPending then askForm.Show;
       enableItems;
+      fastUpdating:=false;
     end;
 
   begin
@@ -773,30 +675,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       slowUpdates;
       subTimerCounter:=0;
     end;
-  end;
-
-PROCEDURE TIdeMainForm.UndockPopup1Popup(Sender: TObject);
-  begin
-    miUndock1.enabled:=(PageControl1.activePage<>nil);
-    miClose1 .enabled:=canCloseActivePage(PageControl1);
-  end;
-
-PROCEDURE TIdeMainForm.UndockPopup2Popup(Sender: TObject);
-  begin
-    miUndock2.enabled:=(PageControl2.activePage<>nil);
-    miClose2 .enabled:=canCloseActivePage(PageControl2);
-  end;
-
-PROCEDURE TIdeMainForm.UndockPopup3Popup(Sender: TObject);
-  begin
-    miUndock3.enabled:=(PageControl3.activePage<>nil);
-    miClose3 .enabled:=canCloseActivePage(PageControl3);
-  end;
-
-PROCEDURE TIdeMainForm.UndockPopup4Popup(Sender: TObject);
-  begin
-    miUndock4.enabled:=(PageControl4.activePage<>nil);
-    miClose4 .enabled:=canCloseActivePage(PageControl4);
   end;
 
 end.
