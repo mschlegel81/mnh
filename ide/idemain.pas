@@ -279,14 +279,22 @@ FUNCTION anyEvaluationRunning:boolean;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
-  VAR mr:integer=mrClose;
   begin
-    if anyEvaluationRunning
-    then mr:=closeDialogForm.showOnQuitWhileEvaluating;
-
-    if mr<>mrClose then begin
-      quitPosted:=(mr=mrOk);
-      if anyEvaluationRunning then CanClose:=false;
+    if anyEvaluationRunning then
+    case closeDialogForm.showOnQuitWhileEvaluating of
+      cda_quitAfterEval: begin
+        quitPosted:=true;
+        if anyEvaluationRunning then CanClose:=false;
+      end;
+      cda_dontQuit: begin
+        quitPosted:=false;
+        CanClose:=false;
+      end;
+      cda_cancelEvalAndQuit: begin
+        runnerModel.postHalt;
+        stopQuickEvaluation;
+        CanClose:=true;
+      end;
     end;
   end;
 

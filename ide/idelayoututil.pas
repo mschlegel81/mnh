@@ -532,9 +532,9 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeLongint(mainForm.height);
     stream.writeLongint(mainForm.width);
     case mainForm.WindowState of
-      wsMaximized   :  stream.writeByte(byte(wsfuMaximized));
-      wsfuFullscreen:  stream.writeByte(byte(wsfuFullscreen));
-      else             stream.writeByte(byte(wsfuNormal));
+      wsMaximized : stream.writeByte(byte(wsfuMaximized));
+      wsFullScreen: stream.writeByte(byte(wsfuFullscreen));
+      else          stream.writeByte(byte(wsfuNormal));
     end;
 
     for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
