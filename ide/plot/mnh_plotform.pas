@@ -773,6 +773,7 @@ PROCEDURE TplotForm.doPlot;
 FUNCTION plotClosedByUser_impl intFuncSignature;
   VAR closedRequest:P_queryPlotClosedMessage;
   begin if (params=nil) or (params^.size=0) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
     new(closedRequest,createRetrieveRequest);
     context.messages^.postCustomMessage(closedRequest);
     result:=newBoolLiteral(closedRequest^.getResponseWaiting(context.messages));
@@ -781,12 +782,14 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
     result:=newVoidLiteral;
     context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
     result:=newVoidLiteral;
     context.messages^.postSingal(mt_plot_addAnimationFrame,C_nilTokenLocation);
   end else result:=nil; end;
@@ -794,6 +797,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest);
     displayRequest^.waitForExecution(context.messages);
@@ -804,6 +808,7 @@ FUNCTION display_imp intFuncSignature;
 FUNCTION postdisplay_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest,true);
     result:=newVoidLiteral;
