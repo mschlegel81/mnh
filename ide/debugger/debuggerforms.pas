@@ -76,7 +76,7 @@ PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
       debuggerVarFormIsDirty:=true;
       jumpToFile;
       form:=getFormOfType(icDebugger);
-      form.showComponent;
+      form.showComponent(false);
       TDebuggerForm(form).updateWithCurrentSnapshot;
     end;
   end;

@@ -246,7 +246,7 @@ PROCEDURE T_guiPlotSystem.ensureForm;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm                    .pullPlotSettingsToGui();
       dockNewForm(myPlotForm);
-    end;
+    end else myPlotForm.showComponent(true);
   end;
 
 CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);

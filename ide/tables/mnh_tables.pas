@@ -160,7 +160,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
           end;
           dockNewForm(tab);
           tab.fillTable;
-          tab.showComponent;
+          tab.showComponent(true);
         end;
       mt_startOfEvaluation:
         begin

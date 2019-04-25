@@ -681,7 +681,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
         newForm.adapter:=@self;
         setCreatedForm(newForm);
         dockNewForm(newForm);
-        newForm.showComponent;
+        newForm.showComponent(false);
         include(result,m^.messageType);
       end;
     end;

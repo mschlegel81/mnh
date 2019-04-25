@@ -147,7 +147,7 @@ PROCEDURE TOutputForm.performFastUpdate;
         if mainForm<>nil
         then oldActive:=mainForm.ActiveControl
         else oldActive:=nil;
-        showComponent;
+        showComponent(true);
         if oldActive<>nil then mainForm.ActiveControl:=oldActive;
       end;
     end;

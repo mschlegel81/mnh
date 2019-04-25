@@ -40,7 +40,7 @@ TYPE
       PROCEDURE performFastUpdate; virtual; abstract;
       PROCEDURE getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
       PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
-      PROCEDURE showComponent;
+      PROCEDURE showComponent(CONST retainOriginalFocus:boolean);
     public
       myComponentParent:T_componentParent;
       DESTRUCTOR destroy; override;
@@ -262,6 +262,7 @@ PROCEDURE T_mnhDockSiteModel.updateRelSizeByAbsSize;
 
 PROCEDURE T_mnhDockSiteModel.fixSize;
   begin
+    if PageControl=nil then exit;
     if PageControl.PageCount=0 then begin
       absSize     :=0;
       relativeSize:=0;
@@ -340,18 +341,24 @@ PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; 
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.showComponent;
+PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
   VAR page:TTabSheet;
       PageControl:TPageControl;
+      oldActive:TWinControl;
   begin
     getParents(page,PageControl);
     if PageControl=nil then begin
       Show;
       BringToFront;
     end else begin
+      oldActive:=mainForm.ActiveControl;
       Show;
       PageControl.activePage:=page;
-      if mainForm<>nil then mainForm.ActiveControl:=self;
+      if mainForm<>nil then begin
+        if retainOriginalFocus
+        then mainForm.ActiveControl:=oldActive
+        else mainForm.ActiveControl:=self;
+      end;
     end;
   end;
 
@@ -373,7 +380,7 @@ FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boo
   begin
     result:=false;
     for f in activeForms do if f.getIdeComponentType=ideComponent then begin
-      if BringToFront then f.showComponent;
+      if BringToFront then f.showComponent(false);
       exit(true);
     end;
   end;
