@@ -36,7 +36,9 @@ TYPE
 P_editorMetaProxy=^T_editorMetaProxy;
 T_editorMetaProxy=object(T_codeProvider)
   private
-    //TODO: Use link to meta for performance tuning.
+    fixated:boolean;
+    lines:T_arrayOfString;
+    pseudo:boolean;
     filePath: ansistring;
   public
     CONSTRUCTOR create(CONST path:ansistring);
@@ -44,6 +46,7 @@ T_editorMetaProxy=object(T_codeProvider)
     FUNCTION getLines: T_arrayOfString; virtual;
     FUNCTION getPath: ansistring;       virtual;
     FUNCTION isPseudoFile:boolean;      virtual;
+    FUNCTION fixate:P_editorMetaProxy;
 end;
 
 P_editorMeta=^T_editorMeta;
@@ -136,16 +139,20 @@ VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin
     filePath:=path;
+    fixated:=false;
+    setLength(lines,0);
   end;
 
 DESTRUCTOR T_editorMetaProxy.destroy;
   begin
+    setLength(lines,0);
   end;
 
 FUNCTION T_editorMetaProxy.getLines: T_arrayOfString;
   VAR meta:P_editorMeta;
       accessed:boolean;
   begin
+    if fixated then exit(lines);
     meta:=workspace.getExistingEditorForPath(filePath);
     if meta=nil then begin
       result:=fileLines(filePath,accessed);
@@ -161,12 +168,23 @@ FUNCTION T_editorMetaProxy.getPath: ansistring;
 FUNCTION T_editorMetaProxy.isPseudoFile: boolean;
   VAR meta:P_editorMeta;
   begin
+    if fixated then exit(pseudo);
     meta:=workspace.getExistingEditorForPath(filePath);
     if meta=nil then begin
       result:=not(fileExists(filePath))
     end else begin
       result:=meta^.isPseudoFile;
     end;
+  end;
+
+FUNCTION T_editorMetaProxy.fixate: P_editorMetaProxy;
+  begin
+    if not(fixated) then begin
+      lines:=getLines;
+      pseudo:=isPseudoFile;
+      fixated:=true;
+    end;
+    result:=@self;
   end;
 
 {$define includeImplementation}
@@ -375,7 +393,7 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
 
 PROCEDURE T_editorMeta.triggerCheck;
   begin
-    postCodeAssistanceRequest(newFileProxy(pseudoName));
+    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()));
   end;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
@@ -445,7 +463,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
 
     recycler.initRecycler;
-    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFileProxy(pseudoName),recycler);
+    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),recycler);
     recycler.cleanup;
 
     editor.BeginUpdate(true);

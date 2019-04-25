@@ -87,6 +87,7 @@ CONST
   LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
 
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
+FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
 {$endif}
 {$ifdef includeImplementation}
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
@@ -94,6 +95,12 @@ FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
   begin
     new(proxy,create(fileName));
     result:=proxy;
+  end;
+
+FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
+  begin
+    new(result,create(fileName));
+    result^.fixate;
   end;
 
 {$i func_defines.inc}
