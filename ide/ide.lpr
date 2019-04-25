@@ -8,8 +8,9 @@ USES
   {$ifdef UNIX}
   cthreads,
   {$endif}
-  Forms, Interfaces
-  { you can add units after this }, idemain, reevaluationForms,
+  Forms, Interfaces,
+  LCLTranslator,
+  idemain, reevaluationForms,
   cmdLineInterpretation,
   ipcModel, mnh_doc,
   askDialog,funcs,mnh_constants, evaluation,
@@ -22,6 +23,7 @@ begin
   Application.title:='MNH5 - GUI';
   RequireDerivedFormResource := true;
   Application.initialize;
+  SetDefaultLang('en');
   if wantMainLoopAfterParseCmdLine then begin
     {$ifndef debugMode}
     hideConsole;

@@ -125,7 +125,7 @@ TYPE
     scriptedForms: array of TscriptedForm;
     relatedPlotAdapter:P_guiPlotSystem;
     CONSTRUCTOR createCustomFormAdapter(CONST plot:P_guiPlotSystem);
-    FUNCTION flushToGui:T_messageTypeSet; virtual;
+    FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -655,7 +655,7 @@ CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter(CONST plot:P_guiPlotSyst
     relatedPlotAdapter:=plot;
   end;
 
-FUNCTION T_customFormAdapter.flushToGui: T_messageTypeSet;
+FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR m:P_storedMessage;
       k:longint;
       newForm:TscriptedForm;

@@ -468,19 +468,16 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose:P_editorMeta);
 
 PROCEDURE T_workspace.closeCurrentFile;
   VAR toClose:P_editorMeta;
-      answer:integer;
   begin
     toClose:=currentEditor;
     if toClose=nil then exit;
-
     //Ask if editor shall be closed
     if toClose^.editor.modified then begin
-      answer:=closeDialogForm.showOnClose(toClose^.pseudoName(true));
-      if answer=mrOk then begin
-        if not(saveCurrentFile(false,toClose)) then exit
-      end else if answer=mrCancel then exit;
+      case closeDialogForm.showOnClose(toClose^.pseudoName(true)) of
+        cda_saveAndClose: if not(saveCurrentFile(false,toClose)) then exit;
+        cda_cancelAndStay:                                            exit;
+      end;
     end;
-
     closeQuietly(toClose);
   end;
 
@@ -554,7 +551,6 @@ PROCEDURE T_workspace.renameWordUnderCursor;
 PROCEDURE T_workspace.checkForFileChanges;
   VAR metaIndex:longint=0;
       m:P_editorMeta;
-      modalRes:longint;
   FUNCTION fileIsModifiedOnFileSystem: boolean;
     VAR currentFileAge:double;
     begin
@@ -568,18 +564,30 @@ PROCEDURE T_workspace.checkForFileChanges;
       m:=metas[metaIndex];
       with m^ do
       if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
-        modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
-        if modalRes=mrOk then begin closeQuietly(m); dec(metaIndex); end;
-        if modalRes=mrClose then begin if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true; end else begin
-          fileInfo.ignoreDeleted:=true;
-          fileInfo.isChanged:=true;
-          updateSheetCaption;
+        case closeDialogForm.showOnDeleted(fileInfo.filePath) of
+          cda_close        : begin
+            closeQuietly(m);
+            dec(metaIndex);
+          end;
+          cda_ignoreChanges: begin
+            if not(saveCurrentFile(false,m))
+            then fileInfo.isChanged:=true;
+          end;
+          cda_overwrite    : begin
+            fileInfo.ignoreDeleted:=true;
+            fileInfo.isChanged:=true;
+            updateSheetCaption;
+          end;
         end;
       end else if fileIsModifiedOnFileSystem then begin
-        modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
-        if modalRes=mrOk then reloadFile();
-        if modalRes=mrClose then begin if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true; end else
-        fileInfo.isChanged:=true;
+        case closeDialogForm.showOnOutOfSync(fileInfo.filePath) of
+          cda_reload:
+            reloadFile();
+          cda_ignoreChanges:
+            fileInfo.isChanged:=true;
+          cda_overwrite:
+            if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true;
+        end;
       end;
       inc(metaIndex);
     end;
@@ -610,8 +618,7 @@ FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
     meta:=currentEditor;
     if meta=nil
     then result:=nil
-    else result:=meta^.latestAssistanceReponse;
-    if result<>nil then result^.rereferenced;
+    else result:=meta^.getCodeAssistanceDataRereferenced;
   end;
 
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);

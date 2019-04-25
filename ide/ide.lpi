@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="66">
+    <Units Count="67">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -382,6 +382,7 @@
         <Filename Value="splash/mnh_splash.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="SplashForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit47>
       <Unit48>
@@ -474,6 +475,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="closeDialog"/>
       </Unit65>
+      <Unit66>
+        <Filename Value="../core/funcs_regex.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit66>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

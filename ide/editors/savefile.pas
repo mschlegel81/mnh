@@ -55,14 +55,13 @@ PROCEDURE TSaveFileDialog.Button1Click(Sender: TObject);
   end;
 
 PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
-  VAR mr:TModalResult;
   begin
     if key=#13 then begin
       selectedFile:=expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text;
-      if fileExists(selectedFile) then begin
-         mr:=closeDialogForm.showOnOverwrite(selectedFile);
-         if      mr=mrOk    then ModalResult:=mrOk
-         else if mr=mrClose then ModalResult:=mrCancel;
+      if fileExists(selectedFile)
+      then case closeDialogForm.showOnOverwrite(selectedFile) of
+        cda_overwrite  : ModalResult:=mrOk;
+        cda_cancel     : ModalResult:=mrCancel;
       end else ModalResult:=mrOk;
     end;
   end;

@@ -187,7 +187,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2,miUndock2,miClose2,UndockPopup2));
     new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3,miUndock3,miClose3,UndockPopup3));
     new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4,miUndock4,miClose4,UndockPopup4));
-
+    windowStateForUpdate:=wsfuNone;
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
@@ -236,7 +236,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
-
+    ensureStdOutAdapter.updateAfterSettingsRestore;
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
@@ -244,6 +244,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     {$ifdef LINUX}
     miIncFontSize.ShortCut:=16605;
     {$endif}
+    miFocusEditorClick(Sender);
   end;
 
 PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
@@ -278,14 +279,22 @@ FUNCTION anyEvaluationRunning:boolean;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
-  VAR mr:integer=mrClose;
   begin
-    if anyEvaluationRunning
-    then mr:=closeDialogForm.showOnQuitWhileEvaluating;
-
-    if mr<>mrClose then begin
-      quitPosted:=(mr=mrOk);
-      if anyEvaluationRunning then CanClose:=false;
+    if anyEvaluationRunning then
+    case closeDialogForm.showOnQuitWhileEvaluating of
+      cda_quitAfterEval: begin
+        quitPosted:=true;
+        if anyEvaluationRunning then CanClose:=false;
+      end;
+      cda_dontQuit: begin
+        quitPosted:=false;
+        CanClose:=false;
+      end;
+      cda_cancelEvalAndQuit: begin
+        runnerModel.postHalt;
+        stopQuickEvaluation;
+        CanClose:=true;
+      end;
     end;
   end;
 
@@ -513,13 +522,8 @@ PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
   begin
     if WindowState=wsFullScreen
-    then begin
-      BorderStyle:=bsSizeable;
-      WindowState:=wsMaximized;
-    end else begin
-      BorderStyle:=bsNone;
-      WindowState:=wsFullScreen;
-    end;
+    then windowStateForUpdate:=wsfuMaximized
+    else windowStateForUpdate:=wsfuFullscreen;
   end;
 
 PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
@@ -594,7 +598,7 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
-  PROCEDURE slowUpdates; inline;
+  PROCEDURE slowUpdates;
     PROCEDURE drawMemoryUsage;
       VAR fraction:double;
 
@@ -621,7 +625,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         if edit^.isPseudoFile
         then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
         else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-      end else EditLocationLabel.caption:='';
+      end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
 
       performSlowUpdates;
       drawMemoryUsage;
@@ -633,12 +637,12 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       slowUpdating:=false;
     end;
 
-  PROCEDURE fastUpdates; inline;
+  PROCEDURE fastUpdates;
     PROCEDURE enableItems;
       VAR unlocked:boolean;
           canRun:boolean;
       begin
-        miHaltEvaluation.enabled:=runnerModel.anyRunning();// or quick.task.processing;
+        miHaltEvaluation.enabled:=runnerModel.anyRunning();
         canRun:=runnerModel.canRun;
         unlocked:=not(runnerModel.areEditorsLocked);
         miRunDirect.enabled:=canRun;
@@ -655,6 +659,15 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         result:=intToStr(edit.CaretY)+','+intToStr(edit.CaretX);
       end;
 
+    PROCEDURE processPendingResize;
+      begin
+        case windowStateForUpdate of
+          wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     windowStateForUpdate:=wsfuNone; end;
+          wsfuMaximized : begin BorderStyle:=bsSizeable; WindowState:=wsMaximized;  windowStateForUpdate:=wsfuNone; end;
+          wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; windowStateForUpdate:=wsfuNone; end;
+        end;
+      end;
+
     begin
       if fastUpdating then exit;
       fastUpdating:=true;
@@ -665,6 +678,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
       if askForm.displayPending then askForm.Show;
       enableItems;
+      processPendingResize;
       fastUpdating:=false;
     end;
 

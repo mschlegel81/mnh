@@ -81,7 +81,7 @@ TYPE
 
   P_abstractGuiOutAdapter = ^T_abstractGuiOutAdapter;
   T_abstractGuiOutAdapter = object(T_collectingOutAdapter)
-    FUNCTION flushToGui:T_messageTypeSet; virtual; abstract;
+    FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual; abstract;
   end;
 
   {$ifdef fullVersion}
@@ -337,7 +337,7 @@ FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
      at_plot,
      at_imig,
      at_table,
-     at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui;
+     at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);
   end;
 {$endif}
 

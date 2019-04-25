@@ -90,14 +90,11 @@ TYPE
   end;
 
   P_tableAdapter=^T_tableAdapter;
-
-  { T_tableAdapter }
-
   T_tableAdapter=object(T_abstractGuiOutAdapter)
     tableForms: array of TtableForm;
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
-    FUNCTION flushToGui:T_messageTypeSet; virtual;
+    FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -140,7 +137,7 @@ CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_: string);
     setLength(tableForms,0);
   end;
 
-FUNCTION T_tableAdapter.flushToGui: T_messageTypeSet;
+FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR m:P_storedMessage;
       i:longint;
       tab:TtableForm;

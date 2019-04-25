@@ -46,6 +46,7 @@ TYPE
       parentMessages:P_messages;
       wrapEcho:boolean;
       jumpToEnd:boolean;
+      autoflush:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
                          CONST messageTypesToInclude:T_messageTypeSet=[mt_clearConsole,
                                                                        mt_printline,
@@ -60,7 +61,7 @@ TYPE
                                                                        mt_echo_continued,
                                                                        mt_startOfEvaluation,
                                                                        mt_endOfEvaluation]);
-      FUNCTION flushToGui:T_messageTypeSet; virtual;
+      FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROPERTY ownerForm:TForm read synOwnerForm;
       PROCEDURE flushClear;
@@ -304,6 +305,7 @@ PROCEDURE T_synOutAdapter.doneOutput(CONST jumpDown:boolean);
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
     inherited create(at_guiSynOutput,messageTypesToInclude);
+    autoflush:=true;
     parentMessages:=nil;
     wrapEcho:=false;
     id:=interLockedIncrement(lastSynOutId);
@@ -314,9 +316,10 @@ CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdi
     lastWasDirectPrint:=false;
   end;
 
-FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
+FUNCTION T_synOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
+    if not(forceFlush or autoflush) then exit;
     system.enterCriticalSection(cs);
     result:=[];
     startOutput;

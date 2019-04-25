@@ -5,23 +5,42 @@ UNIT closeDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ButtonPanel;
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, ButtonPanel;
+TYPE
+  T_closeDialogAnswer=(cda_noneOrInvalid,
+                       cda_close,cda_reload,cda_ignoreChanges,cda_overwrite,
+                       cda_cancel,cda_pickAnother,
+                       cda_saveAndChange,cda_cancelAndStay,cda_discardChanges,
+                       cda_saveAndClose,
+                       cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit);
+CONST
+  C_answerText:array[T_closeDialogAnswer] of string=('',
+                                                     'Close','Reload','Ignore changes','Overwrite',
+                                                     'Cancel','Pick another',
+                                                     'Save and change file','Cancel (stay here)','Discard changes',
+                                                     'Save and close file',
+                                                     'Quit after end of evaluation','Don''t quit','Cancel evaluation and quit');
+
 TYPE
   TcloseDialogForm = class(TForm)
     ButtonPanel1: TButtonPanel;
     PROCEDURE FormShow(Sender: TObject);
   private
+    FUNCTION showFor(CONST okAnswer,cancelAnswer,closeAnswer:T_closeDialogAnswer):T_closeDialogAnswer;
   public
-    FUNCTION showOnOverwrite(CONST fileName:string): integer;
-    FUNCTION showOnLoad     (CONST fileName:string): integer;
-    FUNCTION showOnClose    (CONST fileName:string): integer;
-    FUNCTION showOnDeleted  (CONST fileName:string): integer;
-    FUNCTION showOnOutOfSync(CONST fileName:string): integer;
-    FUNCTION showOnQuitWhileEvaluating:integer;
+    FUNCTION showOnOverwrite(CONST fileName:string): T_closeDialogAnswer;
+    FUNCTION showOnLoad     (CONST fileName:string): T_closeDialogAnswer;
+    FUNCTION showOnClose    (CONST fileName:string): T_closeDialogAnswer;
+    {OK: close, Cancel: ignore, Close: overwrite}
+    FUNCTION showOnDeleted  (CONST fileName:string): T_closeDialogAnswer;
+    {OK: reload, Cancel: ignore, Close: overwrite}
+    FUNCTION showOnOutOfSync(CONST fileName:string): T_closeDialogAnswer;
+    FUNCTION showOnQuitWhileEvaluating:T_closeDialogAnswer;
   end;
 
 FUNCTION closeDialogForm:TcloseDialogForm;
 IMPLEMENTATION
+USES FileUtil;
 VAR
   myCloseDialogForm: TcloseDialogForm=nil;
 
@@ -36,58 +55,53 @@ PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
   end;
 
-FUNCTION TcloseDialogForm.showOnOverwrite(CONST fileName:string): integer;
+FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_closeDialogAnswer): T_closeDialogAnswer;
+  VAR mr:integer;
+  begin
+    ButtonPanel1.OKButton    .caption := C_answerText[okAnswer];
+    ButtonPanel1.CancelButton.caption := C_answerText[cancelAnswer];
+    ButtonPanel1.CloseButton .caption := C_answerText[closeAnswer];
+    mr := ShowModal;
+    if      mr=mrOk     then result:=okAnswer
+    else if mr=mrCancel then result:=cancelAnswer
+    else if mr=mrClose  then result:=closeAnswer
+    else result:=cda_noneOrInvalid;
+  end;
+
+FUNCTION TcloseDialogForm.showOnOverwrite(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:=fileName+' already exists';
-    ButtonPanel1.OKButton.caption := 'Overwrite';
-    ButtonPanel1.CancelButton.caption := 'Pick another';
-    ButtonPanel1.CloseButton.caption := 'Cancel';
-    result := ShowModal;
+    result:=showFor(cda_overwrite,cda_pickAnother,cda_cancel);
   end;
 
-FUNCTION TcloseDialogForm.showOnLoad(CONST fileName:string): integer;
+FUNCTION TcloseDialogForm.showOnLoad(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:=fileName+' has been changed';
-    ButtonPanel1.OKButton.caption := 'Save and change file';
-    ButtonPanel1.CancelButton.caption := 'Cancel (stay here)';
-    ButtonPanel1.CloseButton.caption := 'Discard changes';
-    result := ShowModal;
+    result:=showFor(cda_saveAndChange,cda_cancelAndStay,cda_discardChanges);
   end;
 
-FUNCTION TcloseDialogForm.showOnClose(CONST fileName:string): integer;
+FUNCTION TcloseDialogForm.showOnClose(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:=fileName+' has been changed';
-    ButtonPanel1.OKButton.caption := 'Save and close file';
-    ButtonPanel1.CancelButton.caption := 'Cancel (stay here)';
-    ButtonPanel1.CloseButton.caption := 'Discard changes';
-    result := ShowModal;
+    result:=showFor(cda_saveAndClose,cda_cancelAndStay,cda_discardChanges);
   end;
 
-FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName:string): integer;
+FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:=fileName+' is out of sync';
-    ButtonPanel1.OKButton.caption := 'Reload';
-    ButtonPanel1.CancelButton.caption := 'Ignore changes';
-    ButtonPanel1.CloseButton.caption := 'Overwrite';
-    result:=ShowModal;
+    result:=showFor(cda_reload,cda_ignoreChanges,cda_overwrite);
   end;
 
-FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName:string): integer;
+FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:=fileName+' is deleted';
-    ButtonPanel1.OKButton.caption := 'Close';
-    ButtonPanel1.CancelButton.caption := 'Ignore changes';
-    ButtonPanel1.CloseButton.caption := 'Overwrite';
-    result:=ShowModal;
+    result:=showFor(cda_close,cda_ignoreChanges,cda_overwrite);
   end;
 
-FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating:integer;
+FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating: T_closeDialogAnswer;
   begin
     caption:='Still evaluating...';
-    ButtonPanel1.OKButton.caption:= 'Quit after end of evaluation';
-    ButtonPanel1.CancelButton.caption:='Don''t quit';
-    ButtonPanel1.CloseButton.caption:= 'Cancel evaluation and quit';
-    result:=ShowModal;
+    result:=showFor(cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit);
   end;
 
 end.
