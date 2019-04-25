@@ -35,7 +35,7 @@ TYPE
       CONSTRUCTOR create(CONST renderCallback:F_execPlotCallback);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      FUNCTION flushToGui:T_messageTypeSet; virtual;
+      FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
   end;
 
   P_replaceImageMessage=^T_replaceImageMessage;
@@ -597,7 +597,7 @@ FUNCTION T_imageSystem.append(CONST message: P_storedMessage): boolean;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_imageSystem.flushToGui:T_messageTypeSet;
+FUNCTION T_imageSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
     enterCriticalSection(cs);
