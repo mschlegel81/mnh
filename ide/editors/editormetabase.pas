@@ -221,6 +221,8 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
             menuItem:=TMenuItem.create(languageMenuRoot);
             menuItem.caption:=menuCaption;
             menuItem.Tag:=ord(language);
+            menuItem.RadioItem:=true;
+            menuItem.AutoCheck:=true;
             languageMenuRoot.add(menuItem);
             fileTypeMeta[language].menuItem:=menuItem;
           end else fileTypeMeta[language].menuItem:=nil;

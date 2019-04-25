@@ -209,7 +209,6 @@ FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterA
   end;
 
 PROCEDURE TSynMnhSyn.next;
-  CONST RUN_LIMIT=10000;
   VAR localId: shortstring;
       i,j: longint;
       specialLineCase:byte=0;
@@ -251,11 +250,6 @@ PROCEDURE TSynMnhSyn.next;
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
     fTokenPos := run;
-    if run>=RUN_LIMIT then begin
-      fTokenId:=tkNull;
-      exit;
-    end;
-
     if (run = 0) and (flavour in [msf_output,msf_help]) then begin
       i:=-1;
       for j:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[j].marker) then specialLineCase:=j;
@@ -264,12 +258,12 @@ PROCEDURE TSynMnhSyn.next;
       if specialLineCase=SPECIAL_LINE_CASE_TM2 then fTokenSubId:=skWarn;
       if (specialLineCase=SPECIAL_LINE_CASE_ECHO) then begin
         if (flavour=msf_output) then begin
-          while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
+          while not(fLine[run] in [#0,'>']) do inc(run);
           if fLine[run]='>' then inc(run);
         end else inc(run,3);
-      end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
+      end else while (fLine[run]<>#0) do inc(run);
       if (run>0) and not((flavour=msf_help) and (specialLineCase=SPECIAL_LINE_CASE_ECHO)) then exit;
-    end else while (run<RUN_LIMIT) and (fLine[run]=' ') do inc(run);
+    end else while (fLine[run]=' ') do inc(run);
     if (flavour<>msf_debug) and (blobEnder<>#0) then begin
       if fLine[run]=#0 then begin
         fTokenId := tkNull;

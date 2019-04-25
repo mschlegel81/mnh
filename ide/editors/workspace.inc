@@ -87,6 +87,7 @@ CONST
   LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
 
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
+FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
 {$endif}
 {$ifdef includeImplementation}
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
@@ -94,6 +95,12 @@ FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
   begin
     new(proxy,create(fileName));
     result:=proxy;
+  end;
+
+FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
+  begin
+    new(result,create(fileName));
+    result^.fixate;
   end;
 
 {$i func_defines.inc}
@@ -512,26 +519,22 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
     end;
 
     toSave^.saveFile(newName);
+    fileHistory.fileClosed(newName);
     result:=true;
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;
-  VAR SynExporterHTML: TSynExporterHTML;
-      name:string;
-      meta:P_editorMeta;
+  VAR meta:P_editorMeta;
+      htmlMeta:P_editorMeta;
+      htmlText:ansistring;
   begin
     meta:=currentEditor;
     if meta=nil then exit;
-
-    name:=safeCallback(GetCurrentDir,'','.html');
-    if name='' then exit;
-
-    SynExporterHTML:=TSynExporterHTML.create(nil);
-    SynExporterHTML.title:=meta^.pseudoName();
-    SynExporterHTML.highlighter:=meta^.editor.highlighter;
-    SynExporterHTML.ExportAll(meta^.editor.lines);
-    SynExporterHTML.saveToFile(name);
-    SynExporterHTML.free;
+    htmlText:=htmlExporter.textToHtml(meta^.pseudoName,meta^.editor.lines,meta^.editor.highlighter);
+    htmlMeta:=addEditorMetaForNewFile;
+    htmlMeta^.language:=LANG_HTML;
+    htmlMeta^.editor.text:=htmlText;
+    inputPageControl.activePage:=htmlMeta^.tabsheet;
   end;
 
 PROCEDURE T_workspace.renameWordUnderCursor;

@@ -99,7 +99,7 @@ TYPE
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST quickStdout:P_synOutAdapter);
-      FUNCTION postEvalulation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
+      FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
   end;
 
   T_ideScriptEvaluation = object (T_abstractEvaluation)
@@ -360,7 +360,7 @@ begin
   else executeEditScript_impl;
 end;
 
-FUNCTION T_quickEvaluation.postEvalulation(CONST parent: P_codeProvider; CONST evaluateInParent: boolean; CONST input: T_arrayOfString):boolean;
+FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST evaluateInParent: boolean; CONST input: T_arrayOfString):boolean;
   begin
     system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
@@ -388,7 +388,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
       globals.afterEvaluation(recycler);
     end else begin
-      if package.getCodeProvider<>parentProvider then package.replaceCodeProvider(parentProvider);
+      package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);

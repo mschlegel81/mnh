@@ -158,8 +158,8 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
 
     quickEvaluation.flushMessages;
     if evaluatedFor<>stateHash then begin
-      if meta=nil then proxy:=nil else proxy:=P_editorMetaProxy(newFileProxy(meta^.getPath));
-      quickEvaluation.postEvalulation(proxy,
+      if meta=nil then proxy:=nil else proxy:=newFixatedFileProxy(meta^.getPath);
+      quickEvaluation.postEvaluation(proxy,
                                       cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked,
                                       inputMeta.getLines);
       evaluatedFor:=stateHash;

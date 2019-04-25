@@ -571,7 +571,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     end;
     dockSites[componentParent]^.fixSize;
     form.myComponentParent:=componentParent;
-    form.showComponent;
+    form.showComponent(false);
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
 

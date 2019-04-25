@@ -809,7 +809,7 @@ object IdeMainForm: TIdeMainForm
   end
   object Timer: TTimer
     Enabled = False
-    Interval = 10
+    Interval = 20
     OnTimer = TimerTimer
     left = 277
     top = 58

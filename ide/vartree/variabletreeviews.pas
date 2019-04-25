@@ -107,7 +107,7 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
             tree.initWithLiteral(treeContent,caption)
           end;
           dockNewForm(tree);
-          tree.showComponent;
+          tree.showComponent(true);
         end;
       mt_startOfEvaluation:
         begin

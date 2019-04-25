@@ -246,7 +246,7 @@ PROCEDURE T_guiPlotSystem.ensureForm;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm                    .pullPlotSettingsToGui();
       dockNewForm(myPlotForm);
-    end;
+    end else myPlotForm.showComponent(true);
   end;
 
 CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);
@@ -621,7 +621,7 @@ PROCEDURE TplotForm.performFastUpdate;
 
       if animateCheckBox.checked and
          //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
-         (frameInterval-eTimer.elapsed<0.02) and
+         (frameInterval-eTimer.elapsed<0.05) and
          relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
       then begin
         relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
@@ -629,7 +629,7 @@ PROCEDURE TplotForm.performFastUpdate;
         eTimer.start;
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
-          animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
+          animationFPSLabel.caption:=formatFloat('#0.00',(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
           fpsSamplingStart:=now;
           framesSampled:=0;
         end;
@@ -809,28 +809,17 @@ FUNCTION postdisplay_imp intFuncSignature;
     result:=newVoidLiteral;
   end else result:=nil; end;
 
-FUNCTION uninitialized_fallback intFuncSignature;
-  begin
-    context.messages^.logGuiNeeded;
-    result:=nil;
-  end;
-
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   begin
     mainFormCoordinatesLabel:=coordLabel;
-    reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
-    reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
-    reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
-    reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
-    reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      );
   end;
 
 INITIALIZATION
-  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@uninitialized_fallback,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@uninitialized_fallback,ak_nullary,'clearAnimation;//Clears the animated plot');
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@uninitialized_fallback,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
-  registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution');
-  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
+  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
+  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution');
+  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
 
 end.
 
