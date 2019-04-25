@@ -9,7 +9,7 @@ USES  //basic classes
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls,
   //GUI: SynEdit
-  SynEdit, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,SynExportHTML,
+  SynEdit, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
   closeDialog,
   //MNH:
   mnh_doc,

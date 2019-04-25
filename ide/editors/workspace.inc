@@ -512,26 +512,22 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
     end;
 
     toSave^.saveFile(newName);
+    fileHistory.fileClosed(newName);
     result:=true;
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;
-  VAR SynExporterHTML: TSynExporterHTML;
-      name:string;
-      meta:P_editorMeta;
+  VAR meta:P_editorMeta;
+      htmlMeta:P_editorMeta;
+      htmlText:ansistring;
   begin
     meta:=currentEditor;
     if meta=nil then exit;
-
-    name:=safeCallback(GetCurrentDir,'','.html');
-    if name='' then exit;
-
-    SynExporterHTML:=TSynExporterHTML.create(nil);
-    SynExporterHTML.title:=meta^.pseudoName();
-    SynExporterHTML.highlighter:=meta^.editor.highlighter;
-    SynExporterHTML.ExportAll(meta^.editor.lines);
-    SynExporterHTML.saveToFile(name);
-    SynExporterHTML.free;
+    htmlText:=htmlExporter.textToHtml(meta^.pseudoName,meta^.editor.lines,meta^.editor.highlighter);
+    htmlMeta:=addEditorMetaForNewFile;
+    htmlMeta^.language:=LANG_HTML;
+    htmlMeta^.editor.text:=htmlText;
+    inputPageControl.activePage:=htmlMeta^.tabsheet;
   end;
 
 PROCEDURE T_workspace.renameWordUnderCursor;

@@ -5,7 +5,8 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages;
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
+  SynEditTypes,SynExportHTML,SynEditHighlighter;
 
 TYPE
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
@@ -90,6 +91,13 @@ TYPE
       dockSites:array[T_componentParent] of P_mnhDockSiteModel;
   end;
 
+  T_htmlExporter=object
+    FUNCTION textToHtml(CONST title:string; CONST content:TStrings; CONST highlighter:TSynCustomHighlighter):string;
+    PROCEDURE OutputSynEditCutCopy(Sender: TObject; VAR AText: string;
+      VAR AMode: TSynSelectionMode; ALogStartPos: TPoint;
+      VAR AnAction: TSynCopyPasteAction);
+  end;
+
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
 CONST C_dockSetupDockAll:T_dockSetup
     {icOutline}   =(cpPageControl3,
@@ -161,10 +169,10 @@ TYPE F_getFontSize= FUNCTION (CONST c:T_controlType): longint of object;
      F_setFontSize= PROCEDURE (CONST c:T_controlType; CONST value: longint) of object;
 VAR getFontSize_callback:F_getFontSize=nil;
     setFontSize_callback:F_setFontSize=nil;
-
+    htmlExporter:T_htmlExporter;
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
-USES math,litVar,recyclers,basicTypes,contexts,funcs;
+USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 
@@ -186,6 +194,39 @@ PROCEDURE dockAllForms;
     for f in activeForms do dockNewForm(f);
     lastDockLocationFor:=C_dockSetupDockAll;
   end;
+
+FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; CONST highlighter:TSynCustomHighlighter): string;
+  VAR SynExporterHTML: TSynExporterHTML;
+      outputStream:TMemoryStream;
+      size:longint;
+  begin
+    SynExporterHTML:=TSynExporterHTML.create(nil);
+    SynExporterHTML.title:=title;
+    SynExporterHTML.highlighter:=highlighter;
+    SynExporterHTML.ExportAll(content);
+    outputStream:=TMemoryStream.create();
+    SynExporterHTML.saveToStream(outputStream);
+    SynExporterHTML.free;
+    size:=outputStream.size;
+    outputStream.Seek(0,soFromBeginning);
+    setLength(result,size);
+    outputStream.ReadBuffer(result[1],size);
+    outputStream.free;
+  end;
+
+PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject;
+  VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint;
+  VAR AnAction: TSynCopyPasteAction);
+  VAR content:TStringList;
+begin
+  if (Sender.ClassName<>'TSynEdit') or (AnAction<>scaPlainText) then exit;
+  if (Clipboard=nil) then exit;
+  content:=TStringList.create;
+  content.text:=AText;
+  ClipBoard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
+  AnAction:=scaAbort;
+  content.free;
+end;
 
 FUNCTION T_mnhDockSiteModel.getAbsSize: longint;
   begin
@@ -354,8 +395,8 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
       oldActive:=mainForm.ActiveControl;
       Show;
       PageControl.activePage:=page;
-      if mainForm<>nil then begin
-        if retainOriginalFocus
+      if (mainForm<>nil) then begin
+        if retainOriginalFocus and (oldActive<>nil)
         then mainForm.ActiveControl:=oldActive
         else mainForm.ActiveControl:=self;
       end;
@@ -404,6 +445,8 @@ PROCEDURE registerFontControl(control:TWinControl; CONST controlType:T_controlTy
       control.Font.style:=settings.Font[controlType].style;
       control.Font.quality:=fqCleartypeNatural;
     end else control.Font:=fontControls[controlType][0].Font;
+
+    if control.ClassName='TSynEdit' then TSynEdit(control).OnCutCopy:=@htmlExporter.OutputSynEditCutCopy;
   end;
 
 PROCEDURE unregisterFontControl(control:TWinControl);
@@ -612,6 +655,5 @@ INITIALIZATION
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
   registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
-
 end.
 

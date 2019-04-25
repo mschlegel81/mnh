@@ -69,6 +69,7 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
     adapter.outputBehavior:=guiOutAdapters.outputBehavior;
+    adapter.autoflush:=false;
   end;
 
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
@@ -136,20 +137,12 @@ PROCEDURE TOutputForm.performSlowUpdate;
   end;
 
 PROCEDURE TOutputForm.performFastUpdate;
-  VAR oldActive:TWinControl;
   begin
     adapter.jumpToEnd:=cbShowOnOutput.checked;
-    adapter.autoflush:=not(cbFreezeOutput.checked);
     if not(cbFreezeOutput.checked) then begin
       if (adapter.flushToGui(true)<>[])
       and (cbShowOnOutput.checked)
-      then begin
-        if mainForm<>nil
-        then oldActive:=mainForm.ActiveControl
-        else oldActive:=nil;
-        showComponent(true);
-        if oldActive<>nil then mainForm.ActiveControl:=oldActive;
-      end;
+      then showComponent(true);
     end;
   end;
 

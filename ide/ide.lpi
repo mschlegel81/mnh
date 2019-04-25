@@ -523,7 +523,7 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="7">
+    <Exceptions Count="10">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -545,6 +545,15 @@
       <Item7>
         <Name Value="RunError(210)"/>
       </Item7>
+      <Item8>
+        <Name Value="ERangeError"/>
+      </Item8>
+      <Item9>
+        <Name Value="RunError(201)"/>
+      </Item9>
+      <Item10>
+        <Name Value="Exception"/>
+      </Item10>
     </Exceptions>
   </Debugging>
 </CONFIG>
