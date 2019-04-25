@@ -1,19 +1,18 @@
 object reevaluationForm: TreevaluationForm
   Left = 817
-  Height = 360
+  Height = 240
   Top = 177
-  Width = 480
+  Width = 320
   Caption = 'MNH'
-  DesignTimePPI = 144
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object Timer: TTimer
     Enabled = False
-    Interval = 10
+    Interval = 20
     OnTimer = TimerTimer
-    left = 164
-    top = 65
+    left = 109
+    top = 43
   end
 end
