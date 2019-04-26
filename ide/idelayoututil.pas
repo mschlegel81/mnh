@@ -223,7 +223,7 @@ begin
   if (Clipboard=nil) then exit;
   content:=TStringList.create;
   content.text:=AText;
-  ClipBoard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
+  Clipboard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
   AnAction:=scaAbort;
   content.free;
 end;
