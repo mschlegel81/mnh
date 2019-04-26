@@ -459,7 +459,6 @@ FUNCTION T_abstractEvaluation.flushMessages:T_messageTypeSet;
 
 FUNCTION T_abstractEvaluation.stateString:string;
   begin
-    enterCriticalSection(evaluationCs);
     if (state=es_debugRunning) and      globals.isPaused  then state:=es_debugHalted else
     if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
     result:=C_evaluationState[state].txt;
@@ -467,7 +466,6 @@ FUNCTION T_abstractEvaluation.stateString:string;
       1: result+=myTimeToStr(now-evalTime,false);
       2: result+=myTimeToStr(    evalTime);
     end;
-    leaveCriticalSection(evaluationCs);
   end;
 
 FUNCTION T_standardEvaluation.isPaused:boolean;

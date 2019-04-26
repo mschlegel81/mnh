@@ -611,6 +611,8 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
     workspace.updateEditorsByGuiStatus;
   end;
 
+VAR slowUpdateState:string='';
+    fastUpdateState:string='';
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
   PROCEDURE slowUpdates;
@@ -631,25 +633,36 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     VAR edit:P_editorMeta;
     begin
       if slowUpdating then exit;
-      slowUpdating:=true;
-      if workspace.savingRequested then saveIdeSettings;
+      try
+        slowUpdating:=true;
+        slowUpdateState:='Saving IDE settings';
+        if workspace.savingRequested then saveIdeSettings;
 
-      edit:=workspace.currentEditor;
-      if (edit<>nil) then begin
-        edit^.pollAssistanceResult;
-        if edit^.isPseudoFile
-        then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-        else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-      end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
+        edit:=workspace.currentEditor;
+        if (edit<>nil) then begin
+          slowUpdateState:='Polling assistant result';
+          edit^.pollAssistanceResult;
+          slowUpdateState:='Updating form caption';
+          if edit^.isPseudoFile
+          then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+          else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+        end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
 
-      performSlowUpdates;
-      drawMemoryUsage;
+        slowUpdateState:='Performing global slow updates';
+        performSlowUpdates;
+        slowUpdateState:='Drawing memory usage';
+        drawMemoryUsage;
 
-      FormDropFiles(Sender,ipcModel.getFilesToOpen);
-      evaluationStateLabel.caption:=runnerModel.getStateLabel;
-      if quitPosted and not(anyEvaluationRunning) then close;
-      workspace.checkForFileChanges;
-      slowUpdating:=false;
+        slowUpdateState:='Opening files received by IPC';
+        FormDropFiles(Sender,ipcModel.getFilesToOpen);
+        slowUpdateState:='Updating state label';
+        evaluationStateLabel.caption:=runnerModel.getStateLabel;
+        if quitPosted and not(anyEvaluationRunning) then close;
+        slowUpdateState:='Checking for file changes';
+        workspace.checkForFileChanges;
+      finally
+        slowUpdating:=false;
+      end;
     end;
 
   PROCEDURE fastUpdates;
@@ -685,16 +698,22 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
     begin
       if fastUpdating then exit;
-      fastUpdating:=true;
-      performFastUpdates;
-      runnerModel.flushMessages;
+      try
+        fastUpdating:=true;
+        fastUpdateState:='Global fast updates';
+        performFastUpdates;
+        fastUpdateState:='Flushing messages';
+        runnerModel.flushMessages;
 
-      if ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
+        if ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 
-      if askForm.displayPending then askForm.Show;
-      enableItems;
-      processPendingResize;
-      fastUpdating:=false;
+        if askForm.displayPending then askForm.Show;
+        fastUpdateState:='Updating dynamic items';
+        enableItems;
+        processPendingResize;
+      finally
+        fastUpdating:=false;
+      end;
     end;
 
   begin
@@ -715,8 +734,8 @@ PROCEDURE TIdeMainForm.ensureTimerSuspend;
         inc(counter);
         sleep(1);
       end;
-      if slowUpdating then raise Exception.create('Slow updates are hanging for at least 1 second.');
-      if fastUpdating then raise Exception.create('Fast updates are hanging for at least 1 second.');
+      if slowUpdating then raise Exception.create('Slow updates are hanging for at least 1 second at '+slowUpdateState);
+      if fastUpdating then raise Exception.create('Fast updates are hanging for at least 1 second at '+fastUpdateState);
     end;
   end;
 
