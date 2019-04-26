@@ -475,12 +475,16 @@ PROCEDURE TIdeMainForm.miQuickEvalClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRenameClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     workspace.renameWordUnderCursor;
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miReplaceClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     searchReplaceModel.beginFindOrReplace(focusedEditor,false);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
@@ -525,7 +529,9 @@ PROCEDURE TIdeMainForm.miSaveClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     SettingsForm.ShowModal;
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
