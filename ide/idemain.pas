@@ -13,8 +13,6 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
 
 TYPE
-  { TIdeMainForm }
-
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
@@ -158,6 +156,7 @@ TYPE
     slowUpdating,
     quitPosted:boolean;
     subTimerCounter:longint;
+    PROCEDURE ensureTimerSuspend;
   public
     PROCEDURE saveIdeSettings;
     { public declarations }
@@ -258,7 +257,7 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    timer.enabled:=false;
+    ensureTimerSuspend;
     finalizeCodeAssistance;
     saveIdeSettings;
     runnerModel.destroy;
@@ -321,7 +320,9 @@ PROCEDURE TIdeMainForm.miBreakpointsClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     workspace.closeCurrentFile;
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miDebugClick(Sender: TObject);
@@ -432,7 +433,7 @@ PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
   begin
-    timer.enabled:=false;
+    ensureTimerSuspend;
     if (openFileDialog.showClassicDialog=mrOk) and fileExists(openFileDialog.getSelectedFile)
     then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     timer.enabled:=true;
@@ -442,7 +443,7 @@ PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
   VAR currentEdit:P_editorMeta;
       currentPath:string;
   begin
-    timer.enabled:=false;
+    ensureTimerSuspend;
     currentEdit:=workspace.currentEditor;
     if (currentEdit=nil) or (currentEdit^.isPseudoFile)
     then currentPath:=GetCurrentDir
@@ -496,22 +497,30 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     if customRunForm(false).ShowModal=mrOk then runnerModel.customRun(true,customRunForm(false).scriptParamEdit.text);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     if customRunForm(true).ShowModal=mrOk then runnerModel.runExternally(customRunForm(true).scriptParamEdit.text);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miSaveAsClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     workspace.saveCurrentFile(true);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miSaveClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     workspace.saveCurrentFile();
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
@@ -688,6 +697,20 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     if subTimerCounter>50 then begin
       slowUpdates;
       subTimerCounter:=0;
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.ensureTimerSuspend;
+  VAR counter:longint=0;
+  begin
+    if timer.enabled then begin
+      timer.enabled:=false;
+      while (slowUpdating or fastUpdating) and (counter<1000) do begin
+        inc(counter);
+        sleep(1);
+      end;
+      if slowUpdating then raise Exception.create('Slow updates are hanging for at least 1 second.');
+      if fastUpdating then raise Exception.create('Fast updates are hanging for at least 1 second.');
     end;
   end;
 
