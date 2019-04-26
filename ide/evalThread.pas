@@ -469,7 +469,7 @@ FUNCTION T_abstractEvaluation.stateString:string;
     if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
     result:=C_evaluationState[state].txt;
     case C_evaluationState[state].showTime of
-      1: result+=myTimeToStr(now-evalTime);
+      1: result+=myTimeToStr(now-evalTime,false);
       2: result+=myTimeToStr(    evalTime);
     end;
     leaveCriticalSection(evaluationCs);
