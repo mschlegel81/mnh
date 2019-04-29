@@ -63,7 +63,6 @@ USES evaluation,
      funcs_strings,
      funcs_system,
      funcs_types,
-     funcs_xml,
      builtinGenerators,
      consoleAsk;
 
