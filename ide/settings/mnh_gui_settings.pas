@@ -308,9 +308,10 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       then APP_STYLE:=APP_STYLE_NORMAL
       else APP_STYLE:=APP_STYLE_PORTABLE;
     end;
-    saveSettings;
     workspace.postSaveRequest;
     ensureDemosAndPackages(nil,nil,false);
+    htmlDocGeneratedForCodeHash:='';
+    makeHtmlFromTemplate(nil,nil);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
   end;
   {$else}begin end;{$endif}
