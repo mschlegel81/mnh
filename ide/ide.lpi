@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="67">
+    <Units Count="69">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -476,6 +476,15 @@
         <Filename Value="../core/funcs_regex.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit66>
+      <Unit67>
+        <Filename Value="plot/plotmath.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="plotMath"/>
+      </Unit67>
+      <Unit68>
+        <Filename Value="plot/plotstyles.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit68>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

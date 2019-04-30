@@ -1,6 +1,6 @@
 UNIT plotMath;
 INTERFACE
-USES sysutils, math,
+USES sysutils,
      Graphics, base64,
      myGenerics,
      myStringUtil,
@@ -133,6 +133,7 @@ TYPE
 
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
+USES math;
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
     result[0]:=x;
@@ -764,13 +765,12 @@ FUNCTION T_scalingOptions.getOptionDiffString(CONST before:T_scalingOptions):str
 
 CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);
   begin
-    style.create(index);
+    style.init();
     sample:=row;
   end;
 
 DESTRUCTOR T_sampleRow.destroy;
   begin
-    style.destroy;
     sample.free;
   end;
 

@@ -51,19 +51,22 @@ TYPE
     solidStyle  :TFPBrushStyle;
   end;
 
+  T_styleTemplateDefault =(std_defaultColor,std_defaultTransparentIdx);
+  T_styleTemplateDefaults=set of T_styleTemplateDefault;
+
   T_style = object
     private
       transparentIndex:byte;
+      PROCEDURE parseStyle(CONST styleString: ansistring);
+      PROCEDURE setDefaults(CONST index:longint; VAR transparentCount:longint);
     public
-    txt:string;
-    style: T_plotStyles;
-    color: T_color;
-    styleModifier: double;
-    CONSTRUCTOR create(CONST index: longint);
-    DESTRUCTOR destroy;
-    PROCEDURE parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
-    FUNCTION toString:ansistring;
-    FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;
+      defaults:T_styleTemplateDefaults;
+      style: T_plotStyles;
+      color: T_color;
+      styleModifier: double;
+      PROCEDURE init();
+      FUNCTION toString:ansistring;
+      FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;
   end;
 
   T_gridStyleElement=(gse_tics,gse_coarseGrid,gse_fineGrid);
@@ -72,7 +75,11 @@ TYPE
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
 OPERATOR :=(CONST b:byte):T_gridStyle;
 OPERATOR :=(CONST c:T_color):longint;
+FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparentCount:longint):T_style;
 IMPLEMENTATION
+USES myGenerics,mySys;
+VAR styleCS:TRTLCriticalSection;
+    styleMap:specialize G_stringKeyMap<T_style>;
 CONST GSE_BYTE:array[T_gridStyleElement] of byte=(1,2,4);
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
   VAR se:T_gridStyleElement;
@@ -108,21 +115,16 @@ CONST C_defaultColor: array[0..7] of record
        (name: 'yellow'; color:(255,255,  0)),
        (name: 'cyan'  ; color:(  0,128,128)));
 
-CONSTRUCTOR T_style.create(CONST index: longint);
+PROCEDURE T_style.init();
   begin
-    transparentIndex:=index and 255;
+    transparentIndex:=0;
     style:=[ps_straight];
-    color:=C_defaultColor[index mod length(C_defaultColor)].color;
-    txt:='';
+    defaults:=[low(T_styleTemplateDefault)..high(T_styleTemplateDefault)];
+    color:=C_defaultColor[0].color;
     styleModifier:=1;
   end;
 
-DESTRUCTOR T_style.destroy;
-  begin
-  end;
-
-PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
-  VAR givenTransparentIndex:longint=-1;
+PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
   FUNCTION parseColorOption(colorOption: shortstring; OUT r, g, b: byte): boolean;
     PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
       VAR hi,p,q,t: byte;
@@ -200,8 +202,6 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
         b:=r;
         result:=true;
       end;
-      if not(result) and (copy(colorOption,1,2)='TI') then
-        givenTransparentIndex:=strToIntDef(copy(colorOption,3,length(colorOption)-2),-1);
     end;
 
   VAR part, options: ansistring;
@@ -236,19 +236,30 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
         else include(style,ps);
         mightBeColor:=false;
       end;
-      if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
+      if mightBeColor then begin
+        if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor]
+        else begin
+          if (copy(part,1,2)='TI') then begin
+            transparentIndex:=strToIntDef(copy(part,3,length(part)-2),-1) and 255;
+            defaults-=[std_defaultTransparentIdx];
+          end;
+        end;
+      end;
     until options = '';
     if (style-[ps_filled,ps_fillSolid])=[] then include(style,ps_straight);
+  end;
 
+PROCEDURE T_style.setDefaults(CONST index:longint; VAR transparentCount:longint);
+  begin
     if ((ps_filled  in style) or
         (ps_bar     in style) or
         (ps_tube    in style) or
         (ps_polygon in style)) and not(ps_fillSolid in style) then begin
-      if givenTransparentIndex>=0
-      then transparentIndex:=givenTransparentIndex and 255
-      else transparentIndex:=transparentCount      and 255;
+      if std_defaultTransparentIdx in defaults
+      then transparentIndex:=transparentCount and 255;
       inc(transparentCount);
     end;
+    if std_defaultColor in defaults then color:=C_defaultColor[index mod length(C_defaultColor)].color;
   end;
 
 FUNCTION T_style.toString:ansistring;
@@ -313,6 +324,35 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
+
+PROCEDURE clearStyles;
+  begin
+    enterCriticalSection(styleCS);
+    styleMap.clear;
+    leaveCriticalSection(styleCS);
+  end;
+
+FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparentCount:longint):T_style;
+  begin
+    enterCriticalSection(styleCS);
+    if not(styleMap.containsKey(styleString,result)) then begin
+      result.init();
+      result.parseStyle(styleString);
+      styleMap.put(styleString,result);
+    end;
+    result.setDefaults(index,transparentCount);
+    leaveCriticalSection(styleCS);
+  end;
+
+INITIALIZATION
+  initCriticalSection(styleCS);
+  styleMap.create();
+  memoryCleaner.registerCleanupMethod(@clearStyles);
+FINALIZATION
+  enterCriticalSection(styleCS);
+  styleMap.destroy;
+  leaveCriticalSection(styleCS);
+  doneCriticalSection(styleCS);
 
 end.
 
