@@ -508,6 +508,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
     prepareBuiltInDocs;
+    if (htmlDocGeneratedForCodeHash=CODE_HASH) then exit;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;

@@ -722,7 +722,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     index:=length(row);
     setLength(row, index+1);
     row[index].create(index,rowData);
-    if trim(styleOptions)<>'' then row[index].style.parseStyle(styleOptions,transparentCount);
+    row[index].style:=getStyle(index,styleOptions,transparentCount);
     system.leaveCriticalSection(cs);
   end;
 
@@ -1543,9 +1543,6 @@ PROCEDURE T_plotSystem.logPlotDone;
   end;
 
 INITIALIZATION
-  MAJOR_TIC_STYLE.create(0); MAJOR_TIC_STYLE.styleModifier:=0.2;
-  MINOR_TIC_STYLE.create(0); MINOR_TIC_STYLE.styleModifier:=0.1;
-FINALIZATION
-  MAJOR_TIC_STYLE.destroy;
-  MINOR_TIC_STYLE.destroy;
+  MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2; MAJOR_TIC_STYLE.defaults:=[];
+  MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1; MAJOR_TIC_STYLE.defaults:=[];
 end.

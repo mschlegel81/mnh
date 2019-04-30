@@ -147,6 +147,7 @@ PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
     runnerModel.postHalt;
     disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
+    updateWithCurrentSnapshot;
   end;
 
 PROCEDURE TDebuggerForm.addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
@@ -226,6 +227,7 @@ PROCEDURE TDebuggerForm.delegateDebuggerAction(CONST newState: T_debuggerState);
     parameterInfo:=nil;
     disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
+    updateWithCurrentSnapshot;
   end;
 
 end.

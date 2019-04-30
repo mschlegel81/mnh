@@ -64,7 +64,6 @@ USES evaluation,
      funcs_strings,
      funcs_system,
      funcs_types,
-     funcs_xml,
      builtinGenerators,
      consoleAsk;
 
@@ -80,6 +79,8 @@ PROCEDURE pauseOnce;
   begin
     pauseAtEnd:=false;
     pauseOnError:=false;
+    if ExitCode=0 then write('Evaluation finished. Press enter to exit ')
+                  else write('Evaluation finished with exit code ',ExitCode,'. Press enter to exit ');
     readln;
   end;
 {$ifdef fullVersion}
