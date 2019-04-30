@@ -118,7 +118,7 @@ CONST C_defaultColor: array[0..7] of record
 PROCEDURE T_style.init();
   begin
     transparentIndex:=0;
-    style:=[ps_straight];
+    style:=[];
     defaults:=[low(T_styleTemplateDefault)..high(T_styleTemplateDefault)];
     color:=C_defaultColor[0].color;
     styleModifier:=1;
@@ -221,27 +221,29 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         part:=copy(options, 1, sp-1);
         options:=trim(copy(options, sp+1, length(options)));
       end;
-      mightBeColor:=true;
-      if part<>'.' then begin
-      size:=strToFloatDef(part, Nan);
-        if not(isNan(size)) then begin
-          styleModifier:=size;
+      if part<>'' then begin
+        mightBeColor:=true;
+        if part<>'.' then begin
+        size:=strToFloatDef(part, Nan);
+          if not(isNan(size)) then begin
+            styleModifier:=size;
+            mightBeColor:=false;
+          end;
+        end;
+        for ps in T_plotStyle do
+        if (part = C_styleName[ps,0]) or (part = C_styleName[ps,1]) then begin
+          if ps in C_lineStyles
+          then style:=style-C_lineStyles+[ps]
+          else include(style,ps);
           mightBeColor:=false;
         end;
-      end;
-      for ps in T_plotStyle do
-      if (part = C_styleName[ps,0]) or (part = C_styleName[ps,1]) then begin
-        if ps in C_lineStyles
-        then style:=style-C_lineStyles+[ps]
-        else include(style,ps);
-        mightBeColor:=false;
-      end;
-      if mightBeColor then begin
-        if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor]
-        else begin
-          if (copy(part,1,2)='TI') then begin
-            transparentIndex:=strToIntDef(copy(part,3,length(part)-2),-1) and 255;
-            defaults-=[std_defaultTransparentIdx];
+        if mightBeColor then begin
+          if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor]
+          else begin
+            if (copy(part,1,2)='TI') then begin
+              transparentIndex:=strToIntDef(copy(part,3,length(part)-2),-1) and 255;
+              defaults-=[std_defaultTransparentIdx];
+            end;
           end;
         end;
       end;
