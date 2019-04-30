@@ -2,6 +2,7 @@
 PROGRAM ide;
 
 {$mode objfpc}{$H+}
+{$apptype console} // to read debug output on windows
 
 USES
   {$ifdef UNIX}
