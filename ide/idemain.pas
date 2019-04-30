@@ -656,10 +656,15 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         slowUpdateState:='Opening files received by IPC';
         FormDropFiles(Sender,ipcModel.getFilesToOpen);
         slowUpdateState:='Updating state label';
-        evaluationStateLabel.caption:=runnerModel.getStateLabel;
-        if quitPosted and not(anyEvaluationRunning) then close;
-        slowUpdateState:='Checking for file changes';
-        workspace.checkForFileChanges;
+        evaluationStateLabel.caption:=runnerModel.getStateLabel+BoolToStr(quitPosted,' QUIT POSTED','');
+        if quitPosted and not(anyEvaluationRunning) then begin
+          OnCloseQuery:=nil;
+          slowUpdating:=false;
+          close;
+        end else begin
+          slowUpdateState:='Checking for file changes';
+          workspace.checkForFileChanges;
+        end;
       finally
         slowUpdating:=false;
       end;

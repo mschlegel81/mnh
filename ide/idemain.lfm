@@ -159,7 +159,6 @@ object IdeMainForm: TIdeMainForm
       Top = 1
       Width = 133
       Align = alLeft
-      Constraints.MaxWidth = 133
       Constraints.MinWidth = 133
       ParentColor = False
       ParentFont = False
