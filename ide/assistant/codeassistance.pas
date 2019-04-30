@@ -20,15 +20,19 @@ USES
 
 TYPE
   T_highlightingData=object
-    warnLocations:array of record line,column:longint; isError:boolean; end;
-    userRules    :T_setOfString;
-    localIdInfos :T_localIdInfos;
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE clear;
-    FUNCTION isUserRule(CONST id: string): boolean;
-    FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-    FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+    private
+      highlightingCs:TRTLCriticalSection;
+      warnLocations:array of record line,column:longint; isError:boolean; end;
+      userRules    :T_setOfString;
+      localIdInfos :T_localIdInfos;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      FUNCTION isUserRule(CONST id: string): boolean;
+      FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
+      FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+      PROCEDURE clearLocalIdInfos;
   end;
 
   P_codeAssistanceResponse=^T_codeAssistanceResponse;
@@ -190,6 +194,7 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
   VAR k:longint;
       e:P_storedMessage;
   begin
+    enterCriticalSection(highlightingData.highlightingCs);
     highlightingData.userRules.clear;
     package^.updateLists(highlightingData.userRules,false);
     highlightingData.localIdInfos.copyFrom(localIdInfos);
@@ -203,49 +208,74 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
       inc(k);
     end;
     setLength(highlightingData.warnLocations,k);
+    leaveCriticalSection(highlightingData.highlightingCs);
   end;
 
 CONSTRUCTOR T_highlightingData.create;
   begin
+    initCriticalSection(highlightingCs);
+    enterCriticalSection(highlightingCs);
     userRules   .create;
     localIdInfos.create;
     setLength(warnLocations,0);
+    leaveCriticalSection(highlightingCs);
   end;
 
 PROCEDURE T_highlightingData.clear;
   begin
+    enterCriticalSection(highlightingCs);
     userRules   .clear;
     localIdInfos.clear;
     setLength(warnLocations,0);
+    leaveCriticalSection(highlightingCs);
   end;
 
 DESTRUCTOR T_highlightingData.destroy;
   begin
+    enterCriticalSection(highlightingCs);
     userRules   .destroy;
     localIdInfos.destroy;
     setLength(warnLocations,0);
+    leaveCriticalSection(highlightingCs);
+    doneCriticalSection(highlightingCs);
   end;
 
 FUNCTION T_highlightingData.isUserRule(CONST id: string): boolean;
   begin
+    enterCriticalSection(highlightingCs);
     result:=userRules.contains(id);
+    leaveCriticalSection(highlightingCs);
   end;
 
 FUNCTION T_highlightingData.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   VAR k:longint;
   begin
+    enterCriticalSection(highlightingCs);
     result:=0;
     for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
     if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
-      if isError then exit(2)
+      if isError then begin
+        leaveCriticalSection(highlightingCs);
+        exit(2);
+      end
       else if result<1 then result:=1;
     end;
+    leaveCriticalSection(highlightingCs);
   end;
 
 FUNCTION T_highlightingData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
   VAR dummyLocation:T_tokenLocation;
   begin
+    enterCriticalSection(highlightingCs);
     result:=localIdInfos.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
+    leaveCriticalSection(highlightingCs);
+  end;
+
+PROCEDURE T_highlightingData.clearLocalIdInfos;
+  begin
+    enterCriticalSection(highlightingCs);
+    localIdInfos.clear;
+    leaveCriticalSection(highlightingCs);
   end;
 
 CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos);
