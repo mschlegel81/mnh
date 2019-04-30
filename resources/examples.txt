@@ -626,9 +626,6 @@ extractFileName('/home/user/file.ext');
 
 extractFileExt('/home/user/file.ext');
 
-//Each XML node is represented as a triplet: [name,attributes,children], where attributes is a key-value-list
-readXml('<?xml version="1.0"?><body empty="False"><first id="1" value="Text"><child dummy="True"/></first><second/></body>');
-
 extractPath('/index.html?x=0&y=3%2Ax');
 
 extractParameters('/index.html?x=0&y=3%2Ax');
