@@ -1,15 +1,14 @@
 object scriptedForm: TscriptedForm
   Left = 885
-  Height = 360
+  Height = 240
   Top = 210
-  Width = 480
+  Width = 320
   Caption = 'scriptedForm'
-  DesignTimePPI = 144
   DragKind = dkDock
   DragMode = dmAutomatic
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
 end

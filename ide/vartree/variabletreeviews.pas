@@ -92,7 +92,7 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
       caption:string;
   begin
     result:=[];
-    enterCriticalSection(cs);
+    enterCriticalSection(adapterCs);
     for m in storedMessages do case m^.messageType of
       mt_displayVariableTree:
         begin
@@ -117,7 +117,7 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         end;
     end;
     clear;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_treeAdapter.destroy;

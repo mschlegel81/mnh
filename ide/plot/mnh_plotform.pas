@@ -301,11 +301,15 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
       relatedPlot^.startGuiInteraction;
-      if key='+' then relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,  0.9,plotImage)
-                 else relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,1/0.9,plotImage);
-      pullPlotSettingsToGui();
-      doPlot();
-      relatedPlot^.doneGuiInteraction;
+      //TODO: Post plot request instead of rendering immediately
+      try
+        if key='+' then relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,  0.9,plotImage)
+                   else relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,1/0.9,plotImage);
+        pullPlotSettingsToGui();
+        doPlot();
+      finally
+        relatedPlot^.doneGuiInteraction;
+      end;
       if Assigned(onPlotRescale) then onPlotRescale(Sender);
     end;
   end;
@@ -355,8 +359,11 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
     if animationFrameIndex=frameTrackBar.position then exit;
     animationFrameIndex:=frameTrackBar.position;
     relatedPlot^.startGuiInteraction;
-    relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
-    relatedPlot^.doneGuiInteraction;
+    try
+      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+    finally
+      relatedPlot^.doneGuiInteraction;
+    end;
     animateCheckBox.checked:=false;
   end;
 
@@ -450,8 +457,11 @@ PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
 PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
   begin
     relatedPlot^.startGuiInteraction;
-    exportPlotForm.showModalFor(relatedPlot,animationFrameIndex);
-    relatedPlot^.doneGuiInteraction;
+    try
+      exportPlotForm.showModalFor(relatedPlot,animationFrameIndex);
+    finally
+      relatedPlot^.doneGuiInteraction;
+    end;
   end;
 
 PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
@@ -559,8 +569,11 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     if (ssLeft in Shift) and (relatedPlot^.animation.frameCount=0) then begin
       if (x<>lastMouseX) or (y<>lastMouseY) then begin
         relatedPlot^.startGuiInteraction;
-        relatedPlot^.currentPlot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
-        relatedPlot^.doneGuiInteraction;
+        try
+          relatedPlot^.currentPlot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+        finally
+          relatedPlot^.doneGuiInteraction;
+        end;
         mouseUpTriggersPlot:=true;
       end;
     end else if Assigned(onPlotMouseMove) then onPlotMouseMove(p);
@@ -617,31 +630,34 @@ PROCEDURE TplotForm.performFastUpdate;
   begin
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
-    if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
+    try
+      if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
 
-      if animateCheckBox.checked and
-         //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
-         (frameInterval-eTimer.elapsed<0.05) and
-         relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
-      then begin
-        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
-        eTimer.clear;
-        eTimer.start;
-        inc(framesSampled);
-        if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
-          animationFPSLabel.caption:=formatFloat('#0.00',(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
-          fpsSamplingStart:=now;
-          framesSampled:=0;
+        if animateCheckBox.checked and
+           //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
+           (frameInterval-eTimer.elapsed<0.05) and
+           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
+        then begin
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
+          eTimer.clear;
+          eTimer.start;
+          inc(framesSampled);
+          if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
+            animationFPSLabel.caption:=formatFloat('#0.00',(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
+            fpsSamplingStart:=now;
+            framesSampled:=0;
+          end;
         end;
+        frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
+        frameTrackBar.position:=animationFrameIndex;
+        frameIndexLabel.caption:=intToStr(animationFrameIndex);
+        if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
+        if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
+                                else frameTrackBar.frequency:= 1;
       end;
-      frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
-      frameTrackBar.position:=animationFrameIndex;
-      frameIndexLabel.caption:=intToStr(animationFrameIndex);
-      if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
-      if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
-                              else frameTrackBar.frequency:= 1;
+    finally
+      relatedPlot^.doneGuiInteraction;
     end;
-    relatedPlot^.doneGuiInteraction;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;
@@ -656,8 +672,11 @@ PROCEDURE TplotForm.pullPlotSettingsToGui();
   VAR currentScalingOptions:T_scalingOptions;
   begin
     relatedPlot^.startGuiInteraction;
-    currentScalingOptions:=relatedPlot^.currentPlot.options;
-    relatedPlot^.doneGuiInteraction;
+    try
+      currentScalingOptions:=relatedPlot^.currentPlot.options;
+    finally
+      relatedPlot^.doneGuiInteraction;
+    end;
     miXTics         .checked:=gse_tics       in currentScalingOptions.axisStyle['x'];
     miXGrid         .checked:=gse_coarseGrid in currentScalingOptions.axisStyle['x'];
     miXFinerGrid    .checked:=gse_fineGrid   in currentScalingOptions.axisStyle['x'];
@@ -688,19 +707,23 @@ PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize: double);
       i:longint;
   begin
     relatedPlot^.startGuiInteraction;
-    currentScalingOptions:=relatedPlot^.currentPlot.options;
-    currentScalingOptions.relativeFontSize:=newSize;
-    relatedPlot^.currentPlot.options:=currentScalingOptions;
-    pullPlotSettingsToGui();
-    i:=0;
-    while i<relatedPlot^.animation.frameCount do begin
-      currentScalingOptions:=relatedPlot^.animation.options[i];
+    try
+      currentScalingOptions:=relatedPlot^.currentPlot.options;
       currentScalingOptions.relativeFontSize:=newSize;
-      relatedPlot^.animation.options[i]:=currentScalingOptions;
-      inc(i);
+      relatedPlot^.currentPlot.options:=currentScalingOptions;
+      pullPlotSettingsToGui();
+      i:=0;
+      while i<relatedPlot^.animation.frameCount do begin
+        currentScalingOptions:=relatedPlot^.animation.options[i];
+        currentScalingOptions.relativeFontSize:=newSize;
+        relatedPlot^.animation.options[i]:=currentScalingOptions;
+        inc(i);
+      end;
+      //TODO: Post plot request instead of plotting immediately
+      doPlot;
+    finally
+      relatedPlot^.doneGuiInteraction;
     end;
-    doPlot;
-    relatedPlot^.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer();
@@ -725,19 +748,23 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
 
   begin
     relatedPlot^.startGuiInteraction;
-    currentScalingOptions:=relatedPlot^.currentPlot.options;
-    updateCurrent;
-    relatedPlot^.currentPlot.options:=currentScalingOptions;
-    pullPlotSettingsToGui();
-    i:=0;
-    while i<relatedPlot^.animation.frameCount do begin
-      currentScalingOptions:=relatedPlot^.animation.options[i];
+    try
+      currentScalingOptions:=relatedPlot^.currentPlot.options;
       updateCurrent;
-      relatedPlot^.animation.options[i]:=currentScalingOptions;
-      inc(i);
+      relatedPlot^.currentPlot.options:=currentScalingOptions;
+      pullPlotSettingsToGui();
+      i:=0;
+      while i<relatedPlot^.animation.frameCount do begin
+        currentScalingOptions:=relatedPlot^.animation.options[i];
+        updateCurrent;
+        relatedPlot^.animation.options[i]:=currentScalingOptions;
+        inc(i);
+      end;
+      //TODO: Post plot request instead of plotting immediatley
+      doPlot;
+    finally
+      relatedPlot^.doneGuiInteraction;
     end;
-    doPlot;
-    relatedPlot^.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.doPlot;
@@ -756,17 +783,19 @@ PROCEDURE TplotForm.doPlot;
   begin
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
-    updateInteractiveSection;
-    plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+    try
+      updateInteractiveSection;
+      plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
 
-    if relatedPlot^.animation.frameCount<>0 then begin
-      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+      if relatedPlot^.animation.frameCount<>0 then begin
+        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+      end else begin
+        relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
+        relatedPlot^.logPlotDone;
+      end;
+    finally
       relatedPlot^.doneGuiInteraction;
-      exit;
     end;
-    relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
-    relatedPlot^.logPlotDone;
-    relatedPlot^.doneGuiInteraction;
   end;
 
 {$i func_defines.inc}

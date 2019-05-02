@@ -48,19 +48,19 @@ TYPE
       jumpToEnd:boolean;
       autoflush:boolean;
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
-                         CONST messageTypesToInclude:T_messageTypeSet=[mt_clearConsole,
-                                                                       mt_printline,
-                                                                       mt_printdirect,
-                                                                       mt_el1_note,
-                                                                       mt_el1_userNote,
-                                                                       mt_el2_warning,
-                                                                       mt_el2_userWarning,
-                                                                       mt_echo_input,
-                                                                       mt_echo_output,
-                                                                       mt_echo_declaration,
-                                                                       mt_echo_continued,
-                                                                       mt_startOfEvaluation,
-                                                                       mt_endOfEvaluation]);
+                         CONST messageTypesToInc:T_messageTypeSet=[mt_clearConsole,
+                                                                   mt_printline,
+                                                                   mt_printdirect,
+                                                                   mt_el1_note,
+                                                                   mt_el1_userNote,
+                                                                   mt_el2_warning,
+                                                                   mt_el2_userWarning,
+                                                                   mt_echo_input,
+                                                                   mt_echo_output,
+                                                                   mt_echo_declaration,
+                                                                   mt_echo_continued,
+                                                                   mt_startOfEvaluation,
+                                                                   mt_endOfEvaluation]);
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROPERTY ownerForm:TForm read synOwnerForm;
@@ -302,9 +302,9 @@ PROCEDURE T_synOutAdapter.doneOutput(CONST jumpDown:boolean);
     syn.enabled:=not(lastWasDirectPrint);
   end;
 
-CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
+CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInc:T_messageTypeSet);
   begin
-    inherited create(at_guiSynOutput,messageTypesToInclude);
+    inherited create(at_guiSynOutput,messageTypesToInc);
     autoflush:=true;
     parentMessages:=nil;
     wrapEcho:=false;
@@ -320,7 +320,7 @@ FUNCTION T_synOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
     if not(forceFlush or autoflush) then exit;
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(adapterCs);
     result:=[];
     startOutput;
     try
@@ -332,20 +332,20 @@ FUNCTION T_synOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
     finally
       if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
       doneOutput(jumpToEnd);
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(adapterCs);
     end;
   end;
 
 PROCEDURE T_synOutAdapter.flushClear;
   VAR clearMessage:P_storedMessage;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(adapterCs);
     lastWasDirectPrint:=false;
     clear;
     new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
     append(clearMessage);
     disposeMessage(clearMessage);
-    system.leaveCriticalSection(cs);
+    system.leaveCriticalSection(adapterCs);
   end;
 
 INITIALIZATION

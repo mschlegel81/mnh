@@ -2,7 +2,6 @@ UNIT out_adapters;
 INTERFACE
 USES sysutils,
      myGenerics,mySys,
-     myStringUtil,
      mnh_messages,
      mnh_constants, basicTypes;
 TYPE
@@ -43,9 +42,9 @@ TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
     protected
-      cs:TRTLCriticalSection;
-    private
+      adapterCs:TRTLCriticalSection;
       messageTypesToInclude:T_messageTypeSet;
+    private
       PROCEDURE setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
     public
     adapterType:T_adapterType;
@@ -251,6 +250,7 @@ VAR
   gui_started:boolean=false;
 OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
+USES  myStringUtil;
 VAR globalAdaptersCs:TRTLCriticalSection;
     allConnectors:array of P_messagesDistributor;
     finalizing:longint=0;
@@ -383,8 +383,11 @@ FUNCTION T_messages.continueEvaluation: boolean;
 PROCEDURE T_messagesRedirector.clear(CONST clearAllAdapters: boolean);
   begin
     enterCriticalSection(messagesCs);
-    inherited clear(clearAllAdapters);
-    leaveCriticalSection(messagesCs);
+    try
+      inherited clear(clearAllAdapters);
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 PROCEDURE T_messagesDistributor.clear(CONST clearAllAdapters: boolean);
@@ -405,8 +408,11 @@ PROCEDURE T_messagesErrorHolder.clear(CONST clearAllAdapters: boolean);
 PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
   begin
     enterCriticalSection(messagesCs);
-    clearFlags;
-    leaveCriticalSection(messagesCs);
+    try
+      clearFlags;
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType): boolean;
@@ -417,33 +423,40 @@ FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType): bo
 FUNCTION T_messagesRedirector.storedMessages(CONST filterDuplicates:boolean): T_storedMessages;
   begin
     enterCriticalSection(messagesCs);
-    if filterDuplicates then collector.removeDuplicateStoredMessages;
-    result:=collector.storedMessages;
-    leaveCriticalSection(messagesCs);
+    try
+      if filterDuplicates then collector.removeDuplicateStoredMessages;
+      result:=collector.storedMessages;
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 FUNCTION T_messagesErrorHolder.storedMessages(CONST filterDuplicates: boolean): T_storedMessages;
   begin
     enterCriticalSection(messagesCs);
-    if filterDuplicates then collector.removeDuplicateStoredMessages;
-    result:=collector.storedMessages;
-    leaveCriticalSection(messagesCs);
+    try
+      if filterDuplicates then collector.removeDuplicateStoredMessages;
+      result:=collector.storedMessages;
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 FUNCTION T_messagesDistributor.flushAllFiles: boolean;
   VAR a:T_flaggedAdapter;
   begin
     enterCriticalSection(messagesCs);
-    result:=false;
-    for a in adapters do try
-      if a.adapter^.adapterType=at_textFile
-      then begin
-        if P_textFileOutAdapter(a.adapter)^.flush
-        then result:=true;
-      end;
-    except
+    try
+      result:=false;
+      for a in adapters do
+        if a.adapter^.adapterType=at_textFile
+        then begin
+          if P_textFileOutAdapter(a.adapter)^.flush
+          then result:=true;
+        end;
+    finally
+      leaveCriticalSection(messagesCs);
     end;
-    leaveCriticalSection(messagesCs);
   end;
 
 PROCEDURE T_messagesDistributor.updateCollecting;
@@ -451,11 +464,12 @@ PROCEDURE T_messagesDistributor.updateCollecting;
   begin
     enterCriticalSection(messagesCs);
     collecting:=[];;
-    for a in adapters do try
-      collecting:=collecting + a.adapter^.messageTypesToInclude;
-    except
+    try
+      for a in adapters do
+        collecting:=collecting + a.adapter^.messageTypesToInclude;
+    finally
+      leaveCriticalSection(messagesCs);
     end;
-    leaveCriticalSection(messagesCs);
   end;
 
 CONSTRUCTOR T_messagesDistributor.createDistributor();
@@ -489,42 +503,52 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
       appended:boolean=false;
   begin
     enterCriticalSection(messagesCs);
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    if message^.messageClass in [mc_error,mc_fatal] then begin
-      inc(errorCount);
-      if errorCount>20 then begin
-        leaveCriticalSection(messagesCs);
-        if disposeAfterPosting then disposeMessage(message);
-        exit;
+    try
+      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+      if message^.messageClass in [mc_error,mc_fatal] then begin
+        inc(errorCount);
+        if errorCount>20 then begin
+          posting:=false;
+          leaveCriticalSection(messagesCs);
+          {$ifdef debugmode} writeln('T_messagesRedirector.postCustomMessage cancelled'); {$endif}
+          if disposeAfterPosting then disposeMessage(message);
+          exit;
+        end;
       end;
+      for a in adapters do begin
+        if a.adapter^.append(message) then appended:=true;
+      end;
+      if appended then include(collected,message^.messageType);
+      {$ifdef fullVersion}
+      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
+      then raiseUnhandledError(message);
+      {$endif}
+    finally
+      leaveCriticalSection(messagesCs);
+      if disposeAfterPosting then disposeMessage(message);
     end;
-    for a in adapters do if a.adapter^.append(message) then appended:=true;
-    if appended then include(collected,message^.messageType);
-    {$ifdef fullVersion}
-    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
-    then raiseUnhandledError(message);
-    {$endif}
-    leaveCriticalSection(messagesCs);
-    if disposeAfterPosting then disposeMessage(message);
   end;
 
 PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   {$ifdef fullVersion} VAR appended:boolean=false; {$endif}
   begin
     enterCriticalSection(messagesCs);
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    if message^.messageType in heldTypes then begin
-      collector.append(message);
-      {$ifdef fullVersion} appended:=true; {$endif}
-      if disposeAfterPosting then disposeMessage(message);
-    end else if parentMessages<>nil then begin
-      parentMessages^.postCustomMessage(message,disposeAfterPosting);
-      {$ifdef fullVersion} appended:=true; {$endif}
+    try
+      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+      if message^.messageType in heldTypes then begin
+        collector.append(message);
+        {$ifdef fullVersion} appended:=true; {$endif}
+        if disposeAfterPosting then disposeMessage(message);
+      end else if parentMessages<>nil then begin
+        parentMessages^.postCustomMessage(message,disposeAfterPosting);
+        {$ifdef fullVersion} appended:=true; {$endif}
+      end;
+      {$ifdef fullVersion}
+      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+      {$endif}
+    finally
+      leaveCriticalSection(messagesCs);
     end;
-    {$ifdef fullVersion}
-    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
-    {$endif}
-    leaveCriticalSection(messagesCs);
   end;
 
 PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
@@ -532,19 +556,22 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
       appended:boolean=false;
   begin
     enterCriticalSection(messagesCs);
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    for a in adapters do if a.adapter^.append(message) then appended:=true;
-    if appended then include(collected,message^.messageType);
-    if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
-    then begin
-      messageReceiver^.postCustomMessage(message,false);
-      appended:=true;
+    try
+      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+      for a in adapters do if a.adapter^.append(message) then appended:=true;
+      if appended then include(collected,message^.messageType);
+      if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
+      then begin
+        messageReceiver^.postCustomMessage(message,false);
+        appended:=true;
+      end;
+      {$ifdef fullVersion}
+      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+      {$endif}
+      if disposeAfterPosting then disposeMessage(message);
+    finally
+      leaveCriticalSection(messagesCs);
     end;
-    {$ifdef fullVersion}
-    if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
-    {$endif}
-    if disposeAfterPosting then disposeMessage(message);
-    leaveCriticalSection(messagesCs);
   end;
 
 PROCEDURE T_messagesDummy.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
@@ -586,12 +613,15 @@ PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter;
   CONST destroyIt: boolean);
   begin
     enterCriticalSection(messagesCs);
-    setLength(adapters,length(adapters)+1);
-    adapters[length(adapters)-1].adapter:=p;
-    adapters[length(adapters)-1].doDispose:=destroyIt;
-    collecting:=collecting+p^.messageTypesToInclude;
-    if p^.adapterType=at_textFile then ensureFileFlushThread;
-    leaveCriticalSection(messagesCs);
+    try
+      setLength(adapters,length(adapters)+1);
+      adapters[length(adapters)-1].adapter:=p;
+      adapters[length(adapters)-1].doDispose:=destroyIt;
+      collecting:=collecting+p^.messageTypesToInclude;
+      if p^.adapterType=at_textFile then ensureFileFlushThread;
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 FUNCTION T_messagesDistributor.addOutfile(CONST fileNameAndOptions: ansistring;
@@ -620,12 +650,15 @@ PROCEDURE T_messagesDistributor.removeOutAdapter(CONST p: P_abstractOutAdapter);
   VAR i:longint=0;
   begin
     enterCriticalSection(messagesCs);
-    while i<length(adapters) do if adapters[i].adapter=p then begin
-      if adapters[i].doDispose then dispose(adapters[i].adapter,destroy);
-      adapters[i]:=adapters[length(adapters)-1];
-      setLength(   adapters,length(adapters)-1);
-    end else inc(i);
-    leaveCriticalSection(messagesCs);
+    try
+      while i<length(adapters) do if adapters[i].adapter=p then begin
+        if adapters[i].doDispose then dispose(adapters[i].adapter,destroy);
+        adapters[i]:=adapters[length(adapters)-1];
+        setLength(   adapters,length(adapters)-1);
+      end else inc(i);
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 FUNCTION T_messagesDistributor.getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -674,24 +707,35 @@ DESTRUCTOR T_messages.destroy;
 
 PROCEDURE T_messages.setStopFlag;
   begin
-    enterCriticalSection(messagesCs);
     include(flags,FlagQuietHalt);
-    leaveCriticalSection(messagesCs);
+    if FlagQuietHalt in flags then exit;
+    enterCriticalSection(messagesCs);
+    try
+      include(flags,FlagQuietHalt);
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 PROCEDURE T_messages.logGuiNeeded;
   begin
     enterCriticalSection(messagesCs);
-    include(flags,FlagGUINeeded);
-    leaveCriticalSection(messagesCs);
+    try
+      include(flags,FlagGUINeeded);
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 PROCEDURE T_messages.clearFlags;
   begin
     enterCriticalSection(messagesCs);
-    flags:=[];
-    errorCount:=0;
-    leaveCriticalSection(messagesCs);
+    try
+      flags:=[];
+      errorCount:=0;
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 PROCEDURE T_messages.setUserDefinedExitCode(CONST code: longint);
@@ -758,8 +802,11 @@ PROCEDURE T_messages.postCustomMessages(CONST message: T_storedMessages);
   VAR m:P_storedMessage;
   begin
     enterCriticalSection(messagesCs);
-    for m in message do postCustomMessage(m);
-    leaveCriticalSection(messagesCs);
+    try
+      for m in message do postCustomMessage(m);
+    finally
+      leaveCriticalSection(messagesCs);
+    end;
   end;
 
 CONSTRUCTOR T_messagesDummy.createDummy;
@@ -784,12 +831,12 @@ CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType;
   begin
     adapterType:=typ;
     setOutputBehavior(messageTypesToInclude_);
-    system.initCriticalSection(cs);
+    system.initCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_abstractOutAdapter.destroy;
   begin
-    system.doneCriticalSection(cs);
+    system.doneCriticalSection(adapterCs);
   end;
 
 FUNCTION T_abstractOutAdapter.appendAll(CONST messages: T_storedMessages): boolean;
@@ -824,24 +871,27 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
   begin
     result:=message^.messageType in messageTypesToInclude;
     if result then with message^ do begin
-      enterCriticalSection(cs);
-      case messageType of
-        mt_clearConsole: mySys.clearConsole;
-        mt_printline: begin
-          if not(mySys.isConsoleShowing) then mySys.showConsole;
-          for i:=0 to length(messageText)-1 do begin
-            if messageText[i]=C_formFeedChar
-            then mySys.clearConsole
-            else writeln(messageText[i]);
+      enterCriticalSection(adapterCs);
+      try
+        case messageType of
+          mt_clearConsole: mySys.clearConsole;
+          mt_printline: begin
+            if not(mySys.isConsoleShowing) then mySys.showConsole;
+            for i:=0 to length(messageText)-1 do begin
+              if messageText[i]=C_formFeedChar
+              then mySys.clearConsole
+              else writeln(messageText[i]);
+            end;
           end;
+          mt_printdirect: begin
+            if not(mySys.isConsoleShowing) then mySys.showConsole;
+            for i:=0 to length(messageText)-1 do write(messageText[i]);
+          end;
+          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(stdErr,s);
         end;
-        mt_printdirect: begin
-          if not(mySys.isConsoleShowing) then mySys.showConsole;
-          for i:=0 to length(messageText)-1 do write(messageText[i]);
-        end;
-        else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(stdErr,s);
+      finally
+        leaveCriticalSection(adapterCs);
       end;
-      leaveCriticalSection(cs);
     end;
   end;
 //==========================================================:T_consoleOutAdapter
@@ -866,10 +916,13 @@ FUNCTION T_collectingOutAdapter.append(CONST message: P_storedMessage):boolean;
 
     result:=message^.messageType in messageTypesToInclude;
     if result then begin
-      system.enterCriticalSection(cs);
-      setLength(storedMessages,length(storedMessages)+1);
-      storedMessages[length(storedMessages)-1]:=message^.rereferenced;
-      system.leaveCriticalSection(cs);
+      system.enterCriticalSection(adapterCs);
+      try
+        setLength(storedMessages,length(storedMessages)+1);
+        storedMessages[length(storedMessages)-1]:=message^.rereferenced;
+      finally
+        system.leaveCriticalSection(adapterCs);
+      end;
     end;
   end;
 
@@ -893,20 +946,26 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
 PROCEDURE T_collectingOutAdapter.clear;
   VAR m:P_storedMessage;
   begin
-    system.enterCriticalSection(cs);
-    inherited clear;
-    for m in storedMessages do disposeMessage(m);
-    setLength(storedMessages,0);
-    system.leaveCriticalSection(cs);
+    system.enterCriticalSection(adapterCs);
+    try
+      inherited clear;
+      for m in storedMessages do disposeMessage(m);
+      setLength(storedMessages,0);
+    finally
+      system.leaveCriticalSection(adapterCs);
+    end;
   end;
 
 FUNCTION T_collectingOutAdapter.typesOfStoredMessages:T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
-    system.enterCriticalSection(cs);
-    result:=[];
-    for m in storedMessages do include(result,m^.messageType);
-    system.leaveCriticalSection(cs);
+    system.enterCriticalSection(adapterCs);
+    try
+      result:=[];
+      for m in storedMessages do include(result,m^.messageType);
+    finally
+      system.leaveCriticalSection(adapterCs);
+    end;
   end;
 //=======================================================:T_collectingOutAdapter
 //T_textFileOutAdapter:=========================================================
@@ -915,28 +974,31 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
       s:string;
       m:P_storedMessage;
   begin
-    enterCriticalSection(cs);
-    if length(storedMessages)>0 then begin
-      result:=true;
-      try
-        assign(handle,outputFileName);
-        if fileExists(outputFileName) and not(forceRewrite)
-        then system.append(handle)
-        else rewrite(handle);
-        forceRewrite:=false;
-        for m in storedMessages do begin
-          case m^.messageType of
-            mt_printline  : for s in m^.messageText do writeln(handle,s);
-            mt_printdirect: for s in m^.messageText do write  (handle,s);
-            else for s in m^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
+    enterCriticalSection(adapterCs);
+    try
+      if length(storedMessages)>0 then begin
+        result:=true;
+        try
+          assign(handle,outputFileName);
+          if fileExists(outputFileName) and not(forceRewrite)
+          then system.append(handle)
+          else rewrite(handle);
+          forceRewrite:=false;
+          for m in storedMessages do begin
+            case m^.messageType of
+              mt_printline  : for s in m^.messageText do writeln(handle,s);
+              mt_printdirect: for s in m^.messageText do write  (handle,s);
+              else for s in m^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
+            end;
           end;
+          clear;
+          close(handle);
+        except
         end;
-        clear;
-        close(handle);
-      except
-      end;
-    end else result:=false;
-    leaveCriticalSection(cs);
+      end else result:=false;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
@@ -950,9 +1012,12 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messag
 FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
   begin
     result:=inherited append(message);
-    enterCriticalSection(cs);
-    if length(storedMessages)>100 then flush;
-    leaveCriticalSection(cs);
+    enterCriticalSection(adapterCs);
+    try
+      if length(storedMessages)>100 then flush;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;

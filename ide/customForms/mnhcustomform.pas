@@ -661,41 +661,42 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
       newForm:TscriptedForm;
   begin
     result:=[];
-    enterCriticalSection(cs);
-    for m in storedMessages do case m^.messageType of
-      mt_endOfEvaluation: begin
-        for k:=0 to length(scriptedForms)-1 do begin
-          scriptedForms[k].adapter:=nil;
-          FreeAndNil(scriptedForms[k]);
+    enterCriticalSection(adapterCs);
+    for m in storedMessages do begin
+      case m^.messageType of
+        mt_endOfEvaluation: begin
+          for k:=0 to length(scriptedForms)-1 do begin
+            scriptedForms[k].adapter:=nil;
+            FreeAndNil(scriptedForms[k]);
+          end;
+          setLength(scriptedForms,0);
+          include(result,m^.messageType);
         end;
-        setLength(scriptedForms,0);
-        include(result,m^.messageType);
-      end;
-      mt_displayCustomForm: with P_customFormRequest(m)^ do begin
-        newForm:=TscriptedForm.create(nil);
-        newForm.displayPending:=true;
-        newForm.caption:=setupTitle;
-        setLength(scriptedForms,length(scriptedForms)+1);
-        scriptedForms[length(scriptedForms)-1]:=newForm;
-        newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
-        newForm.adapter:=@self;
-        setCreatedForm(newForm);
-        dockNewForm(newForm);
-        newForm.showComponent(false);
-        include(result,m^.messageType);
+        mt_displayCustomForm: with P_customFormRequest(m)^ do begin
+          newForm:=TscriptedForm.create(nil);
+          newForm.displayPending:=true;
+          newForm.caption:=setupTitle;
+          setLength(scriptedForms,length(scriptedForms)+1);
+          scriptedForms[length(scriptedForms)-1]:=newForm;
+          newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
+          newForm.adapter:=@self;
+          setCreatedForm(newForm);
+          dockNewForm(newForm);
+          include(result,m^.messageType);
+        end;
       end;
     end;
     clear;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_customFormAdapter.destroy;
   VAR k:longint;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(adapterCs);
     for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
     setLength(scriptedForms,0);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 INITIALIZATION

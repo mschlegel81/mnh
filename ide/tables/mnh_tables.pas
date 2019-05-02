@@ -144,7 +144,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
       caption:string;
   begin
     result:=[];
-    enterCriticalSection(cs);
+    enterCriticalSection(adapterCs);
     for m in storedMessages do case m^.messageType of
       mt_displayTable:
         begin
@@ -170,7 +170,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         end;
     end;
     clear;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_tableAdapter.destroy;

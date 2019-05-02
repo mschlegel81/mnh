@@ -508,18 +508,15 @@ PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
   end;
 
 FUNCTION T_plotOptionsMessage.getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
-  VAR timeout:double;
   begin
-    timeout:=now+5/(24*60*60);
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider^.continueEvaluation) and (now<timeout) do begin
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
     result:=options;
     leaveCriticalSection(messageCs);
-    if now>=timeout then raise Exception.create('T_plotOptionsMessage.getOptionsWaiting timed out');
   end;
 
 FUNCTION T_addRowMessage.internalType: shortstring;
@@ -1421,42 +1418,45 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
 
 PROCEDURE T_plotSystem.startGuiInteraction;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(adapterCs);
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   VAR prevOptions:T_scalingOptions;
       i:longint;
   begin
-    enterCriticalSection(cs);
-    result:='plain script;';
-    myGenerics.append(result,'resetOptions;');
-    myGenerics.append(result,'clearAnimation;');
-    prevOptions.setDefaults;
-    if animation.frameCount>0 then begin
-      if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-        myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
-        prevOptions:=animation.frame[i]^.plotData.scalingOptions;
-        myGenerics.append(result,'addAnimationFrame;');
+    enterCriticalSection(adapterCs);
+    try
+      result:='plain script;';
+      myGenerics.append(result,'resetOptions;');
+      myGenerics.append(result,'clearAnimation;');
+      prevOptions.setDefaults;
+      if animation.frameCount>0 then begin
+        if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
+          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
+          prevOptions:=animation.frame[i]^.plotData.scalingOptions;
+          myGenerics.append(result,'addAnimationFrame;');
+        end else begin
+          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
+        end;
       end else begin
-        myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
+        myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
       end;
-    end else begin
-      myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
+      myGenerics.append(result,'display;');
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    myGenerics.append(result,'display;');
-    leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
   begin
     if executePlotCallback=nil
-    then inherited create(at_plot,C_includableMessages[at_plot]-[mt_plot_queryClosedByUser,mt_plot_addAnimationFrame,mt_plot_clearAnimation,mt_plot_postDisplay])
+    then inherited create(at_plot,C_includableMessages[at_plot]-[mt_plot_queryClosedByUser,mt_plot_addAnimationFrame,mt_plot_clearAnimation,mt_plot_postDisplay,mt_plot_retrieveOptions])
     else inherited create(at_plot,C_includableMessages[at_plot]);
     sandboxed:=isSandboxSystem;
     plotChangedSinceLastDisplay:=false;
@@ -1480,36 +1480,40 @@ DESTRUCTOR T_plotSystem.destroy;
 
 FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
   begin
-    enterCriticalSection(cs);
-    case message^.messageType of
-      mt_startOfEvaluation,
-      mt_plot_addText,
-      mt_plot_addRow,
-      mt_plot_dropRow,
-      mt_plot_setOptions,
-      mt_plot_clear,
-      mt_plot_clearAnimation,
-      mt_plot_retrieveOptions,
-      mt_plot_renderRequest,
-      mt_plot_queryClosedByUser,
-      mt_plot_addAnimationFrame: begin
-        result:=true;
-        //if there are pending tasks then store else process
-        if (length(storedMessages)>0)
-        then inherited append(message)
-        else processMessage(message);
+    if not(message^.messageType in messageTypesToInclude) then exit(false);
+    enterCriticalSection(adapterCs);
+    try
+      case message^.messageType of
+        mt_startOfEvaluation,
+        mt_plot_addText,
+        mt_plot_addRow,
+        mt_plot_dropRow,
+        mt_plot_setOptions,
+        mt_plot_clear,
+        mt_plot_clearAnimation,
+        mt_plot_retrieveOptions,
+        mt_plot_renderRequest,
+        mt_plot_queryClosedByUser,
+        mt_plot_addAnimationFrame: begin
+          result:=true;
+          //if there are pending tasks then store else process
+          if (length(storedMessages)>0)
+          then inherited append(message)
+          else processMessage(message);
+        end;
+        mt_endOfEvaluation,
+        mt_plot_postDisplay: begin
+          //if we can't plot anyway, we can process the message right away
+          result:=true;
+          if doPlot=nil
+          then processMessage(message)
+          else inherited append(message);
+        end;
+        else result:=false;
       end;
-      mt_endOfEvaluation,
-      mt_plot_postDisplay: begin
-        //if we can't plot anyway, we can process the message right away
-        result:=true;
-        if doPlot=nil
-        then processMessage(message)
-        else inherited append(message);
-      end;
-      else result:=false;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    leaveCriticalSection(cs);
   end;
 
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
@@ -1517,32 +1521,38 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       i:longint;
       m:P_storedMessage;
   begin
-    enterCriticalSection(cs);
-    result:=[];
-    //it does not make sense to render multiple plots in one run
-    //Lookup the last display request;
-    lastDisplayIndex:=-1;
-    for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
-    //process messages
-    for i:=0 to length(storedMessages)-1 do begin
-      m:=storedMessages[i];
-      include(result,m^.messageType);
-      if m^.messageType=mt_plot_postDisplay
-      then begin
-        if i=lastDisplayIndex
-        then processMessage(m)
-        else P_plotDisplayRequest(m)^.markExecuted;
-      end else processMessage(m);
+    enterCriticalSection(adapterCs);
+    try
+      result:=[];
+      //it does not make sense to render multiple plots in one run
+      //Lookup the last display request;
+      lastDisplayIndex:=-1;
+      for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
+      //process messages
+      for i:=0 to length(storedMessages)-1 do begin
+        m:=storedMessages[i];
+        include(result,m^.messageType);
+        if m^.messageType=mt_plot_postDisplay
+        then begin
+          if i=lastDisplayIndex
+          then processMessage(m)
+          else P_plotDisplayRequest(m)^.markExecuted;
+        end else processMessage(m);
+      end;
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    clear;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_plotSystem.logPlotDone;
   begin
-    enterCriticalSection(cs);
-    plotChangedSinceLastDisplay:=false;
-    leaveCriticalSection(cs);
+    enterCriticalSection(adapterCs);
+    try
+      plotChangedSinceLastDisplay:=false;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 INITIALIZATION

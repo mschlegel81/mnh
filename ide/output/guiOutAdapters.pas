@@ -68,7 +68,7 @@ CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
 FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR message:P_storedMessage;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(adapterCs);
     try
       result:=[];
       for message in storedMessages do begin
@@ -82,7 +82,7 @@ FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeS
       end;
       if length(storedMessages)>0 then clear;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(adapterCs);
     end;
   end;
 
