@@ -153,17 +153,23 @@ PROCEDURE setupSandboxes;
   begin
     initCriticalSection(sbLock);
     enterCriticalSection(sbLock);
-    setLength(sandboxes,0);
-    leaveCriticalSection(sbLock);
+    try
+      setLength(sandboxes,0);
+    finally
+      leaveCriticalSection(sbLock);
+    end;
   end;
 
 PROCEDURE doneSandboxes;
   VAR i:longint;
   begin
     enterCriticalSection(sbLock);
-    for i:=0 to length(sandboxes)-1 do dispose(sandboxes[i],destroy);
-    setLength(sandboxes,0);
-    leaveCriticalSection(sbLock);
+    try
+      for i:=0 to length(sandboxes)-1 do dispose(sandboxes[i],destroy);
+      setLength(sandboxes,0);
+    finally
+      leaveCriticalSection(sbLock);
+    end;
     doneCriticalSection(sbLock);
   end;
 
@@ -173,33 +179,39 @@ FUNCTION sandbox:P_sandbox;
   begin
     result:=nil;
     enterCriticalSection(sbLock);
-    repeat
-      firstTry:=not(firstTry);
-      for i:=0 to length(sandboxes)-1 do if result=nil then begin
-        enterCriticalSection(sandboxes[i]^.cs);
-        if not(sandboxes[i]^.busy) then begin
-          sandboxes[i]^.busy:=true;
-          result:=sandboxes[i];
+    try
+      repeat
+        firstTry:=not(firstTry);
+        for i:=0 to length(sandboxes)-1 do if result=nil then begin
+          enterCriticalSection(sandboxes[i]^.cs);
+          try
+            if not(sandboxes[i]^.busy) then begin
+              sandboxes[i]^.busy:=true;
+              result:=sandboxes[i];
+            end;
+          finally
+            leaveCriticalSection(sandboxes[i]^.cs);
+          end;
         end;
-        leaveCriticalSection(sandboxes[i]^.cs);
+        if (result=nil) and firstTry then begin
+          leaveCriticalSection(sbLock);
+          sleep(1);
+          ThreadSwitch;
+          enterCriticalSection(sbLock);
+        end;
+      until (result<>nil) or not(firstTry);
+      if result=nil then begin
+        i:=length(sandboxes);
+        setLength(sandboxes,i+1);
+        new(sandboxes[i],create);
+        result:=sandboxes[i];
+        enterCriticalSection(result^.cs);
+        result^.busy:=true;
+        leaveCriticalSection(result^.cs);
       end;
-      if (result=nil) and firstTry then begin
-        leaveCriticalSection(sbLock);
-        sleep(1);
-        ThreadSwitch;
-        enterCriticalSection(sbLock);
-      end;
-    until (result<>nil) or not(firstTry);
-    if result=nil then begin
-      i:=length(sandboxes);
-      setLength(sandboxes,i+1);
-      new(sandboxes[i],create);
-      result:=sandboxes[i];
-      enterCriticalSection(result^.cs);
-      result^.busy:=true;
-      leaveCriticalSection(result^.cs);
+    finally
+      leaveCriticalSection(sbLock);
     end;
-    leaveCriticalSection(sbLock);
   end;
 
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
@@ -230,13 +242,16 @@ CONSTRUCTOR T_sandbox.create;
 DESTRUCTOR T_sandbox.destroy;
   begin
     enterCriticalSection(cs);
-    package.destroy;
-    globals.destroy;
-    messages.destroy;
-    {$ifdef fullVersion}
-    plotSystem.destroy;
-    {$endif}
-    leaveCriticalSection(cs);
+    try
+      package.destroy;
+      globals.destroy;
+      messages.destroy;
+      {$ifdef fullVersion}
+      plotSystem.destroy;
+      {$endif}
+    finally
+      leaveCriticalSection(cs);
+    end;
     doneCriticalSection(cs);
   end;
 

@@ -218,13 +218,16 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
     if (tryEnterCriticalsection(recyclerCS)=0)
     then dispose(context,destroy)
     else begin
-      if (fill>=length(contexts))
-      then dispose(context,destroy)
-      else begin
-        contexts[fill]:=context;
-        inc(fill);
+      try
+        if (fill>=length(contexts))
+        then dispose(context,destroy)
+        else begin
+          contexts[fill]:=context;
+          inc(fill);
+        end;
+      finally
+        leaveCriticalSection(recyclerCS);
       end;
-      leaveCriticalSection(recyclerCS);
     end;
     context:=nil;
   end;
@@ -232,11 +235,14 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
 FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   begin
     if (tryEnterCriticalsection(recyclerCS)<>0) then begin
-      if (fill>0) then begin
-        dec(fill);
-        result:=contexts[fill];
-      end else new(result,create);
-      leaveCriticalSection(recyclerCS);
+      try
+        if (fill>0) then begin
+          dec(fill);
+          result:=contexts[fill];
+        end else new(result,create);
+      finally
+        leaveCriticalSection(recyclerCS);
+      end;
     end else new(result,create);
     with result^ do begin
       options           :=parentThread^.options;
@@ -450,12 +456,15 @@ FUNCTION T_context.wallclockTime: double;
   begin
     if related.evaluation^.wallClock=nil then begin
       enterCriticalSection(related.evaluation^.primaryContext.contextCS);
-      if related.evaluation^.wallClock=nil then begin
-        related.evaluation^.wallClock:=TEpikTimer.create(nil);
-        related.evaluation^.wallClock.clear;
-        related.evaluation^.wallClock.start;
+      try
+        if related.evaluation^.wallClock=nil then begin
+          related.evaluation^.wallClock:=TEpikTimer.create(nil);
+          related.evaluation^.wallClock.clear;
+          related.evaluation^.wallClock.start;
+        end;
+      finally
+        leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
       end;
-      leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
     end;
     result:=related.evaluation^.wallClock.elapsed;
   end;
@@ -540,8 +549,11 @@ FUNCTION T_context.setAllowedSideEffectsReturningPrevious(
 FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
     enterCriticalSection(contextCS);
-    result:=contextPool.newContext(recycler,@self,ACCESS_READONLY);
-    leaveCriticalSection(contextCS);
+    try
+      result:=contextPool.newContext(recycler,@self,ACCESS_READONLY);
+    finally
+      leaveCriticalSection(contextCS);
+    end;
   end;
 
 PROCEDURE T_context.beginEvaluation;
@@ -550,8 +562,11 @@ PROCEDURE T_context.beginEvaluation;
     if state<>fts_pending then raise Exception.create('Wrong state before calling T_threadContext.beginEvaluation');
     {$endif}
     enterCriticalSection(contextCS);
-    state:=fts_evaluating;
-    leaveCriticalSection(contextCS);
+    try
+      state:=fts_evaluating;
+    finally
+      leaveCriticalSection(contextCS);
+    end;
   end;
 
 PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
@@ -564,16 +579,19 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
         enterCriticalSection(contextCS);
       end;
     end;
-    state:=fts_finished;
-    if related.parent<>nil then related.parent^.dropChildContext;
-    related.parent:=nil;
-    {$ifdef fullVersion}
-    callStack.clear;
-    parentCustomForm:=nil;
-    {$endif}
-    if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
-                         else recyclerOrNil^.disposeScope(valueScope);
-    leaveCriticalSection(contextCS);
+    try
+      state:=fts_finished;
+      if related.parent<>nil then related.parent^.dropChildContext;
+      related.parent:=nil;
+      {$ifdef fullVersion}
+      callStack.clear;
+      parentCustomForm:=nil;
+      {$endif}
+      if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
+                           else recyclerOrNil^.disposeScope(valueScope);
+    finally
+      leaveCriticalSection(contextCS);
+    end;
   end;
 
 PROCEDURE T_context.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -757,8 +775,11 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
 PROCEDURE T_queueTask.clearContext;
   begin
     enterCriticalSection(taskCs);
-    if context<>nil then contextPool.disposeContext(context);
-    leaveCriticalSection(taskCs);
+    try
+      if context<>nil then contextPool.disposeContext(context);
+    finally
+      leaveCriticalSection(taskCs);
+    end;
   end;
 
 DESTRUCTOR T_queueTask.destroy;
@@ -802,29 +823,35 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
 
   begin
     system.enterCriticalSection(cs);
-    inc(queuedCount);
-    if first=nil then begin
-      first:=task;
-      last:=task;
-    end else begin
-      last^.nextToEvaluate:=task;
-      last:=task;
+    try
+      inc(queuedCount);
+      if first=nil then begin
+        first:=task;
+        last:=task;
+      end else begin
+        last^.nextToEvaluate:=task;
+        last:=task;
+      end;
+      ensurePoolThreads();
+    finally
+      system.leaveCriticalSection(cs);
     end;
-    ensurePoolThreads();
-    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_taskQueue.dequeue: P_queueTask;
   begin
     system.enterCriticalSection(cs);
-    if queuedCount<=0
-    then result:=nil
-    else begin
-      dec(queuedCount);
-      result:=first;
-      first:=first^.nextToEvaluate;
+    try
+      if queuedCount<=0
+      then result:=nil
+      else begin
+        dec(queuedCount);
+        result:=first;
+        first:=first^.nextToEvaluate;
+      end;
+    finally
+      system.leaveCriticalSection(cs);
     end;
-    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;

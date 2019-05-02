@@ -27,8 +27,11 @@ VAR regexCache:T_regexMap;
 PROCEDURE disposeRegex(VAR r:T_regexMapEntry);
   begin
     enterCriticalSection(r.entryCS);
-    r.RegExpr.free;
-    leaveCriticalSection(r.entryCS);
+    try
+      r.RegExpr.free;
+    finally
+      leaveCriticalSection(r.entryCS);
+    end;
     doneCriticalSection(r.entryCS);
   end;
 
@@ -41,26 +44,29 @@ PROCEDURE hardDisposeRegex(VAR r:T_regexMapEntry);
 FUNCTION regexForExpression(CONST expression:ansistring):T_regexMapEntry;
   begin
     enterCriticalSection(regexCacheCs);
-    if regexCache.containsKey(expression,result) then begin
-      //contained in map:
-      if (tryEnterCriticalsection(result.entryCS)<>0) then begin
-        leaveCriticalSection(regexCacheCs);
-        exit(result);
+    try
+      if regexCache.containsKey(expression,result) then begin
+        //contained in map:
+        if (tryEnterCriticalsection(result.entryCS)<>0) then begin
+          leaveCriticalSection(regexCacheCs);
+          exit(result);
+        end;
+        //contained in map but not accessible
+        result.temporary:=true;
+        result.RegExpr:=TRegExpr.create(expression);
+        result.RegExpr.expression:=expression;
+      end else begin
+        //not contained in map:
+        initCriticalSection(result.entryCS);
+        enterCriticalSection(result.entryCS);
+        result.temporary:=false;
+        result.RegExpr:=TRegExpr.create(expression);
+        result.RegExpr.expression:=expression;
+        regexCache.put(expression,result);
       end;
-      //contained in map but not accessible
-      result.temporary:=true;
-      result.RegExpr:=TRegExpr.create(expression);
-      result.RegExpr.expression:=expression;
-    end else begin
-      //not contained in map:
-      initCriticalSection(result.entryCS);
-      enterCriticalSection(result.entryCS);
-      result.temporary:=false;
-      result.RegExpr:=TRegExpr.create(expression);
-      result.RegExpr.expression:=expression;
-      regexCache.put(expression,result);
+    finally
+      leaveCriticalSection(regexCacheCs);
     end;
-    leaveCriticalSection(regexCacheCs);
   end;
 
 PROCEDURE doneRegex(VAR entry:T_regexMapEntry); inline;

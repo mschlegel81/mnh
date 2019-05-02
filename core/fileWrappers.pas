@@ -75,21 +75,27 @@ VAR fileByIDCache:specialize G_stringKeyMap<string>;
 PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
   begin
     enterCriticalSection(fileByIdCs);
-    fileByIDCache.put(searchRoot+'#'+searchForId,foundFile);
-    leaveCriticalSection(fileByIdCs);
+    try
+      fileByIDCache.put(searchRoot+'#'+searchForId,foundFile);
+    finally
+      leaveCriticalSection(fileByIdCs);
+    end;
   end;
 
 FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
   begin
     enterCriticalSection(fileByIdCs);
-    if GetCurrentDir=lastFileCacheWorkingDir then begin
-      if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
-    end else begin
-      lastFileCacheWorkingDir:=GetCurrentDir;
-      fileByIDCache.clear;
-      result:='';
+    try
+      if GetCurrentDir=lastFileCacheWorkingDir then begin
+        if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
+      end else begin
+        lastFileCacheWorkingDir:=GetCurrentDir;
+        fileByIDCache.clear;
+        result:='';
+      end;
+    finally
+      leaveCriticalSection(fileByIdCs);
     end;
-    leaveCriticalSection(fileByIdCs);
   end;
 
 PROCEDURE ensurePath(CONST path:ansistring);

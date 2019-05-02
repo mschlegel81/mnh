@@ -508,9 +508,7 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
       if message^.messageClass in [mc_error,mc_fatal] then begin
         inc(errorCount);
         if errorCount>20 then begin
-          posting:=false;
           leaveCriticalSection(messagesCs);
-          {$ifdef debugmode} writeln('T_messagesRedirector.postCustomMessage cancelled'); {$endif}
           if disposeAfterPosting then disposeMessage(message);
           exit;
         end;

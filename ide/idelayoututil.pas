@@ -389,7 +389,7 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
   begin
     getParents(page,PageControl);
     if PageControl=nil then begin
-      if not(Showing) then begin
+      if not(showing) then begin
         Show;
         BringToFront;
       end;

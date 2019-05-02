@@ -52,13 +52,16 @@ PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
       i:longint;
   begin
     enterCriticalSection(cachedFormatCS);
-    formats:=cachedFormats.entrySet;
-    for i:=0 to length(formats)-1 do
-    if formats[i].value^.inPackage=package then begin
-      dispose(formats[i].value,destroy);
-      cachedFormats.dropKey(formats[i].key);
+    try
+      formats:=cachedFormats.entrySet;
+      for i:=0 to length(formats)-1 do
+      if formats[i].value^.inPackage=package then begin
+        dispose(formats[i].value,destroy);
+        cachedFormats.dropKey(formats[i].key);
+      end;
+    finally
+      leaveCriticalSection(cachedFormatCS);
     end;
-    leaveCriticalSection(cachedFormatCS);
   end;
 
 PROCEDURE clearCachedFormats;
@@ -66,11 +69,14 @@ PROCEDURE clearCachedFormats;
       i:longint;
   begin
     system.enterCriticalSection(cachedFormatCS);
-    f:=cachedFormats.valueSet;
-    for i:=0 to length(f)-1 do dispose(f[i],destroy);
-    setLength(f,0);
-    cachedFormats.clear;
-    system.leaveCriticalSection(cachedFormatCS);
+    try
+      f:=cachedFormats.valueSet;
+      for i:=0 to length(f)-1 do dispose(f[i],destroy);
+      setLength(f,0);
+      cachedFormats.clear;
+    finally
+      system.leaveCriticalSection(cachedFormatCS);
+    end;
   end;
 
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);
@@ -174,13 +180,16 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
     end;
-    new(result,create(formatString,tokenLocation,context,recycler));
-    if context.messages^.continueEvaluation then cachedFormats.put(formatString,result)
-    else begin
-      dispose(result,destroy);
-      result:=nil;
+    try
+      new(result,create(formatString,tokenLocation,context,recycler));
+      if context.messages^.continueEvaluation then cachedFormats.put(formatString,result)
+      else begin
+        dispose(result,destroy);
+        result:=nil;
+      end;
+    finally
+      system.leaveCriticalSection(cachedFormatCS);
     end;
-    system.leaveCriticalSection(cachedFormatCS);
   end;
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
@@ -469,8 +478,11 @@ FUNCTION printf_imp intFuncSignature;
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
-      context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
-      system.leaveCriticalSection(print_cs);
+      try
+        context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
+      finally
+        system.leaveCriticalSection(print_cs);
+      end;
       if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}

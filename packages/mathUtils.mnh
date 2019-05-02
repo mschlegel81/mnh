@@ -72,4 +72,3 @@ rootOfQuadraticPoly(squareFactor:Numeric,
   discriminant<0 ? return [] : void;
   (-linearFactor+sqrt(discriminant)*[-1,1])/(2*squareFactor);
 end;
-
