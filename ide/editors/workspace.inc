@@ -612,7 +612,7 @@ PROCEDURE T_workspace.postSaveRequest;
 
 FUNCTION T_workspace.savingRequested:boolean;
   begin
-    result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
+    result:=(savedAt<=0) or ((now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval);
   end;
 
 FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
