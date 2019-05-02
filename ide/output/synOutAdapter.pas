@@ -340,12 +340,15 @@ PROCEDURE T_synOutAdapter.flushClear;
   VAR clearMessage:P_storedMessage;
   begin
     system.enterCriticalSection(adapterCs);
-    lastWasDirectPrint:=false;
-    clear;
-    new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
-    append(clearMessage);
-    disposeMessage(clearMessage);
-    system.leaveCriticalSection(adapterCs);
+    try
+      lastWasDirectPrint:=false;
+      clear;
+      new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
+      append(clearMessage);
+      disposeMessage(clearMessage);
+    finally
+      system.leaveCriticalSection(adapterCs);
+    end;
   end;
 
 INITIALIZATION

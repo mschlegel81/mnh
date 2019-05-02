@@ -76,8 +76,6 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
     end else result:=nil;
   end;
 
-{ T_treeAdapter }
-
 CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
   begin
     inherited create(at_treeView,[mt_startOfEvaluation,mt_displayVariableTree]);
@@ -93,31 +91,34 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
-    for m in storedMessages do case m^.messageType of
-      mt_displayVariableTree:
-        begin
-          include(result,m^.messageType);
-          tree:=TVarTreeViewForm.create(nil);
-          setLength(treeForms,length(treeForms)+1);
-          treeForms[length(treeForms)-1]:=tree;
-          with P_treeDisplayRequest(m)^ do begin
-            if treeCaption=''
-            then caption:=defaultCaption+' ('+intToStr(length(treeForms))+')'
-            else caption:=treeCaption;
-            tree.initWithLiteral(treeContent,caption)
+    try
+      for m in storedMessages do case m^.messageType of
+        mt_displayVariableTree:
+          begin
+            include(result,m^.messageType);
+            tree:=TVarTreeViewForm.create(nil);
+            setLength(treeForms,length(treeForms)+1);
+            treeForms[length(treeForms)-1]:=tree;
+            with P_treeDisplayRequest(m)^ do begin
+              if treeCaption=''
+              then caption:=defaultCaption+' ('+intToStr(length(treeForms))+')'
+              else caption:=treeCaption;
+              tree.initWithLiteral(treeContent,caption)
+            end;
+            dockNewForm(tree);
+            tree.showComponent(true);
           end;
-          dockNewForm(tree);
-          tree.showComponent(true);
-        end;
-      mt_startOfEvaluation:
-        begin
-          include(result,m^.messageType);
-          for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
-          setLength(treeForms,0);
-        end;
+        mt_startOfEvaluation:
+          begin
+            include(result,m^.messageType);
+            for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
+            setLength(treeForms,0);
+          end;
+      end;
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    clear;
-    leaveCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_treeAdapter.destroy;

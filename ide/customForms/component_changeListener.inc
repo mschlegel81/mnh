@@ -30,19 +30,22 @@ PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
   VAR newLit:P_stringLiteral=nil;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    if (config.bindingTo<>'') then begin
-      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
-      newLit:=newStringLiteral(changeValue);
-      state.bindingValue:=newLit;
-      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+    try
+      if (config.bindingTo<>'') then begin
+        if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+        newLit:=newStringLiteral(changeValue);
+        state.bindingValue:=newLit;
+        propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+      end;
+      if config_onChange<>nil then begin
+        state_changeTriggered:=true;
+        if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
+        if newLit<>nil then state_onChangeParam:=newLit^.rereferenced
+                       else state_onChangeParam:=newStringLiteral(changeValue);
+      end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    if config_onChange<>nil then begin
-      state_changeTriggered:=true;
-      if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
-      if newLit<>nil then state_onChangeParam:=newLit^.rereferenced
-                     else state_onChangeParam:=newStringLiteral(changeValue);
-    end;
-    leaveCriticalSection(elementCs);
   end;
 
 DESTRUCTOR T_changeListeningMeta.destroy;
@@ -56,16 +59,19 @@ FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR cont
   VAR tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context,recycler);
+    try
+      result:=inherited evaluate(location,context,recycler);
 
-    if state_changeTriggered then begin
-      if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
-      then tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,state_onChangeParam,nil).literal
-      else tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,nil                ,nil).literal;
-      if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
-      if tmp<>nil then disposeLiteral(tmp);
-      state_changeTriggered:=false;
-      result:=true;
+      if state_changeTriggered then begin
+        if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
+        then tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,state_onChangeParam,nil).literal
+        else tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,nil                ,nil).literal;
+        if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
+        if tmp<>nil then disposeLiteral(tmp);
+        state_changeTriggered:=false;
+        result:=true;
+      end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    leaveCriticalSection(elementCs);
   end;

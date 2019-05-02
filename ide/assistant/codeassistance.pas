@@ -151,9 +151,12 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
         lastEvaluationStart:=now;
         response:=doCodeAssistanceSynchronously(provider,recycler,globals,@adapters);
         enterCriticalSection(codeAssistanceCs);
-        disposeCodeAssistanceResponse(codeAssistanceResponse);
-        codeAssistanceResponse:=response;
-        leaveCriticalSection(codeAssistanceCs);
+        try
+          disposeCodeAssistanceResponse(codeAssistanceResponse);
+          codeAssistanceResponse:=response;
+        finally
+          leaveCriticalSection(codeAssistanceCs);
+        end;
       end;
       repeat sleep(100) until timeForNextCheck;
     until isShutdownRequested;
@@ -171,23 +174,29 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider): P_codeAssistanceResponse;
   begin
     enterCriticalSection(codeAssistanceCs);
-    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath)
-    then result:=codeAssistanceResponse^.rereferenced
-    else result:=nil;
-    leaveCriticalSection(codeAssistanceCs);
+    try
+      if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath)
+      then result:=codeAssistanceResponse^.rereferenced
+      else result:=nil;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
+    end;
   end;
 
 PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
   begin
     enterCriticalSection(codeAssistanceCs);
-    if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
-    then dispose(codeAssistanceRequest,destroy);
-    codeAssistanceRequest:=source;
-    if not(codeAssistantIsRunning) then begin
-      codeAssistantIsRunning:=true;
-      beginThread(@codeAssistanceThread);
+    try
+      if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
+      then dispose(codeAssistanceRequest,destroy);
+      codeAssistanceRequest:=source;
+      if not(codeAssistantIsRunning) then begin
+        codeAssistantIsRunning:=true;
+        beginThread(@codeAssistanceThread);
+      end;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
     end;
-    leaveCriticalSection(codeAssistanceCs);
   end;
 
 PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: T_highlightingData);
@@ -195,87 +204,111 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
       e:P_storedMessage;
   begin
     enterCriticalSection(highlightingData.highlightingCs);
-    highlightingData.userRules.clear;
-    package^.updateLists(highlightingData.userRules,false);
-    highlightingData.localIdInfos.copyFrom(localIdInfos);
-    setLength(highlightingData.warnLocations,length(localErrors));
-    k:=0;
-    for e in localErrors do begin
-      if k>=length(highlightingData.warnLocations) then setLength(highlightingData.warnLocations,k+1);
-      highlightingData.warnLocations[k].line   :=e^.getLocation.line;
-      highlightingData.warnLocations[k].column :=e^.getLocation.column;
-      highlightingData.warnLocations[k].isError:=C_messageTypeMeta[e^.messageType].level>2;
-      inc(k);
+    try
+      highlightingData.userRules.clear;
+      package^.updateLists(highlightingData.userRules,false);
+      highlightingData.localIdInfos.copyFrom(localIdInfos);
+      setLength(highlightingData.warnLocations,length(localErrors));
+      k:=0;
+      for e in localErrors do begin
+        if k>=length(highlightingData.warnLocations) then setLength(highlightingData.warnLocations,k+1);
+        highlightingData.warnLocations[k].line   :=e^.getLocation.line;
+        highlightingData.warnLocations[k].column :=e^.getLocation.column;
+        highlightingData.warnLocations[k].isError:=C_messageTypeMeta[e^.messageType].level>2;
+        inc(k);
+      end;
+      setLength(highlightingData.warnLocations,k);
+    finally
+      leaveCriticalSection(highlightingData.highlightingCs);
     end;
-    setLength(highlightingData.warnLocations,k);
-    leaveCriticalSection(highlightingData.highlightingCs);
   end;
 
 CONSTRUCTOR T_highlightingData.create;
   begin
     initCriticalSection(highlightingCs);
     enterCriticalSection(highlightingCs);
-    userRules   .create;
-    localIdInfos.create;
-    setLength(warnLocations,0);
-    leaveCriticalSection(highlightingCs);
+    try
+      userRules   .create;
+      localIdInfos.create;
+      setLength(warnLocations,0);
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
   end;
 
 PROCEDURE T_highlightingData.clear;
   begin
     enterCriticalSection(highlightingCs);
-    userRules   .clear;
-    localIdInfos.clear;
-    setLength(warnLocations,0);
-    leaveCriticalSection(highlightingCs);
+    try
+      userRules   .clear;
+      localIdInfos.clear;
+      setLength(warnLocations,0);
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
   end;
 
 DESTRUCTOR T_highlightingData.destroy;
   begin
     enterCriticalSection(highlightingCs);
-    userRules   .destroy;
-    localIdInfos.destroy;
-    setLength(warnLocations,0);
-    leaveCriticalSection(highlightingCs);
-    doneCriticalSection(highlightingCs);
+    try
+      userRules   .destroy;
+      localIdInfos.destroy;
+      setLength(warnLocations,0);
+    finally
+      leaveCriticalSection(highlightingCs);
+      doneCriticalSection(highlightingCs);
+    end;
   end;
 
 FUNCTION T_highlightingData.isUserRule(CONST id: string): boolean;
   begin
     enterCriticalSection(highlightingCs);
-    result:=userRules.contains(id);
-    leaveCriticalSection(highlightingCs);
+    try
+      result:=userRules.contains(id);
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
   end;
 
 FUNCTION T_highlightingData.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   VAR k:longint;
   begin
     enterCriticalSection(highlightingCs);
-    result:=0;
-    for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
-    if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
-      if isError then begin
-        leaveCriticalSection(highlightingCs);
-        exit(2);
-      end
-      else if result<1 then result:=1;
+    try
+      result:=0;
+      for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
+      if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
+        if isError then begin
+          leaveCriticalSection(highlightingCs);
+          exit(2);
+        end
+        else if result<1 then result:=1;
+      end;
+    finally
+      leaveCriticalSection(highlightingCs);
     end;
-    leaveCriticalSection(highlightingCs);
   end;
 
 FUNCTION T_highlightingData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
   VAR dummyLocation:T_tokenLocation;
   begin
     enterCriticalSection(highlightingCs);
-    result:=localIdInfos.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
-    leaveCriticalSection(highlightingCs);
+    try
+      result:=localIdInfos.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
   end;
 
 PROCEDURE T_highlightingData.clearLocalIdInfos;
   begin
     enterCriticalSection(highlightingCs);
-    localIdInfos.clear;
-    leaveCriticalSection(highlightingCs);
+    try
+      localIdInfos.clear;
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
   end;
 
 CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos);

@@ -145,32 +145,35 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
-    for m in storedMessages do case m^.messageType of
-      mt_displayTable:
-        begin
-          include(result,m^.messageType);
-          tab:=TtableForm.create(nil);
-          setLength(tableForms,length(tableForms)+1);
-          tableForms[length(tableForms)-1]:=tab;
-          with P_tableDisplayRequest(m)^ do begin
-            if tableCaption=''
-            then caption:=defaultCaption+' ('+intToStr(length(tableForms))+')'
-            else caption:=tableCaption;
-            tab.initWithLiteral(tableContent,caption,firstIsHeader);
+    try
+      for m in storedMessages do case m^.messageType of
+        mt_displayTable:
+          begin
+            include(result,m^.messageType);
+            tab:=TtableForm.create(nil);
+            setLength(tableForms,length(tableForms)+1);
+            tableForms[length(tableForms)-1]:=tab;
+            with P_tableDisplayRequest(m)^ do begin
+              if tableCaption=''
+              then caption:=defaultCaption+' ('+intToStr(length(tableForms))+')'
+              else caption:=tableCaption;
+              tab.initWithLiteral(tableContent,caption,firstIsHeader);
+            end;
+            dockNewForm(tab);
+            tab.fillTable;
+            tab.showComponent(true);
           end;
-          dockNewForm(tab);
-          tab.fillTable;
-          tab.showComponent(true);
-        end;
-      mt_startOfEvaluation:
-        begin
-          include(result,m^.messageType);
-          for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
-          setLength(tableForms,0);
-        end;
+        mt_startOfEvaluation:
+          begin
+            include(result,m^.messageType);
+            for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
+            setLength(tableForms,0);
+          end;
+      end;
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    clear;
-    leaveCriticalSection(adapterCs);
   end;
 
 DESTRUCTOR T_tableAdapter.destroy;

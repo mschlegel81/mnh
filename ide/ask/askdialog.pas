@@ -234,20 +234,26 @@ FUNCTION ask_impl intFuncSignature;
     if (params<>nil) and (params^.size = 1) and
       (arg0^.literalType = lt_string) then begin
       system.enterCriticalSection(cs);
-      askForm.initWithQuestion(str0^.value);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(context.messages));
-      system.leaveCriticalSection(cs);
+      try
+        askForm.initWithQuestion(str0^.value);
+        result := newStringLiteral(askForm.getLastAnswerReleasing(context.messages));
+      finally
+        system.leaveCriticalSection(cs);
+      end;
     end
     else if (params<>nil) and (params^.size = 2) and
       (arg0^.literalType = lt_string) and
       (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
-      setLength(opt, list1^.size);
-      for i := 0 to length(opt)-1 do
-        opt[i] := P_stringLiteral(list1^.value[i])^.value;
-      askForm.initWithQuestionAndOptions(str0^.value, opt);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(context.messages));
-      system.leaveCriticalSection(cs);
+      try
+        setLength(opt, list1^.size);
+        for i := 0 to length(opt)-1 do
+          opt[i] := P_stringLiteral(list1^.value[i])^.value;
+        askForm.initWithQuestionAndOptions(str0^.value, opt);
+        result := newStringLiteral(askForm.getLastAnswerReleasing(context.messages));
+      finally
+        system.leaveCriticalSection(cs);
+      end;
     end;
   end;
 
