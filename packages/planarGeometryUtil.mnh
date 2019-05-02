@@ -1,0 +1,16 @@
+@SuppressUnusedParameterWarning
+ducktype Vector2d(x:NumericList(2))->true;
+
+@SuppressUnusedWarning
+//*Returns the points where the circles (c0,r0) and (c1,r1) intersect
+circleIntersection(c0:Vector2d,r0,
+                   c1:Vector2d,r1)->begin
+  local d:=euklideanNorm(c1-c0);
+  local a:=(r0^2-r1^2+d^2)/(2*d);
+  local h:=r0^2-a^2;
+  h<0 ? return void : h:=sqrt(h);
+  local X:=c0+a*(c1-c0)/d;
+  local Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
+  [X+Y,X-Y];
+end;
+

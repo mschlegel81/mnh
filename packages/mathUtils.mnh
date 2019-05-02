@@ -63,3 +63,13 @@ allPartitions(L:List)->begin
       [L[!mask],L[mask]];
     end);
 end;
+
+ //*Returns the real roots of {a*x^2+b*x+c} or void if there is none
+rootOfQuadraticPoly(squareFactor:Numeric,
+                    linearFactor:Numeric,
+                    constantPart:Numeric)->begin
+  local discriminant:=linearFactor^2-4*squareFactor*constantPart;
+  discriminant<0 ? return [] : void;
+  (-linearFactor+sqrt(discriminant)*[-1,1])/(2*squareFactor);
+end;
+
