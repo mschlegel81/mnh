@@ -19,6 +19,7 @@ newLabel                                                   ->['type'=>'label'  ]
 newPanel(contents:List)                                    ->['type'=>'panel','parts'=>contents].toMap;
 newSplitPanel(left:List,right:List)                        ->['type'=>'splitPanel','left'=>left,'right'=>right].toMap;
 newPlotLink                                                ->['type'=>'plot'].toMap;
+newPlotDock                                                ->['type'=>'plotDock'].toMap;
 //*Workers are background tasks without corresponding GUI element
 //*If no interval is given, the worker is invoked in every GUI-evaluation step
 newWorker(alwaysDo:Expression(0)                          )->['type'=>'worker','action'=>alwaysDo                              ].toMap;

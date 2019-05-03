@@ -185,9 +185,9 @@ TYPE
   T_plotSystem=object(T_abstractGuiOutAdapter)
     protected
       pullSettingsToGui:F_pullSettingsToGuiCallback;
+      plotChangedSinceLastDisplay:boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
-      plotChangedSinceLastDisplay:boolean;
       displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       sandboxed:boolean;
@@ -203,6 +203,7 @@ TYPE
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
+      PROPERTY isPlotChanged:boolean read plotChangedSinceLastDisplay;
   end;
 
 FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
@@ -265,25 +266,31 @@ CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
 DESTRUCTOR T_plotSeriesFrame.destroy;
   begin
     enterCriticalSection(frameCS);
-    clearImage(false);
-    if dumpName<>'' then DeleteFile(dumpName);
-    dumpName:='';
-    renderedWidth :=-1;
-    renderedHeight:=-1;
-    renderedQuality:=255;
-    plotData.destroy;
-    leaveCriticalSection(frameCS);
-    doneCriticalSection(frameCS);
+    try
+      clearImage(false);
+      if dumpName<>'' then DeleteFile(dumpName);
+      dumpName:='';
+      renderedWidth :=-1;
+      renderedHeight:=-1;
+      renderedQuality:=255;
+      plotData.destroy;
+    finally
+      leaveCriticalSection(frameCS);
+      doneCriticalSection(frameCS);
+    end;
   end;
 
 PROCEDURE T_plotSeriesFrame.invalidate;
   begin
     enterCriticalSection(frameCS);
-    clearImage(false);
-    renderedWidth :=-1;
-    renderedHeight:=-1;
-    renderedQuality:=255;
-    leaveCriticalSection(frameCS);
+    try
+      clearImage(false);
+      renderedWidth :=-1;
+      renderedHeight:=-1;
+      renderedQuality:=255;
+    finally
+      leaveCriticalSection(frameCS);
+    end;
   end;
 
 PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
@@ -291,17 +298,20 @@ PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
       bmpWriter:TFPWriterBMP;
   begin
     enterCriticalSection(frameCS);
-    if doDump and not(dumpIsUpToDate) then begin
-      bmpWriter:=TFPWriterBMP.create;
-      if dumpName='' then dumpName:=getTempFileName;
-      tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-      tempIntfImage.saveToFile(dumpName,bmpWriter);
-      tempIntfImage.free;
-      bmpWriter.free;
+    try
+      if doDump and not(dumpIsUpToDate) then begin
+        bmpWriter:=TFPWriterBMP.create;
+        if dumpName='' then dumpName:=getTempFileName;
+        tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
+        tempIntfImage.saveToFile(dumpName,bmpWriter);
+        tempIntfImage.free;
+        bmpWriter.free;
+      end;
+      if not(doDump) then dumpName:='';
+      if image<>nil then FreeAndNil(image);
+    finally
+      leaveCriticalSection(frameCS);
     end;
-    if not(doDump) then dumpName:='';
-    if image<>nil then FreeAndNil(image);
-    leaveCriticalSection(frameCS);
   end;
 
 PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
@@ -309,33 +319,36 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quali
       bmpReader:TFPReaderBMP;
   begin
     enterCriticalSection(frameCS);
-    if (renderedQuality=quality) and
-       (renderedHeight =height) and
-       (renderedWidth  =width) and
-       ((image<>nil) or (dumpName<>'') and fileExists(dumpName)) then begin
-      if image=nil then begin
-        //load image
-        image:=TImage.create(nil);
-        image.SetInitialBounds(0,0,width,height);
-        tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-        bmpReader:=TFPReaderBMP.create;
-        tempIntfImage.loadFromFile(dumpName,bmpReader);
-        bmpReader.destroy;
-        image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
-        dumpIsUpToDate:=true;
-        tempIntfImage.free;
+    try
+      if (renderedQuality=quality) and
+         (renderedHeight =height) and
+         (renderedWidth  =width) and
+         ((image<>nil) or (dumpName<>'') and fileExists(dumpName)) then begin
+        if image=nil then begin
+          //load image
+          image:=TImage.create(nil);
+          image.SetInitialBounds(0,0,width,height);
+          tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
+          bmpReader:=TFPReaderBMP.create;
+          tempIntfImage.loadFromFile(dumpName,bmpReader);
+          bmpReader.destroy;
+          image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
+          dumpIsUpToDate:=true;
+          tempIntfImage.free;
+        end;
+      end else begin
+        enterCriticalSection(globalTextRenderingCs);
+        if image<>nil then FreeAndNil(image);
+        leaveCriticalSection(globalTextRenderingCs);
+        image:=plotData.obtainPlot(width,height,quality);
+        dumpIsUpToDate:=false;
+        renderedQuality:=quality;
+        renderedHeight :=height;
+        renderedWidth  :=width;
       end;
-    end else begin
-      enterCriticalSection(globalTextRenderingCs);
-      if image<>nil then FreeAndNil(image);
-      leaveCriticalSection(globalTextRenderingCs);
-      image:=plotData.obtainPlot(width,height,quality);
-      dumpIsUpToDate:=false;
-      renderedQuality:=quality;
-      renderedHeight :=height;
-      renderedWidth  :=width;
+    finally
+      leaveCriticalSection(frameCS);
     end;
-    leaveCriticalSection(frameCS);
   end;
 
 PROCEDURE T_plotSeriesFrame.performPostedPreparation;
@@ -363,21 +376,27 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST qu
       leaveCriticalSection(frameCS);
       exit;
     end;
-    backgroundPreparation:=true;
-    postedHeight:=height;
-    postedWidth:=width;
-    postedQuality:=quality;
-    beginThread(@preparationThread,@self);
-    leaveCriticalSection(frameCS);
+    try
+      backgroundPreparation:=true;
+      postedHeight:=height;
+      postedWidth:=width;
+      postedQuality:=quality;
+      beginThread(@preparationThread,@self);
+    finally
+      leaveCriticalSection(frameCS);
+    end;
   end;
 
 PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte; CONST timing:T_timedPlotExecution);
   begin
     enterCriticalSection(frameCS);
-    prepareImage(target.width,target.height,quality);
-    timing.wait;
-    target.Canvas.draw(0,0,image.picture.Bitmap);
-    leaveCriticalSection(frameCS);
+    try
+      prepareImage(target.width,target.height,quality);
+      timing.wait;
+      target.Canvas.draw(0,0,image.picture.Bitmap);
+    finally
+      leaveCriticalSection(frameCS);
+    end;
   end;
 
 FUNCTION T_plotDisplayRequest.internalType: shortstring;
@@ -563,10 +582,13 @@ PROCEDURE T_plotSeries.clear;
   VAR k:longint;
   begin
     enterCriticalSection(seriesCs);
-    for k:=0 to length(frame)-1 do dispose(frame[k],destroy);
-    setLength(frame,0);
-    for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
-    leaveCriticalSection(seriesCs);
+    try
+      for k:=0 to length(frame)-1 do dispose(frame[k],destroy);
+      setLength(frame,0);
+      for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
     tryToKeepMemoryLow:=not(isMemoryInComfortZone);
   end;
 
@@ -626,59 +648,68 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       leaveCriticalSection(seriesCs);
       exit;
     end;
-    {$ifndef unix}
-    if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height,quality);
-    {$endif}
+    try
+      {$ifndef unix}
+      if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height,quality);
+      {$endif}
 
-    storeImage:=TImage.create(nil);
-    storeImage.SetInitialBounds(0,0,width,height);
-    frame[index]^.obtainImage(storeImage,quality,timedPlotExecution(nil,0));
-    storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
-    enterCriticalSection(globalTextRenderingCs);
-    storeImage.destroy;
-    leaveCriticalSection(globalTextRenderingCs);
-    frame[index]^.clearImage(false);
-    leaveCriticalSection(seriesCs);
+      storeImage:=TImage.create(nil);
+      storeImage.SetInitialBounds(0,0,width,height);
+      frame[index]^.obtainImage(storeImage,quality,timedPlotExecution(nil,0));
+      storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      enterCriticalSection(globalTextRenderingCs);
+      storeImage.destroy;
+      leaveCriticalSection(globalTextRenderingCs);
+      frame[index]^.clearImage(false);
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
   end;
 
 PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   VAR newIdx:longint;
   begin
     enterCriticalSection(seriesCs);
-    newIdx:=length(frame);
-    setLength(frame,newIdx+1);
-    new(frame[newIdx],create(plot));
-    leaveCriticalSection(seriesCs);
+    try
+      newIdx:=length(frame);
+      setLength(frame,newIdx+1);
+      new(frame[newIdx],create(plot));
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
   {$ifndef unix}VAR nextToPrepare:longint;{$endif}
   begin
     enterCriticalSection(seriesCs);
-    if length(frame)=0 then begin
-      frameIndex:=-1;
-      result:=false;
-    end else begin
-      result:=true;
-      inc(frameIndex);
-      if frameIndex>=length(frame) then begin
-        if cycle then frameIndex:=0
-                 else begin
-                   frameIndex:=length(frame)-1;
-                   result:=false;
-                 end;
+    try
+      if length(frame)=0 then begin
+        frameIndex:=-1;
+        result:=false;
+      end else begin
+        result:=true;
+        inc(frameIndex);
+        if frameIndex>=length(frame) then begin
+          if cycle then frameIndex:=0
+                   else begin
+                     frameIndex:=length(frame)-1;
+                     result:=false;
+                   end;
+        end;
+        {$ifndef unix}
+        if result then begin
+          nextToPrepare:=frameIndex+(settings.cpuCount div 2);
+          if nextToPrepare=frameIndex then inc(nextToPrepare);
+          if cycle then nextToPrepare:=nextToPrepare mod length(frame);
+          if (nextToPrepare>=0) and (nextToPrepare<length(frame))
+          then frame[nextToPrepare]^.postPreparation(width,height,quality);
+        end;
+        {$endif}
       end;
-      {$ifndef unix}
-      if result then begin
-        nextToPrepare:=frameIndex+(settings.cpuCount div 2);
-        if nextToPrepare=frameIndex then inc(nextToPrepare);
-        if cycle then nextToPrepare:=nextToPrepare mod length(frame);
-        if (nextToPrepare>=0) and (nextToPrepare<length(frame))
-        then frame[nextToPrepare]^.postPreparation(width,height,quality);
-      end;
-      {$endif}
+    finally
+      leaveCriticalSection(seriesCs);
     end;
-    leaveCriticalSection(seriesCs);
   end;
 
 CONSTRUCTOR T_plot.createWithDefaults;
@@ -690,40 +721,52 @@ CONSTRUCTOR T_plot.createWithDefaults;
 PROCEDURE T_plot.setDefaults;
   begin
     system.enterCriticalSection(cs);
-    scalingOptions.setDefaults;
-    clear;
-    system.leaveCriticalSection(cs);
+    try
+      scalingOptions.setDefaults;
+      clear;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 DESTRUCTOR T_plot.destroy;
   begin
     system.enterCriticalSection(cs);
-    clear;
-    system.leaveCriticalSection(cs);
-    doneCriticalSection(cs);
+    try
+      clear;
+    finally
+      system.leaveCriticalSection(cs);
+      doneCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plot.clear;
   VAR i: longint;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(row)-1 do row[i].destroy;
-    setLength(row, 0);
-    for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
-    setLength(customText,0);
-    transparentCount:=0;
-    system.leaveCriticalSection(cs);
+    try
+      for i:=0 to length(row)-1 do row[i].destroy;
+      setLength(row, 0);
+      for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
+      setLength(customText,0);
+      transparentCount:=0;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
   VAR index:longint;
   begin
     system.enterCriticalSection(cs);
-    index:=length(row);
-    setLength(row, index+1);
-    row[index].create(index,rowData);
-    row[index].style:=getStyle(index,styleOptions,transparentCount);
-    system.leaveCriticalSection(cs);
+    try
+      index:=length(row);
+      setLength(row, index+1);
+      row[index].create(index,rowData);
+      row[index].style:=getStyle(index,styleOptions,transparentCount);
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
@@ -731,18 +774,24 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
   begin
     if numberOfRowsToRemove<=0 then exit;
     system.enterCriticalSection(cs);
-    i0:=length(row)-numberOfRowsToRemove; if i0<0 then i0:=0;
-    for i:=i0 to length(row)-1 do row[i].destroy;
-    setLength(row,i0);
-    system.leaveCriticalSection(cs);
+    try
+      i0:=length(row)-numberOfRowsToRemove; if i0<0 then i0:=0;
+      for i:=i0 to length(row)-1 do row[i].destroy;
+      setLength(row,i0);
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plot.addCustomText(CONST text: P_customText);
   begin
     system.enterCriticalSection(cs);
-    setLength(customText,length(customText)+1);
-    customText[length(customText)-1]:=text;
-    system.leaveCriticalSection(cs);
+    try
+      setLength(customText,length(customText)+1);
+      customText[length(customText)-1]:=text;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
@@ -764,21 +813,24 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
-    scalingOptions.axisTrafo['x'].zoom(pixelX,factor);
-    scalingOptions.axisTrafo['y'].zoom(pixelY,factor);
+    try
+      scalingOptions.axisTrafo['x'].zoom(pixelX,factor);
+      scalingOptions.axisTrafo['y'].zoom(pixelY,factor);
 
-    rectA.top:=0;
-    rectA.Left:=0;
-    rectA.Right:=plotImage.width;
-    rectA.Bottom:=plotImage.height;
+      rectA.top:=0;
+      rectA.Left:=0;
+      rectA.Right:=plotImage.width;
+      rectA.Bottom:=plotImage.height;
 
-    rectB.top:=round((-pixelY)*factor+pixelY);
-    rectB.Left:=round((-pixelX)*factor+pixelX);
-    rectB.Right:=round((plotImage.width-pixelX)*factor+pixelX);
-    rectB.Bottom:=round((plotImage.height-pixelY)*factor+pixelY);
+      rectB.top:=round((-pixelY)*factor+pixelY);
+      rectB.Left:=round((-pixelX)*factor+pixelX);
+      rectB.Right:=round((plotImage.width-pixelX)*factor+pixelX);
+      rectB.Bottom:=round((plotImage.height-pixelY)*factor+pixelY);
 
-    plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
-    system.leaveCriticalSection(cs);
+      plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end; end;
 
 PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
@@ -786,20 +838,23 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
-    scalingOptions.axisTrafo['x'].pan(pixelDX);
-    scalingOptions.axisTrafo['y'].pan(pixelDY);
+    try
+      scalingOptions.axisTrafo['x'].pan(pixelDX);
+      scalingOptions.axisTrafo['y'].pan(pixelDY);
 
-    rectA.top:=0;
-    rectA.Left:=0;
-    rectA.Right:=plotImage.width;
-    rectA.Bottom:=plotImage.height;
-    rectB.top:=0+pixelDY;
-    rectB.Left:=0+pixelDX;
-    rectB.Right:=plotImage.width+pixelDX;
-    rectB.Bottom:=plotImage.height+pixelDY;
+      rectA.top:=0;
+      rectA.Left:=0;
+      rectA.Right:=plotImage.width;
+      rectA.Bottom:=plotImage.height;
+      rectB.top:=0+pixelDY;
+      rectB.Left:=0+pixelDX;
+      rectB.Right:=plotImage.width+pixelDX;
+      rectB.Bottom:=plotImage.height+pixelDY;
 
-    plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
-    system.leaveCriticalSection(cs);
+      plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end; end;
 
 PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, intendedHeight, scalingFactor: longint; VAR gridTic: T_ticInfos; CONST sampleIndex: byte);
@@ -1337,23 +1392,25 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   begin
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
-    transparentCount:=p.transparentCount;
-    scalingOptions:=p.scalingOptions;
-    //copy rows:
-    for i:=0 to length(row)-1 do row[i].destroy;
-    setLength(row,length(p.row));
-    for i:=0 to length(row)-1 do begin
-      p.row[i].sample.cloneTo(clonedSample);
-      row[i].create(i,clonedSample);
-      row[i].style:=p.row[i].style;
+    try
+      transparentCount:=p.transparentCount;
+      scalingOptions:=p.scalingOptions;
+      //copy rows:
+      for i:=0 to length(row)-1 do row[i].destroy;
+      setLength(row,length(p.row));
+      for i:=0 to length(row)-1 do begin
+        p.row[i].sample.cloneTo(clonedSample);
+        row[i].create(i,clonedSample);
+        row[i].style:=p.row[i].style;
+      end;
+      //:copy rows | copy custom text:
+      for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
+      setLength(customText,length(p.customText));
+      for i:=0 to length(customText)-1 do customText[i]:=p.customText[i]^.clone;
+    finally
+      system.leaveCriticalSection(p.cs);
+      system.leaveCriticalSection(cs);
     end;
-    //:copy rows | copy custom text:
-    for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
-    setLength(customText,length(p.customText));
-    for i:=0 to length(customText)-1 do customText[i]:=p.customText[i]^.clone;
-    //:copy custom text
-    system.leaveCriticalSection(p.cs);
-    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfString;
@@ -1361,11 +1418,14 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfSt
       i:longint;
   begin
     system.enterCriticalSection(cs);
-    opt:=scalingOptions.getOptionDiffString(prevOptions);
-    if opt='' then setLength(result,0) else result:=opt;
-    for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0));
-    for i:=0 to length(customText)-1 do append(result,customText[i]^.toTextStatement);
-    system.leaveCriticalSection(cs);
+    try
+      opt:=scalingOptions.getOptionDiffString(prevOptions);
+      if opt='' then setLength(result,0) else result:=opt;
+      for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0));
+      for i:=0 to length(customText)-1 do append(result,customText[i]^.toTextStatement);
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
@@ -1418,36 +1478,39 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
 
 PROCEDURE T_plotSystem.startGuiInteraction;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(adapterCs);
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
-    leaveCriticalSection(cs);
+    leaveCriticalSection(adapterCs);
   end;
 
 FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   VAR prevOptions:T_scalingOptions;
       i:longint;
   begin
-    enterCriticalSection(cs);
-    result:='plain script;';
-    myGenerics.append(result,'resetOptions;');
-    myGenerics.append(result,'clearAnimation;');
-    prevOptions.setDefaults;
-    if animation.frameCount>0 then begin
-      if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-        myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
-        prevOptions:=animation.frame[i]^.plotData.scalingOptions;
-        myGenerics.append(result,'addAnimationFrame;');
+    enterCriticalSection(adapterCs);
+    try
+      result:='plain script;';
+      myGenerics.append(result,'resetOptions;');
+      myGenerics.append(result,'clearAnimation;');
+      prevOptions.setDefaults;
+      if animation.frameCount>0 then begin
+        if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
+          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
+          prevOptions:=animation.frame[i]^.plotData.scalingOptions;
+          myGenerics.append(result,'addAnimationFrame;');
+        end else begin
+          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
+        end;
       end else begin
-        myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
+        myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
       end;
-    end else begin
-      myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
+      myGenerics.append(result,'display;');
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    myGenerics.append(result,'display;');
-    leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
@@ -1477,36 +1540,40 @@ DESTRUCTOR T_plotSystem.destroy;
 
 FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
   begin
-    enterCriticalSection(cs);
-    case message^.messageType of
-      mt_startOfEvaluation,
-      mt_plot_addText,
-      mt_plot_addRow,
-      mt_plot_dropRow,
-      mt_plot_setOptions,
-      mt_plot_clear,
-      mt_plot_clearAnimation,
-      mt_plot_retrieveOptions,
-      mt_plot_renderRequest,
-      mt_plot_queryClosedByUser,
-      mt_plot_addAnimationFrame: begin
-        result:=true;
-        //if there are pending tasks then store else process
-        if (length(storedMessages)>0)
-        then inherited append(message)
-        else processMessage(message);
+    if not(message^.messageType in messageTypesToInclude) then exit(false);
+    enterCriticalSection(adapterCs);
+    try
+      case message^.messageType of
+        mt_startOfEvaluation,
+        mt_plot_addText,
+        mt_plot_addRow,
+        mt_plot_dropRow,
+        mt_plot_setOptions,
+        mt_plot_clear,
+        mt_plot_clearAnimation,
+        mt_plot_retrieveOptions,
+        mt_plot_renderRequest,
+        mt_plot_queryClosedByUser,
+        mt_plot_addAnimationFrame: begin
+          result:=true;
+          //if there are pending tasks then store else process
+          if (length(storedMessages)>0)
+          then inherited append(message)
+          else processMessage(message);
+        end;
+        mt_endOfEvaluation,
+        mt_plot_postDisplay: begin
+          //if we can't plot anyway, we can process the message right away
+          result:=true;
+          if doPlot=nil
+          then processMessage(message)
+          else inherited append(message);
+        end;
+        else result:=false;
       end;
-      mt_endOfEvaluation,
-      mt_plot_postDisplay: begin
-        //if we can't plot anyway, we can process the message right away
-        result:=true;
-        if doPlot=nil
-        then processMessage(message)
-        else inherited append(message);
-      end;
-      else result:=false;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    leaveCriticalSection(cs);
   end;
 
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
@@ -1514,32 +1581,38 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       i:longint;
       m:P_storedMessage;
   begin
-    enterCriticalSection(cs);
-    result:=[];
-    //it does not make sense to render multiple plots in one run
-    //Lookup the last display request;
-    lastDisplayIndex:=-1;
-    for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
-    //process messages
-    for i:=0 to length(storedMessages)-1 do begin
-      m:=storedMessages[i];
-      include(result,m^.messageType);
-      if m^.messageType=mt_plot_postDisplay
-      then begin
-        if i=lastDisplayIndex
-        then processMessage(m)
-        else P_plotDisplayRequest(m)^.markExecuted;
-      end else processMessage(m);
+    enterCriticalSection(adapterCs);
+    try
+      result:=[];
+      //it does not make sense to render multiple plots in one run
+      //Lookup the last display request;
+      lastDisplayIndex:=-1;
+      for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
+      //process messages
+      for i:=0 to length(storedMessages)-1 do begin
+        m:=storedMessages[i];
+        include(result,m^.messageType);
+        if m^.messageType=mt_plot_postDisplay
+        then begin
+          if i=lastDisplayIndex
+          then processMessage(m)
+          else P_plotDisplayRequest(m)^.markExecuted;
+        end else processMessage(m);
+      end;
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    clear;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_plotSystem.logPlotDone;
   begin
-    enterCriticalSection(cs);
-    plotChangedSinceLastDisplay:=false;
-    leaveCriticalSection(cs);
+    enterCriticalSection(adapterCs);
+    try
+      plotChangedSinceLastDisplay:=false;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 INITIALIZATION

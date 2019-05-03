@@ -58,12 +58,15 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
 PROCEDURE T_editMeta.update;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    editLabel.caption:=state.caption;
-    edit.enabled:=state.enabled;
-    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
-      edit.caption:=P_stringLiteral(state.bindingValue)^.value;
+    try
+      editLabel.caption:=state.caption;
+      edit.enabled:=state.enabled;
+      if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
+        edit.caption:=P_stringLiteral(state.bindingValue)^.value;
+      end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_editMeta.leftLabelOrNil:TLabel;

@@ -91,7 +91,7 @@ TYPE
     markedForCleanup:boolean;
     meta:array of P_guiElementMeta;
     metaForUpdate:T_setOfPointer;
-    plotLink:P_guiElementMeta;
+    plotLink,plotDock:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
@@ -166,6 +166,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 //indentation signifies inheritance
 {$I component_panel.inc}
   {$I component_splitPanel.inc}
+  {$I component_plotDock.inc}
   {$I component_grid.inc}
 {$I component_label.inc}
 {$I component_checkbox.inc}
@@ -206,69 +207,75 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
   begin
     initCriticalSection(elementCs);
     enterCriticalSection(elementCs);
-    with config do begin
-      action :=nil;
-      caption:=nil;
-      enabled:=nil;
-      bindingTo:='';
-    end;
-    with state do begin
-      actionTriggered:=false;
-      actionParameter:=nil;
-      caption        :='';
-      enabled        :=true;
-      isFocused:=false;
-    end;
-
-    tmp:=mapGet(def,key[dmk_action]);
-    if tmp<>nil then begin
-      if (tmp^.literalType=lt_expression)
-      then config.action:=P_expressionLiteral(tmp)
-      else context.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
-    end;
-
-    tmp:=mapGet(def,key[dmk_caption]);
-    if tmp<>nil then begin
-      case tmp^.literalType of
-        lt_expression: config.caption:=P_expressionLiteral(tmp);
-        lt_string    : begin
-          state .caption:=P_stringLiteral(tmp)^.value;
-          disposeLiteral(tmp);
-        end
-        else context.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
+    try
+      with config do begin
+        action :=nil;
+        caption:=nil;
+        enabled:=nil;
+        bindingTo:='';
       end;
-    end;
-
-    tmp:=mapGet(def,key[dmk_enabled]);
-    if tmp<>nil then begin
-      case tmp^.literalType of
-        lt_expression: config.enabled:=P_expressionLiteral(tmp);
-        lt_boolean   : state .enabled:=P_boolLiteral(tmp)^.value;
-        else context.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
+      with state do begin
+        actionTriggered:=false;
+        actionParameter:=nil;
+        caption        :='';
+        enabled        :=true;
+        isFocused:=false;
       end;
-    end;
 
-    tmp:=mapGet(def,key[dmk_bind]);
-    if tmp<>nil then begin
-      if tmp^.literalType=lt_string then begin
-        config.bindingTo:=P_stringLiteral(tmp)^.value;
-        state.bindingValue:=context.valueScope^.getVariableValue(config.bindingTo);
-      end else context.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
-      disposeLiteral(tmp);
-    end;
+      tmp:=mapGet(def,key[dmk_action]);
+      if tmp<>nil then begin
+        if (tmp^.literalType=lt_expression)
+        then config.action:=P_expressionLiteral(tmp)
+        else context.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
+      end;
 
-    raiseUnusedKeyWarning;
-    leaveCriticalSection(elementCs);
+      tmp:=mapGet(def,key[dmk_caption]);
+      if tmp<>nil then begin
+        case tmp^.literalType of
+          lt_expression: config.caption:=P_expressionLiteral(tmp);
+          lt_string    : begin
+            state .caption:=P_stringLiteral(tmp)^.value;
+            disposeLiteral(tmp);
+          end
+          else context.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
+        end;
+      end;
+
+      tmp:=mapGet(def,key[dmk_enabled]);
+      if tmp<>nil then begin
+        case tmp^.literalType of
+          lt_expression: config.enabled:=P_expressionLiteral(tmp);
+          lt_boolean   : state .enabled:=P_boolLiteral(tmp)^.value;
+          else context.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
+        end;
+      end;
+
+      tmp:=mapGet(def,key[dmk_bind]);
+      if tmp<>nil then begin
+        if tmp^.literalType=lt_string then begin
+          config.bindingTo:=P_stringLiteral(tmp)^.value;
+          state.bindingValue:=context.valueScope^.getVariableValue(config.bindingTo);
+        end else context.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
+        disposeLiteral(tmp);
+      end;
+
+      raiseUnusedKeyWarning;
+    finally
+      leaveCriticalSection(elementCs);
+    end;
   end;
 
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
   begin
     if (config.action=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
-    if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-    state.actionParameter:=param;
-    state.actionTriggered:=true;
-    propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
-    leaveCriticalSection(elementCs);
+    try
+      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
+      state.actionParameter:=param;
+      state.actionTriggered:=true;
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+    finally
+      leaveCriticalSection(elementCs);
+    end;
   end;
 
 FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
@@ -277,96 +284,101 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       oldCaption:string;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=false;
-    if (config.bindingTo<>'') then begin
-      if (state.bindingValue<>nil) and (state.isFocused) then begin
-        tmp:=context.valueScope^.getVariableValue(config.bindingTo);
-        if tmp=nil then begin
-          {$ifdef debug_mnhCustomForm}
-          writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
-          {$endif}
-          result:=true;
-          context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
-        end else begin
-          if tmp^.equals(state.bindingValue) then begin
-            disposeLiteral(tmp);
-          end else begin
+    try
+      result:=false;
+      if (config.bindingTo<>'') then begin
+        if (state.bindingValue<>nil) and (state.isFocused) then begin
+          tmp:=context.valueScope^.getVariableValue(config.bindingTo);
+          if tmp=nil then begin
             {$ifdef debug_mnhCustomForm}
-            writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
+            writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
             {$endif}
             result:=true;
-            disposeLiteral(tmp);
             context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
+          end else begin
+            if tmp^.equals(state.bindingValue) then begin
+              disposeLiteral(tmp);
+            end else begin
+              {$ifdef debug_mnhCustomForm}
+              writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
+              {$endif}
+              result:=true;
+              disposeLiteral(tmp);
+              context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
+            end;
+          end;
+        end else if not(state.isFocused) then begin
+          tmp:=context.valueScope^.getVariableValue(config.bindingTo);
+          if tmp<>nil then begin
+            if tmp^.equals(state.bindingValue)
+            then  disposeLiteral(tmp)
+            else begin
+              {$ifdef debug_mnhCustomForm}
+              writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
+              {$endif}
+              disposeLiteral(state.bindingValue);
+              state.bindingValue:=tmp;
+              result:=true;
+            end;
           end;
         end;
-      end else if not(state.isFocused) then begin
-        tmp:=context.valueScope^.getVariableValue(config.bindingTo);
+      end;
+
+      if state.actionTriggered then begin
+        {$ifdef debug_mnhCustomForm}
+        writeln(stdErr,'        DEBUG: evaluating action for ',getName);
+        {$endif}
+        if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
+        then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
+        else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
+        if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
+        if tmp                  <>nil then disposeLiteral(tmp);
+        state.actionTriggered:=false;
+        result:=true;
+      end;
+
+      if config.enabled<>nil then begin
+        {$ifdef debug_mnhCustomForm}
+        writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
+        {$endif}
+        oldEnabled:=state.enabled;
+        state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true,nil,nil);
+        result:=result or (oldEnabled<>state.enabled);
+      end;
+
+      if config.caption<>nil then begin
+        {$ifdef debug_mnhCustomForm}
+        writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
+        {$endif}
+        oldCaption:=state.caption;
+        tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
         if tmp<>nil then begin
-          if tmp^.equals(state.bindingValue)
-          then  disposeLiteral(tmp)
-          else begin
-            {$ifdef debug_mnhCustomForm}
-            writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
-            {$endif}
-            disposeLiteral(state.bindingValue);
-            state.bindingValue:=tmp;
-            result:=true;
-          end;
+          if tmp^.literalType=lt_string
+          then state.caption:=P_stringLiteral(tmp)^.value
+          else state.caption:=tmp^.toString();
+          disposeLiteral(tmp);
         end;
+        result:=result or (oldCaption<>state.caption);
       end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-
-    if state.actionTriggered then begin
-      {$ifdef debug_mnhCustomForm}
-      writeln(stdErr,'        DEBUG: evaluating action for ',getName);
-      {$endif}
-      if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
-      then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
-      else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
-      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-      if tmp                  <>nil then disposeLiteral(tmp);
-      state.actionTriggered:=false;
-      result:=true;
-    end;
-
-    if config.enabled<>nil then begin
-      {$ifdef debug_mnhCustomForm}
-      writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
-      {$endif}
-      oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true,nil,nil);
-      result:=result or (oldEnabled<>state.enabled);
-    end;
-
-    if config.caption<>nil then begin
-      {$ifdef debug_mnhCustomForm}
-      writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
-      {$endif}
-      oldCaption:=state.caption;
-      tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
-      if tmp<>nil then begin
-        if tmp^.literalType=lt_string
-        then state.caption:=P_stringLiteral(tmp)^.value
-        else state.caption:=tmp^.toString();
-        disposeLiteral(tmp);
-      end;
-      result:=result or (oldCaption<>state.caption);
-    end;
-
-    leaveCriticalSection(elementCs);
   end;
 
 DESTRUCTOR T_guiElementMeta.destroy;
   begin
     enterCriticalSection(elementCs);
-    if config.action  <>nil then disposeLiteral(config.action );
-    if config.caption <>nil then disposeLiteral(config.caption);
-    if config.enabled <>nil then disposeLiteral(config.enabled);
-    state.actionTriggered:=false;
-    if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-    if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
-    leaveCriticalSection(elementCs);
-    doneCriticalSection(elementCs);
+    try
+      if config.action  <>nil then disposeLiteral(config.action );
+      if config.caption <>nil then disposeLiteral(config.caption);
+      if config.enabled <>nil then disposeLiteral(config.enabled);
+      state.actionTriggered:=false;
+      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
+      if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
+    finally
+      leaveCriticalSection(elementCs);
+      doneCriticalSection(elementCs);
+    end;
   end;
 
 FUNCTION T_guiElementMeta.leftLabelOrNil:TLabel;
@@ -393,13 +405,19 @@ PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
 PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  VAR m:P_guiElementMeta;
+
   begin
     if tryEnterCriticalsection(lock)=0
     then CloseAction:=caNone
     else begin
-      if processingEvents then CloseAction:=caNone;
-      markedForCleanup:=(CloseAction in [caFree,caHide]);
-      leaveCriticalSection(lock);
+      try
+        if processingEvents then CloseAction:=caNone;
+        markedForCleanup:=(CloseAction in [caFree,caHide]);
+        if markedForCleanup then for m in meta do m^.disconnect;
+      finally
+        leaveCriticalSection(lock);
+      end;
     end;
   end;
 
@@ -407,10 +425,15 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
   begin
     initCriticalSection(lock);
     enterCriticalSection(lock);
-    setLength(meta,0);
-    metaForUpdate.create;
-    displayPending:=false;
-    leaveCriticalSection(lock);
+    try
+      setLength(meta,0);
+      metaForUpdate.create;
+      displayPending:=false;
+      plotLink:=nil;
+      plotDock:=nil;
+    finally
+      leaveCriticalSection(lock);
+    end;
     markedForCleanup:=false;
   end;
 
@@ -418,20 +441,23 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
   VAR k:longint;
   begin
     enterCriticalSection(lock);
-    for k:=0 to length(meta)-1 do dispose(meta[k],destroy);
-    setLength(meta,0);
-    displayPending:=false;
-    metaForUpdate.destroy;
-    if adapter<>nil then with adapter^ do begin
-      k:=0;
-      while (k<length(scriptedForms)) and (scriptedForms[k]<>self) do inc(k);
-      if k<length(scriptedForms) then begin
-        scriptedForms[k]:=scriptedForms[length(scriptedForms)-1];
-        setLength(        scriptedForms,length(scriptedForms)-1);
+    try
+      for k:=0 to length(meta)-1 do dispose(meta[k],destroy);
+      setLength(meta,0);
+      displayPending:=false;
+      metaForUpdate.destroy;
+      if adapter<>nil then with adapter^ do begin
+        k:=0;
+        while (k<length(scriptedForms)) and (scriptedForms[k]<>self) do inc(k);
+        if k<length(scriptedForms) then begin
+          scriptedForms[k]:=scriptedForms[length(scriptedForms)-1];
+          setLength(        scriptedForms,length(scriptedForms)-1);
+        end;
       end;
+    finally
+      leaveCriticalSection(lock);
+      doneCriticalSection(lock);
     end;
-    leaveCriticalSection(lock);
-    doneCriticalSection(lock);
   end;
 
 FUNCTION TscriptedForm.getIdeComponentType: T_ideComponent;
@@ -448,17 +474,20 @@ PROCEDURE TscriptedForm.performFastUpdate;
   VAR metaPointer:pointer;
   begin
     if markedForCleanup or (tryEnterCriticalsection(lock)=0) then exit;
-    if processingEvents
-    then propagateCursor(self,crHourGlass)
-    else propagateCursor(self,crDefault);
-    for metaPointer in metaForUpdate.values do P_guiElementMeta(metaPointer)^.update;
-    metaForUpdate.clear;
-    leaveCriticalSection(lock);
+    try
+      if processingEvents
+      then propagateCursor(self,crHourGlass)
+      else propagateCursor(self,crDefault);
+      for metaPointer in metaForUpdate.values do P_guiElementMeta(metaPointer)^.update;
+      metaForUpdate.clear;
+    finally
+      leaveCriticalSection(lock);
+    end;
   end;
 
 PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid,tc_plotDock);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid','plotDock');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -527,6 +556,10 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocat
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
           addMeta(plotLink);
         end else setupContext^.raiseError('Only one plot link is allowed per custom form',setupLocation);
+        tc_plotDock:     if plotDock=nil then begin;
+          new(P_plotDockMeta(plotDock),create(container,P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
+          addMeta(plotDock);
+        end else setupContext^.raiseError('Only one plot dock is allowed per custom form',setupLocation);
         tc_panel:begin
           new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
           addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts]));
@@ -554,24 +587,27 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocat
       m:P_guiElementMeta;
   begin
     enterCriticalSection(lock);
-    new(formMeta,createForExistingForm(self));
-    if setupParam^.literalType in C_listTypes
-    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta,P_listLiteral(setupParam)^.value[k])
-    else                                                  initComponent(formMeta,              setupParam           );
-    formMeta^.alignContents;
-    for k:=length(meta)-1 downto 0 do begin
-      if meta[k]^.getControl<>nil then begin
-        {$ifdef debug_mnhCustomForm}
-        writeln(stdErr,'        DEBUG: Custom form height by ',meta[k]^.getName);
-        {$endif}
-        height:=meta[k]^.getControl.top+meta[k]^.getControl.height;
-        break;
+    try
+      new(formMeta,createForExistingForm(self));
+      if setupParam^.literalType in C_listTypes
+      then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta,P_listLiteral(setupParam)^.value[k])
+      else                                                  initComponent(formMeta,              setupParam           );
+      formMeta^.alignContents;
+      for k:=length(meta)-1 downto 0 do begin
+        if meta[k]^.getControl<>nil then begin
+          {$ifdef debug_mnhCustomForm}
+          writeln(stdErr,'        DEBUG: Custom form height by ',meta[k]^.getName);
+          {$endif}
+          height:=meta[k]^.getControl.top+meta[k]^.getControl.height;
+          break;
+        end;
       end;
+      addMeta(formMeta);
+      for m in meta do metaForUpdate.put(m);
+      displayPending:=true;
+    finally
+      leaveCriticalSection(lock);
     end;
-    addMeta(formMeta);
-    for m in meta do metaForUpdate.put(m);
-    displayPending:=true;
-    leaveCriticalSection(lock);
   end;
 
 PROCEDURE TscriptedForm.showAndConnectAll;
@@ -599,19 +635,21 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
       {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: Cannot obtain lock in TscriptedForm.processPendingEvents'); {$endif}
       exit(false);
     end;
-    customFormBefore:=context.parentCustomForm;
-    context.parentCustomForm:=self;
-    processingEvents:=true;
-    for m in meta do if context.messages^.continueEvaluation then begin
-      if m^.evaluate(location,context,recycler) then begin
-        result:=true;
-        metaForUpdate.put(m);
+    try
+      customFormBefore:=context.parentCustomForm;
+      context.parentCustomForm:=self;
+      processingEvents:=true;
+      for m in meta do if context.messages^.continueEvaluation then begin
+        if m^.evaluate(location,context,recycler) then begin
+          result:=true;
+          metaForUpdate.put(m);
+        end;
       end;
+      processingEvents:=false;
+      context.parentCustomForm:=customFormBefore;
+    finally
+      leaveCriticalSection(lock);
     end;
-    processingEvents:=false;
-    context.parentCustomForm:=customFormBefore;
-    leaveCriticalSection(lock);
-    //if result then context.messages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);
     {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
   end;
 
@@ -661,41 +699,50 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
       newForm:TscriptedForm;
   begin
     result:=[];
-    enterCriticalSection(cs);
-    for m in storedMessages do case m^.messageType of
-      mt_endOfEvaluation: begin
-        for k:=0 to length(scriptedForms)-1 do begin
-          scriptedForms[k].adapter:=nil;
-          FreeAndNil(scriptedForms[k]);
+    enterCriticalSection(adapterCs);
+    try
+      for m in storedMessages do begin
+        case m^.messageType of
+          mt_endOfEvaluation: begin
+            for k:=0 to length(scriptedForms)-1 do begin
+              scriptedForms[k].adapter:=nil;
+              FreeAndNil(scriptedForms[k]);
+            end;
+            setLength(scriptedForms,0);
+            include(result,m^.messageType);
+          end;
+          mt_displayCustomForm: with P_customFormRequest(m)^ do begin
+            newForm:=TscriptedForm.create(nil);
+            newForm.displayPending:=true;
+            newForm.caption:=setupTitle;
+            setLength(scriptedForms,length(scriptedForms)+1);
+            scriptedForms[length(scriptedForms)-1]:=newForm;
+            newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
+            newForm.adapter:=@self;
+            setCreatedForm(newForm);
+            dockNewForm(newForm);
+            newForm.showAndConnectAll;
+            include(result,m^.messageType);
+          end;
         end;
-        setLength(scriptedForms,0);
-        include(result,m^.messageType);
       end;
-      mt_displayCustomForm: with P_customFormRequest(m)^ do begin
-        newForm:=TscriptedForm.create(nil);
-        newForm.displayPending:=true;
-        newForm.caption:=setupTitle;
-        setLength(scriptedForms,length(scriptedForms)+1);
-        scriptedForms[length(scriptedForms)-1]:=newForm;
-        newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
-        newForm.adapter:=@self;
-        setCreatedForm(newForm);
-        dockNewForm(newForm);
-        newForm.showComponent(false);
-        include(result,m^.messageType);
-      end;
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    clear;
-    leaveCriticalSection(cs);
   end;
 
 DESTRUCTOR T_customFormAdapter.destroy;
   VAR k:longint;
   begin
-    enterCriticalSection(cs);
-    for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
-    setLength(scriptedForms,0);
-    leaveCriticalSection(cs);
+    enterCriticalSection(adapterCs);
+    try
+      for k:=0 to length(scriptedForms)-1 do FreeAndNil(scriptedForms[k]);
+      setLength(scriptedForms,0);
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
+    inherited destroy;
   end;
 
 INITIALIZATION

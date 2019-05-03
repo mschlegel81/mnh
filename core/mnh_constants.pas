@@ -772,12 +772,15 @@ FUNCTION getTempFileName:string;
     ForceDirectories(tempFolder);
     tempFolder+=DirectorySeparator;
     enterCriticalSection(tempFilesCs);
-    repeat result:=tempFolder+IntToHex(random(maxLongint),8) until not(fileExists(result));
-    //touch file:
-    assign(handle,result);
-    rewrite(handle);
-    close(handle);
-    leaveCriticalSection(tempFilesCs);
+    try
+      repeat result:=tempFolder+IntToHex(random(maxLongint),8) until not(fileExists(result));
+      //touch file:
+      assign(handle,result);
+      rewrite(handle);
+      close(handle);
+    finally
+      leaveCriticalSection(tempFilesCs);
+    end;
   end;
 
 PROCEDURE cleanupTemp;
@@ -785,12 +788,15 @@ PROCEDURE cleanupTemp;
       allFiles:TStringList;
   begin
     enterCriticalSection(tempFilesCs);
-    allFiles:=FindAllFiles(configDir+'temp');
-    for fileName in allFiles do try
-      DeleteFile(fileName);
-    except end;
-    allFiles.free;
-    leaveCriticalSection(tempFilesCs);
+    try
+      allFiles:=FindAllFiles(configDir+'temp');
+      for fileName in allFiles do try
+        DeleteFile(fileName);
+      except end;
+      allFiles.free;
+    finally
+      leaveCriticalSection(tempFilesCs);
+    end;
   end;
 
 INITIALIZATION

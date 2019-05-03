@@ -710,7 +710,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         fastUpdateState:='Flushing messages';
         runnerModel.flushMessages;
 
-        if ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
+        if Assigned(ActiveControl) and ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 
         if askForm.displayPending then askForm.Show;
         fastUpdateState:='Updating dynamic items';

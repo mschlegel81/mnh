@@ -398,7 +398,7 @@ object IdeMainForm: TIdeMainForm
       end
       object miFocusEditor: TMenuItem
         Caption = 'Focus &editor'
-        ShortCut = 16453
+        ShortCut = 117
         OnClick = miFocusEditorClick
       end
       object MenuItem1: TMenuItem

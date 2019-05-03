@@ -41,11 +41,17 @@ PROCEDURE polishAllCaches;
   VAR i:longint;
   begin
     enterCriticalSection(allCacheCs);
-    for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.tryEnterCriticalsection(criticalSection)<>0 then begin
-      polish;
-      system.leaveCriticalSection(criticalSection);
+    try
+      for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.tryEnterCriticalsection(criticalSection)<>0 then begin
+        try
+          polish;
+        finally
+          system.leaveCriticalSection(criticalSection);
+        end;
+      end;
+    finally
+      leaveCriticalSection(allCacheCs);
     end;
-    leaveCriticalSection(allCacheCs);
   end;
 
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
@@ -55,8 +61,11 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
     useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
     enterCriticalSection(allCacheCs);
-    append(allCaches,pointer(@self));
-    leaveCriticalSection(allCacheCs);
+    try
+      append(allCaches,pointer(@self));
+    finally
+      leaveCriticalSection(allCacheCs);
+    end;
   end;
 
 DESTRUCTOR T_cache.destroy;

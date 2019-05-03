@@ -480,13 +480,16 @@ FUNCTION T_protectedRuleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; C
     if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then P_context(context)^.raiseError('Stack depth limit exceeded calling '+getId+'.',getLocation,mt_el4_systemError)
     else if inherited replaces(ruleTokenType,callLocation,param,firstRep,lastRep,context,recycler) then begin
       system.enterCriticalSection(rule_cs);
-      result:=true;
-      P_context(context)^.reduceExpression(firstRep,recycler);
-      if firstRep<>nil then lastRep:=firstRep^.last else begin
-        lastRep:=nil;
-        result:=false;
+      try
+        result:=true;
+        P_context(context)^.reduceExpression(firstRep,recycler);
+        if firstRep<>nil then lastRep:=firstRep^.last else begin
+          lastRep:=nil;
+          result:=false;
+        end;
+      finally
+        system.leaveCriticalSection(rule_cs);
       end;
-      system.leaveCriticalSection(rule_cs);
     end;
   end;
 
@@ -602,8 +605,11 @@ FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocat
     result:=((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
       system.enterCriticalSection(rule_cs);
-      firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
-      system.leaveCriticalSection(rule_cs);
+      try
+        firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
+      finally
+        system.leaveCriticalSection(rule_cs);
+      end;
       lastRep:=firstRep;
       called:=true;
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
@@ -614,10 +620,13 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
     result:=((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
       system.enterCriticalSection(rule_cs);
-      readDataStore(P_context(context)^,recycler);
-      firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
-      lastRep:=firstRep;
-      system.leaveCriticalSection(rule_cs);
+      try
+        readDataStore(P_context(context)^,recycler);
+        firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
+        lastRep:=firstRep;
+      finally
+        system.leaveCriticalSection(rule_cs);
+      end;
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
   end;
 
@@ -640,16 +649,22 @@ DESTRUCTOR T_typeCheckRule.destroy;
 FUNCTION T_mutableRule.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    result:=namedValue.getValue;
-    system.leaveCriticalSection(rule_cs);
+    try
+      result:=namedValue.getValue;
+    finally
+      system.leaveCriticalSection(rule_cs);
+    end;
   end;
 
 FUNCTION T_datastoreRule.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    readDataStore(context,recycler);
-    result:=namedValue.getValue;
-    system.leaveCriticalSection(rule_cs);
+    try
+      readDataStore(context,recycler);
+      result:=namedValue.getValue;
+    finally
+      system.leaveCriticalSection(rule_cs);
+    end;
   end;
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
@@ -811,12 +826,15 @@ FUNCTION T_mutableRule.hasPublicSubrule: boolean;
 PROCEDURE T_mutableRule.setMutableValue(CONST value: P_literal; CONST onDeclaration: boolean);
   begin
     system.enterCriticalSection(rule_cs);
-    namedValue.setValue(value);
-    if not(onDeclaration) then begin
-      valueChangedAfterDeclaration:=true;
-      called:=true;
+    try
+      namedValue.setValue(value);
+      if not(onDeclaration) then begin
+        valueChangedAfterDeclaration:=true;
+        called:=true;
+      end;
+    finally
+      system.leaveCriticalSection(rule_cs);
     end;
-    system.leaveCriticalSection(rule_cs);
   end;
 
 FUNCTION T_mutableRule.isReportable(OUT value: P_literal): boolean;
@@ -843,18 +861,24 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_context; VAR recycler:T_re
 FUNCTION T_mutableRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
-    valueChangedAfterDeclaration:=true;
-    called:=true;
-    system.leaveCriticalSection(rule_cs);
+    try
+      result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
+      valueChangedAfterDeclaration:=true;
+      called:=true;
+    finally
+      system.leaveCriticalSection(rule_cs);
+    end;
   end;
 
 FUNCTION T_datastoreRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    if not(called) and not(valueChangedAfterDeclaration) then readDataStore(context,recycler);
-    result:=inherited mutateInline(mutation,RHS,location,context,recycler);
-    system.leaveCriticalSection(rule_cs);
+    try
+      if not(called) and not(valueChangedAfterDeclaration) then readDataStore(context,recycler);
+      result:=inherited mutateInline(mutation,RHS,location,context,recycler);
+    finally
+      system.leaveCriticalSection(rule_cs);
+    end;
   end;
 
 PROCEDURE T_datastoreRule.writeBack(CONST adapters:P_messages);
@@ -875,17 +899,23 @@ FUNCTION T_datastoreRule.isInitialized:boolean;
 PROCEDURE T_memoizedRule.clearCache;
   begin
     enterCriticalSection(rule_cs);
-    cache.clear;
-    leaveCriticalSection(rule_cs);
+    try
+      cache.clear;
+    finally
+      leaveCriticalSection(rule_cs);
+    end;
   end;
 
 FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral): P_literal;
   begin
     enterCriticalSection(rule_cs);
-    cache.put(P_listLiteral(param^.value[0]),
-                            param^.value[1] );
-    result:=param^.value[1]^.rereferenced;
-    leaveCriticalSection(rule_cs);
+    try
+      cache.put(P_listLiteral(param^.value[0]),
+                              param^.value[1] );
+      result:=param^.value[1]^.rereferenced;
+    finally
+      leaveCriticalSection(rule_cs);
+    end;
   end;
 
 end.

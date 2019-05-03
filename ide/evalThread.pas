@@ -256,14 +256,17 @@ FUNCTION evaluationThread(p:pointer):ptrint;
 PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
   begin
     enterCriticalSection(evaluationCs);
-    if state=es_pending then begin
-      stoppedByUser:=false;
-      if debugging then state:=es_debugRunning
-                   else state:=es_running;
-      interLockedIncrement(evaluationThreadsRunning);
-      beginThread(@evaluationThread,@self);
+    try
+      if state=es_pending then begin
+        stoppedByUser:=false;
+        if debugging then state:=es_debugRunning
+                     else state:=es_running;
+        interLockedIncrement(evaluationThreadsRunning);
+        beginThread(@evaluationThread,@self);
+      end;
+    finally
+      leaveCriticalSection(evaluationCs);
     end;
-    leaveCriticalSection(evaluationCs);
   end;
 
 PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
@@ -281,10 +284,13 @@ PROCEDURE T_ideScriptEvaluation.ensureEditScripts();
       system.leaveCriticalSection(evaluationCs);
       exit;
     end;
-    evalRequest:=nil;
-    state:=es_pending;
-    executeInNewThread(false);
-    system.leaveCriticalSection(evaluationCs);
+    try
+      evalRequest:=nil;
+      state:=es_pending;
+      executeInNewThread(false);
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST L: T_arrayOfString; CONST inputLang: string; CONST editorFileName: string);
@@ -294,10 +300,13 @@ PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST 
       system.leaveCriticalSection(evaluationCs);
       exit;
     end;
-    new(evalRequest,create(utilityScriptList[scriptIndex],editorFileName,L,inputLang));
-    state:=es_pending;
-    executeInNewThread(false);
-    system.leaveCriticalSection(evaluationCs);
+    try
+      new(evalRequest,create(utilityScriptList[scriptIndex],editorFileName,L,inputLang));
+      state:=es_pending;
+      executeInNewThread(false);
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
@@ -367,15 +376,18 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
       system.leaveCriticalSection(evaluationCs);
       exit(false);
     end;
-    if evaluateInParent
-    then parentProvider:=parent
-    else parentProvider:=nil;
-    setLength(toEvaluate,0);
-    append(toEvaluate,input);
-    state:=es_pending;
-    executeInNewThread();
-    result:=true;
-    system.leaveCriticalSection(evaluationCs);
+    try
+      if evaluateInParent
+      then parentProvider:=parent
+      else parentProvider:=nil;
+      setLength(toEvaluate,0);
+      append(toEvaluate,input);
+      state:=es_pending;
+      executeInNewThread();
+      result:=true;
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
@@ -410,15 +422,18 @@ PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST co
       system.leaveCriticalSection(evaluationCs);
       exit;
     end;
-    evalRequest.contextType:=contextType;
-    evalRequest.parameters:=C_EMPTY_STRING_ARRAY;
-    evalRequest.callMain:=false;
-    evalRequest.folder:=executeInFolder;
-    state:=es_pending;
-    if provider<>package.getCodeProvider then package.clear(true);
-    package.replaceCodeProvider(provider);
-    executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
-    system.leaveCriticalSection(evaluationCs);
+    try
+      evalRequest.contextType:=contextType;
+      evalRequest.parameters:=C_EMPTY_STRING_ARRAY;
+      evalRequest.callMain:=false;
+      evalRequest.folder:=executeInFolder;
+      state:=es_pending;
+      if provider<>package.getCodeProvider then package.clear(true);
+      package.replaceCodeProvider(provider);
+      executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
@@ -428,15 +443,18 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: 
       system.leaveCriticalSection(evaluationCs);
       exit;
     end;
-    evalRequest.contextType:=contextType;
-    evalRequest.parameters:=splitCommandLine(trim(params));
-    evalRequest.callMain:=true;
-    evalRequest.folder:=executeInFolder;
-    state:=es_pending;
-    if provider<>package.getCodeProvider then package.clear(true);
-    package.replaceCodeProvider(provider);
-    executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
-    system.leaveCriticalSection(evaluationCs);
+    try
+      evalRequest.contextType:=contextType;
+      evalRequest.parameters:=splitCommandLine(trim(params));
+      evalRequest.callMain:=true;
+      evalRequest.folder:=executeInFolder;
+      state:=es_pending;
+      if provider<>package.getCodeProvider then package.clear(true);
+      package.replaceCodeProvider(provider);
+      executeInNewThread(contextType in [ect_debugging,ect_debuggingAndProfiling]);
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
@@ -451,15 +469,21 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
 FUNCTION T_abstractEvaluation.isRunning: boolean;
   begin
     enterCriticalSection(evaluationCs);
-    result:=state in C_runningStates;
-    leaveCriticalSection(evaluationCs);
+    try
+      result:=state in C_runningStates;
+    finally
+      leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 FUNCTION T_abstractEvaluation.flushMessages:T_messageTypeSet;
   begin
     enterCriticalSection(evaluationCs);
-    result:=messages.flushToGui;
-    leaveCriticalSection(evaluationCs);
+    try
+      result:=messages.flushToGui;
+    finally
+      leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 FUNCTION T_abstractEvaluation.stateString:string;
@@ -476,10 +500,13 @@ FUNCTION T_abstractEvaluation.stateString:string;
 FUNCTION T_standardEvaluation.isPaused:boolean;
   begin
     enterCriticalSection(evaluationCs);
-    if (state=es_debugRunning) and      globals.isPaused  then state:=es_debugHalted else
-    if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
-    result:=globals.isPaused;
-    leaveCriticalSection(evaluationCs);
+    try
+      if (state=es_debugRunning) and      globals.isPaused  then state:=es_debugHalted else
+      if (state=es_debugHalted ) and  not(globals.isPaused) then state:=es_debugRunning;
+      result:=globals.isPaused;
+    finally
+      leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 FUNCTION T_standardEvaluation.stepper:P_debuggingStepper;
@@ -500,12 +527,15 @@ PROCEDURE T_abstractEvaluation.postHalt;
   begin
     recycler.initRecycler;
     system.enterCriticalSection(evaluationCs);
-    globals.primaryContext.messages^.setStopFlag;
-    if eco_debugging in globals.options then globals.stepper^.haltEvaluation;
-    globals.stopWorkers(recycler);
-    stoppedByUser:=true;
-    system.leaveCriticalSection(evaluationCs);
-    recycler.cleanup;
+    try
+      globals.primaryContext.messages^.setStopFlag;
+      if eco_debugging in globals.options then globals.stepper^.haltEvaluation;
+      globals.stopWorkers(recycler);
+      stoppedByUser:=true;
+    finally
+      system.leaveCriticalSection(evaluationCs);
+      recycler.cleanup;
+    end;
   end;
 
 end.

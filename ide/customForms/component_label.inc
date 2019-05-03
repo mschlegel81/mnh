@@ -21,9 +21,12 @@ CONSTRUCTOR T_labelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
 PROCEDURE T_labelMeta.update;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    mylabel.caption:=state.caption;
-    mylabel.enabled:=state.enabled;
-    leaveCriticalSection(elementCs);
+    try
+      mylabel.caption:=state.caption;
+      mylabel.enabled:=state.enabled;
+    finally
+      leaveCriticalSection(elementCs);
+    end;
   end;
 
 FUNCTION T_labelMeta.getControl: TControl;

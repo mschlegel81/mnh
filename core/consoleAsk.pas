@@ -64,13 +64,16 @@ FUNCTION ask_impl intFuncSignature;
             (arg0^.literalType = lt_string) and
             (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
-      setLength(opt, list1^.size);
-      iter:=list1^.iteratableList;
-      setLength(opt,length(iter));
-      for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(iter[i])^.value;
-      disposeLiteral(iter);
-      result:=newStringLiteral(ask(str0^.value, opt));
-      system.leaveCriticalSection(cs);
+      try
+        setLength(opt, list1^.size);
+        iter:=list1^.iteratableList;
+        setLength(opt,length(iter));
+        for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(iter[i])^.value;
+        disposeLiteral(iter);
+        result:=newStringLiteral(ask(str0^.value, opt));
+      finally
+        system.leaveCriticalSection(cs);
+      end;
     end;
   end;
 

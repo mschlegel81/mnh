@@ -585,9 +585,12 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
 DESTRUCTOR T_mapTask.destroy;
   begin
     enterCriticalSection(taskCs);
-    clearMapPayload;
-    clearContext;
-    leaveCriticalSection(taskCs);
+    try
+      clearMapPayload;
+      clearContext;
+    finally
+      leaveCriticalSection(taskCs);
+    end;
     inherited destroy;
   end;
 
@@ -600,18 +603,24 @@ PROCEDURE T_eachTask.dropEachParameter;
   VAR k:longint;
   begin
     enterCriticalSection(taskCs);
-    for k:=0 to length(payloads)-1 do if payloads[k].eachParameter<>nil then disposeLiteral(payloads[k].eachParameter);
-    leaveCriticalSection(taskCs);
+    try
+      for k:=0 to length(payloads)-1 do if payloads[k].eachParameter<>nil then disposeLiteral(payloads[k].eachParameter);
+    finally
+      leaveCriticalSection(taskCs);
+    end;
   end;
 
 PROCEDURE T_eachTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads; VAR recycler:T_recycler);
   begin
     enterCriticalSection(taskCs);
-    payloads:=payloads_;
-    setLength(results,0);
-    nextToAggregate:=nil;
-    inherited defineAndEnqueueOrEvaluate(taskEnv,recycler);
-    leaveCriticalSection(taskCs);
+    try
+      payloads:=payloads_;
+      setLength(results,0);
+      nextToAggregate:=nil;
+      inherited defineAndEnqueueOrEvaluate(taskEnv,recycler);
+    finally
+      leaveCriticalSection(taskCs);
+    end;
   end;
 
 PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
@@ -644,9 +653,12 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
 DESTRUCTOR T_eachTask.destroy;
   begin
     enterCriticalSection(taskCs);
-    dropEachParameter;
-    clearContext;
-    leaveCriticalSection(taskCs);
+    try
+      dropEachParameter;
+      clearContext;
+    finally
+      leaveCriticalSection(taskCs);
+    end;
     inherited destroy;
   end;
 
@@ -707,19 +719,22 @@ FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
 FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     enterCriticalSection(criticalSection);
-    if isBlocking then begin
-      if state=fls_pending then executeInContext(P_context(context),P_recycler(recycler)^)
-      else while state<>fls_done do begin
-        leaveCriticalSection(criticalSection);
-        ThreadSwitch;
-        sleep(1);
-        enterCriticalSection(criticalSection);
+    try
+      if isBlocking then begin
+        if state=fls_pending then executeInContext(P_context(context),P_recycler(recycler)^)
+        else while state<>fls_done do begin
+          leaveCriticalSection(criticalSection);
+          ThreadSwitch;
+          sleep(1);
+          enterCriticalSection(criticalSection);
+        end;
       end;
+      result.triggeredByReturn:=false;
+      if resultValue=nil then result.literal:=newVoidLiteral
+                         else result.literal:=resultValue^.rereferenced;
+    finally
+      leaveCriticalSection(criticalSection);
     end;
-    result.triggeredByReturn:=false;
-    if resultValue=nil then result.literal:=newVoidLiteral
-                       else result.literal:=resultValue^.rereferenced;
-    leaveCriticalSection(criticalSection);
   end;
 
 PROCEDURE T_futureLiteral.executeInContext(CONST context:P_context; VAR recycler:T_recycler);
@@ -732,7 +747,6 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_context; VAR recycler
       leaveCriticalSection(criticalSection);
       exit;
     end;
-
     resultValue:=func^.evaluate(getLocation,context,@recycler,param).literal;
     if (resultValue=nil) and (context^.messages^.continueEvaluation)
     then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation);

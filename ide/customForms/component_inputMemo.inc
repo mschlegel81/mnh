@@ -44,8 +44,11 @@ FUNCTION T_inputEditorMeta.getName:string;
 PROCEDURE T_inputEditorMeta.update;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    synMeta.setLanguage(state_hlLang,synMeta.language);
-    synMeta.editor.enabled:=state.enabled;
-    leaveCriticalSection(elementCs);
+    try
+      synMeta.setLanguage(state_hlLang,synMeta.language);
+      synMeta.editor.enabled:=state.enabled;
+    finally
+      leaveCriticalSection(elementCs);
+    end;
   end;
 

@@ -19,6 +19,8 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE TimerTimer(Sender: TObject);
   private
+    fastUpdating,
+    slowUpdating:boolean;
     subTimerCounter:byte;
     runner:T_reevaluationWithGui;
   public
@@ -37,18 +39,26 @@ IMPLEMENTATION
 PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
     begin
-      performSlowUpdates;
-      {$ifdef debugMode}
-      writeln(runner.stateString);
-      {$endif}
+      if not(slowUpdating) then begin
+        slowUpdating:=true;
+        performSlowUpdates;
+        {$ifdef debugMode}
+        writeln(runner.stateString);
+        {$endif}
+        slowUpdating:=false;
+      end;
       if not(runner.isRunning) and not(hasAnyForm) then close;
     end;
 
   PROCEDURE fastUpdates; inline;
     begin
-      performFastUpdates;
-      runner.flushMessages;
-      if askForm.displayPending then askForm.Show;
+      if not(fastUpdating) then begin
+        fastUpdating:=true;
+        performFastUpdates;
+        runner.flushMessages;
+        if askForm.displayPending then askForm.Show;
+        fastUpdating:=false;
+      end;
     end;
 
   begin
@@ -65,6 +75,9 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     writeln('Reevaluting with GUI');
     {$endif}
+    fastUpdating:=false;
+    slowUpdating:=false;
+
     initializePlotForm(nil);
     setupEditorMetaBase(nil);
     gui_started:=true;

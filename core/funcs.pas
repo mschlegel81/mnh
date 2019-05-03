@@ -206,8 +206,11 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
 FUNCTION clearPrint_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
-    context.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
-    system.leaveCriticalSection(print_cs);
+    try
+      context.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+    finally
+      system.leaveCriticalSection(print_cs);
+    end;
     result:=newVoidLiteral;
   end;
 
@@ -245,8 +248,11 @@ FUNCTION print_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
-    system.leaveCriticalSection(print_cs);
+    try
+      context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
+    finally
+      system.leaveCriticalSection(print_cs);
+    end;
     result:=newVoidLiteral;
   end;
 
@@ -254,8 +260,11 @@ FUNCTION printDirect_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.messages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
-    system.leaveCriticalSection(print_cs);
+    try
+      context.messages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
+    finally
+      system.leaveCriticalSection(print_cs);
+    end;
     result:=newVoidLiteral;
   end;
 

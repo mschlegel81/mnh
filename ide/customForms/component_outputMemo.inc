@@ -43,10 +43,13 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
 PROCEDURE T_outputMemoMeta.update;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    synMeta.editor.text:=state.caption;
-    synMeta.editor.enabled:=state.enabled;
-    synMeta.setLanguage(state_hlLang,synMeta.language);
-    leaveCriticalSection(elementCs);
+    try
+      synMeta.editor.text:=state.caption;
+      synMeta.editor.enabled:=state.enabled;
+      synMeta.setLanguage(state_hlLang,synMeta.language);
+    finally
+      leaveCriticalSection(elementCs);
+    end;
   end;
 
 FUNCTION T_outputMemoMeta.getControl: TControl;
@@ -69,19 +72,22 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       oldLang:string;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context,recycler);
-    if config_hlLang<>nil then begin
-      tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
-      if tmp<>nil then begin
-        if tmp^.literalType=lt_string then begin
-          oldLang:=state_hlLang;
-          state_hlLang:=P_stringLiteral(tmp)^.value;
-          result:=result or (oldLang<>state_hlLang);
-        end else context.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
-        disposeLiteral(tmp);
+    try
+      result:=inherited evaluate(location,context,recycler);
+      if config_hlLang<>nil then begin
+        tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
+        if tmp<>nil then begin
+          if tmp^.literalType=lt_string then begin
+            oldLang:=state_hlLang;
+            state_hlLang:=P_stringLiteral(tmp)^.value;
+            result:=result or (oldLang<>state_hlLang);
+          end else context.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
+          disposeLiteral(tmp);
+        end;
       end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    leaveCriticalSection(elementCs);
   end;
 
 DESTRUCTOR T_outputMemoMeta.destroy;

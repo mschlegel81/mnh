@@ -330,23 +330,30 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
 PROCEDURE clearStyles;
   begin
     enterCriticalSection(styleCS);
-    styleMap.clear;
-    leaveCriticalSection(styleCS);
+    try
+      styleMap.clear;
+    finally
+      leaveCriticalSection(styleCS);
+    end;
   end;
 
 FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparentCount:longint):T_style;
   begin
     enterCriticalSection(styleCS);
-    if not(styleMap.containsKey(styleString,result)) then begin
-      result.init();
-      result.parseStyle(styleString);
-      styleMap.put(styleString,result);
+    try
+      if not(styleMap.containsKey(styleString,result)) then begin
+        result.init();
+        result.parseStyle(styleString);
+        styleMap.put(styleString,result);
+      end;
+      result.setDefaults(index,transparentCount);
+    finally
+      leaveCriticalSection(styleCS);
     end;
-    result.setDefaults(index,transparentCount);
-    leaveCriticalSection(styleCS);
   end;
 
 INITIALIZATION
+  initialize(styleCS);
   initCriticalSection(styleCS);
   styleMap.create();
   memoryCleaner.registerCleanupMethod(@clearStyles);

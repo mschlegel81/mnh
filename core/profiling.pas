@@ -185,28 +185,37 @@ CONSTRUCTOR T_profiler.create;
 DESTRUCTOR T_profiler.destroy;
   begin
     enterCriticalSection(cs);
-    map.destroy;
-    leaveCriticalSection(cs);
+    try
+      map.destroy;
+    finally
+      leaveCriticalSection(cs);
+    end;
     doneCriticalSection(cs);
   end;
 
 PROCEDURE T_profiler.clear;
   begin
     enterCriticalSection(cs);
-    map.clear;
-    leaveCriticalSection(cs);
+    try
+      map.clear;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive, dt_exclusive: double);
   VAR profilingEntry:P_calleeEntry;
   begin
     enterCriticalSection(cs);
-    if not map.containsKey(calleeLocation,profilingEntry) then begin
-      new(profilingEntry,create(id,calleeLocation));
-      map.put             (calleeLocation,profilingEntry);
+    try
+      if not map.containsKey(calleeLocation,profilingEntry) then begin
+        new(profilingEntry,create(id,calleeLocation));
+        map.put             (calleeLocation,profilingEntry);
+      end;
+      profilingEntry^.add(callerLocation,dt_inclusive,dt_exclusive);
+    finally
+      system.leaveCriticalSection(cs);
     end;
-    profilingEntry^.add(callerLocation,dt_inclusive,dt_exclusive);
-    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);

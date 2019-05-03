@@ -83,17 +83,20 @@ PROCEDURE T_comboboxMeta.update;
   VAR i:longint;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
-    combobox.enabled:=state.enabled;
-    comboboxLabel.caption:=state.caption;
+    try
+      combobox.enabled:=state.enabled;
+      comboboxLabel.caption:=state.caption;
 
-    while (combobox.items.count>length(state_items)) do combobox.items.delete(length(state_items));
-    for i:=0 to combobox.items.count-1 do combobox.items[i]:=state_items[i];
-    for i:=combobox.items.count to length(state_items)-1 do combobox.items.add(state_items[i]);
+      while (combobox.items.count>length(state_items)) do combobox.items.delete(length(state_items));
+      for i:=0 to combobox.items.count-1 do combobox.items[i]:=state_items[i];
+      for i:=combobox.items.count to length(state_items)-1 do combobox.items.add(state_items[i]);
 
-    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
-      combobox.text:=P_stringLiteral(state.bindingValue)^.value;
+      if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
+        combobox.text:=P_stringLiteral(state.bindingValue)^.value;
+      end;
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
@@ -116,19 +119,22 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       tmp:P_literal;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
-    result:=inherited evaluate(location,context,recycler);
-    if config_items<>nil then begin
-      oldItems:=state_items;
-      tmp:=config_items^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
-      if (tmp<>nil) then begin
-        if tmp^.literalType in [lt_stringList,lt_emptyList]
-        then state_items:=P_listLiteral(tmp)^
-        else context.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
-        disposeLiteral(tmp);
+    try
+      result:=inherited evaluate(location,context,recycler);
+      if config_items<>nil then begin
+        oldItems:=state_items;
+        tmp:=config_items^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
+        if (tmp<>nil) then begin
+          if tmp^.literalType in [lt_stringList,lt_emptyList]
+          then state_items:=P_listLiteral(tmp)^
+          else context.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+          disposeLiteral(tmp);
+        end;
+        result:=result or not(arrEquals(oldItems,state_items));
       end;
-      result:=result or not(arrEquals(oldItems,state_items));
+    finally
+      leaveCriticalSection(elementCs);
     end;
-    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_comboboxMeta.getName:string;

@@ -393,8 +393,10 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
   begin
     getParents(page,PageControl);
     if PageControl=nil then begin
-      Show;
-      BringToFront;
+      if not(showing) then begin
+        Show;
+        BringToFront;
+      end;
     end else begin
       oldActive:=mainForm.ActiveControl;
       Show;
