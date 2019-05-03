@@ -581,30 +581,36 @@ DESTRUCTOR T_imageSystem.destroy;
 
 FUNCTION T_imageSystem.append(CONST message: P_storedMessage): boolean;
   begin
-    enterCriticalSection(cs);
-    case message^.messageType of
-      mt_image_postDisplay : result:=inherited append(message);
-      mt_image_replaceImage,
-      mt_image_close,
-      mt_image_obtainImageData,
-      mt_image_obtainDimensions:begin
-        if length(storedMessages)=0 then processMessage(message)
-                                    else inherited append(message);
-        result:=true;
+    enterCriticalSection(adapterCs);
+    try
+      case message^.messageType of
+        mt_image_postDisplay : result:=inherited append(message);
+        mt_image_replaceImage,
+        mt_image_close,
+        mt_image_obtainImageData,
+        mt_image_obtainDimensions:begin
+          if length(storedMessages)=0 then processMessage(message)
+                                      else inherited append(message);
+          result:=true;
+        end;
+        else result:=false;
       end;
-      else result:=false;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    leaveCriticalSection(cs);
   end;
 
 FUNCTION T_imageSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR m:P_storedMessage;
   begin
-    enterCriticalSection(cs);
-    result:=typesOfStoredMessages;
-    for m in storedMessages do processMessage(m);
-    clear;
-    leaveCriticalSection(cs);
+    enterCriticalSection(adapterCs);
+    try
+      result:=typesOfStoredMessages;
+      for m in storedMessages do processMessage(m);
+      clear;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 INITIALIZATION

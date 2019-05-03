@@ -84,18 +84,21 @@ PROCEDURE T_guiImageSystem.formDestroyed;
 PROCEDURE T_guiImageSystem.render(VAR target: TImage);
   VAR resizedPic:T_rawImage;
   begin
-    enterCriticalSection(cs);
-    if (currentImage<>nil) then begin
-      if (currentImage^.dimensions.width<target.width) and (currentImage^.dimensions.height<target.height)
-      then currentImage^.copyToImage(target)
-      else begin
-        resizedPic.create(currentImage^);
-        resizedPic.resize(target.width,target.height,res_fit);
-        resizedPic.copyToImage(target);
-        resizedPic.destroy;
+    enterCriticalSection(adapterCs);
+    try
+      if (currentImage<>nil) then begin
+        if (currentImage^.dimensions.width<target.width) and (currentImage^.dimensions.height<target.height)
+        then currentImage^.copyToImage(target)
+        else begin
+          resizedPic.create(currentImage^);
+          resizedPic.resize(target.width,target.height,res_fit);
+          resizedPic.copyToImage(target);
+          resizedPic.destroy;
+        end;
       end;
+    finally
+      leaveCriticalSection(adapterCs);
     end;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE TDisplayImageForm.FormCreate(Sender: TObject);
