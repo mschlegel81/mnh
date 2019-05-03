@@ -82,7 +82,6 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
 
 FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR m:P_storedMessage;
-      i:longint;
       tree:TVarTreeViewForm;
       caption:string;
   begin

@@ -5,7 +5,7 @@ DEFAULT_TARGET_FOLDER:=DEV_ROOT&'\temp\';
 PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\target\mnh5_'&maxLoggedBuildNumber&'_code.zip';
 ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\target\mnh5_'&maxLoggedBuildNumber&'*.zip';
 WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
-EDITOR_CALL          :='C:\Program Files (x86)\Notepad++\notepad++.exe';
+EDITOR_CALL          :='C:\Program Files\Notepad++\notepad++.exe';
 
 NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'] AND !(filename.matches('3rd_party'));
 License:=//!~
