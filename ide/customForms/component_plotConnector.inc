@@ -1,6 +1,5 @@
 
 TYPE
-  //TODO: Maybe refactor this, so that a new plot adapter becomes part of the custom form.
   P_plotConnectorMeta=^T_plotConnectorMeta;
   T_plotConnectorMeta=object(T_guiElementMeta)
     plotConfig:record
@@ -132,7 +131,7 @@ PROCEDURE T_plotConnectorMeta.plotRescaled(Sender:TObject);
 PROCEDURE T_plotConnectorMeta.connect;
   VAR plotForm:TplotForm;
   begin
-    plotForm:=relatedPlotAdapter^.plotFormForConnecting;
+    plotForm:=relatedPlotAdapter^.plotFormForConnecting(false);
     if (config.action<>nil)
     then plotForm.onPlotRescale:=@plotRescaled
     else plotForm.onPlotRescale:=nil;

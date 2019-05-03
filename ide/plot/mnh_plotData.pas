@@ -185,9 +185,9 @@ TYPE
   T_plotSystem=object(T_abstractGuiOutAdapter)
     protected
       pullSettingsToGui:F_pullSettingsToGuiCallback;
+      plotChangedSinceLastDisplay:boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
-      plotChangedSinceLastDisplay:boolean;
       displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       sandboxed:boolean;
@@ -203,6 +203,7 @@ TYPE
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
+      PROPERTY isPlotChanged:boolean read plotChangedSinceLastDisplay;
   end;
 
 FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;

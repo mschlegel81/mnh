@@ -38,14 +38,15 @@ TYPE
       cap:string;
       connected:boolean;
       formWasClosedByUser:boolean;
-      PROCEDURE ensureForm;
+      PROCEDURE ensureForm(CONST dockToMain:boolean);
     public
       CONSTRUCTOR create(CONST plotFormCaption:string='MNH plot');
       DESTRUCTOR destroy; virtual;
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
-      FUNCTION plotFormForConnecting:TplotForm;
+      FUNCTION plotFormForConnecting(CONST forDocking:boolean):TplotForm;
       PROCEDURE disconnect;
+      PROCEDURE logPlotChanged;
   end;
 
   PMouseEvent=PROCEDURE(CONST realPoint:T_point) of object;
@@ -237,7 +238,7 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
     end;
   end;
 
-PROCEDURE T_guiPlotSystem.ensureForm;
+PROCEDURE T_guiPlotSystem.ensureForm(CONST dockToMain:boolean);
   begin
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(Application);
@@ -245,8 +246,10 @@ PROCEDURE T_guiPlotSystem.ensureForm;
       myPlotForm.relatedPlot:=@self;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;
       myPlotForm                    .pullPlotSettingsToGui();
-      dockNewForm(myPlotForm);
-    end else myPlotForm.showComponent(true);
+      if dockToMain
+      then dockNewForm(myPlotForm)
+      else myPlotForm.Show;
+    end else if dockToMain then myPlotForm.showComponent(true);
   end;
 
 CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);
@@ -270,7 +273,7 @@ DESTRUCTOR T_guiPlotSystem.destroy;
 
 PROCEDURE T_guiPlotSystem.doPlot;
   begin
-    ensureForm;
+    ensureForm(true);
     myPlotForm.doPlot;
   end;
 
@@ -280,10 +283,10 @@ PROCEDURE T_guiPlotSystem.formDestroyed;
     myPlotForm:=nil;
   end;
 
-FUNCTION T_guiPlotSystem.plotFormForConnecting: TplotForm;
+FUNCTION T_guiPlotSystem.plotFormForConnecting(CONST forDocking:boolean): TplotForm;
   begin
     connected:=true;
-    ensureForm;
+    ensureForm(not(forDocking));
     result:=myPlotForm;
   end;
 
@@ -296,17 +299,23 @@ PROCEDURE T_guiPlotSystem.disconnect;
     myPlotForm.onPlotMouseMove:=nil;
   end;
 
+PROCEDURE T_guiPlotSystem.logPlotChanged;
+  begin
+    EnterCriticalsection(adapterCs);
+    plotChangedSinceLastDisplay:=true;
+    LeaveCriticalsection(adapterCs);
+  end;
+
 {$R *.lfm}
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
       relatedPlot^.startGuiInteraction;
-      //TODO: Post plot request instead of rendering immediately
       try
         if key='+' then relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,  0.9,plotImage)
                    else relatedPlot^.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,1/0.9,plotImage);
         pullPlotSettingsToGui();
-        doPlot();
+        relatedPlot^.logPlotChanged;
       finally
         relatedPlot^.doneGuiInteraction;
       end;
@@ -618,6 +627,7 @@ PROCEDURE TplotForm.performSlowUpdate;
     end;
   begin
     updateAttachment;
+    if (relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
@@ -719,8 +729,7 @@ PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize: double);
         relatedPlot^.animation.options[i]:=currentScalingOptions;
         inc(i);
       end;
-      //TODO: Post plot request instead of plotting immediately
-      doPlot;
+      relatedPlot^.logPlotChanged;
     finally
       relatedPlot^.doneGuiInteraction;
     end;
@@ -760,8 +769,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
         relatedPlot^.animation.options[i]:=currentScalingOptions;
         inc(i);
       end;
-      //TODO: Post plot request instead of plotting immediatley
-      doPlot;
+      relatedPlot^.logPlotChanged;
     finally
       relatedPlot^.doneGuiInteraction;
     end;

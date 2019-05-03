@@ -91,7 +91,7 @@ TYPE
     markedForCleanup:boolean;
     meta:array of P_guiElementMeta;
     metaForUpdate:T_setOfPointer;
-    plotLink:P_guiElementMeta;
+    plotLink,plotDock:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
@@ -166,6 +166,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 //indentation signifies inheritance
 {$I component_panel.inc}
   {$I component_splitPanel.inc}
+  {$I component_plotDock.inc}
   {$I component_grid.inc}
 {$I component_label.inc}
 {$I component_checkbox.inc}
@@ -404,6 +405,8 @@ PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
 PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  VAR m:P_guiElementMeta;
+
   begin
     if tryEnterCriticalsection(lock)=0
     then CloseAction:=caNone
@@ -411,6 +414,7 @@ PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
       try
         if processingEvents then CloseAction:=caNone;
         markedForCleanup:=(CloseAction in [caFree,caHide]);
+        if markedForCleanup then for m in meta do m^.disconnect;
       finally
         leaveCriticalSection(lock);
       end;
@@ -425,6 +429,8 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
       setLength(meta,0);
       metaForUpdate.create;
       displayPending:=false;
+      plotLink:=nil;
+      plotDock:=nil;
     finally
       leaveCriticalSection(lock);
     end;
@@ -480,8 +486,8 @@ PROCEDURE TscriptedForm.performFastUpdate;
   end;
 
 PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid,tc_plotDock);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid','plotDock');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -550,6 +556,10 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocat
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
           addMeta(plotLink);
         end else setupContext^.raiseError('Only one plot link is allowed per custom form',setupLocation);
+        tc_plotDock:     if plotDock=nil then begin;
+          new(P_plotDockMeta(plotDock),create(container,P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
+          addMeta(plotDock);
+        end else setupContext^.raiseError('Only one plot dock is allowed per custom form',setupLocation);
         tc_panel:begin
           new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
           addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts]));
@@ -711,6 +721,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
             newForm.adapter:=@self;
             setCreatedForm(newForm);
             dockNewForm(newForm);
+            newForm.showAndConnectAll;
             include(result,m^.messageType);
           end;
         end;
