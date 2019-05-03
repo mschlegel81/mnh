@@ -7,13 +7,11 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   mnh_constants,basicTypes,
-  mnh_messages,recyclers,
+  mnh_messages,
   debuggingVar,treeUtil, litVar,contexts,funcs,out_adapters,mnh_settings,ideLayoutUtil;
 
 TYPE
-
-  { TVarTreeViewForm }
-
+  P_treeAdapter=^T_treeAdapter;
   TVarTreeViewForm = class(T_mnhComponentForm)
     VarTreeView: TTreeView;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -26,8 +24,9 @@ TYPE
   private
     rootNode:P_variableTreeEntryAnonymousValue;
     model:T_treeModel;
+    adapter:P_treeAdapter;
   public
-    PROCEDURE initWithLiteral(CONST L:P_literal; CONST newCaption:string);
+    PROCEDURE initWithLiteral(CONST L:P_literal; CONST newCaption:string; CONST adapter_:P_treeAdapter);
   end;
 
   P_treeDisplayRequest=^T_treeDisplayRequest;
@@ -42,16 +41,15 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  P_treeAdapter=^T_treeAdapter;
-  T_treeAdapter=object(T_abstractGuiOutAdapter)
-    treeForms: array of TVarTreeViewForm;
+  T_treeAdapterTemplate=specialize G_multiChildGuiOutAdapter<TVarTreeViewForm>;
+  T_treeAdapter=object(T_treeAdapterTemplate)
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
-    DESTRUCTOR destroy; virtual;
   end;
 
 IMPLEMENTATION
+USES recyclers;
 {$R *.lfm}
 
 FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
@@ -80,7 +78,6 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
   begin
     inherited create(at_treeView,[mt_startOfEvaluation,mt_displayVariableTree]);
     defaultCaption:=defaultCaption_;
-    setLength(treeForms,0);
   end;
 
 FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
@@ -96,14 +93,12 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         mt_displayVariableTree:
           begin
             include(result,m^.messageType);
-            tree:=TVarTreeViewForm.create(nil);
-            setLength(treeForms,length(treeForms)+1);
-            treeForms[length(treeForms)-1]:=tree;
+            tree:=addChild(TVarTreeViewForm.create(nil));
             with P_treeDisplayRequest(m)^ do begin
               if treeCaption=''
-              then caption:=defaultCaption+' ('+intToStr(length(treeForms))+')'
+              then caption:=defaultCaption+' ('+intToStr(length(children))+')'
               else caption:=treeCaption;
-              tree.initWithLiteral(treeContent,caption)
+              tree.initWithLiteral(treeContent,caption,@self);
             end;
             dockNewForm(tree);
             tree.showComponent(true);
@@ -111,21 +106,13 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         mt_startOfEvaluation:
           begin
             include(result,m^.messageType);
-            for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
-            setLength(treeForms,0);
+            destroyAllChildren;
           end;
       end;
       clear;
     finally
       leaveCriticalSection(adapterCs);
     end;
-  end;
-
-DESTRUCTOR T_treeAdapter.destroy;
-  VAR i:longint;
-  begin
-    for i:=0 to length(treeForms)-1 do FreeAndNil(treeForms[i]);
-    setLength(treeForms,0);
   end;
 
 FUNCTION T_treeDisplayRequest.internalType: shortstring;
@@ -152,6 +139,7 @@ PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
     model.destroy;
     VarTreeView.items.clear;
     unregisterFontControl(VarTreeView);
+    adapter^.childDestroyed(self);
   end;
 
 FUNCTION TVarTreeViewForm.getIdeComponentType: T_ideComponent;
@@ -173,10 +161,10 @@ PROCEDURE TVarTreeViewForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAct
     CloseAction:=caFree;
   end;
 
-PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
-  CONST newCaption: string);
+PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption: string; CONST adapter_:P_treeAdapter);
   VAR node:TTreeNode;
   begin
+    adapter:=adapter_;
     if rootNode<>nil then begin
       dispose(rootNode,destroy);
       VarTreeView.items.clear;

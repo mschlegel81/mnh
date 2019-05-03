@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
-  myGenerics,myStringUtil,
+  myGenerics,
   mnh_constants,basicTypes,
   mnh_messages,
   litVar, funcs,
@@ -18,8 +18,7 @@ USES
   ideLayoutUtil;
 
 TYPE
-
-  { TtableForm }
+  P_tableAdapter=^T_tableAdapter;
 
   TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
@@ -65,14 +64,14 @@ TYPE
     literal:P_listLiteral;
     headerData:T_arrayOfString;
     firstIsHeader:boolean;
-
+    adapter:P_tableAdapter;
     sorted:record
       ascending:boolean;
       byColumn:longint;
     end;
   public
     { public declarations }
-    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
+    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean; CONST adapter_:P_tableAdapter);
     PROCEDURE fillTable;
   end;
 
@@ -89,16 +88,15 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  P_tableAdapter=^T_tableAdapter;
-  T_tableAdapter=object(T_abstractGuiOutAdapter)
-    tableForms: array of TtableForm;
+  T_tableAdapterTemplate=specialize G_multiChildGuiOutAdapter<TtableForm>;
+  T_tableAdapter=object(T_tableAdapterTemplate)
     defaultCaption:string;
     CONSTRUCTOR create(CONST defaultCaption_:string);
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
-    DESTRUCTOR destroy; virtual;
   end;
 
 IMPLEMENTATION
+USES myStringUtil;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
@@ -134,12 +132,10 @@ CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_: string);
   begin
     inherited create(at_table,[mt_startOfEvaluation,mt_displayTable]);
     defaultCaption:=defaultCaption_;
-    setLength(tableForms,0);
   end;
 
 FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR m:P_storedMessage;
-      i:longint;
       tab:TtableForm;
       caption:string;
   begin
@@ -150,14 +146,12 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         mt_displayTable:
           begin
             include(result,m^.messageType);
-            tab:=TtableForm.create(nil);
-            setLength(tableForms,length(tableForms)+1);
-            tableForms[length(tableForms)-1]:=tab;
+            tab:=addChild(TtableForm.create(nil));
             with P_tableDisplayRequest(m)^ do begin
               if tableCaption=''
-              then caption:=defaultCaption+' ('+intToStr(length(tableForms))+')'
+              then caption:=defaultCaption+' ('+intToStr(length(children))+')'
               else caption:=tableCaption;
-              tab.initWithLiteral(tableContent,caption,firstIsHeader);
+              tab.initWithLiteral(tableContent,caption,firstIsHeader,@self);
             end;
             dockNewForm(tab);
             tab.fillTable;
@@ -166,22 +160,13 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
         mt_startOfEvaluation:
           begin
             include(result,m^.messageType);
-            for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
-            setLength(tableForms,0);
+            destroyAllChildren;
           end;
       end;
       clear;
     finally
       leaveCriticalSection(adapterCs);
     end;
-  end;
-
-DESTRUCTOR T_tableAdapter.destroy;
-  VAR i:longint;
-  begin
-    for i:=0 to length(tableForms)-1 do FreeAndNil(tableForms[i]);
-    setLength(tableForms,0);
-    inherited destroy;
   end;
 
 FUNCTION T_tableDisplayRequest.internalType: shortstring;
@@ -219,6 +204,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
   begin
     if literal<>nil then disposeLiteral(literal);
     unregisterFontControl(StringGrid);
+    adapter^.childDestroyed(self);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
@@ -329,11 +315,11 @@ PROCEDURE TtableForm.performFastUpdate;
   begin
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
-  CONST newCaption: string; CONST firstIsHeader_: boolean);
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST firstIsHeader_: boolean; CONST adapter_:P_tableAdapter);
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
+    adapter:=adapter_;
     with sorted do begin
       ascending:=false;
       byColumn:=-1;
