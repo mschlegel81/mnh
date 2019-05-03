@@ -44,7 +44,7 @@ PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 FUNCTION cleanPath(CONST s:string):string;
   begin
     {$ifdef UNIX}
-    result:=cleanString(replaceAll(s,'/','_'),['a'..'z','A'..'Z','0'..'9','_'],'_');
+    result:=cleanString(replaceOne(replaceAll('$'+s,'/','_'),'$_',''),['a'..'z','A'..'Z','0'..'9','_'],'_');
     {$else}
     result:=s;
     {$endif}
@@ -233,7 +233,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         result:=false;
       end;
     end; end;
-
+  VAR serverCreated:boolean=false;
   begin
     recycler.initRecycler;
     with P_myIpcServer(p)^ do begin
@@ -241,9 +241,15 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       recentRequestOffset:=0;
       try
         server:=newServer(serverId);
-        if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId)
-      except on e:Exception do ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError); end;
-
+        if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId);
+        serverCreated:=true;
+      except on e:Exception do
+        begin
+          ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
+          serverCreated:=false;
+          hasKillRequest:=true;
+        end;
+      end;
       while not(hasKillRequest) and (ipcMessageConnector^.continueEvaluation) do begin
         if serve then sleepTime:=0
                  else begin
@@ -251,7 +257,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
                    sleep(sleepTime);
                  end;
       end;
-      try
+      if serverCreated then try
         disposeServer(server);
       except on e:Exception do
         ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);

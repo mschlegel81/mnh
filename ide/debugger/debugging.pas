@@ -138,7 +138,10 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
          (lastContextVar<>contextVar) then begin
         result:=false;
         for i:=0 to length(breakpoints)-1 do if isEqualLine(first^.location,breakpoints[i]) then exit(true);
-      end else if (lastContextVar=contextVar) and (callStack^.size<lastBreakLevel) then lastBreakLevel:=callStack^.size;
+      end else begin
+        if (lastContextVar=contextVar) and (callStack^.size<lastBreakLevel) then lastBreakLevel:=callStack^.size;
+        result:=false;
+      end;
     end;
 
   VAR snapshot:P_debuggingSnapshot;

@@ -5,6 +5,7 @@ private mutable longestCaseText:=0;
 private printCase(s:String)->begin
   longestCaseText:=max(longestCaseText,s.length);
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
+  s=='' ? void : note("Testcase: ",s);
 end;
 
 ensureServer->begin
@@ -45,6 +46,7 @@ private shorter([])->void;
 
 private sbExecute([])->void;
 private sbExecute(code:StringList)->begin
+  note("Examples test code:  \n"&code.join("  \n"));
   printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
   local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
   out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;

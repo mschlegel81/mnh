@@ -11,6 +11,7 @@ USES sysutils,Classes,
      contexts;
 
 IMPLEMENTATION
+USES mySys;
 {$i func_defines.inc}
 TYPE T_triplet=record
        x,y,z:ansistring;
@@ -47,14 +48,13 @@ FUNCTION regexForExpression(CONST expression:ansistring):T_regexMapEntry;
     try
       if regexCache.containsKey(expression,result) then begin
         //contained in map:
-        if (tryEnterCriticalsection(result.entryCS)<>0) then begin
-          leaveCriticalSection(regexCacheCs);
-          exit(result);
+        if (tryEnterCriticalsection(result.entryCS)=0)
+        then begin
+          //contained in map but not accessible
+          result.temporary:=true;
+          result.RegExpr:=TRegExpr.create(expression);
+          result.RegExpr.expression:=expression;
         end;
-        //contained in map but not accessible
-        result.temporary:=true;
-        result.RegExpr:=TRegExpr.create(expression);
-        result.RegExpr.expression:=expression;
       end else begin
         //not contained in map:
         initCriticalSection(result.entryCS);
@@ -275,6 +275,13 @@ FUNCTION regexReplace_imp intFuncSignature;
     end;
   end;
 
+PROCEDURE cleanRegexCache;
+  begin
+    enterCriticalSection(regexCacheCs);
+    regexCache.clear;
+    leaveCriticalSection(regexCacheCs);
+  end;
+
 {$ifdef fullVersion}
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/en/regexp_syntax.html">the used library''s website.</a>';
 {$endif}
@@ -286,7 +293,8 @@ INITIALIZATION
   funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary   {$ifdef fullVersion},'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif},true);
   initialize(regexCacheCs);
   initCriticalSection(regexCacheCs);
-  regexCache.create(@disposeRegex)
+  regexCache.create(@disposeRegex);
+  memoryCleaner.registerCleanupMethod(@cleanRegexCache);
 FINALIZATION
   regexCache.overrideDisposer(@hardDisposeRegex);
   try regexCache.destroy; except end;

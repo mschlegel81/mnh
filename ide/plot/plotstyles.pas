@@ -353,6 +353,7 @@ FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparent
   end;
 
 INITIALIZATION
+  initialize(styleCS);
   initCriticalSection(styleCS);
   styleMap.create();
   memoryCleaner.registerCleanupMethod(@clearStyles);
