@@ -1,8 +1,6 @@
 UNIT debugging;
 INTERFACE
-USES sysutils,
-     //MNH:
-     basicTypes,
+USES basicTypes,
      tokens,
      mnh_messages,
      out_adapters,
@@ -39,9 +37,10 @@ TYPE
       state:T_debuggerState;
       lastBreakLine:T_tokenLocation;
       lastBreakLevel:longint;
+      lastContextVar:F_fillCategoryNode;
       adapters:P_messages;
       packageVar:F_fillCategoryNode;
-      cs:TRTLCriticalSection;
+      debuggerCs,breakCs:TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST parentAdapters:P_messages);
       DESTRUCTOR destroy;
@@ -50,14 +49,12 @@ TYPE
       //GUI interaction
       PROCEDURE haltEvaluation;
       PROCEDURE setBreakpoints(CONST locations:array of T_searchTokenLocation);
-      PROCEDURE addBreakpoint(CONST location:T_searchTokenLocation);
-      PROCEDURE removeBreakpoint(CONST location:T_searchTokenLocation);
       PROCEDURE setState(CONST newState: T_debuggerState);
       FUNCTION paused:boolean;
   end;
 
 IMPLEMENTATION
-
+USES sysutils;
 CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack;
   CONST first_: P_token; CONST stack_: P_callStack; CONST globals,
   locals: P_variableTreeEntryCategoryNode);
@@ -83,7 +80,8 @@ DESTRUCTOR T_debuggingSnapshot.destroy;
 
 CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messages);
   begin
-    initCriticalSection(cs);
+    initCriticalSection(debuggerCs);
+    initCriticalSection(breakCs);
     adapters:=parentAdapters;
     state:=dontBreakAtAll;
     setLength(breakpoints,0);
@@ -92,26 +90,30 @@ CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messages);
 
 DESTRUCTOR T_debuggingStepper.destroy;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(breakCs);
+    enterCriticalSection(debuggerCs);
     try
       setLength(breakpoints,0);
     finally
-      leaveCriticalSection(cs);
-      doneCriticalSection(cs);
+      leaveCriticalSection(breakCs);
+      leaveCriticalSection(debuggerCs);
+      doneCriticalSection(breakCs);
+      leaveCriticalSection(debuggerCs);
     end;
   end;
 
 PROCEDURE T_debuggingStepper.resetForDebugging(CONST inPackage:P_objectWithPath; CONST packageVar_:F_fillCategoryNode);
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(debuggerCs);
     try
       state:=runUntilBreakpoint;
       lastBreakLevel:=-1;
       lastBreakLine.line:=-1;
       lastBreakLine.package:=inPackage;
+      lastContextVar:=nil;
       packageVar:=packageVar_;
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(debuggerCs);
     end;
   end;
 
@@ -131,8 +133,12 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
   FUNCTION breakpointEncountered:boolean;
     VAR i:longint;
     begin
-      result:=false;
-      for i:=0 to length(breakpoints)-1 do if isEqualLine(first^.location,breakpoints[i]) then exit(true);
+      if (callStack^.size<>lastBreakLevel) or
+         not(isEqualLine(lastBreakLine,first^.location)) or
+         (lastContextVar<>contextVar) then begin
+        result:=false;
+        for i:=0 to length(breakpoints)-1 do if isEqualLine(first^.location,breakpoints[i]) then exit(true);
+      end else if (lastContextVar=contextVar) and (callStack^.size<lastBreakLevel) then lastBreakLevel:=callStack^.size;
     end;
 
   VAR snapshot:P_debuggingSnapshot;
@@ -140,9 +146,10 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
       localVariableReport :P_variableTreeEntryCategoryNode;
   begin
     if (state=dontBreakAtAll) then exit;
-    //TODO: For multithreaded debugging, step and microstep must consider the context!
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(breakCs);
+    system.enterCriticalSection(debuggerCs);
     try
+      if (lastContextVar=nil) or (lastContextVar=contextVar) then
       case state of
         breakSoonest      : state:=waitingForGUI;
         breakOnLineChange : if (callStack^.size<lastBreakLevel) or
@@ -150,10 +157,7 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         breakOnStepOut    : if (callStack^.size<lastBreakLevel) then state:=waitingForGUI;
         breakOnStepIn     : if (callStack^.size>lastBreakLevel) then state:=waitingForGUI;
       end;
-      if (state<>waitingForGUI) and
-         ((callStack^.size<>lastBreakLevel) or not(isEqualLine(lastBreakLine,first^.location))) and
-         breakpointEncountered
-      then state:=waitingForGUI;
+      if (state<>waitingForGUI) and breakpointEncountered then state:=waitingForGUI;
       if state=waitingForGUI then begin
         {$ifdef debugMode}
         writeln('+----------------- - - -');
@@ -163,7 +167,6 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         writeln('|       curr ',callStack^.size);
         writeln('| Line  last ',string(lastBreakLine));
         writeln('|       curr ',string(first^.location));
-        writeln('| Breakpoint ',breakpointEncountered);
         writeln('+----------------- - - -');
         {$endif}
 
@@ -178,85 +181,60 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         new(snapshot,create(stack,first,callStack,globalVariableReport,localVariableReport));
         adapters^.postCustomMessage(snapshot);
         while state=waitingForGUI do begin
-          system.leaveCriticalSection(cs);
+          system.leaveCriticalSection(debuggerCs);
           ThreadSwitch;
           sleep(1);
-          system.enterCriticalSection(cs);
+          system.enterCriticalSection(debuggerCs);
         end;
       end;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(debuggerCs);
+      system.leaveCriticalSection(breakCs);
     end;
   end;
 
 PROCEDURE T_debuggingStepper.haltEvaluation;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(debuggerCs);
     try
       state:=dontBreakAtAll;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(debuggerCs);
     end;
   end;
 
 PROCEDURE T_debuggingStepper.setBreakpoints(CONST locations:array of T_searchTokenLocation);
   VAR i:longint;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(debuggerCs);
     try
       setLength(breakpoints,length(locations));
       for i:=0 to length(locations)-1 do breakpoints[i]:=locations[i];
     finally
-      system.leaveCriticalSection(cs);
-    end;
-  end;
-
-PROCEDURE T_debuggingStepper.addBreakpoint(CONST location:T_searchTokenLocation);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    try
-      i:=length(breakpoints);
-      setLength(breakpoints,i+1);
-      breakpoints[i]:=location;
-    finally
-      system.leaveCriticalSection(cs);
-    end;
-  end;
-
-PROCEDURE T_debuggingStepper.removeBreakpoint(CONST location:T_searchTokenLocation);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    try
-      i:=0;
-      while (i<length(breakpoints)) and not((breakpoints[i]=location)) do inc(i);
-      if i<length(breakpoints) then begin
-        breakpoints[i]:=breakpoints[length(breakpoints)-1];
-        setLength(breakpoints,length(breakpoints)-1);
-      end;
-    finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(debuggerCs);
     end;
   end;
 
 PROCEDURE T_debuggingStepper.setState(CONST newState: T_debuggerState);
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(debuggerCs);
     try
-      if (state=waitingForGUI) or (newState=breakSoonest) then state:=newState;
+      if (state=waitingForGUI) or (newState=breakSoonest) then begin
+        state:=newState;
+        if state in [runUntilBreakpoint,dontBreakAtAll] then lastContextVar:=nil;
+      end;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(debuggerCs);
     end;
   end;
 
 FUNCTION T_debuggingStepper.paused:boolean;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(debuggerCs);
     try
       result:=state=waitingForGUI;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(debuggerCs);
     end;
   end;
 

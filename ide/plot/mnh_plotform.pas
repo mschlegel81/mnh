@@ -301,9 +301,9 @@ PROCEDURE T_guiPlotSystem.disconnect;
 
 PROCEDURE T_guiPlotSystem.logPlotChanged;
   begin
-    EnterCriticalsection(adapterCs);
+    enterCriticalSection(adapterCs);
     plotChangedSinceLastDisplay:=true;
-    LeaveCriticalsection(adapterCs);
+    leaveCriticalSection(adapterCs);
   end;
 
 {$R *.lfm}
