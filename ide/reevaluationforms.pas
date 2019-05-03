@@ -9,9 +9,6 @@ USES
   ideLayoutUtil,askDialog,evalThread,mnh_constants,out_adapters,mnh_plotForm,editorMetaBase;
 
 TYPE
-
-  { TreevaluationForm }
-
   TreevaluationForm = class(TForm)
     timer: TTimer;
     PROCEDURE FormCreate(Sender: TObject);
@@ -33,9 +30,6 @@ VAR
 IMPLEMENTATION
 
 {$R *.lfm}
-
-{ TreevaluationForm }
-
 PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
     begin
@@ -88,8 +82,8 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
 
 PROCEDURE TreevaluationForm.FormDestroy(Sender: TObject);
   begin
-    runner.haltEvaluation;
     timer.enabled:=false;
+    while fastUpdating or slowUpdating do sleep(1);
     runner.destroy;
   end;
 

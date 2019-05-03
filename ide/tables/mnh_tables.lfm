@@ -1,12 +1,11 @@
 object tableForm: TtableForm
   Left = 355
-  Height = 240
+  Height = 160
   Top = 217
-  Width = 320
+  Width = 213
   Caption = '-'
-  ClientHeight = 210
-  ClientWidth = 320
-  DesignTimePPI = 144
+  ClientHeight = 140
+  ClientWidth = 213
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = tableMenu
@@ -15,23 +14,24 @@ object tableForm: TtableForm
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object stringGrid: TStringGrid
     Left = 0
-    Height = 210
+    Height = 140
     Top = 0
-    Width = 320
+    Width = 213
     Align = alClient
     BorderStyle = bsNone
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
+    ParentFont = False
     PopupMenu = tableMenu1
     TabOrder = 0
     OnHeaderClick = stringGridHeaderClick
   end
   object tableMenu: TMainMenu
-    left = 68
-    top = 16
+    left = 45
+    top = 11
     object MenuItem1: TMenuItem
       Caption = '&Display'
       object mi_transpose: TMenuItem
@@ -78,12 +78,12 @@ object tableForm: TtableForm
     Title = 'Export as'
     Filter = 'All|*.*|CSV|*.csv|Text|*.txt'
     FilterIndex = 2
-    left = 8
-    top = 16
+    left = 5
+    top = 11
   end
   object tableMenu1: TPopupMenu
-    left = 68
-    top = 16
+    left = 45
+    top = 11
     object MenuItem3: TMenuItem
       Caption = '&Display'
       object mi_transpose1: TMenuItem

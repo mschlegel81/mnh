@@ -78,12 +78,23 @@ TYPE
     FUNCTION typesOfStoredMessages:T_messageTypeSet;
   end;
 
+  {$ifdef fullVersion}
   P_abstractGuiOutAdapter = ^T_abstractGuiOutAdapter;
   T_abstractGuiOutAdapter = object(T_collectingOutAdapter)
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual; abstract;
   end;
 
-  {$ifdef fullVersion}
+  generic G_multiChildGuiOutAdapter<childType>= object(T_abstractGuiOutAdapter)
+    protected
+      children:array of childType;
+    public
+      CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
+      PROCEDURE childDestroyed(CONST child:childType);
+      FUNCTION addChild(CONST child:childType):childType;
+      PROCEDURE destroyAllChildren;
+      DESTRUCTOR destroy; virtual;
+  end;
+
   F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
   {$endif}
 
@@ -258,7 +269,7 @@ VAR globalAdaptersCs:TRTLCriticalSection;
     finalizing:longint=0;
     flushThreadsRunning:longint=0;
 
-FUNCTION fileFlushThread({$WARN 5024 OFF}p:pointer):ptrint;
+FUNCTION fileFlushThread(p:pointer):ptrint;
   VAR messageConnector:P_messagesDistributor;
       k   :longint=0;
   begin
@@ -321,6 +332,41 @@ OPERATOR :=(s:string):T_messageTypeSet;
   end;
 
 {$ifdef fullVersion}
+CONSTRUCTOR G_multiChildGuiOutAdapter.create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
+  begin
+    inherited create(typ,messageTypesToInclude_);
+    setLength(children,0);
+  end;
+
+PROCEDURE G_multiChildGuiOutAdapter.childDestroyed(CONST child: childType);
+  VAR i:longint=0;
+  begin
+    while i<length(children) do begin
+      if children[i]=child then begin
+        children[i]:=children[length(children)-1];
+        setLength(   children,length(children)-1);
+      end else inc(i);
+    end;
+  end;
+
+FUNCTION G_multiChildGuiOutAdapter.addChild(CONST child: childType): childType;
+  begin
+    setLength(children,length(children)+1);
+    children[length(children)-1]:=child;
+    result:=child;
+  end;
+
+PROCEDURE G_multiChildGuiOutAdapter.destroyAllChildren;
+  begin
+    while length(children)>0 do FreeAndNil(children[0]);
+  end;
+
+DESTRUCTOR G_multiChildGuiOutAdapter.destroy;
+  begin
+    destroyAllChildren;
+    inherited destroy;
+  end;
+
 CONSTRUCTOR T_guiMessagesDistributor.createGuiMessagesDistributor();
   begin
     inherited createDistributor();
@@ -419,9 +465,16 @@ PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
   end;
 
 FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType): boolean;
-  begin
-    result:=true;
-  end;
+  begin result:=true; end;
+
+FUNCTION T_messagesDistributor.isCollecting(CONST messageType: T_messageType): boolean;
+  begin result:=messageType in collecting; end;
+
+FUNCTION T_messagesErrorHolder.isCollecting(CONST messageType: T_messageType): boolean;
+  begin result:=(messageType in heldTypes) or (parentMessages<>nil) and parentMessages^.isCollecting(messageType); end;
+
+FUNCTION T_messagesDummy.isCollecting(CONST messageType: T_messageType): boolean;
+  begin result:=false; end;
 
 FUNCTION T_messagesRedirector.storedMessages(CONST filterDuplicates:boolean): T_storedMessages;
   begin
@@ -578,11 +631,6 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
 PROCEDURE T_messagesDummy.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   begin if disposeAfterPosting then disposeMessage(message); end;
 
-FUNCTION T_messagesDistributor.isCollecting(CONST messageType: T_messageType): boolean;
-  begin
-    result:=messageType in collecting;
-  end;
-
 FUNCTION T_messagesDistributor.collectedMessageTypes: T_messageTypeSet;
   begin
     result:=collected;
@@ -680,11 +728,6 @@ DESTRUCTOR T_messagesErrorHolder.destroy;
   begin
     clear;
     inherited destroy;
-  end;
-
-FUNCTION T_messagesErrorHolder.isCollecting(CONST messageType: T_messageType): boolean;
-  begin
-    result:=(messageType in heldTypes) or (parentMessages<>nil) and parentMessages^.isCollecting(messageType);
   end;
 
 FUNCTION T_messagesErrorHolder.triggersBeep: boolean;
@@ -814,8 +857,6 @@ CONSTRUCTOR T_messagesDummy.createDummy;
   begin inherited create; end;
 DESTRUCTOR T_messagesDummy.destroy;
   begin inherited destroy; end;
-FUNCTION T_messagesDummy.isCollecting(CONST messageType: T_messageType): boolean;
-  begin result:=false; end;
 FUNCTION T_messagesDummy.triggersBeep: boolean;
   begin result:=false; end;
 //T_abstractOutAdapter:=========================================================
