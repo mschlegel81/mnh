@@ -13,26 +13,39 @@ TYPE
     openHtmlButton: TButton;
     SynEdit1: TSynEdit;
     helpHighlighter:TSynMnhSyn;
+    UpdateToggleBox: TToggleBox;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE openHtmlButtonClick(Sender: TObject);
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE UpdateToggleBoxChange(Sender: TObject);
   private
     currentLink:string;
-
+    PROCEDURE toggleUpdate(CONST force:boolean=false; CONST enable:boolean=false);
   public
 
   end;
 
 PROCEDURE ensureHelpForm;
 IMPLEMENTATION
-USES editorMetaBase, lclintf;
+USES editorMetaBase, lclintf,ComCtrls,Graphics;
 
 PROCEDURE ensureHelpForm;
+  VAR helperForm:T_mnhComponentForm;
+      page:TTabSheet;
+      PageControl:TPageControl;
   begin
-    if not(hasFormOfType(icHelp,true)) then dockNewForm(THelpForm.create(Application));
+    helperForm:=getFormOfType(icHelp);
+    if helperForm=nil then dockNewForm(THelpForm.create(Application))
+    else begin
+      helperForm.getParents(page,PageControl);
+      if (PageControl= nil) and (helperForm.Focused) or
+         (PageControl<>nil) and (PageControl.activePage=page)
+      then THelpForm(helperForm).toggleUpdate()
+      else PageControl.activePage:=page;
+    end;
   end;
 
 {$R *.lfm}
@@ -63,18 +76,33 @@ PROCEDURE THelpForm.openHtmlButtonClick(Sender: TObject);
   end;
 
 PROCEDURE THelpForm.performSlowUpdate;
+  begin
+
+  end;
+
+PROCEDURE THelpForm.performFastUpdate;
   VAR meta:P_editorMeta;
   begin
-    if not(showing) then exit;
+    if not(showing and UpdateToggleBox.checked) then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     meta^.setUnderCursor(false,true);
     SynEdit1.text:=getHelpText(currentLink);
   end;
 
-PROCEDURE THelpForm.performFastUpdate;
+PROCEDURE THelpForm.UpdateToggleBoxChange(Sender: TObject);
   begin
+    toggleUpdate(true,UpdateToggleBox.checked);
+  end;
 
+PROCEDURE THelpForm.toggleUpdate(CONST force: boolean; CONST enable: boolean);
+  begin
+    if force
+    then UpdateToggleBox.checked:=enable
+    else UpdateToggleBox.checked:=not(UpdateToggleBox.checked);
+    if UpdateToggleBox.checked
+    then SynEdit1.color:=clWhite
+    else SynEdit1.color:=TColor($E0E0E0);
   end;
 
 end.

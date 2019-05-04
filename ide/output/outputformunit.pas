@@ -132,7 +132,7 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
 PROCEDURE TOutputForm.performSlowUpdate;
   begin
     if cbFreezeOutput.checked
-    then OutputSynEdit.color:=clSilver
+    then OutputSynEdit.color:=TColor($E0E0E0)
     else OutputSynEdit.color:=clWhite;
   end;
 
