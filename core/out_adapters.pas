@@ -355,8 +355,12 @@ FUNCTION G_multiChildGuiOutAdapter.addChild(CONST child: childType): childType;
   end;
 
 PROCEDURE G_multiChildGuiOutAdapter.destroyAllChildren;
+  VAR toDestroy:childType;
   begin
-    while length(children)>0 do FreeAndNil(children[0]);
+    while length(children)>0 do begin
+      toDestroy:=children[0];
+      toDestroy.free;
+    end;
   end;
 
 DESTRUCTOR G_multiChildGuiOutAdapter.destroy;

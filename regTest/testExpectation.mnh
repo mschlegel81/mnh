@@ -240,7 +240,9 @@ main->begin
      end).sort(2).formatTable(['Test','by flavour?','Completeness']).join("\n").print;
 end;
 
-//*Limit to 50 timings per case and flavour
+ELEMENTS_TO_RETAIN_ON_CLEANUP:=30;
+
+//*Limit to 30 timings per case and flavour
 //*Drop all values outside of 3 sigma environment
 main('cleanup')->begin
   local droppedExtremes:=0;
@@ -253,14 +255,14 @@ main('cleanup')->begin
       caseEntry[1].each(flavEntry,begin
         local flavour:=flavEntry[0];
         local times:=flavEntry[1];
-        local threshold:=times.getInner(1).mean+
-                       3*times.getInner(1).standardVariation;
+        local threshold:=times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).mean+
+                       3*times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).standardVariation;
         local sizeBefore:=times.size;
         droppedTotal+=times.size;
         droppedExtremes+=trueCount(times.getInner(1)>threshold);
         times:=times[times.getInner(1)<=threshold];
         droppedExtremes+=trueCount(times.getInner(1)<=0);
-        times:=times[times.getInner(1)>0].head(50);
+        times:=times[times.getInner(1)>0].head(ELEMENTS_TO_RETAIN_ON_CLEANUP);
         droppedTotal-=times.size;
         sizeBefore!=times.size
         ? begin
