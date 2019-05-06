@@ -222,8 +222,11 @@ PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject;
   VAR AnAction: TSynCopyPasteAction);
   VAR content:TStringList;
 begin
-  if (Sender.ClassName<>'TSynEdit') or (AnAction<>scaPlainText) then exit;
-  if (Clipboard=nil) then exit;
+  if (Sender.ClassName<>'TSynEdit') or
+     (AnAction<>scaPlainText) or
+     (TSynEdit(Sender).highlighter=nil) or
+     (Clipboard=nil)
+  then exit;
   content:=TStringList.create;
   content.text:=AText;
   Clipboard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
