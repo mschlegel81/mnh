@@ -608,6 +608,7 @@ PROCEDURE TIdeMainForm.onDebuggerEvent;
 
 PROCEDURE TIdeMainForm.onEndOfEvaluation;
   begin
+    if currentSnapshot<>nil then disposeMessage(currentSnapshot);
     workspace.updateEditorsByGuiStatus;
   end;
 

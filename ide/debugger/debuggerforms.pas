@@ -140,6 +140,8 @@ PROCEDURE TDebuggerForm.performFastUpdate;
    handleButton(tbStepIn     ,halted , 6);
    handleButton(tbStepOut    ,halted , 8);
    handleButton(tbMicroStep  ,halted ,10);
+
+   if not(running) and not(halted) and (inlineVariablesTreeView.items.count>0) then updateWithCurrentSnapshot;
  end;
 
 PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);

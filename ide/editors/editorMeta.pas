@@ -640,13 +640,12 @@ PROCEDURE T_editorMeta.activate;
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
         triggerCheck;
-        completionLogic.assignEditor(editor_,nil);
       end else begin
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
-        completionLogic.assignEditor(editor_,nil);
       end;
-      editor.readonly                :=runnerModel.areEditorsLocked;
+      completionLogic.assignEditor(editor_,nil);
+      editor.readonly       :=runnerModel.areEditorsLocked;
       mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
   end;
