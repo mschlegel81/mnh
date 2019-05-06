@@ -83,7 +83,7 @@ PROCEDURE THelpForm.performSlowUpdate;
 PROCEDURE THelpForm.performFastUpdate;
   VAR meta:P_editorMeta;
   begin
-    if not(showing and UpdateToggleBox.checked) then exit;
+    if not(showing and UpdateToggleBox.checked) or SynEdit1.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     meta^.setUnderCursor(false,true);
