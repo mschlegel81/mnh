@@ -584,11 +584,15 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
 PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR jump,mark:boolean;
   begin
-    jump:=(key=13) and (ssCtrl in Shift);
-    mark:=(key=13) and (ssAlt  in Shift);
-    if not(jump or mark) then exit;
-    setUnderCursor(mark,jump);
-    if jump then workspace.openLocation(underCursor.location);
+    if language_<>LANG_MNH
+    then workspace.keyUpForJumpToLocation(Sender,key,Shift)
+    else begin
+      jump:=(key=13) and (ssCtrl in Shift);
+      mark:=(key=13) and (ssAlt  in Shift);
+      if not(jump or mark) then exit;
+      setUnderCursor(mark,jump);
+      if jump then workspace.openLocation(underCursor.location);
+    end;
   end;
 
 PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
