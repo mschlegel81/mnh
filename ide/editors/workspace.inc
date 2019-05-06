@@ -308,8 +308,12 @@ FUNCTION T_workspace.createNewFile:P_editorMeta;
 FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_editorMeta;
   VAR meta:P_editorMeta;
   begin
-    result:=nil;
-    for meta in metas do if SameFileName(meta^.pseudoName,pathOrPseudoName) then exit(meta);
+    try
+      result:=nil;
+      for meta in metas do if SameFileName(meta^.pseudoName,pathOrPseudoName) then exit(meta);
+    except
+      result:=nil;
+    end;
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(

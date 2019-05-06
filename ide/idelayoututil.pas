@@ -8,6 +8,9 @@ USES
   Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
   SynEditTypes,SynExportHTML,SynEditHighlighter;
 
+CONST
+  CL_INACTIVE_GREY=TColor($E0E0E0);
+
 TYPE
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
   T_ideComponent=(icOutline,
