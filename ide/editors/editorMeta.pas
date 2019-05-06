@@ -584,11 +584,15 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
 PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR jump,mark:boolean;
   begin
-    jump:=(key=13) and (ssCtrl in Shift);
-    mark:=(key=13) and (ssAlt  in Shift);
-    if not(jump or mark) then exit;
-    setUnderCursor(mark,jump);
-    if jump then workspace.openLocation(underCursor.location);
+    if language_<>LANG_MNH
+    then workspace.keyUpForJumpToLocation(Sender,key,Shift)
+    else begin
+      jump:=(key=13) and (ssCtrl in Shift);
+      mark:=(key=13) and (ssAlt  in Shift);
+      if not(jump or mark) then exit;
+      setUnderCursor(mark,jump);
+      if jump then workspace.openLocation(underCursor.location);
+    end;
   end;
 
 PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -636,13 +640,12 @@ PROCEDURE T_editorMeta.activate;
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
         triggerCheck;
-        completionLogic.assignEditor(editor_,nil);
       end else begin
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         disposeCodeAssistanceResponse(latestAssistanceReponse);
-        completionLogic.assignEditor(editor_,nil);
       end;
-      editor.readonly                :=runnerModel.areEditorsLocked;
+      completionLogic.assignEditor(editor_,nil);
+      editor.readonly       :=runnerModel.areEditorsLocked;
       mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
   end;

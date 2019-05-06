@@ -236,7 +236,8 @@ TYPE
   end;
 
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
-PROCEDURE disposeMessage(message:P_storedMessage);
+PROCEDURE disposeMessage(VAR message:P_storedMessage);
+PROCEDURE disposeMessage_(message:P_storedMessage);
 FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
@@ -255,9 +256,16 @@ OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
     end;
   end;
 
-PROCEDURE disposeMessage(message:P_storedMessage);
+PROCEDURE disposeMessage(VAR message:P_storedMessage);
   begin
     if message^.unreference then dispose(message,destroy);
+    message:=nil;
+  end;
+
+PROCEDURE disposeMessage_(message:P_storedMessage);
+  begin
+    if message^.unreference then dispose(message,destroy);
+    message:=nil;
   end;
 
 FUNCTION T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;

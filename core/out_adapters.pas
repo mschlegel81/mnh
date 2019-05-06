@@ -569,7 +569,7 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
         inc(errorCount);
         if errorCount>20 then begin
           leaveCriticalSection(messagesCs);
-          if disposeAfterPosting then disposeMessage(message);
+          if disposeAfterPosting then disposeMessage_(message);
           exit;
         end;
       end;
@@ -583,7 +583,7 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
       {$endif}
     finally
       leaveCriticalSection(messagesCs);
-      if disposeAfterPosting then disposeMessage(message);
+      if disposeAfterPosting then disposeMessage_(message);
     end;
   end;
 
@@ -596,7 +596,7 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
       if message^.messageType in heldTypes then begin
         collector.append(message);
         {$ifdef fullVersion} appended:=true; {$endif}
-        if disposeAfterPosting then disposeMessage(message);
+        if disposeAfterPosting then disposeMessage_(message);
       end else if parentMessages<>nil then begin
         parentMessages^.postCustomMessage(message,disposeAfterPosting);
         {$ifdef fullVersion} appended:=true; {$endif}
@@ -626,14 +626,14 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
       {$ifdef fullVersion}
       if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
       {$endif}
-      if disposeAfterPosting then disposeMessage(message);
+      if disposeAfterPosting then disposeMessage_(message);
     finally
       leaveCriticalSection(messagesCs);
     end;
   end;
 
 PROCEDURE T_messagesDummy.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
-  begin if disposeAfterPosting then disposeMessage(message); end;
+  begin if disposeAfterPosting then disposeMessage_(message); end;
 
 FUNCTION T_messagesDistributor.collectedMessageTypes: T_messageTypeSet;
   begin
@@ -995,7 +995,7 @@ PROCEDURE T_collectingOutAdapter.clear;
     system.enterCriticalSection(adapterCs);
     try
       inherited clear;
-      for m in storedMessages do disposeMessage(m);
+      for m in storedMessages do disposeMessage_(m);
       setLength(storedMessages,0);
     finally
       system.leaveCriticalSection(adapterCs);

@@ -661,7 +661,7 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message:P_storedMessage);
         end;
       end;
       updateEditorsByGuiStatus;
-      disposeMessage(data);
+      disposeMessage_(data);
     end;
 
   PROCEDURE updateScriptMenu;

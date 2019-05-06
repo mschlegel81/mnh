@@ -906,13 +906,26 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     end;
 
   PROCEDURE drawEllipse(CONST x0,y0,x1,y1:longint);
+    VAR points:array[0..100] of TPoint;
+        cx,cy,rx,ry:double;
+        i:longint;
     begin
       if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
+      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psClear;
       target.Brush.color:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
-      if (scaleAndColor.lineWidth<1) then target.Pen.style:=psClear;
-      target.Ellipse(x0,y0,x1,y1);
-      if (scaleAndColor.lineWidth<1) then target.Pen.style:=psSolid;
+      if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
+        cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
+        cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
+        for i:=0 to 100 do begin
+          points[i].x:=round(cx+rx*cos(0.02*pi*i));
+          points[i].y:=round(cy+ry*sin(0.02*pi*i));
+        end;
+        target.Polygon(points);
+      end else begin
+        target.Ellipse(x0,y0,x1,y1);
+      end;
+      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
