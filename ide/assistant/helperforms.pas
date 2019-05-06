@@ -102,7 +102,7 @@ PROCEDURE THelpForm.toggleUpdate(CONST force: boolean; CONST enable: boolean);
     else UpdateToggleBox.checked:=not(UpdateToggleBox.checked);
     if UpdateToggleBox.checked
     then SynEdit1.color:=clWhite
-    else SynEdit1.color:=TColor($E0E0E0);
+    else SynEdit1.color:=CL_INACTIVE_GREY;
   end;
 
 end.
