@@ -47,7 +47,7 @@
           <CodeGeneration>
             <SmartLinkUnit Value="True"/>
             <Optimizations>
-              <OptimizationLevel Value="3"/>
+              <OptimizationLevel Value="4"/>
             </Optimizations>
           </CodeGeneration>
           <Linking>
@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="77">
+    <Units Count="78">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -517,6 +517,10 @@
         <Filename Value="../core/funcs_files.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit76>
+      <Unit77>
+        <Filename Value="../common/huffman.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit77>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
