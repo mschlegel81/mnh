@@ -1131,7 +1131,9 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end else begin
-          first^.data:=context.valueScope^.getVariableValue(first^.txt);
+          if context.valueScope<>nil
+          then first^.data:=context.valueScope^.getVariableValue(first^.txt)
+          else first^.data:=nil;
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;

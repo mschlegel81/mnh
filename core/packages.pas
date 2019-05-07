@@ -732,6 +732,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData.create;
         metaData.setComment(join(statement.comments,C_lineBreakChar));
         metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
+        formatMetaData(metaData,ruleDeclarationStart,@globals.primaryContext,recycler);
         ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData,newRuleCreated);
 
         if (globals.primaryContext.messages^.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
@@ -801,6 +802,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       metaData.create;
       metaData.setComment(join(statement.comments,C_lineBreakChar));
       metaData.setAttributes(statement.attributes,statement.firstToken^.location,globals.primaryContext.messages);
+      formatMetaData(metaData,statement.firstToken^.location,@globals.primaryContext,recycler);
       ensureRuleId(statement.firstToken^.txt,
                    ruleModifiers,
                    statement.firstToken^.location,globals.primaryContext.messages,metaData,newRuleCreated);

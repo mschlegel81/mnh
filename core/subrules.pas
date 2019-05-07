@@ -1,8 +1,6 @@
 UNIT subrules;
 INTERFACE
-USES //basic classes
-     sysutils,
-     //my utilities
+USES //my utilities
      myGenerics,myStringUtil,
      //MNH:
      basicTypes,mnh_constants,
@@ -48,6 +46,8 @@ TYPE
   T_ruleMetaData=object
     private
       attributes:array of T_subruleAttribute;
+      FUNCTION getAttributeValue(CONST index:longint):string;
+      PROCEDURE setAttributeValue(CONST index:longint; CONST value:string);
     public
       comment:ansistring;
       CONSTRUCTOR create;
@@ -61,6 +61,8 @@ TYPE
       FUNCTION getAttributesLiteral:P_mapLiteral;
       FUNCTION getDocTxt:ansistring;
       PROCEDURE setComment(CONST commentText:ansistring);
+      FUNCTION attributeCount:longint;
+      PROPERTY attributeValue[index:longint]:string read getAttributeValue write setAttributeValue;
   end;
 
   P_inlineExpression=^T_inlineExpression;
@@ -168,6 +170,8 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 IMPLEMENTATION
+USES sysutils;
+
 TYPE
 P_builtinExpression=^T_builtinExpression;
 T_builtinExpression=object(T_expression)
@@ -1127,6 +1131,25 @@ PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
     if commentText<>'' then comment:=commentText;
   end;
+
+FUNCTION T_ruleMetaData.attributeCount:longint;
+  begin
+    result:=length(attributes);
+  end;
+
+FUNCTION T_ruleMetaData.getAttributeValue(CONST index:longint):string;
+  begin
+    if (index>=0) and (index<length(attributes))
+    then result:=attributes[index].value
+    else result:='';
+  end;
+
+PROCEDURE T_ruleMetaData.setAttributeValue(CONST index:longint; CONST value:string);
+  begin
+    if (index>=0) and (index<length(attributes))
+    then attributes[index].value:=value;
+  end;
+
 {$ifdef fullVersion}
 PROCEDURE T_ruleMetaData.addSuppressUnusedWarningAttribute;
   CONST supressUnusedAttribute:T_subruleAttribute=(key:SUPPRESS_UNUSED_WARNING_ATTRIBUTE;value:'');
