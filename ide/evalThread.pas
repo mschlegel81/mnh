@@ -121,7 +121,8 @@ CONST
 
 IMPLEMENTATION
 USES mnh_constants,
-     tokenArray;
+     tokenArray,
+     mySys;
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem; begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
@@ -459,6 +460,9 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
     globals.afterEvaluation(recycler);
+
+    package.clear(true);
+    memoryCleaner.callCleanupMethods;
   end;
 
 FUNCTION T_abstractEvaluation.isRunning: boolean;

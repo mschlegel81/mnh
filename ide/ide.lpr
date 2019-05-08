@@ -35,6 +35,7 @@ begin
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);
     Application.run;
+    memoryCleaner.stop;
     showConsole;
     if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then pauseOnce;
   end;

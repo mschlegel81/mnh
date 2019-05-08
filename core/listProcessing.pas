@@ -35,22 +35,23 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
                             VAR context:T_context; VAR recycler:T_recycler);
 PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                               CONST eachLocation:T_tokenLocation;
-                              VAR context:T_context; VAR recycler:T_recycler; CONST iteratorSource:P_literal);
+                              VAR context:T_context; VAR recycler:T_recycler);
 FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
                           CONST mapLocation:T_tokenLocation;
                           VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
 FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
-                            VAR context:T_context; VAR recycler:T_recycler;  CONST iteratorSource:P_literal):P_listLiteral;
+                            VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
 PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressionLiteral;
                                 CONST filterLocation:T_tokenLocation;
                                 VAR context:T_context; VAR recycler:T_recycler;
-                                CONST output:P_compoundLiteral; CONST iteratorSource:P_literal);
+                                CONST output:P_compoundLiteral);
 PROCEDURE aggregate(CONST inputIterator:P_expressionLiteral; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
 PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context; VAR recycler:T_recycler);
 
 VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
 IMPLEMENTATION
+USES mySys;
 TYPE
   T_eachPayload=record
     eachIndex:longint;
@@ -65,9 +66,11 @@ TYPE
     payloads:T_eachPayloads;
     nextToAggregate:P_eachTask;
     results:T_evaluationResults;
+    tasksPerSecond:double;
     CONSTRUCTOR createEachTask();
     PROCEDURE dropEachParameter;
     PROCEDURE defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads; VAR recycler:T_recycler);
+    PROCEDURE dropResults;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -130,11 +133,12 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rules
 
 PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
-  CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler; CONST iteratorSource:P_literal);
+  CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
 
   VAR earlyAborting:boolean=false;
       firstToAggregate:P_eachTask=nil;
       lastToAggregate:P_eachTask=nil;
+      tasksPerSecond:double=1E-3;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_eachTask;
         fill:longint;
@@ -150,7 +154,10 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         for r in toAggregate^.results do aggregator^.addToAggregation(r,true,eachLocation,@context,recycler);
+        tasksPerSecond:=tasksPerSecond*0.9+
+           toAggregate^.tasksPerSecond*0.1;
         with recycling do if fill<length(dat) then begin
+          toAggregate^.dropResults;
           dat[fill]:=toAggregate;
           inc(fill);
         end else dispose(toAggregate,destroy);
@@ -199,12 +206,19 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         eachParameter:=x^.rereferenced;
       end;
       inc(enqueueFill);
+      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         inc(processed,enqueueFill);
         defineAndEnqueueTask;
-        if earlyAborting
-        then setLength(nextToEnqueue,min(8                    ,ceil(processed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
-        else setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(processed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
+        if isMemoryInComfortZone then begin
+          if earlyAborting
+          then setLength(nextToEnqueue,min(    8,round(max(1,0.1*tasksPerSecond))))
+          else setLength(nextToEnqueue,min(16384,round(max(1,    tasksPerSecond))));
+        end else begin
+          tasksPerSecond:=1E-6;
+          setLength(nextToEnqueue,1);
+          context.getGlobals^.taskQueue.activeDeqeue(recycler);
+        end;
         enqueueFill:=0;
       end;
     end;
@@ -220,20 +234,14 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     for rule in rulesList do earlyAborting:=earlyAborting or P_inlineExpression(rule)^.containsReturnToken;
 
     processed:=0;
-    if iteratorSource^.literalType in C_compoundTypes
-    then begin
-      if earlyAborting then setLength(nextToEnqueue,1)
-                       else setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)));
-    end else setLength(nextToEnqueue,1);
+    setLength(nextToEnqueue,1);
 
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
       for rule in rulesList do if proceed then begin
         createTask(rule,eachIndex,x);
-        if earlyAborting then begin
-          canAggregate;
-          proceed:=proceed and not(aggregator^.earlyAbort);
-        end;
-        proceed:=proceed and context.messages^.continueEvaluation;
+        canAggregate;
+        proceed:=proceed and not(aggregator^.earlyAbort)
+                         and context.messages^.continueEvaluation;
       end;
       inc(eachIndex);
       disposeLiteral(x);
@@ -272,7 +280,7 @@ FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
 
 FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
-                            VAR context:T_context; VAR recycler:T_recycler; CONST iteratorSource:P_literal):P_listLiteral;
+                            VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
 
   VAR firstToAggregate:P_mapTask=nil;
       lastToAggregate:P_mapTask=nil;
@@ -327,9 +335,12 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       if x<>nil then x^.rereference;
       inc(enqueueFill);
       inc(elementsProcessed);
+      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
-        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
+        if isMemoryInComfortZone
+        then setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
+        else setLength(nextToEnqueue,1);
         enqueueFill:=0;
         result:=true;
       end else result:=false;
@@ -343,9 +354,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
 
-    if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)))
-    else setLength(nextToEnqueue,1);
+    setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
@@ -372,7 +381,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
 PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressionLiteral;
                                 CONST filterLocation:T_tokenLocation;
                                 VAR context:T_context; VAR recycler:T_recycler;
-                                CONST output:P_compoundLiteral; CONST iteratorSource:P_literal);
+                                CONST output:P_compoundLiteral);
   VAR firstToAggregate:P_filterTask=nil;
       lastToAggregate:P_filterTask=nil;
       recycling:record
@@ -429,9 +438,12 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       nextToEnqueue[enqueueFill]:=x^.rereferenced;
       inc(enqueueFill);
       inc(elementsProcessed);
+      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
-        setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))));
+        if isMemoryInComfortZone
+        then setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
+        else setLength(nextToEnqueue,1);
         enqueueFill:=0;
         result:=true;
       end else result:=false;
@@ -441,9 +453,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
   begin
     recycling.fill:=0;
 
-    if iteratorSource^.literalType in C_compoundTypes
-    then setLength(nextToEnqueue,ceil(P_compoundLiteral(iteratorSource)^.size/(ENQUEUE_QUOTIENT*settings.cpuCount)))
-    else setLength(nextToEnqueue,1);
+    setLength(nextToEnqueue,1);
 
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context,@recycler,nil,nil).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
@@ -610,10 +620,21 @@ PROCEDURE T_eachTask.dropEachParameter;
     end;
   end;
 
+PROCEDURE T_eachTask.dropResults;
+  begin
+    enterCriticalSection(taskCs);
+    try
+      setLength(results,0);
+    finally
+      leaveCriticalSection(taskCs);
+    end;
+  end;
+
 PROCEDURE T_eachTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST payloads_:T_eachPayloads; VAR recycler:T_recycler);
   begin
     enterCriticalSection(taskCs);
     try
+      tasksPerSecond:=1;
       payloads:=payloads_;
       setLength(results,0);
       nextToAggregate:=nil;
@@ -628,8 +649,10 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
       localReturn:boolean=false;
       k:longint=0;
       payload:T_eachPayload;
+      wallClockAtStart:double;
   begin
     enterCriticalSection(taskCs);
+    wallClockAtStart:=context^.wallclockTime;
     context^.beginEvaluation;
     leaveCriticalSection(taskCs);
     try
@@ -644,6 +667,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
     finally
       setLength(results,k);
       enterCriticalSection(taskCs);
+      tasksPerSecond:=min(1E6,length(payloads)/(context^.wallclockTime-wallClockAtStart));
       dropEachParameter;
       context^.finalizeTaskAndDetachFromParent(@recycler);
       leaveCriticalSection(taskCs);
@@ -656,6 +680,8 @@ DESTRUCTOR T_eachTask.destroy;
     try
       dropEachParameter;
       clearContext;
+      setLength(payloads,0);
+      setLength(results,0);
     finally
       leaveCriticalSection(taskCs);
     end;

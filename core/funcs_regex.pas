@@ -276,13 +276,11 @@ FUNCTION regexReplace_imp intFuncSignature;
 
 PROCEDURE cleanRegexCache;
   begin
-    writeln(stdErr,'Clearing cached regex...');
     enterCriticalSection(regexCacheCs);
     try
       regexCache.clear;
     finally
       leaveCriticalSection(regexCacheCs);
-      writeln(stdErr,'Clearing cached regex done');
     end;
   end;
 

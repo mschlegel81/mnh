@@ -498,7 +498,7 @@ FUNCTION pMap_imp intFuncSignature;
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
       if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
-      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler,arg0)
+      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler)
       else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler);
       disposeLiteral(iterator);
     end;

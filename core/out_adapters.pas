@@ -558,21 +558,16 @@ DESTRUCTOR T_messagesDistributor.destroy;
 PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   VAR a:T_flaggedAdapter;
       appended:boolean=false;
+      doAppend:boolean=true;
   begin
     enterCriticalSection(messagesCs);
     try
       flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
       if message^.messageClass in [mc_error,mc_fatal] then begin
         inc(errorCount);
-        if errorCount>20 then begin
-          leaveCriticalSection(messagesCs);
-          if disposeAfterPosting then disposeMessage_(message);
-          exit;
-        end;
+        if errorCount>20 then doAppend:=false;
       end;
-      for a in adapters do begin
-        if a.adapter^.append(message) then appended:=true;
-      end;
+      if doAppend then for a in adapters do if a.adapter^.append(message) then appended:=true;
       if appended then include(collected,message^.messageType);
       {$ifdef fullVersion}
       if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
