@@ -713,9 +713,9 @@ FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(compressString(str0^.value,0))
+    then result:=newStringLiteral(compressString(str0^.value,[0..255]))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_bigint,lt_smallint])
-    then result:=newStringLiteral(compressString(str0^.value,int1^.intValue))
+    then result:=newStringLiteral(compressString(str0^.value,[byte(int1^.intValue)]))
     else result:=genericVectorization('compress',params,tokenLocation,context,recycler);
   end;
 

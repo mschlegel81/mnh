@@ -200,14 +200,13 @@ FUNCTION T_dataRow.toMnhString:string;
       simple:boolean=true;
       dataList:P_listLiteral;
       compressedForm:string;
-      dummyLocation:T_tokenLocation;
   begin
     while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
     dataList:=newListLiteral(alloc);
     if simple
     then for i:=0 to alloc-1 do dataList^.append(simplify(dat[i,1]),false)
     else for i:=0 to alloc-1 do dataList^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
-    compressedForm:=escapeString(EncodeStringBase64(compressString(serialize(dataList,dummyLocation,nil),1)),es_javaStyle,simple)+'.base64decode.decompress.deserialize';
+    compressedForm:=escapeString(EncodeStringBase64(compressString(dataList^.toString,[C_compression_huffman_numbers,C_compression_gzip])),es_javaStyle,simple)+'.base64decode.decompress.interpret';
     result:=dataList^.toString();
     disposeLiteral(dataList);
     if length(compressedForm)<length(result) then result:=compressedForm;
