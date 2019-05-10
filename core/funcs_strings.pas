@@ -64,29 +64,25 @@ FUNCTION copy_imp intFuncSignature;
   end;
 
 FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
-  VAR txt:ansistring;
-      c:char;
+  VAR c:char;
   begin
-    txt:=P_stringLiteral(input)^.value;
-    result:=newListLiteral(length(txt));
-    for c in txt do result^.appendString(c);
+    result:=newListLiteral(length(P_stringLiteral(input)^.value));
+    for c in P_stringLiteral(input)^.value do result^.appendString(c);
   end;
 
 FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
   VAR charIndex,
       byteIndex:longint;
       i:longint;
-      txt:ansistring;
       sub:ansistring;
   begin
     if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(input));
     result:=newListLiteral;
-    txt:=P_stringLiteral(input)^.value;
     byteIndex:=1;
-    for charIndex:=1 to UTF8Length(txt) do begin
+    for charIndex:=1 to UTF8Length(P_stringLiteral(input)^.value) do begin
       sub:='';
-      for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-        sub:=sub+txt[byteIndex];
+      for i:=0 to UTF8CharacterLength(@(P_stringLiteral(input)^.value[byteIndex]))-1 do begin
+        sub:=sub+P_stringLiteral(input)^.value[byteIndex];
         inc(byteIndex)
       end;
       result^.appendString(sub);
@@ -134,7 +130,6 @@ FUNCTION charSet_imp intFuncSignature;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
-        txt:ansistring;
         sub:ansistring;
         charSetUtf8:T_setOfString;
         byteSet:T_charSet=[];
@@ -142,12 +137,11 @@ FUNCTION charSet_imp intFuncSignature;
     begin
       if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
-        txt:=input^.value;
         byteIndex:=1;
-        for charIndex:=1 to UTF8Length(txt) do begin
+        for charIndex:=1 to UTF8Length(input^.value) do begin
           sub:='';
-          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-            sub:=sub+txt[byteIndex];
+          for i:=0 to UTF8CharacterLength(@(input^.value[byteIndex]))-1 do begin
+            sub:=sub+input^.value[byteIndex];
             inc(byteIndex)
           end;
           charSetUtf8.put(sub);
@@ -156,8 +150,7 @@ FUNCTION charSet_imp intFuncSignature;
         for sub in charSetUtf8.values do result^.appendString(sub);
         charSetUtf8.destroy;
       end else begin
-        txt:=input^.value;
-        for c in txt do include(byteSet,c);
+        for c in input^.value do include(byteSet,c);
         result:=newSetLiteral;
         for c in byteSet do result^.appendString(c);
       end;
@@ -508,25 +501,23 @@ FUNCTION reverseString_impl intFuncSignature;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
-        txt:ansistring;
         sub:ansistring;
     begin
       result:='';
-      txt:=P_stringLiteral(input)^.value;
       if P_stringLiteral(input)^.getEncoding=se_utf8 then begin
         byteIndex:=1;
-        for charIndex:=1 to UTF8Length(txt) do begin
+        for charIndex:=1 to UTF8Length(P_stringLiteral(input)^.value) do begin
           sub:='';
-          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-            sub:=sub+txt[byteIndex];
+          for i:=0 to UTF8CharacterLength(@(P_stringLiteral(input)^.value[byteIndex]))-1 do begin
+            sub:=sub+P_stringLiteral(input)^.value[byteIndex];
             inc(byteIndex)
           end;
           result:=sub+result;
         end;
       end else begin
-        i:=length(txt);
+        i:=length(P_stringLiteral(input)^.value);
         setLength(result,i);
-        for byteIndex:=1 to i do result[byteIndex]:=txt[i+1-byteIndex];
+        for byteIndex:=1 to i do result[byteIndex]:=P_stringLiteral(input)^.value[i+1-byteIndex];
       end;
     end;
 
@@ -722,9 +713,9 @@ FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(compressString(str0^.value,0))
+    then result:=newStringLiteral(compressString(str0^.value,[0..255]))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_bigint,lt_smallint])
-    then result:=newStringLiteral(compressString(str0^.value,int1^.intValue))
+    then result:=newStringLiteral(compressString(str0^.value,[byte(int1^.intValue)]))
     else result:=genericVectorization('compress',params,tokenLocation,context,recycler);
   end;
 

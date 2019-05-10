@@ -21,6 +21,7 @@ begin
       end;
     end else displayHelp;
   end;
+  memoryCleaner.stop;
   if pauseAtEnd then pauseOnce;
 end.
 

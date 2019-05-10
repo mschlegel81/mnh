@@ -249,7 +249,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler,iteratorSource)
+        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context,recycler);
       end else begin
         if eachType = tt_parallelEach then context.messages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
@@ -1131,7 +1131,9 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end else begin
-          first^.data:=context.valueScope^.getVariableValue(first^.txt);
+          if context.valueScope<>nil
+          then first^.data:=context.valueScope^.getVariableValue(first^.txt)
+          else first^.data:=nil;
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
@@ -1276,6 +1278,7 @@ end}
       cleanupStackAndExpression;
     end;
     stack.destroy;
+    if not(isMemoryInComfortZone) then recycler.cleanup;
   end;
 
 TYPE

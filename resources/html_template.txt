@@ -1627,7 +1627,8 @@ The <code>nameOf</code> construct can be used for returning the name of a variab
   out> 'X'
   
    in> nameOf{$1+2};
-  out> 'inline_expression'<!--end-->
+  out> 'inline_expression'
+<!--end-->
 </code>
 
 </div>

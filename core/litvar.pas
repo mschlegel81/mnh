@@ -1,9 +1,7 @@
 UNIT litVar;
 {$Q-}
 INTERFACE
-USES sysutils, math,
-     Classes,LazUTF8,
-     myGenerics, myStringUtil, serializationUtil, bigint,
+USES myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
      basicTypes,
      mnh_messages,
@@ -275,12 +273,12 @@ TYPE
            value:VALUE_TYPE;
          end;
          P_CACHE_ENTRY=^CACHE_ENTRY;
+         KEY_VALUE_LIST=array of CACHE_ENTRY;
          BIN_ENTRY=record
-           binFill,binAlloc:longint;
-           entry:P_CACHE_ENTRY;
+           binFill:longint;
+           arr:KEY_VALUE_LIST;
          end;
          P_BIN_ENTRY=^BIN_ENTRY;
-         KEY_VALUE_LIST=array of CACHE_ENTRY;
          MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
     VAR bin:array of BIN_ENTRY;
         fill:longint;
@@ -492,6 +490,8 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
     negInfLit     : T_realLiteral;
 CONST maxSingletonInt=4000;
 IMPLEMENTATION
+USES sysutils, math,
+     Classes,LazUTF8;
 VAR
   intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
@@ -564,7 +564,7 @@ FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
           end else begin
             rest.destroy;
             quotient.destroy;
-            result:=newRealLiteral(P_smallIntLiteral(LHS)^.val/P_bigIntLiteral(RHS)^.val.toFloat);
+            result:=newRealLiteral(P_bigIntLiteral(LHS)^.val.toFloat/P_smallIntLiteral(RHS)^.val);
           end;
         end;
       end else begin
@@ -890,9 +890,8 @@ FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CON
 CONSTRUCTOR G_literalKeyMap.create();
   begin
     setLength(bin,1);
-    bin[0].binAlloc:=2;
     bin[0].binFill:=0;
-    getMem(bin[0].entry,bin[0].binAlloc*sizeOf(CACHE_ENTRY));
+    setLength(bin[0].arr,2);
     fill:=0;
   end;
 
@@ -903,17 +902,16 @@ CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
     setLength(bin,length(map.bin));
     for i:=0 to length(bin)-1 do begin
       bin[i].binFill :=map.bin[i].binFill;
-      bin[i].binAlloc:=map.bin[i].binFill;
-      getMem(bin[i].entry,sizeOf(CACHE_ENTRY)*bin[i].binAlloc);
-      for j:=0 to bin[i].binFill-1 do bin[i].entry[j]:=
-                                  map.bin[i].entry[j];
+      setLength(bin[i].arr,bin[i].binFill);
+      for j:=0 to bin[i].binFill-1 do bin[i].arr[j]:=
+                                  map.bin[i].arr[j];
     end;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(bin)-1 do with bin[i] do freeMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+    for i:=0 to length(bin)-1 do with bin[i] do setLength(arr,0);
     setLength(bin,0);
   end;
 
@@ -926,28 +924,26 @@ PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
       setLength(bin,i0+i0);
       hashMask:=length(bin)-1;
       for i:=0 to i0-1 do begin
-        bin[i+i0].binAlloc:=bin[i].binFill;
-        getMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
+        setLength(bin[i+i0].arr,bin[i].binFill);
         c0:=0;
         c1:=0;
         for j:=0 to bin[i].binFill-1 do begin
-          if (bin[i].entry[j].keyHash and hashMask=i)
-          then begin bin[i   ].entry[c0]:=bin[i].entry[j]; inc(c0); end
-          else begin bin[i+i0].entry[c1]:=bin[i].entry[j]; inc(c1); end;
+          if (bin[i].arr[j].keyHash and hashMask=i)
+          then begin bin[i   ].arr[c0]:=bin[i].arr[j]; inc(c0); end
+          else begin bin[i+i0].arr[c1]:=bin[i].arr[j]; inc(c1); end;
         end;
-        bin[i   ].binFill:=c0; bin[i   ].binAlloc:=max(2,bin[i   ].binFill); ReAllocMem(bin[i   ].entry,bin[i   ].binAlloc*sizeOf(CACHE_ENTRY));
-        bin[i+i0].binFill:=c1; bin[i+i0].binAlloc:=max(2,bin[i+i0].binFill); ReAllocMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
+        bin[i   ].binFill:=c0; setLength(bin[i   ].arr,max(2,bin[i   ].binFill));
+        bin[i+i0].binFill:=c1; setLength(bin[i+i0].arr,max(2,bin[i+i0].binFill));
       end;
     end else if length(bin)>1 then begin
       i0:=length(bin) shr 1;
       for i:=0 to i0-1 do begin
-        bin[i].binAlloc:=bin[i].binFill+bin[i+i0].binFill;
-        ReAllocMem(bin[i].entry,bin[i].binAlloc*sizeOf(CACHE_ENTRY));
+        setLength(bin[i].arr,bin[i].binFill+bin[i+i0].binFill);
         for j:=0 to bin[i+i0].binFill-1 do begin
-          bin[i].entry[bin[i].binFill]:=bin[i+i0].entry[j];
+          bin[i].arr[bin[i].binFill]:=bin[i+i0].arr[j];
           inc(bin[i].binFill);
         end;
-        freeMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
+        setLength(bin[i+i0].arr,0);
       end;
       setLength(bin,i0);
     end;
@@ -959,18 +955,15 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
   begin
     hash:=key^.hash;
     with bin[hash and (length(bin)-1)] do begin
-      while (j<binFill) and not((entry[j].keyHash=hash) and (entry[j].key^.equals(key))) do inc(j);
+      while (j<binFill) and not((arr[j].keyHash=hash) and (arr[j].key^.equals(key))) do inc(j);
       if j>=binFill then begin
-        if j>=binAlloc then begin
-          inc(binAlloc,binAlloc+1);
-          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
-        end;
-        entry[j].key    :=key;
-        entry[j].keyHash:=hash;
+        if j>=length(arr) then setLength(arr,(length(arr)*5+4) shr 2);
+        arr[j].key    :=key;
+        arr[j].keyHash:=hash;
         inc(binFill);
         inc(fill);
       end;
-      entry[j].value:=value;
+      arr[j].value:=value;
     end;
     if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
@@ -986,9 +979,8 @@ PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
       setLength(bin,targetSize);
       while (i<length(bin)) do begin
         with bin[i] do begin
-          binAlloc:=2;
           binFill:=0;
-          getMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+          setLength(arr,2);
         end;
         inc(i);
       end;
@@ -1000,21 +992,18 @@ FUNCTION G_literalKeyMap.putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VA
   begin
     initialize(previousValue);
     with bin[newEntry.keyHash and (length(bin)-1)] do begin
-      while (j<binFill) and not((newEntry.keyHash=entry[j].keyHash) and entry[j].key^.equals(newEntry.key)) do inc(j);
+      while (j<binFill) and not((newEntry.keyHash=arr[j].keyHash) and arr[j].key^.equals(newEntry.key)) do inc(j);
       if j>=binFill then begin
-        if j>=binAlloc then begin
-          inc(binAlloc,binAlloc+1);
-          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
-        end;
-        entry[j].key    :=newEntry.key;
-        entry[j].keyHash:=newEntry.keyHash;
-        entry[j].value  :=newEntry.value;
+        if j>=length(arr) then setLength(arr,(length(arr)*5+4) shr 2);
+        arr[j].key    :=newEntry.key;
+        arr[j].keyHash:=newEntry.keyHash;
+        arr[j].value  :=newEntry.value;
         inc(binFill);
         inc(fill);
         result:=true;
       end else begin
-        previousValue:=entry[j].value;
-        entry[j].value:=newEntry.value;
+        previousValue:=arr[j].value;
+        arr[j].value:=newEntry.value;
         result:=false;
       end;
     end;
@@ -1028,21 +1017,18 @@ FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT
     initialize(previousValue);
     hash:=key^.hash;
     with bin[hash and (length(bin)-1)] do begin
-      while (j<binFill) and not((hash=entry[j].keyHash) and entry[j].key^.equals(key)) do inc(j);
+      while (j<binFill) and not((hash=arr[j].keyHash) and arr[j].key^.equals(key)) do inc(j);
       if j>=binFill then begin
-        if j>=binAlloc then begin
-          inc(binAlloc,binAlloc+1);
-          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
-        end;
-        entry[j].key    :=key;
-        entry[j].keyHash:=hash;
-        entry[j].value  :=value;
+        if j>=length(arr) then setLength(arr,(length(arr)*5+4) shr 2);
+        arr[j].key    :=key;
+        arr[j].keyHash:=hash;
+        arr[j].value  :=value;
         inc(binFill);
         inc(fill);
         result:=true;
       end else begin
-        previousValue:=entry[j].value;
-        entry[j].value:=value;
+        previousValue:=arr[j].value;
+        arr[j].value:=value;
         result:=false;
       end;
     end;
@@ -1056,7 +1042,7 @@ FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE
     hash:=key^.hash;
     result:=fallbackIfNotFound;
     with bin[hash and (length(bin)-1)] do
-    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry[j].value);
+    for j:=0 to binFill-1 do if (arr[j].keyHash=hash) and (arr[j].key^.equals(key)) then exit(arr[j].value);
   end;
 
 FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
@@ -1065,7 +1051,7 @@ FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
   begin
     hash:=key^.hash;
     with bin[hash and (length(bin)-1)] do
-    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry+j);
+    for j:=0 to binFill-1 do if (arr[j].keyHash=hash) and (arr[j].key^.equals(key)) then exit(@arr[j]);
     result:=nil;
   end;
 
@@ -1076,10 +1062,10 @@ FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
     result.key:=nil;
     hash:=key^.hash;
     with bin[hash and (length(bin)-1)] do
-    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and entry[j].key^.equals(key) then begin
-      result:=entry[j];
+    for j:=0 to binFill-1 do if (arr[j].keyHash=hash) and arr[j].key^.equals(key) then begin
+      result:=arr[j];
       i:=binFill-1;
-      if (j<i) then entry[j]:=entry[i];
+      if (j<i) then arr[j]:=arr[i];
       dec(binFill);
       dec(fill);
       if fill<length(bin)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
@@ -1095,7 +1081,7 @@ FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
     for i:=0 to length(bin)-1 do
     with bin[i] do
     for j:=0 to binFill-1 do begin
-      result[k]:=entry[j];
+      result[k]:=arr[j];
       inc(k);
     end;
   end;
@@ -1109,7 +1095,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
       {$ifdef debugMode}
       try
       {$endif}
-        result[k]:=entry[j].key;
+        result[k]:=arr[j].key;
       {$ifdef debugMode}
       except
         raise Exception.create('Trying to set result ['+intToStr(k)+'] in list of length '+intToStr(length(result)));
@@ -1130,7 +1116,7 @@ PROCEDURE G_literalKeyMap.writeDump;
         f+=binFill;
         for j:=0 to binFill-1 do begin
           if j>0 then write(', ');
-          write(entry[j].key^.toString())
+          write(arr[j].key^.toString())
         end;
       end;
       if i=length(bin)-1 then writeln(']]') else writeln('],');

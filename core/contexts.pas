@@ -52,6 +52,7 @@ TYPE
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
+      PROCEDURE cleanup;
       PROCEDURE disposeContext(VAR context:P_context);
       FUNCTION newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
   end;
@@ -203,13 +204,23 @@ CONSTRUCTOR T_contextRecycler.create;
     initialize(contexts);
   end;
 
-DESTRUCTOR T_contextRecycler.destroy;
+PROCEDURE T_contextRecycler.cleanup;
   VAR k:longint;
   begin
     enterCriticalSection(recyclerCS);
-    for k:=0 to fill-1 do dispose(contexts[k],destroy);
-    fill:=0;
-    leaveCriticalSection(recyclerCS);
+    try
+    for k:=0 to fill-1 do begin
+      dispose(contexts[k],destroy);
+    end;
+    finally
+      fill:=0;
+      leaveCriticalSection(recyclerCS);
+    end;
+  end;
+
+DESTRUCTOR T_contextRecycler.destroy;
+  begin
+    cleanup;
     doneCriticalSection(recyclerCS);
   end;
 
@@ -351,7 +362,6 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     if evaluationContextType=ect_silent
     then primaryContext.allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
     else primaryContext.allowedSideEffects:=C_allSideEffects;
-
     primaryContext.setThreadOptions(globalOptions);
     recycler.disposeScope(primaryContext.valueScope);
     primaryContext.valueScope:=nil;
@@ -437,6 +447,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do recycler.scopePop(primaryContext.valueScope);
+    primaryContext.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
 {$ifdef fullVersion}
@@ -511,8 +522,6 @@ PROCEDURE T_context.callStackPop(CONST first: P_token);
 FUNCTION T_context.stepping(CONST first: P_token; CONST stack: P_tokenStack): boolean;
   begin
     if (related.evaluation=nil) or (related.evaluation^.debuggingStepper=nil) then exit(false);
-    //TODO give callbacks for querying package-global and context-local variables
-
     if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack,@reportVariables);
     result:=true;
   end;
@@ -694,7 +703,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           end else currentTask^.evaluate(recycler);
           sleepCount:=0;
         end;
-      until (sleepCount>=MS_IDLE_BEFORE_QUIT) or (taskQueue.destructionPending) or not(primaryContext.messages^.continueEvaluation);
+      until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
+            (taskQueue.destructionPending) or
+            not(primaryContext.messages^.continueEvaluation) or //error ocurred
+            (not(isMemoryInComfortZone) and (taskQueue.poolThreadsRunning>1)); //memory panic with more than 1 pool thread running
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
     end;
@@ -764,7 +776,7 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      if (context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) and not(isVolatile)
+      if ((context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) or not(isMemoryInComfortZone)) and not(isVolatile)
       then evaluate(recycler)
       else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
     finally
@@ -814,8 +826,12 @@ DESTRUCTOR T_taskQueue.destroy;
 
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   PROCEDURE ensurePoolThreads();
+    VAR aimPoolThreads:longint;
     begin
-      while poolThreadsRunning<settings.cpuCount-1 do begin
+      if isMemoryInComfortZone
+      then aimPoolThreads:=settings.cpuCount-1
+      else aimPoolThreads:=1;
+      if poolThreadsRunning<aimPoolThreads then begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
@@ -870,8 +886,14 @@ FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;
     end;
   end;
 
+PROCEDURE cleanupContextPool;
+  begin
+    contextPool.cleanup;
+  end;
+
 INITIALIZATION
   contextPool.create;
+  memoryCleaner.registerCleanupMethod(@cleanupContextPool);
 FINALIZATION
   contextPool.destroy;
 

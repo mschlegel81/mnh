@@ -73,6 +73,7 @@ main('files')->begin
     .replace('/./','/')
     .union(allFiles('ide',['*.inc','*.lpr']),
            allFiles('consoles','*.lpr'),
+           allFiles('common','*.inc'),
            allFiles('3rd_party','*.inc'),
            allFiles('core','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
     .sort;

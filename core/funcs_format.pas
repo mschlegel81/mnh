@@ -13,7 +13,9 @@ USES sysutils,
 CONST MAX_FORMATS_TO_CACHE=4096;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
 IMPLEMENTATION
+USES out_adapters;
 TYPE
   T_format=object
     category:(fmtCat_decimal,
@@ -167,6 +169,38 @@ DESTRUCTOR T_format.destroy;
   begin
     realFmt:='';
     strFmt:='';
+  end;
+
+FUNCTION formatComment(CONST commentString:string; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler):string;
+  VAR fmt:T_preparedFormatStatement;
+      dummyParams:P_listLiteral;
+      resultList:T_arrayOfString;
+      tryMessages:T_messagesErrorHolder;
+      oldMessages:P_messages;
+  begin
+    if pos('{',commentString)<=0 then exit(commentString);
+    oldMessages:=context^.messages;
+    tryMessages.createErrorHolder(context^.messages,[mt_el3_evalError..mt_el3_userDefined]);
+    context^.messages:=@tryMessages;
+    fmt.create(commentString,tokenLocation,context^,recycler,true);
+    dummyParams:=newListLiteral(1);
+    dummyParams^.appendString(commentString);
+    resultList:=fmt.format(dummyParams,tokenLocation,context^,recycler);
+    fmt.destroy;
+    disposeLiteral(dummyParams);
+    if (tryMessages.getFlags*[FlagError,FlagFatalError]=[]) and (length(resultList)=1)
+    then result:=resultList[0]
+    else result:=commentString;
+    tryMessages.destroy;
+    context^.messages:=oldMessages;
+  end;
+
+PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
+  VAR k:longint;
+  begin
+    for k:=0 to meta.attributeCount-1 do
+      meta.attributeValue[k]:=formatComment(meta.attributeValue[k],tokenLocation,context,recycler);
+      meta.comment          :=formatComment(meta.comment          ,tokenLocation,context,recycler);
   end;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_preparedFormatStatement;
