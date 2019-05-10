@@ -286,7 +286,6 @@ PROCEDURE cleanRegexCache;
 
 CONSTRUCTOR T_regexMapEntry.createForCache(CONST ex: string);
   begin
-    {$ifdef debugMode} writeln('Creating regex "',ex,'" for caching'); {$endif}
     owner:=ThreadID;
     temporary:=false;
     RegExpr:=TRegExpr.create(ex);
@@ -295,7 +294,6 @@ CONSTRUCTOR T_regexMapEntry.createForCache(CONST ex: string);
 
 CONSTRUCTOR T_regexMapEntry.createTemporary(CONST ex: string);
   begin
-    {$ifdef debugMode} writeln('Creating regex "',ex,'" temporary'); {$endif}
     owner:=0;
     temporary:=true;
     RegExpr:=TRegExpr.create(ex);
@@ -304,7 +302,6 @@ CONSTRUCTOR T_regexMapEntry.createTemporary(CONST ex: string);
 
 DESTRUCTOR T_regexMapEntry.destroy;
   begin
-    {$ifdef debugMode} writeln('Destroying regex "',RegExpr.expression,'"; temporary=',temporary); {$endif}
     FreeAndNil(RegExpr);
   end;
 
@@ -313,7 +310,6 @@ FUNCTION T_regexMapEntry.canBeUsed: boolean;
     if (owner=0) or (owner=ThreadID) then begin
       owner:=ThreadID;
       result:=true;
-      {$ifdef debugMode} writeln('Reusing regex "',RegExpr.expression,'"'); {$endif}
     end else result:=false;
   end;
 
