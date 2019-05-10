@@ -9,6 +9,7 @@ USES sysutils,
      mnh_messages,
      out_adapters,
      plotstyles,plotMath,
+     litVar,
      EpikTimer;
 TYPE
   T_plotQuality=0..3;
@@ -133,7 +134,7 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
-      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfString;
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral):T_arrayOfString;
   end;
 
   P_plotSeriesFrame=^T_plotSeriesFrame;
@@ -210,7 +211,7 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadBMP,FPWriteBMP,IntfGraphics;
+USES FPReadBMP,FPWriteBMP,IntfGraphics,myStringUtil,base64;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -762,7 +763,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     try
       index:=length(row);
       setLength(row, index+1);
-      row[index].create(index,rowData);
+      row[index].create(rowData);
       row[index].style:=getStyle(index,styleOptions,transparentCount);
     finally
       system.leaveCriticalSection(cs);
@@ -1413,7 +1414,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
       setLength(row,length(p.row));
       for i:=0 to length(row)-1 do begin
         p.row[i].sample.cloneTo(clonedSample);
-        row[i].create(i,clonedSample);
+        row[i].create(clonedSample);
         row[i].style:=p.row[i].style;
       end;
       //:copy rows | copy custom text:
@@ -1426,7 +1427,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     end;
   end;
 
-FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfString;
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral):T_arrayOfString;
   VAR opt:string;
       i:longint;
   begin
@@ -1434,7 +1435,7 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions):T_arrayOfSt
     try
       opt:=scalingOptions.getOptionDiffString(prevOptions);
       if opt='' then setLength(result,0) else result:=opt;
-      for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0));
+      for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0,globalRowData));
       for i:=0 to length(customText)-1 do append(result,customText[i]^.toTextStatement);
     finally
       system.leaveCriticalSection(cs);
@@ -1502,26 +1503,42 @@ PROCEDURE T_plotSystem.doneGuiInteraction;
 FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
   VAR prevOptions:T_scalingOptions;
       i:longint;
+      globalRowData:P_listLiteral;
+      dummyLocation:T_tokenLocation;
+      dummyBool:boolean=false;
   begin
     enterCriticalSection(adapterCs);
     try
+      globalRowData:=newListLiteral();
       result:='plain script;';
+      myGenerics.append(result,'ROW:=');
       myGenerics.append(result,'resetOptions;');
       myGenerics.append(result,'clearAnimation;');
       prevOptions.setDefaults;
       if animation.frameCount>0 then begin
         if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions));
+          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
           prevOptions:=animation.frame[i]^.plotData.scalingOptions;
           myGenerics.append(result,'addAnimationFrame;');
         end else begin
-          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions));
+          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
         end;
       end else begin
-        myGenerics.append(result,currentPlot.getRowStatements(prevOptions));
+        myGenerics.append(result,currentPlot.getRowStatements(prevOptions,globalRowData^));
       end;
+      result[1]:='ROW:='+
+                 escapeString(
+                   EncodeStringBase64(
+                     compressString(
+                       serialize(globalRowData,
+                                 dummyLocation,
+                                 nil),
+                       [C_compression_gzip])),
+                   es_pickShortest,
+                   dummyBool)+'.base64decode.decompress.deserialize;';
       myGenerics.append(result,'display;');
     finally
+      disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
     end;
   end;

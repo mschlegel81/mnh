@@ -1,7 +1,7 @@
 UNIT plotMath;
 INTERFACE
 USES sysutils,
-     Graphics, base64,
+     Graphics,
      myGenerics,
      myStringUtil,
      basicTypes,
@@ -29,7 +29,7 @@ TYPE
       PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
       PROPERTY size:longint read alloc write setSize;
       PROCEDURE cloneTo(OUT other:T_dataRow);
-      FUNCTION toMnhString:string;
+      FUNCTION toNewLiteralForExport:P_listLiteral;
   end;
 
   T_rowToPaint = array of record
@@ -83,9 +83,9 @@ TYPE
   T_sampleRow = object
     style: T_style;
     sample: T_dataRow;
-    CONSTRUCTOR create(CONST index: longint; CONST row:T_dataRow);
+    CONSTRUCTOR create(CONST row:T_dataRow);
     DESTRUCTOR destroy;
-    FUNCTION toPlotStatement(CONST firstRow:boolean):string;
+    FUNCTION toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string;
   end;
 
   T_allSamples=array of T_sampleRow;
@@ -185,7 +185,7 @@ FUNCTION numToString(num:double):string;
     end else result:=myFloatToStr(num);
   end;
 
-FUNCTION T_dataRow.toMnhString:string;
+FUNCTION T_dataRow.toNewLiteralForExport:P_listLiteral;
   FUNCTION simplify(CONST num:double):P_numericLiteral;
     VAR inum:int64;
     begin
@@ -198,19 +198,12 @@ FUNCTION T_dataRow.toMnhString:string;
 
   VAR i:longint=0;
       simple:boolean=true;
-      dataList:P_listLiteral;
-      compressedForm:string;
-      dummyLocation:T_tokenLocation;
   begin
     while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
-    dataList:=newListLiteral(alloc);
+    result:=newListLiteral(alloc);
     if simple
-    then for i:=0 to alloc-1 do dataList^.append(simplify(dat[i,1]),false)
-    else for i:=0 to alloc-1 do dataList^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
-    compressedForm:=escapeString(EncodeStringBase64(compressString(serialize(dataList,dummyLocation,nil),[C_compression_huffman_datastore,C_compression_gzip])),es_javaStyle,simple)+'.base64decode.decompress.deserialize';
-    result:=dataList^.toString();
-    disposeLiteral(dataList);
-    if length(compressedForm)<length(result) then result:=compressedForm;
+    then for i:=0 to alloc-1 do result^.append(simplify(dat[i,1]),false)
+    else for i:=0 to alloc-1 do result^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
@@ -763,7 +756,7 @@ FUNCTION T_scalingOptions.getOptionDiffString(CONST before:T_scalingOptions):str
     if result<>'' then result:='setOptions(['+result+'].toMap);';
   end;
 
-CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);
+CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
   begin
     style.init();
     sample:=row;
@@ -774,11 +767,13 @@ DESTRUCTOR T_sampleRow.destroy;
     sample.free;
   end;
 
-FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean):string;
-  VAR dummy:boolean;
+FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string;
+  VAR myRowIndex:longint;
   begin
-    if firstRow then result:='plot(' else result:='addPlot(';
-    result+=sample.toMnhString+','+escapeString(style.toString,es_pickShortest,dummy)+');';
+    myRowIndex:=globalRowData.size;
+    if firstRow then result:='plot@(ROW['+intToStr(myRowIndex)+']);'
+             else result:='addPlot@(ROW['+intToStr(myRowIndex)+']);';
+    globalRowData.append(newListLiteral(2)^.append(sample.toNewLiteralForExport,false)^.appendString(style.toString),false);
   end;
 
 PROCEDURE T_axisTrafo.prepare;
