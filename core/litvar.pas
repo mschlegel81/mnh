@@ -564,7 +564,7 @@ FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
           end else begin
             rest.destroy;
             quotient.destroy;
-            result:=newRealLiteral(P_smallIntLiteral(LHS)^.val/P_bigIntLiteral(RHS)^.val.toFloat);
+            result:=newRealLiteral(P_bigIntLiteral(LHS)^.val.toFloat/P_smallIntLiteral(RHS)^.val);
           end;
         end;
       end else begin
