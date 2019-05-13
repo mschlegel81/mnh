@@ -38,35 +38,6 @@ CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_unaryOpMinus];
       tt_unaryOpNegate,
       tt_unaryOpMinus];
 
-CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
-      ('COMPARATOR_EQ',
-       'COMPARATOR_NEQ',
-       'COMPARATOR_LEQ',
-       'COMPARATOR_GEQ',
-       'COMPARATOR_LSS',
-       'COMPARATOR_GRT',
-       'COMPARATOR_LISTEQ ',
-       'OPERATOR_IN',
-       'OPERATOR_AND',
-       'OPERATOR_OR',
-       'OPERATOR_XOR',
-       'OPERATOR_LAZYAND',
-       'OPERATOR_LAZYOR',
-       'OPERATOR_PLUS',
-       'OPERATOR_MINUS',
-       'OPERATOR_MULT',
-       'OPERATOR_DIVREAL',
-       'OPERATOR_DIVINT',
-       'OPERATOR_MOD',
-       'OPERATOR_POT',
-       'OPERATOR_STRCONCAT',
-       'OPERATOR_ORELSE',
-       'OPERATOR_CONCAT',
-       'OPERATOR_CONCATALT',
-       'OPERATOR_NEGATE_LOGICAL',
-       'OPERATOR_UNARY_PLUS',
-       'OPERATOR_NEGATE_ARITHMETIC');
-
 FUNCTION operator_StrConcat intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 

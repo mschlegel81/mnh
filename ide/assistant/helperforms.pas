@@ -86,8 +86,8 @@ PROCEDURE THelpForm.performFastUpdate;
     if not(showing and UpdateToggleBox.checked) or SynEdit1.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
-    meta^.setUnderCursor(false,true);
-    SynEdit1.text:=getHelpText(currentLink);
+    if meta^.setUnderCursor(false,true)
+    then SynEdit1.text:=getHelpText(currentLink);
   end;
 
 PROCEDURE THelpForm.UpdateToggleBoxChange(Sender: TObject);

@@ -16,6 +16,35 @@ USES sysutils,math,
      tokens,
      mnh_messages,
      out_adapters;
+CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
+      ('COMPARATOR_EQ',
+       'COMPARATOR_NEQ',
+       'COMPARATOR_LEQ',
+       'COMPARATOR_GEQ',
+       'COMPARATOR_LSS',
+       'COMPARATOR_GRT',
+       'COMPARATOR_LISTEQ ',
+       'OPERATOR_IN',
+       'OPERATOR_AND',
+       'OPERATOR_OR',
+       'OPERATOR_XOR',
+       'OPERATOR_LAZYAND',
+       'OPERATOR_LAZYOR',
+       'OPERATOR_PLUS',
+       'OPERATOR_MINUS',
+       'OPERATOR_MULT',
+       'OPERATOR_DIVREAL',
+       'OPERATOR_DIVINT',
+       'OPERATOR_MOD',
+       'OPERATOR_POT',
+       'OPERATOR_STRCONCAT',
+       'OPERATOR_ORELSE',
+       'OPERATOR_CONCAT',
+       'OPERATOR_CONCATALT',
+       'OPERATOR_NEGATE_LOGICAL',
+       'OPERATOR_UNARY_PLUS',
+       'OPERATOR_NEGATE_ARITHMETIC');
+
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
   P_abstractPackage=^T_abstractPackage;
@@ -75,7 +104,8 @@ TYPE
 
   {$ifdef fullVersion}
   T_tokenInfo=record
-    infoText:ansistring;
+    infoText,fullLine:ansistring;
+    CaretX:longint;
     location,startLoc,endLoc:T_searchTokenLocation;
     canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
@@ -423,6 +453,10 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
       tt_blockLocalVariable, tt_parameterIdentifier, tt_eachParameter, tt_eachIndex:
         result.infoText+=C_lineBreakChar+'Declared '+ansistring(references);
+      tt_comparatorEq..tt_unaryOpMinus: begin
+        tokenText:=operatorName[token^.tokType];
+        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
+      end;
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');

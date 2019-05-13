@@ -84,9 +84,9 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
   public
-    PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
+    FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
   private
-    PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
+    FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint):boolean;
     PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
 
     PROCEDURE setFile(CONST fileName:string);
@@ -425,23 +425,24 @@ FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
     mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
+FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean):boolean;
   begin
-    setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
+    result:=setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean; CONST caret: TPoint);
+FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean; CONST caret: TPoint):boolean;
   VAR m:P_editorMeta;
       wordUnderCursor:string;
   begin
-    if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit;
+    if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit(false);
     wordUnderCursor:=editor.GetWordAtRowCol(caret);
     if updateMarker then begin
       for m in workspace.metas do m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
-    if forHelpOrJump and (latestAssistanceReponse<>nil) then with editor do
-      latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
+    if forHelpOrJump and (latestAssistanceReponse<>nil)
+    then with editor do result:=latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
+    else result:=false;
   end;
 
 PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean);
@@ -704,5 +705,9 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
   end;
+
+INITIALIZATION
+  underCursor.fullLine:='';
+  underCursor.CaretX:=-1;
 
 end.
