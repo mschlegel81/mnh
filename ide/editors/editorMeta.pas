@@ -201,6 +201,7 @@ PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
 PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
   begin
     setLanguage(T_language(TMenuItem(Sender).Tag));
+    activate;
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
