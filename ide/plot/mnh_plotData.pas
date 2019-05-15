@@ -877,7 +877,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         i:longint;
     begin
       if (i0<0) or (i1<i0+1) then exit;
-      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1) then exit;
+      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
       target.Brush.color:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       setLength(points,i1-i0+1);
@@ -885,9 +885,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         points[i].x:=screenRow[i0+i].x;
         points[i].y:=screenRow[i0+i].y;
       end;
-      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psClear;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
       target.Polygon(points);
-      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psSolid;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
@@ -912,7 +912,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         i:longint;
     begin
       if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
-      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psClear;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
       target.Brush.color:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
@@ -926,7 +926,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       end else begin
         target.Ellipse(x0,y0,x1,y1);
       end;
-      if (scaleAndColor.lineWidth<0) then target.Pen.style:=psSolid;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
