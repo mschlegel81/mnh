@@ -201,7 +201,8 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
     result:=stream.allOkay;
     for k:=0 to length(metas)-1 do if result then begin
       result:=result and metas[k]^.loadFromStream(stream) and stream.allOkay;
-      if nextMetaIndex<=metas[k]^.metaIndex then nextMetaIndex:=metas[k]^.metaIndex+1;
+      metas[k]^.metaIndex:=nextMetaIndex;
+      inc(nextMetaIndex);
     end;
     if result then begin
       currentFile:=stream.readAnsiString;

@@ -62,14 +62,17 @@ PROCEDURE TAssistanceForm.performSlowUpdate;
       codeAssistanceResponse:P_codeAssistanceResponse;
   begin
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
-    if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.stateHash<>paintedWithStateHash)
-    then begin
-      codeAssistanceResponse^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
-      caption:=conditionalCaption[hasErrors,hasWarnings];
-      if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
-      paintedWithStateHash:=codeAssistanceResponse^.stateHash;
+    try
+      if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.stateHash<>paintedWithStateHash)
+      then begin
+        codeAssistanceResponse^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
+        caption:=conditionalCaption[hasErrors,hasWarnings];
+        if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
+        paintedWithStateHash:=codeAssistanceResponse^.stateHash;
+      end;
+    finally
+      try disposeCodeAssistanceResponse(codeAssistanceResponse); except end;
     end;
-    disposeCodeAssistanceResponse(codeAssistanceResponse);
   end;
 
 PROCEDURE TAssistanceForm.performFastUpdate;
