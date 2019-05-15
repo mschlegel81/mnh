@@ -79,6 +79,7 @@ PROCEDURE T_guiImageSystem.displayImage;
 
 PROCEDURE T_guiImageSystem.formDestroyed;
   begin
+    myImageForm:=nil;
   end;
 
 PROCEDURE T_guiImageSystem.render(VAR target: TImage);
