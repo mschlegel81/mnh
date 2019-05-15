@@ -298,17 +298,12 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   FUNCTION prettyHtml(CONST s: ansistring): ansistring;
+    CONST splitters:array[0..1] of string=('#','//');
     VAR lines: T_arrayOfString;
         i: longint;
     begin
       result:=s;
-      setLength(lines, 0);
-      while pos('#', result)>0 do begin
-        append(lines, copy(result, 1, pos('#', result)-1));
-        result:=copy(result, pos('#', result)+1, length(result));
-      end;
-      append(lines,result);
-
+      lines:=split(s,splitters);
       result:='';
       for i:=0 to length(lines)-1 do
         begin

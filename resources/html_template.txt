@@ -249,34 +249,34 @@ Some attributes currently used are:
 <h3><a name="overview"> Overview<a></h3>
 <table>
   <tr><td>Op.</td><td>Precedence</td><td>Name</td><td>Function</td><td>Overridable</td></tr>
-<tr><td><code>|</code></td><td>1</td><td> list concatenation</td><td><code><span class="builtin">mnh.OPERATOR_CONCAT</span></code></td><td>no</td></tr>
-<tr><td><code>^</code></td><td>2</td><td> potentiation</td><td><code><span class="builtin">mnh.OPERATOR_POT</span></code></td><td>yes</td></tr>
-<tr><td><code>**</code></td><td>2</td><td> potentiation (alias)</td><td><code><span class="builtin">mnh.OPERATOR_POT</span></code></td><td>yes</td></tr>
-<tr><td><code>*</code></td><td>3</td><td> multiplication</td><td><code><span class="builtin">mnh.OPERATOR_MULT</span></code></td><td>yes</td></tr>
-<tr><td><code>/</code></td><td>3</td><td> division</td><td><code><span class="builtin">mnh.OPERATOR_DIVREAL</span></code></td><td>yes</td></tr>
-<tr><td><code>div</code></td><td>3</td><td> integer division</td><td><code><span class="builtin">mnh.OPERATOR_DIVINT</span></code></td><td>yes</td></tr>
-<tr><td><code>mod</code></td><td>3</td><td> modulo</td><td><code><span class="builtin">mnh.OPERATOR_MOD</span></code></td><td>yes</td></tr>
-<tr><td><code>+</code></td><td>4</td><td> plus</td><td><code><span class="builtin">mnh.OPERATOR_PLUS</span></code></td><td>yes</td></tr>
-<tr><td><code>-</code></td><td>4</td><td> minus</td><td><code><span class="builtin">mnh.OPERATOR_MINUS</span></code></td><td>yes</td></tr>
-<tr><td><code>&</code></td><td>5</td><td> string concatenation</td><td><code><span class="builtin">mnh.OPERATOR_STRCONCAT</span></code></td><td>yes</td></tr>
-<tr><td><code>=</code></td><td>6</td><td> equals (mathematical)</td><td><code><span class="builtin">mnh.COMPARATOR_EQ</span></code></td><td>yes</td></tr>
-<tr><td><code><></code></td><td>6</td><td> not equals</td><td><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></td><td>yes</td></tr>
-<tr><td><code>!=</code></td><td>6</td><td> not equals (alias)</td><td><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></td><td>yes</td></tr>
-<tr><td><code><=</code></td><td>6</td><td> lesser/equals</td><td><code><span class="builtin">mnh.COMPARATOR_LEQ</span></code></td><td>yes</td></tr>
-<tr><td><code>>=</code></td><td>6</td><td> greater/equals</td><td><code><span class="builtin">mnh.COMPARATOR_GEQ</span></code></td><td>yes</td></tr>
-<tr><td><code><</code></td><td>6</td><td> lesser</td><td><code><span class="builtin">mnh.COMPARATOR_LSS</span></code></td><td>yes</td></tr>
-<tr><td><code>></code></td><td>6</td><td> greater</td><td><code><span class="builtin">mnh.COMPARATOR_GRT</span></code></td><td>yes</td></tr>
-<tr><td><code>==</code></td><td>6</td><td> equals (technical)</td><td><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></td><td>no</td></tr>
-<tr><td><code>in</code></td><td>7</td><td> in</td><td><code><span class="builtin">mnh.OPERATOR_IN</span></code></td><td>no</td></tr>
-<tr><td><code>+</code></td><td>8</td><td> unary plus</td><td><code><span class="builtin">mnh.OPERATOR_UNARY_PLUS</span></code></td><td>no</td></tr>
-<tr><td><code>-</code></td><td>8</td><td> unary minus</td><td><code><span class="builtin">mnh.OPERATOR_NEGATE_ARITHMETIC</span></code></td><td>yes</td></tr>
-<tr><td><code>!</code></td><td>8</td><td> logical negation</td><td><code><span class="builtin">mnh.OPERATOR_NEGATE_LOGICAL</span></code></td><td>yes</td></tr>
-<tr><td><code>and</code></td><td>8</td><td> bitwise and</td><td><code><span class="builtin">mnh.OPERATOR_AND</span></code></td><td>yes</td></tr>
-<tr><td><code>AND</code></td><td>8</td><td> lazy and</td><td><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></td><td>no</td></tr>
-<tr><td><code>orElse </code></td><td>9</td><td> orElse</td><td><code><span class="builtin">mnh.OPERATOR_ORELSE</span></code></td><td>no</td></tr>
-<tr><td><code>or</code></td><td>9</td><td> bitwise or</td><td><code><span class="builtin">mnh.OPERATOR_OR</span></code></td><td>yes</td></tr>
-<tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td><td><code><span class="builtin">mnh.OPERATOR_XOR</span></code></td><td>yes</td></tr>
-<tr><td><code>OR</code></td><td>9</td><td> lazy or</td><td><code><span class="builtin">mnh.OPERATOR_LAZYOR</span></code></td><td>no</td></tr>
+<tr><td><code>|</code></td><td>1</td><td> list concatenation</td><td><a href="builtin.html#mnh.OPERATOR_CONCAT"><code><span class="builtin">mnh.OPERATOR_CONCAT</span></code></a></td><td>no</td></tr>
+<tr><td><code>^</code></td><td>2</td><td> potentiation</td><td><a href="builtin.html#mnh.OPERATOR_POT"><code><span class="builtin">mnh.OPERATOR_POT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>**</code></td><td>2</td><td> potentiation (alias)</td><td><a href="builtin.html#mnh.OPERATOR_POT"><code><span class="builtin">mnh.OPERATOR_POT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>*</code></td><td>3</td><td> multiplication</td><td><a href="builtin.html#mnh.OPERATOR_MULT"><code><span class="builtin">mnh.OPERATOR_MULT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>/</code></td><td>3</td><td> division</td><td><a href="builtin.html#mnh.OPERATOR_DIVREAL"><code><span class="builtin">mnh.OPERATOR_DIVREAL</span></code></a></td><td>yes</td></tr>
+<tr><td><code>div</code></td><td>3</td><td> integer division</td><td><a href="builtin.html#mnh.OPERATOR_DIVINT"><code><span class="builtin">mnh.OPERATOR_DIVINT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>mod</code></td><td>3</td><td> modulo</td><td><a href="builtin.html#mnh.OPERATOR_MOD"><code><span class="builtin">mnh.OPERATOR_MOD</span></code></a></td><td>yes</td></tr>
+<tr><td><code>+</code></td><td>4</td><td> plus</td><td><a href="builtin.html#mnh.OPERATOR_PLUS"><code><span class="builtin">mnh.OPERATOR_PLUS</span></code></a></td><td>yes</td></tr>
+<tr><td><code>-</code></td><td>4</td><td> minus</td><td><a href="builtin.html#mnh.OPERATOR_MINUS"><code><span class="builtin">mnh.OPERATOR_MINUS</span></code></a></td><td>yes</td></tr>
+<tr><td><code>&</code></td><td>5</td><td> string concatenation</td><td><a href="builtin.html#mnh.OPERATOR_STRCONCAT"><code><span class="builtin">mnh.OPERATOR_STRCONCAT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>=</code></td><td>6</td><td> equals (mathematical)</td><td><a href="builtin.html#mnh.COMPARATOR_EQ"><code><span class="builtin">mnh.COMPARATOR_EQ</span></code></a></td><td>yes</td></tr>
+<tr><td><code><></code></td><td>6</td><td> not equals</td><td><a href="builtin.html#mnh.COMPARATOR_NEQ"><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></a></td><td>yes</td></tr>
+<tr><td><code>!=</code></td><td>6</td><td> not equals (alias)</td><td><a href="builtin.html#mnh.COMPARATOR_NEQ"><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></a></td><td>yes</td></tr>
+<tr><td><code><=</code></td><td>6</td><td> lesser/equals</td><td><a href="builtin.html#mnh.COMPARATOR_LEQ"><code><span class="builtin">mnh.COMPARATOR_LEQ</span></code></a></td><td>yes</td></tr>
+<tr><td><code>>=</code></td><td>6</td><td> greater/equals</td><td><a href="builtin.html#mnh.COMPARATOR_GEQ"><code><span class="builtin">mnh.COMPARATOR_GEQ</span></code></a></td><td>yes</td></tr>
+<tr><td><code><</code></td><td>6</td><td> lesser</td><td><a href="builtin.html#mnh.COMPARATOR_LSS"><code><span class="builtin">mnh.COMPARATOR_LSS</span></code></a></td><td>yes</td></tr>
+<tr><td><code>></code></td><td>6</td><td> greater</td><td><a href="builtin.html#mnh.COMPARATOR_GRT"><code><span class="builtin">mnh.COMPARATOR_GRT</span></code></a></td><td>yes</td></tr>
+<tr><td><code>==</code></td><td>6</td><td> equals (technical)</td><td><a href="builtin.html#mnh.COMPARATOR_LISTEQ"><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></a></td><td>no</td></tr>
+<tr><td><code>in</code></td><td>7</td><td> in</td><td><a href="builtin.html#mnh.OPERATOR_IN"><code><span class="builtin">mnh.OPERATOR_IN</span></code></a></td><td>no</td></tr>
+<tr><td><code>+</code></td><td>8</td><td> unary plus</td><td><a href="builtin.html#mnh.OPERATOR_UNARY_PLUS"><code><span class="builtin">mnh.OPERATOR_UNARY_PLUS</span></code></a></td><td>no</td></tr>
+<tr><td><code>-</code></td><td>8</td><td> unary minus</td><td><a href="builtin.html#mnh.OPERATOR_NEGATE_ARITHMETIC"><code><span class="builtin">mnh.OPERATOR_NEGATE_ARITHMETIC</span></code></a></td><td>yes</td></tr>
+<tr><td><code>!</code></td><td>8</td><td> logical negation</td><td><a href="builtin.html#mnh.OPERATOR_NEGATE_LOGICAL"><code><span class="builtin">mnh.OPERATOR_NEGATE_LOGICAL</span></code></a></td><td>yes</td></tr>
+<tr><td><code>and</code></td><td>8</td><td> bitwise and</td><td><a href="builtin.html#mnh.OPERATOR_AND"><code><span class="builtin">mnh.OPERATOR_AND</span></code></a></td><td>yes</td></tr>
+<tr><td><code>AND</code></td><td>8</td><td> lazy and</td><td><a href="builtin.html#mnh.OPERATOR_LAZYAND"><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></a></td><td>no</td></tr>
+<tr><td><code>orElse </code></td><td>9</td><td> orElse</td><td><a href="builtin.html#mnh.OPERATOR_ORELSE"><code><span class="builtin">mnh.OPERATOR_ORELSE</span></code></a></td><td>no</td></tr>
+<tr><td><code>or</code></td><td>9</td><td> bitwise or</td><td><a href="builtin.html#mnh.OPERATOR_OR"><code><span class="builtin">mnh.OPERATOR_OR</span></code></a></td><td>yes</td></tr>
+<tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td><td><a href="builtin.html#mnh.OPERATOR_XOR"><code><span class="builtin">mnh.OPERATOR_XOR</span></code></a></td><td>yes</td></tr>
+<tr><td><code>OR</code></td><td>9</td><td> lazy or</td><td><a href="builtin.html#mnh.OPERATOR_LAZYOR"><code><span class="builtin">mnh.OPERATOR_LAZYOR</span></code></a></a></td><td>no</td></tr>
 <tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td><td>-</td><td>no</td></tr>
 <tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td><td>-</td><td>no</td></tr>
 <tr><td><code>+=</code></td><td>n/a</td><td> increment</td><td>-</td><td>no</td></tr>
@@ -348,20 +348,23 @@ out> "ab"
 <!--end-->
 <span class="error">Error @<new 7>:1,8 Operator + cannot be applied to operands of type intList(3) and intList(2)</span>
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_PLUS"><code><span class="builtin">mnh.OPERATOR_PLUS</span></code></a>
 </td></tr>
 <tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td>
 This is the common subtraction operator, which also doubles as unary negation.<br>
 If both operands are integers, the result will be an integer. <br>
 If both operands are numeric and at least one of them is real, the result will be a real number.
+See also: <a href="builtin.html#mnh.OPERATOR_MINUS"><code><span class="builtin">mnh.OPERATOR_MINUS</span></code></a>
 </td></tr>
 <tr><td><code>*</code></td><td><h5>Multiplication</h5></td></tr><tr><td></td><td>
 This is the common multiplication operator.<br>
 If both operands are integers, the result will be an integer. <br>
 If both operands are numeric and at least one of them is real, the result will be a real number.
+See also: <a href="builtin.html#mnh.OPERATOR_MULT"><code><span class="builtin">mnh.OPERATOR_MULT</span></code></a>
 </td></tr>
 <tr><td><code>/</code></td><td><h5>Real division</h5></td></tr><tr><td></td><td>
 This is the common division operator.<br>
-If both operands are numeric the result is a real number.
+See also: <a href="builtin.html#mnh.OPERATOR_DIVREAL"><code><span class="builtin">mnh.OPERATOR_DIVREAL</span></code></a>
 </td></tr>
 <tr><td><code>**</code>, <code>^</code></td><td><h5>Potentiation</h5></td></tr><tr><td></td><td>
 This is the potentiation operator.<br>
@@ -374,6 +377,7 @@ out> 4 //The result is an integer
 out> 0.25 //The result is a real number
 <!--end-->
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_POT"><code><span class="builtin">mnh.OPERATOR_POT</span></code></a>
 </td></tr>
 <tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td>
 Inspired by Pascal.
@@ -385,6 +389,7 @@ out> 2
 out> -1
 <!--end-->
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_DIVINT"><code><span class="builtin">mnh.OPERATOR_DIVINT</span></code></a>
 </td></tr>
 <tr><td><code>mod</code></td><td><h5>Integer modulo</h5></td></tr><tr><td></td><td>
 Inspired by Pascal.<br>
@@ -397,6 +402,7 @@ out> 6
 out> -3
 <!--end-->
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_MOD"><code><span class="builtin">mnh.OPERATOR_MOD</span></code></a>
 </td></tr>
 </table>
 
@@ -431,7 +437,9 @@ out> [true,true,true]
  in> "a"=3
 <!--end-->
 <span class="error">Error: Incompatible comparands string and int</span>
-</code></td></tr>
+</code>
+See also: <a href="builtin.html#mnh.COMPARATOR_EQ"><code><span class="builtin">mnh.COMPARATOR_EQ</span></code></a>
+</td></tr>
 <tr><td><code>==</code></td><td><h5>List equals or techical equals</h5></td></tr><tr><td></td><td>
 Returns a scalar boolean.<br>Returns true if the comparands are technically equal, which means that they have the same type and identical value. <br>
 For compound types:
@@ -470,18 +478,24 @@ Additionally <code>==</code> will not result in an error, even for incomparable 
 <!--end-->
   <span class="error">Error: Incompatible comparands string and int</span>
 </code>
+See also: <a href="builtin.html#mnh.COMPARATOR_LISTEQ"><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></a>
 </td></tr>
 <tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
 Returns a boolean or a list of booleans.<br>Returns true if the comparands are not (mathematically) equal.<br>
-</code></td></tr>
+See also: <a href="builtin.html#mnh.COMPARATOR_NEQ"><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></a>
+</td></tr>
 <tr><td><code>> </code></td><td><h5>Greater than</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand.
+<br>See also: <a href="builtin.html#mnh.COMPARATOR_GRT"><code><span class="builtin">mnh.COMPARATOR_GRT</span></code></a></td></tr>
 <tr><td><code>< </code></td><td><h5>Lesser than</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand.
+<br>See also: <a href="builtin.html#mnh.COMPARATOR_LSS"><code><span class="builtin">mnh.COMPARATOR_LSS</span></code></a></td></tr>
 <tr><td><code>>=</code></td><td><h5>Greater-or-equal</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand or both comparands are equal.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand or both comparands are equal.
+<br>See also: <a href="builtin.html#mnh.COMPARATOR_GEQ"><code><span class="builtin">mnh.COMPARATOR_GEQ</span></code></a></td></tr>
 <tr><td><code><=</code></td><td><h5>Lesser-or-equal</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand or both comparands are equal.
+<br>See also: <a href="builtin.html#mnh.COMPARATOR_LEQ"><code><span class="builtin">mnh.COMPARATOR_LEQ</span></code></a></td></tr>
 </table>
 
 <h4><br><a name="logOps">Logical operators</a></h4>
@@ -498,7 +512,9 @@ Examples: <code>
    in> false and 3
 <!--end-->
   <span class="error">Error: Operator and is not supported for types boolean and int</span>
-</code></td></tr>
+</code>
+See also: <a href="builtin.html#mnh.OPERATOR_AND"><code><span class="builtin">mnh.OPERATOR_AND</span></code></a>
+</td></tr>
 <tr><td><code>or</code></td><td><h5>Logical or bitwise or</h5></td></tr><tr><td></td><td>
 Examples: <code>
 <!--mnh-->
@@ -511,7 +527,9 @@ Examples: <code>
    in> false or 3
 <!--end-->
   <span class="error">Error: Operator or is not supported for types boolean and int</span>
-</code></td></tr>
+</code>
+See also: <a href="builtin.html#mnh.OPERATOR_OR"><code><span class="builtin">mnh.OPERATOR_OR</span></code></a>
+</td></tr>
 <tr><td><code>xor</code></td><td><h5>Logical or bitwise exclusive-or</h5></td></tr><tr><td></td><td>
 Examples: <code>
 <!--mnh-->
@@ -524,7 +542,9 @@ Examples: <code>
    in> false xor 3
 <!--end-->
   <span class="error">Error: Operator xor is not supported for types boolean and int</span>
-</code></td></tr>
+</code>
+See also: <a href="builtin.html#mnh.OPERATOR_XOR"><code><span class="builtin">mnh.OPERATOR_XOR</span></code></a>
+</td></tr>
 <tr><td><code>AND</code></td><td><h5>Logical lazy and</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
 For any right-hand-side expression <code>RHS</code> the behavior is as follows:<code>
@@ -539,6 +559,7 @@ Or generally:<code>
 <!--end-->
 </code>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>false</code> is encountered.
+<br>See also: <a href="builtin.html#mnh.OPERATOR_LAZYAND"><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></a>
 </td></tr>
 <tr><td><code>OR</code></td><td><h5>Logical lazy or</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
@@ -554,6 +575,7 @@ Or generally:<code>
 <!--end-->
 </code>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>true</code> is encountered.
+<br>See also: <a href="builtin.html#mnh.OPERATOR_LAZYOR"><code><span class="builtin">mnh.OPERATOR_LAZYOR</span></code></a>
 </td></tr>
 </table>
 
@@ -568,6 +590,7 @@ Examples:<code>
   out> false
 <!--end-->
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_STRCONCAT"><code><span class="builtin">mnh.OPERATOR_STRCONCAT</span></code></a>
 
 <h4><br><a name="orElseOp">orElse</a></h4>
 The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. <code>
@@ -592,7 +615,7 @@ The <code>orElse</code>-operator is intended for cases where the left-hand-side 
 
 This is a lazy operator, i.e. the right-hand-side is evaluated only if necessary.<br>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first non-<code>void</code> element is encountered.
-
+<br>See also: <a href="builtin.html#mnh.OPERATOR_ORELSE"><code><span class="builtin">mnh.OPERATOR_ORELSE</span></code></a>
 <h3><br><a name="listOps">List operators</a></h3>
 <table border="0">
 <tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
@@ -623,6 +646,7 @@ For obvious reasons the right hand side operands must be a compound type.<br>
   x in Y -> Y.each(y,x==y,OR);
 <!--end-->
 </code>
+See also: <a href="builtin.html#mnh.OPERATOR_IN"><code><span class="builtin">mnh.OPERATOR_IN</span></code></a>
 </td></tr>
 <tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td>
 The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>

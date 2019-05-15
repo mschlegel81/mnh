@@ -23,7 +23,7 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
        'COMPARATOR_GEQ',
        'COMPARATOR_LSS',
        'COMPARATOR_GRT',
-       'COMPARATOR_LISTEQ ',
+       'COMPARATOR_LISTEQ',
        'OPERATOR_IN',
        'OPERATOR_AND',
        'OPERATOR_OR',
