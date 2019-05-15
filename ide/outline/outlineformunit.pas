@@ -77,7 +77,7 @@ TYPE
 PROCEDURE ensureOutlineForm;
 VAR outlineSettings:T_outlineSettings;
 IMPLEMENTATION
-USES  operators;
+USES tokenArray;
 PROCEDURE ensureOutlineForm;
   begin
     if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(Application));

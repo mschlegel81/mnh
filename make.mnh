@@ -14,10 +14,9 @@ private delp->(isLinux ? 'delp' : DelpPath).exec(
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
-  local inLines:=fileLines(inFile);
+  local inLines:=fileLines(inFile).join("\n").compress;
   local outText:=
-  'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
-  inLines.each(line,line.escapePascal).join(",\n")&');';
+  'CONST '&pasId&': string='&inLines.escapePascal&';';
   outFile.fileContents==outText
   ? void
   : writeFile(outFile,outText);

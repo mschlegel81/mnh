@@ -323,12 +323,12 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
 PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
   VAR recycler:T_recycler;
-  begin recycler.initRecycler; execute(ensureAssoc_mnh,recycler); recycler.cleanup; end;
+  begin recycler.initRecycler; execute(split(decompressString(ensureAssoc_mnh),C_lineBreakChar),recycler); recycler.cleanup; end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
   VAR recycler:T_recycler;
-  begin recycler.initRecycler; execute(removeAssoc_mnh,recycler); recycler.cleanup; end;
+  begin recycler.initRecycler; execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),recycler); recycler.cleanup; end;
 
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
   VAR messages:T_storedMessages;

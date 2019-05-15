@@ -606,6 +606,7 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if relatedPlot<>nil then relatedPlot^.formWasClosedByUser:=true;
     animateCheckBox.checked:=false;
+    if mainFormCoordinatesLabel<>nil then mainFormCoordinatesLabel.caption:='';
     CloseAction:=caFree;
   end;
 
@@ -620,6 +621,7 @@ PROCEDURE TplotForm.performSlowUpdate;
       if myComponentParent=cpNone then begin
         attachedToMainForm:=false;
         StatusBar.visible:=true;
+        if mainFormCoordinatesLabel<>nil then mainFormCoordinatesLabel.caption:='';
       end else begin
         attachedToMainForm:=true;
         StatusBar.visible:=false;

@@ -907,6 +907,177 @@ divMod(10,7);
 
 isPrime(47531677974672740279381824573269878221106369761801704860769848227327108403647);
 
+//#mnh.COMPARATOR_LISTEQ
+3==3.0; //not equal, because types differ
+
+//#mnh.COMPARATOR_LISTEQ
+[1,2,3]==[3,1,3]; //== always returns a scalar boolean
+
+//#COMPARATOR_EQ
+3=3.0;
+
+//#COMPARATOR_EQ
+{$x}=3; //Used with expressions the result will be a new expression
+
+//#COMPARATOR_EQ
+[1,2,3]=[3,1,3]; //= compares element by element
+
+//#COMPARATOR_LEQ
+3<=3.0;
+
+//#COMPARATOR_LEQ
+[1,2,3]<=[3,1,3];
+
+//#COMPARATOR_GEQ
+3>=3.0;
+
+//#COMPARATOR_GEQ
+[1,2,3]>=[3,1,3];
+
+//#COMPARATOR_LSS
+3<3.0;
+
+//#COMPARATOR_LSS
+[1,2,3]<[3,1,3];
+
+//#COMPARATOR_GRT
+3>3.0;
+
+//#COMPARATOR_GRT
+[1,2,3]>[3,1,3];
+
+//#COMPARATOR_NEQ
+3!=3.0;
+
+//#COMPARATOR_NEQ
+[1,2,3]!=[3,1,3];
+
+//#OPERATOR_LAZYAND
+true AND false;
+
+//#OPERATOR_LAZYAND
+true AND 3; //Lazy boolean operators only examine the left hand side
+
+//#OPERATOR_LAZYAND
+false AND 3;  //Lazy boolean operators only examine the left hand side
+
+//#OPERATOR_AND
+true and false;
+
+//#OPERATOR_AND
+[true,false,true,false] and [true,true,false,false];
+
+//#OPERATOR_AND
+7 and 252; //and can be applied on integers
+
+//#OPERATOR_LAZYOR
+true OR false;
+
+//#OPERATOR_LAZYOR
+true OR 3; //Lazy boolean operators only examine the left hand side
+
+//#OPERATOR_LAZYOR
+false OR 3;  //Lazy boolean operators only examine the left hand side
+
+//#OPERATOR_OR
+true or false;
+
+//#OPERATOR_OR
+[true,false,true,false] or [true,true,false,false];
+
+//#OPERATOR_OR
+7 or 252; //or can be applied on integers
+
+//#OPERATOR_XOR
+true xor false;
+
+//#OPERATOR_XOR
+[true,false,true,false] xor [true,true,false,false];
+
+//#OPERATOR_XOR
+7 xor 252; //xor can be applied on integers
+
+//#OPERATOR_UNARY_PLUS
++'a'; //the unary plus is a dummy and will be dropped
+
+//#OPERATOR_NEGATE_ARITHMETIC
+-3;
+
+//#OPERATOR_NEGATE_ARITHMETIC
+-[1,2.0,Inf,Nan];
+
+//#OPERATOR_NEGATE_LOGICAL
+!true;
+
+//#OPERATOR_IN
+3 in [1..5];
+
+//#OPERATOR_IN
+3.0 in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
+
+//#OPERATOR_CONCAT
+1|2;
+
+//#OPERATOR_CONCAT
+[1]|[2];
+
+//#OPERATOR_CONCAT
+[1]|2;
+
+//#OPERATOR_CONCAT
+[1]|[[2]];
+
+//#OPERATOR_CONCATALT
+[1]||2;
+
+//#OPERATOR_CONCATALT
+[1]||[2];
+
+//#OPERATOR_DIVINT
+10 div 3;
+
+//#OPERATOR_DIVREAL
+10 / 3;
+
+//#OPERATOR_DIVREAL
+10 / 5; //The result of a division of two integers may be an integer
+
+//#OPERATOR_DIVREAL
+10.0 / 5; //If either operand is a real number, the quotient will be a real number
+
+//#OPERATOR_ORELSE
+void orElse 42; //orElse returns the right-hand-side if the left-hand-side is void
+
+//#OPERATOR_ORELSE
+3 orElse fail; //The right-hand side will never be evaluated for a given (non-void) left-hand-side
+
+//#OPERATOR_MINUS
+3-pi;
+
+//#OPERATOR_MOD
+32459378562983 mod 2342832;
+
+//#OPERATOR_MULT
+2*3;
+
+//#OPERATOR_MULT
+2.0*3; //If either factor is a real number the product will be a real number
+
+//#OPERATOR_PLUS
+4+5;
+
+//#OPERATOR_PLUS
+'a'+'b'; //You can "add" strings
+
+//#OPERATOR_POT
+5^7;
+
+//#OPERATOR_POT
+-3.5^3; //Potentiation with a negative base is defined for integer exponents
+
+//#OPERATOR_STRCONCAT
+3 & 4; //You can concatenate operands of any type
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');

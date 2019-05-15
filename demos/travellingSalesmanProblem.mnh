@@ -19,6 +19,7 @@ begin
     end);
     P|=[q];
   end);
+  resetRandom;
   P;
 end);
 

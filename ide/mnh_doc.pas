@@ -234,11 +234,13 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       wrapper.destroy;
     end;
 
+  VAR decompressed_examples:T_arrayOfString;
   begin
     if functionDocExamplesReady then exit;
+    decompressed_examples:=split(decompressString(examples_txt),C_lineBreakChar);
     if bar<>nil then begin
       bar.caption:='Executing example code for help/doc';
-      bar.max:=length(examples_txt);
+      bar.max:=length(decompressed_examples);
       bar.position:=0;
       Application.ProcessMessages;
     end;
@@ -253,9 +255,9 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       setLength(examplesToStore,0);
       //Read examples:---------------------------------------------------------------------
       setLength(code,0);
-      for i:=0 to length(examples_txt)-1 do begin
-        if trim(examples_txt[i])='' then processExample
-                                    else append(code,examples_txt[i]);
+      for i:=0 to length(decompressed_examples)-1 do begin
+        if trim(decompressed_examples[i])='' then processExample
+                                             else append(code,decompressed_examples[i]);
         if bar<>nil then begin
           bar.position:=i+1;
           Application.ProcessMessages;
@@ -296,17 +298,12 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   FUNCTION prettyHtml(CONST s: ansistring): ansistring;
+    CONST splitters:array[0..1] of string=('#','//');
     VAR lines: T_arrayOfString;
         i: longint;
     begin
       result:=s;
-      setLength(lines, 0);
-      while pos('#', result)>0 do begin
-        append(lines, copy(result, 1, pos('#', result)-1));
-        result:=copy(result, pos('#', result)+1, length(result));
-      end;
-      append(lines,result);
-
+      lines:=split(s,splitters);
       result:='';
       for i:=0 to length(lines)-1 do
         begin
@@ -505,19 +502,21 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
   {$include res_html_template.inc}
   VAR templateLine:string;
       templateLineCount:longint=0;
+      decompressedTemplate:T_arrayOfString;
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
     prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
+    decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
     if bar<>nil then begin
       bar.caption:='Creating html documentation';
-      bar.max:=length(html_template_txt);
+      bar.max:=length(decompressedTemplate);
       bar.position:=0;
       Application.ProcessMessages;
     end;
-    for templateLine in html_template_txt do begin
+    for templateLine in decompressedTemplate do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
         beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
@@ -525,7 +524,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
       end;
       inc(templateLineCount);
       if bar<>nil then begin
-        bar.max:=length(html_template_txt);
+        bar.max:=length(decompressedTemplate);
         bar.position:=templateLineCount;
         Application.ProcessMessages;
       end;
