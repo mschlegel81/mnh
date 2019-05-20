@@ -66,27 +66,37 @@ FUNCTION try_imp intFuncSignature;
   end;
 
 FUNCTION runScript_imp intFuncSignature;
-  VAR scriptParams:T_arrayOfString;
-      i:longint;
-      connect:longint=0;
+  VAR scriptParams,
+      scriptSource      :T_arrayOfString;
+      i,j               :longint;
+      connect           :longint=0;
       enforceDeterminism:boolean=false;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and (params^.size<=4) and
+    if (params<>nil) and (params^.size>=2) and (params^.size<=5) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType in [lt_emptyList,lt_stringList])
     then begin
+      scriptParams:=C_EMPTY_STRING_ARRAY;
+      scriptSource:=C_EMPTY_STRING_ARRAY;
+
+      setLength(scriptParams,list1^.size);
+      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
+
       for i:=2 to params^.size-1 do case params^.value[i]^.literalType of
         lt_smallint: begin
           connect:=P_smallIntLiteral(params^.value[i])^.value;
           if (connect<0) or (connect>3) then exit(nil);
         end;
-        lt_boolean: enforceDeterminism:=P_boolLiteral(params^.value[i])^.value;
+        lt_boolean:    enforceDeterminism:=P_boolLiteral(params^.value[i])^.value;
+        lt_stringList,lt_emptyList: begin
+          scriptSource:=scriptParams;
+          setLength(scriptParams,P_listLiteral(params^.value[i])^.size);
+          for j:=0 to P_listLiteral(params^.value[i])^.size-1 do scriptParams[j]:=P_stringLiteral(P_listLiteral(params^.value[i])^.value[j])^.value;
+        end
         else exit(nil);
       end;
-      setLength(scriptParams,list1^.size);
-      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
-      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,@context,recycler,byte(connect),enforceDeterminism);
+      result:=sandbox^.runScript(str0^.value,scriptSource,scriptParams,tokenLocation,@context,recycler,byte(connect),enforceDeterminism);
     end;
   end;
 
@@ -197,6 +207,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
              'try(E:Expression(0),except:Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
              'try(E:Expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary{$ifdef fullVersion},'runScript(filenameOrId:String,parameters:StringList);//executes the given script - in the current program instance but strictly isolated#'+
+                                                                                           'runScript(filename:String,scriptSource:StringList,parameters:StringList);//executes the given script source using filename as script file name#'+
                                                                                            'runScript(filenameOrId:String,parameters:StringList,connectionLevel);//executes the given script with connectionLevel#  // 0: isolated#  // 1: print#  // 2: print and warnings#  // 3: print, warnings and errors#  // Add an additional boolean parameter true to enforce determinism'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});

@@ -135,7 +135,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler):T_storedMessages;
-      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -284,22 +284,24 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   CONST TYPES_BY_LEVEL:array[0..3] of T_messageTypeSet=
         ([],
-         [mt_clearConsole,mt_printline,mt_printdirect],
-         [mt_clearConsole,mt_printline,mt_printdirect,mt_el1_note..mt_el2_userWarning],
-         [mt_clearConsole,mt_printline,mt_printdirect,mt_el1_note..mt_el2_userWarning,mt_el3_evalError..mt_el4_systemError]);
+         [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif}],
+         [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif},mt_el1_note..mt_el2_userWarning],
+         [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif},mt_el1_note..mt_el2_userWarning,mt_el3_evalError..mt_el4_systemError]);
 
   VAR fileName:string='';
       callContextType:T_evaluationContextType;
   begin
-    if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
-    then fileName:=expandFileName(filenameOrId)
-    else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
-    if (fileName='') or not(fileExists(fileName)) then begin
-      callerContext^.messages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
-      exit(nil);
+    if length(scriptSource)=0 then begin
+      if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+      then fileName:=expandFileName(filenameOrId)
+      else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
+      if (fileName='') or not(fileExists(fileName)) then begin
+        callerContext^.messages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
+        exit(nil);
+      end;
     end;
     if connectLevel=0 then callContextType:=ect_silent
                       else callContextType:=ect_normal;
@@ -307,7 +309,9 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);
-    package.replaceCodeProvider(newCodeProvider(fileName));
+    if length(scriptSource)=0
+    then package.replaceCodeProvider(newCodeProvider(fileName))
+    else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters);

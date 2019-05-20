@@ -33,6 +33,7 @@ TYPE
     public
       styleOptions: string;
       rowData:T_dataRow;
+      used:boolean;
       CONSTRUCTOR create(CONST styleOptions_: string; CONST rowData_:T_dataRow);
   end;
 
@@ -549,6 +550,7 @@ CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: 
     inherited create(mt_plot_addRow);
     styleOptions:=styleOptions_;
     rowData     :=rowData_;
+    used        :=false;
   end;
 
 FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
@@ -1443,6 +1445,7 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalR
   end;
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
+  VAR clonedRow:T_dataRow;
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
@@ -1454,9 +1457,13 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       end;
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);
-      mt_plot_addRow : begin
-        currentPlot.addRow(P_addRowMessage(message)^.styleOptions,P_addRowMessage(message)^.rowData);
-        P_addRowMessage(message)^.styleOptions:='';
+      mt_plot_addRow : with P_addRowMessage(message)^ do begin
+        if used then begin
+          rowData.cloneTo(clonedRow);
+          currentPlot.addRow(styleOptions,clonedRow);
+        end else currentPlot.addRow(styleOptions,rowData);
+        used:=true;
+        styleOptions:='';
       end;
       mt_plot_dropRow:
         currentPlot.removeRows(P_plotDropRowRequest(message)^.count);

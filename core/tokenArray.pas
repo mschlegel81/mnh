@@ -981,6 +981,7 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
 
 PROCEDURE safeAppend(VAR first,last:P_token; CONST appendix:P_token);
   begin
+    if appendix=nil then exit;
     if first=nil
     then first     :=appendix
     else last^.next:=appendix;
