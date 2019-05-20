@@ -850,8 +850,12 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'compress'      ,@compress_impl     ,ak_unary     {$ifdef fullVersion},'compress(S:String);#Returns a compressed version of S#compress(S:String,k:Int);#'+
                                                            'As above but with a specified algorithm:#'+
                                                            '  1: deflate#'+
-                                                           '  2: huffman with default model#'+
-                                                           '  3: huffman with another model#'+
+                                                           '  2: huffman with relaxed default model#'+
+                                                           '  3: huffman with strict default model#'+
+                                                           '  4: huffman with numbers model#'+
+                                                           '  5: huffman with Wikipedia.de model#'+
+                                                           '  6: huffman with MNH code model#'+
+                                                           '  7: huffman with MNH datastore model#'+
                                                            '255: don''''t compress'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used'{$endif});

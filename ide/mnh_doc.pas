@@ -305,8 +305,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       result:=s;
       lines:=split(s,splitters);
       result:='';
-      for i:=0 to length(lines)-1 do
-        begin
+      for i:=0 to length(lines)-1 do if lines[i]<>'' then begin
         if i>0 then result:=result+'<br>';
         if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i])+'</code>'
         else result:=result+lines [i];
