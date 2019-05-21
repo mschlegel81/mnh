@@ -171,11 +171,12 @@ object IdeMainForm: TIdeMainForm
       Left = 134
       Height = 15
       Top = 1
-      Width = 150
+      Width = 0
       Align = alCustom
       Anchors = [akTop, akLeft, akBottom]
       Brush.Color = clSilver
       Pen.Style = psClear
+      OnMouseUp = MemoryUsageShapeMouseUp
     end
     object MemoryUsageLabel: TLabel
       Left = 134
@@ -189,6 +190,7 @@ object IdeMainForm: TIdeMainForm
       Constraints.MinWidth = 100
       ParentColor = False
       ParentFont = False
+      OnMouseUp = MemoryUsageShapeMouseUp
     end
     object EditLocationLabel: TLabel
       Left = 254
@@ -224,6 +226,7 @@ object IdeMainForm: TIdeMainForm
       Width = 100
       Anchors = [akTop, akLeft, akRight, akBottom]
       Brush.Style = bsClear
+      OnMouseUp = MemoryUsageShapeMouseUp
     end
   end
   object MainMenu: TMainMenu

@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="81">
+    <Units Count="80">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -529,10 +529,6 @@
         <Filename Value="../core/tokens.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit79>
-      <Unit80>
-        <Filename Value="plot/funcs_plot.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit80>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
