@@ -856,7 +856,7 @@ INITIALIZATION
                                                            '  5: huffman with Wikipedia.de model#'+
                                                            '  6: huffman with MNH code model#'+
                                                            '  7: huffman with MNH datastore model#'+
-                                                           '255: don''''t compress'+
+                                                           '255: don''''t compress#'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used'{$endif});
   registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary{$ifdef fullVersion},'decompress(S:String);#Returns an uncompressed version of S'{$endif});
