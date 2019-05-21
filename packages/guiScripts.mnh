@@ -149,6 +149,29 @@ checkForUpdates(editorFile:String)->begin
   void;
 end;
 
+@utility=create encrypted script
+@newEdit
+@language=mnh
+formatCipherScript(editorFile:String)->begin
+  local plainTextSource:=editorContent(editorFile).join("\n");
+  local passphrase:=ask('Please enter passphrase');
+  local cipherSource:=plainTextSource.compress;
+  cipherSource:=chars[isaacRandomGenerator(passphrase.sha256,256).head(cipherSource.byteLength) xor cipherSource.bytes.ord].join.base64encode;
+  local scriptSource:=['plain script;',
+    'scriptSource:=//!~'&copy(cipherSource,0,150-18)];
+  cipherSource:=cipherSource.copy(150-18);
+  while(cipherSource.byteLength>0,begin
+    scriptSource|=cipherSource.copy(0,150);
+    cipherSource:=cipherSource.copy(150);
+  end);
+  scriptSource[scriptSource.size-1]&='~.base64decode;';
+  scriptSource|=['deciphered:=chars[isaacRandomGenerator(ask("Enter passphrase").sha256,256).head(scriptSource.byteLength) xor scriptSource.bytes.ord].join.decompress;',
+                 'deciphered.sha256=='&plainTextSource.sha256,
+                 '? runScript(myPath,deciphered.split("\n"),$params,3)',
+                 ': fail("Wrong passphrase");'];
+  scriptSource;
+end;
+
 @utility=Show Cheat Sheet
 @SuppressUnusedParameterWarning
 showCheatSheet(editorFile:String)->print(
