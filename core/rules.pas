@@ -149,6 +149,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
       PROCEDURE writeBack(CONST adapters:P_messages);
+      PROCEDURE memoryCleanup;
       FUNCTION isInitialized:boolean;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
@@ -156,6 +157,7 @@ TYPE
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
 IMPLEMENTATION
+USES mySys;
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
   begin
     if      tok^.tokType in C_operators   then result:=getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType])
@@ -285,6 +287,7 @@ CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_to
     inherited create(ruleId,startAt,meta_,isPrivate,rt_datastore);
     encodeAsText:=usePlainTextEncoding;
     dataStoreMeta.create(datastorePackage^.getPath,ruleId);
+    memoryCleaner.registerObjectForCleanup(@memoryCleanup);
   end;
 
 DESTRUCTOR T_ruleWithSubrules.destroy;
@@ -322,6 +325,7 @@ DESTRUCTOR T_mutableRule.destroy;
 DESTRUCTOR T_datastoreRule.destroy;
   begin
     dataStoreMeta.destroy;
+    memoryCleaner.unregisterObjectForCleanup(@memoryCleanup);
     inherited destroy;
   end;
 
@@ -888,6 +892,19 @@ PROCEDURE T_datastoreRule.writeBack(CONST adapters:P_messages);
       L:=namedValue.getValue;
       dataStoreMeta.writeValue(L,getLocation,adapters,encodeAsText);
       disposeLiteral(L);
+    end;
+  end;
+
+PROCEDURE T_datastoreRule.memoryCleanup;
+  begin
+    enterCriticalSection(rule_cs);
+    try
+      writeBack(nil);
+      namedValue.setValue(newVoidLiteral);
+      called:=false;
+      valueChangedAfterDeclaration:=false;
+    finally
+      leaveCriticalSection(rule_cs);
     end;
   end;
 
