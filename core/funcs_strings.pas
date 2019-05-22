@@ -709,6 +709,22 @@ FUNCTION base64decode_impl intFuncSignature;
     else result:=genericVectorization('base64decode',params,tokenLocation,context,recycler);
   end;
 
+FUNCTION base92encode_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(base92Encode(str0^.value))
+    else result:=genericVectorization('base92encode',params,tokenLocation,context,recycler);
+  end;
+
+FUNCTION base92decode_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(base92Decode(str0^.value))
+    else result:=genericVectorization('base92decode',params,tokenLocation,context,recycler);
+  end;
+
 FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
@@ -847,6 +863,8 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'ansiToUtf8'    ,@ansiToUtf8_impl   ,ak_unary     {$ifdef fullVersion},'ansiToUtf8(S:String);//Converts an ANSI encoded string to a UTF8 encoded string.'{$endif});
   registerRule(STRINGS_NAMESPACE,'base64encode'  ,@base64encode_impl ,ak_unary     {$ifdef fullVersion},'base64encode(S:String);//Converts a string to a base64 encoded string.'{$endif});
   registerRule(STRINGS_NAMESPACE,'base64decode'  ,@base64decode_impl ,ak_unary     {$ifdef fullVersion},'base64decode(S:String);//Converts a base64 encoded string to a string.'{$endif});
+  registerRule(STRINGS_NAMESPACE,'base92encode'  ,@base92encode_impl ,ak_unary     {$ifdef fullVersion},'base92encode(S:String);//Converts a string to a base92 encoded string.'{$endif});
+  registerRule(STRINGS_NAMESPACE,'base92decode'  ,@base92decode_impl ,ak_unary     {$ifdef fullVersion},'base92decode(S:String);//Converts a base92 encoded string to a string.'{$endif});
   registerRule(STRINGS_NAMESPACE,'compress'      ,@compress_impl     ,ak_unary     {$ifdef fullVersion},'compress(S:String);#Returns a compressed version of S#compress(S:String,k:Int);#'+
                                                            'As above but with a specified algorithm:#'+
                                                            '  1: deflate#'+

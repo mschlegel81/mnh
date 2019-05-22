@@ -1513,38 +1513,53 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
       globalRowData:P_listLiteral;
       dummyLocation:T_tokenLocation;
       dummyBool:boolean=false;
+      commands:T_arrayOfString;
+      DataString:string;
   begin
     enterCriticalSection(adapterCs);
     try
       globalRowData:=newListLiteral();
       result:='plain script;';
-      myGenerics.append(result,'ROW:=');
-      myGenerics.append(result,'resetOptions;');
-      myGenerics.append(result,'clearAnimation;');
+
+      commands:='resetOptions;';
+      myGenerics.append(commands,'clearAnimation;');
       prevOptions.setDefaults;
       if animation.frameCount>0 then begin
         if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
+          myGenerics.append(commands,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
           prevOptions:=animation.frame[i]^.plotData.scalingOptions;
-          myGenerics.append(result,'addAnimationFrame;');
+          myGenerics.append(commands,'addAnimationFrame;');
         end else begin
-          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
         end;
       end else begin
-        myGenerics.append(result,currentPlot.getRowStatements(prevOptions,globalRowData^));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,globalRowData^));
       end;
-      result[1]:='ROW:='+
-                 escapeString(
-                   EncodeStringBase64(
-                     compressString(
-                       serialize(globalRowData,
-                                 dummyLocation,
-                                 nil),
-                       [C_compression_gzip])),
-                   es_pickShortest,
-                   se_testPending,
-                   dummyBool)+'.base64decode.decompress.deserialize;';
+      DataString:=base92Encode(
+                   compressString(
+                     serialize(globalRowData,
+                               dummyLocation,
+                               nil),
+                     [C_compression_gzip]));
+      myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,160));
+      DataString:=copy(DataString,161,length(DataString));
+      while length(DataString)>0 do begin
+        myGenerics.append(result,'     '+copy(DataString,1,164));
+        DataString:=copy(DataString,165,length(DataString));
+      end;
+      result[length(result)-1]+='~';
+      if length(result[length(result)-1])<151
+      then result[length(result)-1]+='.base92decode'
+      else myGenerics.append(result, '.base92decode');
+      if length(result[length(result)-1])<153
+      then result[length(result)-1]+='.decompress'
+      else myGenerics.append(result, '.decompress');
+      if length(result[length(result)-1])<151
+      then result[length(result)-1]+='.deserialize;'
+      else myGenerics.append(result, '.deserialize;');
+      myGenerics.append(result,commands);
       myGenerics.append(result,'display;');
+      setLength(commands,0);
     finally
       disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
