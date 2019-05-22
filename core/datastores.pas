@@ -21,6 +21,7 @@ TYPE
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
+      FUNCTION fileExists:boolean;
       FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   end;
@@ -121,6 +122,12 @@ FUNCTION T_datastoreMeta.fileChangedSinceRead: boolean;
     if fileReadAt=0 then exit(true);
     fileAge(fileName,currentAge);
     result:=currentAge<>fileReadAt;
+  end;
+
+FUNCTION T_datastoreMeta.fileExists:boolean;
+  begin
+    tryObtainName(false);
+    result:=fileName<>'';
   end;
 
 FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;

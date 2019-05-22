@@ -899,10 +899,12 @@ PROCEDURE T_datastoreRule.memoryCleanup;
   begin
     enterCriticalSection(rule_cs);
     try
-      writeBack(nil);
-      namedValue.setValue(newVoidLiteral);
-      called:=false;
-      valueChangedAfterDeclaration:=false;
+      if called and not(valueChangedAfterDeclaration) //The store has been read but not modified
+         and (dataStoreMeta.fileExists)               //and the store can be re-read
+      then begin
+        namedValue.setValue(newVoidLiteral);
+        called:=false;
+      end;
     finally
       leaveCriticalSection(rule_cs);
     end;
