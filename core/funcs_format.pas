@@ -322,12 +322,12 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       begin
         part:=trim(part);
         if pos('{',part)<=0 then begin
-          if pos('}',part)>0 then context.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,nonescapableFound),tokenLocation);
+          if pos('}',part)>0 then context.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
           expPart:='$'+intToStr(index);
         end else begin
           expPart:=copy(part,3,pos('}',part)-3);
           part:='%'+copy(part,pos('}',part)+1,length(part));
-          if (pos('{',part)>0) or (pos('}',part)>0) then context.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,nonescapableFound),tokenLocation);
+          if (pos('{',part)>0) or (pos('}',part)>0) then context.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
         end;
         if expressionString=''
         then expressionString:=                 '['+expPart

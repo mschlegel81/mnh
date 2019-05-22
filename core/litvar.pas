@@ -1414,8 +1414,8 @@ FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ans
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   VAR dummy:boolean;
   begin
-    if lengthLimit>=length(val)+2 then result:=escapeString(val                                ,es_pickShortest,dummy)
-                                  else result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest,dummy);
+    if lengthLimit>=length(val)+2 then result:=escapeString(val                                ,es_pickShortest,getEncoding,dummy)
+                                  else result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest,getEncoding,dummy);
   end;
 
 FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
@@ -2284,7 +2284,7 @@ FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
 FUNCTION T_stringLiteral.escape: P_stringLiteral;
   VAR dummy:boolean;
   begin
-    result:=newStringLiteral(escapeString(val,es_pickShortest,dummy));
+    result:=newStringLiteral(escapeString(val,es_pickShortest,getEncoding,dummy));
   end;
 
 FUNCTION T_stringLiteral.getEncoding: T_stringEncoding;
