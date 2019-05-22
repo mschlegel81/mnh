@@ -855,7 +855,6 @@ INITIALIZATION
                                                            '  4: huffman with numbers model#'+
                                                            '  5: huffman with Wikipedia.de model#'+
                                                            '  6: huffman with MNH code model#'+
-                                                           '  7: huffman with MNH datastore model#'+
                                                            '255: don''''t compress#'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used'{$endif});
