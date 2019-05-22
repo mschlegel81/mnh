@@ -98,7 +98,7 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
       repeat
         fileName:=ChangeFileExt(packagePath,'.datastore'+intToStr(i));
         inc(i);
-      until not(fileExists(fileName));
+      until not(sysutils.fileExists(fileName));
     end;
   end;
 
