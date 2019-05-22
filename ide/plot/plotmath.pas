@@ -383,10 +383,10 @@ FUNCTION T_customText.toTextStatement:string;
     then result:='drawTextAbsolute('
     else result:='drawText(';
     result+=numToString(p[0])+','+numToString(p[1])+','+
-            escapeString(join(text,C_lineBreakChar),es_pickShortest,dummy);
+            escapeString(join(text,C_lineBreakChar),es_pickShortest,se_testPending,dummy);
     if isNan(fontSize) then result+=',Nan' else result+=','+numToString(fontSize);
     result+=','+anchorText[anchor];
-    result+=','+escapeString(fontName,es_pickShortest,dummy);
+    result+=','+escapeString(fontName,es_pickShortest,se_testPending,dummy);
     result+=',['+numToString(foreground[cc_red  ]*255)+','+
                  numToString(foreground[cc_green]*255)+','+
                  numToString(foreground[cc_blue ]*255)+']';

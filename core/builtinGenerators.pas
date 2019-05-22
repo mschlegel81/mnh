@@ -680,8 +680,8 @@ FUNCTION T_stringIterator.toString(CONST lengthLimit:longint=maxLongint):string;
   VAR i:longint;
       nonescapableFound:boolean;
   begin
-    result:='stringIterator(['+escapeString(charSet[0],es_pickShortest,nonescapableFound);
-    for i:=1 to length(charSet)-1 do result+=','+escapeString(charSet[i],es_pickShortest,nonescapableFound);
+    result:='stringIterator(['+escapeString(charSet[0],es_pickShortest,se_testPending,nonescapableFound);
+    for i:=1 to length(charSet)-1 do result+=','+escapeString(charSet[i],es_pickShortest,se_testPending,nonescapableFound);
     result+='],'+intToStr(minL)+','+intToStr(maxL)+')';
   end;
 

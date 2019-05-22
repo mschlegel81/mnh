@@ -105,6 +105,8 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE MemoryUsageShapeMouseUp(Sender: TObject; button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miAssistantClick(Sender: TObject);
     PROCEDURE miBreakpointsClick(Sender: TObject);
@@ -302,6 +304,12 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
   begin
     for cp in PAGES do dockSites[cp]^.updateAbsSizeByRelSize;
   end;
+
+PROCEDURE TIdeMainForm.MemoryUsageShapeMouseUp(Sender: TObject;
+  button: TMouseButton; Shift: TShiftState; X, Y: integer);
+begin
+  memoryCleaner.callCleanupMethods;
+end;
 
 PROCEDURE TIdeMainForm.miAboutClick(Sender: TObject);
   begin

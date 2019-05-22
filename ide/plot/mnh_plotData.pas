@@ -1542,6 +1542,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
                                  nil),
                        [C_compression_gzip])),
                    es_pickShortest,
+                   se_testPending,
                    dummyBool)+'.base64decode.decompress.deserialize;';
       myGenerics.append(result,'display;');
     finally

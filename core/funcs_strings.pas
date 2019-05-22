@@ -282,7 +282,7 @@ FUNCTION escapePascal_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(escapeString(str0^.value,es_mnhPascalStyle,dummy))
+    then result:=newStringLiteral(escapeString(str0^.value,es_mnhPascalStyle,str0^.getEncoding,dummy))
     else result:=genericVectorization('escapePascal',params,tokenLocation,context,recycler);
   end;
 
@@ -292,7 +292,7 @@ FUNCTION escapeJava_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
-      result:=newStringLiteral(escapeString(str0^.value,es_javaStyle,nonescapableFound));
+      result:=newStringLiteral(escapeString(str0^.value,es_javaStyle,str0^.getEncoding,nonescapableFound));
       if nonescapableFound then context.raiseError('escapeJava cannot be applied to this string because it contains characters that cannot be represented.',tokenLocation);
     end
     else result:=genericVectorization('escapeJava',params,tokenLocation,context,recycler);
@@ -855,8 +855,7 @@ INITIALIZATION
                                                            '  4: huffman with numbers model#'+
                                                            '  5: huffman with Wikipedia.de model#'+
                                                            '  6: huffman with MNH code model#'+
-                                                           '  7: huffman with MNH datastore model#'+
-                                                           '255: don''''t compress'+
+                                                           '255: don''''t compress#'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used'{$endif});
   registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary{$ifdef fullVersion},'decompress(S:String);#Returns an uncompressed version of S'{$endif});

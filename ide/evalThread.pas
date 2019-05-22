@@ -465,9 +465,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
     globals.afterEvaluation(recycler);
-
     package.clear(true);
-    memoryCleaner.callCleanupMethods;
   end;
 
 FUNCTION T_abstractEvaluation.isRunning: boolean;
