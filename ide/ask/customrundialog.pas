@@ -46,25 +46,31 @@ TYPE
 
   end;
 
-FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
+FUNCTION showCustomRunForm(CONST externalRun:boolean; OUT mainParameters:string):boolean;
 
 IMPLEMENTATION
 VAR myCustomRunForm:TCustomRunForm=nil;
 
-FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
+FUNCTION showCustomRunForm(CONST externalRun:boolean; OUT mainParameters:string):boolean;
   CONST formCaption:array[false..true] of string=('Run','Run externally');
   VAR k:longint;
   begin
     if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
-    result:=myCustomRunForm;
-    result.caption:=formCaption[externalRun];
-    result.GroupBox2.enabled:=externalRun;
-    result.GroupBox4.enabled:=externalRun;
-    with result.scriptParamEdit do if text<>'' then begin
-      k:=items.IndexOf(text);
-      if k>=0 then items.delete(k);
-      items.Insert(0,text);
-      text:='';
+    myCustomRunForm.caption:=formCaption[externalRun];
+    myCustomRunForm.GroupBox2.enabled:=externalRun;
+    myCustomRunForm.GroupBox4.enabled:=externalRun;
+    if myCustomRunForm.ShowModal=mrOk then begin
+      result:=true;
+      mainParameters:=myCustomRunForm.scriptParamEdit.text;
+      with myCustomRunForm.scriptParamEdit do if text<>'' then begin
+        k:=items.IndexOf(text);
+        if k>=0 then items.delete(k);
+        items.Insert(0,text);
+        text:='';
+      end;
+    end else begin
+      result:=false;
+      myCustomRunForm.scriptParamEdit.text:='';
     end;
   end;
 
