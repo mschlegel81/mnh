@@ -468,6 +468,9 @@ PROCEDURE finalizeCodeAssistance;
     end;
     doneCriticalSection(codeAssistanceCs);
     disposeCodeAssistanceResponse(codeAssistanceResponse);
+    if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
+    then dispose(codeAssistanceRequest,destroy);
+    codeAssistanceRequest:=nil;
     isFinalized:=true;
   end;
 

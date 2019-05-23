@@ -15,7 +15,7 @@ USES sysutils,Classes,
      debugging,
      cmdLineInterpretation,
      recyclers,
-     mnh_plotForm,
+     mnh_plotForm, mnh_plotData,
      synOutAdapter,
      variableTreeViews,
      mnh_tables,
@@ -99,6 +99,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST quickStdout:P_synOutAdapter);
       FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
+      DESTRUCTOR destroy; virtual;
   end;
 
   T_ideScriptEvaluation = object (T_abstractEvaluation)
@@ -149,6 +150,13 @@ DESTRUCTOR T_abstractEvaluation.destroy;
     messages.destroy;
     leaveCriticalSection(evaluationCs);
     doneCriticalSection(evaluationCs);
+  end;
+
+DESTRUCTOR T_quickEvaluation.destroy;
+  begin
+    if (parentProvider<>nil) and (parentProvider^.disposeOnPackageDestruction) then dispose(parentProvider,destroy);
+    setLength(toEvaluate,0);
+    inherited destroy;
   end;
 
 CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
@@ -375,7 +383,13 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
     try
       if evaluateInParent
       then parentProvider:=parent
-      else parentProvider:=nil;
+      else begin
+        if (parent<>nil) and (parent^.disposeOnPackageDestruction) then begin
+          parentProvider:=parent;
+          dispose(parentProvider,destroy);
+        end;
+        parentProvider:=nil;
+      end;
       setLength(toEvaluate,0);
       append(toEvaluate,input);
       state:=es_pending;
