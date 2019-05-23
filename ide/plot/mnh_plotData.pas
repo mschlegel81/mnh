@@ -213,7 +213,7 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadPNG,FPWritePNG,IntfGraphics,myStringUtil,base64;
+USES FPReadPNG,FPWritePNG,IntfGraphics,myStringUtil;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -1526,7 +1526,6 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
       i:longint;
       globalRowData:P_listLiteral;
       dummyLocation:T_tokenLocation;
-      dummyBool:boolean=false;
       commands:T_arrayOfString;
       DataString:string;
   begin
