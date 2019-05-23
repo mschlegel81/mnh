@@ -11,6 +11,7 @@ USES
 TYPE
   TCustomRunForm = class(TForm)
     Button1: TButton;
+    scriptParamEdit: TComboBox;
     RunButton: TButton;
     guiFlagCb: TCheckBox;
     quietFlagCb: TCheckBox;
@@ -27,7 +28,6 @@ TYPE
     lightVersionRb: TRadioButton;
     scriptLocRb: TRadioButton;
     customLocRb: TRadioButton;
-    scriptParamEdit: TEdit;
     GroupBox1: TGroupBox;
     PROCEDURE customLocRbChange(Sender: TObject);
     PROCEDURE DirectoryEditChange(Sender: TObject);
@@ -53,14 +53,19 @@ VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION customRunForm(CONST externalRun:boolean):TCustomRunForm;
   CONST formCaption:array[false..true] of string=('Run','Run externally');
+  VAR k:longint;
   begin
-    if myCustomRunForm=nil then begin
-      myCustomRunForm:=TCustomRunForm.create(Application);
-    end;
+    if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
     result:=myCustomRunForm;
     result.caption:=formCaption[externalRun];
     result.GroupBox2.enabled:=externalRun;
     result.GroupBox4.enabled:=externalRun;
+    with result.scriptParamEdit do if text<>'' then begin
+      k:=items.IndexOf(text);
+      if k>=0 then items.delete(k);
+      items.Insert(0,text);
+      text:='';
+    end;
   end;
 
 {$R *.lfm}
