@@ -652,6 +652,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           slowUpdateState:='Polling assistant result';
           edit^.pollAssistanceResult;
           slowUpdateState:='Updating form caption';
+          miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
           if edit^.isPseudoFile
           then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
           else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
