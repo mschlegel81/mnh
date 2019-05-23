@@ -169,6 +169,7 @@ TYPE
       seriesCs:TRTLCriticalSection;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
+      PROCEDURE flushFramesToDisk;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -212,7 +213,7 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadBMP,FPWriteBMP,IntfGraphics,myStringUtil,base64;
+USES FPReadPNG,FPWritePNG,IntfGraphics,myStringUtil,base64;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -297,12 +298,12 @@ PROCEDURE T_plotSeriesFrame.invalidate;
 
 PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
   VAR tempIntfImage: TLazIntfImage;
-      bmpWriter:TFPWriterBMP;
+      bmpWriter:TFPWriterPNG;
   begin
     enterCriticalSection(frameCS);
     try
-      if doDump and not(dumpIsUpToDate) then begin
-        bmpWriter:=TFPWriterBMP.create;
+      if doDump and not(dumpIsUpToDate) and (image<>nil) then begin
+        bmpWriter:=TFPWriterPNG.create;
         if dumpName='' then dumpName:=getTempFileName;
         tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
         tempIntfImage.saveToFile(dumpName,bmpWriter);
@@ -318,7 +319,7 @@ PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
 
 PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
   VAR tempIntfImage: TLazIntfImage;
-      bmpReader:TFPReaderBMP;
+      bmpReader:TFPReaderPNG;
   begin
     enterCriticalSection(frameCS);
     try
@@ -331,7 +332,7 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quali
           image:=TImage.create(nil);
           image.SetInitialBounds(0,0,width,height);
           tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-          bmpReader:=TFPReaderBMP.create;
+          bmpReader:=TFPReaderPNG.create;
           tempIntfImage.loadFromFile(dumpName,bmpReader);
           bmpReader.destroy;
           image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
@@ -568,15 +569,29 @@ PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOp
     leaveCriticalSection(seriesCs);
   end;
 
+PROCEDURE T_plotSeries.flushFramesToDisk;
+  VAR k:longint;
+  begin
+    enterCriticalSection(seriesCs);
+    try
+      tryToKeepMemoryLow:=true;
+      for k:=0 to length(frame)-1 do frame[k]^.clearImage(true);
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
+  end;
+
 CONSTRUCTOR T_plotSeries.create;
   begin
     setLength(frame,0);
     initCriticalSection(seriesCs);
     clear;
+    memoryCleaner.registerObjectForCleanup(@flushFramesToDisk);
   end;
 
 DESTRUCTOR T_plotSeries.destroy;
   begin
+    memoryCleaner.unregisterObjectForCleanup(@flushFramesToDisk);
     clear;
     doneCriticalSection(seriesCs);
   end;
@@ -592,7 +607,7 @@ PROCEDURE T_plotSeries.clear;
     finally
       leaveCriticalSection(seriesCs);
     end;
-    tryToKeepMemoryLow:=not(isMemoryInComfortZone);
+    tryToKeepMemoryLow:=false;
   end;
 
 FUNCTION T_plotSeries.frameCount: longint;
@@ -608,7 +623,6 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
   PROCEDURE handleImagesToFree;
     VAR k,j:longint;
     begin
-      tryToKeepMemoryLow:=tryToKeepMemoryLow or not(isMemoryInComfortZone);
       //remove current from list
       k:=0;
       while k<length(framesWithImagesAllocated)-1 do
