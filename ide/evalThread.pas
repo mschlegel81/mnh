@@ -321,6 +321,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
     end;
 
   PROCEDURE doneEdit;
+    VAR clearConsoleMessage:P_storedMessage;
     begin
       package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
@@ -329,8 +330,12 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
 
-      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then
-      StdOut^.appendAll(collector.storedMessages);
+      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then begin
+        new(clearConsoleMessage,create(mt_clearConsole,C_nilTokenLocation));
+        StdOut^.append(clearConsoleMessage);
+        disposeMessage(clearConsoleMessage);
+        StdOut^.appendAll(collector.storedMessages);
+      end;
       collector.clear;
     end;
 
