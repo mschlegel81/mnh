@@ -317,14 +317,24 @@ FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_e
     end;
   end;
 
-FUNCTION T_workspace.addOrGetEditorMetaForFiles(
-  CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
+FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
     FUNCTION isPseudoName:boolean;
       begin
         result:=(length(fileName)>1)
             and (fileName[1]='<')
             and (fileName[length(fileName)]='>');
+      end;
+
+    PROCEDURE updateMarkers(CONST meta:P_editorMeta);
+      VAR k:longint=0;
+          i:longint;
+      begin
+        while k<length(oldMarkers) do if oldMarkers[k].location.fileName=fileName then begin
+          meta^._add_breakpoint_or_bookmark_(oldMarkers[k].location.line,oldMarkers[k].location.column,oldMarkers[k].markIndex);
+          for i:=k to length(oldMarkers)-2 do oldMarkers[i]:=oldMarkers[i+1];
+          setLength(oldMarkers,length(oldMarkers)-1);
+        end else inc(k);
       end;
 
     VAR meta:P_editorMeta;
@@ -335,6 +345,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(
         for meta in metas do if SameFileName(meta^.fileInfo.filePath,fileName) then begin result:=meta; exit; end;
         result:=addEditorMetaForNewFile();
         result^.setFile(fileName);
+        updateMarkers(result);
         //Update history:
         fileHistory.fileClosed(fileName);
       end;
@@ -357,6 +368,7 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
   VAR meta:P_editorMeta;
       k:longint;
       mark:TSynEditMark;
+      location:T_searchTokenLocation;
   begin
     for meta in metas do begin
       for k:=0 to meta^.editor.Marks.count-1 do begin
@@ -369,6 +381,11 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
           exit;
         end;
       end;
+    end;
+    for k:=0 to length(oldMarkers)-1 do if oldMarkers[k].markIndex=index then begin
+      location:=oldMarkers[k].location;
+      openLocation(location);
+      exit;
     end;
   end;
 

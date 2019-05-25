@@ -15,7 +15,7 @@ USES sysutils,Classes,
      debugging,
      cmdLineInterpretation,
      recyclers,
-     mnh_plotForm,
+     mnh_plotForm, mnh_plotData,
      mnh_imig_form,
      synOutAdapter,
      variableTreeViews,
@@ -100,6 +100,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST quickStdout:P_synOutAdapter);
       FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
+      DESTRUCTOR destroy; virtual;
   end;
 
   T_ideScriptEvaluation = object (T_abstractEvaluation)
@@ -151,6 +152,13 @@ DESTRUCTOR T_abstractEvaluation.destroy;
     messages.destroy;
     leaveCriticalSection(evaluationCs);
     doneCriticalSection(evaluationCs);
+  end;
+
+DESTRUCTOR T_quickEvaluation.destroy;
+  begin
+    if (parentProvider<>nil) and (parentProvider^.disposeOnPackageDestruction) then dispose(parentProvider,destroy);
+    setLength(toEvaluate,0);
+    inherited destroy;
   end;
 
 CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
@@ -318,6 +326,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
     end;
 
   PROCEDURE doneEdit;
+    VAR clearConsoleMessage:P_storedMessage;
     begin
       package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
@@ -326,8 +335,12 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
 
-      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then
-      StdOut^.appendAll(collector.storedMessages);
+      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then begin
+        new(clearConsoleMessage,create(mt_clearConsole,C_nilTokenLocation));
+        StdOut^.append(clearConsoleMessage);
+        disposeMessage(clearConsoleMessage);
+        StdOut^.appendAll(collector.storedMessages);
+      end;
       collector.clear;
     end;
 
@@ -380,7 +393,13 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
     try
       if evaluateInParent
       then parentProvider:=parent
-      else parentProvider:=nil;
+      else begin
+        if (parent<>nil) and (parent^.disposeOnPackageDestruction) then begin
+          parentProvider:=parent;
+          dispose(parentProvider,destroy);
+        end;
+        parentProvider:=nil;
+      end;
       setLength(toEvaluate,0);
       append(toEvaluate,input);
       state:=es_pending;
@@ -397,12 +416,13 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
   begin
     if parentProvider=nil then begin
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
-      globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
+      globals.resetForEvaluation(@package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
       globals.afterEvaluation(recycler);
     end else begin
       package.replaceCodeProvider(parentProvider);
-      globals.resetForEvaluation(@package,nil,ect_normal,C_EMPTY_STRING_ARRAY,recycler);      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.resetForEvaluation(@package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});

@@ -50,12 +50,13 @@ TYPE
   T_plotOptionsMessage=object(T_payloadMessage)
     private
       options:T_scalingOptions;
+      modified:T_scalingOptionElements;
       retrieved:boolean;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR createRetrieveRequest;
-      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions);
+      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions; CONST m:T_scalingOptionElements);
       PROCEDURE setOptions(CONST o:T_scalingOptions);
       FUNCTION getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   end;
@@ -169,6 +170,7 @@ TYPE
       seriesCs:TRTLCriticalSection;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
+      PROCEDURE flushFramesToDisk;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -212,7 +214,7 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadBMP,FPWriteBMP,IntfGraphics,myStringUtil,base64;
+USES FPReadPNG,FPWritePNG,IntfGraphics,myStringUtil;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -297,12 +299,12 @@ PROCEDURE T_plotSeriesFrame.invalidate;
 
 PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
   VAR tempIntfImage: TLazIntfImage;
-      bmpWriter:TFPWriterBMP;
+      bmpWriter:TFPWriterPNG;
   begin
     enterCriticalSection(frameCS);
     try
-      if doDump and not(dumpIsUpToDate) then begin
-        bmpWriter:=TFPWriterBMP.create;
+      if doDump and not(dumpIsUpToDate) and (image<>nil) then begin
+        bmpWriter:=TFPWriterPNG.create;
         if dumpName='' then dumpName:=getTempFileName;
         tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
         tempIntfImage.saveToFile(dumpName,bmpWriter);
@@ -318,7 +320,7 @@ PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
 
 PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
   VAR tempIntfImage: TLazIntfImage;
-      bmpReader:TFPReaderBMP;
+      bmpReader:TFPReaderPNG;
   begin
     enterCriticalSection(frameCS);
     try
@@ -331,7 +333,7 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quali
           image:=TImage.create(nil);
           image.SetInitialBounds(0,0,width,height);
           tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-          bmpReader:=TFPReaderBMP.create;
+          bmpReader:=TFPReaderPNG.create;
           tempIntfImage.loadFromFile(dumpName,bmpReader);
           bmpReader.destroy;
           image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
@@ -513,11 +515,12 @@ CONSTRUCTOR T_plotOptionsMessage.createRetrieveRequest;
     retrieved:=false;
   end;
 
-CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions);
+CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions; CONST m:T_scalingOptionElements);
   begin
     inherited create(mt_plot_setOptions);
     retrieved:=true;
     options:=o;
+    modified:=m;
   end;
 
 PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
@@ -568,15 +571,29 @@ PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOp
     leaveCriticalSection(seriesCs);
   end;
 
+PROCEDURE T_plotSeries.flushFramesToDisk;
+  VAR k:longint;
+  begin
+    enterCriticalSection(seriesCs);
+    try
+      tryToKeepMemoryLow:=true;
+      for k:=0 to length(frame)-1 do frame[k]^.clearImage(true);
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
+  end;
+
 CONSTRUCTOR T_plotSeries.create;
   begin
     setLength(frame,0);
     initCriticalSection(seriesCs);
     clear;
+    memoryCleaner.registerObjectForCleanup(@flushFramesToDisk);
   end;
 
 DESTRUCTOR T_plotSeries.destroy;
   begin
+    memoryCleaner.unregisterObjectForCleanup(@flushFramesToDisk);
     clear;
     doneCriticalSection(seriesCs);
   end;
@@ -592,7 +609,7 @@ PROCEDURE T_plotSeries.clear;
     finally
       leaveCriticalSection(seriesCs);
     end;
-    tryToKeepMemoryLow:=not(isMemoryInComfortZone);
+    tryToKeepMemoryLow:=false;
   end;
 
 FUNCTION T_plotSeries.frameCount: longint;
@@ -608,7 +625,6 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
   PROCEDURE handleImagesToFree;
     VAR k,j:longint;
     begin
-      tryToKeepMemoryLow:=tryToKeepMemoryLow or not(isMemoryInComfortZone);
       //remove current from list
       k:=0;
       while k<length(framesWithImagesAllocated)-1 do
@@ -1476,7 +1492,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_retrieveOptions:
         P_plotOptionsMessage(message)^.setOptions(currentPlot.scalingOptions);
       mt_plot_setOptions:
-        currentPlot.scalingOptions:=P_plotOptionsMessage(message)^.options;
+        currentPlot.scalingOptions.modifyOptions(P_plotOptionsMessage(message)^.options,P_plotOptionsMessage(message)^.modified);
       mt_plot_clear:
         currentPlot.clear;
       mt_plot_clearAnimation:
@@ -1512,39 +1528,53 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
       i:longint;
       globalRowData:P_listLiteral;
       dummyLocation:T_tokenLocation;
-      dummyBool:boolean=false;
+      commands:T_arrayOfString;
+      DataString:string;
   begin
     enterCriticalSection(adapterCs);
     try
       globalRowData:=newListLiteral();
       result:='plain script;';
-      myGenerics.append(result,'ROW:=');
-      myGenerics.append(result,'resetOptions;');
-      myGenerics.append(result,'clearAnimation;');
+
+      commands:='resetOptions;';
+      myGenerics.append(commands,'clearAnimation;');
       prevOptions.setDefaults;
       if animation.frameCount>0 then begin
         if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-          myGenerics.append(result,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
+          myGenerics.append(commands,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
           prevOptions:=animation.frame[i]^.plotData.scalingOptions;
-          myGenerics.append(result,'addAnimationFrame;');
+          myGenerics.append(commands,'addAnimationFrame;');
         end else begin
-          myGenerics.append(result,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
         end;
       end else begin
-        myGenerics.append(result,currentPlot.getRowStatements(prevOptions,globalRowData^));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,globalRowData^));
       end;
-      result[1]:='ROW:='+
-                 escapeString(
-                   EncodeStringBase64(
-                     compressString(
-                       serialize(globalRowData,
-                                 dummyLocation,
-                                 nil),
-                       [C_compression_gzip])),
-                   es_pickShortest,
-                   se_testPending,
-                   dummyBool)+'.base64decode.decompress.deserialize;';
+      DataString:=base92Encode(
+                   compressString(
+                     serialize(globalRowData,
+                               dummyLocation,
+                               nil),
+                     [C_compression_gzip]));
+      myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,160));
+      DataString:=copy(DataString,161,length(DataString));
+      while length(DataString)>0 do begin
+        myGenerics.append(result,'     '+copy(DataString,1,164));
+        DataString:=copy(DataString,165,length(DataString));
+      end;
+      result[length(result)-1]+='~';
+      if length(result[length(result)-1])<151
+      then result[length(result)-1]+='.base92decode'
+      else myGenerics.append(result, '.base92decode');
+      if length(result[length(result)-1])<153
+      then result[length(result)-1]+='.decompress'
+      else myGenerics.append(result, '.decompress');
+      if length(result[length(result)-1])<151
+      then result[length(result)-1]+='.deserialize;'
+      else myGenerics.append(result, '.deserialize;');
+      myGenerics.append(result,commands);
       myGenerics.append(result,'display;');
+      setLength(commands,0);
     finally
       disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);

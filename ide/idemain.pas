@@ -508,16 +508,18 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
+  VAR mainParam:string;
   begin
     ensureTimerSuspend;
-    if customRunForm(false).ShowModal=mrOk then runnerModel.customRun(true,customRunForm(false).scriptParamEdit.text);
+    if showCustomRunForm(false,mainParam) then runnerModel.customRun(true,mainParam);
     timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
+  VAR mainParam:string;
   begin
     ensureTimerSuspend;
-    if customRunForm(true).ShowModal=mrOk then runnerModel.runExternally(customRunForm(true).scriptParamEdit.text);
+    if showCustomRunForm(true,mainParam) then runnerModel.runExternally(mainParam);
     timer.enabled:=true;
   end;
 
@@ -652,6 +654,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           slowUpdateState:='Polling assistant result';
           edit^.pollAssistanceResult;
           slowUpdateState:='Updating form caption';
+          miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
           if edit^.isPseudoFile
           then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
           else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
