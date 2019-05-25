@@ -50,12 +50,13 @@ TYPE
   T_plotOptionsMessage=object(T_payloadMessage)
     private
       options:T_scalingOptions;
+      modified:T_scalingOptionElements;
       retrieved:boolean;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR createRetrieveRequest;
-      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions);
+      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions; CONST m:T_scalingOptionElements);
       PROCEDURE setOptions(CONST o:T_scalingOptions);
       FUNCTION getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   end;
@@ -514,11 +515,12 @@ CONSTRUCTOR T_plotOptionsMessage.createRetrieveRequest;
     retrieved:=false;
   end;
 
-CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions);
+CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions; CONST m:T_scalingOptionElements);
   begin
     inherited create(mt_plot_setOptions);
     retrieved:=true;
     options:=o;
+    modified:=m;
   end;
 
 PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
@@ -1490,7 +1492,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_retrieveOptions:
         P_plotOptionsMessage(message)^.setOptions(currentPlot.scalingOptions);
       mt_plot_setOptions:
-        currentPlot.scalingOptions:=P_plotOptionsMessage(message)^.options;
+        currentPlot.scalingOptions.modifyOptions(P_plotOptionsMessage(message)^.options,P_plotOptionsMessage(message)^.modified);
       mt_plot_clear:
         currentPlot.clear;
       mt_plot_clearAnimation:

@@ -138,6 +138,7 @@ FUNCTION getOptions intFuncSignature;
 FUNCTION setOptions intFuncSignature;
   VAR opt:T_scalingOptions;
       allOkay:boolean=true;
+      modified:T_scalingOptionElements=[];
   PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
     PROCEDURE fail;
       begin
@@ -150,42 +151,55 @@ FUNCTION setOptions intFuncSignature;
     begin
       if (key='x0'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMin:=f;
+        include(modified,soe_x0);
       end else
       if (key='x1'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMax:=f;
+        include(modified,soe_x1);
       end else
       if (key='y0'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMin:=f;
+        include(modified,soe_y0);
       end else
       if (key='y1'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMax:=f;
+        include(modified,soe_y1);
       end else
       if (key='fontsize'      ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.relativeFontSize:=f;
+        include(modified,soe_fontsize);
       end else
       if (key='autoscaleFactor') and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) or (f<1E-3) then fail else opt.autoscaleFactor:=f;
+        include(modified,soe_autoscaleFactor);
       end else
       if (key='preserveAspect') and (value^.literalType=lt_boolean) then begin
         opt.preserveAspect:=P_boolLiteral(value)^.value;
+        include(modified,soe_preserveAspect);
       end else
       if (key='autoscaleX'    ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['x'].autoscale:=P_boolLiteral(value)^.value;
+        include(modified,soe_autoscaleX);
       end else
       if (key='autoscaleY'    ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['y'].autoscale:=P_boolLiteral(value)^.value;
+        include(modified,soe_autoscaleY);
       end else
       if (key='logscaleX'     ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['x'].logscale:=P_boolLiteral(value)^.value;
+        include(modified,soe_logscaleX);
       end else
       if (key='logscaleY'     ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['y'].logscale:=P_boolLiteral(value)^.value;
+        include(modified,soe_logscaleY);
       end else
       if (key='axisStyleX'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
         opt.axisStyle['x']:=P_abstractIntLiteral(value)^.intValue and 7;
+        include(modified,soe_axisStyleX);
       end else
       if (key='axisStyleY'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
         opt.axisStyle['y']:=P_abstractIntLiteral(value)^.intValue and 7;
+        include(modified,soe_axisStyleY);
       end else fail;
     end;
 
@@ -195,7 +209,7 @@ FUNCTION setOptions intFuncSignature;
   begin
     if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     result:=nil;
-    opt:=getOptionsViaAdapters(context.messages);
+    opt.setDefaults;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       iter:=compound0^.iteratableList;
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
@@ -211,7 +225,7 @@ FUNCTION setOptions intFuncSignature;
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;
     if allOkay then begin
-      new(postOptionsMessage,createPostRequest(opt));
+      new(postOptionsMessage,createPostRequest(opt,modified));
       context.messages^.postCustomMessage(postOptionsMessage,true);
     end;
   end;
@@ -223,7 +237,7 @@ FUNCTION resetOptions_impl intFuncSignature;
     if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       opt.setDefaults;
-      new(postOptionsMessage,createPostRequest(opt));
+      new(postOptionsMessage,createPostRequest(opt,[low(T_scalingOptionElement)..high(T_scalingOptionElement)]));
       context.messages^.postCustomMessage(postOptionsMessage);
       result:=newVoidLiteral;
     end else result:=nil;

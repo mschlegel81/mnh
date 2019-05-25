@@ -89,6 +89,8 @@ TYPE
   end;
 
   T_allSamples=array of T_sampleRow;
+  T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY);
+  T_scalingOptionElements=set of T_scalingOptionElement;
   T_scalingOptions=object
     preserveAspect  : boolean;
     relativeFontSize: double;
@@ -103,6 +105,7 @@ TYPE
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
     FUNCTION getOptionString:string;
     FUNCTION getOptionDiffString(CONST before:T_scalingOptions):string;
+    PROCEDURE modifyOptions(CONST o:T_scalingOptions; CONST modified:T_scalingOptionElements);
   end;
 
   T_customTextAnchor=(cta_topLeft   ,cta_top   ,cta_topRight   ,
@@ -134,6 +137,7 @@ TYPE
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
+
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
     result[0]:=x;
@@ -754,6 +758,23 @@ FUNCTION T_scalingOptions.getOptionDiffString(CONST before:T_scalingOptions):str
     if axisStyle['x']          <>before.axisStyle['x']           then result+=BoolToStr(result='','',',')+'"axisStyleX"=>'+intToStr(byte(axisStyle['x']));
     if axisStyle['y']          <>before.axisStyle['y']           then result+=BoolToStr(result='','',',')+'"axisStyleY"=>'+intToStr(byte(axisStyle['y']));
     if result<>'' then result:='setOptions(['+result+'].toMap);';
+  end;
+
+PROCEDURE T_scalingOptions.modifyOptions(CONST o:T_scalingOptions; CONST modified:T_scalingOptionElements);
+  begin
+    if soe_x0              in modified then axisTrafo['x'].worldMin :=o.axisTrafo['x'].worldMin ;
+    if soe_x1              in modified then axisTrafo['x'].worldMax :=o.axisTrafo['x'].worldMax ;
+    if soe_y0              in modified then axisTrafo['y'].worldMin :=o.axisTrafo['y'].worldMin ;
+    if soe_y1              in modified then axisTrafo['y'].worldMax :=o.axisTrafo['y'].worldMax ;
+    if soe_fontsize        in modified then relativeFontSize        :=o.relativeFontSize        ;
+    if soe_autoscaleFactor in modified then autoscaleFactor         :=o.autoscaleFactor         ;
+    if soe_preserveAspect  in modified then preserveAspect          :=o.preserveAspect          ;
+    if soe_autoscaleX      in modified then axisTrafo['x'].autoscale:=o.axisTrafo['x'].autoscale;
+    if soe_autoscaleY      in modified then axisTrafo['y'].autoscale:=o.axisTrafo['y'].autoscale;
+    if soe_logscaleX       in modified then axisTrafo['x'].logscale :=o.axisTrafo['x'].logscale ;
+    if soe_logscaleY       in modified then axisTrafo['y'].logscale :=o.axisTrafo['y'].logscale ;
+    if soe_axisStyleX      in modified then axisStyle['x']          :=o.axisStyle['x']          ;
+    if soe_axisStyleY      in modified then axisStyle['y']          :=o.axisStyle['y']          ;
   end;
 
 CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
