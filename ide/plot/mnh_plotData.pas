@@ -166,7 +166,6 @@ TYPE
     private
       frame:array of P_plotSeriesFrame;
       framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
-      tryToKeepMemoryLow:boolean;
       seriesCs:TRTLCriticalSection;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
@@ -573,11 +572,12 @@ PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOp
 
 PROCEDURE T_plotSeries.flushFramesToDisk;
   VAR k:longint;
+      cleanupTimeout:double;
   begin
     enterCriticalSection(seriesCs);
+    cleanupTimeout:=now+1/(24*60*60);
     try
-      tryToKeepMemoryLow:=true;
-      for k:=0 to length(frame)-1 do frame[k]^.clearImage(true);
+      for k:=0 to length(frame)-1 do if now<cleanupTimeout then frame[k]^.clearImage(settings.cacheAnimationFrames);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -609,7 +609,6 @@ PROCEDURE T_plotSeries.clear;
     finally
       leaveCriticalSection(seriesCs);
     end;
-    tryToKeepMemoryLow:=false;
   end;
 
 FUNCTION T_plotSeries.frameCount: longint;
@@ -635,7 +634,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one, dump to file
       k:=length(framesWithImagesAllocated)-1;
-      if (framesWithImagesAllocated[k]<>nil) and (tryToKeepMemoryLow or not(settings.cacheAnimationFrames)) then framesWithImagesAllocated[k]^.clearImage(settings.cacheAnimationFrames);
+      if (framesWithImagesAllocated[k]<>nil) and (not(isMemoryInComfortZone) or not(settings.cacheAnimationFrames)) then framesWithImagesAllocated[k]^.clearImage(settings.cacheAnimationFrames);
       //shift
       move(framesWithImagesAllocated[0],
            framesWithImagesAllocated[1],
