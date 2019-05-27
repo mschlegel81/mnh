@@ -231,6 +231,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
         ids :=readArrayOfString;
         addExample(code,html,txt ,ids);
       end;
+      result:=result and wrapper.allOkay;
       wrapper.destroy;
     end;
 

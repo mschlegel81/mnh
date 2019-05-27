@@ -1,7 +1,6 @@
 UNIT tokenArray;
 INTERFACE
-USES sysutils,math,
-     myGenerics,myStringUtil,
+USES myGenerics,myStringUtil,
      basicTypes,mnh_constants,
      fileWrappers,
      litVar,
@@ -178,6 +177,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
+USES sysutils,math;
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
   VAR t:P_token;
       rule:P_abstractRule;
@@ -530,7 +530,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
-      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el2_warning,inputLocation,commentText);
+      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el1_note,inputLocation,commentText);
     end;
 
   VAR id:ansistring='';

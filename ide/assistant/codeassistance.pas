@@ -76,14 +76,16 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
       loadMessages:T_storedMessages;
   begin
     if givenGlobals=nil then begin
-      adapters.createErrorHolder(nil,C_errorsAndWarnings);
+      adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
       new(globals,create(@adapters));
     end else begin
       globals:=givenGlobals;
       givenAdapters^.clear;
     end;
     new(package,create(source,nil));
-    initialStateHash:=source^.stateHash;
+    {$Q-}{$R-}
+    initialStateHash:=source^.stateHash xor hashOfAnsiString(source^.getPath);
+    {$Q+}{$R+}
     globals^.resetForEvaluation(package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     new(localIdInfos,create);
     package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos);
@@ -138,7 +140,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
   VAR recycler:T_recycler;
   begin
     //setup:
-    adapters.createErrorHolder(nil,C_errorsAndWarnings);
+    adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
     new(globals,create(@adapters));
     recycler.initRecycler;
     //:setup
@@ -322,7 +324,7 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
 
     setLength(localErrors,0);
     setLength(externalErrors,0);
-    for level:=4 downto 2 do for m in messages do
+    for level:=4 downto 1 do for m in messages do
     if C_messageTypeMeta[m^.messageType].level=level then begin
       if m^.getLocation.fileName=package_^.getPath
       then begin
