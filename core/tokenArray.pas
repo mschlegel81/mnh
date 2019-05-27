@@ -457,6 +457,11 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         tokenText:=operatorName[token^.tokType];
         result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
       end;
+      tt_attributeComment: begin
+        if tokenText=ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE then result.infoText+=C_lineBreakChar+'marks a nullary subrule for execution after the script is finished without raising an error';
+        if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
+        if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
+      end;
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
