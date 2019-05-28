@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="80">
+    <Units Count="82">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -529,6 +529,14 @@
         <Filename Value="../core/tokens.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit79>
+      <Unit80>
+        <Filename Value="../core/tokenArray.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit80>
+      <Unit81>
+        <Filename Value="../core/tokenStack.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit81>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
