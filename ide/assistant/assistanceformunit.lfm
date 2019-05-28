@@ -1,24 +1,23 @@
 object AssistanceForm: TAssistanceForm
   Left = 817
-  Height = 360
+  Height = 240
   Top = 165
-  Width = 480
+  Width = 320
   Caption = 'Assistance'
-  ClientHeight = 360
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 240
+  ClientWidth = 320
   DragKind = dkDock
   DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   inline AssistanceEdit: TSynEdit
     Left = 0
-    Height = 360
+    Height = 240
     Top = 0
-    Width = 480
+    Width = 320
     Align = alClient
-    Font.Height = -13
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -456,6 +455,7 @@ object AssistanceForm: TAssistanceForm
     MouseSelActions = <>
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
+    RightEdge = 0
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
