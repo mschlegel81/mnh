@@ -110,6 +110,6 @@ main->randomRiddle.printBoard;
 //*Create count riddles
 main(count)->begin
   local iCount:=count.toInt;
-  iCount<=0 ? fail('count must be >0') : void;
+  assert(iCount>0,'count must be >0');
   [1..iCount].pMap(::randomRiddle).each(r,print('============================='),r.printBoard);
 end;

@@ -87,8 +87,8 @@ private myMove(source,dest:String)->fileExists(source) ? begin
     stopOeisServer;
     sleep(0.5);
   end);
-  fileExists(dest) ? fail('Failed deleting '+dest) : void;
-  moveFile(source,dest) ? void : fail('File move '+source+' -> '+dest+' failed!');
+  assert(!fileExists(dest),'Failed deleting '+dest);
+  assert(moveFile(source,dest),'File move '+source+' -> '+dest+' failed!');
 end : fail('File  '+source+' does not exist');
 
 private BUILD_LOG:='build.log';
@@ -148,9 +148,7 @@ end;
 
 private verboseDelete(file)->
   fileExists(file)
-  ? deleteFile(file)
-    ? void
-    : fail('Could not delete ',file)
+  ? assert(deleteFile(file),'Could not delete ',file)
   : void;
 
 private cleanup->begin
@@ -187,11 +185,11 @@ main->main('build');
 //*Build all targets
 main('build')->BUILDS.reverseList.each(B,B.buildExe);
 //*Test all targets - non-debug versions will be built if necessary
-main('test')->BUILDS.reverseList.each(B,B.testExe,and) ? void : fail('There are failed tests');
+main('test')->BUILDS.reverseList.each(B,B.testExe,and).assert('There are failed tests');
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
-main('retest')->BUILDS.reverseList.each(B,B.testExe('retest'),and) ? void : fail('There are failed tests');
+main('retest')->BUILDS.reverseList.each(B,B.testExe('retest'),and).assert('There are failed tests');
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
-main('noLogTest')->BUILDS.reverseList.each(B,B.testExe('noLog'),and) ? void : fail('There are failed tests');
+main('noLogTest')->BUILDS.reverseList.each(B,B.testExe('noLog'),and).assert('There are failed tests');
 //*Show the current built status
 main('status')->showStatus;
 //*Show the current built status
@@ -240,8 +238,8 @@ main(target:String)->begin
     testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
                    : {buildExe($B) orElse                    true};
 
-  BUILDS.each(B,isSameFileName(B['targetDest'],tgt) OR tgt=B['flavour'] ? buildAndTest(B) OR fail orElse true : false,OR) OR
-  BUILDS.each(B,matches       (B['targetDest'],tgt)                     ? buildAndTest(B) OR fail orElse true : false,or)
+  BUILDS.each(B,isSameFileName(B['targetDest'],tgt) OR tgt=B['flavour'] ? buildAndTest(B).assert orElse true : false,OR) OR
+  BUILDS.each(B,matches       (B['targetDest'],tgt)                     ? buildAndTest(B).assert orElse true : false,or)
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | '<target name or pattern>').join("\n"));
 end;

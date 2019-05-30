@@ -14,7 +14,7 @@ private testGray(i:Int)->begin
   local b :=digits(i,2)=1;
   local g :=b.toGray;
   local b2:=g.fromGray;
-  b2==b ? void : fail('Reconstruction was invalid!');
+  assert(b2==b,'Reconstruction was invalid!');
   [i,b.ord.join,g.ord.join];
 end;
 
