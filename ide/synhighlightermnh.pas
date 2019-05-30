@@ -46,10 +46,8 @@ CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tok
      SPECIAL_LINE_CASE_TM2 =6;
 
 TYPE
-  TSynMnhSyn = class(TSynCustomHighlighter)
+  TAbstractSynMnhSyn = class(TSynCustomHighlighter)
   private
-    //Initialized only
-    flavour :T_mnhSynFlavour;
     styleTable: array[T_tokenKind,T_tokenSubKind] of TSynHighlighterAttributes;
     fLine: PChar;
     blobEnder:char;
@@ -58,14 +56,12 @@ TYPE
     fTokenId: T_tokenKind;
     fTokenSubId: T_tokenSubKind;
     fLineNumber: integer;
-    markedWord:string;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
-    highlightingData:T_highlightingData;
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); reintroduce;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}
@@ -81,8 +77,38 @@ TYPE
     PROCEDURE ResetRange; override;
     PROCEDURE setRange(value: pointer); override;
     PROCEDURE SetLine(CONST newValue: ansistring; LineNumber: integer); override;
-    FUNCTION setMarkedWord(CONST s:ansistring):boolean;
     FUNCTION getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
+
+    PROCEDURE handle194; virtual;
+    PROCEDURE handleId(CONST id:string; CONST line,col:longint); virtual;
+  end;
+
+  TMnhInputSyn = class(TAbstractSynMnhSyn)
+    private
+      markedWord:string;
+    public
+      highlightingData:T_highlightingData;
+      CONSTRUCTOR create(AOwner: TComponent); reintroduce;
+      DESTRUCTOR destroy; override;
+      FUNCTION setMarkedWord(CONST s:ansistring):boolean;
+      PROCEDURE next; override;
+      PROCEDURE handleId(CONST id:string; CONST line,col:longint); override;
+  end;
+
+  TMnhOutputSyn = class(TAbstractSynMnhSyn)
+    public
+      CONSTRUCTOR create(AOwner: TComponent); reintroduce;
+      DESTRUCTOR destroy; override;
+      PROCEDURE next; override;
+  end;
+
+  TMnhDebugSyn = class(TAbstractSynMnhSyn)
+    public
+      CONSTRUCTOR create(AOwner: TComponent); reintroduce;
+      DESTRUCTOR destroy; override;
+      PROCEDURE next; override;
+
+      PROCEDURE handle194; override;
   end;
 
 PROCEDURE initLists;
@@ -91,13 +117,17 @@ VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
     builtinRules:T_setOfString;
 
-CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
+FUNCTION TMnhInputSyn.setMarkedWord(CONST s: ansistring): boolean;
+  begin
+    result:=(s<>markedWord);
+    markedWord:=s;
+  end;
+
+CONSTRUCTOR TAbstractSynMnhSyn.create(AOwner: TComponent; CONST flav: T_mnhSynFlavour);
   VAR t:T_tokenKind;
       s:T_tokenSubKind;
   begin
     inherited create(AOwner);
-    highlightingData.create;
-    flavour:=flav;
     for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do begin
       styleTable[tkComment         ,s]:=TSynHighlighterAttributes.create('Comment');
       styleTable[tkDocComment      ,s]:=TSynHighlighterAttributes.create('DocComment');
@@ -127,9 +157,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkSpecialRule     ,s].style:=[fsBold];
       styleTable[tkOperator        ,s].style:=[fsBold];
       styleTable[tkModifier        ,s].style:=[fsBold];
-      styleTable[tkError           ,s].style:=[fsBold];
-      styleTable[tkWarning         ,s].style:=[fsBold];
-      styleTable[tkNote            ,s].style:=[fsBold];
+      styleTable[tkError           ,s].style:=[fsBold,fsUnderline];
       styleTable[tkTimingNote      ,s].style:=[fsBold];
       styleTable[tkHighlightedItem ,s].style:=[fsBold];
 
@@ -148,15 +176,15 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkModifier        ,s].foreground:=$000088ff;
       styleTable[tkNull            ,s].foreground:=$00000000;
       styleTable[tkError           ,s].foreground:=$000000ff;
-      styleTable[tkError           ,s].background:=$0000FFFF;
       styleTable[tkWarning         ,s].foreground:=$000000ff;
+      styleTable[tkNote            ,s].foreground:=$00666666;
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
       styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
     end;
     styleTable[tkTimingNote,skWarn].style:=[];
     styleTable[tkTimingNote,skWarn].background:=$00F6F6F6;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
-      if flavour=msf_debug
+      if flav=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
       else if t<>tkTimingNote then begin
         styleTable[t,skWarn].FrameColor:=clRed;
@@ -169,25 +197,56 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[t,skError].FrameStyle:=slsWaved;
       styleTable[t,skError].FrameEdges:=sfeBottom;
     end;
-    markedWord:='';
   end; { Create }
 
-DESTRUCTOR TSynMnhSyn.destroy;
+CONSTRUCTOR TMnhInputSyn.create(AOwner: TComponent);
+  begin
+    inherited create(AOwner,msf_input);
+    highlightingData.create;
+    markedWord:='';
+  end;
+
+CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent);
+  begin
+    inherited create(AOwner,msf_output);
+  end;
+
+CONSTRUCTOR TMnhDebugSyn.create(AOwner: TComponent);
+  begin
+    inherited create(AOwner,msf_debug)
+  end;
+
+DESTRUCTOR TAbstractSynMnhSyn.destroy;
   VAR t: T_tokenKind;
       s: T_tokenSubKind;
   begin
     for t:=low(T_tokenKind)    to high(T_tokenKind) do
     for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do styleTable[t,s].destroy;
+    inherited destroy;
+  end;
+
+DESTRUCTOR TMnhInputSyn.destroy;
+  begin
     highlightingData.destroy;
     inherited destroy;
-  end; { Destroy }
+  end;
 
-FUNCTION TSynMnhSyn.GetDefaultAttribute(index: integer): TSynHighlighterAttributes;
+DESTRUCTOR TMnhOutputSyn.destroy;
+  begin
+    inherited destroy;
+  end;
+
+DESTRUCTOR TMnhDebugSyn.destroy;
+  begin
+    inherited destroy;
+  end;
+
+FUNCTION TAbstractSynMnhSyn.GetDefaultAttribute(index: integer): TSynHighlighterAttributes;
   begin
     result := styleTable [tkDefault,skNormal];
   end;
 
-PROCEDURE TSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
+PROCEDURE TAbstractSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
   begin
     inherited;
     fLine := PChar(newValue);
@@ -197,32 +256,56 @@ PROCEDURE TSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
     next;
   end;
 
-FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
-  begin
-    result:=(s<>markedWord);
-    markedWord:=s;
-  end;
-
-FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
+FUNCTION TAbstractSynMnhSyn.getAttributeForKind(CONST kind: T_tokenKind): TSynHighlighterAttributes;
   begin
     result:=styleTable[kind,skNormal];
   end;
 
-PROCEDURE TSynMnhSyn.next;
+PROCEDURE TAbstractSynMnhSyn.handle194;
+  begin
+    fTokenId   :=tkError;
+    fTokenSubId:=skError;
+    inc(run);
+    if fLine[run]<>#0 then inc(run);
+  end;
+
+PROCEDURE TMnhDebugSyn.handle194;
+  begin
+    fTokenId   :=tkError;
+    fTokenSubId:=skError;
+    inc(run);
+    if (fLine[run]=#167) then blobEnder:=#194;
+    if fLine[run]<>#0 then inc(run);
+  end;
+
+PROCEDURE TAbstractSynMnhSyn.handleId(CONST id: string; CONST line, col: longint);
+  begin
+    if not(tokenTypeMap.containsKey(id,fTokenId))
+    then begin
+      if builtinRules.contains(id)
+      then fTokenId:=tkBultinRule
+      else fTokenId:=tkDefault;
+    end;
+  end;
+
+PROCEDURE TMnhInputSyn.handleId(CONST id: string; CONST line, col: longint);
+  begin
+    if id=markedWord then fTokenId:=tkHighlightedItem
+    else if tokenTypeMap.containsKey(id,fTokenId)    then begin end
+    else if highlightingData.isUserRule(id)          then fTokenId:=tkUserRule
+    else if highlightingData.isLocalId (id,line,col) then fTokenId:=tkLocalVar
+    else if builtinRules    .contains  (id)          then fTokenId:=tkBultinRule
+    else                                                  fTokenId:=tkDefault;
+  end;
+
+PROCEDURE TAbstractSynMnhSyn.next;
   VAR localId: shortstring;
-      i,j: longint;
-      specialLineCase:byte=0;
 
   FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
     VAR k:longint;
     begin
       result:=length(part)>0;
       for k:=1 to length(part) do if fLine[k-1+offset]<>part[k] then exit(false);
-    end;
-
-  FUNCTION startsWith(CONST prefix:shortstring):boolean;
-    begin
-      result:=continuesWith(prefix,0);
     end;
 
   PROCEDURE handleComment(endedBy:T_charSet; CONST isHashComment:boolean);
@@ -247,35 +330,7 @@ PROCEDURE TSynMnhSyn.next;
     end;
 
   begin
-    fTokenId := tkDefault;
-    fTokenSubId:=skNormal;
-    fTokenPos := run;
-    if (run = 0) and (flavour in [msf_output,msf_help]) then begin
-      i:=-1;
-      for j:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[j].marker) then specialLineCase:=j;
-      if i>=0 then run:=i+1;
-      fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
-      if specialLineCase=SPECIAL_LINE_CASE_TM2 then fTokenSubId:=skWarn;
-      if (specialLineCase=SPECIAL_LINE_CASE_ECHO) then begin
-        if (flavour=msf_output) then begin
-          while not(fLine[run] in [#0,'>']) do inc(run);
-          if fLine[run]='>' then inc(run);
-        end else inc(run,3);
-      end else while (fLine[run]<>#0) do inc(run);
-      if (run>0) and not((flavour=msf_help) and (specialLineCase=SPECIAL_LINE_CASE_ECHO)) then exit;
-    end else while (fLine[run]=' ') do inc(run);
-    if (flavour<>msf_debug) and (blobEnder<>#0) then begin
-      if fLine[run]=#0 then begin
-        fTokenId := tkNull;
-        exit;
-      end;
-      while (fLine[run]<>#0) and (fLine[run]<>blobEnder) do inc(run);
-      if fLine[run]=blobEnder then begin
-        blobEnder:=#0;
-        inc(run);
-      end;
-      fTokenId:=tkString;
-    end else case fLine [run] of
+    case fLine [run] of
       #0: fTokenId := tkNull;
       '{': begin
              inc(run);
@@ -294,13 +349,7 @@ PROCEDURE TSynMnhSyn.next;
         end;
         fTokenId := tkNonStringLiteral;
       end;
-      #194: begin
-        fTokenId   :=tkError;
-        fTokenSubId:=skError;
-        inc(run);
-        if (fLine[run]=#167) and (flavour=msf_debug) then blobEnder:=#194;
-        if fLine[run]<>#0 then inc(run);
-      end;
+      #194: handle194;
       '$': begin
         inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do inc(run);
@@ -313,12 +362,7 @@ PROCEDURE TSynMnhSyn.next;
           localId := localId+fLine [run];
           inc(run);
         end;
-        if localId=markedWord then fTokenId:=tkHighlightedItem
-        else if tokenTypeMap.containsKey(localId,fTokenId) then begin end
-        else if highlightingData.isUserRule(localId)                then fTokenId:=tkUserRule
-        else if highlightingData.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
-        else if builtinRules.contains(localId) then fTokenId:=tkBultinRule
-        else fTokenId := tkDefault;
+        handleId(localId,lineIndex+1,run);
       end;
       '@': if fTokenPos=0 then begin
              fTokenId:=tkSpecialComment;
@@ -327,12 +371,9 @@ PROCEDURE TSynMnhSyn.next;
              inc(run);
              fTokenId := tkOperator;
            end;
-      '|', '^', '?', '+', '&', '*', '.': begin
+      '=','<','>','-','|', '^', '?', '+', '&', '*', '.',':': begin
         inc(run);
-        fTokenId := tkOperator;
-      end;
-      '=','<','>','-': begin
-        while fLine [run] in ['=', '<', '>' ,'-'] do inc(run);
+        while fLine [run] in ['=', '<', '>' ,'-','|', '^', '?', '+', '&', '*', '.',':'] do inc(run);
         fTokenId := tkOperator;
       end;
       '/': begin
@@ -342,24 +383,6 @@ PROCEDURE TSynMnhSyn.next;
           handleComment([#0],false);
         end
         else fTokenId := tkOperator;
-      end;
-      ':': begin
-        inc(run);
-        case fLine [run] of
-          'm','c', 'b', 'e', 'i', 'l', 'n', 's', 'r', 'k', 'f': begin
-            localId := ':';
-            i:=run;
-            while fLine [i] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
-              localId := localId+fLine [i];
-              inc(i);
-            end;
-            fTokenId := tkDefault;
-            if fTokenId<>tkOperator then begin
-              fTokenId := tkOperator;
-            end;
-          end;
-          else fTokenId := tkOperator;
-        end;
       end;
       '"': begin
         inc(run);
@@ -385,27 +408,109 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
       end;
     end;
-    if (flavour=msf_input) then case highlightingData.isErrorLocation(fLineNumber,fTokenPos,run) of
+  end;
+
+PROCEDURE TMnhInputSyn.next;
+  begin
+    fTokenId := tkDefault;
+    fTokenSubId:=skNormal;
+    fTokenPos := run;
+    if  (blobEnder<>#0) then begin
+      if fLine[run]=#0 then begin
+        fTokenId := tkNull;
+        exit;
+      end;
+      while (fLine[run]<>#0) and (fLine[run]<>blobEnder) do inc(run);
+      if fLine[run]=blobEnder then begin
+        blobEnder:=#0;
+        inc(run);
+      end;
+      fTokenId:=tkString;
+    end else
+    inherited next;
+    case highlightingData.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
     end;
-    if (flavour=msf_debug) and (blobEnder=#0) then begin
-      fTokenSubId:=skWarn;
-    end;
   end;
 
-FUNCTION TSynMnhSyn.GetEol: boolean;
+PROCEDURE TMnhOutputSyn.next;
+  VAR b:byte;
+      specialLineCase:byte;
+
+  FUNCTION startsWith(CONST part:shortstring):boolean;
+    VAR k:longint;
+    begin
+      if length(part)<=0 then exit(false);
+      for k:=1 to length(part) do if fLine[k-1]<>part[k] then exit(false);
+      result:=true;
+    end;
+
+  begin
+    fTokenId := tkDefault;
+    fTokenSubId:=skNormal;
+    fTokenPos := run;
+
+    if (run = 0) then begin
+      specialLineCase:=0;
+      for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then specialLineCase:=b;
+      case specialLineCase of
+        SPECIAL_LINE_CASE_TM2: begin
+          fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
+          fTokenSubId:=skWarn;
+          run:=3; //This is the length of the invisible char
+          while (fLine[run]<>#0) do inc(run);
+          exit;
+        end;
+        SPECIAL_LINE_CASE_ECHO:
+          if startsWith(ECHO_MARKER+getPrefix(mt_echo_input    )) or
+             startsWith(ECHO_MARKER+getPrefix(mt_echo_output   )) or
+             startsWith(ECHO_MARKER+getPrefix(mt_echo_continued)) then begin
+            run:=8; //3 bytes invisible char + 5 bytes prefix
+            fTokenId:=tkOperator;
+            exit;
+          end else inc(run,3);
+        else begin
+          fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
+          run:=3; //This is the length of the invisible char
+          while (fLine[run]<>#0) do inc(run);
+          exit;
+        end;
+      end;
+    end;
+
+    if (blobEnder<>#0) then begin
+      if fLine[run]=#0 then begin
+        fTokenId := tkNull;
+        exit;
+      end;
+      while (fLine[run]<>#0) and (fLine[run]<>blobEnder) do inc(run);
+      if fLine[run]=blobEnder then begin
+        blobEnder:=#0;
+        inc(run);
+      end;
+      fTokenId:=tkString;
+    end else inherited next;
+  end;
+
+PROCEDURE TMnhDebugSyn.next;
+  begin
+    inherited next;
+    if (blobEnder=#0) then fTokenSubId:=skWarn;
+  end;
+
+FUNCTION TAbstractSynMnhSyn.GetEol: boolean;
   begin
     result := fTokenId = tkNull;
   end;
 
-FUNCTION TSynMnhSyn.getRange: pointer;
+FUNCTION TAbstractSynMnhSyn.getRange: pointer;
   begin
     result:=nil;
     move(blobEnder,result,sizeOf(blobEnder));
   end;
 
-FUNCTION TSynMnhSyn.getToken: ansistring;
+FUNCTION TAbstractSynMnhSyn.getToken: ansistring;
   VAR len: longint;
   begin
     len := run-fTokenPos;
@@ -413,44 +518,45 @@ FUNCTION TSynMnhSyn.getToken: ansistring;
     setString(result, (fLine+fTokenPos), len);
   end;
 
-PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer);
+PROCEDURE TAbstractSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT
+  tokenLength: integer);
   begin
     tokenLength := run-fTokenPos;
     tokenStart := fLine+fTokenPos;
   end;
 
-FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
+FUNCTION TAbstractSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId,fTokenSubId];
-    if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
+//    if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
   end;
 
-FUNCTION TSynMnhSyn.GetTokenKind: integer;
+FUNCTION TAbstractSynMnhSyn.GetTokenKind: integer;
   begin
     result := ord(fTokenId);
   end;
 
-FUNCTION TSynMnhSyn.GetTokenPos: integer;
+FUNCTION TAbstractSynMnhSyn.GetTokenPos: integer;
   begin
     result := fTokenPos;
   end;
 
-PROCEDURE TSynMnhSyn.ResetRange;
+PROCEDURE TAbstractSynMnhSyn.ResetRange;
   begin
     if lineIndex=0 then blobEnder:=#0;
   end;
 
-PROCEDURE TSynMnhSyn.setRange(value: pointer);
+PROCEDURE TAbstractSynMnhSyn.setRange(value: pointer);
   begin
     move(value,blobEnder,sizeOf(blobEnder));
   end;
 
-class FUNCTION TSynMnhSyn.GetLanguageName: ansistring;
+class FUNCTION TAbstractSynMnhSyn.GetLanguageName: ansistring;
   begin
     result := 'MNH';
   end;
 
-FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
+FUNCTION TAbstractSynMnhSyn.GetIdentChars: TSynIdentChars;
   begin
     result := IDENTIFIER_CHARS;
   end;

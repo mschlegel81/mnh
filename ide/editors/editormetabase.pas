@@ -59,7 +59,7 @@ TYPE T_language=(LANG_MNH   = 0,
       language_   : T_language;
       editor_     : TSynEdit;
       plugin      : TSynPluginMultiCaret;
-      highlighter : TSynMnhSyn;
+      highlighter : TMnhInputSyn;
       PROCEDURE setLanguage(CONST languageIndex:T_language);
       FUNCTION currentBlockOrLine:T_lineRange;
     public
@@ -121,7 +121,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynUNIXShellScriptSyn: TSynUNIXShellScriptSyn;
       SynVBSyn             : TSynVBSyn             ;
       SynXMLSyn            : TSynXMLSyn            ;
-      outputHighlighter    : TSynMnhSyn;
+      outputHighlighter    : TMnhOutputSyn;
 
   PROCEDURE initHighlighters;
     begin
@@ -141,7 +141,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(Application);
       SynVBSyn             :=TSynVBSyn             .create(Application);
       SynXMLSyn            :=TSynXMLSyn            .create(Application);
-      outputHighlighter    :=TSynMnhSyn.create(Application,msf_output);
+      outputHighlighter    :=TMnhOutputSyn         .create(Application);
       SynBatSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCppSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCssSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
@@ -456,7 +456,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     addKeystroke(editCommandMoveLineDown     ,scAlt  + downArrow);
     addKeystroke(editCommandEscapeSelection  ,scCtrl +           ord('E'));
     addKeystroke(editCommandUnescapeSelection,scCtrl + scShift + ord('E'));
-    highlighter:=TSynMnhSyn.create(editor_,msf_input);
+    highlighter:=TMnhInputSyn.create(editor_);
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;

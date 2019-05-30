@@ -41,7 +41,7 @@ TYPE
     parameterInfo,
     inlineVariableReport:P_variableTreeEntryCategoryNode;
     treeViewModel:T_treeModel;
-    currentExpressionHighlighter:TSynMnhSyn;
+    currentExpressionHighlighter:TMnhDebugSyn;
 
     PROCEDURE addCategoryNode(CONST r: P_variableTreeEntryCategoryNode;
       CONST expand: boolean=true);
@@ -97,7 +97,7 @@ PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
     treeViewModel.create(inlineVariablesTreeView);
     registerFontControl(currentExpressionEdit,ctEditor);
     registerFontControl(inlineVariablesTreeView,ctGeneral);
-    currentExpressionHighlighter:=TSynMnhSyn.create(currentExpressionEdit,msf_debug);
+    currentExpressionHighlighter:=TMnhDebugSyn.create(currentExpressionEdit);
     currentExpressionEdit.highlighter:=currentExpressionHighlighter;
   end;
 

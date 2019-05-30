@@ -12,7 +12,7 @@ TYPE
   THelpForm = class(T_mnhComponentForm)
     openHtmlButton: TButton;
     SynEdit1: TSynEdit;
-    helpHighlighter:TSynMnhSyn;
+    helpHighlighter:TMnhOutputSyn;
     UpdateToggleBox: TToggleBox;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -53,7 +53,7 @@ PROCEDURE ensureHelpForm;
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(SynEdit1,ctEditor);
-    helpHighlighter:=TSynMnhSyn.create(self,msf_help);
+    helpHighlighter:=TMnhOutputSyn.create(self);
     SynEdit1.highlighter:=helpHighlighter;
     SynEdit1.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     SynEdit1.OnMouseDown:=@workspace.mouseDownForJumpToLocation;

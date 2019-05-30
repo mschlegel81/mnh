@@ -11,7 +11,7 @@ USES
 TYPE
   TAssistanceForm = class(T_mnhComponentForm)
     AssistanceEdit: TSynEdit;
-    assistanceHighlighter:TSynMnhSyn;
+    assistanceHighlighter:TMnhOutputSyn;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -36,7 +36,7 @@ PROCEDURE ensureAssistanceForm;
 PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(AssistanceEdit,ctEditor);
-    assistanceHighlighter:=TSynMnhSyn.create(self,msf_output);
+    assistanceHighlighter:=TMnhOutputSyn.create(self);
     AssistanceEdit.highlighter:=assistanceHighlighter;
     AssistanceEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     AssistanceEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
