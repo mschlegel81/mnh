@@ -16,6 +16,7 @@ TYPE
       CONSTRUCTOR create(CONST L:P_literal; CONST mapEntry:boolean);
       FUNCTION canExpand:boolean; virtual;
       FUNCTION toString:string; virtual;
+      FUNCTION toStringForErrorTrace:string; virtual;
       FUNCTION getChildren:T_treeEntries; virtual;
       DESTRUCTOR destroy; virtual;
   end;
@@ -27,6 +28,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST value_:P_literal; CONST id_:T_idString);
       FUNCTION toString:string; virtual;
+      FUNCTION toStringForErrorTrace:string; virtual;
       PROPERTY getIdOnly:T_idString read id;
       DESTRUCTOR destroy; virtual;
   end;
@@ -45,6 +47,7 @@ TYPE
       CONSTRUCTOR create(CONST category_:T_debuggerVariableCategory);
       FUNCTION canExpand:boolean; virtual;
       FUNCTION toString:string; virtual;
+      FUNCTION toStringForErrorTrace:string; virtual;
       FUNCTION getChildren:T_treeEntries; virtual;
       DESTRUCTOR destroy; virtual;
 
@@ -55,7 +58,15 @@ TYPE
 
   F_fillCategoryNode=PROCEDURE(VAR cn:T_variableTreeEntryCategoryNode) of object;
 
+FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
 IMPLEMENTATION
+FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
+  VAR i:longint;
+  begin
+    new(result,create(dvc_callParameter));
+    if L<>nil then for i:=0 to L^.size-1 do result^.addEntry('$'+intToStr(i),L^.value[i],true);
+  end;
+
 CONSTRUCTOR T_variableTreeEntryCategoryNode.create(CONST category_: T_debuggerVariableCategory);
   begin
     category:=category_;
@@ -71,6 +82,14 @@ FUNCTION T_variableTreeEntryCategoryNode.toString: string;
   CONST name:array[T_debuggerVariableCategory] of string=('global','local','inline','parameter');
   begin
     result:=name[category];
+  end;
+
+FUNCTION T_variableTreeEntryCategoryNode.toStringForErrorTrace:string;
+  VAR child:P_variableTreeEntryNamedValue;
+  begin
+    if category<>dvc_callParameter then exit('');
+    result:='';
+    for child in children do result+=child^.toStringForErrorTrace+'; ';
   end;
 
 FUNCTION T_variableTreeEntryCategoryNode.getChildren: T_treeEntries;
@@ -131,6 +150,11 @@ FUNCTION T_variableTreeEntryNamedValue.toString: string;
     result:=id+' = '+inherited toString;
   end;
 
+FUNCTION T_variableTreeEntryNamedValue.toStringForErrorTrace:string;
+  begin
+    result:=id+'='+inherited toStringForErrorTrace;
+  end;
+
 CONSTRUCTOR T_variableTreeEntryAnonymousValue.create(CONST L:P_literal; CONST mapEntry:boolean);
   begin
     value:=L^.rereferenced;
@@ -160,6 +184,13 @@ FUNCTION T_variableTreeEntryAnonymousValue.toString: string;
       else result:=result+P_listLiteral(value)^.value[1]^.toString();
     end else if canExpand then result:=value^.typeString
     else                       result:=value^.toString();
+  end;
+
+FUNCTION T_variableTreeEntryAnonymousValue.toStringForErrorTrace:string;
+  begin
+    if value=nil
+    then result:=''
+    else result:=value^.toString(100);
   end;
 
 FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;

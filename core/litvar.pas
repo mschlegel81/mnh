@@ -751,7 +751,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
     //Default representation (preferred if accurate)
     result:=floatToStr(x);
     if strToFloatDef(result,Nan)=x then begin
-      if (pos('.', result)<=0) then result:=result+'.0';
+      if (pos('.', result)<=0) and (pos('E', result)<=0) and (pos('e', result)<=0) then result:=result+'.0';
       exit(result);
     end;
     //alternative representations

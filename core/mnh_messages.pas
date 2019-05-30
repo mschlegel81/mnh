@@ -203,7 +203,7 @@ TYPE
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; end;
+      stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; parameters:string; end;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
       FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       FUNCTION messageText:T_arrayOfString; virtual;
@@ -336,7 +336,7 @@ FUNCTION T_errorMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif
     i0:=length(result);
     setLength(result,i0+length(stacktrace));
     for i:=0 to length(stacktrace)-1 do begin
-      result[i+i0]:=marker+string(stacktrace[i].location)+' call '+stacktrace[i].callee;
+      result[i+i0]:=marker+string(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters;
     end;
   end;
 

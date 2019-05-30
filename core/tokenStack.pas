@@ -266,8 +266,11 @@ PROCEDURE T_callStack.ensureTraceInError(VAR error:T_errorMessage);
       setLength(error.stacktrace,fill);
       k:=0;
       for i:=fill-1 downto 0 do begin
-        error.stacktrace[k].callee  :=dat[i].calleeId;
-        error.stacktrace[k].location:=dat[i].callLocation;
+        error.stacktrace[k].callee    :=dat[i].calleeId;
+        error.stacktrace[k].location  :=dat[i].callLocation;
+        if dat[i].parameters=nil
+        then error.stacktrace[k].parameters:='n/a'
+        else error.stacktrace[k].parameters:=dat[i].parameters^.toStringForErrorTrace;
         inc(k);
       end;
     end;

@@ -480,7 +480,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
     begin
       enterCriticalSection(subruleCallCs);
       {$ifdef fullVersion}
-      if tco_debugging in context.threadOptions then new(parametersNode,create(dvc_callParameter));
+      if tco_stackTrace in context.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
       if (indexOfSave>=0) and currentlyEvaluating then begin
         firstRep:=nil;
