@@ -595,7 +595,6 @@ TYPE
     modifier_curry);
   T_modifierSet=set of T_modifier;
 CONST
-  //TODO: Enhance modifiers by link to doc?
   C_modifierInfo:array[T_modifier] of record
     name,helpText:string;
     isRuleModifier:boolean;
