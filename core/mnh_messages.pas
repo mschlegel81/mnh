@@ -65,8 +65,7 @@ TYPE
     mt_endOfEvaluation,
     mt_timing_info
     {$ifdef fullVersion},
-    mt_profile_call_info1,
-    mt_profile_call_info2,
+    mt_profile_call_info,
     mt_startOfEvaluation,
     mt_debugger_breakpoint,
     mt_displayTable,
@@ -97,7 +96,7 @@ TYPE
   T_messageTypeSet=set of T_messageType;
 
 CONST
-  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
+  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messageTypeMeta:array[T_messageType] of record
     guiMarker:string[3];
@@ -123,8 +122,7 @@ CONST
 {mt_endOfEvaluation   }  (guiMarker: NOTE_MARKER   ; level:-1; mClass:mc_note;    systemErrorLevel:0),
 {mt_timing_info       }  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_profile_call_info1}  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0),
-{mt_profile_call_info2}  (guiMarker: TIMING_MARKER2; level:-1; mClass:mc_timing;  systemErrorLevel:0),
+{mt_profile_call_info}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_startOfEvaluation}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_debugger_breakpoint} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayTable}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
@@ -228,7 +226,7 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation,mt_profile_call_info1,mt_profile_call_info2{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ,mt_echo_continued];
     if x.echo_output      then result+=[mt_echo_output     ,mt_echo_continued];
     if x.echo_declaration then result+=[mt_echo_declaration,mt_echo_continued];

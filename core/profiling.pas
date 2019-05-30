@@ -32,25 +32,31 @@ TYPE
   end;
   T_callerMap=specialize G_stringKeyMap<T_callerEntry>;
 
+  T_profilingListEntry=record
+    id:T_idString;
+    calleeLocation:string;
+    callers:T_callerMap.KEY_VALUE_LIST;
+
+    //aggregated values
+    timeSpent_inclusive,
+    timeSpent_exclusive:double;
+    callCount:longint;
+  end;
+
   P_calleeEntry=^T_calleeEntry;
   T_calleeEntry=object
     id:T_idString;
     calleeLocation:string;
     callerMap:T_callerMap;
 
-    //aggregated values
-    timeSpent_inclusive,
-    timeSpent_exclusive:double;
-    callCount:longint;
-
     CONSTRUCTOR create(CONST id_:T_idString;CONST loc:string);
     DESTRUCTOR destroy;
-    PROCEDURE aggregateValues;
-    FUNCTION toString(CONST withHeader:boolean):T_arrayOfString;
     PROCEDURE add(CONST callerLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
+    FUNCTION toProfilingListEntry:T_profilingListEntry;
   end;
 
   T_profilingMap=specialize G_stringKeyMap<P_calleeEntry>;
+  T_profilingList=array of T_profilingListEntry;
 
   P_profiler=^T_profiler;
   T_profiler=object
@@ -64,17 +70,138 @@ TYPE
       PROCEDURE add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
       PROCEDURE logInfo(CONST adapters:P_messages);
   end;
+
+  P_profileMessage=^T_profileMessage;
+  T_profileMessage=object(T_payloadMessage)
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      content:T_profilingList;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
+  end;
+
+PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
+PROCEDURE sortCallerList(VAR list:T_callerMap.KEY_VALUE_LIST; CONST sortIndex:byte);
   {$endif}
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 VAR mnhSysPseudopackagePrefix :string='';
 IMPLEMENTATION
+CONST categoryText:array[T_profileCategory] of string=(':importing',':tokenizing',':declarations',':evaluation',':unknown',':total');
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;
   begin
     for p in T_profileCategory do result[p]:=nil;
   end;
 {$ifdef fullVersion}
+PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
+  FUNCTION lesser(CONST a,b:T_profilingListEntry):boolean;
+    begin
+      result:=false;
+      case sortIndex of
+        0: result:=a.id<b.id;
+        1: result:=a.id>b.id;
+        2: result:=a.calleeLocation<b.calleeLocation;
+        3: result:=a.calleeLocation>b.calleeLocation;
+        4: result:=a.callCount<b.callCount;
+        5: result:=a.callCount>b.callCount;
+        6: result:=a.timeSpent_inclusive<b.timeSpent_inclusive;
+        7: result:=a.timeSpent_inclusive>b.timeSpent_inclusive;
+        8: result:=a.timeSpent_exclusive<b.timeSpent_exclusive;
+        9: result:=a.timeSpent_exclusive>b.timeSpent_exclusive;
+      end;
+    end;
+
+  VAR i,j:longint;
+      tmp:T_profilingListEntry;
+  begin
+    for i:=1 to length(list)-1 do
+    for j:=0 to i-1 do if lesser(list[i],list[j]) then begin
+      tmp:=list[i]; list[i]:=list[j]; list[j]:=tmp;
+    end;
+  end;
+
+PROCEDURE sortCallerList(VAR list:T_callerMap.KEY_VALUE_LIST; CONST sortIndex:byte);
+  FUNCTION lesser(CONST a,b:T_callerMap.KEY_VALUE_PAIR):boolean;
+    begin
+      result:=false;
+      case sortIndex of
+        0: result:=a.key<b.key;
+        1: result:=a.key>b.key;
+        2: result:=a.value.callCount<b.value.callCount;
+        3: result:=a.value.callCount>b.value.callCount;
+        4: result:=a.value.timeSpent_inclusive<b.value.timeSpent_inclusive;
+        5: result:=a.value.timeSpent_inclusive>b.value.timeSpent_inclusive;
+        6: result:=a.value.timeSpent_exclusive<b.value.timeSpent_exclusive;
+        7: result:=a.value.timeSpent_exclusive>b.value.timeSpent_exclusive;
+      end;
+    end;
+
+  VAR i,j:longint;
+      tmp:T_callerMap.KEY_VALUE_PAIR;
+  begin
+    for i:=1 to length(list)-1 do
+    for j:=0 to i-1 do if lesser(list[i],list[j]) then begin
+      tmp:=list[i]; list[i]:=list[j]; list[j]:=tmp;
+    end;
+  end;
+
+FUNCTION T_profileMessage.internalType: shortstring;
+begin result:='T_profileMessage'; end;
+
+CONSTRUCTOR T_profileMessage.create;
+  begin
+    inherited create(mt_profile_call_info);
+  end;
+
+DESTRUCTOR T_profileMessage.destroy;
+  begin
+    setLength(content,0);
+  end;
+
+FUNCTION T_profileMessage.toString(CONST forGui: boolean): T_arrayOfString;
+  FUNCTION nicestTime(CONST seconds:double):string;
+    begin
+       result:=formatFloat('0.000',seconds*1E3);
+    end;
+
+  FUNCTION profiledLocation(CONST location:string):string;
+    begin
+      if startsWith(location,mnhSysPseudopackagePrefix)
+      then result:='(builtin)'
+      else result:=location;
+    end;
+
+  VAR j,k:longint;
+      shortId:string;
+  begin
+    for k:=0 to length(content)-1 do sortCallerList(content[k].callers,4);
+    sortProfilingList(content,6);
+    result:='id'          +C_tabChar+
+            'location'    +C_tabChar+
+            'count'       +C_tabChar+
+            'inclusive ms'+C_tabChar+
+            'exclusive ms';
+    for k:=0 to length(content)-1 do with content[k] do begin
+      if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
+      append(result,shortId                         +C_tabChar+
+                    profiledLocation(calleeLocation)+C_tabChar+
+                    intToStr  (callCount)           +C_tabChar+
+                    nicestTime(timeSpent_inclusive) +C_tabChar+
+                    nicestTime(timeSpent_exclusive));
+      for j:=0 to length(callers)-1 do begin
+        append(result,BoolToStr(j=0,C_shiftInChar+'called at',' ')+C_tabChar+
+                  profiledLocation(callers[j].key)                +C_tabChar+
+                  intToStr  (callers[j].value.callCount)          +C_tabChar+
+                  nicestTime(callers[j].value.timeSpent_inclusive)+C_tabChar+
+                  nicestTime(callers[j].value.timeSpent_exclusive));
+      end;
+    end;
+    formatTabs(result);
+  end;
+
 PROCEDURE disposeEntry(VAR entry:P_calleeEntry);
   begin
     dispose(entry,destroy);
@@ -92,76 +219,8 @@ DESTRUCTOR T_calleeEntry.destroy;
     callerMap.destroy;
   end;
 
-PROCEDURE T_calleeEntry.aggregateValues;
-  VAR callerEntry:T_callerEntry;
-  begin
-    timeSpent_inclusive:=0;
-    timeSpent_exclusive:=0;
-    callCount          :=0;
-    for callerEntry in callerMap.valueSet do begin
-      timeSpent_inclusive+=callerEntry.timeSpent_inclusive;
-      timeSpent_exclusive+=callerEntry.timeSpent_exclusive;
-      callCount          +=callerEntry.callCount          ;
-    end;
-  end;
-
-FUNCTION T_calleeEntry.toString(CONST withHeader: boolean): T_arrayOfString;
-  FUNCTION nicestTime(CONST seconds:double):string;
-    begin
-       result:=formatFloat('0.000',seconds*1E3);
-    end;
-
-  FUNCTION profiledLocation(CONST location:string):string;
-    begin
-      if startsWith(location,mnhSysPseudopackagePrefix)
-      then result:='(builtin)'
-      else result:=location;
-    end;
-
-  VAR callers:T_callerMap.KEY_VALUE_LIST;
-      temp   :T_callerMap.KEY_VALUE_PAIR;
-      firstCaller:boolean=true;
-      i,j:longint;
-      shortId:string;
-  begin
-    callers:=callerMap.entrySet;
-    for j:=0 to length(callers)-1 do for i:=0 to j-1 do
-    if callers[i].value.timeSpent_inclusive<callers[j].value.timeSpent_inclusive then begin
-      temp:=callers[i];
-      callers[i]:=callers[j];
-      callers[j]:=temp;
-    end;
-    j:=length(callers)+1;
-    if withHeader then inc(j);
-    setLength(result,j);
-    j:=0;
-    if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
-    if withHeader then begin
-      result[0]:='id'       +C_tabChar+
-                 'location' +C_tabChar+
-                 'count'    +C_tabChar+
-                 'inclusive ms'+C_tabChar+
-                 'exclusive ms';
-      inc(j);
-    end;
-    result[j]:=shortId                         +C_tabChar+
-               profiledLocation(calleeLocation)+C_tabChar+
-               intToStr  (callCount)           +C_tabChar+
-               nicestTime(timeSpent_inclusive) +C_tabChar+
-               nicestTime(timeSpent_exclusive);
-    inc(j);
-    for temp in callers do begin
-      result[j]:=BoolToStr(firstCaller,C_shiftInChar+'called at',' ')    +C_tabChar+
-                 profiledLocation(temp.key)                +C_tabChar+
-                 intToStr  (temp.value.callCount)          +C_tabChar+
-                 nicestTime(temp.value.timeSpent_inclusive)+C_tabChar+
-                 nicestTime(temp.value.timeSpent_exclusive);
-      firstCaller:=false;
-      inc(j);
-    end;
-  end;
-
-PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring; CONST dt_inclusive, dt_exclusive: double);
+PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring;
+  CONST dt_inclusive, dt_exclusive: double);
   VAR callerEntry:T_callerEntry;
   begin
     if callerMap.containsKey(callerLocation,callerEntry) then begin
@@ -174,6 +233,29 @@ PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring; CONST dt_inclusive
       callerEntry.timeSpent_exclusive:=dt_exclusive;
     end;
     callerMap.put(callerLocation,callerEntry);
+  end;
+
+FUNCTION T_calleeEntry.toProfilingListEntry: T_profilingListEntry;
+  VAR caller:T_callerMap.KEY_VALUE_PAIR;
+      anyCat:boolean=false;
+      s:string;
+  begin
+    result.callCount:=0;
+    result.timeSpent_exclusive:=0;
+    result.timeSpent_inclusive:=0;
+    result.id:=id;
+    result.calleeLocation:=calleeLocation;
+    result.callers:=callerMap.entrySet;
+    for caller in result.callers do begin
+      result.callCount          +=caller.value.callCount;
+      result.timeSpent_exclusive+=caller.value.timeSpent_exclusive;
+      result.timeSpent_inclusive+=caller.value.timeSpent_inclusive;
+    end;
+    for s in categoryText do if s=id then anyCat:=true;
+    if anyCat then begin
+      result.calleeLocation:='';
+      setLength(result.callers,0);
+    end;
   end;
 
 CONSTRUCTOR T_profiler.create;
@@ -220,34 +302,16 @@ PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerLocation,calleeLocati
 
 PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
   VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-      temp:P_calleeEntry;
-      lines:T_arrayOfString;
-      i,j:longint;
-      firstEntry:boolean=true;
-      txt:string;
+      message:P_profileMessage;
+      k:longint;
   begin
     enterCriticalSection(cs);
     try
-      profilingData:=map.valueSet;
-      for temp in profilingData do temp^.aggregateValues;
-      for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do
-      if profilingData[i]^.timeSpent_inclusive<profilingData[j]^.timeSpent_inclusive then begin
-        temp:=profilingData[i];
-        profilingData[i]:=profilingData[j];
-        profilingData[j]:=temp;
-      end;
-      lines:=C_EMPTY_STRING_ARRAY;
-      for temp in profilingData do begin
-        append(lines,temp^.toString(firstEntry));
-        firstEntry:=false;
-      end;
-      lines:=formatTabs(lines);
-      adapters^.postTextMessage(mt_printline,C_nilTokenLocation,'Profiling output:');
-      for txt in lines do begin
-        if (length(txt)=0) or (txt[1]=' ') or (copy(txt,1,9)='called at')
-        then adapters^.postTextMessage(mt_profile_call_info2,C_nilTokenLocation,txt)
-        else adapters^.postTextMessage(mt_profile_call_info1,C_nilTokenLocation,txt);
-      end;
+       profilingData:=map.valueSet;
+       new(message,create);
+       setLength(message^.content,length(profilingData));
+       for k:=0 to length(profilingData)-1 do message^.content[k]:=profilingData[k]^.toProfilingListEntry;
+       adapters^.postCustomMessage(message,true);
     finally
       leaveCriticalSection(cs);
     end;
@@ -264,9 +328,8 @@ DESTRUCTOR T_packageProfilingCall.destroy;
   begin end;
 
 FUNCTION T_packageProfilingCall.getId: T_idString;
-  CONST categoryText:array[T_profileCategory] of string=('importing','tokenizing','declarations','evaluation','unknown','total');
   begin
-    result:=':'+categoryText[category];
+    result:=categoryText[category];
   end;
 
 FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;

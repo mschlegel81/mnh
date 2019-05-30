@@ -294,7 +294,6 @@ FUNCTION fail_impl intFuncSignature;
 
 FUNCTION assert_impl intFuncSignature;
   VAR failParam:P_listLiteral;
-      failResult:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_boolean) then begin

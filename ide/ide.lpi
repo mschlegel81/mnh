@@ -36,7 +36,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -74,7 +74,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="82">
+    <Units Count="83">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -537,6 +537,14 @@
         <Filename Value="../core/tokenStack.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit81>
+      <Unit82>
+        <Filename Value="profiling/profilingview.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="profilingOutputForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="profilingView"/>
+      </Unit82>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -546,7 +554,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="../core"/>
-      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick"/>
+      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
       <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>

@@ -123,12 +123,14 @@ CONST
 IMPLEMENTATION
 USES mnh_constants,
      tokenArray,
-     mySys;
-FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem; begin new(result,create(caption)); end;
+     mySys,
+     profilingView;
+FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem;      begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
 FUNCTION newCustomFormAdapter(CONST plot:P_guiPlotSystem):P_customFormAdapter;  begin new(result,createCustomFormAdapter(plot)); end;
 FUNCTION newGuiEventsAdapter (CONST guiForm:T_mnhIdeForm):P_guiEventsAdapter;   begin new(result,create(guiForm)); end;
+FUNCTION newProfilingAdapter                             :P_profileAdapter;     begin new(result,create); end;
 
 CONSTRUCTOR T_abstractEvaluation.init(CONST kind: T_evaluationKind);
   begin
@@ -171,6 +173,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONS
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
+    messages.addOutAdapter(newProfilingAdapter                  ,true);
     {$ifdef debugMode}
     messages.addConsoleOutAdapter('v');
     {$endif}
