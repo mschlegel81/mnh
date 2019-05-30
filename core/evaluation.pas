@@ -4,11 +4,15 @@ INTERFACE
   {$define useTryCatchBlocks}
 {$endif}
 
+IMPLEMENTATION
 USES sysutils,
      myGenerics,
      mySys,
      {$ifndef debugMode}
      myStringUtil,
+     {$endif}
+     {$ifdef fullVersion}
+     debuggingVar,
      {$endif}
      mnh_constants,basicTypes,
      litVar,
@@ -29,8 +33,6 @@ USES sysutils,
      aggregators,
      recyclers,
      listProcessing;
-
-IMPLEMENTATION
 
 FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler:T_recycler):T_reduceResult;
   VAR stack:T_TokenStack;
@@ -388,8 +390,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         try
         {$endif}
         {$ifdef fullVersion}
-        if tco_profiling in context.threadOptions then begin
-          context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),nil);
+        if tco_stackTrace in context.threadOptions then begin
+          context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),newCallParametersNode(parameterListLiteral));
           newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
           context.callStackPop(nil);
         end else

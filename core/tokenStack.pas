@@ -99,6 +99,7 @@ TYPE
   T_idStack=object
     scope:array of record
       scopeType:T_scopeType;
+      scopeStartLocation:T_tokenLocation;
       ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
     end;
     bracketLevel:longint;
@@ -109,7 +110,7 @@ TYPE
     CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
     DESTRUCTOR destroy;
     PROCEDURE clear;
-    PROCEDURE scopePush(CONST scopeType:T_scopeType);
+    PROCEDURE scopePush(CONST scopeType:T_scopeType; CONST location:T_tokenLocation);
     PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
@@ -265,8 +266,11 @@ PROCEDURE T_callStack.ensureTraceInError(VAR error:T_errorMessage);
       setLength(error.stacktrace,fill);
       k:=0;
       for i:=fill-1 downto 0 do begin
-        error.stacktrace[k].callee  :=dat[i].calleeId;
-        error.stacktrace[k].location:=dat[i].callLocation;
+        error.stacktrace[k].callee    :=dat[i].calleeId;
+        error.stacktrace[k].location  :=dat[i].callLocation;
+        if dat[i].parameters=nil
+        then error.stacktrace[k].parameters:='n/a'
+        else error.stacktrace[k].parameters:=dat[i].parameters^.toStringForErrorTrace;
         inc(k);
       end;
     end;
@@ -441,13 +445,14 @@ PROCEDURE T_idStack.clear;
     bracketLevel:=0;
   end;
 
-PROCEDURE T_idStack.scopePush(CONST scopeType:T_scopeType);
+PROCEDURE T_idStack.scopePush(CONST scopeType:T_scopeType; CONST location:T_tokenLocation);
   VAR newTopIdx:longint;
   begin
     newTopIdx:=length(scope);
     setLength(scope,newTopIdx+1);
     setLength(scope[newTopIdx].ids,0);
     scope[newTopIdx].scopeType:=scopeType;
+    scope[newTopIdx].scopeStartLocation:=location;
   end;
 
 PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
@@ -460,9 +465,15 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       exit;
     end;
     if closeByBracket then begin
-      if scope[topIdx].scopeType=sc_block then adapters^.raiseSimpleError('Mismatch; begin closed by )',location);
+      if scope[topIdx].scopeType=sc_block then begin
+        adapters^.raiseSimpleError('Mismatch; begin closed by )',scope[topIdx].scopeStartLocation);
+        adapters^.raiseSimpleError('Mismatch; begin closed by )',location);
+      end;
     end else begin
-      if scope[topIdx].scopeType<>sc_block then adapters^.raiseSimpleError('Mismatch; ( closed by end',location);
+      if scope[topIdx].scopeType<>sc_block then begin
+        adapters^.raiseSimpleError('Mismatch; ( closed by end',scope[topIdx].scopeStartLocation);
+        adapters^.raiseSimpleError('Mismatch; ( closed by end',location);
+      end;
     end;
     with scope[topIdx] do for i:=0 to length(ids)-1 do begin
       if warnAboutUnused and not(ids[i].used) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);

@@ -16,22 +16,24 @@ TYPE
                  at_table,
                  at_treeView,
                  at_customForm,
+                 at_profilingView,
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
-    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
-    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
-    {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}],
+    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
+    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
+    {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
     {$ifdef fullVersion}
-    {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info,mt_profile_call_info1,mt_profile_call_info2],
+    {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info],
     {at_guiEve...}[mt_startOfEvaluation,mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done,mt_guiEditScriptsLoaded],
     {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_imig}     [mt_image_postDisplay..mt_image_obtainDimensions],
     {at_table}    [mt_startOfEvaluation,mt_displayTable],
     {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
     {at_custom...}[                     mt_displayCustomForm,mt_endOfEvaluation],
+    {at_profil...}[mt_profile_call_info],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -313,8 +315,8 @@ OPERATOR :=(s:string):T_messageTypeSet;
       'D': result:=result-[mt_echo_declaration];
       'o': result:=result+[mt_echo_output];
       'O': result:=result-[mt_echo_output];
-      't': result:=result+[mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
-      'T': result:=result-[mt_timing_info{$ifdef fullVersion},mt_profile_call_info1,mt_profile_call_info2{$endif}];
+      't': result:=result+[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
+      'T': result:=result-[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
       'e': result:=result+[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'E': result:=result-[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'n': result:=result+[mt_el1_note,mt_el1_userNote];
@@ -387,7 +389,8 @@ FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
      at_plot,
      at_imig,
      at_table,
-     at_treeView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);
+     at_treeView,
+     at_profilingView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);
   end;
 {$endif}
 

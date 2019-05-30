@@ -292,6 +292,19 @@ FUNCTION fail_impl intFuncSignature;
     result:=nil;
   end;
 
+FUNCTION assert_impl intFuncSignature;
+  VAR failParam:P_listLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_boolean) then begin
+      if not(bool0^.value) then begin
+        failParam:=params^.tail;
+        result:=fail_impl(failParam,tokenLocation,context,recycler);
+        disposeLiteral(failParam);
+      end else result:=newVoidLiteral;
+    end;
+  end;
+
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
   begin
     if builtinExpressionMap.containsKey(p,result) then exit(P_expressionLiteral(result^.rereferenced));
@@ -316,6 +329,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
   system.initCriticalSection(print_cs);
 FINALIZATION
   builtinExpressionMap.destroy;

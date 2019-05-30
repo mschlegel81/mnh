@@ -25,7 +25,7 @@ TYPE
     miWrapEcho: TMenuItem;
     OutputPopupMenu: TPopupMenu;
     Splitter1: TSplitter;
-    outputHighlighter:TSynMnhSyn;
+    outputHighlighter:TMnhOutputSyn;
     quickInputSynEdit: TSynEdit;
     quickOutputSynEdit: TSynEdit;
     PROCEDURE FormCreate(Sender: TObject);
@@ -103,7 +103,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     inputMeta.editor.OnChange:=@quickInputEditChange;
 
     registerFontControl(quickOutputSynEdit,ctEditor);
-    outputHighlighter:=TSynMnhSyn.create(self,msf_output);
+    outputHighlighter:=TMnhOutputSyn.create(self);
     quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(self,quickOutputSynEdit,quickOutputBehavior);
     quickOutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;

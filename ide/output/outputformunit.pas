@@ -24,7 +24,7 @@ TYPE
     miEchoInput: TMenuItem;
     miEchoOutput: TMenuItem;
     OutputSynEdit: TSynEdit;
-    outputHighlighter:TSynMnhSyn;
+    outputHighlighter:TMnhOutputSyn;
     OutputPopupMenu: TPopupMenu;
     PROCEDURE cbShowOnOutputChange(Sender: TObject);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -75,7 +75,7 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(OutputSynEdit,ctEditor);
-    outputHighlighter:=TSynMnhSyn.create(self,msf_output);
+    outputHighlighter:=TMnhOutputSyn.create(self);
     OutputSynEdit.highlighter:=outputHighlighter;
     OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;

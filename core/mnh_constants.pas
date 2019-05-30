@@ -439,7 +439,7 @@ CONST
 {tt_modifier}                   (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier'; helpLink:'/functions.html#modifiers'),
 {tt_EOL}                        (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'; helpLink:''),
 {tt_docComment}                 (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'; helpLink:'/packages.html#comments'),
-{tt_attributeComment}           (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'; helpLink:'packages.html#attributes'),
+{tt_attributeComment}           (defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'; helpLink:'/packages.html#attributes'),
 {tt_use}                        (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'; helpLink:'/packages.html#importing'),
 {tt_include}                    (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'; helpLink:'/packages.html#including'),
 {tt_nameOf}                     (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Returns the name of the argument or the blank string if there is none'; helpLink:'/specials.html#nameof'),
@@ -596,7 +596,6 @@ TYPE
     modifier_curry);
   T_modifierSet=set of T_modifier;
 CONST
-  //TODO: Enhance modifiers by link to doc?
   C_modifierInfo:array[T_modifier] of record
     name,helpText:string;
     isRuleModifier:boolean;

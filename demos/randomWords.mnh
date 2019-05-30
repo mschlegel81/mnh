@@ -38,6 +38,6 @@ end;
 @demo_for=http, memoization, map operations, strings
 main(count)->begin
   local cnt:=toInt(count);
-  cnt<=0 ? fail('count must be >0') : void;
+  assert(cnt>0,'count must be >0');
   [1..cnt].each(w,randomWord.print);
 end;

@@ -640,6 +640,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         except
           i:=1;
         end;
+        //TODO: OVerhaul tic initialization
         initLinearTics(i,10,1);
         if majorTicCount>10 then begin
           initLinearTics(i,50,10);
@@ -692,11 +693,11 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
     enterCriticalSection(globalTextRenderingCs);
     try
       Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
+      ticSampleText:='.0E12';
+      updateBorders;
     finally
       leaveCriticalSection(globalTextRenderingCs);
     end;
-    ticSampleText:='.0E12';
-    updateBorders;
     prepareRanges;
     for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
     ticSampleText:=longestTic;

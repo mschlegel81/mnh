@@ -25,7 +25,8 @@ TYPE
                   icImage,
                   icCustomForm,
                   icTable,
-                  icVariableView);
+                  icVariableView,
+                  icProfilingOutput);
   T_ideComponentSet=set of T_ideComponent;
 
   T_componentParent=(cpNone,
@@ -116,7 +117,8 @@ CONST C_dockSetupDockAll:T_dockSetup
                     cpPageControl1,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
-    {icVariableView}cpPageControl1);
+    {icVariableView}cpPageControl1,
+    {icProfiling...}cpPageControl1);
   C_dockSetupUnDockAll:T_dockSetup
      {icOutline}   =(cpNone,
      {icHelp}        cpNone,
@@ -130,7 +132,8 @@ CONST C_dockSetupDockAll:T_dockSetup
                      cpNone,
      {icCustomForm}  cpNone,
      {icTable}       cpNone,
-     {icVariableView}cpNone);
+     {icVariableView}cpNone,
+                     cpNone);
 
 VAR lastDockLocationFor:T_dockSetup
     {icOutline}   =(cpPageControl3,
@@ -145,7 +148,8 @@ VAR lastDockLocationFor:T_dockSetup
                     cpNone,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
-    {icVariableView}cpPageControl1);
+    {icVariableView}cpPageControl1,
+                    cpPageControl1);
 
     mainForm:T_mnhIdeForm=nil;
 
@@ -347,6 +351,7 @@ FUNCTION T_mnhDockSiteModel.undockCurrent: boolean;
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
     then newForm:=T_mnhComponentForm(control)
     else raise Exception.create('Not an mnhComponent form!');
+    lastDockLocationFor[newForm.getIdeComponentType]:=cpNone;
     newForm.ManualDock(nil);
     newForm.BringToFront;
     newForm.myComponentParent:=cpNone;

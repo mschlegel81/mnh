@@ -1,7 +1,6 @@
 UNIT tokenArray;
 INTERFACE
-USES sysutils,math,
-     myGenerics,myStringUtil,
+USES myGenerics,myStringUtil,
      basicTypes,mnh_constants,
      fileWrappers,
      litVar,
@@ -178,6 +177,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
+USES sysutils,math;
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
   VAR t:P_token;
       rule:P_abstractRule;
@@ -457,6 +457,11 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         tokenText:=operatorName[token^.tokType];
         result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
       end;
+      tt_attributeComment: begin
+        if tokenText=ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE then result.infoText+=C_lineBreakChar+'marks a nullary subrule for execution after the script is finished without raising an error';
+        if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
+        if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
+      end;
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
@@ -530,7 +535,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
-      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el2_warning,inputLocation,commentText);
+      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el1_note,inputLocation,commentText);
     end;
 
   VAR id:ansistring='';
@@ -883,24 +888,24 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
       lastLocation:=t^.location;
       case t^.tokType of
         tt_beginBlock:
-          localIdStack.scopePush(sc_block);
+          localIdStack.scopePush(sc_block,lastLocation);
         tt_endBlock:
-          localIdStack.scopePop(messages,t^.location,false,true);
+          localIdStack.scopePop(messages,lastLocation,false,true);
         tt_braceOpen:
-          localIdStack.scopePush(sc_bracketOnly);
+          localIdStack.scopePush(sc_bracketOnly,lastLocation);
         tt_braceClose:
-          localIdStack.scopePop(messages,t^.location,true,true);
+          localIdStack.scopePop(messages,lastLocation,true,true);
         tt_each,tt_parallelEach:begin
-          localIdStack.scopePush(sc_each);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,t^.location,tt_eachIndex);
-          localIdStack.addId(t^.txt               ,t^.location,tt_eachParameter);
+          localIdStack.scopePush(sc_each,lastLocation);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
+          localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
         tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
-            case localIdStack.addId(t^.txt,t^.location,tt_blockLocalVariable) of
-              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
-              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',t^.location);
+            case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
+              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',lastLocation);
+              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastLocation);
             end;
           end else if (localIdStack.hasId(t^.txt,idType,idLoc)) then begin
             t^.tokType:=idType;
@@ -935,24 +940,24 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
       lastLocation:=lastTokenized^.location;
       case lastTokenized^.tokType of
         tt_beginBlock:
-          localIdStack.scopePush(sc_block);
+          localIdStack.scopePush(sc_block,lastLocation);
         tt_endBlock:
-          localIdStack.scopePop(messages,lastTokenized^.location,false,not(hasSuppressedUnusedAttribute));
+          localIdStack.scopePop(messages,lastLocation,false,not(hasSuppressedUnusedAttribute));
         tt_braceOpen:
-          localIdStack.scopePush(sc_bracketOnly);
+          localIdStack.scopePush(sc_bracketOnly,lastLocation);
         tt_braceClose:
-          localIdStack.scopePop(messages,lastTokenized^.location,true,not(hasSuppressedUnusedAttribute));
+          localIdStack.scopePop(messages,lastLocation,true,not(hasSuppressedUnusedAttribute));
         tt_each,tt_parallelEach:begin
-          localIdStack.scopePush(sc_each);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastTokenized^.location,tt_eachIndex);
-          localIdStack.addId(lastTokenized^.txt   ,lastTokenized^.location,tt_eachParameter);
+          localIdStack.scopePush(sc_each,lastLocation);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
+          localIdStack.addId(lastTokenized^.txt   ,lastLocation,tt_eachParameter);
         end;
         tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
-            case localIdStack.addId(lastTokenized^.txt,lastTokenized^.location,tt_blockLocalVariable) of
-              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
-              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastTokenized^.location);
+            case localIdStack.addId(lastTokenized^.txt,lastLocation,tt_blockLocalVariable) of
+              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastLocation);
+              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastLocation);
             end;
           end else if (localIdStack.hasId(lastTokenized^.txt,idType,idLoc)) then begin
             lastTokenized^.tokType:=idType;
