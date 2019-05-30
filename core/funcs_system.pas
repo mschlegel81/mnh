@@ -205,6 +205,14 @@ FUNCTION changeDirectory_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION callMemoryCleaner_impl intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      memoryCleaner.callCleanupMethods;
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
@@ -221,5 +229,5 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
-
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});
 end.
