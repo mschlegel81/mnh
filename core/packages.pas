@@ -1,8 +1,6 @@
 UNIT packages;
 INTERFACE
-USES //basic classes
-     sysutils,typinfo, FileUtil, Classes,
-     //my utilities:
+USES //my utilities:
      myGenerics, myStringUtil,
      //MNH:
      mnh_constants, basicTypes,
@@ -147,6 +145,8 @@ FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
+USES sysutils,typinfo, FileUtil, Classes;
+
 VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
 PROCEDURE setupSandboxes;
