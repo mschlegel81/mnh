@@ -1555,11 +1555,11 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
                                dummyLocation,
                                nil),
                      [C_compression_gzip]));
-      myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,160));
-      DataString:=copy(DataString,161,length(DataString));
+      myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
+      DataString:=copy(DataString,152,length(DataString));
       while length(DataString)>0 do begin
-        myGenerics.append(result,'     '+copy(DataString,1,164));
-        DataString:=copy(DataString,165,length(DataString));
+        myGenerics.append(result,copy(DataString,1,160));
+        DataString:=copy(DataString,161,length(DataString));
       end;
       result[length(result)-1]+='~';
       if length(result[length(result)-1])<151
