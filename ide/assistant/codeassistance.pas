@@ -38,6 +38,7 @@ TYPE
   P_codeAssistanceResponse=^T_codeAssistanceResponse;
   T_codeAssistanceResponse=object
     private
+      responseCs:TRTLCriticalSection;
       referenceCount:longint;
       localErrors,externalErrors:T_storedMessages;
       localIdInfos:P_localIdInfos;
@@ -205,6 +206,7 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
   VAR k:longint;
       e:P_storedMessage;
   begin
+    enterCriticalSection(responseCs);
     enterCriticalSection(highlightingData.highlightingCs);
     try
       highlightingData.userRules.clear;
@@ -222,6 +224,7 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
       setLength(highlightingData.warnLocations,k);
     finally
       leaveCriticalSection(highlightingData.highlightingCs);
+      leaveCriticalSection(responseCs);
     end;
   end;
 
@@ -317,32 +320,43 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
   VAR m:P_storedMessage;
       level:longint;
   begin
-    referenceCount:=1;
-    package:=package_;
-    responseStateHash:=stateHash_;
-    localIdInfos:=localIdInfos_;
+    initCriticalSection(responseCs);
+    enterCriticalSection(responseCs);
+    try
+      referenceCount:=1;
+      package:=package_;
+      responseStateHash:=stateHash_;
+      localIdInfos:=localIdInfos_;
 
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    for level:=4 downto 1 do for m in messages do
-    if C_messageTypeMeta[m^.messageType].level=level then begin
-      if m^.getLocation.fileName=package_^.getPath
-      then begin
-        setLength(localErrors,length(localErrors)+1);
-        localErrors[length(localErrors)-1]:=m;
-      end else begin
-        setLength(externalErrors,length(externalErrors)+1);
-        externalErrors[length(externalErrors)-1]:=m;
+      setLength(localErrors,0);
+      setLength(externalErrors,0);
+      for level:=4 downto 1 do for m in messages do
+      if C_messageTypeMeta[m^.messageType].level=level then begin
+        if m^.getLocation.fileName=package_^.getPath
+        then begin
+          setLength(localErrors,length(localErrors)+1);
+          localErrors[length(localErrors)-1]:=m^.rereferenced;
+        end else begin
+          setLength(externalErrors,length(externalErrors)+1);
+          externalErrors[length(externalErrors)-1]:=m^.rereferenced;
+        end;
       end;
+    finally
+      leaveCriticalSection(responseCs);
     end;
   end;
 
 FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
   VAR s:string;
   begin
-    package^.updateLists(wordsInEditor,true);
-    for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-    result:=(package^.packageRules .size>0) or (package^.importedRules.size>0) or not(localIdInfos^.isEmpty);
+    enterCriticalSection(responseCs);
+    try
+      package^.updateLists(wordsInEditor,true);
+      for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
+      result:=(package^.packageRules .size>0) or (package^.importedRules.size>0) or not(localIdInfos^.isEmpty);
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
@@ -350,18 +364,23 @@ FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; 
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    loc.line:=CaretY;
-    loc.column:=1;
-    loc.package:=package;
-    result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
-    if result then begin
-      lexer.create(fullLine,loc,package);
-      enhanced:=lexer.getEnhancedTokens(localIdInfos);
-      info:=enhanced.getTokenAtIndex(CaretX).toInfo;
-      info.fullLine:=fullLine;
-      info.CaretX:=CaretX;
-      enhanced.destroy;
-      lexer.destroy;
+    enterCriticalSection(responseCs);
+    try
+      loc.line:=CaretY;
+      loc.column:=1;
+      loc.package:=package;
+      result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
+      if result then begin
+        lexer.create(fullLine,loc,package);
+        enhanced:=lexer.getEnhancedTokens(localIdInfos);
+        info:=enhanced.getTokenAtIndex(CaretX).toInfo;
+        info.fullLine:=fullLine;
+        info.CaretX:=CaretX;
+        enhanced.destroy;
+        lexer.destroy;
+      end;
+    finally
+      leaveCriticalSection(responseCs);
     end;
   end;
 
@@ -370,33 +389,57 @@ FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(CONST location: T_searc
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    loc.line:=CaretY;
-    loc.column:=1;
-    loc.package:=package;
-    lexer.create(lineText,loc,package);
-    enhanced:=lexer.getEnhancedTokens(localIdInfos);
-    result:=enhanced.renameInLine(lineText,location,oldId,newId);
-    enhanced.destroy;
-    lexer.destroy;
+    enterCriticalSection(responseCs);
+    try
+      loc.line:=CaretY;
+      loc.column:=1;
+      loc.package:=package;
+      lexer.create(lineText,loc,package);
+      enhanced:=lexer.getEnhancedTokens(localIdInfos);
+      result:=enhanced.renameInLine(lineText,location,oldId,newId);
+      enhanced.destroy;
+      lexer.destroy;
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceResponse.resolveImport(CONST id:string):string;
   begin
-    if package=nil then result:=''
-                   else result:=package^.getSecondaryPackageById(id);
+    enterCriticalSection(responseCs);
+    try
+      if package=nil then result:=''
+                     else result:=package^.getSecondaryPackageById(id);
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceResponse.getImportablePackages: T_arrayOfString;
   begin
-    result:=listScriptIds(extractFilePath(package^.getPath));
+    enterCriticalSection(responseCs);
+    try
+      result:=listScriptIds(extractFilePath(package^.getPath));
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 DESTRUCTOR T_codeAssistanceResponse.destroy;
+  VAR m:P_storedMessage;
   begin
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    dispose(localIdInfos,destroy);
-    dispose(package,destroy);
+    enterCriticalSection(responseCs);
+    try
+      for m in localErrors do disposeMessage_(m);
+      setLength(localErrors,0);
+      for m in externalErrors do disposeMessage_(m);
+      setLength(externalErrors,0);
+      dispose(localIdInfos,destroy);
+      dispose(package,destroy);
+    finally
+      leaveCriticalSection(responseCs);
+      doneCriticalSection(responseCs);
+    end;
   end;
 
 PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
@@ -442,20 +485,30 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
     end;
 
   begin
-    edit.clearAll;
-    edit.lines.clear;
-    lengthLimit:=edit.charsInWindow;
-    if lengthLimit<20 then lengthLimit:=20;
-    hasErrors:=false;
-    hasWarnings:=false;
-    addErrors(localErrors);
-    addErrors(externalErrors);
+    enterCriticalSection(responseCs);
+    try
+      edit.clearAll;
+      edit.lines.clear;
+      lengthLimit:=edit.charsInWindow;
+      if lengthLimit<20 then lengthLimit:=20;
+      hasErrors:=false;
+      hasWarnings:=false;
+      addErrors(localErrors);
+      addErrors(externalErrors);
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceResponse.rereferenced:P_codeAssistanceResponse;
   begin
-    interLockedIncrement(referenceCount);
-    result:=@self;
+    enterCriticalSection(responseCs);
+    try
+      interLockedIncrement(referenceCount);
+      result:=@self;
+    finally
+      leaveCriticalSection(responseCs);
+    end;
   end;
 
 VAR isFinalized:boolean=false;

@@ -801,16 +801,14 @@ PROCEDURE T_messages.postSingal(CONST kind: T_messageType; CONST location: T_sea
   VAR message:P_storedMessage;
   begin
     new(message,create(kind,location));
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
   VAR message:P_storedMessageWithText;
   begin
     new(message,create(kind,location,txt));
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -819,8 +817,7 @@ PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_sear
     if (kind<>mt_el4_systemError) and (FlagQuietHalt in flags) then exit;
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -828,8 +825,7 @@ PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST locat
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage);
@@ -837,8 +833,7 @@ PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage)
   begin
     new(message,create(mt_el3_evalError,unhandledMessage^.getLocation,'Unhandled message of type "'+unhandledMessage^.getMessageTypeName+'"'));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.postCustomMessages(CONST message: T_storedMessages);
