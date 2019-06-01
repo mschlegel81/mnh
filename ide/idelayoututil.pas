@@ -229,6 +229,7 @@ begin
   if (Sender.ClassName<>'TSynEdit') or
      (AnAction<>scaPlainText) or
      (TSynEdit(Sender).highlighter=nil) or
+     (AMode=smColumn) or
      (Clipboard=nil)
   then exit;
   content:=TStringList.create;
