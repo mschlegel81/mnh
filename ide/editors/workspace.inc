@@ -649,7 +649,7 @@ FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
-    if meta=nil
+    if (meta=nil) or (meta^.language<>LANG_MNH)
     then result:=nil
     else result:=meta^.getCodeAssistanceDataRereferenced;
   end;

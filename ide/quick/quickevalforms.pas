@@ -91,8 +91,8 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    quickOutput.outputBehavior:=outputBehavior;
-    quickOutput.wrapEcho:=outputBehavior.echo_wrapping;
+    quickOutput.outputBehavior:=quickOutputBehavior;
+    quickOutput.wrapEcho:=quickOutputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 

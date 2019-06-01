@@ -27,7 +27,7 @@ FUNCTION try_imp intFuncSignature;
       context.messages:=@tryMessages;
 
       result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-      if (result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[]) then begin
+      if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin

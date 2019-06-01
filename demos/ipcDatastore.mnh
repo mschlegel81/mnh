@@ -1,110 +1,112 @@
-//ID of the server, used for inter process communication (IPC)
-private IPC_ID:=myPath;
-//ID of the currently running script instance
-private PID:=hash([systime,executor,myPath]);
+private datastore store:=[].toMap;
+private mutable pendingUpdates:=[].toMap;
+private mutable pendingDeletes:=[].toMap;
 
-//Convenience constants for actions
-private COMMIT  :='COMMIT';
-private ROLLBACK:='ROLLBACK';
-private INSERT  :='INSERT';
-private DELETE  :='DELETE';
+private IPC_ID:=myPath&'_server';
+private PID:=[inspectAll,systime].hash;
+private clientId(pid)->myPath&'_client'&pid;
+private mutable isClientInstance:=true;
 
-datastore store:=[];
-
-private synchronized persistStage(stage:List)->
-  stage.each(stageElement,
-    stageElement.head==INSERT
-    ? begin
-        store|=stageElement.trailing;
-        void;
-      end
-    : stageElement.head==DELETE
-      ? begin
-          store:=store.filter({!($storeElement==stageElement.trailing)});
-          void;
-        end
-      : warn('Invalid element on stage: ',stageElement)
-  );
-
-private serve(input)->begin
-  local stage:=[].toMap;
-  //actions, encoded as a look-up table
-  local action:=
-    [[COMMIT,
-      {begin
-         persistStage(stage[$id]);
-         stage>>$id;
-         print($id,' ',$payload,'; Remaining stage elements: ',stage.getInner(1).map(::size).agg(+),' in ',stage.size,' groups');
-         true;
-       end}],
-     [ROLLBACK,
-      {begin
-         stage>>$id;
-         print($id,' ',$payload,'; Remaining stage elements: ',stage.getInner(1).map(::size).agg(+),' in ',stage.size,' groups');
-         true;
-       end}],
-     [INSERT,
-      {begin
-         stage<<[$id,stage[$id]|[$payload]];
-         print($id,' ','STAGE TO INSERT: ',$payload.trailing);
-         true;
-       end}],
-     [DELETE,
-      {begin
-         stage<<[$id,stage[$id]|[$payload]];
-         print($id,' ','STAGE TO DELETE: ',$payload.trailing);
-         true;
-       end}]].toMap;
-  local invalidAction:={begin
-                          warn($id,' Requested invalid action',$payload);
-                          false;
-                        end};
-save;
-  input=='flush'
-  ? begin
-      local result:=stage;
-      stage:=[].toMap;
-      result;
-    end
-  : input.isList(2) AND input.head.isInt
-    ? begin
-        local id     :=input.head;
-        local payload:=input.trailing;
-        (action[payload.head] orElse invalidAction)(id,payload);
-      end
-    : warn('invalid input: ',input) orElse false;
-end;
-
-private ensureServer->isIpcServerRunning(IPC_ID) ? void :
-  begin
-    executor.execAsync([myPath]);
-    sleep(1);
-  end;
-
-private sendRequest(data)->begin
-  ensureServer;
-  sendIpcRequest(IPC_ID,[PID,data]);
-end;
-
- @SuppressUnusedWarning
-//*Requests insert of the given data item; returns true on success
-//*Note that you have to call commit in order to persist this request
-insert(data)->sendRequest([INSERT,data]);
- @SuppressUnusedWarning
-//*Requests delete of the given data item; returns true on success
-//*Note that you have to call commit in order to persist this request
-delete(data)->sendRequest([DELETE,data]);
- @SuppressUnusedWarning
-//*Requests persisting of the stage for the curren PID; returns true on success
-commit->sendRequest(COMMIT);
- @SuppressUnusedWarning
-//*Requests rollback of the stage for the curren PID; returns true on success
-rollback->sendRequest(ROLLBACK);
-
-//*Starts an IPC server instance.
-//*Implicitly called in a new, standalone instance of MNH if needed.
-@demo_for=Inter Process Communication, datastores
 main->begin
-  startIpcServer(IPC_ID,::serve);
-  ask("IPC server started: "&myPath&"\nPress enter to shutdown");
+  //Start serving under ID=IPC_ID
+  startIpcServer(IPC_ID,{serve@$p});
+  isClientInstance:=false;
+  sleep(60);
+  while(stageIsNonemptyAndClientsAreAlive,sleep(60));
 end;
+
+private stageIsNonemptyAndClientsAreAlive->
+  pendingUpdates.getInner(0).union(pendingDeletes.getInner(0)).each(pid,
+    pid.clientId.isIpcServerRunning
+    ? true
+    : begin
+        //send IPC request to self to avoid concurrent accesses
+        sendIpcRequest(IPC_ID,pid|ROLLBACK);
+        false;
+      end,OR);
+
+@after
+//*After evaluation, tell the server that you are gone
+//*Do not call the server if it is not running yet
+private logOff->
+  isClientInstance AND isIpcServerRunning(IPC_ID)
+  ? storeRollback
+  : void;
+
+//*Ensure that temporary entries for the given pid are available
+private ensureTemporary(pid)->begin
+  pendingDeletes[pid].isVoid ? pendingDeletes[pid]:=[].toSet : void;
+  pendingUpdates[pid].isVoid ? pendingUpdates[pid]:=[].toMap : void;
+end;
+
+private sendRequest(operation,...)->begin
+  //Start a marker-server indicating that the client is still alive
+  operation==ROLLBACK OR isIpcServerRunning(clientId(PID))
+  ? void
+  : startIpcServer(clientId(PID),::OPERATOR_UNARY_PLUS);
+  isIpcServerRunning(IPC_ID)
+  ? void
+  : begin
+      execAsync(executor,[myPath]);
+      while(!isIpcServerRunning(IPC_ID),sleep(0.01));
+    end;
+  sendIpcRequest(IPC_ID,PID|operation|...);
+end;
+
+private PUT:='PUT';
+private serve(pid,(PUT),key,value)->begin
+  ensureTemporary(pid);
+  pendingDeletes[pid]>>key;
+  pendingUpdates[pid,key]:=value;
+  value;
+end;
+
+@SuppressUnusedWarning
+//*Put an entry to the store
+//*The entry will not be persisted unless storeCommit is called
+storePut(key,value)->sendRequest(PUT,key,value);
+
+private GET:='GET';
+private serve(pid,(GET),key)->begin
+  ensureTemporary(pid);
+  key in pendingDeletes[pid]
+  ? void
+  : pendingUpdates[pid,key] orElse
+    store         [pid,key];
+end;
+@SuppressUnusedWarning
+//*Get an entry with the specified key from the store
+storeGet(key)->sendRequest(GET,key);
+
+private DELETE:='DELETE';
+private serve(pid,(DELETE),key)->begin
+  ensureTemporary(pid);
+  pendingDeletes[pid]|=key;
+  pendingUpdates[pid,key]:=void;
+end;
+@SuppressUnusedWarning
+//*Delete an entry from the store
+//*The changes will not be persisted unless storeCommit is called
+storeDelete(key)->sendRequest(DELETE,key);
+
+private COMMIT:='COMMIT';
+private serve(pid,(COMMIT))->begin
+  (pendingDeletes[pid] orElse []).each(keyToRemove,store[keyToRemove]:=void);
+  (pendingUpdates[pid] orElse []).each(entry      ,store[entry[0]]:=entry[1]);
+  serve(pid,ROLLBACK);
+end;
+@SuppressUnusedWarning
+//*Commits the pending changes and clears the stage
+storeCommit->sendRequest(COMMIT);
+
+private ROLLBACK:='ROLLBACK';
+private serve(pid,(ROLLBACK))->begin
+  pendingDeletes[pid]:=void;
+  pendingUpdates[pid]:=void;
+end;
+@SuppressUnusedWarning
+//*Clears the stage, rolling back the changes
+//*This is done automatically when the script stops
+storeRollback->sendRequest(ROLLBACK);
+
+private serve(...)->warn('Unhandled request: ',...);

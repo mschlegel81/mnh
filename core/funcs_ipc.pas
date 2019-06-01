@@ -17,6 +17,10 @@ IMPLEMENTATION
 TYPE
   P_myIpcServer=^T_myIpcServer;
   T_myIpcServer=object
+    serverCs:TRTLCriticalSection;
+    localRequest: P_literal;
+    localResponse: P_literal;
+
     serverId:string;
     feedbackLocation:T_tokenLocation;
     servingExpressionOrNil:P_expressionLiteral;
@@ -25,10 +29,13 @@ TYPE
     hasKillRequest:boolean;
     CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages);
     DESTRUCTOR destroy;
+
+    FUNCTION processLocally(CONST request:P_literal):P_literal;
   end;
 
 VAR checkingClient:TSimpleIPCClient=nil;
     registry:specialize G_instanceRegistry<P_myIpcServer>;
+    localServers:specialize G_stringKeyMap<P_myIpcServer>;
 
 FUNCTION serverIsAssociatedWithPackage(s:P_myIpcServer; package:pointer):boolean;
   begin
@@ -53,9 +60,13 @@ FUNCTION cleanPath(CONST s:string):string;
 FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin
     registry.enterCs;
-    if not(Assigned(checkingClient)) then checkingClient:=TSimpleIPCClient.create(nil);
-    checkingClient.serverId:=cleanPath(serverId);
-    result:=checkingClient.ServerRunning;
+    if localServers.containsKey(serverId)
+    then result:=true
+    else begin
+      if not(Assigned(checkingClient)) then checkingClient:=TSimpleIPCClient.create(nil);
+      checkingClient.serverId:=cleanPath(serverId);
+      result:=checkingClient.ServerRunning;
+    end;
     registry.leaveCs;
   end;
 
@@ -161,7 +172,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
       memoryStream:TMemoryStream;
       typeMap:T_typeMap;
   begin
-    if not(receiver.PeekMessage(1,true)) then exit(false);
+    if not(receiver.PeekMessage(0,true)) then exit(false);
     memoryStream:=TMemoryStream.create;
     receiver.GetMessageData(memoryStream);
     streamWrapper.create(memoryStream);
@@ -202,12 +213,23 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
           messageHash:T_hashInt;
         end;
     begin with P_myIpcServer(p)^ do begin
+      if (servingContextOrNil=nil) or (servingExpressionOrNil=nil) then exit(false);
+      result:=false;
       request.payload:=nil;
+      enterCriticalSection(serverCs);
+      try
+        if (localRequest<>nil) and (localResponse=nil) then begin
+          localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,localRequest,nil).literal;
+          result:=true;
+        end;
+      finally
+        leaveCriticalSection(serverCs);
+      end;
+      if result then exit(true);
+
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if (servingContextOrNil<>nil) and
-         readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages) and
-         processThisRequest(request.messageHash) and
-         (servingExpressionOrNil<>nil) then begin
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages) and
+         processThisRequest(request.messageHash)then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
@@ -253,8 +275,8 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       while not(hasKillRequest) and (ipcMessageConnector^.continueEvaluation) do begin
         if serve then sleepTime:=0
                  else begin
-                   if sleepTime<100 then inc(sleepTime);
-                   sleep(sleepTime);
+                   if sleepTime<500 then inc(sleepTime);
+                   sleep(sleepTime shr 2);
                  end;
       end;
       if serverCreated then try
@@ -271,26 +293,71 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
 
 CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages);
   begin
+    initCriticalSection(serverCs);
     serverId:=serverId_;
     feedbackLocation:=location;
     servingExpressionOrNil:=expression;
     servingContextOrNil:=context;
     ipcMessageConnector:=ipcMessageConnect;
+    registry.enterCs;
     registry.onCreation(@self);
+    localServers.put(serverId,@self);
+    registry.leaveCs;
     hasKillRequest:=false;
+    localRequest:=nil;
+    localResponse:=nil;
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
   VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
-    if servingContextOrNil<>nil then begin
-      servingContextOrNil^.finalizeTaskAndDetachFromParent(nil);
-      contextPool.disposeContext(servingContextOrNil);
+    enterCriticalSection(serverCs);
+    try
+      recycler.initRecycler;
+      if servingContextOrNil<>nil then begin
+        servingContextOrNil^.finalizeTaskAndDetachFromParent(nil);
+        contextPool.disposeContext(servingContextOrNil);
+      end;
+      if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
+      registry.enterCs;
+      registry.onDestruction(@self);
+      localServers.dropKey(serverId);
+      registry.leaveCs;
+    finally
+      leaveCriticalSection(serverCs);
+      doneCriticalSection(serverCs);
+      recycler.cleanup;
     end;
-    if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
-    registry.onDestruction(@self);
-    recycler.cleanup;
+  end;
+
+FUNCTION T_myIpcServer.processLocally(CONST request:P_literal):P_literal;
+  FUNCTION aliveAndWell:boolean; inline;
+    begin
+      result:=not(hasKillRequest) and
+              (servingContextOrNil<>nil) and
+              (servingContextOrNil^.continueEvaluation);
+    end;
+
+  begin
+    enterCriticalSection(serverCs);
+    while aliveAndWell and (localRequest<>nil) do begin
+      leaveCriticalSection(serverCs);
+      ThreadSwitch;
+      enterCriticalSection(serverCs);
+    end;
+    if aliveAndWell then begin
+      localRequest:=request;
+      leaveCriticalSection(serverCs);
+      while aliveAndWell and (localResponse=nil) do begin
+        leaveCriticalSection(serverCs);
+        ThreadSwitch;
+        enterCriticalSection(serverCs);
+      end;
+      result:=localResponse;
+      localResponse:=nil;
+      localRequest :=nil;
+      leaveCriticalSection(serverCs);
+    end else exit(nil);
   end;
 
 {$i func_defines.inc}
@@ -345,7 +412,8 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
   VAR temporaryReceiver:TSimpleIPCServer;
       fetchedResult:boolean;
       aliveCheckCounter:longint=0;
-
+      localServer:P_myIpcServer;
+      isLocal:boolean;
       response:record
         senderId:string;
         statusOk:boolean;
@@ -357,25 +425,32 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
        (arg0^.literalType=lt_string) then begin
-      temporaryReceiver:=newServer();
-      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
-      repeat
-        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages);
-        if not(fetchedResult) then begin
-          inc(aliveCheckCounter);
-          if (aliveCheckCounter>100) then begin
-            if not(isServerRunning(str0^.value))
-            then context.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
-            else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
-            aliveCheckCounter:=0;
-          end else sleep(1);
+      registry.enterCs;
+      isLocal:=localServers.containsKey(str0^.value,localServer);
+      registry.leaveCs;
+      if isLocal
+      then result:=localServer^.processLocally(arg1)
+      else begin
+        temporaryReceiver:=newServer();
+        sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
+        repeat
+          fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages);
+          if not(fetchedResult) then begin
+            inc(aliveCheckCounter);
+            if (aliveCheckCounter>100) then begin
+              if not(isServerRunning(str0^.value))
+              then context.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
+              else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
+              aliveCheckCounter:=0;
+            end else sleep(1);
+          end;
+        until fetchedResult or not(context.messages^.continueEvaluation);
+        if fetchedResult and context.messages^.continueEvaluation then begin
+          if response.payload<>nil then result:=response.payload
+                                   else result:=newVoidLiteral;
         end;
-      until fetchedResult or not(context.messages^.continueEvaluation);
-      if fetchedResult and context.messages^.continueEvaluation then begin
-        if response.payload<>nil then result:=response.payload
-                                 else result:=newVoidLiteral;
+        disposeServer(temporaryReceiver);
       end;
-      disposeServer(temporaryReceiver);
     end;
   end;
 
@@ -391,11 +466,13 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
 
 INITIALIZATION
   registry.create;
+  localServers.create();
   registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   {$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});
   registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary    {$ifdef fullVersion},'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server'{$endif});
   registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary    {$ifdef fullVersion},'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server'{$endif});
   registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1{$ifdef fullVersion},'isIpcServerRunning(serverId:String);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance'{$endif});
 FINALIZATION
   registry.destroy;
+  localServers.destroy;
   if Assigned(checkingClient) then checkingClient.free;
 end.

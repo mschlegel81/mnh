@@ -594,9 +594,8 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
       if message^.messageType in heldTypes then begin
         collector.append(message);
         {$ifdef fullVersion} appended:=true; {$endif}
-        if disposeAfterPosting then disposeMessage_(message);
       end else if parentMessages<>nil then begin
-        parentMessages^.postCustomMessage(message,disposeAfterPosting);
+        parentMessages^.postCustomMessage(message);
         {$ifdef fullVersion} appended:=true; {$endif}
       end;
       {$ifdef fullVersion}
@@ -604,6 +603,7 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
       {$endif}
     finally
       leaveCriticalSection(messagesCs);
+      if disposeAfterPosting then disposeMessage_(message);
     end;
   end;
 
@@ -624,9 +624,9 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
       {$ifdef fullVersion}
       if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
       {$endif}
-      if disposeAfterPosting then disposeMessage_(message);
     finally
       leaveCriticalSection(messagesCs);
+      if disposeAfterPosting then disposeMessage_(message);
     end;
   end;
 
@@ -804,16 +804,14 @@ PROCEDURE T_messages.postSingal(CONST kind: T_messageType; CONST location: T_sea
   VAR message:P_storedMessage;
   begin
     new(message,create(kind,location));
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
   VAR message:P_storedMessageWithText;
   begin
     new(message,create(kind,location,txt));
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -822,8 +820,7 @@ PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_sear
     if (kind<>mt_el4_systemError) and (FlagQuietHalt in flags) then exit;
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -831,8 +828,7 @@ PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST locat
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage);
@@ -840,8 +836,7 @@ PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage)
   begin
     new(message,create(mt_el3_evalError,unhandledMessage^.getLocation,'Unhandled message of type "'+unhandledMessage^.getMessageTypeName+'"'));
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    postCustomMessage(message);
-    disposeMessage(message);
+    postCustomMessage(message,true);
   end;
 
 PROCEDURE T_messages.postCustomMessages(CONST message: T_storedMessages);

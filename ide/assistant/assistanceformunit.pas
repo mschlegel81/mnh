@@ -55,6 +55,10 @@ FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TAssistanceForm.performSlowUpdate;
+  begin
+  end;
+
+PROCEDURE TAssistanceForm.performFastUpdate;
   CONST conditionalCaption:array[false..true,false..true] of string=
        (('Assistance','Warnings'           ),
         ('Errors'    ,'Errors and Warnings'));
@@ -76,11 +80,6 @@ PROCEDURE TAssistanceForm.performSlowUpdate;
     finally
       try disposeCodeAssistanceResponse(codeAssistanceResponse); except end;
     end;
-  end;
-
-PROCEDURE TAssistanceForm.performFastUpdate;
-  begin
-
   end;
 
 end.
