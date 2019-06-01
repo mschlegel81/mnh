@@ -337,6 +337,10 @@ FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TOutlineForm.performSlowUpdate;
+  begin
+  end;
+
+PROCEDURE TOutlineForm.performFastUpdate;
   VAR codeAssistanceResponse:P_codeAssistanceResponse;
   begin
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
@@ -345,11 +349,6 @@ PROCEDURE TOutlineForm.performSlowUpdate;
       caResponse:=codeAssistanceResponse;
       updateOutlineTree;
     end else disposeCodeAssistanceResponse(codeAssistanceResponse);
-  end;
-
-PROCEDURE TOutlineForm.performFastUpdate;
-  begin
-
   end;
 
 FUNCTION TOutlineForm.ruleSorting: T_ruleSorting;

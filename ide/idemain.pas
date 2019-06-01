@@ -622,8 +622,6 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
     workspace.updateEditorsByGuiStatus;
   end;
 
-VAR slowUpdateState:string='';
-    fastUpdateState:string='';
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
   PROCEDURE slowUpdates;
@@ -641,40 +639,21 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           round(255*max(0,min(1,  2*fraction)));
       end;
 
-    VAR edit:P_editorMeta;
     begin
       if slowUpdating then exit;
       try
         slowUpdating:=true;
-        slowUpdateState:='Saving IDE settings';
         if workspace.savingRequested then saveIdeSettings;
-
-        edit:=workspace.currentEditor;
-        if (edit<>nil) then begin
-          slowUpdateState:='Polling assistant result';
-          edit^.pollAssistanceResult;
-          slowUpdateState:='Updating form caption';
-          miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
-          if edit^.isPseudoFile
-          then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-          else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-        end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
-
-        slowUpdateState:='Performing global slow updates';
         performSlowUpdates;
-        slowUpdateState:='Drawing memory usage';
         drawMemoryUsage;
 
-        slowUpdateState:='Opening files received by IPC';
         FormDropFiles(Sender,ipcModel.getFilesToOpen);
-        slowUpdateState:='Updating state label';
         evaluationStateLabel.caption:=runnerModel.getStateLabel+BoolToStr(quitPosted,' QUIT POSTED','');
         if quitPosted and not(anyEvaluationRunning) then begin
           OnCloseQuery:=nil;
           slowUpdating:=false;
           close;
         end else begin
-          slowUpdateState:='Checking for file changes';
           workspace.checkForFileChanges;
         end;
       finally
@@ -713,19 +692,26 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         end;
       end;
 
+    VAR edit:P_editorMeta;
     begin
       if fastUpdating then exit;
       try
         fastUpdating:=true;
-        fastUpdateState:='Global fast updates';
         performFastUpdates;
-        fastUpdateState:='Flushing messages';
         runnerModel.flushMessages;
+
+        edit:=workspace.currentEditor;
+        if (edit<>nil) then begin
+          edit^.pollAssistanceResult;
+          miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
+          if edit^.isPseudoFile
+          then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+          else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+        end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
 
         if Assigned(ActiveControl) and ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 
         if askForm.displayPending then askForm.Show;
-        fastUpdateState:='Updating dynamic items';
         enableItems;
         processPendingResize;
       finally
@@ -751,8 +737,6 @@ PROCEDURE TIdeMainForm.ensureTimerSuspend;
         inc(counter);
         sleep(1);
       end;
-      if slowUpdating then raise Exception.create('Slow updates are hanging for at least 1 second at '+slowUpdateState);
-      if fastUpdating then raise Exception.create('Fast updates are hanging for at least 1 second at '+fastUpdateState);
     end;
   end;
 

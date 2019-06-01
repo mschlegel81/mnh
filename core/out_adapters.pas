@@ -591,9 +591,8 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
       if message^.messageType in heldTypes then begin
         collector.append(message);
         {$ifdef fullVersion} appended:=true; {$endif}
-        if disposeAfterPosting then disposeMessage_(message);
       end else if parentMessages<>nil then begin
-        parentMessages^.postCustomMessage(message,disposeAfterPosting);
+        parentMessages^.postCustomMessage(message);
         {$ifdef fullVersion} appended:=true; {$endif}
       end;
       {$ifdef fullVersion}
@@ -601,6 +600,7 @@ PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage
       {$endif}
     finally
       leaveCriticalSection(messagesCs);
+      if disposeAfterPosting then disposeMessage_(message);
     end;
   end;
 
@@ -621,9 +621,9 @@ PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage;
       {$ifdef fullVersion}
       if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
       {$endif}
-      if disposeAfterPosting then disposeMessage_(message);
     finally
       leaveCriticalSection(messagesCs);
+      if disposeAfterPosting then disposeMessage_(message);
     end;
   end;
 

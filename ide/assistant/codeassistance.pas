@@ -119,7 +119,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 
       provider:P_codeProvider;
       response:P_codeAssistanceResponse;
-      lastEvaluationStart:double;
+      lastEvaluationEnd:double;
   FUNCTION isShutdownRequested:boolean;
     begin
       enterCriticalSection(codeAssistanceCs);
@@ -130,7 +130,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
   FUNCTION timeForNextCheck:boolean;
     CONST ONE_SECOND=1/(24*60*60);
     begin
-      if (now<lastEvaluationStart+ONE_SECOND) then exit(false);
+      if (now<lastEvaluationEnd+0.5*ONE_SECOND) then exit(false);
       enterCriticalSection(codeAssistanceCs);
       result:=shuttingDown or
               (codeAssistanceRequest<>nil) and
@@ -151,8 +151,8 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       codeAssistanceRequest:=nil;
       leaveCriticalSection(codeAssistanceCs);
       if provider<>nil then begin;
-        lastEvaluationStart:=now;
         response:=doCodeAssistanceSynchronously(provider,recycler,globals,@adapters);
+        lastEvaluationEnd:=now;
         enterCriticalSection(codeAssistanceCs);
         try
           disposeCodeAssistanceResponse(codeAssistanceResponse);
