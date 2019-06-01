@@ -3,6 +3,9 @@ arity({3});
 //#mnh.arity
 arity({sin($x)/$x});
 
+//#mnh.runScript
+runScript('hello.mnh',["main->print('Hello world');"],[]).filter({$message.head=='printline'}).map(::trailing);
+
 //#mnh.arity
 arity({sin($x)/$y});
 
@@ -485,7 +488,7 @@ permutations([1,1,2]);
 
 permutations([1..3]);
 
-//#serialize
+//#serialize deserialize
 //Test serialization
 input:=[[1..10],random,'test',random(9)];
 serialized:=input.serialize;
@@ -583,6 +586,12 @@ bytes('ö').ord;
 base64encode('Test');
 
 base64decode('VGVzdA==');
+
+base92encode('bla bla bla '); //Encode 4 chars to 5 chars
+
+base92decode('PgsC.?d@t^' );
+
+listSideEffects;
 
 changeFileExt('file.extension','.newExtension');
 
@@ -778,6 +787,18 @@ try({deserialize('x')},{warn($x.head.trailing)});
 
 interpret("3+4");
 
+shiftRight(7,1);
+
+shiftRight(5,-2);
+
+//#typecast.toBuiltin
+type FiniteRealList(L:List)->L.each(x,!x.isNan,!x.isInfinite,AND);
+x:=[1,5,0.4,1/7].toFiniteRealList;
+x;
+x.typeOf;
+x.toBuiltin;
+x.toBuiltin.typeOf;
+
 interpret({print("Hello world")},[]);
 
 //Compose binary digits
@@ -857,6 +878,12 @@ toIteratableExpression(::sqr);
 
 //#toIteratableExpression
 toIteratableExpression({begin local i:=1; save; i+=i-1; end});
+
+euklideanNorm([1,2]);
+
+assert(1=1.0);
+
+assert('bla'.isInt,'Invalid integer given');
 
 md5('Test input. Could be anything really.');
 

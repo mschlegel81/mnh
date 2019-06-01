@@ -1693,7 +1693,7 @@ where <ul><li><code>expression</code> is a valid MNH expression (in curly bracke
 <li><code>ArgType</code> is one of the following<ul>
     <li> <code>d  </code> decimal format
     <li> <code>e  </code> scientific format
-    <li> <code>f  </code> fixed point format
+    <li> <code>f  </code> floating point format
     <li> <code>g  </code> general number format
     <li> <code>s  </code> string format
     <li> <code>x  </code> hexadecimal format

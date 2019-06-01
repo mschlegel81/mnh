@@ -140,7 +140,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     begin
       if length(exampleSource)<=0 then exit;
       if copy(exampleSource[0],1,3)='//#' then begin
-        ids:=(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
+        ids:=split(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)),' ');
         leadingIdLine:=true;
       end else ids:=idList;
       sortUnique(ids);
