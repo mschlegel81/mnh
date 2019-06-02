@@ -336,9 +336,9 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       if doAsynch then
         result:=newVoidLiteral
       else begin
-        hideConsole;
         result:=newIntLiteral(processExitCode);
       end;
+      hideConsole;
     end;
   end;
 
