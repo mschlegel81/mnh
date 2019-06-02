@@ -8,9 +8,6 @@ USES basicTypes,
      tokenStack;
 TYPE
   P_debuggingSnapshot=^T_debuggingSnapshot;
-
-  { T_debuggingSnapshot }
-
   T_debuggingSnapshot=object(T_payloadMessage)
     tokenStack:P_tokenStack;
     first:P_token;
@@ -55,9 +52,7 @@ TYPE
 
 IMPLEMENTATION
 USES sysutils;
-CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack;
-  CONST first_: P_token; CONST stack_: P_callStack; CONST globals,
-  locals: P_variableTreeEntryCategoryNode);
+CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_: P_token; CONST stack_: P_callStack; CONST globals,locals: P_variableTreeEntryCategoryNode);
   begin
     inherited create(mt_debugger_breakpoint);
     first:=first_;

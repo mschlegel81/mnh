@@ -48,6 +48,7 @@ private sendRequest(operation,...)->begin
   ? void
   : begin
       execAsync(executor,[myPath]);
+      //For debugging in the same instance use: async(::main);
       while(!isIpcServerRunning(IPC_ID),sleep(0.01));
     end;
   sendIpcRequest(IPC_ID,PID|operation|...);
@@ -71,8 +72,7 @@ private serve(pid,(GET),key)->begin
   ensureTemporary(pid);
   key in pendingDeletes[pid]
   ? void
-  : pendingUpdates[pid,key] orElse
-    store         [pid,key];
+  : pendingUpdates[pid,key] orElse store[key];
 end;
 @SuppressUnusedWarning
 //*Get an entry with the specified key from the store
