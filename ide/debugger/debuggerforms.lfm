@@ -1,77 +1,24 @@
 object DebuggerForm: TDebuggerForm
   Left = 904
-  Height = 234
-  Top = 327
-  Width = 480
+  Height = 313
+  Top = 170
+  Width = 320
   Caption = 'Debugger'
-  ClientHeight = 234
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 313
+  ClientWidth = 320
   DragKind = dkDock
   DragMode = dmAutomatic
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  LCLVersion = '2.0.0.4'
-  object DebuggerToolbar: TToolBar
-    Left = 0
-    Height = 35
-    Top = 0
-    Width = 480
-    AutoSize = True
-    Caption = 'DebuggerToolbar'
-    Images = DebuggerIcons
-    TabOrder = 0
-    object tbRunContinue: TToolButton
-      Left = 1
-      Top = 2
-      Caption = 'tbRunContinue'
-      ImageIndex = 0
-      OnClick = tbRunContinueClick
-    end
-    object tbStepIn: TToolButton
-      Left = 36
-      Top = 2
-      Caption = 'tbStepIn'
-      ImageIndex = 6
-      OnClick = tbStepInClick
-    end
-    object tbStep: TToolButton
-      Left = 71
-      Top = 2
-      Caption = 'tbStep'
-      ImageIndex = 4
-      OnClick = tbStepClick
-    end
-    object tbMicrostep: TToolButton
-      Left = 106
-      Top = 2
-      Caption = 'tbMicrostep'
-      ImageIndex = 10
-      OnClick = tbMicrostepClick
-    end
-    object tbStepOut: TToolButton
-      Left = 141
-      Top = 2
-      Caption = 'tbStepOut'
-      ImageIndex = 8
-      OnClick = tbStepOutClick
-    end
-    object tbHalt: TToolButton
-      Left = 176
-      Top = 2
-      Caption = 'tbHalt'
-      ImageIndex = 2
-      OnClick = tbHaltClick
-    end
-  end
+  LCLVersion = '2.0.2.0'
   inline currentExpressionEdit: TSynEdit
     Left = 0
-    Height = 101
-    Top = 35
-    Width = 480
+    Height = 208
+    Top = 40
+    Width = 320
     Align = alClient
-    Font.Height = -13
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -509,6 +456,7 @@ object DebuggerForm: TDebuggerForm
     MouseSelActions = <>
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
+    RightEdge = 0
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
@@ -527,31 +475,124 @@ object DebuggerForm: TDebuggerForm
     MouseLinkColor.Foreground = clBlue
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
+    WantTabs = False
     inline SynLeftGutterPartList1: TSynGutterPartList
     end
   end
   object inlineVariablesTreeView: TTreeView
     Left = 0
-    Height = 90
-    Top = 144
-    Width = 480
+    Height = 60
+    Top = 253
+    Width = 320
     Align = alBottom
+    ParentFont = False
     TabOrder = 2
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
-    Height = 8
-    Top = 136
-    Width = 480
+    Height = 5
+    Top = 248
+    Width = 320
     Align = alBottom
     ResizeAnchor = akBottom
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 40
+    Top = 0
+    Width = 320
+    Align = alTop
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 40
+    ClientWidth = 320
+    TabOrder = 0
+    TabStop = True
+    object bbRunContinue: TBitBtn
+      Left = 0
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbRunContinueClick
+      Spacing = 1
+      TabOrder = 0
+    end
+    object bbStepIn: TBitBtn
+      Left = 57
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbStepInClick
+      Spacing = 1
+      TabOrder = 1
+    end
+    object bbStep: TBitBtn
+      Left = 114
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbStepClick
+      Spacing = 1
+      TabOrder = 2
+    end
+    object bbMicrostep: TBitBtn
+      Left = 171
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbMicrostepClick
+      Spacing = 1
+      TabOrder = 3
+    end
+    object bbStepOut: TBitBtn
+      Left = 228
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbStepOutClick
+      Spacing = 1
+      TabOrder = 4
+    end
+    object bbHalt: TBitBtn
+      Left = 285
+      Height = 40
+      Top = 0
+      Width = 57
+      Align = alLeft
+      AutoSize = True
+      Images = DebuggerIcons
+      ImageIndex = 0
+      OnClick = tbHaltClick
+      Spacing = 1
+      TabOrder = 5
+    end
   end
   object DebuggerIcons: TImageList
     Height = 30
     Width = 30
-    left = 112
-    top = 47
+    left = 75
+    top = 31
     Bitmap = {
       4C690C0000001E0000001E000000F4F4F4E1F2F2F2ECF2F2F2ECF3F3F3ECF4F4
       F4ECF4F4F4ECF3F3F3ECF2F2F2ECF2F2F2ECF0F0F0ECEEEEEEECEDEDEDECE9E9

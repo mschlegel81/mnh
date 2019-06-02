@@ -5,7 +5,7 @@ UNIT debuggerForms;
 INTERFACE
 
 USES
-  sysutils, Forms, Controls, ComCtrls, ExtCtrls, SynEdit,
+  sysutils, Forms, Controls, ComCtrls, ExtCtrls, Buttons, SynEdit,
   ideLayoutUtil, debugging, debuggingVar, debuggerVarForms, Classes, treeUtil,
   SynHighlighterMnh;
 
@@ -14,16 +14,16 @@ TYPE
   { TDebuggerForm }
 
   TDebuggerForm = class(T_mnhComponentForm)
+    bbRunContinue: TBitBtn;
+    bbStepIn: TBitBtn;
+    bbStep: TBitBtn;
+    bbMicrostep: TBitBtn;
+    bbStepOut: TBitBtn;
+    bbHalt: TBitBtn;
     DebuggerIcons: TImageList;
-    DebuggerToolbar: TToolBar;
     currentExpressionEdit: TSynEdit;
+    Panel1: TPanel;
     Splitter1: TSplitter;
-    tbRunContinue: TToolButton;
-    tbStepIn: TToolButton;
-    tbStep: TToolButton;
-    tbMicroStep: TToolButton;
-    tbStepOut: TToolButton;
-    tbHalt: TToolButton;
     inlineVariablesTreeView: TTreeView;
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
@@ -42,9 +42,9 @@ TYPE
     inlineVariableReport:P_variableTreeEntryCategoryNode;
     treeViewModel:T_treeModel;
     currentExpressionHighlighter:TMnhDebugSyn;
+    lastClickedButton:T_debuggerState;
 
-    PROCEDURE addCategoryNode(CONST r: P_variableTreeEntryCategoryNode;
-      CONST expand: boolean=true);
+    PROCEDURE addCategoryNode(CONST r: P_variableTreeEntryCategoryNode; CONST expand: boolean=true);
     PROCEDURE updateWithCurrentSnapshot;
     PROCEDURE delegateDebuggerAction(CONST newState:T_debuggerState);
   public
@@ -83,8 +83,6 @@ PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
 
 {$R *.lfm}
 
-{ TDebuggerForm }
-
 FUNCTION TDebuggerForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icDebugger;
@@ -99,6 +97,7 @@ PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
     registerFontControl(inlineVariablesTreeView,ctGeneral);
     currentExpressionHighlighter:=TMnhDebugSyn.create(currentExpressionEdit);
     currentExpressionEdit.highlighter:=currentExpressionHighlighter;
+    lastClickedButton:=dontBreakAtAll;
   end;
 
 PROCEDURE TDebuggerForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -124,22 +123,27 @@ PROCEDURE TDebuggerForm.performFastUpdate;
   VAR running:boolean;
       halted:boolean;
 
- PROCEDURE handleButton(VAR button:TToolButton; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways:boolean=false);
-   begin
-     button.enabled:=enabled or enableAlways;
-     if enabled then button.ImageIndex:=enabledImageIndex
-                else button.ImageIndex:=enabledImageIndex+1;
-   end;
+   PROCEDURE handleButton(VAR button:TBitBtn; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways,focusOnEnable:boolean);
+     VAR wasEnabledBefore:boolean;
+     begin
+       wasEnabledBefore:=button.Enabled;
+       button.enabled:=enabled or enableAlways;
+       if enabled then button.ImageIndex:=enabledImageIndex
+                  else button.ImageIndex:=enabledImageIndex+1;
+       if button.Enabled and not(wasEnabledBefore) and focusOnEnable then begin
+         button.SetFocus;
+       end;
+     end;
 
  begin
    running  :=runnerModel.anyRunning(false);
    halted   :=runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil);
-   handleButton(tbHalt       ,halted or running, 2);
-   handleButton(tbRunContinue,halted or runnerModel.canRun, 0,true);
-   handleButton(tbStep       ,halted , 4);
-   handleButton(tbStepIn     ,halted , 6);
-   handleButton(tbStepOut    ,halted , 8);
-   handleButton(tbMicroStep  ,halted ,10);
+   handleButton(bbHalt       ,halted or running, 2           ,false,lastClickedButton=dontBreakAtAll);
+   handleButton(bbRunContinue,halted or runnerModel.canRun, 0,true ,lastClickedButton=runUntilBreakpoint);
+   handleButton(bbStep       ,halted , 4                     ,false,lastClickedButton=breakOnLineChange);
+   handleButton(bbStepIn     ,halted , 6                     ,false,lastClickedButton=breakOnStepIn);
+   handleButton(bbStepOut    ,halted , 8                     ,false,lastClickedButton=breakOnStepOut);
+   handleButton(bbMicroStep  ,halted ,10                     ,false,lastClickedButton=breakSoonest);
 
    if not(running) and not(halted) and (inlineVariablesTreeView.items.count>0) then updateWithCurrentSnapshot;
  end;
@@ -150,6 +154,7 @@ PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
     disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
     updateWithCurrentSnapshot;
+    lastClickedButton:=dontBreakAtAll;
   end;
 
 PROCEDURE TDebuggerForm.addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
@@ -174,15 +179,15 @@ PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
     else delegateDebuggerAction(breakSoonest);
   end;
 
-PROCEDURE TDebuggerForm.tbMicroStepClick(Sender: TObject); begin if tbMicroStep.enabled then delegateDebuggerAction(breakSoonest     ); end;
-PROCEDURE TDebuggerForm.tbStepClick     (Sender: TObject); begin if tbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
-PROCEDURE TDebuggerForm.tbStepInClick   (Sender: TObject); begin if tbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
-PROCEDURE TDebuggerForm.tbStepOutClick  (Sender: TObject); begin if tbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
+PROCEDURE TDebuggerForm.tbMicroStepClick(Sender: TObject); begin if bbMicroStep.enabled then delegateDebuggerAction(breakSoonest     ); end;
+PROCEDURE TDebuggerForm.tbStepClick     (Sender: TObject); begin if bbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
+PROCEDURE TDebuggerForm.tbStepInClick   (Sender: TObject); begin if bbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
+PROCEDURE TDebuggerForm.tbStepOutClick  (Sender: TObject); begin if bbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
 
 PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
   VAR lines,chars:longint;
       tokens:T_arrayOfString;
-      txt:ansistring;
+      txt:ansistring='';
       k:longint=0;
       firstInLine:boolean;
   begin
@@ -217,6 +222,7 @@ PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
         firstInLine:=false;
       end;
       currentExpressionEdit.lines.append(txt);
+      writeln('Ex: ',txt);
     end;
     setLength(tokens,0);
   end;
@@ -229,6 +235,7 @@ PROCEDURE TDebuggerForm.delegateDebuggerAction(CONST newState: T_debuggerState);
     parameterInfo:=nil;
     disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
+    lastClickedButton:=newState;
     updateWithCurrentSnapshot;
   end;
 

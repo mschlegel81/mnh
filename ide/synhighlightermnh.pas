@@ -107,7 +107,6 @@ TYPE
       CONSTRUCTOR create(AOwner: TComponent); reintroduce;
       DESTRUCTOR destroy; override;
       PROCEDURE next; override;
-
       PROCEDURE handle194; override;
   end;
 
@@ -495,7 +494,10 @@ PROCEDURE TMnhOutputSyn.next;
 
 PROCEDURE TMnhDebugSyn.next;
   begin
-    inherited next;
+    fTokenId := tkDefault;
+    fTokenSubId:=skNormal;
+    fTokenPos := run;
+    inherited;
     if (blobEnder=#0) then fTokenSubId:=skWarn;
   end;
 
@@ -528,7 +530,6 @@ PROCEDURE TAbstractSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT
 FUNCTION TAbstractSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId,fTokenSubId];
-//    if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
   end;
 
 FUNCTION TAbstractSynMnhSyn.GetTokenKind: integer;
