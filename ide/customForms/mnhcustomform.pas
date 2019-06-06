@@ -66,6 +66,7 @@ TYPE
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
+    FUNCTION getCustomForm:TWinControl;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
@@ -130,7 +131,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES synOutAdapter;
+USES synOutAdapter,mnh_settings;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -265,6 +266,12 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     end;
   end;
 
+FUNCTION T_guiElementMeta.getCustomForm:TWinControl;
+  begin
+    result:=getControl.parent;
+    while (result.parent<>nil) and (result.ClassType<>TscriptedForm.ClassType) do result:=result.parent;
+  end;
+
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
   begin
     if (config.action=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
@@ -272,7 +279,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
       if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
       state.actionParameter:=param;
       state.actionTriggered:=true;
-      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+      propagateCursor(getCustomForm,crHourGlass);
     finally
       leaveCriticalSection(elementCs);
     end;
