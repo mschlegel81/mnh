@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,
      //my libraries
      {$ifdef fullVersion}
-     myGenerics,myStringUtil,
+     myGenerics,
      mnh_messages,out_adapters,
      {$endif}
      //MNH:
@@ -36,7 +36,6 @@ TYPE
     id:T_idString;
     calleeLocation:string;
     callers:T_callerMap.KEY_VALUE_LIST;
-
     //aggregated values
     timeSpent_inclusive,
     timeSpent_exclusive:double;
@@ -46,10 +45,10 @@ TYPE
   P_calleeEntry=^T_calleeEntry;
   T_calleeEntry=object
     id:T_idString;
-    calleeLocation:string;
+    calleeLocation:T_tokenLocation;
     callerMap:T_callerMap;
 
-    CONSTRUCTOR create(CONST id_:T_idString;CONST loc:string);
+    CONSTRUCTOR create(CONST id_:T_idString;CONST loc:T_tokenLocation);
     DESTRUCTOR destroy;
     PROCEDURE add(CONST callerLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
     FUNCTION toProfilingListEntry:T_profilingListEntry;
@@ -57,17 +56,19 @@ TYPE
 
   T_profilingMap=specialize G_stringKeyMap<P_calleeEntry>;
   T_profilingList=array of T_profilingListEntry;
+  T_string2stringMap=specialize G_stringKeyMap<string>;
 
   P_profiler=^T_profiler;
   T_profiler=object
     private
       cs:TRTLCriticalSection;
       map:T_profilingMap;
+      lineToFunc:T_string2stringMap;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive,dt_exclusive:double);
+      PROCEDURE add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive,dt_exclusive:double);
       PROCEDURE logInfo(CONST adapters:P_messages);
   end;
 
@@ -89,6 +90,7 @@ PROCEDURE sortCallerList(VAR list:T_callerMap.KEY_VALUE_LIST; CONST sortIndex:by
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 VAR mnhSysPseudopackagePrefix :string='';
 IMPLEMENTATION
+USES myStringUtil;
 CONST categoryText:array[T_profileCategory] of string=(':importing',':tokenizing',':declarations',':evaluation',':unknown',':total');
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;
@@ -207,7 +209,7 @@ PROCEDURE disposeEntry(VAR entry:P_calleeEntry);
     dispose(entry,destroy);
   end;
 
-CONSTRUCTOR T_calleeEntry.create(CONST id_: T_idString; CONST loc: string);
+CONSTRUCTOR T_calleeEntry.create(CONST id_: T_idString; CONST loc: T_tokenLocation);
   begin
     id:=id_;
     calleeLocation:=loc;
@@ -253,7 +255,7 @@ FUNCTION T_calleeEntry.toProfilingListEntry: T_profilingListEntry;
     end;
     for s in categoryText do if s=id then anyCat:=true;
     if anyCat then begin
-      result.calleeLocation:='';
+      result.calleeLocation:=packageTokenLocation(calleeLocation.package);
       setLength(result.callers,0);
     end;
   end;
@@ -261,6 +263,7 @@ FUNCTION T_calleeEntry.toProfilingListEntry: T_profilingListEntry;
 CONSTRUCTOR T_profiler.create;
   begin
     map.create(@disposeEntry);
+    lineToFunc.create();
     initCriticalSection(cs);
   end;
 
@@ -269,6 +272,7 @@ DESTRUCTOR T_profiler.destroy;
     enterCriticalSection(cs);
     try
       map.destroy;
+      lineToFunc.destroy;
     finally
       leaveCriticalSection(cs);
     end;
@@ -280,16 +284,18 @@ PROCEDURE T_profiler.clear;
     enterCriticalSection(cs);
     try
       map.clear;
+      lineToFunc.clear;
     finally
       leaveCriticalSection(cs);
     end;
   end;
 
-PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerLocation,calleeLocation: ansistring; CONST dt_inclusive, dt_exclusive: double);
+PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive, dt_exclusive: double);
   VAR profilingEntry:P_calleeEntry;
   begin
     enterCriticalSection(cs);
     try
+      if callerFuncLocation.package<>nil then lineToFunc.put(callerLocation,callerFuncLocation);
       if not map.containsKey(calleeLocation,profilingEntry) then begin
         new(profilingEntry,create(id,calleeLocation));
         map.put             (calleeLocation,profilingEntry);
@@ -307,11 +313,12 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
   begin
     enterCriticalSection(cs);
     try
-       profilingData:=map.valueSet;
-       new(message,create);
-       setLength(message^.content,length(profilingData));
-       for k:=0 to length(profilingData)-1 do message^.content[k]:=profilingData[k]^.toProfilingListEntry;
-       adapters^.postCustomMessage(message,true);
+      //TODO: Use line to func to construct list of callers per entry
+      profilingData:=map.valueSet;
+      new(message,create);
+      setLength(message^.content,length(profilingData));
+      for k:=0 to length(profilingData)-1 do message^.content[k]:=profilingData[k]^.toProfilingListEntry;
+      adapters^.postCustomMessage(message,true);
     finally
       leaveCriticalSection(cs);
     end;

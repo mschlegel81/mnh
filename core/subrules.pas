@@ -571,6 +571,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               recycler.disposeScope(saveValueStore);
             end;
           end;
+          {$ifdef fullVersion}
+          context.callStackPop(firstRep);
+          {$endif}
         end else begin
           lastRep^.next:=recycler.newToken(getLocation,'',tt_semicolon);
           lastRep:=lastRep^.next;

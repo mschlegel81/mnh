@@ -77,7 +77,7 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
     begin
       StackGrid.RowCount:=1+currentSnapshot^.callStack^.size;
       for i:=currentSnapshot^.callStack^.size-1 downto 0 do begin
-        StackGrid.Cells[0,j]:=currentSnapshot^.callStack^[i].callLocation;
+        StackGrid.Cells[0,j]:=currentSnapshot^.callStack^[i].callerLocation;
         StackGrid.Cells[1,j]:=currentSnapshot^.callStack^[i].calleeId;
         inc(j);
       end;
