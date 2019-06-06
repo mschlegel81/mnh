@@ -25,21 +25,20 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_callerEntry=record
+  T_profilingInfo=record
     timeSpent_inclusive,
     timeSpent_exclusive:double;
     callCount:longint;
   end;
-  T_callerMap=specialize G_stringKeyMap<T_callerEntry>;
+  T_callerMap=specialize G_stringKeyMap<T_profilingInfo>;
 
   T_profilingListEntry=record
     id:T_idString;
     calleeLocation:string;
-    callers:T_callerMap.KEY_VALUE_LIST;
+    callers,
+    callees:T_callerMap.KEY_VALUE_LIST;
     //aggregated values
-    timeSpent_inclusive,
-    timeSpent_exclusive:double;
-    callCount:longint;
+    aggTime:T_profilingInfo;
   end;
 
   P_calleeEntry=^T_calleeEntry;
@@ -62,8 +61,8 @@ TYPE
   T_profiler=object
     private
       cs:TRTLCriticalSection;
-      map:T_profilingMap;
-      lineToFunc:T_string2stringMap;
+      callee2callers:T_profilingMap;
+      caller2callees:T_profilingMap;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -107,12 +106,12 @@ PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
         1: result:=a.id>b.id;
         2: result:=a.calleeLocation<b.calleeLocation;
         3: result:=a.calleeLocation>b.calleeLocation;
-        4: result:=a.callCount<b.callCount;
-        5: result:=a.callCount>b.callCount;
-        6: result:=a.timeSpent_inclusive<b.timeSpent_inclusive;
-        7: result:=a.timeSpent_inclusive>b.timeSpent_inclusive;
-        8: result:=a.timeSpent_exclusive<b.timeSpent_exclusive;
-        9: result:=a.timeSpent_exclusive>b.timeSpent_exclusive;
+        4: result:=a.aggTime.callCount<b.aggTime.callCount;
+        5: result:=a.aggTime.callCount>b.aggTime.callCount;
+        6: result:=a.aggTime.timeSpent_inclusive<b.aggTime.timeSpent_inclusive;
+        7: result:=a.aggTime.timeSpent_inclusive>b.aggTime.timeSpent_inclusive;
+        8: result:=a.aggTime.timeSpent_exclusive<b.aggTime.timeSpent_exclusive;
+        9: result:=a.aggTime.timeSpent_exclusive>b.aggTime.timeSpent_exclusive;
       end;
     end;
 
@@ -190,9 +189,9 @@ FUNCTION T_profileMessage.toString(CONST forGui: boolean): T_arrayOfString;
       if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
       append(result,shortId                         +C_tabChar+
                     profiledLocation(calleeLocation)+C_tabChar+
-                    intToStr  (callCount)           +C_tabChar+
-                    nicestTime(timeSpent_inclusive) +C_tabChar+
-                    nicestTime(timeSpent_exclusive));
+                    intToStr  (aggTime.callCount)           +C_tabChar+
+                    nicestTime(aggTime.timeSpent_inclusive) +C_tabChar+
+                    nicestTime(aggTime.timeSpent_exclusive));
       for j:=0 to length(callers)-1 do begin
         append(result,BoolToStr(j=0,C_shiftInChar+'called at',' ')+C_tabChar+
                   profiledLocation(callers[j].key)                +C_tabChar+
@@ -223,7 +222,7 @@ DESTRUCTOR T_calleeEntry.destroy;
 
 PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring;
   CONST dt_inclusive, dt_exclusive: double);
-  VAR callerEntry:T_callerEntry;
+  VAR callerEntry:T_profilingInfo;
   begin
     if callerMap.containsKey(callerLocation,callerEntry) then begin
       inc(callerEntry.callCount);
@@ -237,33 +236,36 @@ PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring;
     callerMap.put(callerLocation,callerEntry);
   end;
 
+OPERATOR +(CONST x,y:T_profilingInfo):T_profilingInfo;
+  begin
+    result.callCount          :=x.callCount          +y.callCount;
+    result.timeSpent_inclusive:=x.timeSpent_inclusive+y.timeSpent_inclusive;
+    result.timeSpent_exclusive:=x.timeSpent_exclusive+y.timeSpent_exclusive;
+  end;
+
 FUNCTION T_calleeEntry.toProfilingListEntry: T_profilingListEntry;
   VAR caller:T_callerMap.KEY_VALUE_PAIR;
       anyCat:boolean=false;
       s:string;
   begin
-    result.callCount:=0;
-    result.timeSpent_exclusive:=0;
-    result.timeSpent_inclusive:=0;
+    result.aggTime.callCount:=0;
+    result.aggTime.timeSpent_exclusive:=0;
+    result.aggTime.timeSpent_inclusive:=0;
     result.id:=id;
     result.calleeLocation:=calleeLocation;
     result.callers:=callerMap.entrySet;
-    for caller in result.callers do begin
-      result.callCount          +=caller.value.callCount;
-      result.timeSpent_exclusive+=caller.value.timeSpent_exclusive;
-      result.timeSpent_inclusive+=caller.value.timeSpent_inclusive;
-    end;
+    setLength(result.callees,0);
+    for caller in result.callers do result.aggTime+=caller.value;
     for s in categoryText do if s=id then anyCat:=true;
     if anyCat then begin
       result.calleeLocation:=packageTokenLocation(calleeLocation.package);
-      setLength(result.callers,0);
     end;
   end;
 
 CONSTRUCTOR T_profiler.create;
   begin
-    map.create(@disposeEntry);
-    lineToFunc.create();
+    callee2callers.create(@disposeEntry);
+    caller2callees.create(@disposeEntry);
     initCriticalSection(cs);
   end;
 
@@ -271,8 +273,8 @@ DESTRUCTOR T_profiler.destroy;
   begin
     enterCriticalSection(cs);
     try
-      map.destroy;
-      lineToFunc.destroy;
+      callee2callers.destroy;
+      caller2callees.destroy;
     finally
       leaveCriticalSection(cs);
     end;
@@ -283,8 +285,8 @@ PROCEDURE T_profiler.clear;
   begin
     enterCriticalSection(cs);
     try
-      map.clear;
-      lineToFunc.clear;
+      callee2callers.clear;
+      caller2callees.clear;
     finally
       leaveCriticalSection(cs);
     end;
@@ -295,29 +297,38 @@ PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLo
   begin
     enterCriticalSection(cs);
     try
-      if callerFuncLocation.package<>nil then lineToFunc.put(callerLocation,callerFuncLocation);
-      if not map.containsKey(calleeLocation,profilingEntry) then begin
+      if not callee2callers.containsKey(calleeLocation,profilingEntry) then begin
         new(profilingEntry,create(id,calleeLocation));
-        map.put             (calleeLocation,profilingEntry);
+        callee2callers.put(calleeLocation,profilingEntry);
       end;
       profilingEntry^.add(callerLocation,dt_inclusive,dt_exclusive);
+
+      if not caller2callees.containsKey(callerFuncLocation,profilingEntry) then begin
+        new(profilingEntry,create('?',callerFuncLocation));
+        caller2callees.put(callerFuncLocation,profilingEntry);
+      end;
+      profilingEntry^.add(calleeLocation,dt_inclusive,dt_exclusive);
     finally
       system.leaveCriticalSection(cs);
     end;
   end;
 
 PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
-  VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
+  VAR callee2callersList:T_profilingMap.VALUE_TYPE_ARRAY;
+      callerInfo:P_calleeEntry;
       message:P_profileMessage;
       k:longint;
   begin
     enterCriticalSection(cs);
     try
-      //TODO: Use line to func to construct list of callers per entry
-      profilingData:=map.valueSet;
+      callee2callersList:=callee2callers.valueSet;
       new(message,create);
-      setLength(message^.content,length(profilingData));
-      for k:=0 to length(profilingData)-1 do message^.content[k]:=profilingData[k]^.toProfilingListEntry;
+      setLength(message^.content,length(callee2callersList));
+      for k:=0 to length(callee2callersList)-1 do begin
+        message^.content[k]:=callee2callersList[k]^.toProfilingListEntry;
+        if caller2callees.containsKey(message^.content[k].calleeLocation,callerInfo) then
+          message^.content[k].callees:=callerInfo^.callerMap.entrySet;
+      end;
       adapters^.postCustomMessage(message,true);
     finally
       leaveCriticalSection(cs);

@@ -12,9 +12,13 @@ TYPE
   TprofilingOutputForm = class(T_mnhComponentForm)
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    GroupBox3: TGroupBox;
+    Panel1: TPanel;
     Splitter1: TSplitter;
+    Splitter2: TSplitter;
     StringGrid1: TStringGrid;
     StringGrid2: TStringGrid;
+    StringGrid3: TStringGrid;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE StringGrid1HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
@@ -25,6 +29,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE StringGrid3KeyPress(Sender: TObject; VAR key: char);
   private
     grid1Sorting:byte;
     grid2Sorting:byte;
@@ -81,18 +86,23 @@ FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSe
     end;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid2HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid2HeaderClick(Sender: TObject;
+  IsColumn: boolean; index: integer);
   VAR k:longint;
   begin
     if not(IsColumn) then exit;
     if index*2 = grid2Sorting
     then grid2Sorting:=index*2+1
     else grid2Sorting:=index*2;
-    for k:=0 to length(profilingList)-1 do sortCallerList(profilingList[k].callers,grid2Sorting);
+    for k:=0 to length(profilingList)-1 do begin
+      sortCallerList(profilingList[k].callers,grid2Sorting);
+      sortCallerList(profilingList[k].callees,grid2Sorting);
+    end;
     fillGrid2;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject;
+  IsColumn: boolean; index: integer);
   begin
     if not(IsColumn) then exit;
     if index*2 = grid1Sorting
@@ -121,7 +131,8 @@ PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol, aRow:
     fillGrid2;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: char);
+PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject;
+  VAR key: char);
   begin
     if key=#13 then workspace.openLocation(guessLocationFromString( StringGrid1.Cells[1,StringGrid1.selection.top],false));
   end;
@@ -129,6 +140,11 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: cha
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
   begin
     if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid2.Cells[0,StringGrid2.selection.top],false));
+  end;
+
+PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
+  begin
+    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid3.Cells[0,StringGrid3.selection.top],false));
   end;
 
 FUNCTION TprofilingOutputForm.getIdeComponentType: T_ideComponent;
@@ -144,7 +160,10 @@ PROCEDURE TprofilingOutputForm.setProfilingList(CONST list: T_profilingList);
   begin
     profilingList:=list;
     if grid1Sorting<>255 then                                        sortProfilingList(profilingList        ,grid1Sorting);;
-    if grid2Sorting<>255 then for k:=0 to length(profilingList)-1 do sortCallerList(profilingList[k].callers,grid2Sorting);
+    if grid2Sorting<>255 then for k:=0 to length(profilingList)-1 do begin
+      sortCallerList(profilingList[k].callers,grid2Sorting);
+      sortCallerList(profilingList[k].callees,grid2Sorting);
+    end;
     fillGrid1;
     StringGrid2.RowCount:=1;
   end;
@@ -156,9 +175,9 @@ PROCEDURE TprofilingOutputForm.fillGrid1;
     for i:=0 to length(profilingList)-1 do begin
       StringGrid1.Cells[0,i+1]:=profilingList[i].id;
       StringGrid1.Cells[1,i+1]:=profilingList[i].calleeLocation;
-      StringGrid1.Cells[2,i+1]:=intToStr(profilingList[i].callCount);
-      StringGrid1.Cells[3,i+1]:=formatFloat('0.000',profilingList[i].timeSpent_inclusive*1E3)+'ms';
-      StringGrid1.Cells[4,i+1]:=formatFloat('0.000',profilingList[i].timeSpent_exclusive*1E3)+'ms';
+      StringGrid1.Cells[2,i+1]:=intToStr(profilingList[i].aggTime.callCount);
+      StringGrid1.Cells[3,i+1]:=formatFloat('0.000',profilingList[i].aggTime.timeSpent_inclusive*1E3)+'ms';
+      StringGrid1.Cells[4,i+1]:=formatFloat('0.000',profilingList[i].aggTime.timeSpent_exclusive*1E3)+'ms';
     end;
   end;
 
@@ -174,7 +193,18 @@ PROCEDURE TprofilingOutputForm.fillGrid2;
         StringGrid2.Cells[2,i+1]:=formatFloat('0.000',profilingList[k].callers[i].value.timeSpent_inclusive*1E3)+'ms';
         StringGrid2.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callers[i].value.timeSpent_exclusive*1E3)+'ms';
       end;
-    end else StringGrid2.RowCount:=1;
+
+      StringGrid3.RowCount:=length(profilingList[k].callees)+1;
+      for i:=0 to length(profilingList[k].callees)-1 do begin
+        StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].key;
+        StringGrid3.Cells[1,i+1]:=intToStr(profilingList[k].callees[i].value.callCount);
+        StringGrid3.Cells[2,i+1]:=formatFloat('0.000',profilingList[k].callees[i].value.timeSpent_inclusive*1E3)+'ms';
+        StringGrid3.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callees[i].value.timeSpent_exclusive*1E3)+'ms';
+      end;
+    end else begin
+      StringGrid2.RowCount:=1;
+      StringGrid3.RowCount:=1;
+    end;
   end;
 
 end.
