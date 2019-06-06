@@ -25,10 +25,12 @@ TYPE
     PROCEDURE StringGrid1Selection(Sender: TObject; aCol, aRow: integer);
     PROCEDURE StringGrid2HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
     PROCEDURE StringGrid1KeyPress(Sender: TObject; VAR key: char);
+    PROCEDURE StringGrid2HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
     PROCEDURE StringGrid2KeyPress(Sender: TObject; VAR key: char);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean;index: integer);
     PROCEDURE StringGrid3KeyPress(Sender: TObject; VAR key: char);
   private
     grid1Sorting:byte;
@@ -118,12 +120,14 @@ PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
     grid2Sorting:=255;
     registerFontControl(StringGrid1,ctTable);
     registerFontControl(StringGrid2,ctTable);
+    registerFontControl(StringGrid3,ctTable);
   end;
 
 PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
   begin
     unregisterFontControl(StringGrid1);
     unregisterFontControl(StringGrid2);
+    unregisterFontControl(StringGrid3);
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol, aRow: integer);
@@ -135,6 +139,18 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject;
   VAR key: char);
   begin
     if key=#13 then workspace.openLocation(guessLocationFromString( StringGrid1.Cells[1,StringGrid1.selection.top],false));
+  end;
+
+PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
+  begin
+    if IsColumn then
+    StringGrid3.ColWidths[index]:=StringGrid2.ColWidths[index];
+  end;
+
+PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
+  begin
+    if IsColumn then
+    StringGrid2.ColWidths[index]:=StringGrid3.ColWidths[index];
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
@@ -166,6 +182,7 @@ PROCEDURE TprofilingOutputForm.setProfilingList(CONST list: T_profilingList);
     end;
     fillGrid1;
     StringGrid2.RowCount:=1;
+    StringGrid3.RowCount:=1;
   end;
 
 PROCEDURE TprofilingOutputForm.fillGrid1;

@@ -92,6 +92,7 @@ object profilingOutputForm: TprofilingOutputForm
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
         TabOrder = 0
         OnHeaderClick = StringGrid2HeaderClick
+        OnHeaderSized = StringGrid2HeaderSized
         OnKeyPress = StringGrid2KeyPress
         Cells = (
           4
@@ -140,6 +141,8 @@ object profilingOutputForm: TprofilingOutputForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
         TabOrder = 0
+        OnHeaderClick = StringGrid2HeaderClick
+        OnHeaderSized = StringGrid3HeaderSized
         OnKeyPress = StringGrid3KeyPress
         Cells = (
           4
