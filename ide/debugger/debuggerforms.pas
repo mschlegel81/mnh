@@ -17,7 +17,7 @@ TYPE
     bbRunContinue: TBitBtn;
     bbStepIn: TBitBtn;
     bbStep: TBitBtn;
-    bbMicrostep: TBitBtn;
+    bbMicroStep: TBitBtn;
     bbStepOut: TBitBtn;
     bbHalt: TBitBtn;
     DebuggerIcons: TImageList;
