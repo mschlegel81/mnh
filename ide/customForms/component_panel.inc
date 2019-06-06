@@ -64,6 +64,7 @@ CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
     inherited create(def,location,context,consideredKeys);
     newPanel:=TPanel.create(parent^.winControl);
     newPanel.parent:=parent^.winControl;
+    newPanel.ParentFont:=true;
     newPanel.Align:=alTop;
     newPanel.AutoSize:=true;
     newPanel.BorderWidth:=3;
@@ -85,6 +86,7 @@ CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
     lastControl:=nil;
     winControl:=form;
     containedInForm:=form;
+    registerFontControl(form,ctGeneral);
   end;
 
 PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
@@ -146,6 +148,7 @@ DESTRUCTOR T_panelMeta.destroy;
   begin
     inherited destroy;
     setLength(elements,0);
+    unregisterFontControl(winControl);
   end;
 
 FUNCTION T_panelMeta.getName:string;

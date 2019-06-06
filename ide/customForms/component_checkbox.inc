@@ -45,7 +45,7 @@ PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
       if (config.bindingTo<>'') then begin
         if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
         state.bindingValue:=newBoolLiteral(checkbox.checked);
-        propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+        propagateCursor(getCustomForm,crHourGlass);
       end;
       if config.action<>nil then postAction(newBoolLiteral(checkbox.checked));
     finally

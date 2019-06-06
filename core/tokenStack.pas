@@ -38,9 +38,10 @@ TYPE
 
   {$ifdef fullVersion}
   T_callStackEntry=record
-    callLocation:T_tokenLocation;
+    callerLocation:T_tokenLocation;
     calleeId:ansistring;
     calleeLocation:T_tokenLocation;
+    callerFuncLocation:T_tokenLocation;
     timeForProfiling_inclusive,
     timeForProfiling_exclusive:double;
     parameters:P_variableTreeEntryCategoryNode;
@@ -222,11 +223,14 @@ PROCEDURE T_callStack.push(CONST wallclockTime:double; CONST parameters:P_variab
   CONST callee: P_objectWithIdAndLocation);
   begin
     if length(dat)<=fill then setLength(dat,length(dat)+16);
-    dat[fill].callLocation:=callerLocation;
+    dat[fill].callerLocation:=callerLocation;
     dat[fill].calleeId:=callee^.getId;
     dat[fill].calleeLocation:=callee^.getLocation;
 
-    if fill>0 then with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+    if fill>0 then begin
+      with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+             dat[fill].callerFuncLocation:=dat[fill-1].calleeLocation;
+    end else dat[fill].callerFuncLocation.package:=nil;
     dat[fill].timeForProfiling_exclusive:=wallclockTime;
     dat[fill].timeForProfiling_inclusive:=wallclockTime;
     dat[fill].parameters:=parameters;
@@ -247,7 +251,7 @@ FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):
       with dat[fill-1] do begin
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
         timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
-        profiler^.add(calleeId,callLocation,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
+        profiler^.add(calleeId,callerFuncLocation,callerLocation,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
       end;
       if fill>1 then with dat[fill-2] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;
@@ -255,7 +259,7 @@ FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):
       dispose(dat[fill-1].parameters,destroy);
       dat[fill-1].parameters:=nil;
     end;
-    result:=dat[fill-1].callLocation;
+    result:=dat[fill-1].callerLocation;
     dec(fill);
   end;
 
@@ -267,7 +271,7 @@ PROCEDURE T_callStack.ensureTraceInError(VAR error:T_errorMessage);
       k:=0;
       for i:=fill-1 downto 0 do begin
         error.stacktrace[k].callee    :=dat[i].calleeId;
-        error.stacktrace[k].location  :=dat[i].callLocation;
+        error.stacktrace[k].location  :=dat[i].callerLocation;
         if dat[i].parameters=nil
         then error.stacktrace[k].parameters:='n/a'
         else error.stacktrace[k].parameters:=dat[i].parameters^.toStringForErrorTrace;

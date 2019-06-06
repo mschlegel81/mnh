@@ -17,7 +17,7 @@ TYPE
     bbRunContinue: TBitBtn;
     bbStepIn: TBitBtn;
     bbStep: TBitBtn;
-    bbMicrostep: TBitBtn;
+    bbMicroStep: TBitBtn;
     bbStepOut: TBitBtn;
     bbHalt: TBitBtn;
     DebuggerIcons: TImageList;
@@ -126,11 +126,11 @@ PROCEDURE TDebuggerForm.performFastUpdate;
    PROCEDURE handleButton(VAR button:TBitBtn; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways,focusOnEnable:boolean);
      VAR wasEnabledBefore:boolean;
      begin
-       wasEnabledBefore:=button.Enabled;
+       wasEnabledBefore:=button.enabled;
        button.enabled:=enabled or enableAlways;
        if enabled then button.ImageIndex:=enabledImageIndex
                   else button.ImageIndex:=enabledImageIndex+1;
-       if button.Enabled and not(wasEnabledBefore) and focusOnEnable then begin
+       if button.enabled and not(wasEnabledBefore) and focusOnEnable then begin
          button.SetFocus;
        end;
      end;

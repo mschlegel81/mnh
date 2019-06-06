@@ -1,50 +1,50 @@
 object QuickEvalForm: TQuickEvalForm
   Left = 799
-  Height = 360
+  Height = 240
   Top = 165
-  Width = 480
+  Width = 320
   Caption = 'Quick evaluation'
-  ClientHeight = 360
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 240
+  ClientWidth = 320
   DragKind = dkDock
   DragMode = dmAutomatic
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
-    Height = 29
+    Height = 19
     Top = 0
-    Width = 480
+    Width = 320
     Align = alTop
     Caption = 'evaluate in current package'
+    ParentFont = False
     TabOrder = 0
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
-    Height = 8
-    Top = 254
-    Width = 480
+    Height = 5
+    Top = 169
+    Width = 320
     Align = alTop
     ResizeAnchor = akTop
   end
   inline quickInputSynEdit: TSynEdit
     Left = 0
-    Height = 225
-    Top = 29
-    Width = 480
+    Height = 150
+    Top = 19
+    Width = 320
     Align = alTop
-    Font.Height = -13
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
     TabOrder = 2
-    Gutter.Width = 77
+    Gutter.Width = 51
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -493,11 +493,11 @@ object QuickEvalForm: TQuickEvalForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterMarks1: TSynGutterMarks
-        Width = 36
+        Width = 24
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 17
+        Width = 11
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -507,19 +507,18 @@ object QuickEvalForm: TQuickEvalForm
         LeadingZeros = False
       end
       object SynGutterChanges1: TSynGutterChanges
-        Width = 6
+        Width = 4
         MouseActions = <>
         ModifiedColor = 59900
         SavedColor = clGreen
       end
       object SynGutterSeparator1: TSynGutterSeparator
-        Width = 3
+        Width = 2
         MouseActions = <>
         MarkupInfo.Background = clWhite
         MarkupInfo.Foreground = clGray
       end
       object SynGutterCodeFolding1: TSynGutterCodeFolding
-        Width = 15
         MouseActions = <>
         MarkupInfo.Background = clNone
         MarkupInfo.Foreground = clGray
@@ -530,11 +529,11 @@ object QuickEvalForm: TQuickEvalForm
   end
   inline quickOutputSynEdit: TSynEdit
     Left = 0
-    Height = 98
-    Top = 262
-    Width = 480
+    Height = 66
+    Top = 174
+    Width = 320
     Align = alClient
-    Font.Height = -13
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -542,7 +541,7 @@ object QuickEvalForm: TQuickEvalForm
     ParentFont = False
     PopupMenu = OutputPopupMenu
     TabOrder = 3
-    Gutter.Width = 77
+    Gutter.Width = 51
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -972,6 +971,7 @@ object QuickEvalForm: TQuickEvalForm
     MouseSelActions = <>
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
+    RightEdge = 0
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
@@ -992,11 +992,11 @@ object QuickEvalForm: TQuickEvalForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterMarks1: TSynGutterMarks
-        Width = 36
+        Width = 24
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 17
+        Width = 11
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -1006,19 +1006,18 @@ object QuickEvalForm: TQuickEvalForm
         LeadingZeros = False
       end
       object SynGutterChanges1: TSynGutterChanges
-        Width = 6
+        Width = 4
         MouseActions = <>
         ModifiedColor = 59900
         SavedColor = clGreen
       end
       object SynGutterSeparator1: TSynGutterSeparator
-        Width = 3
+        Width = 2
         MouseActions = <>
         MarkupInfo.Background = clWhite
         MarkupInfo.Foreground = clGray
       end
       object SynGutterCodeFolding1: TSynGutterCodeFolding
-        Width = 15
         MouseActions = <>
         MarkupInfo.Background = clNone
         MarkupInfo.Foreground = clGray
@@ -1028,8 +1027,8 @@ object QuickEvalForm: TQuickEvalForm
     end
   end
   object OutputPopupMenu: TPopupMenu
-    left = 257
-    top = 187
+    left = 171
+    top = 125
     object miEchoInput: TMenuItem
       AutoCheck = True
       Caption = 'Echo &input'

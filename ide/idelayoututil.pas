@@ -413,10 +413,11 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
       oldActive:=mainForm.ActiveControl;
       Show;
       PageControl.activePage:=page;
-      if (mainForm<>nil) then begin
+      if (mainForm<>nil) then try
         if retainOriginalFocus and (oldActive<>nil)
         then mainForm.ActiveControl:=oldActive
         else mainForm.ActiveControl:=self;
+      except
       end;
     end;
   end;

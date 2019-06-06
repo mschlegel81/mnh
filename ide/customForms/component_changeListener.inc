@@ -35,7 +35,7 @@ PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
         if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
         newLit:=newStringLiteral(changeValue);
         state.bindingValue:=newLit;
-        propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+        propagateCursor(getCustomForm,crHourGlass);
       end;
       if config_onChange<>nil then begin
         state_changeTriggered:=true;

@@ -455,6 +455,7 @@ object HelpForm: THelpForm
     MouseSelActions = <>
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
+    RightEdge = 0
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50

@@ -1,11 +1,11 @@
 object profilingOutputForm: TprofilingOutputForm
   Left = 391
-  Height = 240
+  Height = 292
   Top = 145
-  Width = 320
+  Width = 557
   Caption = 'Profiling Output'
-  ClientHeight = 240
-  ClientWidth = 320
+  ClientHeight = 292
+  ClientWidth = 557
   DragKind = dkDock
   DragMode = dmAutomatic
   OnCreate = FormCreate
@@ -13,17 +13,17 @@ object profilingOutputForm: TprofilingOutputForm
   LCLVersion = '2.0.2.0'
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 240
+    Height = 292
     Top = 0
     Width = 185
     Align = alLeft
-    Caption = 'Called'
-    ClientHeight = 220
+    Caption = 'Functions'
+    ClientHeight = 272
     ClientWidth = 181
     TabOrder = 0
     object StringGrid1: TStringGrid
       Left = 0
-      Height = 220
+      Height = 272
       Top = 0
       Width = 181
       Align = alClient
@@ -56,48 +56,110 @@ object profilingOutputForm: TprofilingOutputForm
   end
   object Splitter1: TSplitter
     Left = 185
-    Height = 240
+    Height = 292
     Top = 0
     Width = 5
   end
-  object GroupBox2: TGroupBox
+  object Panel1: TPanel
     Left = 190
-    Height = 240
+    Height = 292
     Top = 0
-    Width = 130
+    Width = 367
     Align = alClient
-    Caption = 'Callers'
-    ClientHeight = 220
-    ClientWidth = 126
+    BevelOuter = bvNone
+    ClientHeight = 292
+    ClientWidth = 367
     TabOrder = 2
-    object StringGrid2: TStringGrid
+    object GroupBox2: TGroupBox
       Left = 0
-      Height = 220
+      Height = 112
       Top = 0
-      Width = 126
-      Align = alClient
-      AutoEdit = False
-      ColCount = 4
-      FixedCols = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
+      Width = 367
+      Align = alTop
+      Caption = '...is called by:'
+      ClientHeight = 92
+      ClientWidth = 363
       TabOrder = 0
-      OnHeaderClick = StringGrid2HeaderClick
-      OnKeyPress = StringGrid2KeyPress
-      Cells = (
-        4
-        0
-        0
-        'location'
-        1
-        0
-        'count'
-        2
-        0
-        'inclusive time'
-        3
-        0
-        'exclusive time'
-      )
+      object StringGrid2: TStringGrid
+        Left = 0
+        Height = 92
+        Top = 0
+        Width = 363
+        Align = alClient
+        AutoEdit = False
+        ColCount = 4
+        FixedCols = 0
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
+        TabOrder = 0
+        OnHeaderClick = StringGrid2HeaderClick
+        OnHeaderSized = StringGrid2HeaderSized
+        OnKeyPress = StringGrid2KeyPress
+        Cells = (
+          4
+          0
+          0
+          'location'
+          1
+          0
+          'count'
+          2
+          0
+          'inclusive time'
+          3
+          0
+          'exclusive time'
+        )
+      end
+    end
+    object Splitter2: TSplitter
+      Cursor = crVSplit
+      Left = 0
+      Height = 5
+      Top = 112
+      Width = 367
+      Align = alTop
+      ResizeAnchor = akTop
+    end
+    object GroupBox3: TGroupBox
+      Left = 0
+      Height = 175
+      Top = 117
+      Width = 367
+      Align = alClient
+      Caption = '...calls:'
+      ClientHeight = 155
+      ClientWidth = 363
+      TabOrder = 2
+      object StringGrid3: TStringGrid
+        Left = 0
+        Height = 155
+        Top = 0
+        Width = 363
+        Align = alClient
+        AutoEdit = False
+        ColCount = 4
+        FixedCols = 0
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
+        TabOrder = 0
+        OnHeaderClick = StringGrid2HeaderClick
+        OnHeaderSized = StringGrid3HeaderSized
+        OnKeyPress = StringGrid3KeyPress
+        Cells = (
+          4
+          0
+          0
+          'location'
+          1
+          0
+          'count'
+          2
+          0
+          'inclusive time'
+          3
+          0
+          'exclusive time'
+        )
+      end
     end
   end
 end
