@@ -1079,8 +1079,15 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     if globals.primaryContext.messages^.continueEvaluation then begin
       readyForUsecase:=usecase;
       logReady(newCodeHash);
-      if usecase=lu_forCallingMain then executeMain;
-    end else readyForUsecase:=lu_NONE;
+      if usecase=lu_forCallingMain
+      then executeMain
+      else if isMain and isPlainScript and (length(mainParameters)=1) and (mainParameters[0]='-h')
+      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+    end else begin
+      readyForUsecase:=lu_NONE;
+      if isMain and isPlainScript then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+    end;
+
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then finalize(globals.primaryContext,recycler);
   end;
