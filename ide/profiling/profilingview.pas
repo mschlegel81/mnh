@@ -38,7 +38,7 @@ TYPE
     profilingList:T_profilingList;
     PROCEDURE setProfilingList(CONST list:T_profilingList);
     PROCEDURE fillGrid1;
-    PROCEDURE fillGrid2;
+    PROCEDURE fillGrids2and3;
   public
 
   end;
@@ -100,7 +100,7 @@ PROCEDURE TprofilingOutputForm.StringGrid2HeaderClick(Sender: TObject;
       sortCallerList(profilingList[k].callers,grid2Sorting);
       sortCallerList(profilingList[k].callees,grid2Sorting);
     end;
-    fillGrid2;
+    fillGrids2and3;
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject;
@@ -132,7 +132,7 @@ PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol, aRow: integer);
   begin
-    fillGrid2;
+    fillGrids2and3;
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject;
@@ -155,12 +155,12 @@ PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject; IsColumn:
 
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
   begin
-    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid2.Cells[0,StringGrid2.selection.top],false));
+    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid2.Cells[1,StringGrid2.selection.top],false));
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
   begin
-    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid3.Cells[0,StringGrid3.selection.top],false));
+    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid3.Cells[1,StringGrid3.selection.top],false));
   end;
 
 FUNCTION TprofilingOutputForm.getIdeComponentType: T_ideComponent;
@@ -198,25 +198,27 @@ PROCEDURE TprofilingOutputForm.fillGrid1;
     end;
   end;
 
-PROCEDURE TprofilingOutputForm.fillGrid2;
+PROCEDURE TprofilingOutputForm.fillGrids2and3;
   VAR i,k:longint;
   begin
     k:=StringGrid1.selection.top-1;
     if (k>=0) and (k<length(profilingList)) then begin
       StringGrid2.RowCount:=length(profilingList[k].callers)+1;
       for i:=0 to length(profilingList[k].callers)-1 do begin
-        StringGrid2.Cells[0,i+1]:=profilingList[k].callers[i].key;
-        StringGrid2.Cells[1,i+1]:=intToStr(profilingList[k].callers[i].value.callCount);
-        StringGrid2.Cells[2,i+1]:=formatFloat('0.000',profilingList[k].callers[i].value.timeSpent_inclusive*1E3)+'ms';
-        StringGrid2.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callers[i].value.timeSpent_exclusive*1E3)+'ms';
+        StringGrid2.Cells[0,i+1]:=profilingList[k].callers[i].id;
+        StringGrid2.Cells[1,i+1]:=profilingList[k].callers[i].location;
+        StringGrid2.Cells[2,i+1]:=intToStr(profilingList[k].callers[i].time.callCount);
+        StringGrid2.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callers[i].time.timeSpent_inclusive*1E3)+'ms';
+        StringGrid2.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callers[i].time.timeSpent_exclusive*1E3)+'ms';
       end;
 
       StringGrid3.RowCount:=length(profilingList[k].callees)+1;
       for i:=0 to length(profilingList[k].callees)-1 do begin
-        StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].key;
-        StringGrid3.Cells[1,i+1]:=intToStr(profilingList[k].callees[i].value.callCount);
-        StringGrid3.Cells[2,i+1]:=formatFloat('0.000',profilingList[k].callees[i].value.timeSpent_inclusive*1E3)+'ms';
-        StringGrid3.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callees[i].value.timeSpent_exclusive*1E3)+'ms';
+        StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].id;
+        StringGrid3.Cells[1,i+1]:=profilingList[k].callees[i].location;
+        StringGrid3.Cells[2,i+1]:=intToStr(profilingList[k].callees[i].time.callCount);
+        StringGrid3.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callees[i].time.timeSpent_inclusive*1E3)+'ms';
+        StringGrid3.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callees[i].time.timeSpent_exclusive*1E3)+'ms';
       end;
     end else begin
       StringGrid2.RowCount:=1;

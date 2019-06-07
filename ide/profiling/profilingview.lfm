@@ -87,7 +87,6 @@ object profilingOutputForm: TprofilingOutputForm
         Width = 363
         Align = alClient
         AutoEdit = False
-        ColCount = 4
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
         TabOrder = 0
@@ -95,17 +94,20 @@ object profilingOutputForm: TprofilingOutputForm
         OnHeaderSized = StringGrid2HeaderSized
         OnKeyPress = StringGrid2KeyPress
         Cells = (
-          4
+          5
           0
           0
-          'location'
+          'id'
           1
           0
-          'count'
+          'location'
           2
           0
-          'inclusive time'
+          'count'
           3
+          0
+          'inclusive time'
+          4
           0
           'exclusive time'
         )
@@ -137,7 +139,6 @@ object profilingOutputForm: TprofilingOutputForm
         Width = 363
         Align = alClient
         AutoEdit = False
-        ColCount = 4
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll, goCellEllipsis]
         TabOrder = 0
@@ -145,17 +146,20 @@ object profilingOutputForm: TprofilingOutputForm
         OnHeaderSized = StringGrid3HeaderSized
         OnKeyPress = StringGrid3KeyPress
         Cells = (
-          4
+          5
           0
           0
-          'location'
+          'id'
           1
           0
-          'count'
+          'location'
           2
           0
-          'inclusive time'
+          'count'
           3
+          0
+          'inclusive time'
+          4
           0
           'exclusive time'
         )
