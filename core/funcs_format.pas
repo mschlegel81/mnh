@@ -84,6 +84,7 @@ PROCEDURE clearCachedFormats;
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);
   VAR parts:T_arrayOfString;
   begin
+    DefaultFormatSettings.DecimalSeparator:='.';
     parts:=split(copy(formatString,2,length(formatString)-2),'.');
     if length(parts)>0 then lengthPar1:=strToIntDef(parts[0],-1) else lengthPar1:=-1;
     if length(parts)>1 then lengthPar2:=strToIntDef(parts[1],-1) else lengthPar2:=-1;
@@ -153,6 +154,7 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST loc
     end;
 
   begin
+    DefaultFormatSettings.DecimalSeparator:='.';
     case category of
       fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
         lt_real,
