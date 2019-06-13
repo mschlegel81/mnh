@@ -199,7 +199,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
     if (restrictionId<>'') and (restrictionIdx<0) then begin
       tok:=recycler.newToken(location,restrictionId,tt_identifier,nil);
       context.reduceExpression(tok,recycler);
-      if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
+      if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) and (context.continueEvaluation) then begin
         restrictionId:='';
         restrictionValue:=P_literal(tok^.data)^.rereferenced;
       end else context.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);

@@ -730,7 +730,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       rulePattern.toParameterIds(ruleBody);
 
       //[marker 1]
-      if evaluateBody and (usecase<>lu_forCodeAssistance) and (globals.primaryContext.messages^.continueEvaluation) then globals.primaryContext.reduceExpression(ruleBody,recycler);
+      if evaluateBody and (globals.primaryContext.messages^.continueEvaluation) then globals.primaryContext.reduceExpression(ruleBody,recycler);
 
       if globals.primaryContext.messages^.continueEvaluation then begin
         metaData.create;
