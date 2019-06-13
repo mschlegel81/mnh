@@ -105,6 +105,7 @@ VAR codeAssistanceResponse:P_codeAssistanceResponse=nil;
     codeAssistanceRequest :P_codeProvider=nil;
     codeAssistanceCs      :TRTLCriticalSection;
     codeAssistantIsRunning:boolean=false;
+    codeAssistantThreadId :TThreadID;
     shuttingDown          :boolean=false;
 
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
@@ -195,7 +196,7 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider);
       codeAssistanceRequest:=source;
       if not(codeAssistantIsRunning) then begin
         codeAssistantIsRunning:=true;
-        beginThread(@codeAssistanceThread);
+        codeAssistantThreadId:=beginThread(@codeAssistanceThread);
       end;
     finally
       leaveCriticalSection(codeAssistanceCs);
@@ -513,14 +514,16 @@ FUNCTION T_codeAssistanceResponse.rereferenced:P_codeAssistanceResponse;
 
 VAR isFinalized:boolean=false;
 PROCEDURE finalizeCodeAssistance;
+  VAR i:longint;
   begin
     enterCriticalSection(codeAssistanceCs);
     shuttingDown:=true;
-    while codeAssistantIsRunning do begin
+    for i:=0 to 99 do if codeAssistantIsRunning then begin
       leaveCriticalSection(codeAssistanceCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
     end;
+    if codeAssistantIsRunning then KillThread(codeAssistantThreadId);
     doneCriticalSection(codeAssistanceCs);
     disposeCodeAssistanceResponse(codeAssistanceResponse);
     if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
