@@ -1,12 +1,13 @@
 object CustomRunForm: TCustomRunForm
   Left = 637
-  Height = 304
+  Height = 456
   Top = 191
-  Width = 321
+  Width = 482
   AutoSize = True
   Caption = 'Run externally'
-  ClientHeight = 304
-  ClientWidth = 321
+  ClientHeight = 456
+  ClientWidth = 482
+  DesignTimePPI = 144
   OnCreate = FormCreate
   Position = poOwnerFormCenter
   LCLVersion = '2.0.2.0'
@@ -15,25 +16,26 @@ object CustomRunForm: TCustomRunForm
     AnchorSideTop.Control = Owner
     AnchorSideRight.Control = RunButton
     Left = 0
-    Height = 43
+    Height = 63
     Top = 0
-    Width = 271
+    Width = 420
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
     Caption = 'script parameters'
-    ClientHeight = 23
-    ClientWidth = 267
+    ClientHeight = 33
+    ClientWidth = 416
     ParentFont = False
     TabOrder = 0
     object ScriptParamEdit: TComboBox
       Left = 0
-      Height = 23
+      Height = 33
       Top = 0
-      Width = 267
+      Width = 416
       Align = alClient
-      ItemHeight = 15
+      ItemHeight = 25
       OnKeyPress = scriptParamEditKeyPress
+      ParentFont = False
       TabOrder = 0
     end
   end
@@ -44,19 +46,19 @@ object CustomRunForm: TCustomRunForm
     AnchorSideBottom.Control = GroupBox4
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 138
-    Top = 43
+    Height = 208
+    Top = 63
     Width = 131
     Align = alCustom
     Anchors = [akTop, akLeft, akBottom]
     Caption = 'executable'
-    ClientHeight = 118
+    ClientHeight = 178
     ClientWidth = 127
     ParentFont = False
     TabOrder = 2
     object fullVersionRb: TRadioButton
       Left = 0
-      Height = 19
+      Height = 29
       Top = 0
       Width = 127
       Align = alTop
@@ -69,8 +71,8 @@ object CustomRunForm: TCustomRunForm
     end
     object lightVersionRb: TRadioButton
       Left = 0
-      Height = 19
-      Top = 19
+      Height = 29
+      Top = 29
       Width = 127
       Align = alTop
       Caption = 'light version'
@@ -88,22 +90,22 @@ object CustomRunForm: TCustomRunForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 81
-    Top = 181
-    Width = 321
+    Height = 121
+    Top = 271
+    Width = 482
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
     Caption = 'execution folder'
-    ClientHeight = 61
-    ClientWidth = 317
+    ClientHeight = 91
+    ClientWidth = 478
     ParentFont = False
     TabOrder = 4
     object scriptLocRb: TRadioButton
       Left = 0
-      Height = 19
+      Height = 29
       Top = 0
-      Width = 317
+      Width = 478
       Align = alTop
       Caption = 'script location'
       Checked = True
@@ -114,9 +116,9 @@ object CustomRunForm: TCustomRunForm
     end
     object customLocRb: TRadioButton
       Left = 0
-      Height = 19
-      Top = 19
-      Width = 317
+      Height = 29
+      Top = 29
+      Width = 478
       Align = alTop
       Caption = 'custom location'
       OnChange = customLocRbChange
@@ -125,11 +127,11 @@ object CustomRunForm: TCustomRunForm
     end
     object DirectoryEdit: TDirectoryEdit
       Left = 0
-      Height = 23
-      Top = 38
-      Width = 317
+      Height = 33
+      Top = 58
+      Width = 478
       ShowHidden = False
-      ButtonWidth = 23
+      ButtonWidth = 34
       NumGlyphs = 1
       Align = alClient
       Enabled = False
@@ -147,22 +149,22 @@ object CustomRunForm: TCustomRunForm
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 131
-    Height = 138
-    Top = 43
-    Width = 190
+    Height = 208
+    Top = 63
+    Width = 351
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
     Caption = 'additional flags'
-    ClientHeight = 118
-    ClientWidth = 186
+    ClientHeight = 178
+    ClientWidth = 347
     ParentFont = False
     TabOrder = 3
     object guiFlagCb: TCheckBox
       Left = 0
-      Height = 19
+      Height = 29
       Top = 0
-      Width = 186
+      Width = 347
       Align = alTop
       Caption = '-GUI'
       OnChange = guiFlagCbChange
@@ -171,9 +173,9 @@ object CustomRunForm: TCustomRunForm
     end
     object quietFlagCb: TCheckBox
       Left = 0
-      Height = 19
-      Top = 19
-      Width = 186
+      Height = 29
+      Top = 29
+      Width = 347
       Align = alTop
       Caption = '-quiet (suppress console output)'
       OnChange = quietFlagCbChange
@@ -182,9 +184,9 @@ object CustomRunForm: TCustomRunForm
     end
     object silentFlagCb: TCheckBox
       Left = 0
-      Height = 19
-      Top = 38
-      Width = 186
+      Height = 29
+      Top = 58
+      Width = 347
       Align = alTop
       Caption = '-silent (suppress beeps)'
       OnChange = silentFlagCbChange
@@ -193,9 +195,9 @@ object CustomRunForm: TCustomRunForm
     end
     object headlessFlagCb: TCheckBox
       Left = 0
-      Height = 19
-      Top = 57
-      Width = 186
+      Height = 29
+      Top = 87
+      Width = 347
       Align = alTop
       Caption = '-headless (forbid input)'
       OnChange = headlessFlagCbChange
@@ -204,9 +206,9 @@ object CustomRunForm: TCustomRunForm
     end
     object profileFlagCb: TCheckBox
       Left = 0
-      Height = 19
-      Top = 76
-      Width = 186
+      Height = 29
+      Top = 116
+      Width = 347
       Align = alTop
       Caption = '-profile'
       OnChange = profileFlagCbChange
@@ -218,9 +220,9 @@ object CustomRunForm: TCustomRunForm
       AnchorSideTop.Control = profileFlagCb
       AnchorSideTop.Side = asrBottom
       Left = 0
-      Height = 15
-      Top = 95
-      Width = 51
+      Height = 25
+      Top = 145
+      Width = 78
       Align = alCustom
       Caption = 'Verbosity:'
       ParentColor = False
@@ -235,10 +237,10 @@ object CustomRunForm: TCustomRunForm
       AnchorSideRight.Side = asrBottom
       AnchorSideBottom.Control = GroupBox4
       AnchorSideBottom.Side = asrBottom
-      Left = 51
-      Height = 23
-      Top = 95
-      Width = 135
+      Left = 78
+      Height = 33
+      Top = 145
+      Width = 269
       Align = alCustom
       Anchors = [akTop, akLeft, akRight, akBottom]
       OnChange = verbosityEditChange
@@ -251,10 +253,10 @@ object CustomRunForm: TCustomRunForm
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = GroupBox4
-    Left = 271
-    Height = 43
+    Left = 420
+    Height = 63
     Top = 0
-    Width = 50
+    Width = 62
     Align = alCustom
     Anchors = [akTop, akRight, akBottom]
     AutoSize = True
@@ -268,10 +270,10 @@ object CustomRunForm: TCustomRunForm
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = GroupBox3
     AnchorSideRight.Side = asrBottom
-    Left = 261
-    Height = 25
-    Top = 262
-    Width = 60
+    Left = 408
+    Height = 35
+    Top = 392
+    Width = 74
     Align = alCustom
     Anchors = [akTop, akRight]
     AutoSize = True
