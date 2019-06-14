@@ -11,6 +11,7 @@ USES sysutils,
      recyclers,
      contexts;
 IMPLEMENTATION
+USES out_adapters;
 {$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
@@ -213,6 +214,14 @@ FUNCTION callMemoryCleaner_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION assertGuiStarted_impl intFuncSignature;
+  begin
+    if not(gui_started) then begin
+      context.messages^.logGuiNeeded;
+      result:=nil;
+    end else result:=newVoidLiteral;
+  end;
+
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
@@ -230,4 +239,5 @@ INITIALIZATION
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif});
 end.
