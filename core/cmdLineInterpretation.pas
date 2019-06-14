@@ -30,9 +30,10 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 {$ifdef fullVersion}
 FUNCTION getFileToInterpretFromCommandLine:ansistring;
 FUNCTION getCommandToInterpretFromCommandLine:ansistring;
+{$else}
+PROCEDURE displayHelp(CONST adapters:P_messages);
 {$endif}
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(CONST adapters:P_messagesDistributor; CONST guiAdapterOrNil:P_abstractOutAdapter);
-PROCEDURE displayHelp;
 
 CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
 VAR mainParameters:T_arrayOfString;
@@ -64,7 +65,8 @@ USES evaluation,
      funcs_system,
      funcs_types,
      builtinGenerators,
-     consoleAsk;
+     consoleAsk,
+     basicTypes;
 
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
@@ -105,48 +107,55 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(CONST adapters:P_messagesDi
     if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
   end;
 
-PROCEDURE displayHelp;
+PROCEDURE displayHelp(CONST adapters:P_messages);
+  PROCEDURE wl(CONST s:string);
+    begin
+      if (adapters=nil) or not(adapters^.isCollecting(mt_printline))
+      then writeln(s)
+      else adapters^.postTextMessage(mt_printline,C_nilTokenLocation,s);
+    end;
+
   VAR s:string;
   begin
-    writeln('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
+    wl('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
                     {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
-    writeln('compiled on: '+{$I %DATE%});
-    writeln('         at: '+{$I %TIME%});
-    writeln('FPC version: '+{$I %FPCVERSION%});
-    writeln('Target CPU : '+{$I %FPCTARGET%});
-    writeln('');
-    for s in LOGO do writeln(s);
-    writeln('');
-    writeln('Accepted parameters: ');
-    writeln('  [mnh_options] [('+FLAG_EXEC_CMD+' commandToExecute) | (filename [parameters])]');
-    writeln('  filename          if present the file is interpreted; parameters are passed if present');
-    writeln('  -v[options]       verbosity. options can consist of multiple characters.');
-    writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
-    writeln('                       p/P  : print out');
-    writeln('                       i/I  : input echo');
-    writeln('                       d/D  : declaration echo');
-    writeln('                       o/O  : output echo');
-    writeln('                       e/E  : all echo; same as ido');
-    writeln('                       t/T  : timing info');
-    writeln('                       n/N  : notes (error level 1 only)');
-    writeln('                       w/W  : warnings (error level 2 only)');
-    writeln('                       u/U  : user defined notes, warnings and errors');
-    writeln('                       1..4 : override minimum error level');
-    writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
-    writeln('  '+FLAG_GUI+'              force evaluation with GUI');
-    writeln('  '+FLAG_SHOW_HELP+'                display this help or help on the input file if present and quit');
-    writeln('  '+FLAG_HEADLESS+'         forbid input via ask (scripts using ask will crash)');
-    writeln('  '+FLAG_EXEC_CMD+'              directly execute the following command');
-    writeln('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
-    writeln('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
-    writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
-    writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
-    writeln('                    if no options are given, the global output settings will be used');
-    writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
-    writeln('  '+FLAG_QUIET+'            disable console output');
-    writeln('  '+FLAG_SILENT+'           suppress beeps');
-    writeln('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
-    writeln('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
+    wl('compiled on: '+{$I %DATE%});
+    wl('         at: '+{$I %TIME%});
+    wl('FPC version: '+{$I %FPCVERSION%});
+    wl('Target CPU : '+{$I %FPCTARGET%});
+    wl('');
+    for s in LOGO do wl(s);
+    wl('');
+    wl('Accepted parameters: ');
+    wl('  [mnh_options] [('+FLAG_EXEC_CMD+' commandToExecute) | (filename [parameters])]');
+    wl('  filename          if present the file is interpreted; parameters are passed if present');
+    wl('  -v[options]       verbosity. options can consist of multiple characters.');
+    wl('                    Lowercase indicates enabling, uppercase indicates disabling.');
+    wl('                       p/P  : print out');
+    wl('                       i/I  : input echo');
+    wl('                       d/D  : declaration echo');
+    wl('                       o/O  : output echo');
+    wl('                       e/E  : all echo; same as ido');
+    wl('                       t/T  : timing info');
+    wl('                       n/N  : notes (error level 1 only)');
+    wl('                       w/W  : warnings (error level 2 only)');
+    wl('                       u/U  : user defined notes, warnings and errors');
+    wl('                       1..4 : override minimum error level');
+    wl('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
+    wl('  '+FLAG_GUI+'              force evaluation with GUI');
+    wl('  '+FLAG_SHOW_HELP+'                display this help or help on the input file if present and quit');
+    wl('  '+FLAG_HEADLESS+'         forbid input via ask (scripts using ask will crash)');
+    wl('  '+FLAG_EXEC_CMD+'              directly execute the following command');
+    wl('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
+    wl('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
+    wl('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
+    wl('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
+    wl('                    if no options are given, the global output settings will be used');
+    wl('  +out <filename>[(options)]  As -out but appending to the file if existing.');
+    wl('  '+FLAG_QUIET+'            disable console output');
+    wl('  '+FLAG_SILENT+'           suppress beeps');
+    wl('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
+    wl('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
@@ -158,10 +167,16 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       {$ifdef UNIX}
       hasAnyMnhParameter:boolean=false;
       {$endif}
+      cmdLineParsingErrors:T_arrayOfString;
 
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
+
+  PROCEDURE logCmdLineParsingError(CONST s:string);
+    begin
+      append(cmdLineParsingErrors,s);
+    end;
 
   {Return true when parsed successfully}
   FUNCTION parseSingleMnhParameter(CONST param:string):boolean;
@@ -217,7 +232,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       parameters:=parseShebang(fileName);
       for k:=1 to length(parameters)-1 do
       if not(parseSingleMnhParameter(parameters[k])) then begin
-        writeln('Invalid parameter/switch given by shebang: "',parameters[k],'"');
+        logCmdLineParsingError('Invalid parameter/switch given by shebang: "'+parameters[k]+'"');
         exit(false);
       end;
       result:=true;
@@ -270,7 +285,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
       if wantHelpDisplay then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
-        writeln(package^.getHelpOnMain);
+        consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
         wantHelpDisplay:=false;
         globals.destroy;
@@ -314,7 +329,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
 
   VAR i:longint;
+      s:string;
   begin
+    cmdLineParsingErrors:=C_EMPTY_STRING_ARRAY;
+    //TODO: Collect all ocurring errors and display them on a valid adapter (if possible)
+    //TODO: Set exit code if command line parsing fails
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);
@@ -334,13 +353,12 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
               fileOrCommandToInterpret:=paramStr(i);
             end else begin
               if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
-              then writeln('Invalid parameter/switch given!')
+              then logCmdLineParsingError('Invalid parameter/switch given!')
               else begin
-                writeln('Invalid filename given!');
-                writeln('File does not exist.');
+                logCmdLineParsingError('Invalid filename given!');
+                logCmdLineParsingError('File does not exist.');
               end;
-              writeln('Parameter: ',paramStr(i));
-              exit(false);
+              logCmdLineParsingError('Parameter: '+paramStr(i));
             end;
           end;
         end else addParameter(mainParameters,i);
@@ -359,26 +377,35 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     if profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_profile_call_info];
     {$endif}
     //-----------------------------------------------------
-    wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay;
+    wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay or (length(cmdLineParsingErrors)>0);
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(@consoleAdapters,nil);
-    if (fileOrCommandToInterpret<>'') and not(reEvaluationWithGUIrequired) then begin
-       startMemChecker(settings.memoryLimit);
-       memCheckerStarted:=true;
-       if directExecutionMode then executeCommand
-                              else executeScript;
-       quitImmediate:=true;
-    end;
-    if wantHelpDisplay then begin
-      displayHelp;
-      quitImmediate:=true;
-    end;
+    if length(cmdLineParsingErrors)>0 then begin
+      if wantHelpDisplay then displayHelp(@consoleAdapters);
 
-    quitImmediate:=quitImmediate
-      {$ifdef fullVersion}and (length(filesToOpenInEditor)=0) {$endif}
-      and not(reEvaluationWithGUIrequired);
-    result:=not(quitImmediate);
-    if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
+      if consoleAdapters.isCollecting(mt_el4_systemError)
+      then consoleAdapters.postTextMessage(mt_el4_systemError,C_nilTokenLocation,cmdLineParsingErrors)
+      else for s in cmdLineParsingErrors do writeln(s);
+      ExitCode:=1;
+      result:=false;
+    end else begin
+      if (fileOrCommandToInterpret<>'') and not(reEvaluationWithGUIrequired) then begin
+         startMemChecker(settings.memoryLimit);
+         memCheckerStarted:=true;
+         if directExecutionMode then executeCommand
+                                else executeScript;
+         quitImmediate:=true;
+      end;
+      if wantHelpDisplay then begin
+        displayHelp(@consoleAdapters);
+        quitImmediate:=true;
+      end;
+      quitImmediate:=quitImmediate
+        {$ifdef fullVersion}and (length(filesToOpenInEditor)=0) {$endif}
+        and not(reEvaluationWithGUIrequired);
+      result:=not(quitImmediate);
+      if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
+    end;
     consoleAdapters.destroy;
   end;
 
