@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="83">
+    <Units Count="84">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -545,6 +545,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="profilingView"/>
       </Unit82>
+      <Unit83>
+        <Filename Value="../core/funcs_list.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit83>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

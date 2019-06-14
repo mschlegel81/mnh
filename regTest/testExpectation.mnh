@@ -130,12 +130,12 @@ private average(X)->X.flatten.agg(+)/X.size;
 private memoized averageRunTimes->runTimes.each(caseEntry,begin
   local case:=caseEntry[0];
   //Create time groups by flavour
-  local times:=caseEntry[1]
-               .each(flavEntry,flavEntry[1].getInner(1).each(t,[flavEntry[0],t]),|)
-               .group(0,{[$x[0],$x[1]|$y[1]]}).toMap;
+  local times:=caseEntry[1].each(flavEntry,flavEntry[1].getInner(1).each(t,[flavEntry[0],t]),|);
+  times:=times.getInner(1).group(times.getInner(0));
   //Add time groups by optimization group (optimized/debug)
   times.map({[$x[0].copy(1,1),$x[1]]})
        .group(0,{[$x[0],$x[1]|$y[1]]})
+       .getInner(1)
        .each(G,times[G[0]]:=G[1]);
   //Average Times
   times.each(t,times[t[0]]:=t[1].average);

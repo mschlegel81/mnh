@@ -1,16 +1,13 @@
 USE inputs;
 @demo_for=file processing, string processing, list processing
-readDict(filename)->fileLines(filename)
+readAnagramGroups(filename)->fileLines(filename)
                     .lower
                     .unique
-                    .pMap({[join($word.chars.sort),$word]});
+                    .{$words.group($words.pMap({join($word.chars.sort)}))};
 
-private anagramsInDict(list)->list
-                     .group(0)
-                     .pEach(gr,size(gr)<=1 ? void : gr.getInner(1));
 
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary, sort by anagrams per group and print them out (one line per group)
-main(filename)->printf("{join($0,', ')}",readDict(filename).anagramsInDict.sort.trailing(10));
+main(filename)->printf("{join($0,', ')}",readAnagramGroups(filename).pMap({$group[1].size>1 ? $group[1] : void}).sort.trailing(10));

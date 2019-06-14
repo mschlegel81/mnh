@@ -20,6 +20,7 @@ private getWeeks(year,month)->begin
   local daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
   daysOnTab
   .group([0..size(daysOnTab)-1] div 7)
+  .getInner(1)
   .sort({$x[0]<$y[0]})
   .each(week,week.each(day,day<=0 ? '  ' : format('%2s',day)).join(' '));
 end;

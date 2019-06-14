@@ -14,7 +14,7 @@ private memoized followerTable->words.pEach(word,word.length<2 ? void : word.cop
                                      .flatten
                                      .pEach(s,s.chars)
                                      .group(0)
-                                     .pEach(g,[g[0,0],g.getInner(1).relativeFrequency])
+                                     .pEach(g,g[0]=>g[1].getInner(1).relativeFrequency)
                                      .toMap;
 
 private randomFromTable(T:List)->begin

@@ -10,7 +10,7 @@ count89(x0:IntList)->begin
     x[ 1]:=void;
     x:=x.pMap({[$x[0].digits.sqr.agg(+),$x[1]]})
         .group(0)
-        .pMap({[$g[0,0],$g.getInner(1).agg(+)]})
+        .pMap({$g[0] => $g[1].getInner(1).agg(+)})
         .toMap;
   end);
   result;
