@@ -39,7 +39,7 @@ CONST
     {mc_note   } (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
     {mc_warning} (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
     {mc_error  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagQuietHalt,FlagError]),
-    {mc_fatal  } (htmlSpan:'error'; includeLocation:false; triggeredFlags:[FlagFatalError,FlagQuietHalt])
+    {mc_fatal  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagFatalError,FlagQuietHalt])
     {$ifdef fullVersion},
     {mc_plot   } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
     {mc_gui}     (htmlSpan:''     ; includeLocation:false; triggeredFlags:[])
@@ -181,6 +181,7 @@ TYPE
       FUNCTION messageText:T_arrayOfString; virtual;
       FUNCTION getMessageTypeName:string;
       PROPERTY getLocation:T_searchTokenLocation read location;
+      PROPERTY getRefCount:longint read refCount;
   end;
 
   P_storedMessageWithText=^T_storedMessageWithText;

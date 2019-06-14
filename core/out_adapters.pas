@@ -970,11 +970,13 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
     k:=1;
     for j:=1 to length(storedMessages)-1 do begin
       isDuplicate:=false;
-      for i:=0 to k-1 do isDuplicate:=isDuplicate or storedMessages[i]^.equals(storedMessages[k]);
+      for i:=0 to k-1 do isDuplicate:=isDuplicate or storedMessages[i]^.equals(storedMessages[j]);
       if not(isDuplicate) then begin
         storedMessages[k]:=storedMessages[j];
         inc(k);
-      end else disposeMessage(storedMessages[j]);
+      end else begin
+        disposeMessage(storedMessages[j]);
+      end;
     end;
     setLength(storedMessages,k);
   end;

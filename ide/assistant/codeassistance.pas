@@ -88,10 +88,12 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
     initialStateHash:=source^.stateHash xor hashOfAnsiString(source^.getPath);
     {$Q+}{$R+}
     globals^.resetForEvaluation(package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
+    if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(localIdInfos,create);
     package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos);
-    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(false)
-                         else loadMessages:=adapters      .storedMessages(false);
+    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
+                         else loadMessages:=adapters      .storedMessages(true);
     new(result,create(package,loadMessages,initialStateHash,localIdInfos));
     globals^.afterEvaluation(recycler);
     if givenGlobals=nil then begin

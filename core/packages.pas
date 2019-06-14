@@ -149,8 +149,6 @@ USES sysutils,typinfo, FileUtil, Classes;
 
 VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
-    func_inspect:P_intFuncCallback;
-    func_inspectAll:P_intFuncCallback;
 
 PROCEDURE setupSandboxes;
   begin
@@ -671,17 +669,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         end else packageRules.put(castRule^.getId,castRule);
       end;
 
-    FUNCTION containsInspectionCall(CONST tokens:P_token):boolean;
-      VAR tok:P_token;
-      begin
-        tok:=tokens;
-        result:=false;
-        while tok<>nil do begin
-          if (tok^.tokType=tt_intrinsicRule) and ((tok^.data=pointer(func_inspect)) or (tok^.data=pointer(func_inspectAll))) then exit(true);
-          tok:=tok^.next;
-        end;
-      end;
-
     begin
       ruleDeclarationStart:=statement.firstToken^.location;
       evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -745,7 +732,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
       //[marker 1]
       if evaluateBody and
-         ((usecase<>lu_forCodeAssistance) or containsInspectionCall(ruleBody)) and
+         (usecase<>lu_forCodeAssistance) and
          (globals.primaryContext.messages^.continueEvaluation)
       then globals.primaryContext.reduceExpression(ruleBody,recycler);
 
