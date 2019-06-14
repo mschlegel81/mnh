@@ -742,6 +742,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 
   VAR altRes:shortstring;
   begin
+    DefaultFormatSettings.DecimalSeparator:='.';
     //Special representation for special values:
     if isNan(x) then exit(LITERAL_NAN_TEXT);
     if isInfinite(x) then begin
@@ -769,6 +770,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
       big:T_bigInt;
       intResult:int64;
   begin
+    DefaultFormatSettings.DecimalSeparator:='.';
     result:=nil;
     parsedLength:=0;
     if (length(input)>=offset) and (input [offset] in ['0'..'9', '-', '+']) then begin
@@ -3780,7 +3782,6 @@ INITIALIZATION
   emptyStringSingleton.create('');
   for i:=low(intLit) to high(intLit) do intLit[i].create(i);
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
-  DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   nanLit   .create(Nan);
   infLit   .create(infinity);

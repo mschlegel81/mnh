@@ -113,6 +113,9 @@ FUNCTION T_outlineSettings.getSerialVersion: dword;
 
 FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin
+    {$ifdef debugMode}
+    writeln('Loading T_outlineSettings @',stream.streamPos);
+    {$endif}
     try
       showPrivate:=stream.readBoolean;
       showImported:=stream.readBoolean;
@@ -130,6 +133,9 @@ FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapp
 
 PROCEDURE T_outlineSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   begin
+    {$ifdef debugMode}
+    writeln('Saving T_outlineSettings @',stream.streamPos);
+    {$endif}
     stream.writeBoolean(showPrivate);
     stream.writeBoolean(showImported);
     stream.writeByte(byte(ruleSorting));

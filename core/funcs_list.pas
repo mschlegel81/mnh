@@ -468,8 +468,10 @@ FUNCTION group_imp intFuncSignature;
       disposeLiteral(keyList);
 
       groupList:=groupMap.keyValueList;
-      result:=newListLiteral(length(groupList));
-      for groupEntry in groupList do listResult^.append(groupEntry.value,false);
+      result:=newMapLiteral();
+      for groupEntry in groupList do mapResult^.put(groupEntry.key^.rereferenced,
+                                                    groupEntry.value,
+                                                    false);
       groupMap.destroy;
       {$ifdef fullVersion}
       if aggregator<>nil then context.callStackPop(nil);

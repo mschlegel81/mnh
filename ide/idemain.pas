@@ -259,11 +259,17 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    {$ifdef debugMode} writeln('Suspending timer'); {$endif}
     ensureTimerSuspend;
+    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
     finalizeCodeAssistance;
+    {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
+    {$ifdef debugMode} writeln('Destroying runner'); {$endif}
     runnerModel.destroy;
+    {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
+    {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
   end;
 

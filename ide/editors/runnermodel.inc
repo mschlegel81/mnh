@@ -203,6 +203,9 @@ FUNCTION T_runnerModel.getSerialVersion:dword;
 
 FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin
+    {$ifdef debugMode}
+    writeln('Loading T_runnerModel @',stream.streamPos);
+    {$endif}
     if not stream.allOkay then exit(false);
     debugMode_  :=stream.readBoolean();
     stackTracing:=stream.readBoolean();
@@ -229,6 +232,9 @@ FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
 
 PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   begin
+    {$ifdef debugMode}
+    writeln('Saving T_runnerModel @',stream.streamPos);
+    {$endif}
     stream.writeBoolean(debugMode_  );
     stream.writeBoolean(stackTracing);
     stream.writeBoolean(profiling   );

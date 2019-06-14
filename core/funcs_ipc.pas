@@ -1,9 +1,12 @@
 UNIT funcs_ipc;
 INTERFACE
+USES basicTypes;
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+IMPLEMENTATION
 USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil,
      {$ifdef UNIX}myStringUtil,{$endif}  //my tools
-     basicTypes,mnh_constants,
+     mnh_constants,
      mnh_messages,
      out_adapters,
      litVar,
@@ -11,9 +14,6 @@ USES sysutils, Classes, simpleipc, //RTL
      tokenArray,
      recyclers,
      funcs;
-
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-IMPLEMENTATION
 TYPE
   P_myIpcServer=^T_myIpcServer;
   T_myIpcServer=object
@@ -371,12 +371,18 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       registry.enterCs;
       try
         normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
-        if isServerRunning(normalizedPath)
-        then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
-        else begin
-          new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages));
-          beginThread(@ipcServerThread,markerServer);
-          result:=newVoidLiteral;
+        if localServers.containsKey(normalizedPath,markerServer) then begin
+          if (markerServer^.feedbackLocation.package=tokenLocation.package)
+          then result:=newVoidLiteral
+          else context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation);
+        end else begin
+          if isServerRunning(normalizedPath)
+          then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
+          else begin
+            new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages));
+            beginThread(@ipcServerThread,markerServer);
+            result:=newVoidLiteral;
+          end;
         end;
       except on e:Exception do
         context.messages^.raiseSimpleError(e.message,tokenLocation,mt_el4_systemError);

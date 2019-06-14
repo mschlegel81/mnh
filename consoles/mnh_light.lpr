@@ -19,7 +19,7 @@ begin
         writeln('Reinstall to fix this problem');
         ExitCode:=5;
       end;
-    end else displayHelp;
+    end else displayHelp(nil);
   end;
   memoryCleaner.stop;
   if pauseAtEnd then pauseOnce;

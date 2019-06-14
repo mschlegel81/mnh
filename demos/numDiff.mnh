@@ -1,4 +1,4 @@
-private diffList(L:List)->L.each(e,[e[0]-1,-e[1]],[e[0]+1, e[1]]).group(0,{[$x[0],$x[1]+$y[1]]}).sort;
+private diffList(L:List)->L.each(e,[e[0]-1,-e[1]],[e[0]+1, e[1]]).group(0,{$x[0]=>$x[1]+$y[1]}).getInner(1).sort;
 
 memoized
 private abstractD(i==0)->[[0,1]];

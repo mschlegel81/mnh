@@ -1,11 +1,10 @@
 USE anagram,inputs;
 @demo_for=string processing, list processing, file processing
 private findSemordnilaps(dictionaryFile:String)->
-  readDict(dictionaryFile)
-  .group(0)
+  readAnagramGroups(dictionaryFile)
   .pEach(anagramGroup,
      begin
-       local semordnilapGroup:=anagramGroup.getInner(1);
+       local semordnilapGroup:=anagramGroup[1];
        semordnilapGroup:=intersect(semordnilapGroup,reverseString(semordnilapGroup));
        size(semordnilapGroup)<=1 ? void : semordnilapGroup.toList.join("\v, ");
      end);

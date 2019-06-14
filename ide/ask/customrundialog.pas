@@ -59,6 +59,8 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean; OUT mainParameters:string)
     myCustomRunForm.caption:=formCaption[externalRun];
     myCustomRunForm.GroupBox2.enabled:=externalRun;
     myCustomRunForm.GroupBox4.enabled:=externalRun;
+    myCustomRunForm.GroupBox2.visible:=externalRun;
+    myCustomRunForm.GroupBox4.visible:=externalRun;
     if myCustomRunForm.ShowModal=mrOk then begin
       result:=true;
       mainParameters:=myCustomRunForm.scriptParamEdit.text;

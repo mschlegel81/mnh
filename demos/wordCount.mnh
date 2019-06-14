@@ -11,7 +11,7 @@ end;
 
 private processLinesInChunks(lines:StringList,chunkSize)->
   group(lines,[0..size(lines)-1] div chunkSize)
-  .pEach(chunk,cleanSplitString(chunk))
+  .pEach(chunk,cleanSplitString(chunk[1]))
   .flatten
   .elementFrequency;
 

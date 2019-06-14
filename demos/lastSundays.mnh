@@ -2,7 +2,7 @@ USE '..\packages\dateUtils.mnh';
 private lastSundaysInYear(year:Int)->begin
   [dateOf(year,1,1)..dateOf(year,12,31)] //take all days in that year
   .filter({dayOfWeek($d)=SUNDAY})        //take only sundays
-  .{$L.group($L.month)}                  //group by month
+  .{$L.group($L.month).getInner(1)}      //group by month
   .map(::max)                            //take the maximum within each group
   .sort;                                 //sort the result (because grouping may change the ordering)
 end;

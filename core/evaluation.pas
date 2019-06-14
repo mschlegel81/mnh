@@ -963,8 +963,10 @@ end}
   begin
     result:=rr_ok;
     inc(context.callDepth);
+    if context.callDepth>STACK_DEPTH_LIMIT then context.raiseError('Stack depth limit exceeded',errorLocation(first),mt_el4_systemError);
     stack.create;
     initialScope:=context.valueScope;
+    if context.messages^.continueEvaluation then
     {$ifdef useTryCatchBlocks}try{$endif}
     repeat
       didSubstitution:=false;
