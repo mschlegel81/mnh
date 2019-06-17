@@ -61,8 +61,8 @@ FUNCTION ensureProfileView:TprofilingOutputForm;
     if myProfilingForm=nil then begin
       myProfilingForm:=TprofilingOutputForm.create(Application);
       dockNewForm(myProfilingForm);
-      myProfilingForm.showComponent(true);
     end;
+    myProfilingForm.showComponent(true);
     result:=myProfilingForm;
   end;
 
