@@ -157,7 +157,8 @@ TYPE
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
 IMPLEMENTATION
-USES mySys;
+USES mySys
+     {$ifdef fullVersion},debuggingVar{$endif};
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
   begin
     if      tok^.tokType in C_operators   then result:=getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType])
@@ -608,6 +609,10 @@ FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocat
   begin
     result:=((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
+      {$ifdef fullVersion}
+      if tco_stackTrace in P_context(context)^.threadOptions
+      then P_context(context)^.callStackPush(callLocation,@self,newCallParametersNode(param));
+      {$endif}
       system.enterCriticalSection(rule_cs);
       try
         firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
@@ -616,6 +621,10 @@ FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocat
       end;
       lastRep:=firstRep;
       called:=true;
+      {$ifdef fullVersion}
+      if tco_stackTrace in P_context(context)^.threadOptions
+      then P_context(context)^.callStackPop(firstRep);
+      {$endif}
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
   end;
 
@@ -623,6 +632,10 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
   begin
     result:=((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
+      {$ifdef fullVersion}
+      if tco_stackTrace in P_context(context)^.threadOptions
+      then P_context(context)^.callStackPush(callLocation,@self,newCallParametersNode(param));
+      {$endif}
       system.enterCriticalSection(rule_cs);
       try
         readDataStore(P_context(context)^,recycler);
@@ -631,6 +644,10 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
       finally
         system.leaveCriticalSection(rule_cs);
       end;
+      {$ifdef fullVersion}
+      if tco_stackTrace in P_context(context)^.threadOptions
+      then P_context(context)^.callStackPop(firstRep);
+      {$endif}
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
   end;
 
