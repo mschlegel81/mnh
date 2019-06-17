@@ -22,6 +22,8 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE StringGrid1HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+    PROCEDURE StringGrid1PrepareCanvas(Sender: TObject; aCol, aRow: integer;
+      aState: TGridDrawState);
     PROCEDURE StringGrid1Selection(Sender: TObject; aCol, aRow: integer);
     PROCEDURE StringGrid2HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
     PROCEDURE StringGrid1KeyPress(Sender: TObject; VAR key: char);
@@ -113,6 +115,19 @@ PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject;
     sortProfilingList(profilingList,grid1Sorting);
     fillGrid1;
   end;
+
+PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol, aRow: integer; aState: TGridDrawState);
+  VAR style:TTextStyle;
+      myGrid:TStringGrid;
+begin
+  if Sender.ClassType<>TStringGrid.ClassType then exit;
+  myGrid:=TStringGrid(Sender);
+  style:=myGrid.Canvas.TextStyle;
+  if (aCol=1) and (aRow>=1)
+  then style.Alignment:=taRightJustify
+  else style.Alignment:=taLeftJustify;
+  myGrid.Canvas.TextStyle:=style;
+end;
 
 PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
   begin
