@@ -13,6 +13,7 @@ IGNORED_PATTERNS:=['3rd_party',
                   '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
                   '/core/func_defines\.inc.*\(5024\)',
                   '/core/out_adapters\.pas.*\(5024\)',
+                  '/core/profiling\.pas.*\(5024\)',
                   '/core/operators.*\(5059\)',
                   '/core/funcs_files.*\(6018\)',
                   '/core/listProcessing.*\(5089\).*"nextToEnqueue"'

@@ -419,16 +419,8 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
   end;
 
 FUNCTION hasAnyForm:boolean;
-  {$ifdef debugMode}
-  VAR f:T_mnhComponentForm;
-  {$endif}
   begin
     result:=length(activeForms)>0;
-    {$ifdef debugMode}
-    write('Active Forms:');
-    for f in activeForms do write(f.getIdeComponentType,' ');
-    writeln;
-    {$endif}
   end;
 
 FUNCTION hasFormOfType(CONST ideComponent:T_ideComponent; CONST BringToFront:boolean=false):boolean;
