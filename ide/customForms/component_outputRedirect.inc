@@ -21,7 +21,6 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);
     new(synOutAdapter,create(parent^.containedInForm,synMeta.editor));
     synOutAdapter^.parentMessages:=adaptersHoldingCollector;
-    connect;
   end;
 
 FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;

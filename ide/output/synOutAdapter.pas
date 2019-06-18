@@ -67,6 +67,12 @@ TYPE
       PROCEDURE flushClear;
   end;
 
+  P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
+  T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
+    FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+  end;
+
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
 FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;
@@ -109,6 +115,18 @@ PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
 FUNCTION redirectedMessages:T_messageTypeSet;
   begin
     result:=redirected;
+  end;
+
+CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet);
+  begin
+    inherited create(messageTypesToInclude_);
+  end;
+
+FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessage): boolean;
+  begin
+    if message^.messageType in redirected
+    then result:=false
+    else result:=inherited append(message);
   end;
 
 PROCEDURE T_synOutAdapter.startOutput;
