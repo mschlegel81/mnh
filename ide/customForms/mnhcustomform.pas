@@ -82,6 +82,9 @@ TYPE
 
   P_customFormAdapter = ^T_customFormAdapter;
   TscriptedForm = class(T_mnhComponentForm)
+    CloseButton: TButton;
+    closeButtonPanel: TPanel;
+    PROCEDURE closeButtonClick(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -100,6 +103,7 @@ TYPE
     PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
+    PROCEDURE dockChanged;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   end;
@@ -131,7 +135,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES synOutAdapter,mnh_settings;
+USES synOutAdapter,mnh_settings,ComCtrls;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -411,7 +415,8 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
 PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
-PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
+  );
   VAR m:P_guiElementMeta;
 
   begin
@@ -428,6 +433,11 @@ PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
     end;
   end;
 
+PROCEDURE TscriptedForm.closeButtonClick(Sender: TObject);
+  begin
+    close;
+  end;
+
 PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
   begin
     initCriticalSection(lock);
@@ -442,6 +452,7 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
       leaveCriticalSection(lock);
     end;
     markedForCleanup:=false;
+    onDockChanged:=@dockChanged;
   end;
 
 PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
@@ -492,7 +503,9 @@ PROCEDURE TscriptedForm.performFastUpdate;
     end;
   end;
 
-PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
+PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
+  CONST setupLocation: T_tokenLocation; CONST setupContext: P_context;
+  CONST relatedPlotAdapter: P_guiPlotSystem);
   TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid,tc_plotDock);
   CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid','plotDock');
 
@@ -619,16 +632,30 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocat
 
 PROCEDURE TscriptedForm.showAndConnectAll;
   VAR m:P_guiElementMeta;
+      page:TTabSheet;
+      PageControl:TPageControl;
   begin
     Show;
+    getParents(page,PageControl);
+    if page<>nil then page.visible:=true;
     for m in meta do m^.connect;
+    dockChanged;
   end;
 
 PROCEDURE TscriptedForm.hideAndDisconnectAll;
   VAR m:P_guiElementMeta;
+      page:TTabSheet;
+      PageControl:TPageControl;
   begin
     Hide;
+    getParents(page,PageControl);
+    if page<>nil then page.visible:=false;
     for m in meta do m^.disconnect;
+  end;
+
+PROCEDURE TscriptedForm.dockChanged;
+  begin
+    closeButtonPanel.visible:=myComponentParent<>cpNone;
   end;
 
 FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;

@@ -48,6 +48,7 @@ TYPE
       PROCEDURE showComponent(CONST retainOriginalFocus:boolean);
     public
       myComponentParent:T_componentParent;
+      onDockChanged:PROCEDURE of object;
       DESTRUCTOR destroy; override;
   end;
 
@@ -353,6 +354,7 @@ FUNCTION T_mnhDockSiteModel.undockCurrent: boolean;
     newForm.BringToFront;
     newForm.myComponentParent:=cpNone;
     newForm.ShowInTaskBar:=stAlways;
+    if newForm.onDockChanged<>nil then newForm.onDockChanged();
     result:=true;
   end;
 
@@ -505,6 +507,7 @@ CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
     k:=length(activeForms);
     setLength(activeForms,k+1);
     activeForms[k]:=self;
+    onDockChanged:=nil;
   end;
 
 DESTRUCTOR T_mnhComponentForm.destroy;
@@ -536,6 +539,7 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
       if width <100 then width :=100;
       if height<100 then height:=100;
     end;
+    if onDockChanged<>nil then onDockChanged();
   end;
 
 PROCEDURE performSlowUpdates;
