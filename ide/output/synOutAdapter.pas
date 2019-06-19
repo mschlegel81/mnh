@@ -324,6 +324,7 @@ FUNCTION T_synOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
     result:=[];
     startOutput;
     try
+      removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
       for m in storedMessages do begin
         include(result,m^.messageType);
         singleMessageOut(m);

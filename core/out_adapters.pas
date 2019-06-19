@@ -73,7 +73,7 @@ TYPE
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-    PROCEDURE removeDuplicateStoredMessages;
+    PROCEDURE removeDuplicateStoredMessages(CONST messageTypesToDrop:T_messageTypeSet=[mt_clearConsole..mt_timing_info]);
     PROCEDURE clear; virtual;
     FUNCTION typesOfStoredMessages:T_messageTypeSet;
   end;
@@ -965,7 +965,7 @@ FUNCTION T_collectingOutAdapter.append(CONST message: P_storedMessage):boolean;
     end;
   end;
 
-PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
+PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages(CONST messageTypesToDrop:T_messageTypeSet=[mt_clearConsole..mt_timing_info]);
   VAR i,j,k:longint;
       isDuplicate:boolean=false;
   begin
@@ -973,6 +973,7 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
     k:=1;
     for j:=1 to length(storedMessages)-1 do begin
       isDuplicate:=false;
+      if storedMessages[j]^.messageType in messageTypesToDrop then
       for i:=0 to k-1 do isDuplicate:=isDuplicate or storedMessages[i]^.equals(storedMessages[j]);
       if not(isDuplicate) then begin
         storedMessages[k]:=storedMessages[j];
