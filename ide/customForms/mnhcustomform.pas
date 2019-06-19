@@ -9,7 +9,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls,
-  ExtCtrls, StdCtrls,
+  ExtCtrls, StdCtrls, Menus,
   myGenerics,
   mnh_constants, basicTypes, contexts,
   mnh_messages,
@@ -84,6 +84,9 @@ TYPE
   TscriptedForm = class(T_mnhComponentForm)
     CloseButton: TButton;
     closeButtonPanel: TPanel;
+    MainMenu1: TMainMenu;
+    MenuItem1: TMenuItem;
+    PopupMenu1: TPopupMenu;
     PROCEDURE closeButtonClick(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -91,6 +94,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     markedForCleanup:boolean;
     meta:array of P_guiElementMeta;
@@ -103,7 +107,6 @@ TYPE
     PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
-    PROCEDURE dockChanged;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   end;
@@ -452,7 +455,8 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
       leaveCriticalSection(lock);
     end;
     markedForCleanup:=false;
-    onDockChanged:=@dockChanged;
+    initDockMenuItems(MainMenu1,MenuItem1);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);

@@ -23,26 +23,19 @@ TYPE
   TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
-    MenuItem3: TMenuItem;
-    MenuItem4: TMenuItem;
-    mi_comma1: TMenuItem;
-    mi_exportCsvSemicolon1: TMenuItem;
-    mi_exportCsvTab1: TMenuItem;
+    miDockInMain: TMenuItem;
     mi_exportIncHeader: TMenuItem;
     miIncreaseFontSize: TMenuItem;
     miDecreaseFontSize: TMenuItem;
-    mi_exportIncHeader1: TMenuItem;
     mi_exportText: TMenuItem;
     mi_exportCsvTab: TMenuItem;
     mi_exportCsvSemicolon: TMenuItem;
-    mi_exportText1: TMenuItem;
     mi_transpose: TMenuItem;
     mi_comma: TMenuItem;
-    mi_transpose1: TMenuItem;
+    PopupMenu1: TPopupMenu;
     SaveTableDialog: TSaveDialog;
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
-    tableMenu1: TPopupMenu;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -59,6 +52,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     { private declarations }
     literal:P_listLiteral;
@@ -193,6 +187,8 @@ PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
     registerFontControl(StringGrid,ctTable);
+    initDockMenuItems(tableMenu,miDockInMain);
+    initDockMenuItems(PopupMenu1,nil);
   end;
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -230,7 +226,6 @@ PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
     mi_comma.checked:=not(mi_comma.checked);
-    mi_comma1.checked:=mi_comma.checked;
     fillTable;
   end;
 
@@ -267,7 +262,6 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
   begin
     mi_transpose.checked:=not(mi_transpose.checked);
-    mi_transpose1.checked:=mi_transpose.checked;
     newLiteral:=literal^.transpose(@emptyStringSingleton);
     disposeLiteral(literal);
     literal:=newLiteral;
@@ -315,7 +309,16 @@ PROCEDURE TtableForm.performFastUpdate;
   begin
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST firstIsHeader_: boolean; CONST adapter_:P_tableAdapter);
+PROCEDURE TtableForm.dockChanged;
+  begin
+    if (myComponentParent=cpNone)
+    then moveAllItems(PopupMenu1.items,tableMenu.items)
+    else moveAllItems(tableMenu.items,PopupMenu1.items);
+  end;
+
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
+  CONST newCaption: string; CONST firstIsHeader_: boolean;
+  CONST adapter_: P_tableAdapter);
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
@@ -326,7 +329,6 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
     end;
     firstIsHeader:=firstIsHeader_;
     mi_exportIncHeader.enabled:=firstIsHeader_;
-    mi_exportIncHeader1.enabled:=firstIsHeader_;
     mi_exportIncHeader.checked:=mi_exportIncHeader.checked and firstIsHeader_;
     if firstIsHeader and (L^.size>0) and (L^.value[0]^.literalType in C_listTypes) then begin
       headerLiteral:=P_listLiteral(L^.value[0]);

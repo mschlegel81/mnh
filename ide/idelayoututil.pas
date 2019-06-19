@@ -46,9 +46,19 @@ TYPE
       PROCEDURE getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
       PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
       PROCEDURE showComponent(CONST retainOriginalFocus:boolean);
+      PROCEDURE dockChanged; virtual; abstract;
+      PROCEDURE changeDock(CONST newSite:T_componentParent);
+      PROCEDURE defaultReattachClick(Sender:TObject);
+      PROCEDURE defaultUndockClick(Sender:TObject);
+      PROCEDURE defaultCloseClick(Sender:TObject);
+      PROCEDURE defaultDockSite1Click(Sender:TObject);
+      PROCEDURE defaultDockSite2Click(Sender:TObject);
+      PROCEDURE defaultDockSite3Click(Sender:TObject);
+      PROCEDURE defaultDockSite4Click(Sender:TObject);
+      PROCEDURE initDockMenuItems(CONST menuToInit:TMenu; CONST dockRoot:TMenuItem);
     public
+      lastDock,
       myComponentParent:T_componentParent;
-      onDockChanged:PROCEDURE of object;
       DESTRUCTOR destroy; override;
   end;
 
@@ -56,8 +66,6 @@ TYPE
   T_mnhDockSiteModel=object
     private
       PageControl:TPageControl;
-      undockMi,closeMi:TMenuItem;
-      undockMenu:TPopupMenu;
       canScaleWidth:boolean;
       dockId:T_componentParent;
       relativeSize:word;
@@ -69,23 +77,19 @@ TYPE
       PROCEDURE closeActivePage;
     public
       CONSTRUCTOR create(CONST dockId_:T_componentParent;
-                         CONST pageControl_:TPageControl;
-                         CONST undockMi_,closeMi_:TMenuItem;
-                         CONST undockMenu_:TPopupMenu);
+                         CONST pageControl_:TPageControl);
       DESTRUCTOR destroy;
       PROPERTY absSize:longint read getAbsSize write setAbsSize;
       PROCEDURE updateAbsSizeByRelSize;
       PROCEDURE updateRelSizeByAbsSize;
       PROCEDURE fixSize;
 
-      PROCEDURE menuPopup(Sender:TObject);
-      PROCEDURE closeClick(Sender:TObject);
       FUNCTION  undockCurrent:boolean;
-      PROCEDURE undockClick(Sender:TObject);
       PROCEDURE undockAll;
   end;
 
   T_mnhIdeForm=class(TForm)
+    dockImages: TImageList;
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm);   virtual; abstract;
     PROCEDURE onEditFinished(CONST data:P_storedMessage    ); virtual; abstract;
     PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); virtual; abstract;
@@ -102,53 +106,8 @@ TYPE
       VAR AMode: TSynSelectionMode; ALogStartPos: TPoint;
       VAR AnAction: TSynCopyPasteAction);
   end;
-
-TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
-CONST C_dockSetupDockAll:T_dockSetup
-    {icOutline}   =(cpPageControl3,
-    {icHelp}        cpPageControl2,
-    {icAssistance}  cpPageControl2,
-    {icOutput}      cpPageControl2,
-    {icQuickEval}   cpPageControl2,
-    {icDebugger}    cpPageControl2,
-    {icDebuggerVari}cpPageControl1,
-    {icDebuggerBrea}cpPageControl1,
-    {icPlot}        cpPageControl1,
-    {icCustomForm}  cpPageControl1,
-    {icTable}       cpPageControl1,
-    {icVariableView}cpPageControl1,
-    {icProfiling...}cpPageControl1);
-  C_dockSetupUnDockAll:T_dockSetup
-     {icOutline}   =(cpNone,
-     {icHelp}        cpNone,
-     {icAssistance}  cpNone,
-     {icOutput}      cpNone,
-     {icQuickEval}   cpNone,
-     {icDebugger}    cpNone,
-     {icDebuggerVari}cpNone,
-     {icDebuggerBrea}cpNone,
-     {icPlot}        cpNone,
-     {icCustomForm}  cpNone,
-     {icTable}       cpNone,
-     {icVariableView}cpNone,
-                     cpNone);
-
-VAR lastDockLocationFor:T_dockSetup
-    {icOutline}   =(cpPageControl3,
-    {icHelp}        cpPageControl2,
-    {icAssistance}  cpPageControl2,
-    {icOutput}      cpPageControl2,
-    {icQuickEval}   cpPageControl2,
-    {icDebugger}    cpPageControl2,
-    {icDebuggerVari}cpPageControl1,
-    {icDebuggerBrea}cpPageControl1,
-    {icPlot}        cpPageControl1,
-    {icCustomForm}  cpPageControl1,
-    {icTable}       cpPageControl1,
-    {icVariableView}cpPageControl1,
-                    cpPageControl1);
-
-    mainForm:T_mnhIdeForm=nil;
+VAR
+  mainForm:T_mnhIdeForm=nil;
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 FUNCTION hasAnyForm:boolean;
@@ -170,6 +129,8 @@ PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
 PROCEDURE dockAllForms;
 
+PROCEDURE moveAllItems(CONST sourceMenu,destMenu:TMenuItem);
+
 OPERATOR :=(x:byte):TFontStyles;
 OPERATOR :=(x:TFontStyles):byte;
 
@@ -183,6 +144,36 @@ IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
+TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
+CONST C_defaultDock:T_dockSetup
+    {icOutline}   =(cpPageControl3,
+    {icHelp}        cpPageControl2,
+    {icAssistance}  cpPageControl2,
+    {icOutput}      cpPageControl2,
+    {icQuickEval}   cpPageControl2,
+    {icDebugger}    cpPageControl2,
+    {icDebuggerVari}cpPageControl1,
+    {icDebuggerBrea}cpPageControl1,
+    {icPlot}        cpPageControl1,
+    {icCustomForm}  cpPageControl1,
+    {icTable}       cpPageControl1,
+    {icVariableView}cpPageControl1,
+    {icProfiling...}cpPageControl2);
+
+VAR lastDockLocationFor:T_dockSetup
+    {icOutline}   =(cpPageControl3,
+    {icHelp}        cpPageControl2,
+    {icAssistance}  cpPageControl2,
+    {icOutput}      cpPageControl2,
+    {icQuickEval}   cpPageControl2,
+    {icDebugger}    cpPageControl2,
+    {icDebuggerVari}cpPageControl1,
+    {icDebuggerBrea}cpPageControl1,
+    {icPlot}        cpPageControl1,
+    {icCustomForm}  cpPageControl1,
+    {icTable}       cpPageControl1,
+    {icVariableView}cpPageControl1,
+                    cpPageControl1);
 
 PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
   begin
@@ -193,14 +184,17 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
       newForm.ShowInTaskBar:=stAlways;
       newForm.Show;
     end;
+    newForm.dockChanged;
+    if newForm.myComponentParent=cpNone then begin
+      newForm.ShowInTaskBar:=stAlways;
+      newForm.Show;
+    end;
   end;
 
 PROCEDURE dockAllForms;
   VAR f:T_mnhComponentForm;
   begin
-    lastDockLocationFor:=C_dockSetupDockAll;
-    for f in activeForms do dockNewForm(f);
-    lastDockLocationFor:=C_dockSetupDockAll;
+    for f in activeForms do f.defaultReattachClick(nil);
   end;
 
 FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; CONST highlighter:TSynCustomHighlighter): string;
@@ -284,20 +278,12 @@ PROCEDURE T_mnhDockSiteModel.closeActivePage;
   end;
 
 CONSTRUCTOR T_mnhDockSiteModel.create(CONST dockId_: T_componentParent;
-                                      CONST pageControl_: TPageControl;
-                                      CONST undockMi_, closeMi_: TMenuItem;
-                                      CONST undockMenu_: TPopupMenu);
+                                      CONST pageControl_: TPageControl);
   begin
     dockId       :=dockId_;
     canScaleWidth:=dockId<>cpPageControl2;
     PageControl  :=pageControl_;
-    undockMenu   :=undockMenu_;
-    undockMi     :=undockMi_;
-    closeMi      :=closeMi_;
     if dockId=cpNone then exit;
-    undockMenu.OnPopup:=@menuPopup;
-    closeMi.OnClick:=@closeClick;
-    undockMi.OnClick:=@undockClick;
   end;
 
 DESTRUCTOR T_mnhDockSiteModel.destroy; begin end;
@@ -325,18 +311,6 @@ PROCEDURE T_mnhDockSiteModel.fixSize;
     end;
   end;
 
-PROCEDURE T_mnhDockSiteModel.menuPopup(Sender: TObject);
-  begin
-    undockMi.enabled:=(PageControl.activePage<>nil);
-    closeMi .enabled:=canCloseActivePage;
-  end;
-
-PROCEDURE T_mnhDockSiteModel.closeClick(Sender: TObject);
-  begin
-    closeActivePage;
-    fixSize;
-  end;
-
 FUNCTION T_mnhDockSiteModel.undockCurrent: boolean;
   VAR control:TControl;
       newForm:T_mnhComponentForm;
@@ -349,18 +323,14 @@ FUNCTION T_mnhDockSiteModel.undockCurrent: boolean;
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
     then newForm:=T_mnhComponentForm(control)
     else raise Exception.create('Not an mnhComponent form!');
+    if newForm.myComponentParent<>cpNone then newForm.lastDock:=newForm.myComponentParent;
     lastDockLocationFor[newForm.getIdeComponentType]:=cpNone;
     newForm.ManualDock(nil);
     newForm.BringToFront;
     newForm.myComponentParent:=cpNone;
     newForm.ShowInTaskBar:=stAlways;
-    if newForm.onDockChanged<>nil then newForm.onDockChanged();
+    newForm.dockChanged;
     result:=true;
-  end;
-
-PROCEDURE T_mnhDockSiteModel.undockClick(Sender: TObject);
-  begin
-    if undockCurrent then fixSize;
   end;
 
 PROCEDURE T_mnhDockSiteModel.undockAll;
@@ -370,7 +340,8 @@ PROCEDURE T_mnhDockSiteModel.undockAll;
     if needSizeFix then fixSize;
   end;
 
-PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
+PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT
+  PageControl: TPageControl);
   begin
     page:=nil;
     PageControl:=nil;;
@@ -381,7 +352,8 @@ PROCEDURE T_mnhComponentForm.getParents(OUT page:TTabSheet; OUT PageControl:TPag
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   VAR page:TTabSheet;
       PageControl:TPageControl;
   begin
@@ -396,7 +368,7 @@ PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; 
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
+PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
   VAR page:TTabSheet;
       PageControl:TPageControl;
       oldActive:TWinControl;
@@ -418,6 +390,92 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus:boolean);
       except
       end;
     end;
+    dockChanged;
+  end;
+
+PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
+  VAR prevSite:T_componentParent;
+  begin
+    if myComponentParent=newSite then exit;
+    prevSite:=myComponentParent;
+    if newSite=cpNone
+    then ManualDock(nil)
+    else begin
+      ManualDock(mainForm.dockSites[newSite]^.PageControl);
+      lastDock:=newSite;
+    end;
+    myComponentParent                       :=newSite;
+    lastDockLocationFor[getIdeComponentType]:=newSite;
+    dockChanged;
+    mainForm.dockSites[prevSite]^.fixSize;
+    mainForm.dockSites[newSite ]^.fixSize;
+    showComponent(false);
+  end;
+
+{FUNCTION T_mnhDockSiteModel.canCloseActivePage: boolean;
+  begin
+    result:=(PageControl.activePage.ControlCount=1)
+      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.closeActivePage;
+  VAR active:T_mnhComponentForm;
+      CloseAction:TCloseAction=caFree;
+  begin
+    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
+    then begin
+      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
+      if not(active.CloseQuery) then exit;
+      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
+      if CloseAction=caFree then FreeAndNil(active);
+    end;
+  end;
+}
+
+PROCEDURE T_mnhComponentForm.defaultCloseClick    (Sender: TObject);
+  VAR page:TTabSheet;
+      PageControl:TPageControl;
+      closeAction:TCloseAction=caFree;
+  begin
+    if not(CloseQuery) then exit;
+    getParents(page,PageControl);
+    if page<>nil then freeAndNil(page);
+    if OnClose<>nil then OnClose(sender,closeAction);
+    if closeAction=caFree then FreeAndNil(self);
+  end;
+
+PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
+PROCEDURE T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
+PROCEDURE T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
+PROCEDURE T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
+PROCEDURE T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
+PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
+  begin
+    if lastDock=cpNone
+    then changeDock(C_defaultDock[getIdeComponentType])
+    else changeDock(lastDock);
+  end;
+
+PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST dockRoot: TMenuItem);
+  VAR useRoot,item:TMenuItem;
+  begin
+    if dockRoot=nil then begin
+      useRoot:=TMenuItem.create(menuToInit);
+      useRoot.caption:='&Dock';
+      menuToInit.items.add(useRoot);
+    end else useRoot:=dockRoot;
+    useRoot.Tag:=99;
+    if mainForm<>nil then begin
+      menuToInit.Images:=mainForm.dockImages;
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultUndockClick;    item.caption:='&Undock';                     useRoot.add(item);
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultReattachClick;  item.caption:='&Attach';                     useRoot.add(item);
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite1Click; item.caption:='Dock &1'; item.ImageIndex:=0; useRoot.add(item);
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite2Click; item.caption:='Dock &2'; item.ImageIndex:=1; useRoot.add(item);
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
+      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
+    end;
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
   end;
 
 FUNCTION hasAnyForm:boolean;
@@ -507,7 +565,7 @@ CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
     k:=length(activeForms);
     setLength(activeForms,k+1);
     activeForms[k]:=self;
-    onDockChanged:=nil;
+    lastDock:=lastDockLocationFor[getIdeComponentType];
   end;
 
 DESTRUCTOR T_mnhComponentForm.destroy;
@@ -521,7 +579,7 @@ DESTRUCTOR T_mnhComponentForm.destroy;
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integer);
+PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: integer);
   VAR n:string;
   begin
     if (target<>nil) then begin
@@ -534,12 +592,13 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X, Y: integ
     end else writeln('Unexpected dock at component of type ',target.ClassName);
     end else myComponentParent:=cpNone;
     lastDockLocationFor[getIdeComponentType]:=myComponentParent;
+    if myComponentParent<>cpNone then lastDock:=myComponentParent;
 
     if myComponentParent=cpNone then begin
-      if width <100 then width :=100;
-      if height<100 then height:=100;
+      if width <200 then width :=200;
+      if height<200 then height:=200;
     end;
-    if onDockChanged<>nil then onDockChanged();
+    dockChanged;
   end;
 
 PROCEDURE performSlowUpdates;
@@ -570,11 +629,11 @@ FUNCTION typeOfFocusedControl:T_controlType;
     if mainForm=nil then exit(ctNoneOrUnknown);
     active:=mainForm.ActiveControl;
 
-    if active.ClassName='TSynEdit' then exit(ctEditor);
-    if active.ClassName='TTreeView' then exit(ctGeneral);
-    if active.ClassName='TListBox' then exit(ctGeneral);
-    if active.ClassName='TplotForm' then exit(ctPlot);
-    if active.ClassName='TStringGrid' then exit(ctTable);
+    if active.ClassName='TSynEdit'    then exit(ctEditor );
+    if active.ClassName='TTreeView'   then exit(ctGeneral);
+    if active.ClassName='TListBox'    then exit(ctGeneral);
+    if active.ClassName='TplotForm'   then exit(ctPlot   );
+    if active.ClassName='TStringGrid' then exit(ctTable  );
 
     {$ifdef debugMode}
     writeln('Unknown control class ',active.ClassName);
@@ -635,6 +694,20 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT active
       for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
       doShowSplashScreen:=true;
       htmlDocGeneratedForCodeHash:='';
+    end;
+  end;
+
+PROCEDURE moveAllItems(CONST sourceMenu, destMenu: TMenuItem);
+  VAR mi:TMenuItem;
+      i:longint=0;
+  begin
+    while sourceMenu.count>i do begin
+      mi:=sourceMenu[i];
+      if mi.Tag=99 then inc(i)
+      else begin
+        sourceMenu.remove(mi);
+        destMenu.add(mi);
+      end;
     end;
   end;
 

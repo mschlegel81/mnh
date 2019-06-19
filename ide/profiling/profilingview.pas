@@ -6,14 +6,16 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Grids,profiling,ideLayoutUtil,mnh_messages,out_adapters;
+  Grids, Menus,profiling,ideLayoutUtil,mnh_messages,out_adapters;
 
 TYPE
   TprofilingOutputForm = class(T_mnhComponentForm)
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     GroupBox3: TGroupBox;
+    MainMenu1: TMainMenu;
     Panel1: TPanel;
+    PopupMenu1: TPopupMenu;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
     StringGrid1: TStringGrid;
@@ -34,6 +36,7 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean;index: integer);
     PROCEDURE StringGrid3KeyPress(Sender: TObject; VAR key: char);
+    PROCEDURE dockChanged; override;
   private
     grid1Sorting:byte;
     grid2Sorting:byte;
@@ -116,7 +119,8 @@ PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject;
     fillGrid1;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol, aRow: integer; aState: TGridDrawState);
+PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol,
+  aRow: integer; aState: TGridDrawState);
   VAR style:TTextStyle;
       myGrid:TStringGrid;
 begin
@@ -136,6 +140,8 @@ PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
     registerFontControl(StringGrid1,ctTable);
     registerFontControl(StringGrid2,ctTable);
     registerFontControl(StringGrid3,ctTable);
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
@@ -145,7 +151,8 @@ PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
     unregisterFontControl(StringGrid3);
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol, aRow: integer);
+PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,
+  aRow: integer);
   begin
     fillGrids2and3;
   end;
@@ -156,26 +163,34 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject;
     if key=#13 then workspace.openLocation(guessLocationFromString( StringGrid1.Cells[1,StringGrid1.selection.top],false));
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject;
+  IsColumn: boolean; index: integer);
   begin
     if IsColumn then
     StringGrid3.ColWidths[index]:=StringGrid2.ColWidths[index];
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject;
+  IsColumn: boolean; index: integer);
   begin
     if IsColumn then
     StringGrid2.ColWidths[index]:=StringGrid3.ColWidths[index];
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
+PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject;
+  VAR key: char);
   begin
     if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid2.Cells[1,StringGrid2.selection.top],false));
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
+PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject;
+  VAR key: char);
   begin
     if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid3.Cells[1,StringGrid3.selection.top],false));
+  end;
+
+PROCEDURE TprofilingOutputForm.dockChanged;
+  begin
   end;
 
 FUNCTION TprofilingOutputForm.getIdeComponentType: T_ideComponent;

@@ -6,13 +6,14 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  mnh_constants,basicTypes,
-  mnh_messages,
-  debuggingVar,treeUtil, litVar,contexts,funcs,out_adapters,mnh_settings,ideLayoutUtil;
+  Menus, mnh_constants, basicTypes, mnh_messages, debuggingVar, treeUtil,
+  litVar, contexts, funcs, out_adapters, mnh_settings, ideLayoutUtil;
 
 TYPE
   P_treeAdapter=^T_treeAdapter;
   TVarTreeViewForm = class(T_mnhComponentForm)
+    MainMenu1: TMainMenu;
+    PopupMenu1: TPopupMenu;
     VarTreeView: TTreeView;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -21,6 +22,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     rootNode:P_variableTreeEntryAnonymousValue;
     model:T_treeModel;
@@ -148,19 +150,28 @@ FUNCTION TVarTreeViewForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TVarTreeViewForm.performSlowUpdate; begin end;
 PROCEDURE TVarTreeViewForm.performFastUpdate; begin end;
+
+PROCEDURE TVarTreeViewForm.dockChanged;
+  begin
+  end;
+
 PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
   begin
     model.create(VarTreeView);
     rootNode:=nil;
     registerFontControl(VarTreeView,ctGeneral);
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
-PROCEDURE TVarTreeViewForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+PROCEDURE TVarTreeViewForm.FormClose(Sender: TObject;
+  VAR CloseAction: TCloseAction);
   begin
     CloseAction:=caFree;
   end;
 
-PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption: string; CONST adapter_:P_treeAdapter);
+PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
+  CONST newCaption: string; CONST adapter_: P_treeAdapter);
   VAR node:TTreeNode;
   begin
     adapter:=adapter_;

@@ -12,6 +12,9 @@ USES
 TYPE
   TQuickEvalForm = class(T_mnhComponentForm)
     cbEvaluateInCurrentPackage: TCheckBox;
+    miDockMenuInMain: TMenuItem;
+    miOutputMenuInMain: TMenuItem;
+    OutputMainMenu: TMainMenu;
     MenuItem1: TMenuItem;
     miEchoDeclarations: TMenuItem;
     miEchoInput: TMenuItem;
@@ -36,7 +39,7 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE quickInputEditChange(Sender: TObject);
-
+    PROCEDURE dockChanged; override;
   private
     evaluatedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
@@ -122,6 +125,8 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
     evaluatedFor:=0;
+    initDockMenuItems(OutputMainMenu,miDockMenuInMain);
+    initDockMenuItems(OutputPopupMenu,nil);
   end;
 
 PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
@@ -170,6 +175,13 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
 
 PROCEDURE TQuickEvalForm.quickInputEditChange(Sender: TObject);
   begin
+  end;
+
+PROCEDURE TQuickEvalForm.dockChanged;
+  begin
+    if myComponentParent=cpNone
+    then moveAllItems(OutputPopupMenu.items,miOutputMenuInMain)
+    else moveAllItems(miOutputMenuInMain,OutputPopupMenu.items);
   end;
 
 FUNCTION TQuickEvalForm.stateHash: T_hashInt;

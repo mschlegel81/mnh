@@ -5,12 +5,15 @@ UNIT breakpointsForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, Menus,
   ideLayoutUtil, editorMeta, basicTypes, mnh_settings;
 
 TYPE
   TBreakpointsForm = class(T_mnhComponentForm)
     BreakpointsListBox: TListBox;
+    MainMenu1: TMainMenu;
+    MenuItem1: TMenuItem;
+    PopupMenu1: TPopupMenu;
     PROCEDURE BreakpointsListBoxDblClick(Sender: TObject);
     PROCEDURE BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
@@ -19,6 +22,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
 
   public
@@ -46,7 +50,8 @@ PROCEDURE TBreakpointsForm.BreakpointsListBoxDblClick(Sender: TObject);
     if (ItemIndex>=0) then workspace.openLocation(guessLocationFromString(items[ItemIndex],false));
   end;
 
-PROCEDURE TBreakpointsForm.BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TBreakpointsForm.BreakpointsListBoxKeyDown(Sender: TObject;
+  VAR key: word; Shift: TShiftState);
   begin
     if key=46 //delete
     then begin
@@ -60,6 +65,8 @@ PROCEDURE TBreakpointsForm.BreakpointsListBoxKeyDown(Sender: TObject; VAR key: w
 PROCEDURE TBreakpointsForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(BreakpointsListBox,ctGeneral);
+    initDockMenuItems(MainMenu1,MenuItem1);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TBreakpointsForm.FormDestroy(Sender: TObject);
@@ -79,6 +86,10 @@ PROCEDURE TBreakpointsForm.performSlowUpdate;
   end;
 
 PROCEDURE TBreakpointsForm.performFastUpdate;
+  begin
+  end;
+
+PROCEDURE TBreakpointsForm.dockChanged;
   begin
   end;
 

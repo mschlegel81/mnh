@@ -5,7 +5,7 @@ UNIT debuggerForms;
 INTERFACE
 
 USES
-  sysutils, Forms, Controls, ComCtrls, ExtCtrls, Buttons, SynEdit,
+  sysutils, Forms, Controls, ComCtrls, ExtCtrls, Buttons, Menus, SynEdit,
   ideLayoutUtil, debugging, debuggingVar, debuggerVarForms, Classes, treeUtil,
   SynHighlighterMnh;
 
@@ -22,7 +22,9 @@ TYPE
     bbHalt: TBitBtn;
     DebuggerIcons: TImageList;
     currentExpressionEdit: TSynEdit;
+    MainMenu1: TMainMenu;
     Panel1: TPanel;
+    PopupMenu1: TPopupMenu;
     Splitter1: TSplitter;
     inlineVariablesTreeView: TTreeView;
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -37,6 +39,7 @@ TYPE
     PROCEDURE tbStepClick(Sender: TObject);
     PROCEDURE tbStepInClick(Sender: TObject);
     PROCEDURE tbStepOutClick(Sender: TObject);
+    PROCEDURE dockChanged; override;
   private
     parameterInfo,
     inlineVariableReport:P_variableTreeEntryCategoryNode;
@@ -98,6 +101,8 @@ PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
     currentExpressionHighlighter:=TMnhDebugSyn.create(currentExpressionEdit);
     currentExpressionEdit.highlighter:=currentExpressionHighlighter;
     lastClickedButton:=dontBreakAtAll;
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TDebuggerForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -157,7 +162,8 @@ PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
     lastClickedButton:=dontBreakAtAll;
   end;
 
-PROCEDURE TDebuggerForm.addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
+PROCEDURE TDebuggerForm.addCategoryNode(
+  CONST r: P_variableTreeEntryCategoryNode; CONST expand: boolean);
   VAR newNode:TTreeNode;
   begin
     if (r=nil) or not(r^.canExpand) then exit;
@@ -180,9 +186,13 @@ PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
   end;
 
 PROCEDURE TDebuggerForm.tbMicroStepClick(Sender: TObject); begin if bbMicroStep.enabled then delegateDebuggerAction(breakSoonest     ); end;
-PROCEDURE TDebuggerForm.tbStepClick     (Sender: TObject); begin if bbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
-PROCEDURE TDebuggerForm.tbStepInClick   (Sender: TObject); begin if bbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
-PROCEDURE TDebuggerForm.tbStepOutClick  (Sender: TObject); begin if bbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
+PROCEDURE TDebuggerForm.tbStepClick(Sender: TObject); begin if bbStep     .enabled then delegateDebuggerAction(breakOnLineChange); end;
+PROCEDURE TDebuggerForm.tbStepInClick(Sender: TObject); begin if bbStepIn   .enabled then delegateDebuggerAction(breakOnStepIn    ); end;
+PROCEDURE TDebuggerForm.tbStepOutClick(Sender: TObject); begin if bbStepOut  .enabled then delegateDebuggerAction(breakOnStepOut   ); end;
+
+PROCEDURE TDebuggerForm.dockChanged;
+  begin
+  end;
 
 PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
   VAR lines,chars:longint;

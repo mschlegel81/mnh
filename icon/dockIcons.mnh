@@ -1,0 +1,22 @@
+
+
+
+drawLayout(HL:Int)->begin
+  local STYLE:=
+  [false=>'box black 4',
+   true =>'box fs RGB0.5,0.5,1'];
+save;
+  setOptions(['axisStyleY'=>0,'preserveAspect'=>false,'axisStyleX'=>0,'autoscaleFactor'=>0.99].toMap);
+  plot   ([[0,0],[1,3]],STYLE[HL=4]);
+  addPlot([[4,0],[5,3]],STYLE[HL=1]);
+  addPlot([[1,1],[2,3]],STYLE[HL=3]);
+  addPlot([[1,1],[4,0]],STYLE[HL=2]);
+  addPlot([[0,0],[5,3]],STYLE[false]);
+end;
+
+main->begin
+  drawLayout(1); renderToFile('dockLocation1.png',30,20,3);
+  drawLayout(2); renderToFile('dockLocation2.png',30,20,3);
+  drawLayout(3); renderToFile('dockLocation3.png',30,20,3);
+  drawLayout(4); renderToFile('dockLocation4.png',30,20,3);
+end;

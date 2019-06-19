@@ -1,7 +1,7 @@
 object profilingOutputForm: TprofilingOutputForm
-  Left = 391
+  Left = 756
   Height = 365
-  Top = 145
+  Top = 401
   Width = 696
   Caption = 'Profiling Output'
   ClientHeight = 365
@@ -9,6 +9,7 @@ object profilingOutputForm: TprofilingOutputForm
   DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
+  Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '2.0.2.0'
@@ -176,5 +177,13 @@ object profilingOutputForm: TprofilingOutputForm
         )
       end
     end
+  end
+  object MainMenu1: TMainMenu
+    left = 170
+    top = 232
+  end
+  object PopupMenu1: TPopupMenu
+    left = 152
+    top = 192
   end
 end

@@ -5,12 +5,14 @@ UNIT helperForms;
 INTERFACE
 
 USES
-  sysutils, Forms, Controls, Dialogs, StdCtrls, SynEdit, ideLayoutUtil,
+  sysutils, Forms, Controls, Dialogs, StdCtrls, Menus, SynEdit, ideLayoutUtil,
   SynHighlighterMnh, editorMeta, mnh_settings, Classes,mnh_doc;
 
 TYPE
   THelpForm = class(T_mnhComponentForm)
+    MainMenu1: TMainMenu;
     openHtmlButton: TButton;
+    PopupMenu1: TPopupMenu;
     SynEdit1: TSynEdit;
     helpHighlighter:TMnhOutputSyn;
     UpdateToggleBox: TToggleBox;
@@ -21,6 +23,7 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE UpdateToggleBoxChange(Sender: TObject);
+    PROCEDURE dockChanged; override;
   private
     currentLink:string;
     PROCEDURE toggleUpdate(CONST force:boolean=false; CONST enable:boolean=false);
@@ -58,6 +61,8 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
     SynEdit1.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     SynEdit1.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     currentLink:=getDocIndexLinkForBrowser;
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE THelpForm.FormDestroy(Sender: TObject);
@@ -93,6 +98,10 @@ PROCEDURE THelpForm.performFastUpdate;
 PROCEDURE THelpForm.UpdateToggleBoxChange(Sender: TObject);
   begin
     toggleUpdate(true,UpdateToggleBox.checked);
+  end;
+
+PROCEDURE THelpForm.dockChanged;
+  begin
   end;
 
 PROCEDURE THelpForm.toggleUpdate(CONST force: boolean; CONST enable: boolean);

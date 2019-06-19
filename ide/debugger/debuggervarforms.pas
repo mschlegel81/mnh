@@ -6,10 +6,12 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, ExtCtrls, ComCtrls,
-  Grids,ideLayoutUtil,debuggingVar,debugging, treeUtil;
+  Grids, Menus,ideLayoutUtil,debuggingVar,debugging, treeUtil;
 
 TYPE
   TDebuggerVarForm = class(T_mnhComponentForm)
+    MainMenu1: TMainMenu;
+    PopupMenu1: TPopupMenu;
     Splitter1: TSplitter;
     StackGrid: TStringGrid;
     VariablesTree: TTreeView;
@@ -19,6 +21,7 @@ TYPE
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE StackGridSelection(Sender: TObject; aCol, aRow: integer);
+    PROCEDURE dockChanged; override;
   private
     variablesTreeViewModel:T_treeModel;
   public
@@ -49,6 +52,8 @@ PROCEDURE TDebuggerVarForm.FormCreate(Sender: TObject);
     registerFontControl(StackGrid,ctTable);
     registerFontControl(VariablesTree,ctGeneral);
     variablesTreeViewModel.create(VariablesTree);
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TDebuggerVarForm.FormDestroy(Sender: TObject);
@@ -98,7 +103,8 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
       cleanup;
   end;
 
-PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol, aRow: integer);
+PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol,
+  aRow: integer);
   VAR stackIdx:longint;
   PROCEDURE addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
     VAR newNode:TTreeNode;
@@ -121,6 +127,10 @@ PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol, aRow: integ
          addCategoryNode(currentSnapshot^.callStack^[stackIdx].parameters);
     if currentSnapshot^.localVariableReport<>nil
     then addCategoryNode(currentSnapshot^.localVariableReport);
+  end;
+
+PROCEDURE TDebuggerVarForm.dockChanged;
+  begin
   end;
 
 end.

@@ -15,7 +15,10 @@ TYPE
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;
+    MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
+    miDockMainRoot: TMenuItem;
+    miOutputMainRoot: TMenuItem;
     miErrorUser: TMenuItem;
     miErrorL4: TMenuItem;
     miErrorL3: TMenuItem;
@@ -37,6 +40,7 @@ TYPE
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     PROCEDURE updateWordWrap;
   public
@@ -83,6 +87,8 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     adapter.create(self,OutputSynEdit,outputBehavior);
+    initDockMenuItems(MainMenu1,miDockMainRoot);
+    initDockMenuItems(OutputPopupMenu,nil);
   end;
 
 PROCEDURE TOutputForm.FormResize(Sender: TObject);
@@ -147,6 +153,13 @@ PROCEDURE TOutputForm.performFastUpdate;
       and (cbShowOnOutput.checked)
       then showComponent(true);
     end;
+  end;
+
+PROCEDURE TOutputForm.dockChanged;
+  begin
+    if myComponentParent=cpNone
+    then moveAllItems(OutputPopupMenu.items,miOutputMainRoot)
+    else moveAllItems(miOutputMainRoot,OutputPopupMenu.items);
   end;
 
 end.

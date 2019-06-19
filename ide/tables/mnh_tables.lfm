@@ -1,11 +1,12 @@
 object tableForm: TtableForm
   Left = 355
-  Height = 160
+  Height = 200
   Top = 217
-  Width = 213
+  Width = 266
   Caption = '-'
-  ClientHeight = 140
-  ClientWidth = 213
+  ClientHeight = 175
+  ClientWidth = 266
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = tableMenu
@@ -13,25 +14,29 @@ object tableForm: TtableForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
+  PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
   LCLVersion = '2.0.2.0'
   object stringGrid: TStringGrid
     Left = 0
-    Height = 140
+    Height = 175
     Top = 0
-    Width = 213
+    Width = 266
     Align = alClient
     BorderStyle = bsNone
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
     ParentFont = False
-    PopupMenu = tableMenu1
+    PopupMenu = PopupMenu1
     TabOrder = 0
     OnHeaderClick = stringGridHeaderClick
   end
   object tableMenu: TMainMenu
-    left = 45
-    top = 11
+    left = 56
+    top = 88
+    object miDockInMain: TMenuItem
+      Caption = '&View'
+    end
     object MenuItem1: TMenuItem
       Caption = '&Display'
       object mi_transpose: TMenuItem
@@ -78,42 +83,11 @@ object tableForm: TtableForm
     Title = 'Export as'
     Filter = 'All|*.*|CSV|*.csv|Text|*.txt'
     FilterIndex = 2
-    left = 5
-    top = 11
+    left = 6
+    top = 14
   end
-  object tableMenu1: TPopupMenu
-    left = 45
-    top = 11
-    object MenuItem3: TMenuItem
-      Caption = '&Display'
-      object mi_transpose1: TMenuItem
-        Caption = 'Transpose'
-        OnClick = mi_transposeClick
-      end
-      object mi_comma1: TMenuItem
-        Caption = 'Comma as decimal separator'
-        OnClick = mi_commaClick
-      end
-    end
-    object MenuItem4: TMenuItem
-      Caption = '&Export'
-      object mi_exportCsvSemicolon1: TMenuItem
-        Caption = 'Export to ";"-separated csv'
-        OnClick = mi_exportCsvSemicolonClick
-      end
-      object mi_exportCsvTab1: TMenuItem
-        Caption = 'Export to tab-separated csv...'
-        OnClick = mi_exportCsvTabClick
-      end
-      object mi_exportText1: TMenuItem
-        Caption = 'Export to text...'
-        OnClick = mi_exportTextClick
-      end
-      object mi_exportIncHeader1: TMenuItem
-        AutoCheck = True
-        Caption = 'Include Header in Export'
-        RadioItem = True
-      end
-    end
+  object PopupMenu1: TPopupMenu
+    left = 122
+    top = 53
   end
 end

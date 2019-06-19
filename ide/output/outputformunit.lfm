@@ -1,13 +1,15 @@
 object OutputForm: TOutputForm
   Left = 817
-  Height = 240
+  Height = 300
   Top = 165
-  Width = 320
+  Width = 400
   Caption = 'Output'
-  ClientHeight = 240
-  ClientWidth = 320
+  ClientHeight = 275
+  ClientWidth = 400
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
+  Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnResize = FormResize
@@ -21,12 +23,12 @@ object OutputForm: TOutputForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 221
-    Top = 19
-    Width = 320
+    Height = 251
+    Top = 24
+    Width = 400
     Align = alCustom
     Anchors = [akTop, akLeft, akRight, akBottom]
-    Font.Height = -9
+    Font.Height = -11
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -34,7 +36,7 @@ object OutputForm: TOutputForm
     ParentFont = False
     PopupMenu = OutputPopupMenu
     TabOrder = 0
-    Gutter.Width = 11
+    Gutter.Width = 15
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -485,7 +487,7 @@ object OutputForm: TOutputForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 11
+        Width = 15
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -500,12 +502,12 @@ object OutputForm: TOutputForm
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = Owner
     AnchorSideBottom.Control = OutputSynEdit
-    Left = 7
-    Height = 19
+    Left = 9
+    Height = 24
     Top = 0
-    Width = 167
+    Width = 205
     Align = alCustom
-    BorderSpacing.Left = 7
+    BorderSpacing.Left = 9
     Caption = 'Show when output changes'
     Checked = True
     OnChange = cbShowOnOutputChange
@@ -519,10 +521,10 @@ object OutputForm: TOutputForm
     AnchorSideTop.Control = cbShowOnOutput
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 174
-    Height = 19
+    Left = 214
+    Height = 24
     Top = 0
-    Width = 146
+    Width = 186
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Freeze output'
@@ -530,8 +532,8 @@ object OutputForm: TOutputForm
     TabOrder = 2
   end
   object OutputPopupMenu: TPopupMenu
-    left = 171
-    top = 125
+    left = 214
+    top = 156
     object miEchoInput: TMenuItem
       AutoCheck = True
       Caption = 'Echo &input'
@@ -589,6 +591,16 @@ object OutputForm: TOutputForm
         Caption = 'Show all &user defined messages'
         OnClick = miEchoDeclarationsClick
       end
+    end
+  end
+  object MainMenu1: TMainMenu
+    left = 95
+    top = 114
+    object miDockMainRoot: TMenuItem
+      Caption = '&View'
+    end
+    object miOutputMainRoot: TMenuItem
+      Caption = '&Output'
     end
   end
 end

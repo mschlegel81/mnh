@@ -24,14 +24,6 @@ TYPE
     miUndockAll: TMenuItem;
     miDockAll: TMenuItem;
     miDebuggerVar: TMenuItem;
-    miClose2: TMenuItem;
-    miClose3: TMenuItem;
-    miClose4: TMenuItem;
-    miClose1: TMenuItem;
-    miUndock2: TMenuItem;
-    miUndock3: TMenuItem;
-    miUndock4: TMenuItem;
-    miUndock1: TMenuItem;
     PlotPositionLabel: TLabel;
     MemoryUsageLabel: TLabel;
     MainMenu: TMainMenu;
@@ -60,7 +52,6 @@ TYPE
     miReplace: TMenuItem;
     MemoryUsageShape: TShape;
     MemoryUsageFrame: TShape;
-    UndockPopup2: TPopupMenu;
     StatusPanel: TPanel;
     smEdit: TMenuItem;
     smHistory: TMenuItem;
@@ -95,9 +86,6 @@ TYPE
     Splitter3: TSplitter;
     Splitter4: TSplitter;
     timer: TTimer;
-    UndockPopup3: TPopupMenu;
-    UndockPopup4: TPopupMenu;
-    UndockPopup1: TPopupMenu;
     PROCEDURE EditorsPageControlChange(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -183,11 +171,11 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
   begin
     initIpcServer(self);
     gui_started:=true;
-    new(dockSites[cpNone        ],create(cpNone        ,nil         ,nil      ,nil     ,nil         ));
-    new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1,miUndock1,miClose1,UndockPopup1));
-    new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2,miUndock2,miClose2,UndockPopup2));
-    new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3,miUndock3,miClose3,UndockPopup3));
-    new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4,miUndock4,miClose4,UndockPopup4));
+    new(dockSites[cpNone        ],create(cpNone        ,nil         ));
+    new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1));
+    new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2));
+    new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3));
+    new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4));
     windowStateForUpdate:=wsfuNone;
     quitPosted:=false;
     slowUpdating:=false;
@@ -561,7 +549,6 @@ PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
   VAR cp:T_componentParent;
   begin
     for cp in PAGES do dockSites[cp]^.undockAll;
-    lastDockLocationFor:=C_dockSetupUnDockAll;
   end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
@@ -588,7 +575,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
   VAR dockMeta:TDragDockObject=nil;
       componentParent:T_componentParent;
   begin
-    componentParent:=lastDockLocationFor[form.getIdeComponentType];
+    componentParent:=form.lastDock;
     if componentParent in [cpPageControl1..cpPageControl4] then dockMeta:=TDragDockObject.create(form);
     case componentParent of
       cpPageControl1: PageControl1.DockDrop(dockMeta,0,0);
@@ -602,6 +589,7 @@ PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
     end;
     dockSites[componentParent]^.fixSize;
     form.myComponentParent:=componentParent;
+    if componentParent<>cpNone then form.lastDock:=componentParent;
     form.showComponent(false);
     if dockMeta<>nil then FreeAndNil(dockMeta);
   end;
