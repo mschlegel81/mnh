@@ -60,9 +60,6 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
-    miScriptFromAnimation: TMenuItem;
-    miScriptFromFrame: TMenuItem;
-    miCreateScript: TMenuItem;
     miCacheFrames: TMenuItem;
     miRenderToFile: TMenuItem;
     miAntiAliasing4: TMenuItem;
@@ -88,7 +85,6 @@ TYPE
     miAntiAliasing3: TMenuItem;
     plotImage: TImage;
     PopupMenu1: TPopupMenu;
-    SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
@@ -107,15 +103,12 @@ TYPE
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
     PROCEDURE miCacheFramesClick(Sender: TObject);
-    PROCEDURE miCreateScriptClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miLogscaleXClick(Sender: TObject);
     PROCEDURE miLogscaleYClick(Sender: TObject);
     PROCEDURE miPreserveAspectClick(Sender: TObject);
     PROCEDURE miRenderToFileClick(Sender: TObject);
-    PROCEDURE miScriptFromAnimationClick(Sender: TObject);
-    PROCEDURE miScriptFromFrameClick(Sender: TObject);
     PROCEDURE miXFinerGridClick(Sender: TObject);
     PROCEDURE miXGridClick(Sender: TObject);
     PROCEDURE miXTicsClick(Sender: TObject);
@@ -140,7 +133,6 @@ TYPE
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
     FUNCTION getPlotQuality:byte;
-    PROCEDURE createScriptEditOrFile(CONST contents:T_arrayOfString);
   public
     onPlotRescale:TNotifyEvent;
     onPlotMouseMove,
@@ -430,34 +422,6 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
     finally
       relatedPlot^.doneGuiInteraction;
     end;
-  end;
-
-PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
-  begin
-    miScriptFromAnimation .enabled:=relatedPlot^.animation.frameCount>0;
-  end;
-
-PROCEDURE TplotForm.createScriptEditOrFile(CONST contents: T_arrayOfString);
-  VAR task:P_editScriptTask;
-  begin
-    if mainForm=nil then begin
-      if SaveDialog.execute then begin
-        writeFileLines(SaveDialog.fileName,contents,LineEnding,false);
-      end;
-    end else begin
-      new(task,createForNewEditor(contents));
-      mainForm.onEditFinished(task);
-    end;
-  end;
-
-PROCEDURE TplotForm.miScriptFromAnimationClick(Sender: TObject);
-  begin
-    createScriptEditOrFile(relatedPlot^.getPlotStatement(-1));
-  end;
-
-PROCEDURE TplotForm.miScriptFromFrameClick(Sender: TObject);
-  begin
-    createScriptEditOrFile(relatedPlot^.getPlotStatement(animationFrameIndex));
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);

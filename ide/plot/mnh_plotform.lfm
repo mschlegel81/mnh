@@ -150,20 +150,8 @@ object plotForm: TplotForm
         OnClick = miDecFontSizeClick
       end
       object miRenderToFile: TMenuItem
-        Caption = 'Render to file...'
+        Caption = '&Export'
         OnClick = miRenderToFileClick
-      end
-      object miCreateScript: TMenuItem
-        Caption = 'Create script...'
-        OnClick = miCreateScriptClick
-        object miScriptFromAnimation: TMenuItem
-          Caption = 'Animation'
-          OnClick = miScriptFromAnimationClick
-        end
-        object miScriptFromFrame: TMenuItem
-          Caption = 'Current frame only'
-          OnClick = miScriptFromFrameClick
-        end
       end
       object miCacheFrames: TMenuItem
         Caption = 'Cache animation Frames'
@@ -250,10 +238,6 @@ object plotForm: TplotForm
         OnClick = miLogscaleYClick
       end
     end
-  end
-  object SaveDialog: TSaveDialog
-    left = 79
-    top = 139
   end
   object PopupMenu1: TPopupMenu
     left = 179

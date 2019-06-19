@@ -2,7 +2,7 @@ UNIT mnh_plotData;
 INTERFACE
 USES sysutils,
      math,
-     Interfaces, Classes, ExtCtrls, Graphics, types,
+     Interfaces, Classes, ExtCtrls, Graphics, types,Forms, ComCtrls,
      mySys,myGenerics,
      basicTypes, mnh_constants,
      mnh_settings,
@@ -136,7 +136,8 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
-      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral):T_arrayOfString;
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+      FUNCTION getRowStatementCount:longint;
   end;
 
   P_plotSeriesFrame=^T_plotSeriesFrame;
@@ -205,7 +206,7 @@ TYPE
       PROCEDURE logPlotDone;
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
-      FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
+      FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       PROPERTY isPlotChanged:boolean read plotChangedSinceLastDisplay;
   end;
 
@@ -213,7 +214,10 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadPNG,FPWritePNG,IntfGraphics,myStringUtil;
+USES FPReadPNG,
+     FPWritePNG,
+     IntfGraphics,
+     myStringUtil;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -1444,19 +1448,33 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     end;
   end;
 
-FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral):T_arrayOfString;
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR opt:string;
       i:longint;
   begin
+    if haltExport^ then exit;
     system.enterCriticalSection(cs);
     try
       opt:=scalingOptions.getOptionDiffString(prevOptions);
+      Application.ProcessMessages;
       if opt='' then setLength(result,0) else result:=opt;
-      for i:=0 to length(row)-1 do append(result,row[i].toPlotStatement(i=0,globalRowData));
-      for i:=0 to length(customText)-1 do append(result,customText[i]^.toTextStatement);
+      for i:=0 to length(row)-1 do if not(haltExport^) then begin
+        append(result,row[i].toPlotStatement(i=0,globalRowData));
+        progress.position:=progress.position+1;
+      end;
+      Application.ProcessMessages;
+      for i:=0 to length(customText)-1 do if not(haltExport^) then begin
+        append(result,customText[i]^.toTextStatement);
+        progress.position:=progress.position+1;
+      end;
     finally
       system.leaveCriticalSection(cs);
     end;
+  end;
+
+FUNCTION T_plot.getRowStatementCount:longint;
+  begin
+    result:=length(row)+length(customText);
   end;
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
@@ -1522,9 +1540,10 @@ PROCEDURE T_plotSystem.doneGuiInteraction;
     leaveCriticalSection(adapterCs);
   end;
 
-FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):T_arrayOfString;
+FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR prevOptions:T_scalingOptions;
-      i:longint;
+      i,dsOffset:longint;
+      stepsTotal:longint=0;
       globalRowData:P_listLiteral;
       dummyLocation:T_tokenLocation;
       commands:T_arrayOfString;
@@ -1539,15 +1558,25 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
       myGenerics.append(commands,'clearAnimation;');
       prevOptions.setDefaults;
       if animation.frameCount>0 then begin
-        if frameIndexOrNegativeIfAll<0 then for i:=0 to length(animation.frame)-1 do begin
-          myGenerics.append(commands,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^));
-          prevOptions:=animation.frame[i]^.plotData.scalingOptions;
-          myGenerics.append(commands,'addAnimationFrame;');
+        if frameIndexOrNegativeIfAll<0 then begin
+          for i:=0 to length(animation.frame)-1 do stepsTotal+=animation.frame[i]^.plotData.getRowStatementCount;
+          progress.max:=stepsTotal*2;
+          progress.position:=0;
+          Application.ProcessMessages;
+          for i:=0 to length(animation.frame)-1 do begin
+            myGenerics.append(commands,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
+            prevOptions:=animation.frame[i]^.plotData.scalingOptions;
+            myGenerics.append(commands,'addAnimationFrame;');
+          end;
         end else begin
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^));
+          progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatementCount*2;
+          Application.ProcessMessages;
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
-        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,globalRowData^));
+        progress.max:=currentPlot.getRowStatementCount*2;
+        Application.ProcessMessages;
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
                    compressString(
@@ -1556,10 +1585,14 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint):
                                nil),
                      [C_compression_gzip]));
       myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
-      DataString:=copy(DataString,152,length(DataString));
-      while length(DataString)>0 do begin
-        myGenerics.append(result,copy(DataString,1,160));
-        DataString:=copy(DataString,161,length(DataString));
+      dsOffset:=152;
+      progress.max:=(length(DataString) div 160)*2;
+      progress.position:=progress.max shr 1;
+      while (length(DataString)>dsOffset) and not(haltExport^) do begin
+        Application.ProcessMessages;
+        myGenerics.append(result,copy(DataString,dsOffset,160));
+        inc(dsOffset,160);
+        progress.position:=progress.position+1;
       end;
       result[length(result)-1]+='~';
       if length(result[length(result)-1])<151
