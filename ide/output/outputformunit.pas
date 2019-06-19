@@ -9,6 +9,9 @@ USES
   SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages;
 
 TYPE
+  //TODO: initialize TOutputForm dynamically when output event is received
+  //TODO: Use separate output form for GUI scripts
+  //TODO: Block from closing if related evaluation is running
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;

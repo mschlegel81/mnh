@@ -68,6 +68,7 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE miSaveBeforeRunChange(Sender: TObject);
+    PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
     PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
     PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
@@ -216,6 +217,14 @@ PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
   begin
     workspace.autosaveBeforeEachExecution:=miSaveBeforeRun.checked;
+  end;
+
+PROCEDURE TSettingsForm.PageControlChange(Sender: TObject);
+  VAR c:TSizeConstraints;
+  begin
+    c:=Constraints;
+    c.MinWidth:=width;
+    c.MinHeight:=height;
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
