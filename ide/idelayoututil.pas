@@ -409,40 +409,23 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
     dockChanged;
     mainForm.dockSites[prevSite]^.fixSize;
     mainForm.dockSites[newSite ]^.fixSize;
+    if newSite=cpNone then ShowInTaskBar:=stAlways;
     showComponent(false);
   end;
-
-{FUNCTION T_mnhDockSiteModel.canCloseActivePage: boolean;
-  begin
-    result:=(PageControl.activePage.ControlCount=1)
-      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
-  end;
-
-PROCEDURE T_mnhDockSiteModel.closeActivePage;
-  VAR active:T_mnhComponentForm;
-      CloseAction:TCloseAction=caFree;
-  begin
-    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-    then begin
-      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
-      if not(active.CloseQuery) then exit;
-      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
-      if CloseAction=caFree then FreeAndNil(active);
-    end;
-  end;
-}
 
 PROCEDURE T_mnhComponentForm.defaultCloseClick    (Sender: TObject);
   VAR page:TTabSheet;
       PageControl:TPageControl;
-      closeAction:TCloseAction=caFree;
+      CloseAction:TCloseAction=caFree;
+      cp:T_componentParent;
   begin
     if not(CloseQuery) then exit;
+    cp:=myComponentParent;
     getParents(page,PageControl);
-    if page<>nil then freeAndNil(page);
-    if OnClose<>nil then OnClose(sender,closeAction);
-    if closeAction=caFree then FreeAndNil(self);
+    if page    <>nil then FreeAndNil(page);
+    if OnClose <>nil then OnClose(Sender,CloseAction);
+    if mainForm<>nil then mainForm.dockSites[cp]^.fixSize;
+    if CloseAction=caFree then FreeAndNil(self);
   end;
 
 PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;

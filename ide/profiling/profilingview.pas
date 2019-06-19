@@ -127,7 +127,7 @@ begin
   if Sender.ClassType<>TStringGrid.ClassType then exit;
   myGrid:=TStringGrid(Sender);
   style:=myGrid.Canvas.TextStyle;
-  if (aCol=1) and (aRow>=1)
+  if (aCol>=1) and (aRow>=1)
   then style.Alignment:=taRightJustify
   else style.Alignment:=taLeftJustify;
   myGrid.Canvas.TextStyle:=style;
