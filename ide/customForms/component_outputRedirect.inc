@@ -2,7 +2,7 @@ TYPE
   P_secondaryOutputMemoMeta=^T_secondaryOutputMemoMeta;
   T_secondaryOutputMemoMeta=object(T_outputMemoMeta)
     adaptersHoldingCollector:P_messagesDistributor;
-    collector:P_synOutAdapter;
+    synOutAdapter:P_synOutAdapter;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     PROCEDURE update; virtual;
@@ -19,14 +19,13 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     state_hlLang:=fileTypeMeta[LANG_OUTPUT].extensions[0];
     synMeta.setLanguage(state_hlLang,synMeta.language);
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);
-    new(collector,create(parent^.containedInForm,synMeta.editor));
-    collector^.parentMessages:=adaptersHoldingCollector;
-    connect;
+    new(synOutAdapter,create(parent^.containedInForm,synMeta.editor));
+    synOutAdapter^.parentMessages:=adaptersHoldingCollector;
   end;
 
 FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   begin
-    result:=length(collector^.storedMessages)>0;
+    result:=length(synOutAdapter^.storedMessages)>0;
   end;
 
 PROCEDURE T_secondaryOutputMemoMeta.update;
@@ -35,21 +34,21 @@ PROCEDURE T_secondaryOutputMemoMeta.update;
 
 PROCEDURE T_secondaryOutputMemoMeta.connect;
   begin
-    adaptersHoldingCollector^.addOutAdapter(collector,false);
-    registerRedirector(collector);
+    adaptersHoldingCollector^.addOutAdapter(synOutAdapter,false);
+    registerRedirector(synOutAdapter);
   end;
 
 PROCEDURE T_secondaryOutputMemoMeta.disconnect;
   begin
-    adaptersHoldingCollector^.removeOutAdapter(collector);
-    unregisterRedirector(collector);
+    adaptersHoldingCollector^.removeOutAdapter(synOutAdapter);
+    unregisterRedirector(synOutAdapter);
   end;
 
 DESTRUCTOR T_secondaryOutputMemoMeta.destroy;
   begin
     inherited destroy;
     disconnect;
-    dispose(collector,destroy);
+    dispose(synOutAdapter,destroy);
   end;
 
 FUNCTION T_secondaryOutputMemoMeta.getName:string;

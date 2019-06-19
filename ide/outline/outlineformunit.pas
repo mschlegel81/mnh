@@ -17,6 +17,10 @@ USES
 TYPE
   P_outlineNode=^T_outlineNode;
   TOutlineForm = class(T_mnhComponentForm)
+    MainMenu1: TMainMenu;
+    miDockMain: TMenuItem;
+    outlinePopupMenuRoot: TMenuItem;
+    outlineMainMenuRoot: TMenuItem;
     outlineGlyphs: TImageList;
     showPrivateCheckbox: TMenuItem;
     showImportedCheckbox: TMenuItem;
@@ -35,6 +39,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     caResponse:P_codeAssistanceResponse;
 
@@ -268,6 +273,8 @@ PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
       rs_byNameCaseInsensitive  : sortByNameRadio.checked:=true;
     end;
     registerFontControl(outlineTreeView,ctGeneral);
+    initDockMenuItems(MainMenu1,miDockMain);
+    initDockMenuItems(OutlinePopupMenu,outlinePopupMenuRoot);
     caResponse:=nil;
   end;
 
@@ -355,6 +362,13 @@ PROCEDURE TOutlineForm.performFastUpdate;
       caResponse:=codeAssistanceResponse;
       updateOutlineTree;
     end else disposeCodeAssistanceResponse(codeAssistanceResponse);
+  end;
+
+PROCEDURE TOutlineForm.dockChanged;
+  begin
+    if (myComponentParent=cpNone)
+    then moveAllItems(OutlinePopupMenu.items,outlineMainMenuRoot)
+    else moveAllItems(outlineMainMenuRoot,OutlinePopupMenu.items);
   end;
 
 FUNCTION TOutlineForm.ruleSorting: T_ruleSorting;

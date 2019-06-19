@@ -3,7 +3,7 @@ UNIT mnh_imig_form;
 INTERFACE
 USES
   sysutils,
-  Forms, Controls, ExtCtrls,
+  Forms, Controls, ExtCtrls, Menus,
   mnh_imig,   ideLayoutUtil;
 
 TYPE
@@ -24,6 +24,8 @@ TYPE
 
   TDisplayImageForm = class(T_mnhComponentForm)
     displayImage: TImage;
+    MainMenu1: TMainMenu;
+    PopupMenu1: TPopupMenu;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -31,6 +33,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     relatedAdapters:P_guiImageSystem;
   public
@@ -105,6 +108,8 @@ PROCEDURE T_guiImageSystem.render(VAR target: TImage);
 PROCEDURE TDisplayImageForm.FormCreate(Sender: TObject);
   begin
     relatedAdapters:=nil;
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TDisplayImageForm.FormDestroy(Sender: TObject);
@@ -134,6 +139,10 @@ PROCEDURE TDisplayImageForm.performSlowUpdate;
   end;
 
 PROCEDURE TDisplayImageForm.performFastUpdate;
+  begin
+  end;
+
+PROCEDURE TDisplayImageForm.dockChanged;
   begin
   end;
 

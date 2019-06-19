@@ -57,33 +57,10 @@ TYPE
     animationFPSLabel: TLabel;
     frameIndexLabel: TLabel;
     MainMenu: TMainMenu;
-    MainMenu1: TPopupMenu;
     MenuItem1: TMenuItem;
-    MenuItem10: TMenuItem;
-    MenuItem11: TMenuItem;
-    MenuItem12: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
-    MenuItem7: TMenuItem;
-    MenuItem8: TMenuItem;
-    MenuItem9: TMenuItem;
-    miAntiAliasing5: TMenuItem;
-    miAntiAliasing6: TMenuItem;
-    miAntiAliasing7: TMenuItem;
-    miAntiAliasing8: TMenuItem;
-    miAutoReset1: TMenuItem;
-    miAutoscaleX1: TMenuItem;
-    miAutoscaleY1: TMenuItem;
-    miCacheFrames1: TMenuItem;
-    miCreateScript1: TMenuItem;
-    miDecFontSize1: TMenuItem;
-    miIncFontSize1: TMenuItem;
-    miLogscaleX1: TMenuItem;
-    miLogscaleY1: TMenuItem;
-    miPreserveAspect1: TMenuItem;
-    miRenderToFile1: TMenuItem;
     miScriptFromAnimation: TMenuItem;
-    miScriptFromAnimation1: TMenuItem;
     miScriptFromFrame: TMenuItem;
     miCreateScript: TMenuItem;
     miCacheFrames: TMenuItem;
@@ -97,12 +74,6 @@ TYPE
     miAutoscaleX: TMenuItem;
     miAutoscaleY: TMenuItem;
     miPreserveAspect: TMenuItem;
-    miScriptFromFrame1: TMenuItem;
-    miXFinerGrid1: TMenuItem;
-    miXGrid1: TMenuItem;
-    miXTics1: TMenuItem;
-    miYFinerGrid1: TMenuItem;
-    miYGrid1: TMenuItem;
     miYTics: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
@@ -115,8 +86,8 @@ TYPE
     miAntiAliasing1: TMenuItem;
     miAntiAliasing2: TMenuItem;
     miAntiAliasing3: TMenuItem;
-    miYTics1: TMenuItem;
     plotImage: TImage;
+    PopupMenu1: TPopupMenu;
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
@@ -159,6 +130,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     animationFrameIndex:longint;
     fpsSamplingStart:double;
@@ -166,7 +138,6 @@ TYPE
     eTimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
-    attachedToMainForm:boolean;
     relatedPlot:P_guiPlotSystem;
     FUNCTION getPlotQuality:byte;
     PROCEDURE createScriptEditOrFile(CONST contents:T_arrayOfString);
@@ -325,11 +296,8 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
-    attachedToMainForm:=false;
     miAutoReset .checked:=settings.doResetPlotOnEvaluation;
-    miAutoReset1.checked:=settings.doResetPlotOnEvaluation;
     miCacheFrames .checked:=settings.cacheAnimationFrames;
-    miCacheFrames1.checked:=settings.cacheAnimationFrames;
     fpsSamplingStart:=now;
     framesSampled:=0;
     onPlotRescale:=nil;
@@ -338,6 +306,8 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     eTimer:=TEpikTimer.create(self);
     eTimer.clear;
     eTimer.start;
+    initDockMenuItems(MainMenu,nil);
+    initDockMenuItems(PopupMenu1,nil);
   end;
 
 PROCEDURE TplotForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -379,56 +349,48 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
     miAntiAliasing1.checked:=true;
-    miAntiAliasing5.checked:=true;
     doPlot;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing2Click(Sender: TObject);
   begin
     miAntiAliasing2.checked:=true;
-    miAntiAliasing6.checked:=true;
     doPlot;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing3Click(Sender: TObject);
   begin
     miAntiAliasing3.checked:=true;
-    miAntiAliasing7.checked:=true;
     doPlot;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing4Click(Sender: TObject);
   begin
     miAntiAliasing4.checked:=true;
-    miAntiAliasing8.checked:=true;
     doPlot;
   end;
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
   begin
     miAutoReset .checked:=not(miAutoReset.checked);
-    miAutoReset1.checked:=    miAutoReset.checked;
     settings.doResetPlotOnEvaluation:=miAutoReset.checked;
   end;
 
 PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
   begin
     miAutoscaleX .checked:=not(miAutoscaleX.checked);
-    miAutoscaleX1.checked:=    miAutoscaleX.checked;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
   begin
     miAutoscaleY .checked:=not(miAutoscaleY.checked);
-    miAutoscaleY1.checked:=    miAutoscaleY.checked;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
   begin
     miCacheFrames .checked:=not(miCacheFrames.checked);
-    miCacheFrames1.checked:=    miCacheFrames.checked ;
     settings.cacheAnimationFrames:=miCacheFrames.checked;
   end;
 
@@ -445,21 +407,18 @@ PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
   begin
     miLogscaleX .checked:=not(miLogscaleX.checked);
-    miLogscaleX1.checked:=    miLogscaleX.checked ;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miLogscaleYClick(Sender: TObject);
   begin
     miLogscaleY .checked:=not(miLogscaleY.checked);
-    miLogscaleY1.checked:=    miLogscaleY.checked ;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect .checked:=not(miPreserveAspect.checked);
-    miPreserveAspect1.checked:=    miPreserveAspect.checked ;
     pushSettingsToPlotContainer;
   end;
 
@@ -476,10 +435,9 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
 PROCEDURE TplotForm.miCreateScriptClick(Sender: TObject);
   begin
     miScriptFromAnimation .enabled:=relatedPlot^.animation.frameCount>0;
-    miScriptFromAnimation1.enabled:=relatedPlot^.animation.frameCount>0;
   end;
 
-PROCEDURE TplotForm.createScriptEditOrFile(CONST contents:T_arrayOfString);
+PROCEDURE TplotForm.createScriptEditOrFile(CONST contents: T_arrayOfString);
   VAR task:P_editScriptTask;
   begin
     if mainForm=nil then begin
@@ -506,8 +464,6 @@ PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
   begin
     miXFinerGrid.checked:=not(miXFinerGrid.checked);
     if miXFinerGrid.checked then miXGrid.checked:=true;
-    miXFinerGrid1.checked:=miXFinerGrid.checked;
-    miXGrid1     .checked:=miXGrid     .checked;
     pushSettingsToPlotContainer;
   end;
 
@@ -515,15 +471,12 @@ PROCEDURE TplotForm.miXGridClick(Sender: TObject);
   begin
     miXGrid.checked:=not(miXGrid.checked);
     if not(miXGrid.checked) then miXFinerGrid.checked:=false;
-    miXFinerGrid1.checked:=miXFinerGrid.checked;
-    miXGrid1     .checked:=miXGrid     .checked;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miXTicsClick(Sender: TObject);
   begin
     miXTics .checked:=not(miXTics.checked);
-    miXTics1.checked:=    miXTics.checked ;
     pushSettingsToPlotContainer;
   end;
 
@@ -531,8 +484,6 @@ PROCEDURE TplotForm.miYFinerGridClick(Sender: TObject);
   begin
     miYFinerGrid.checked:=not(miYFinerGrid.checked);
     if miYFinerGrid.checked then miYGrid.checked:=true;
-    miYFinerGrid1.checked:=miYFinerGrid.checked;
-    miYGrid1     .checked:=miYGrid     .checked;
     pushSettingsToPlotContainer;
   end;
 
@@ -540,22 +491,20 @@ PROCEDURE TplotForm.miYGridClick(Sender: TObject);
   begin
     miYGrid.checked:=not(miYGrid.checked);
     if not(miYGrid.checked) then miYFinerGrid.checked:=false;
-    miYFinerGrid1.checked:=miYFinerGrid.checked;
-    miYGrid1     .checked:=miYGrid     .checked;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
   begin
     miYTics .checked:=not(miYTics.checked);
-    miYTics1.checked:=    miYTics.checked ;
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   begin
     performSlowUpdate;
-    if attachedToMainForm then mainForm.ActiveControl:=self;
+    if (myComponentParent<>cpNone) then mainForm.ActiveControl:=self;
     if ssLeft in Shift then begin
       lastMouseX:=x;
       lastMouseY:=y;
@@ -563,7 +512,8 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: integer);
   VAR p:T_point;
       statusText:string;
   begin
@@ -571,7 +521,7 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     then p:=relatedPlot^.animation  .options[animationFrameIndex].screenToReal(x,y)
     else p:=relatedPlot^.currentPlot.options                     .screenToReal(x,y);
     statusText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
-    if attachedToMainForm
+    if (myComponentParent<>cpNone)
     then mainFormCoordinatesLabel.caption:=statusText
     else StatusBar.SimpleText:=statusText;
 
@@ -616,19 +566,7 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TplotForm.performSlowUpdate;
-  PROCEDURE updateAttachment;
-    begin
-      if myComponentParent=cpNone then begin
-        attachedToMainForm:=false;
-        StatusBar.visible:=true;
-        if mainFormCoordinatesLabel<>nil then mainFormCoordinatesLabel.caption:='';
-      end else begin
-        attachedToMainForm:=true;
-        StatusBar.visible:=false;
-      end;
-    end;
   begin
-    updateAttachment;
     if (relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
   end;
 
@@ -672,6 +610,18 @@ PROCEDURE TplotForm.performFastUpdate;
     end;
   end;
 
+PROCEDURE TplotForm.dockChanged;
+  begin
+    if myComponentParent=cpNone
+    then moveAllItems(PopupMenu1.items,MainMenu.items)
+    else moveAllItems(MainMenu.items,PopupMenu1.items);
+    if myComponentParent=cpNone then begin
+      StatusBar.visible:=true;
+      if mainFormCoordinatesLabel<>nil then
+         mainFormCoordinatesLabel.caption:='';
+    end else StatusBar.visible:=false;
+  end;
+
 FUNCTION TplotForm.getPlotQuality: byte;
   begin
     if      miAntiAliasing4.checked then result:=PLOT_QUALITY_HIGH
@@ -700,18 +650,6 @@ PROCEDURE TplotForm.pullPlotSettingsToGui();
     miAutoscaleY    .checked:=currentScalingOptions.axisTrafo['y'].autoscale;
     miLogscaleX     .checked:=currentScalingOptions.axisTrafo['x'].logscale;
     miLogscaleY     .checked:=currentScalingOptions.axisTrafo['y'].logscale;
-
-    miXTics1         .checked:=miXTics         .checked;
-    miXGrid1         .checked:=miXGrid         .checked;
-    miXFinerGrid1    .checked:=miXFinerGrid    .checked;
-    miYTics1         .checked:=miYTics         .checked;
-    miYGrid1         .checked:=miYGrid         .checked;
-    miYFinerGrid1    .checked:=miYFinerGrid    .checked;
-    miPreserveAspect1.checked:=miPreserveAspect.checked;
-    miAutoscaleX1    .checked:=miAutoscaleX    .checked;
-    miAutoscaleY1    .checked:=miAutoscaleY    .checked;
-    miLogscaleX1     .checked:=miLogscaleX     .checked;
-    miLogscaleY1     .checked:=miLogscaleY     .checked;
   end;
 
 PROCEDURE TplotForm.pushFontSizeToPlotContainer(CONST newSize: double);

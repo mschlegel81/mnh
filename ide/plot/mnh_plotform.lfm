@@ -1,11 +1,12 @@
 object plotForm: TplotForm
   Left = 881
-  Height = 301
+  Height = 376
   Top = 224
-  Width = 467
+  Width = 584
   Caption = 'MNH plot'
-  ClientHeight = 281
-  ClientWidth = 467
+  ClientHeight = 351
+  ClientWidth = 584
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = MainMenu
@@ -17,112 +18,121 @@ object plotForm: TplotForm
   OnKeyUp = tabNextKeyHandling
   OnResize = FormResize
   OnShow = FormShow
+  PopupMenu = PopupMenu1
   Position = poScreenCenter
   LCLVersion = '2.0.2.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
-    Height = 213
-    Top = 45
-    Width = 467
+    Height = 266
+    Top = 56
+    Width = 584
     Align = alClient
     OnMouseDown = plotImageMouseDown
     OnMouseMove = plotImageMouseMove
     OnMouseUp = plotImageMouseUp
-    PopupMenu = MainMenu1
+    PopupMenu = PopupMenu1
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 258
-    Width = 467
+    Height = 29
+    Top = 322
+    Width = 584
     Panels = <>
     ParentFont = False
+    PopupMenu = PopupMenu1
   end
   object AnimationGroupBox: TGroupBox
     Left = 0
-    Height = 45
+    Height = 56
     Top = 0
-    Width = 467
+    Width = 584
     Align = alTop
     Anchors = []
     AutoSize = True
     Caption = 'Animation'
-    ClientHeight = 25
-    ClientWidth = 463
+    ClientHeight = 31
+    ClientWidth = 580
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 1
     OnKeyUp = tabNextKeyHandling
     object animateCheckBox: TCheckBox
       Left = 0
-      Height = 25
+      Height = 31
       Top = 0
-      Width = 63
+      Width = 78
       Align = alLeft
       Caption = 'animate'
       OnKeyUp = tabNextKeyHandling
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 0
     end
     object animationSpeedTrackbar: TTrackBar
-      Left = 110
-      Height = 25
+      Left = 135
+      Height = 31
       Top = 0
-      Width = 67
+      Width = 84
       Position = 6
       Align = alLeft
       OnKeyUp = tabNextKeyHandling
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 2
     end
     object animationFPSLabel: TLabel
-      Left = 177
-      Height = 25
+      Left = 219
+      Height = 31
       Top = 0
-      Width = 15
+      Width = 20
       Align = alLeft
       Caption = '     '
       ParentColor = False
       ParentFont = False
+      PopupMenu = PopupMenu1
     end
     object frameTrackBar: TTrackBar
-      Left = 192
-      Height = 25
+      Left = 239
+      Height = 31
       Top = 0
-      Width = 265
+      Width = 333
       Frequency = 5
       OnChange = frameTrackBarChange
       Position = 0
       Align = alClient
       OnKeyUp = tabNextKeyHandling
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 3
     end
     object cycleCheckbox: TCheckBox
-      Left = 63
-      Height = 25
+      Left = 78
+      Height = 31
       Top = 0
-      Width = 47
+      Width = 57
       Align = alLeft
       Caption = 'cycle'
       OnKeyUp = tabNextKeyHandling
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 1
     end
     object frameIndexLabel: TLabel
-      Left = 457
-      Height = 25
+      Left = 572
+      Height = 31
       Top = 0
-      Width = 6
+      Width = 8
       Align = alRight
       Caption = '0'
       ParentColor = False
       ParentFont = False
+      PopupMenu = PopupMenu1
     end
   end
   object MainMenu: TMainMenu
-    left = 27
-    top = 21
+    left = 34
+    top = 26
     object MenuItem6: TMenuItem
       Caption = '&Plot'
       object miAutoReset: TMenuItem
@@ -241,129 +251,12 @@ object plotForm: TplotForm
       end
     end
   end
-  object MainMenu1: TPopupMenu
-    left = 27
-    top = 21
-    object MenuItem7: TMenuItem
-      Caption = '&Plot'
-      object miAutoReset1: TMenuItem
-        Caption = 'Reset plot options on evaluation'
-        OnClick = miAutoResetClick
-      end
-      object miIncFontSize1: TMenuItem
-        Caption = 'Increase Font Size'
-        ShortCut = 16571
-        OnClick = miIncFontSizeClick
-      end
-      object miDecFontSize1: TMenuItem
-        Caption = 'Decrease Font Size'
-        ShortCut = 16573
-        OnClick = miDecFontSizeClick
-      end
-      object miRenderToFile1: TMenuItem
-        Caption = 'Render to file...'
-        OnClick = miRenderToFileClick
-      end
-      object miCreateScript1: TMenuItem
-        Caption = 'Create script...'
-        OnClick = miCreateScriptClick
-        object miScriptFromAnimation1: TMenuItem
-          Caption = 'Animation'
-          OnClick = miScriptFromAnimationClick
-        end
-        object miScriptFromFrame1: TMenuItem
-          Caption = 'Current frame only'
-          OnClick = miScriptFromFrameClick
-        end
-      end
-      object miCacheFrames1: TMenuItem
-        Caption = 'Cache animation Frames'
-        OnClick = miCacheFramesClick
-      end
-    end
-    object MenuItem8: TMenuItem
-      Caption = '&Quality'
-      object miAntiAliasing5: TMenuItem
-        Caption = '&Low'
-        Checked = True
-        RadioItem = True
-        OnClick = miAntiAliasing1Click
-      end
-      object miAntiAliasing6: TMenuItem
-        Caption = 'Medium (&1)'
-        RadioItem = True
-        OnClick = miAntiAliasing2Click
-      end
-      object miAntiAliasing7: TMenuItem
-        Caption = 'Medium (&2)'
-        RadioItem = True
-        OnClick = miAntiAliasing3Click
-      end
-      object miAntiAliasing8: TMenuItem
-        Caption = '&High'
-        RadioItem = True
-        OnClick = miAntiAliasing4Click
-      end
-    end
-    object MenuItem9: TMenuItem
-      Caption = '&Grid'
-      object MenuItem10: TMenuItem
-        Caption = '&x'
-        object miXGrid1: TMenuItem
-          Caption = '&Coarse Grid'
-          OnClick = miXGridClick
-        end
-        object miXFinerGrid1: TMenuItem
-          Caption = '&Fine Grid'
-          OnClick = miXFinerGridClick
-        end
-        object miXTics1: TMenuItem
-          Caption = '&Tics'
-          OnClick = miXTicsClick
-        end
-      end
-      object MenuItem11: TMenuItem
-        Caption = '&y'
-        object miYGrid1: TMenuItem
-          Caption = '&Coarse Grid'
-          OnClick = miYGridClick
-        end
-        object miYFinerGrid1: TMenuItem
-          Caption = '&Fine Grid'
-          OnClick = miYFinerGridClick
-        end
-        object miYTics1: TMenuItem
-          Caption = '&Tics'
-          OnClick = miYTicsClick
-        end
-      end
-    end
-    object MenuItem12: TMenuItem
-      Caption = '&Scaling'
-      object miPreserveAspect1: TMenuItem
-        Caption = '&Preserve aspect ratio'
-        OnClick = miPreserveAspectClick
-      end
-      object miAutoscaleX1: TMenuItem
-        Caption = 'Autoscale &x'
-        OnClick = miAutoscaleXClick
-      end
-      object miAutoscaleY1: TMenuItem
-        Caption = 'Autoscale &y'
-        OnClick = miAutoscaleYClick
-      end
-      object miLogscaleX1: TMenuItem
-        Caption = 'Logscale x'
-        OnClick = miLogscaleXClick
-      end
-      object miLogscaleY1: TMenuItem
-        Caption = '&Logscale y'
-        OnClick = miLogscaleYClick
-      end
-    end
-  end
   object SaveDialog: TSaveDialog
-    left = 63
-    top = 111
+    left = 79
+    top = 139
+  end
+  object PopupMenu1: TPopupMenu
+    left = 179
+    top = 103
   end
 end

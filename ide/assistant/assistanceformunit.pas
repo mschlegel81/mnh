@@ -5,18 +5,21 @@ UNIT assistanceFormUnit;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, SynEdit,
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Menus, SynEdit,
   ideLayoutUtil,codeAssistance,SynHighlighterMnh,editorMeta,mnh_settings,basicTypes;
 
 TYPE
   TAssistanceForm = class(T_mnhComponentForm)
     AssistanceEdit: TSynEdit;
     assistanceHighlighter:TMnhOutputSyn;
+    MainMenu1: TMainMenu;
+    PopupMenu1: TPopupMenu;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate; override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE dockChanged; override;
   private
     paintedWithStateHash:T_hashInt;
     paintedWithWidth:longint;
@@ -42,6 +45,8 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     AssistanceEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     paintedWithStateHash:=0;
     paintedWithWidth:=0;
+    initDockMenuItems(MainMenu1,nil);
+    initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
 PROCEDURE TAssistanceForm.FormDestroy(Sender: TObject);
@@ -80,6 +85,10 @@ PROCEDURE TAssistanceForm.performFastUpdate;
     finally
       try disposeCodeAssistanceResponse(codeAssistanceResponse); except end;
     end;
+  end;
+
+PROCEDURE TAssistanceForm.dockChanged;
+  begin
   end;
 
 end.

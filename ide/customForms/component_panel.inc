@@ -6,7 +6,7 @@ TYPE
     winControl:TWinControl;
     containedInForm:TForm;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
-    CONSTRUCTOR createForExistingForm(CONST form:TForm);
+    CONSTRUCTOR createForExistingForm(CONST form:TscriptedForm);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     PROCEDURE update; virtual;
@@ -79,11 +79,11 @@ CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
     parent^.add(@self);
   end;
 
-CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
+CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TscriptedForm);
   begin
     initCriticalSection(elementCs);
     setLength(elements,0);
-    lastControl:=nil;
+    lastControl:=form.closeButtonPanel;
     winControl:=form;
     containedInForm:=form;
     registerFontControl(form,ctGeneral);

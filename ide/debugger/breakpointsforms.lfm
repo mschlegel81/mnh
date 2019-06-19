@@ -1,26 +1,39 @@
 object BreakpointsForm: TBreakpointsForm
   Left = 817
-  Height = 360
+  Height = 300
   Top = 165
-  Width = 480
+  Width = 400
   Caption = 'Breakpoints'
-  ClientHeight = 360
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 275
+  ClientWidth = 400
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
+  Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object BreakpointsListBox: TListBox
     Left = 0
-    Height = 360
+    Height = 275
     Top = 0
-    Width = 480
+    Width = 400
     Align = alClient
     ItemHeight = 0
     OnDblClick = BreakpointsListBoxDblClick
     OnKeyDown = BreakpointsListBoxKeyDown
+    ParentFont = False
     TabOrder = 0
+  end
+  object MainMenu1: TMainMenu
+    left = 64
+    top = 60
+    object MenuItem1: TMenuItem
+      Caption = '&View'
+    end
+  end
+  object PopupMenu1: TPopupMenu
+    left = 99
+    top = 158
   end
 end

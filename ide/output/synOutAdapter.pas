@@ -67,6 +67,7 @@ TYPE
       PROCEDURE flushClear;
   end;
 
+  P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
   T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
     CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
@@ -304,6 +305,7 @@ CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdi
   begin
     inherited create(at_guiSynOutput,messageTypesToInc);
     autoflush:=true;
+    jumpToEnd:=true;
     parentMessages:=nil;
     wrapEcho:=false;
     id:=interLockedIncrement(lastSynOutId);

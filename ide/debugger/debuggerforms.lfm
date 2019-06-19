@@ -1,29 +1,33 @@
 object DebuggerForm: TDebuggerForm
   Left = 904
-  Height = 313
+  Height = 391
   Top = 170
-  Width = 320
+  Width = 400
   Caption = 'Debugger'
-  ClientHeight = 313
-  ClientWidth = 320
+  ClientHeight = 391
+  ClientWidth = 400
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
+  Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  PopupMenu = PopupMenu1
   LCLVersion = '2.0.2.0'
   inline currentExpressionEdit: TSynEdit
     Left = 0
-    Height = 208
+    Height = 270
     Top = 40
-    Width = 320
+    Width = 400
     Align = alClient
-    Font.Height = -9
+    Font.Height = -11
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 1
     Gutter.Visible = False
     Gutter.Width = 0
@@ -481,19 +485,20 @@ object DebuggerForm: TDebuggerForm
   end
   object inlineVariablesTreeView: TTreeView
     Left = 0
-    Height = 60
-    Top = 253
-    Width = 320
+    Height = 75
+    Top = 316
+    Width = 400
     Align = alBottom
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 2
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
-    Height = 5
-    Top = 248
-    Width = 320
+    Height = 6
+    Top = 310
+    Width = 400
     Align = alBottom
     ResizeAnchor = akBottom
   end
@@ -501,12 +506,13 @@ object DebuggerForm: TDebuggerForm
     Left = 0
     Height = 40
     Top = 0
-    Width = 320
+    Width = 400
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
     ClientHeight = 40
-    ClientWidth = 320
+    ClientWidth = 400
+    ParentFont = False
     TabOrder = 0
     TabStop = True
     object bbRunContinue: TBitBtn
@@ -519,6 +525,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbRunContinueClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 0
     end
@@ -532,6 +539,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbStepInClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 1
     end
@@ -545,6 +553,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbStepClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 2
     end
@@ -558,6 +567,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbMicrostepClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 3
     end
@@ -571,6 +581,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbStepOutClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 4
     end
@@ -584,6 +595,7 @@ object DebuggerForm: TDebuggerForm
       Images = DebuggerIcons
       ImageIndex = 0
       OnClick = tbHaltClick
+      ParentFont = False
       Spacing = 1
       TabOrder = 5
     end
@@ -591,8 +603,8 @@ object DebuggerForm: TDebuggerForm
   object DebuggerIcons: TImageList
     Height = 30
     Width = 30
-    left = 75
-    top = 31
+    left = 94
+    top = 39
     Bitmap = {
       4C690C0000001E0000001E000000F4F4F4E1F2F2F2ECF2F2F2ECF3F3F3ECF4F4
       F4ECF4F4F4ECF3F3F3ECF2F2F2ECF2F2F2ECF0F0F0ECEEEEEEECEDEDEDECE9E9
@@ -1946,5 +1958,13 @@ object DebuggerForm: TDebuggerForm
       BEECBDBDBDECBCBCBCECBBBBBBECB9B9B9ECB8B8B8ECB7B7B7ECB6B6B6ECB4B4
       B4ECB2B2B2ECB0B0B0ECC3C3C3E1
     }
+  end
+  object MainMenu1: TMainMenu
+    left = 95
+    top = 173
+  end
+  object PopupMenu1: TPopupMenu
+    left = 259
+    top = 178
   end
 end

@@ -82,8 +82,10 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     end;
 
   PROCEDURE addItemIfNew(CONST s:string);
+    VAR toAdd:string;
     begin
-      if (dirComboBox.items.IndexOf(s)<0) then dirComboBox.items.add(collapseMnhDir(s));
+      toAdd:=collapseMnhDir(s);
+      if (dirComboBox.items.IndexOf(toAdd)<0) then dirComboBox.items.add(toAdd);
     end;
 
   VAR s:string;
@@ -94,11 +96,10 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     extEdit.text:=ext;
     //directory
     dirComboBox.items.clear;
-    for s in workspace.fileHistory.folderItems do dirComboBox.items.add(collapseMnhDir(s));
+    for s in workspace.fileHistory.folderItems do addItemIfNew(s);
     addItemIfNew(rootPath            );
     addItemIfNew(configDir+'packages');
     addItemIfNew(configDir+'demos'   );
-    dirComboBox.ItemIndex:=0;
     //sub dialog
     if uppercase(ext)='.MNH' then begin
       SaveDialog1.FilterIndex:=0;
@@ -110,6 +111,8 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
       SaveDialog1.FilterIndex:=1;
       SaveDialog1.options:=SaveDialog1.options-[ofExtensionDifferent];
     end;
+    dirComboBox.text:=rootPath;
+    dirComboBox.sorted:=true;
     selectedFile:='';
     if ShowModal=mrOk then result:=selectedFile else result:='';
   end;

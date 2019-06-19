@@ -1,14 +1,15 @@
 object SettingsForm: TSettingsForm
   Left = 881
-  Height = 203
+  Height = 254
   Top = 282
-  Width = 243
+  Width = 304
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 203
-  ClientWidth = 243
-  Constraints.MinWidth = 233
+  ClientHeight = 254
+  ClientWidth = 304
+  Constraints.MinWidth = 291
+  DesignTimePPI = 120
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -17,28 +18,29 @@ object SettingsForm: TSettingsForm
   LCLVersion = '2.0.2.0'
   object PageControl: TPageControl
     Left = 0
-    Height = 193
+    Height = 244
     Top = 0
-    Width = 243
+    Width = 304
     ActivePage = TabSheet_display
     Align = alClient
     ParentFont = False
     TabIndex = 0
     TabOrder = 0
+    OnChange = PageControlChange
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 165
-      ClientWidth = 235
+      ClientHeight = 211
+      ClientWidth = 296
       ParentFont = False
       object Label2: TLabel
         AnchorSideLeft.Control = TabSheet_display
         AnchorSideTop.Control = EditorFontButton
-        Left = 3
-        Height = 15
-        Top = 3
-        Width = 61
+        Left = 4
+        Height = 20
+        Top = 4
+        Width = 76
         Align = alCustom
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'Editor Font:'
         ParentColor = False
         ParentFont = False
@@ -49,15 +51,15 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Control = TabSheet_display
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 3
-        Width = 139
+        Left = 120
+        Height = 30
+        Top = 4
+        Width = 176
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
-        BorderSpacing.Top = 3
+        BorderSpacing.Left = 4
+        BorderSpacing.Top = 4
         Caption = 'EditorFontButton'
         OnClick = EditorFontButtonClick
         ParentFont = False
@@ -66,10 +68,10 @@ object SettingsForm: TSettingsForm
       object Label7: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = outputSizeLimit
-        Left = 3
-        Height = 15
-        Top = 78
-        Width = 90
+        Left = 4
+        Height = 20
+        Top = 94
+        Width = 112
         Align = alCustom
         Caption = 'Output size limit:'
         ParentColor = False
@@ -82,13 +84,13 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 23
-        Top = 78
-        Width = 139
+        Left = 120
+        Height = 28
+        Top = 94
+        Width = 176
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         NumbersOnly = True
         OnEditingDone = outputSizeLimitEditingDone
         ParentFont = False
@@ -98,10 +100,10 @@ object SettingsForm: TSettingsForm
       object Label3: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = GeneralFontButton
-        Left = 3
-        Height = 15
-        Top = 53
-        Width = 70
+        Left = 4
+        Height = 20
+        Top = 64
+        Width = 87
         Align = alCustom
         Caption = 'General Font:'
         ParentColor = False
@@ -114,14 +116,14 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 28
-        Width = 139
+        Left = 120
+        Height = 30
+        Top = 34
+        Width = 176
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'TableFontButton'
         OnClick = TableFontButtonClick
         ParentFont = False
@@ -130,10 +132,10 @@ object SettingsForm: TSettingsForm
       object Label5: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = TableFontButton
-        Left = 3
-        Height = 15
-        Top = 28
-        Width = 58
+        Left = 4
+        Height = 20
+        Top = 34
+        Width = 71
         Align = alCustom
         Caption = 'Table Font:'
         ParentColor = False
@@ -146,14 +148,14 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 53
-        Width = 139
+        Left = 120
+        Height = 30
+        Top = 64
+        Width = 176
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'GeneralFontButton'
         OnClick = GeneralFontButtonClick
         ParentFont = False
@@ -173,7 +175,7 @@ object SettingsForm: TSettingsForm
         Align = alTop
         AutoSize = True
         Caption = 'new files'
-        ClientHeight = 57
+        ClientHeight = 52
         ClientWidth = 231
         ParentFont = False
         TabOrder = 0
@@ -221,7 +223,7 @@ object SettingsForm: TSettingsForm
         Align = alTop
         AutoSize = True
         Caption = 'existing files'
-        ClientHeight = 76
+        ClientHeight = 71
         ClientWidth = 231
         ParentFont = False
         TabOrder = 1
@@ -375,11 +377,11 @@ object SettingsForm: TSettingsForm
         end
         object autosaveComboBox: TComboBox
           Left = 52
-          Height = 23
+          Height = 28
           Top = 0
           Width = 183
           Align = alClient
-          ItemHeight = 15
+          ItemHeight = 20
           OnChange = autosaveComboBoxChange
           ParentFont = False
           Style = csDropDownList
@@ -441,7 +443,7 @@ object SettingsForm: TSettingsForm
       end
       object togglePortableButton: TButton
         Left = 0
-        Height = 25
+        Height = 31
         Top = 75
         Width = 235
         Align = alTop
@@ -470,13 +472,13 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_install
         AnchorSideRight.Side = asrBottom
-        Left = 70
+        Left = 88
         Height = 23
-        Top = 100
+        Top = 125
         Width = 165
         FilterIndex = 0
         HideDirectories = False
-        ButtonWidth = 23
+        ButtonWidth = 29
         NumGlyphs = 1
         Anchors = [akTop, akLeft, akRight]
         MaxLength = 0
@@ -489,8 +491,8 @@ object SettingsForm: TSettingsForm
   object closeButton: TButton
     Left = 0
     Height = 10
-    Top = 193
-    Width = 243
+    Top = 244
+    Width = 304
     Align = alBottom
     AutoSize = True
     Cancel = True
@@ -505,7 +507,7 @@ object SettingsForm: TSettingsForm
     MinFontSize = 0
     MaxFontSize = 0
     Options = [fdFixedPitchOnly, fdForceFontExist, fdNoFaceSel, fdNoSizeSel, fdWysiwyg]
-    left = 139
-    top = 123
+    left = 174
+    top = 154
   end
 end

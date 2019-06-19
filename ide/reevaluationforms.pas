@@ -58,7 +58,7 @@ PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   begin
     fastUpdates;
     inc(subTimerCounter);
-    if subTimerCounter>100 then begin
+    if subTimerCounter>50 then begin
       slowUpdates;
       subTimerCounter:=0;
     end;

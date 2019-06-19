@@ -1,24 +1,35 @@
 object DisplayImageForm: TDisplayImageForm
   Left = 342
-  Height = 360
+  Height = 300
   Top = 242
-  Width = 480
+  Width = 400
   Caption = 'MNH Image'
-  ClientHeight = 360
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 300
+  ClientWidth = 400
+  DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
+  Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
+  PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.2.0'
   object displayImage: TImage
     Left = 0
-    Height = 3000
+    Height = 2500
     Top = 0
-    Width = 4500
+    Width = 3750
+    PopupMenu = PopupMenu1
+  end
+  object MainMenu1: TMainMenu
+    left = 113
+    top = 70
+  end
+  object PopupMenu1: TPopupMenu
+    left = 180
+    top = 101
   end
 end

@@ -98,7 +98,7 @@ PROCEDURE sortCallerList(VAR list:T_callerList; CONST sortIndex:byte);
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 VAR mnhSysPseudopackagePrefix :string='';
 IMPLEMENTATION
-USES myStringUtil;
+{$ifdef fullVersion}USES myStringUtil;{$endif}
 CONST categoryText:array[T_profileCategory] of string=(':importing',':tokenizing',':declarations',':evaluation',':unknown',':total');
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;

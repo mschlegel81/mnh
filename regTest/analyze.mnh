@@ -41,7 +41,7 @@ private doAnalysis()->begin
             " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
             "=====================================================================\n");
       local flavors:=filteredTests.getInner(1).toSet;
-      local testsWithTime:=filteredTests.group(0).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
+      local testsWithTime:=filteredTests.group(0).getInner(1).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
       local totalTime:=testsWithTime.getInner(1).agg(+);
       print("Fast tests: ");
       print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
@@ -57,8 +57,10 @@ private doAnalysis()->begin
 
       local quartileTimes:=filteredTests
                          .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
+                         .getInner(1)
                          .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
                          .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
+                         .getInner(1)
                          .getInner([1,2]); //drop case
       totalTime:=quartileTimes.getInner(1,1).agg(+);
       local star:=80/quartileTimes.getInner(1,2).max;
@@ -79,7 +81,7 @@ private analyzeCase(data,testCase:String)->begin
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
   local allSamples:=debugSamples|optSamples;
-  allSamples.group(1).pEach(g,g[0,1]|g.getInner(0).reverseList.map({roundToRelevantDigits($0,4)})).transpose('').showTable('Times for '&testCase&' (newest first)',true);
+  allSamples.group(1).getInner(1).pEach(g,g[0,1]|g.getInner(0).reverseList.map({roundToRelevantDigits($0,4)})).transpose('').showTable('Times for '&testCase&' (newest first)',true);
 
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
@@ -98,7 +100,7 @@ private analyzeCase(data,testCase:String)->begin
 
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   plot([]);
-  allSamples:=allSamples.group(1).each(g,g.getInner(0));
+  allSamples:=allSamples.group(1).getInner(1).each(g,g.getInner(0));
   local minSize:=allSamples.pMap(::size).min;
   allSamples.each(g,g.trailing(minSize).addPlot);
   plot.display;
@@ -109,6 +111,7 @@ private analyzeFlavour(data,flavour:String)->begin
   data[data.getInner(1)=flavour] //filter by flavour
   .pEach(e,e[[0,2]]) //drop flavour info
   .group(0,{[$x[0],$x[1]|$y[1]]}) //group by case
+  .getInner(1)
   .sort;
   groupedData
   .pEach(case,[case[0],                       //0 - case name
@@ -149,8 +152,8 @@ end;
 USE formattingUtils;
 
 private compareFlavours(data,flavour1:String,flavour2:String)->begin
-  local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
-  local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local tableData:=dat1.getInner(0).union(dat2.getInner(0))
     .each(case,case|(dat1[case] orElse [0,0])|(dat2[case] orElse [0,0]))
     .{$L|['TOTAL'| $L.agg(+).tail]}

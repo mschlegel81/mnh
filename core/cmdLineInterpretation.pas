@@ -336,8 +336,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       s:string;
   begin
     cmdLineParsingErrors:=C_EMPTY_STRING_ARRAY;
-    //TODO: Collect all ocurring errors and display them on a valid adapter (if possible)
-    //TODO: Set exit code if command line parsing fails
     consoleAdapters.createDistributor();
     setLength(mainParameters,0);
     setLength(deferredAdapterCreations,0);

@@ -219,9 +219,11 @@ DESTRUCTOR T_ideScriptEvaluation.destroy;
 
 CONSTRUCTOR T_reevaluationWithGui.create();
   VAR plot:P_guiPlotSystem;
+      console:P_redirectionAwareConsoleOutAdapter;
   begin
     inherited init(ek_normal);
-    messages.addConsoleOutAdapter(cmdLineInterpretation.verbosityString);
+    new(console,create(cmdLineInterpretation.verbosityString));
+    messages.addOutAdapter(console,true);
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);

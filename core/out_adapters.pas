@@ -660,16 +660,19 @@ FUNCTION T_messagesDistributor.triggersBeep: boolean;
     result:=false;
   end;
 
-PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter;
-  CONST destroyIt: boolean);
+PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
+  VAR i:longint=0;
   begin
     enterCriticalSection(messagesCs);
     try
-      setLength(adapters,length(adapters)+1);
-      adapters[length(adapters)-1].adapter:=p;
-      adapters[length(adapters)-1].doDispose:=destroyIt;
-      collecting:=collecting+p^.messageTypesToInclude;
-      if p^.adapterType=at_textFile then ensureFileFlushThread;
+      while (i<length(adapters)) and (adapters[i].adapter<>p) do inc(i);
+      if i>=length(adapters) then begin
+        setLength(adapters,length(adapters)+1);
+        adapters[length(adapters)-1].adapter:=p;
+        adapters[length(adapters)-1].doDispose:=destroyIt;
+        collecting:=collecting+p^.messageTypesToInclude;
+        if p^.adapterType=at_textFile then ensureFileFlushThread;
+      end;
     finally
       leaveCriticalSection(messagesCs);
     end;
