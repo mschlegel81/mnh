@@ -85,7 +85,6 @@ TYPE
     CloseButton: TButton;
     closeButtonPanel: TPanel;
     MainMenu1: TMainMenu;
-    MenuItem1: TMenuItem;
     PopupMenu1: TPopupMenu;
     PROCEDURE closeButtonClick(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -455,7 +454,7 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
       leaveCriticalSection(lock);
     end;
     markedForCleanup:=false;
-    initDockMenuItems(MainMenu1,MenuItem1);
+    initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
