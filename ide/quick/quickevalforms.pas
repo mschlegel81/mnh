@@ -44,7 +44,7 @@ TYPE
     evaluatedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
     quickEvaluation:T_quickEvaluation;
-    quickOutput:T_synOutAdapter;
+    quickOutput:T_eagerInitializedOutAdapter;
     FUNCTION stateHash:T_hashInt;
     PROCEDURE updateWordWrap;
   public
@@ -108,7 +108,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     registerFontControl(quickOutputSynEdit,ctEditor);
     outputHighlighter:=TMnhOutputSyn.create(self);
     quickOutputSynEdit.highlighter:=outputHighlighter;
-    quickOutput.create(self,quickOutputSynEdit,quickOutputBehavior);
+    quickOutput.create(quickOutputSynEdit,self,quickOutputBehavior);
     quickOutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);

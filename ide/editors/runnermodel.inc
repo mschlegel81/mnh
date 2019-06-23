@@ -24,12 +24,13 @@ T_runnerModel=object(T_serializable)
     end;
     stackTracing:boolean;
     profiling:boolean;
-    CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm; CONST stdOutAdapter:P_synOutAdapter);
+    CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
     FUNCTION isMainEvaluationPaused:boolean;
-    FUNCTION canRun:boolean;
+    FUNCTION canRunMain:boolean;
+    FUNCTION canRunScript:boolean;
     PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
     PROCEDURE runExternally(CONST mainParameters:string='');
     PROCEDURE rerun();
@@ -46,6 +47,7 @@ T_runnerModel=object(T_serializable)
     FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+    PROCEDURE ensureStdOutForm;
   end;
 {$endif}
 {$ifdef includeImplementation}
@@ -63,14 +65,14 @@ FUNCTION T_runnerModel.executionDir(CONST provider:P_editorMeta):string;
     else result:=externalRunOptions.customFolder;
   end;
 
-CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm; CONST stdOutAdapter:P_synOutAdapter);
+CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm);
   begin
     debugMode_:=false;
     stackTracing:=false;
     with lastStart do begin mainCall:=false; parameters:=''; end;
 
-    evaluation.create(stdOutAdapter,mainForm);
-    scriptEval.create(stdOutAdapter,mainForm);
+    evaluation.create(mainForm);
+    scriptEval.create(mainForm);
   end;
 
 DESTRUCTOR T_runnerModel.destroy;
@@ -89,18 +91,23 @@ FUNCTION T_runnerModel.isMainEvaluationPaused:boolean;
     result:=evaluation.isPaused;
   end;
 
-FUNCTION T_runnerModel.canRun: boolean;
+FUNCTION T_runnerModel.canRunMain: boolean;
   VAR meta:P_editorMeta;
   begin
-    if evaluation.isRunning or scriptEval.isRunning then exit(false);
+    if evaluation.isRunning then exit(false);
     meta:=workspace.currentEditor;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
+  end;
+
+FUNCTION T_runnerModel.canRunScript:boolean;
+  begin
+    result:=not(scriptEval.isRunning);
   end;
 
 PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters: string);
   VAR contextType:T_evaluationContextType;
   begin
-    if not(canRun) then exit;
+    if not(canRunMain) then exit;
     //environment and options
     if debugMode then begin
       workspace.updateEditorsByGuiStatus;
@@ -147,7 +154,7 @@ PROCEDURE T_runnerModel.rerun();
 
 PROCEDURE T_runnerModel.ensureEditScripts;
   begin
-    if canRun then scriptEval.ensureEditScripts();
+    if canRunScript then scriptEval.ensureEditScripts();
   end;
 
 PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
@@ -188,7 +195,7 @@ FUNCTION T_runnerModel.anyRunning(CONST considerScriptEval:boolean=true):boolean
 PROCEDURE T_runnerModel.flushMessages;
   begin
     evaluation.flushMessages;
-    if not(evaluation.isRunning) then scriptEval.flushMessages;
+    scriptEval.flushMessages;
   end;
 
 FUNCTION T_runnerModel.getStateLabel:string;
@@ -244,6 +251,11 @@ PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
       stream.writeAnsiString(verbosity   );
       stream.writeAnsiString(customFolder);
     end;
+  end;
+
+PROCEDURE T_runnerModel.ensureStdOutForm;
+  begin
+    evaluation.getStdOut^.ensureOutputForm;
   end;
 
 {$endif}

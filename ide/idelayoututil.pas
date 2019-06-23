@@ -443,21 +443,20 @@ PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
 PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST dockRoot: TMenuItem);
   VAR useRoot,item:TMenuItem;
   begin
+    if mainForm=nil then exit;
     if dockRoot=nil then begin
       useRoot:=TMenuItem.create(menuToInit);
       useRoot.caption:='&Dock';
       menuToInit.items.add(useRoot);
     end else useRoot:=dockRoot;
     useRoot.Tag:=99;
-    if mainForm<>nil then begin
-      menuToInit.Images:=mainForm.dockImages;
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultUndockClick;    item.caption:='&Undock';                     useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultReattachClick;  item.caption:='&Attach';                     useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite1Click; item.caption:='Dock &1'; item.ImageIndex:=0; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite2Click; item.caption:='Dock &2'; item.ImageIndex:=1; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
-    end;
+    menuToInit.Images:=mainForm.dockImages;
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultUndockClick;    item.caption:='&Undock';                     useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultReattachClick;  item.caption:='&Attach';                     useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite1Click; item.caption:='Dock &1'; item.ImageIndex:=0; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite2Click; item.caption:='Dock &2'; item.ImageIndex:=1; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
   end;
 
