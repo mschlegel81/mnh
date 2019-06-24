@@ -186,7 +186,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     initializePlotForm(PlotPositionLabel);
 
     setupEditorMetaBase(miLanguage);
-    runnerModel.create(self,@ensureStdOutAdapter.adapter);
+    runnerModel.create(self);
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
@@ -225,7 +225,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     end;
     stream.destroy;
     timer.enabled:=true;
-    ensureStdOutAdapter.updateAfterSettingsRestore;
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
@@ -462,7 +461,7 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOutputClick(Sender: TObject);
   begin
-    ensureStdOutAdapter;
+    runnerModel.ensureStdOutForm;
   end;
 
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);
@@ -661,7 +660,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           canRun:boolean;
       begin
         miHaltEvaluation.enabled:=runnerModel.anyRunning();
-        canRun:=runnerModel.canRun;
+        canRun:=runnerModel.canRunMain;
         unlocked:=not(runnerModel.areEditorsLocked);
         miRunDirect.enabled:=canRun;
         miRunScript.enabled:=canRun;

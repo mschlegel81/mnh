@@ -9,8 +9,36 @@ USES
   SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages;
 
 TYPE
-  //TODO: initialize TOutputForm dynamically when output event is received
-  //TODO: Use separate output form for GUI scripts
+  TIsRunningFunc=FUNCTION:boolean of object;
+  TOutputForm = class;
+  P_lazyInitializedOutAdapter=^T_lazyInitializedOutAdapter;
+  T_lazyInitializedOutAdapter=object(T_abstractSynOutAdapter)
+    private
+      outputForm:TOutputForm;
+      formCaption:string;
+      running:TIsRunningFunc;
+    protected
+      FUNCTION getSynEdit:TSynEdit; virtual;
+      FUNCTION getOwnerForm:TForm;  virtual;
+    public
+      CONSTRUCTOR create(CONST isRunning:TIsRunningFunc;
+                         CONST caption:string;
+                         CONST messageTypesToInc:T_messageTypeSet=[mt_clearConsole,
+                                                                   mt_printline,
+                                                                   mt_printdirect,
+                                                                   mt_el1_note,
+                                                                   mt_el1_userNote,
+                                                                   mt_el2_warning,
+                                                                   mt_el2_userWarning,
+                                                                   mt_echo_input,
+                                                                   mt_echo_output,
+                                                                   mt_echo_declaration,
+                                                                   mt_echo_continued,
+                                                                   mt_startOfEvaluation,
+                                                                   mt_endOfEvaluation]);
+      FUNCTION ensureOutputForm:TOutputForm;
+  end;
+
   //TODO: Block from closing if related evaluation is running
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
@@ -43,23 +71,45 @@ TYPE
     PROCEDURE dockChanged; override;
   private
     PROCEDURE updateWordWrap;
-  public
-    adapter:T_synOutAdapter;
     PROCEDURE updateAfterSettingsRestore;
+  public
+    adapter:P_lazyInitializedOutAdapter;
   end;
 
-FUNCTION ensureStdOutAdapter:TOutputForm;
 IMPLEMENTATION
 USES editorMeta;
-FUNCTION ensureStdOutAdapter: TOutputForm;
-  begin
-    if not(hasFormOfType(icOutput,true)) then begin
-      result:=TOutputForm.create(Application);
-      dockNewForm(result);
-    end else result:=TOutputForm(getFormOfType(icOutput));
-  end;
 
 {$R *.lfm}
+
+FUNCTION T_lazyInitializedOutAdapter.getSynEdit: TSynEdit;
+  begin
+    result:=ensureOutputForm.OutputSynEdit;
+  end;
+
+FUNCTION T_lazyInitializedOutAdapter.getOwnerForm: TForm;
+  begin
+    result:=ensureOutputForm;
+  end;
+
+CONSTRUCTOR T_lazyInitializedOutAdapter.create(CONST isRunning:TIsRunningFunc; CONST caption:string; CONST messageTypesToInc: T_messageTypeSet);
+  begin
+    inherited create(messageTypesToInc);
+    formCaption:=caption;
+    outputForm:=nil;
+    running:=isRunning;
+  end;
+
+FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
+  begin
+    if outputForm=nil then begin
+      outputForm:=TOutputForm.create(Application);
+      outputForm.caption:=formCaption;
+      outputForm.adapter:=@self;
+      dockNewForm(outputForm);
+      outputForm.updateAfterSettingsRestore;
+    end;
+    result:=outputForm;
+  end;
 
 PROCEDURE TOutputForm.updateAfterSettingsRestore;
   begin
@@ -75,8 +125,8 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
       miErrorL3.checked:=suppressWarningsUnderLevel=3;
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
-    adapter.outputBehavior:=guiOutAdapters.outputBehavior;
-    adapter.autoflush:=false;
+    adapter^.outputBehavior:=guiOutAdapters.outputBehavior;
+    adapter^.autoflush:=false;
   end;
 
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
@@ -86,7 +136,6 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     OutputSynEdit.highlighter:=outputHighlighter;
     OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
-    adapter.create(self,OutputSynEdit,outputBehavior);
     initDockMenuItems(MainMenu1,miDockMainRoot);
     initDockMenuItems(OutputPopupMenu,nil);
   end;
@@ -98,12 +147,12 @@ PROCEDURE TOutputForm.FormResize(Sender: TObject);
 
 PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   begin
-    CanClose:=false;
+    CanClose:=not(adapter^.running());
   end;
 
 PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
   begin
-    adapter.jumpToEnd:=cbShowOnOutput.checked;
+    adapter^.jumpToEnd:=cbShowOnOutput.checked;
   end;
 
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
@@ -113,10 +162,10 @@ FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TOutputForm.updateWordWrap;
   begin
-    if adapter.parentMessages=nil then exit;
+    if adapter^.parentMessages=nil then exit;
     if outputBehavior.echo_wrapping
-    then adapter.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
-    else adapter.parentMessages^.preferredEchoLineLength:=-1;
+    then adapter^.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
+    else adapter^.parentMessages^.preferredEchoLineLength:=-1;
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
@@ -133,8 +182,8 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    adapter.outputBehavior:=guiOutAdapters.outputBehavior;
-    adapter.wrapEcho:=outputBehavior.echo_wrapping;
+    adapter^.outputBehavior:=guiOutAdapters.outputBehavior;
+    adapter^.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 
@@ -147,9 +196,9 @@ PROCEDURE TOutputForm.performSlowUpdate;
 
 PROCEDURE TOutputForm.performFastUpdate;
   begin
-    adapter.jumpToEnd:=cbShowOnOutput.checked;
+    adapter^.jumpToEnd:=cbShowOnOutput.checked;
     if not(cbFreezeOutput.checked) then begin
-      if (adapter.flushToGui(true)<>[])
+      if (adapter^.flushToGui(true)<>[])
       and (cbShowOnOutput.checked)
       then showComponent(true);
     end;

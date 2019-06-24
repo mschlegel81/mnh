@@ -412,40 +412,23 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
     dockChanged;
     mainForm.dockSites[prevSite]^.fixSize;
     mainForm.dockSites[newSite ]^.fixSize;
+    if newSite=cpNone then ShowInTaskBar:=stAlways;
     showComponent(false);
   end;
-
-{FUNCTION T_mnhDockSiteModel.canCloseActivePage: boolean;
-  begin
-    result:=(PageControl.activePage.ControlCount=1)
-      and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-      and T_mnhComponentForm(PageControl.activePage.Controls[0]).CloseQuery;
-  end;
-
-PROCEDURE T_mnhDockSiteModel.closeActivePage;
-  VAR active:T_mnhComponentForm;
-      CloseAction:TCloseAction=caFree;
-  begin
-    if (PageControl.activePage.ControlCount=1) and (PageControl.activePage.Controls[0].InheritsFrom(T_mnhComponentForm.ClassType))
-    then begin
-      active:=T_mnhComponentForm(PageControl.activePage.Controls[0]);
-      if not(active.CloseQuery) then exit;
-      if active.OnClose<>nil then active.OnClose(PageControl,CloseAction);
-      if CloseAction=caFree then FreeAndNil(active);
-    end;
-  end;
-}
 
 PROCEDURE T_mnhComponentForm.defaultCloseClick    (Sender: TObject);
   VAR page:TTabSheet;
       PageControl:TPageControl;
-      closeAction:TCloseAction=caFree;
+      CloseAction:TCloseAction=caFree;
+      cp:T_componentParent;
   begin
     if not(CloseQuery) then exit;
+    cp:=myComponentParent;
     getParents(page,PageControl);
-    if page<>nil then freeAndNil(page);
-    if OnClose<>nil then OnClose(sender,closeAction);
-    if closeAction=caFree then FreeAndNil(self);
+    if page    <>nil then FreeAndNil(page);
+    if OnClose <>nil then OnClose(Sender,CloseAction);
+    if mainForm<>nil then mainForm.dockSites[cp]^.fixSize;
+    if CloseAction=caFree then FreeAndNil(self);
   end;
 
 PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
@@ -463,21 +446,20 @@ PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
 PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST dockRoot: TMenuItem);
   VAR useRoot,item:TMenuItem;
   begin
+    if mainForm=nil then exit;
     if dockRoot=nil then begin
       useRoot:=TMenuItem.create(menuToInit);
       useRoot.caption:='&Dock';
       menuToInit.items.add(useRoot);
     end else useRoot:=dockRoot;
     useRoot.Tag:=99;
-    if mainForm<>nil then begin
-      menuToInit.Images:=mainForm.dockImages;
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultUndockClick;    item.caption:='&Undock';                     useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultReattachClick;  item.caption:='&Attach';                     useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite1Click; item.caption:='Dock &1'; item.ImageIndex:=0; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite2Click; item.caption:='Dock &2'; item.ImageIndex:=1; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
-      item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
-    end;
+    menuToInit.Images:=mainForm.dockImages;
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultUndockClick;    item.caption:='&Undock';                     useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultReattachClick;  item.caption:='&Attach';                     useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite1Click; item.caption:='Dock &1'; item.ImageIndex:=0; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite2Click; item.caption:='Dock &2'; item.ImageIndex:=1; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
+    item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
   end;
 

@@ -350,6 +350,7 @@
         <Filename Value="plot/plotexport.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ExportPlotForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="plotExport"/>
       </Unit41>

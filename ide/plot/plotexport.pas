@@ -11,9 +11,12 @@ USES
 
 TYPE
   TExportPlotForm = class(TForm)
+    GroupBox3: TGroupBox;
     OKButton: TButton;
     CancelButton: TButton;
     ProgressBar1: TProgressBar;
+    rbExportToMnh: TRadioButton;
+    rbExportToPng: TRadioButton;
     widthEdit: TEdit;
     heightEdit: TEdit;
     GroupBox1: TGroupBox;
@@ -31,6 +34,7 @@ TYPE
     PROCEDURE okButtonClick(Sender: TObject);
     PROCEDURE OutputFileNameEditEditingDone(Sender: TObject);
     PROCEDURE QualityTrackbarChange(Sender: TObject);
+    PROCEDURE rbExportToPngChange(Sender: TObject);
     PROCEDURE widthEditChange(Sender: TObject);
   private
     exporting,exportHalted:boolean;
@@ -45,6 +49,11 @@ TYPE
 
 FUNCTION exportPlotForm:TExportPlotForm;
 IMPLEMENTATION
+USES ideLayoutUtil,
+     myGenerics,
+     fileWrappers,
+     editScripts,
+     editorMeta;
 VAR myExportPlotForm: TExportPlotForm=nil;
 
 FUNCTION exportPlotForm: TExportPlotForm;
@@ -57,7 +66,9 @@ FUNCTION exportPlotForm: TExportPlotForm;
 
 PROCEDURE TExportPlotForm.OutputFileNameEditEditingDone(Sender: TObject);
   begin
-    OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png');
+    if rbExportToPng.checked
+    then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
+    else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
     enableOkButton;
   end;
 
@@ -67,7 +78,65 @@ PROCEDURE TExportPlotForm.cancelButtonClick(Sender: TObject);
   end;
 
 PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
-  VAR renderHeight,renderWidth,frameIndex:longint;
+  PROCEDURE renderToPng;
+    VAR renderHeight,renderWidth,frameIndex:longint;
+    begin
+      renderHeight:=strToIntDef(heightEdit.text,10000);
+      renderWidth :=strToIntDef(widthEdit.text,10000);
+      if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
+        ProgressBar1.max:=psys^.animation.frameCount;
+        for frameIndex:=0 to psys^.animation.frameCount-1 do if not(exportHalted) then begin
+          ProgressBar1.position:=frameIndex;
+          Application.ProcessMessages;
+          psys^.animation.renderFrame(frameIndex,
+                                animationFileName(
+                                     frameIndex,
+                                     psys^.animation.frameCount),
+                                renderWidth,
+                                renderHeight,
+                                QualityTrackbar.position,true);
+        end;
+      end else begin
+        ProgressBar1.max:=1;
+        if (psys^.animation.frameCount>0)
+        then psys^.animation.renderFrame(
+               animationFrameIndex,
+               OutputFileNameEdit.caption,
+               renderWidth,
+               renderHeight,
+               QualityTrackbar.position,false)
+        else psys^.currentPlot.renderToFile(
+               OutputFileNameEdit.caption,
+               renderWidth,
+               renderHeight,
+               QualityTrackbar.position);
+        ProgressBar1.position:=1;
+        Application.ProcessMessages;
+      end;
+      if exportHalted then ProgressBar1.position:=0 else ProgressBar1.position:=ProgressBar1.max;
+    end;
+
+  PROCEDURE createScript;
+    VAR scriptLines:T_arrayOfString;
+        task:P_editScriptTask;
+    begin
+      if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
+        scriptLines:=psys^.getPlotStatement(-1,@exportHalted,Application,ProgressBar1);
+      end else begin
+        scriptLines:=psys^.getPlotStatement(animationFrameIndex,@exportHalted,Application,ProgressBar1);
+      end;
+      if exportHalted then ProgressBar1.position:=0 else begin
+        ProgressBar1.position:=ProgressBar1.max;
+        if mainForm=nil
+        then writeFileLines(OutputFileNameEdit.caption,scriptLines,LineEnding,false)
+        else begin
+          new(task,createForNewEditor(scriptLines));
+          mainForm.onEditFinished(task);
+          Application.ProcessMessages;
+        end;
+      end;
+    end;
+
   begin
     if exporting then exit;
 
@@ -81,43 +150,13 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
     CancelButton.Cancel     :=false;
     exporting:=true;
     exportHalted:=false;
-
-    renderHeight:=strToIntDef(heightEdit.text,10000);
-    renderWidth :=strToIntDef(widthEdit.text,10000);
+    if rbExportToPng.checked
+    then renderToPng
+    else createScript;
 
     ProgressBar1.position:=0;
     Application.ProcessMessages;
-    if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
-      ProgressBar1.max:=psys^.animation.frameCount;
-      for frameIndex:=0 to psys^.animation.frameCount-1 do if not(exportHalted) then begin
-        ProgressBar1.position:=frameIndex;
-        Application.ProcessMessages;
-        psys^.animation.renderFrame(frameIndex,
-                              animationFileName(
-                                   frameIndex,
-                                   psys^.animation.frameCount),
-                              renderWidth,
-                              renderHeight,
-                              QualityTrackbar.position,true);
-      end;
-    end else begin
-      ProgressBar1.max:=1;
-      if (psys^.animation.frameCount>0)
-      then psys^.animation.renderFrame(
-             animationFrameIndex,
-             OutputFileNameEdit.caption,
-             renderWidth,
-             renderHeight,
-             QualityTrackbar.position,false)
-      else psys^.currentPlot.renderToFile(
-             OutputFileNameEdit.caption,
-             renderWidth,
-             renderHeight,
-             QualityTrackbar.position);
-      ProgressBar1.position:=1;
-      Application.ProcessMessages;
-    end;
-    if exportHalted then ProgressBar1.position:=0 else ProgressBar1.position:=ProgressBar1.max;
+
     exporting:=false;
     enableAll;
   end;
@@ -125,6 +164,15 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
 PROCEDURE TExportPlotForm.QualityTrackbarChange(Sender: TObject);
   begin
     enableOkButton;
+  end;
+
+PROCEDURE TExportPlotForm.rbExportToPngChange(Sender: TObject);
+  begin
+    GroupBox1.visible:=rbExportToPng.checked;
+    Panel1.visible:=rbExportToPng.checked or (mainForm=nil);
+    if rbExportToPng.checked
+    then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
+    else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
   end;
 
 PROCEDURE TExportPlotForm.widthEditChange(Sender: TObject);
@@ -136,6 +184,7 @@ PROCEDURE TExportPlotForm.enableOkButton;
   FUNCTION validSize(CONST s:string):boolean;
     VAR i:longint;
     begin
+      if rbExportToMnh.checked then exit(true);
       i:=strToIntDef(s,10000);
       if i<=0 then exit(false);
       if i>9999 then exit(false);
@@ -145,9 +194,9 @@ PROCEDURE TExportPlotForm.enableOkButton;
     end;
 
   begin
-    OKButton.enabled:=(OutputFileNameEdit.text<>'') and
-                      (OutputFileNameEdit.text<>'.png') and
-                      DirectoryExists(ExtractFileDir(expandFileName(OutputFileNameEdit.text))) and
+    OKButton.enabled:=((OutputFileNameEdit.text<>'') and
+                      DirectoryExists(ExtractFileDir(expandFileName(OutputFileNameEdit.text)))
+                      or not(rbExportToPng.checked or (mainForm=nil))) and
                       validSize(widthEdit.text) and
                       validSize(heightEdit.text) and not(exporting);
   end;

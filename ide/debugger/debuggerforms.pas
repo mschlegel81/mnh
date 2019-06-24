@@ -144,7 +144,7 @@ PROCEDURE TDebuggerForm.performFastUpdate;
    running  :=runnerModel.anyRunning(false);
    halted   :=runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil);
    handleButton(bbHalt       ,halted or running, 2           ,false,lastClickedButton=dontBreakAtAll);
-   handleButton(bbRunContinue,halted or runnerModel.canRun, 0,true ,lastClickedButton=runUntilBreakpoint);
+   handleButton(bbRunContinue,halted or runnerModel.canRunMain, 0,true ,lastClickedButton=runUntilBreakpoint);
    handleButton(bbStep       ,halted , 4                     ,false,lastClickedButton=breakOnLineChange);
    handleButton(bbStepIn     ,halted , 6                     ,false,lastClickedButton=breakOnStepIn);
    handleButton(bbStepOut    ,halted , 8                     ,false,lastClickedButton=breakOnStepOut);
@@ -175,7 +175,7 @@ PROCEDURE TDebuggerForm.addCategoryNode(
 
 PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
   begin
-    if runnerModel.canRun then begin
+    if runnerModel.canRunMain then begin
       runnerModel.debugMode:=true;
       mainForm.onDebuggerEvent;
       runnerModel.rerun();

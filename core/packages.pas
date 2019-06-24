@@ -1437,7 +1437,8 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
                           .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
                           .put('includes',includeList,false)^
-                          .put('declares',rulesList,false);
+                          .put('declares',rulesList,false)^
+                          .put('plain script',newBoolLiteral(isPlainScript),false);
   end;
 
 {$ifdef fullVersion}

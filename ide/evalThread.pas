@@ -22,7 +22,8 @@ USES sysutils,Classes,
      mnh_tables,
      mnhCustomForm,
      guiOutAdapters,
-     editScripts;
+     editScripts,
+     outputFormUnit;
 
 TYPE
   T_evaluationKind = (ek_normal,ek_quick,ek_editScript);
@@ -75,14 +76,16 @@ TYPE
         folder:string;
         callMain:boolean;
       end;
+      stdOutAdapter:P_lazyInitializedOutAdapter;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
+      CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
       PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
       PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
       //Debugger support:
       FUNCTION isPaused:boolean;
       FUNCTION stepper:P_debuggingStepper;
+      PROPERTY getStdOut:P_lazyInitializedOutAdapter read stdOutAdapter;
   end;
 
   T_reevaluationWithGui = object(T_standardEvaluation)
@@ -98,7 +101,7 @@ TYPE
       toEvaluate:T_arrayOfString;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST quickStdout:P_synOutAdapter);
+      CONSTRUCTOR create(CONST quickStdout:P_eagerInitializedOutAdapter);
       FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
       DESTRUCTOR destroy; virtual;
   end;
@@ -107,11 +110,10 @@ TYPE
     private
       utilityScriptList:T_scriptMetaArray;
       evalRequest:P_editScriptTask;
-      collector:T_collectingOutAdapter;
-      StdOut:P_synOutAdapter;
+      stdOutAdapter:P_lazyInitializedOutAdapter;
       PROCEDURE execute(VAR recycler:T_recycler); virtual;
     public
-      CONSTRUCTOR create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
+      CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
       DESTRUCTOR destroy; virtual;
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex:longint; CONST L:T_arrayOfString; CONST inputLang:string; CONST editorFileName:string);
@@ -130,6 +132,7 @@ FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem;      
 FUNCTION newImigAdapter      (CONST caption:string      ):P_guiImageSystem; begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
+FUNCTION newStdOutAdapter    (CONST caption:string; CONST running:TIsRunningFunc; CONST typesToInclude:T_messageTypeSet):P_lazyInitializedOutAdapter;        begin new(result,create(running,caption,typesToInclude)); end;
 FUNCTION newCustomFormAdapter(CONST plot:P_guiPlotSystem):P_customFormAdapter;  begin new(result,createCustomFormAdapter(plot)); end;
 FUNCTION newGuiEventsAdapter (CONST guiForm:T_mnhIdeForm):P_guiEventsAdapter;   begin new(result,create(guiForm)); end;
 FUNCTION newProfilingAdapter                             :P_profileAdapter;     begin new(result,create); end;
@@ -163,12 +166,13 @@ DESTRUCTOR T_quickEvaluation.destroy;
     inherited destroy;
   end;
 
-CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
+CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
   VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_normal);
-    messages.addOutAdapter(sharedStdout,false);
-    sharedStdout^.parentMessages:=@messages;
+    stdOutAdapter:=newStdOutAdapter('Output',@isRunning,C_textMessages);
+    stdOutAdapter^.parentMessages:=@messages;
+    messages.addOutAdapter(stdOutAdapter,true);
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
@@ -182,7 +186,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONS
     {$endif}
   end;
 
-CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_synOutAdapter);
+CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_eagerInitializedOutAdapter);
   VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_quick);
@@ -197,12 +201,12 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_synOutAdapter);
   end;
 
 CONST C_messagesForwardedToOutput:T_messageTypeSet=[mt_clearConsole,mt_printdirect,mt_printline,mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError];
-CONSTRUCTOR T_ideScriptEvaluation.create(CONST sharedStdout:P_synOutAdapter; CONST mainForm:T_mnhIdeForm);
+CONSTRUCTOR T_ideScriptEvaluation.create(CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_editScript);
-    StdOut:=sharedStdout;
-    collector.create(at_console,C_messagesForwardedToOutput);
-    messages.addOutAdapter(@collector,false);
+    stdOutAdapter:=newStdOutAdapter('Output (GUI script)',@isRunning,C_messagesForwardedToOutput);
+    stdOutAdapter^.parentMessages:=@messages;
+    messages.addOutAdapter(stdOutAdapter,true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
     package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));
     setLength(utilityScriptList,0);
@@ -214,7 +218,6 @@ DESTRUCTOR T_ideScriptEvaluation.destroy;
     for script in utilityScriptList do dispose(script,destroy);
     setLength(utilityScriptList,0);
     inherited destroy;
-    collector.destroy;
   end;
 
 CONSTRUCTOR T_reevaluationWithGui.create();
@@ -331,22 +334,13 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
     end;
 
   PROCEDURE doneEdit;
-    VAR clearConsoleMessage:P_storedMessage;
     begin
       package.finalize(globals.primaryContext,recycler);
       globals.afterEvaluation(recycler);
       if evalRequest<>nil
-      then messages.postCustomMessage(evalRequest^.withSuccessFlag(collector.typesOfStoredMessages*C_errorMessageTypes[3]=[]))
+      then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
       evalRequest:=nil;
-
-      if (collector.typesOfStoredMessages*C_messagesForwardedToOutput<>[]) then begin
-        new(clearConsoleMessage,create(mt_clearConsole,C_nilTokenLocation));
-        StdOut^.append(clearConsoleMessage);
-        disposeMessage(clearConsoleMessage);
-        StdOut^.appendAll(collector.storedMessages);
-      end;
-      collector.clear;
     end;
 
   PROCEDURE ensureEditScripts_impl();

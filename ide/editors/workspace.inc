@@ -657,7 +657,7 @@ FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
   VAR meta:P_editorMeta;
   begin
-    if not(runnerModel.canRun) then exit;
+    if not(runnerModel.canRunScript) then exit;
     meta:=currentEditor;
     if meta=nil then exit;
     runnerModel.scriptEval.runUtilScript(
