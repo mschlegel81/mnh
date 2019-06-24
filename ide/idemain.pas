@@ -10,7 +10,7 @@ USES
   editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,litVar,mnh_messages,
-  closeDialog, gotoLineDialogs,SynEdit,outputFormUnit,askDialog;
+  closeDialog, gotoLineDialogs,SynEdit,askDialog;
 
 TYPE
   TIdeMainForm = class(T_mnhIdeForm)
