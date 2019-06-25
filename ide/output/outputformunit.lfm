@@ -12,6 +12,7 @@ object OutputForm: TOutputForm
   Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnResize = FormResize
   LCLVersion = '2.0.2.0'
   inline OutputSynEdit: TSynEdit
