@@ -335,9 +335,12 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
           end;
         end;
       end else begin
-        if hadDirectPrint and (not(synOwnerForm.showing) or not(synOwnerForm.visible)) then begin
-          synOwnerForm.Show;
-          synOwnerForm.visible:=true;
+        if hadDirectPrint then begin
+          synOwnerForm:=getOwnerForm;
+          if (not(synOwnerForm.showing) or not(synOwnerForm.visible)) then begin
+            synOwnerForm.Show;
+            synOwnerForm.visible:=true;
+          end;
         end;
         if SynEdit<>nil then SynEdit.EndUpdate;
       end;

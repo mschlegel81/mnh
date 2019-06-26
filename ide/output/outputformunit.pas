@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
-  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages;
+  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages, Classes;
 
 TYPE
   TIsRunningFunc=FUNCTION:boolean of object;
@@ -39,7 +39,6 @@ TYPE
       FUNCTION ensureOutputForm:TOutputForm;
   end;
 
-  //TODO: Block from closing if related evaluation is running
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;
@@ -63,6 +62,7 @@ TYPE
     PROCEDURE cbShowOnOutputChange(Sender: TObject);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
@@ -107,6 +107,7 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
       outputForm.adapter:=@self;
       dockNewForm(outputForm);
       outputForm.updateAfterSettingsRestore;
+      outputForm.showComponent(false);
     end;
     result:=outputForm;
   end;
@@ -138,6 +139,14 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     initDockMenuItems(MainMenu1,miDockMainRoot);
     initDockMenuItems(OutputPopupMenu,nil);
+  end;
+
+PROCEDURE TOutputForm.FormDestroy(Sender: TObject);
+  begin
+    unregisterFontControl(OutputSynEdit);
+    adapter^.outputForm:=nil;
+    adapter^.autoflush:=true;
+    adapter^.jumpToEnd:=true;
   end;
 
 PROCEDURE TOutputForm.FormResize(Sender: TObject);

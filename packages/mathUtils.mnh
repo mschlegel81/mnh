@@ -72,3 +72,15 @@ rootOfQuadraticPoly(squareFactor:Numeric,
   discriminant<0 ? return [] : void;
   (-linearFactor+sqrt(discriminant)*[-1,1])/(2*squareFactor);
 end;
+
+//*Returns the points where the given circles intersect
+circleIntersection(c0:NumericList(2),r0:Numeric,
+                   c1:NumericList(2),r1:Numeric)->begin
+  local d:=euklideanNorm(c1-c0);
+  local a:=(r0^2-r1^2+d^2)/(2*d);
+  local h:=r0^2-a^2;
+  h<0 ? return void : h:=sqrt(h);
+  local X:=c0+a*(c1-c0)/d;
+  local Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
+  [X+Y,X-Y];
+end;

@@ -31,6 +31,7 @@ PROCEDURE T_plotDockMeta.alignContents;
 
 DESTRUCTOR T_plotDockMeta.destroy;
   begin
+    disconnect;
     inherited destroy;
   end;
 
