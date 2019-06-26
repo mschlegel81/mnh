@@ -461,7 +461,7 @@ PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miOutputClick(Sender: TObject);
   begin
-    runnerModel.ensureStdOutForm;
+    runnerModel.ensureStdOutForm.showComponent(false);
   end;
 
 PROCEDURE TIdeMainForm.miProfileClick(Sender: TObject);

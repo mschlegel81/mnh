@@ -47,7 +47,7 @@ T_runnerModel=object(T_serializable)
     FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
-    PROCEDURE ensureStdOutForm;
+    FUNCTION ensureStdOutForm:T_mnhComponentForm;
   end;
 {$endif}
 {$ifdef includeImplementation}
@@ -253,9 +253,9 @@ PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     end;
   end;
 
-PROCEDURE T_runnerModel.ensureStdOutForm;
+FUNCTION T_runnerModel.ensureStdOutForm:T_mnhComponentForm;
   begin
-    evaluation.getStdOut^.ensureOutputForm;
+    result:=evaluation.getStdOut^.ensureOutputForm;
   end;
 
 {$endif}
