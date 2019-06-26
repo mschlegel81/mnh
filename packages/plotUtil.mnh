@@ -126,7 +126,8 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
     lines.size==0 ? void : addPlot(lines,'black');
     display;
     lines.size==0 ? void : removePlot;
-  end})]);
+  end}),
+    newPlotDock]);
 end;
 
 densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
