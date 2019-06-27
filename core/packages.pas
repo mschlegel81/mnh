@@ -380,6 +380,10 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
   VAR i:longint;
   begin
     with containingPackage^.mainPackage^ do begin
+      if containingPackage^.mainPackage^.getCodeProvider^.id=id then begin
+        globals.primaryContext.raiseError('Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
+        exit;
+      end;
       for i:=0 to length(secondaryPackages)-1 do
         if secondaryPackages[i]^.getCodeProvider^.id = id then begin
           if  (secondaryPackages[i]^.readyForUsecase<>lu_NONE) and
