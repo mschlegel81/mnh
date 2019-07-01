@@ -4,6 +4,7 @@ USES sysutils,math,FPCanvas;
 TYPE
   T_plotStyle=(ps_none,
                ps_straight,
+               ps_bspline,
                ps_stepLeft,
                ps_stepRight,
                ps_filled,
@@ -26,6 +27,7 @@ CONST
   C_styleName: array[T_plotStyle] of array[0..1] of string=
      {ps_none      }  (('',''),
      {ps_straight  }   ('line'     , 'l'),
+     {ps_bspline   }   ('bspline'  , 'b'),
      {ps_stepLeft  }   ('stepLeft' , '' ),
      {ps_stepRight }   ('stepRight', '' ),
      {ps_filled    }   ('fill'     , 'f'),

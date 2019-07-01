@@ -885,31 +885,13 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
                                                 ( 0.24,-0.12),
                                                 (-0.24, 0.12),
                                                 (0,0));
-  VAR rowId, i,j, yBaseLine:longint;
+  VAR rowId, i, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
       lastWasValid: boolean;
       scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
       screenBox:T_boundingBox;
-
-  PROCEDURE screenRowPoly(CONST i0,i1:longint);
-    VAR points:array of TPoint;
-        i:longint;
-    begin
-      if (i0<0) or (i1<i0+1) then exit;
-      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-      target.Brush.color:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      setLength(points,i1-i0+1);
-      for i:=0 to i1-i0 do begin
-        points[i].x:=screenRow[i0+i].x;
-        points[i].y:=screenRow[i0+i].y;
-      end;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-      target.Polygon(points);
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
-    end;
 
   PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
     VAR points:array[0..4] of TPoint;
@@ -927,35 +909,354 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       if not(withBorder) then target.Pen.style:=psSolid;
     end;
 
-  PROCEDURE drawEllipse(CONST x0,y0,x1,y1:longint);
-    VAR points:array[0..100] of TPoint;
-        cx,cy,rx,ry:double;
-        i:longint;
-    begin
-      if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-      target.Brush.color:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
-        cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
-        cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
-        for i:=0 to 100 do begin
-          points[i].x:=round(cx+rx*cos(0.02*pi*i));
-          points[i].y:=round(cy+ry*sin(0.02*pi*i));
-        end;
-        target.Polygon(points);
-      end else begin
-        target.Ellipse(x0,y0,x1,y1);
-      end;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
-    end;
-
   PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
     begin
       drawCustomQuad(x0,y0,
                      x0,yBaseLine,
                      x1,yBaseLine,
                      x1,y1,withBorder);
+    end;
+
+  PROCEDURE drawStraightLines;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo(screenRow[i].x, screenRow[i].y);
+            drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,false);
+          end else
+            target.MoveTo(screenRow[i].x, screenRow[i].y);
+          lastX:=screenRow[i].x;
+          lastY:=screenRow[i].y;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawStepsLeft;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo(lastX, screenRow[i].y);
+            target.LineTo(screenRow[i].x, screenRow[i].y);
+            drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,false);
+          end else target.MoveTo(screenRow[i].x, screenRow[i].y);
+          lastX:=screenRow[i].x;
+          lastY:=screenRow[i].y;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawStepsRight;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo(screenRow[i].x, lastY);
+            target.LineTo(screenRow[i].x, screenRow[i].y);
+            drawPatternRect(lastX, lastY, screenRow[i].x, lastY,false);
+          end else target.MoveTo(screenRow[i].x, screenRow[i].y);
+          lastX:=screenRow[i].x;
+          lastY:=screenRow[i].y;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawBars;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then
+            drawPatternRect(round(lastX*0.95+screenRow[i].x*0.05), lastY,
+                            round(lastX*0.05+screenRow[i].x*0.95), lastY,scaleAndColor.lineWidth>0);
+          lastX:=screenRow[i].x;
+          lastY:=screenRow[i].y;
+          lastWasValid:=screenRow[i].valid;
+        end;
+      end;
+    end;
+
+  PROCEDURE drawBoxes;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      i:=0;
+      while i+1<length(screenRow) do begin
+        if screenRow[i  ].valid and
+           screenRow[i+1].valid and
+           intersect(screenBox,boundingBoxOf(screenRow[i].x, screenRow[i].y,screenRow[i+1].x, screenRow[i+1].y)) then begin
+          drawCustomQuad(screenRow[i  ].x, screenRow[i  ].y,
+                         screenRow[i  ].x, screenRow[i+1].y,
+                         screenRow[i+1].x, screenRow[i+1].y,
+                         screenRow[i+1].x, screenRow[i  ].y,
+                         scaleAndColor.lineWidth>0);
+        end;
+        inc(i, 2);
+      end;
+    end;
+
+  PROCEDURE drawEllipses;
+    PROCEDURE drawEllipse(CONST x0,y0,x1,y1:longint);
+      VAR points:array[0..100] of TPoint;
+          cx,cy,rx,ry:double;
+          i:longint;
+      begin
+        if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
+        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+        target.Brush.color:=scaleAndColor.solidColor;
+        target.Brush.style:=scaleAndColor.solidStyle;
+        if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
+          cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
+          cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
+          for i:=0 to 100 do begin
+            points[i].x:=round(cx+rx*cos(0.02*pi*i));
+            points[i].y:=round(cy+ry*sin(0.02*pi*i));
+          end;
+          target.Polygon(points);
+        end else begin
+          target.Ellipse(x0,y0,x1,y1);
+        end;
+        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
+      end;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      i:=0;
+      while i+1<length(screenRow) do begin
+        if screenRow[i  ].valid and
+           screenRow[i+1].valid then
+          drawEllipse(screenRow[i  ].x, screenRow[i  ].y,
+                      screenRow[i+1].x, screenRow[i+1].y);
+        inc(i, 2);
+      end;
+    end;
+
+  PROCEDURE drawTubes;
+    begin
+      i:=0;
+      while i+3<length(screenRow) do begin
+        target.Pen.style:=psSolid;
+        target.Pen.color:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+        if scaleAndColor.lineWidth>0 then begin
+          if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
+                                                                            screenRow[i+2].x,screenRow[i+2].y);
+          if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
+                                                                            screenRow[i+3].x,screenRow[i+3].y);
+        end;
+        if screenRow[i  ].valid and screenRow[i+2].valid and
+           screenRow[i+1].valid and screenRow[i+3].valid then
+        drawCustomQuad(screenRow[i  ].x,screenRow[i  ].y,
+                       screenRow[i+2].x,screenRow[i+2].y,
+                       screenRow[i+3].x,screenRow[i+3].y,
+                       screenRow[i+1].x,screenRow[i+1].y,false);
+        inc(i,2);
+      end;
+    end;
+
+  PROCEDURE drawPolygons;
+    PROCEDURE screenRowPoly(CONST i0,i1:longint);
+      VAR points:array of TPoint;
+          i:longint;
+      begin
+        if (i0<0) or (i1<i0+1) then exit;
+        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+        target.Brush.color:=scaleAndColor.solidColor;
+        target.Brush.style:=scaleAndColor.solidStyle;
+        setLength(points,i1-i0+1);
+        for i:=0 to i1-i0 do begin
+          points[i].x:=screenRow[i0+i].x;
+          points[i].y:=screenRow[i0+i].y;
+        end;
+        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+        target.Polygon(points);
+        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
+      end;
+    VAR i,j:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      j:=-1;
+      for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
+        if j>=0 then screenRowPoly(j,i-1);
+        j:=-1;
+      end else if j<0 then j:=i;
+      i:=length(screenRow)-1;
+      if j>=0 then screenRowPoly(j,i);
+    end;
+
+  PROCEDURE prepareBSplines;
+    CONST coeff:array[0..15,0..3] of double=((0.16666666666666666    ,0.6666666666666666 ,0.16666666666666666,0),
+                                             (0.13550617283950619    ,0.66237037037037039,0.20207407407407407,0.00004938271604938271),
+                                             (0.10849382716049384    ,0.6500740740740741 ,0.24103703703703705,0.0003950617283950617),
+                                             (0.085333333333333358   ,0.6306666666666666 ,0.28266666666666668,0.0013333333333333337),
+                                             (0.065728395061728409   ,0.605037037037037  ,0.32607407407407407,0.0031604938271604936),
+                                             (0.049382716049382734   ,0.57407407407407407,0.3703703703703704 ,0.006172839506172839),
+                                             (0.036                  ,0.5386666666666666 ,0.41466666666666674,0.01066666666666667),
+                                             (0.025283950617283949   ,0.4997037037037037 ,0.45807407407407408,0.016938271604938274),
+                                             (0.016938271604938274   ,0.45807407407407408,0.4997037037037037 ,0.025283950617283949),
+                                             (0.01066666666666667    ,0.41466666666666674,0.5386666666666666 ,0.036),
+                                             (0.0061728395061728418  ,0.3703703703703704 ,0.57407407407407407,0.04938271604938271),
+                                             (0.0031604938271604954  ,0.3260740740740741 ,0.6050370370370369 ,0.06572839506172838),
+                                             (0.0013333333333333324  ,0.2826666666666666 ,0.6306666666666667 ,0.085333333333333358),
+                                             (0.00039506172839506149 ,0.24103703703703708,0.650074074074074  ,0.10849382716049384),
+                                             (0.000049382716049382686,0.20207407407407407,0.66237037037037039,0.13550617283950619),
+                                             (0                      ,0.16666666666666666,0.6666666666666666 ,0.16666666666666666));
+    VAR input:T_rowToPaint;
+    PROCEDURE screenRowSpline(CONST i0,i1:longint; VAR k:longint);
+
+      VAR support:T_rowToPaint;
+          i,j:longint;
+      begin
+        if (i0<0) or (i1<i0+1) then exit;
+        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+        j:=k+(i1-i0+4)*length(coeff)+1;
+        if length(screenRow)<j then setLength(screenRow,j);
+        setLength(support,4);
+        for i:=i0-2 to i1-1 do begin
+          if i  <i0 then support[0]:=input[i0] else support[0]:=input[i  ];
+          if i+1<i0 then support[1]:=input[i0] else support[1]:=input[i+1];
+          if i+2>i1 then support[2]:=input[i1] else support[2]:=input[i+2];
+          if i+3>i1 then support[3]:=input[i1] else support[3]:=input[i+3];
+          for j:=0 to length(coeff)-1 do begin
+            screenRow[k].x:=round(support[0].x*coeff[j,0]+
+                                  support[1].x*coeff[j,1]+
+                                  support[2].x*coeff[j,2]+
+                                  support[3].x*coeff[j,3]);
+            screenRow[k].y:=round(support[0].y*coeff[j,0]+
+                                  support[1].y*coeff[j,1]+
+                                  support[2].y*coeff[j,2]+
+                                  support[3].y*coeff[j,3]);
+            screenRow[k].valid:=true;
+            inc(k);
+          end;
+        end;
+      end;
+
+    VAR i,j,k:longint;
+    begin
+      setLength(input,length(screenRow));
+      for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
+      setLength(screenRow,length(screenRow)*length(coeff)+1);
+      k:=0;
+      j:=-1;
+      for i:=0 to length(input)-1 do if not(input[i].valid) then begin
+        if j>=0 then screenRowSpline(j,i-1,k);
+        j:=-1;
+      end else if j<0 then j:=i;
+      i:=length(input)-1;
+      if j>=0 then screenRowSpline(j,i,k);
+      setLength(screenRow,k+1);
+      screenRow[k]:=input[i];
+      setLength(input,0);
+    end;
+
+  PROCEDURE drawPluses;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+        target.line(screenRow[i].x-scaleAndColor.symbolWidth,
+                    screenRow[i].y,
+                    screenRow[i].x+scaleAndColor.symbolWidth,
+                    screenRow[i].y);
+        target.line(screenRow[i].x,
+                    screenRow[i].y-scaleAndColor.symbolWidth,
+                    screenRow[i].x,
+                    screenRow[i].y+scaleAndColor.symbolWidth);
+      end;
+    end;
+
+  PROCEDURE drawCrosses;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+        target.line(screenRow[i].x-scaleAndColor.symbolRadius,
+                    screenRow[i].y-scaleAndColor.symbolRadius,
+                    screenRow[i].x+scaleAndColor.symbolRadius,
+                    screenRow[i].y+scaleAndColor.symbolRadius);
+        target.line(screenRow[i].x+scaleAndColor.symbolRadius,
+                    screenRow[i].y-scaleAndColor.symbolRadius,
+                    screenRow[i].x-scaleAndColor.symbolRadius,
+                    screenRow[i].y+scaleAndColor.symbolRadius);
+      end;
+    end;
+
+  PROCEDURE drawDots;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psClear;
+      target.Brush.style:=bsSolid;
+      target.Brush.color:=scaleAndColor.solidColor;
+      if scaleAndColor.symbolWidth>=1 then begin
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+          target.Ellipse(screenRow[i].x-scaleAndColor.symbolWidth,
+                         screenRow[i].y-scaleAndColor.symbolWidth,
+                         screenRow[i].x+scaleAndColor.symbolWidth,
+                         screenRow[i].y+scaleAndColor.symbolWidth);
+      end else begin
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+          target.Pixels[screenRow[i].x,
+                        screenRow[i].y]:=scaleAndColor.lineColor;
+      end;
+    end;
+
+  PROCEDURE drawImpulses;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecSquare;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+        target.line(screenRow[i].x,
+                    yBaseLine,
+                    screenRow[i].x,
+                    screenRow[i].y);
     end;
 
   begin
@@ -1019,203 +1320,23 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
       scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
-      if ps_straight in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            if lastWasValid then begin
-              target.LineTo(screenRow[i].x, screenRow[i].y);
-              drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,false);
-            end else
-              target.MoveTo(screenRow[i].x, screenRow[i].y);
-            lastX:=screenRow[i].x;
-            lastY:=screenRow[i].y;
-          end;
-          lastWasValid:=screenRow[i].valid;
-        end;
-      end else if ps_stepLeft in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            if lastWasValid then begin
-              target.LineTo(lastX, screenRow[i].y);
-              target.LineTo(screenRow[i].x, screenRow[i].y);
-              drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,false);
-            end else target.MoveTo(screenRow[i].x, screenRow[i].y);
-            lastX:=screenRow[i].x;
-            lastY:=screenRow[i].y;
-          end;
-          lastWasValid:=screenRow[i].valid;
-        end;
-      end else if ps_stepRight in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            if lastWasValid then begin
-              target.LineTo(screenRow[i].x, lastY);
-              target.LineTo(screenRow[i].x, screenRow[i].y);
-              drawPatternRect(lastX, lastY, screenRow[i].x, lastY,false);
-            end else target.MoveTo(screenRow[i].x, screenRow[i].y);
-            lastX:=screenRow[i].x;
-            lastY:=screenRow[i].y;
-          end;
-          lastWasValid:=screenRow[i].valid;
-        end;
-      end else if ps_bar in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            if lastWasValid then
-              drawPatternRect(round(lastX*0.95+screenRow[i].x*0.05), lastY,
-                              round(lastX*0.05+screenRow[i].x*0.95), lastY,scaleAndColor.lineWidth>0);
-            lastX:=screenRow[i].x;
-            lastY:=screenRow[i].y;
-            lastWasValid:=screenRow[i].valid;
-          end;
-        end;
-      end else if ps_box in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        i:=0;
-        while i+1<length(screenRow) do begin
-          if screenRow[i  ].valid and
-             screenRow[i+1].valid and
-             intersect(screenBox,boundingBoxOf(screenRow[i].x, screenRow[i].y,screenRow[i+1].x, screenRow[i+1].y)) then begin
-            drawCustomQuad(screenRow[i  ].x, screenRow[i  ].y,
-                           screenRow[i  ].x, screenRow[i+1].y,
-                           screenRow[i+1].x, screenRow[i+1].y,
-                           screenRow[i+1].x, screenRow[i  ].y,
-                           scaleAndColor.lineWidth>0);
-          end;
-          inc(i, 2);
-        end;
-      end else if ps_ellipse in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        lastWasValid:=false;
-        i:=0;
-        while i+1<length(screenRow) do begin
-          if screenRow[i  ].valid and
-             screenRow[i+1].valid then
-            drawEllipse(screenRow[i  ].x, screenRow[i  ].y,
-                        screenRow[i+1].x, screenRow[i+1].y);
-          inc(i, 2);
-        end;
-      end else if ps_tube in row[rowId].style.style then begin
-        i:=0;
-        while i+3<length(screenRow) do begin
-          target.Pen.style:=psSolid;
-          target.Pen.color:=scaleAndColor.lineColor;
-          target.Pen.width:=scaleAndColor.lineWidth;
-          target.Pen.EndCap:=pecRound;
-          if scaleAndColor.lineWidth>0 then begin
-            if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
-                                                                              screenRow[i+2].x,screenRow[i+2].y);
-            if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
-                                                                              screenRow[i+3].x,screenRow[i+3].y);
-          end;
-          if screenRow[i  ].valid and screenRow[i+2].valid and
-             screenRow[i+1].valid and screenRow[i+3].valid then
-          drawCustomQuad(screenRow[i  ].x,screenRow[i  ].y,
-                         screenRow[i+2].x,screenRow[i+2].y,
-                         screenRow[i+3].x,screenRow[i+3].y,
-                         screenRow[i+1].x,screenRow[i+1].y,false);
-          inc(i,2);
-        end;
-      end;
-      if ps_polygon in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        j:=-1;
-        for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
-          if j>=0 then screenRowPoly(j,i-1);
-          j:=-1;
-        end else if j<0 then j:=i;
-        i:=length(screenRow)-1;
-        if j>=0 then screenRowPoly(j,i);
-      end;
-      if ps_dot in row[rowId].style.style then begin
-        target.Pen.style:=psClear;
-        target.Brush.style:=bsSolid;
-        target.Brush.color:=scaleAndColor.solidColor;
-        if scaleAndColor.symbolWidth>=1 then begin
-          for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-            target.Ellipse(screenRow[i].x-scaleAndColor.symbolWidth,
-                           screenRow[i].y-scaleAndColor.symbolWidth,
-                           screenRow[i].x+scaleAndColor.symbolWidth,
-                           screenRow[i].y+scaleAndColor.symbolWidth);
-        end else begin
-          for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-            target.Pixels[screenRow[i].x,
-                          screenRow[i].y]:=scaleAndColor.lineColor;
-        end;
-      end;
-      if ps_plus in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-          target.line(screenRow[i].x-scaleAndColor.symbolWidth,
-                      screenRow[i].y,
-                      screenRow[i].x+scaleAndColor.symbolWidth,
-                      screenRow[i].y);
-          target.line(screenRow[i].x,
-                      screenRow[i].y-scaleAndColor.symbolWidth,
-                      screenRow[i].x,
-                      screenRow[i].y+scaleAndColor.symbolWidth);
-        end;
-      end;
-      if ps_cross in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-          target.line(screenRow[i].x-scaleAndColor.symbolRadius,
-                      screenRow[i].y-scaleAndColor.symbolRadius,
-                      screenRow[i].x+scaleAndColor.symbolRadius,
-                      screenRow[i].y+scaleAndColor.symbolRadius);
-          target.line(screenRow[i].x+scaleAndColor.symbolRadius,
-                      screenRow[i].y-scaleAndColor.symbolRadius,
-                      screenRow[i].x-scaleAndColor.symbolRadius,
-                      screenRow[i].y+scaleAndColor.symbolRadius);
-        end;
-      end;
-      if ps_impulse in row[rowId].style.style then begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecSquare;
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-          target.line(screenRow[i].x,
-                      yBaseLine,
-                      screenRow[i].x,
-                      screenRow[i].y);
-      end;
+      if ps_stepLeft  in row[rowId].style.style then drawStepsLeft;
+      if ps_stepRight in row[rowId].style.style then drawStepsRight;
+      if ps_bar       in row[rowId].style.style then drawBars;
+      if ps_box       in row[rowId].style.style then drawBoxes;
+      if ps_ellipse   in row[rowId].style.style then drawEllipses;
+      if ps_tube      in row[rowId].style.style then drawTubes;
+      if ps_polygon   in row[rowId].style.style then drawPolygons;
+      if ps_dot       in row[rowId].style.style then drawDots;
+      if ps_plus      in row[rowId].style.style then drawPluses;
+      if ps_cross     in row[rowId].style.style then drawCrosses;
+      if ps_impulse   in row[rowId].style.style then drawImpulses;
+
+      if (ps_bspline  in row[rowId].style.style) and
+         (ps_straight in row[rowId].style.style) then drawStraightLines;
+      if  ps_bspline  in row[rowId].style.style then prepareBSplines;
+      if (ps_bspline  in row[rowId].style.style) or
+         (ps_straight in row[rowId].style.style) then drawStraightLines;
     end;
     //===============================================================:row data
     target.UnlockCanvas;
