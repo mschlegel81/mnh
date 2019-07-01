@@ -382,6 +382,7 @@ INITIALIZATION
     '#valid options are:'+'#Style/size modifier: any real number'+
     '#Styles:'+
     '#  line; l;'+
+    '#  bspline; b;'+
     '#  stepLeft;'+
     '#  stepRight;'+
     '#  fill; f;'+

@@ -312,6 +312,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(m^.messageType,m^.messageText);
+        mt_endOfEvaluation:ensureSynEdit.enabled:=true;
         else result:=false;
       end;
       if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;

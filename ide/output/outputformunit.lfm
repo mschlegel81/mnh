@@ -513,6 +513,7 @@ object OutputForm: TOutputForm
     Checked = True
     OnChange = cbShowOnOutputChange
     ParentFont = False
+    PopupMenu = OutputPopupMenu
     State = cbChecked
     TabOrder = 1
   end
@@ -530,6 +531,7 @@ object OutputForm: TOutputForm
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Freeze output'
     ParentFont = False
+    PopupMenu = OutputPopupMenu
     TabOrder = 2
   end
   object OutputPopupMenu: TPopupMenu
