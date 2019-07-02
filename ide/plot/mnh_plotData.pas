@@ -1168,13 +1168,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
             inc(k);
           end;
         end;
+        screenRow[k]:=input[i1];
+        inc(k);
       end;
 
     VAR i,j,k:longint;
     begin
       setLength(input,length(screenRow));
       for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
-      setLength(screenRow,length(screenRow)*length(coeff)+1);
+      setLength(screenRow,0);
       k:=0;
       j:=-1;
       for i:=0 to length(input)-1 do if not(input[i].valid) then begin
@@ -1183,8 +1185,87 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       end else if j<0 then j:=i;
       i:=length(input)-1;
       if j>=0 then screenRowSpline(j,i,k);
-      setLength(screenRow,k+1);
-      screenRow[k]:=input[i];
+      setLength(screenRow,k);
+      setLength(input,0);
+    end;
+
+  PROCEDURE prepareCosSplines;
+    CONST weights:array[0..15] of double=(1.0,0.9903926402016152,0.96193976625564337,0.91573480615127267,0.8535533905932737,0.77778511650980109,0.6913417161825449,0.5975451610080642,0.5,0.4024548389919359,0.30865828381745514,0.22221488349019902,0.14644660940672627,0.08426519384872732,0.03806023374435663,0.00960735979838484);
+    VAR input:T_rowToPaint;
+    PROCEDURE cosSpline(CONST i0,i1:longint; VAR k:longint);
+      VAR i,j:longint;
+          p,q:array[0..2] of T_point;
+          z:T_point;
+          t:double;
+      begin
+        if (i0<0) or (i1<i0+1) then exit;
+        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+        if (i1=i0+1) then begin
+          //linear interpolation - just two points
+          if length(screenRow)<k+2 then setLength(screenRow,k+2);
+          screenRow[k]:=input[i0]; inc(k);
+          screenRow[k]:=input[i1]; inc(k);
+          exit;
+        end;
+        j:=k+(i1-i0+1)*16+1;
+        if length(screenRow)<j then setLength(screenRow,j);
+
+        p[0]:=pointOf(input[i0+1].x            ,input[i0+1].y);
+        p[1]:=pointOf(input[i0+2].x-input[i0].x,input[i0+2].y-input[i0].y)*0.5;
+        p[2]:=pointOf(input[i0+2].x+input[i0].x,input[i0+2].y+input[i0].y)*0.5-p[0];
+        t:=-1;
+        for j:=0 to 15 do begin
+          z:=p[0]+p[1]*t+p[2]*sqr(t);
+          screenRow[k].x:=round(z[0]);
+          screenRow[k].y:=round(z[1]);
+          screenRow[k].valid:=true;
+          inc(k);
+          t+=0.0625;
+        end;
+        i:=i0;
+        q:=p;
+        while i<i1-2 do begin
+          inc(i);
+          p:=q;
+          q[0]:=pointOf(input[i+1].x           ,input[i+1].y);
+          q[1]:=pointOf(input[i+2].x-input[i].x,input[i+2].y-input[i].y)*0.5;
+          q[2]:=pointOf(input[i+2].x+input[i].x,input[i+2].y+input[i].y)*0.5-q[0];
+          t:=0;
+          for j:=0 to 15 do begin
+            z:=(p[0]+p[1]*(t  )+p[2]*sqr(t  ))*(  weights[j])+
+               (q[0]+q[1]*(t-1)+q[2]*sqr(t-1))*(1-weights[j]);
+            screenRow[k].x:=round(z[0]);
+            screenRow[k].y:=round(z[1]);
+            screenRow[k].valid:=true;
+            inc(k);
+            t+=0.0625;
+          end;
+        end;
+        t:=0;
+        for j:=0 to 16 do begin
+          z:=q[0]+q[1]*t+q[2]*sqr(t);
+          screenRow[k].x:=round(z[0]);
+          screenRow[k].y:=round(z[1]);
+          screenRow[k].valid:=true;
+          inc(k);
+          t+=0.0625;
+        end;
+      end;
+
+    VAR i,j,k:longint;
+    begin
+      setLength(input,length(screenRow));
+      for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
+      setLength(screenRow,0);
+      k:=0;
+      j:=-1;
+      for i:=0 to length(input)-1 do if not(input[i].valid) then begin
+        if j>=0 then cosSpline(j,i-1,k);
+        j:=-1;
+      end else if j<0 then j:=i;
+      i:=length(input)-1;
+      if j>=0 then cosSpline(j,i,k);
+      setLength(screenRow,k);
       setLength(input,0);
     end;
 
@@ -1334,9 +1415,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
 
       if (ps_bspline  in row[rowId].style.style) and
          (ps_straight in row[rowId].style.style) then drawStraightLines;
-      if  ps_bspline  in row[rowId].style.style then prepareBSplines;
-      if (ps_bspline  in row[rowId].style.style) or
-         (ps_straight in row[rowId].style.style) then drawStraightLines;
+      if      ps_bspline   in row[rowId].style.style then prepareBSplines
+      else if ps_cosspline in row[rowId].style.style then prepareCosSplines;
+
+      if (ps_bspline   in row[rowId].style.style) or
+         (ps_cosspline in row[rowId].style.style) or
+         (ps_straight  in row[rowId].style.style) then drawStraightLines;
     end;
     //===============================================================:row data
     target.UnlockCanvas;

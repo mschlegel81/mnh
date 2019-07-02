@@ -134,6 +134,9 @@ TYPE
     FUNCTION toTextStatement:string;
   end;
 
+  OPERATOR *(CONST x:T_point; CONST y:double):T_point;
+  OPERATOR +(CONST x,y:T_point):T_point;
+  OPERATOR -(CONST x,y:T_point):T_point;
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
@@ -142,6 +145,24 @@ FUNCTION pointOf(CONST x,y:double):T_point;
   begin
     result[0]:=x;
     result[1]:=y;
+  end;
+
+OPERATOR *(CONST x:T_point; CONST y:double):T_point;
+  begin
+    result[0]:=x[0]*y;
+    result[1]:=x[1]*y;
+  end;
+
+OPERATOR +(CONST x,y:T_point):T_point;
+  begin
+    result[0]:=x[0]+y[0];
+    result[1]:=x[1]+y[1];
+  end;
+
+OPERATOR -(CONST x,y:T_point):T_point;
+  begin
+    result[0]:=x[0]-y[0];
+    result[1]:=x[1]-y[1];
   end;
 
 FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
