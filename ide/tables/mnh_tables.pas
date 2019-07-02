@@ -19,7 +19,6 @@ USES
 
 TYPE
   P_tableAdapter=^T_tableAdapter;
-  //TODO: copy table to html
   TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;

@@ -658,14 +658,13 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         else logRange:=log10(axisTrafo[axis].rangeByAutosize[1]-axisTrafo[axis].rangeByAutosize[0]);
         try
           i:=round(logRange-1.8);
+          logRange:=logRange-1.8-i;
         except
           i:=1;
         end;
-        //TODO: OVerhaul tic initialization
-        initLinearTics(i,10,1);
-        if majorTicCount>10 then begin
-          initLinearTics(i,50,10);
-        end;
+        if logRange<0.2
+        then initLinearTics(i,10,1)
+        else initLinearTics(i,50,10);
       end;
     end;
 

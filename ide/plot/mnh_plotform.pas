@@ -27,7 +27,7 @@ TYPE
       PROCEDURE setResponse(CONST r:boolean);
       FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages):boolean;
   end;
-  //TODO: copy plot to clipboard?
+
   P_guiPlotSystem= ^T_guiPlotSystem;
   T_guiPlotSystem = object(T_plotSystem)
     protected
