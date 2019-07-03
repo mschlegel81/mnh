@@ -1189,67 +1189,60 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       setLength(input,0);
     end;
 
-  PROCEDURE prepareCosSplines;
-    CONST weights:array[0..15] of double=(1.0,0.9903926402016152,0.96193976625564337,0.91573480615127267,0.8535533905932737,0.77778511650980109,0.6913417161825449,0.5975451610080642,0.5,0.4024548389919359,0.30865828381745514,0.22221488349019902,0.14644660940672627,0.08426519384872732,0.03806023374435663,0.00960735979838484);
+  PROCEDURE prepareSplines;
     VAR input:T_rowToPaint;
-    PROCEDURE cosSpline(CONST i0,i1:longint; VAR k:longint);
-      VAR i,j:longint;
-          p,q:array[0..2] of T_point;
-          z:T_point;
+    PROCEDURE Spline(CONST i0,i1:longint; VAR k:longint);
+      CONST precision=32;
+            dt=1/precision;
+      VAR M:array of T_point;
+          C:array of double;
+          i,n,j:longint;
           t:double;
+          sample,
+          cub0,cub1, off,lin :T_point;
       begin
         if (i0<0) or (i1<i0+1) then exit;
         if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        if (i1=i0+1) then begin
-          //linear interpolation - just two points
-          if length(screenRow)<k+2 then setLength(screenRow,k+2);
-          screenRow[k]:=input[i0]; inc(k);
-          screenRow[k]:=input[i1]; inc(k);
-          exit;
+        n:=i1-i0+1;
+        setLength(M,n);
+        setLength(C,n);
+        dec(n);
+        M[0]:=pointOf(input[i0].x,input[i0].y)*0.125;
+        M[n]:=pointOf(input[i1].x,input[i1].y)*(-0.5);
+        C[0]:=1/4;
+        for i:=1 to n-1 do begin
+          M[i]:=(pointOf(input[i0+i-1].x,
+                         input[i0+i-1].y)
+                -pointOf(input[i0+i  ].x,
+                         input[i0+i  ].y)*2
+                +pointOf(input[i0+i+1].x,
+                         input[i0+i+1].y))*6;
+          C[i]:=1/(4-C[i-1]);
         end;
-        j:=k+(i1-i0+1)*16+1;
-        if length(screenRow)<j then setLength(screenRow,j);
+        M[0]:=M[0]*0.25;
+        for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
+        for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
 
-        p[0]:=pointOf(input[i0+1].x            ,input[i0+1].y);
-        p[1]:=pointOf(input[i0+2].x-input[i0].x,input[i0+2].y-input[i0].y)*0.5;
-        p[2]:=pointOf(input[i0+2].x+input[i0].x,input[i0+2].y+input[i0].y)*0.5-p[0];
-        t:=-1;
-        for j:=0 to 15 do begin
-          z:=p[0]+p[1]*t+p[2]*sqr(t);
-          screenRow[k].x:=round(z[0]);
-          screenRow[k].y:=round(z[1]);
-          screenRow[k].valid:=true;
-          inc(k);
-          t+=0.0625;
-        end;
-        i:=i0;
-        q:=p;
-        while i<i1-2 do begin
-          inc(i);
-          p:=q;
-          q[0]:=pointOf(input[i+1].x           ,input[i+1].y);
-          q[1]:=pointOf(input[i+2].x-input[i].x,input[i+2].y-input[i].y)*0.5;
-          q[2]:=pointOf(input[i+2].x+input[i].x,input[i+2].y+input[i].y)*0.5-q[0];
+        setLength(screenRow,k+precision*(n)+1);
+        for i:=0 to n-1 do begin
+          cub0:=M[i  ]*(1/6);
+          cub1:=M[i+1]*(1/6);
+          off :=pointOf(input[i0+i].x,input[i0+i].y)-M[i]*(1/6);
+          lin :=pointOf(input[i0+i+1].x-input[i0+i].x,
+                        input[i0+i+1].y-input[i0+i].y)-(M[i+1]-M[i])*(1/6);
+
           t:=0;
-          for j:=0 to 15 do begin
-            z:=(p[0]+p[1]*(t  )+p[2]*sqr(t  ))*(  weights[j])+
-               (q[0]+q[1]*(t-1)+q[2]*sqr(t-1))*(1-weights[j]);
-            screenRow[k].x:=round(z[0]);
-            screenRow[k].y:=round(z[1]);
+          for j:=0 to precision-1 do begin
+            sample:=off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t);
+            screenRow[k].x:=round(sample[0]);
+            screenRow[k].y:=round(sample[1]);
             screenRow[k].valid:=true;
             inc(k);
-            t+=0.0625;
+            t+=dt;
           end;
         end;
-        t:=0;
-        for j:=0 to 16 do begin
-          z:=q[0]+q[1]*t+q[2]*sqr(t);
-          screenRow[k].x:=round(z[0]);
-          screenRow[k].y:=round(z[1]);
-          screenRow[k].valid:=true;
-          inc(k);
-          t+=0.0625;
-        end;
+        screenRow[k]:=input[i1];
+        inc(k);
       end;
 
     VAR i,j,k:longint;
@@ -1260,12 +1253,11 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       k:=0;
       j:=-1;
       for i:=0 to length(input)-1 do if not(input[i].valid) then begin
-        if j>=0 then cosSpline(j,i-1,k);
+        if j>=0 then Spline(j,i-1,k);
         j:=-1;
       end else if j<0 then j:=i;
       i:=length(input)-1;
-      if j>=0 then cosSpline(j,i,k);
-      setLength(screenRow,k);
+      if j>=0 then Spline(j,i,k);
       setLength(input,0);
     end;
 
@@ -1416,7 +1408,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       if (ps_bspline  in row[rowId].style.style) and
          (ps_straight in row[rowId].style.style) then drawStraightLines;
       if      ps_bspline   in row[rowId].style.style then prepareBSplines
-      else if ps_cosspline in row[rowId].style.style then prepareCosSplines;
+      else if ps_cosspline in row[rowId].style.style then prepareSplines;
 
       if (ps_bspline   in row[rowId].style.style) or
          (ps_cosspline in row[rowId].style.style) or
