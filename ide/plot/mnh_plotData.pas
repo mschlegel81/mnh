@@ -1147,7 +1147,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       begin
         if (i0<0) or (i1<i0+1) then exit;
         if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        j:=k+(i1-i0+4)*length(coeff)+1;
+        j:=k+(i1-i0+4)*length(coeff)+2;
         if length(screenRow)<j then setLength(screenRow,j);
         setLength(support,4);
         for i:=i0-2 to i1-1 do begin
@@ -1168,13 +1168,17 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
             inc(k);
           end;
         end;
+        screenRow[k]:=input[i1];
+        inc(k);
+        screenRow[k].valid:=false;
+        inc(k);
       end;
 
     VAR i,j,k:longint;
     begin
       setLength(input,length(screenRow));
       for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
-      setLength(screenRow,length(screenRow)*length(coeff)+1);
+      setLength(screenRow,0);
       k:=0;
       j:=-1;
       for i:=0 to length(input)-1 do if not(input[i].valid) then begin
@@ -1183,8 +1187,81 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       end else if j<0 then j:=i;
       i:=length(input)-1;
       if j>=0 then screenRowSpline(j,i,k);
-      setLength(screenRow,k+1);
-      screenRow[k]:=input[i];
+      setLength(screenRow,k);
+      setLength(input,0);
+    end;
+
+  PROCEDURE prepareSplines;
+    VAR input:T_rowToPaint;
+    PROCEDURE Spline(CONST i0,i1:longint; VAR k:longint);
+      CONST precision=16;
+            dt=1/precision;
+      VAR M:array of T_point;
+          C:array of double;
+          i,n,j:longint;
+          t:double;
+          sample,
+          cub0,cub1, off,lin :T_point;
+      begin
+        if (i0<0) or (i1<i0+1) then exit;
+        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+        n:=i1-i0+1;
+        setLength(M,n);
+        setLength(C,n);
+        dec(n);
+        M[0]:=pointOf(input[i0].x,input[i0].y)*0.125;
+        M[n]:=pointOf(input[i1].x,input[i1].y)*(-0.5);
+        C[0]:=1/4;
+        for i:=1 to n-1 do begin
+          M[i]:=(pointOf(input[i0+i-1].x,
+                         input[i0+i-1].y)
+                -pointOf(input[i0+i  ].x,
+                         input[i0+i  ].y)*2
+                +pointOf(input[i0+i+1].x,
+                         input[i0+i+1].y))*6;
+          C[i]:=1/(4-C[i-1]);
+        end;
+        M[0]:=M[0]*0.25;
+        for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
+        for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
+
+        setLength(screenRow,k+precision*(n)+2);
+        for i:=0 to n-1 do begin
+          cub0:=M[i  ]*(1/6);
+          cub1:=M[i+1]*(1/6);
+          off :=pointOf(input[i0+i].x,input[i0+i].y)-M[i]*(1/6);
+          lin :=pointOf(input[i0+i+1].x-input[i0+i].x,
+                        input[i0+i+1].y-input[i0+i].y)-(M[i+1]-M[i])*(1/6);
+
+          t:=0;
+          for j:=0 to precision-1 do begin
+            sample:=off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t);
+            screenRow[k].x:=round(sample[0]);
+            screenRow[k].y:=round(sample[1]);
+            screenRow[k].valid:=true;
+            inc(k);
+            t+=dt;
+          end;
+        end;
+        screenRow[k]:=input[i1];
+        inc(k);
+        screenRow[k].valid:=false;
+        inc(k);
+      end;
+
+    VAR i,j,k:longint;
+    begin
+      setLength(input,length(screenRow));
+      for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
+      setLength(screenRow,0);
+      k:=0;
+      j:=-1;
+      for i:=0 to length(input)-1 do if not(input[i].valid) then begin
+        if j>=0 then Spline(j,i-1,k);
+        j:=-1;
+      end else if j<0 then j:=i;
+      i:=length(input)-1;
+      if j>=0 then Spline(j,i,k);
       setLength(input,0);
     end;
 
@@ -1334,9 +1411,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
 
       if (ps_bspline  in row[rowId].style.style) and
          (ps_straight in row[rowId].style.style) then drawStraightLines;
-      if  ps_bspline  in row[rowId].style.style then prepareBSplines;
-      if (ps_bspline  in row[rowId].style.style) or
-         (ps_straight in row[rowId].style.style) then drawStraightLines;
+      if      ps_bspline   in row[rowId].style.style then prepareBSplines
+      else if ps_cosspline in row[rowId].style.style then prepareSplines;
+
+      if (ps_bspline   in row[rowId].style.style) or
+         (ps_cosspline in row[rowId].style.style) or
+         (ps_straight  in row[rowId].style.style) then drawStraightLines;
     end;
     //===============================================================:row data
     target.UnlockCanvas;

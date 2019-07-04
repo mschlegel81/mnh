@@ -383,6 +383,7 @@ INITIALIZATION
     '#Styles:'+
     '#  line; l;'+
     '#  bspline; b;'+
+    '#  cspline; c;'+
     '#  stepLeft;'+
     '#  stepRight;'+
     '#  fill; f;'+

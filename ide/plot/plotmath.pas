@@ -134,6 +134,9 @@ TYPE
     FUNCTION toTextStatement:string;
   end;
 
+  OPERATOR *(CONST x:T_point; CONST y:double):T_point;
+  OPERATOR +(CONST x,y:T_point):T_point;
+  OPERATOR -(CONST x,y:T_point):T_point;
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
@@ -142,6 +145,24 @@ FUNCTION pointOf(CONST x,y:double):T_point;
   begin
     result[0]:=x;
     result[1]:=y;
+  end;
+
+OPERATOR *(CONST x:T_point; CONST y:double):T_point;
+  begin
+    result[0]:=x[0]*y;
+    result[1]:=x[1]*y;
+  end;
+
+OPERATOR +(CONST x,y:T_point):T_point;
+  begin
+    result[0]:=x[0]+y[0];
+    result[1]:=x[1]+y[1];
+  end;
+
+OPERATOR -(CONST x,y:T_point):T_point;
+  begin
+    result[0]:=x[0]-y[0];
+    result[1]:=x[1]-y[1];
   end;
 
 FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
@@ -637,14 +658,13 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         else logRange:=log10(axisTrafo[axis].rangeByAutosize[1]-axisTrafo[axis].rangeByAutosize[0]);
         try
           i:=round(logRange-1.8);
+          logRange:=logRange-1.8-i;
         except
           i:=1;
         end;
-        //TODO: OVerhaul tic initialization
-        initLinearTics(i,10,1);
-        if majorTicCount>10 then begin
-          initLinearTics(i,50,10);
-        end;
+        if logRange<0.2
+        then initLinearTics(i,10,1)
+        else initLinearTics(i,50,10);
       end;
     end;
 

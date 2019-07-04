@@ -1,0 +1,90 @@
+explainPlot(text:String)->drawTextAbsolute(0,1,text.split("\n"),10,'TL','Times New Roman',[0,0,0],[1,1,1]);
+
+sample(0)->begin
+  plot();
+  explainPlot('plot() actually just clears the plot');
+end;
+
+sample(1)->begin
+  plot([1,0,1,2,0]);
+  explainPlot('plot(X) can be applied to numeric lists');
+end;
+
+sample(2)->begin
+  plot([[0,0],[1,1],[1.5,2],[1.5,0],[2,0.5]]);
+  explainPlot('plot(X) can be applied to lists of points as well');
+end;
+
+sample(3)->begin
+  setOptions(['axisStyleX'=>1,'axisStyleY'=>1,'autoscaleFactor'=>0.9]);
+  local samples:=[[0,0],[1,1],[1.5,2],[1.5,0],[2,0.5]];
+  plot(samples);
+  local marks:=['A'..'E'];
+  samples.each(p,
+    drawText(p[0],p[1],marks[index],10,'C','Courier New',[1,0,0],[1,1,1]));
+  explainPlot(" \n \nUse setOptions to modify the general plot behavior\n"&
+              "Use drawText to place text at certain points in transformed coordinates\n"&
+              "Use drawText absolute for coordinates based on the plot canvas");
+  drawTextAbsolute(0,1,'[0,1] is here',10,'TL',[0,0,1]);
+  drawTextAbsolute(1,1,'[1,1] is here',10,'TR',[0,0,1]);
+  drawTextAbsolute(0.5,0.5,'[0.5,0.5] is here',10,'C',[0,0,1]);
+  drawTextAbsolute(0,0,'[0,0] is here',10,'BL',[0,0,1]);
+  drawTextAbsolute(1,0,'[1,0] is here',10,'BR',[0,0,1]);
+end;
+
+sample(4)->begin
+  setOptions(['axisStyleX'=>3,'axisStyleY'=>3,'autoscaleFactor'=>0.99]);
+  local t:=[0..6]/6*2*pi;
+  plot(cos(t),sin(t),'2 . l red');
+  explainPlot("plot can also handle two numeric lists as input\nModify your plot style by an additional string argument");
+end;
+
+sample(5)->begin
+  plot(::sin,0,10,100);
+  addPlot(::cos,0,10,100);
+  addPlot({0.5*(sin($x)+cos($x))},0,10,100);
+  explainPlot("You can use addPlot to add more rows");
+end;
+
+sample(6)->begin
+  local samples:=cos([0..6]*2);
+  plot   (samples,'. l black');
+  addPlot(samples,'. b red');
+  addPlot(samples,'. c blue');
+  explainPlot("Here you can see normal line segments in black\nB-Spline approximation in red and\ncubic Spline interpolation in blue\n \nSpline interpolation can be slow if many points are involved");
+end;
+
+sample(7)->begin
+  plot([-2..2],'+ 2');
+  addPlot([2..-2],'x 2');
+  addPlot([1,0,1,0,1],'. 2');
+  explainPlot('You can draw +, x and dots');
+end;
+
+sample(8)->begin
+  plot([0,2,0],'fs polygon green');
+  addPlot([0,1],'box f orange');
+  addPlot([[1,0],[2,2]],'ellipse 2 black');
+  explainPlot("You can draw polygons, boxes and ellipses\nNote the impact of different plot qualities on the box here!");
+end;
+
+sample(9)->begin
+  plot({[12*sin($t)-4*sin(3*$t),
+         13*cos($t)-5*cos(2*$t)-2*cos(3*$t)-cos(4*$t)-4]},0,2*pi,100,'polygon f red 0');
+  explainPlot('An example for a parametric plot');
+end;
+
+sample(10)->begin
+  plot([0.5,2,1,2,-1,2],'bar f');
+
+end;
+
+
+sample(10);
+//begin
+//  clearAnimation;
+//  [0..6].each(case,
+//    resetOptions,
+//    sample(case),
+//    addAnimationFrame);
+//end;
