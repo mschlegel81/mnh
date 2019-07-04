@@ -1147,7 +1147,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       begin
         if (i0<0) or (i1<i0+1) then exit;
         if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        j:=k+(i1-i0+4)*length(coeff)+1;
+        j:=k+(i1-i0+4)*length(coeff)+2;
         if length(screenRow)<j then setLength(screenRow,j);
         setLength(support,4);
         for i:=i0-2 to i1-1 do begin
@@ -1169,6 +1169,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
           end;
         end;
         screenRow[k]:=input[i1];
+        inc(k);
+        screenRow[k].valid:=false;
         inc(k);
       end;
 
@@ -1192,7 +1194,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE prepareSplines;
     VAR input:T_rowToPaint;
     PROCEDURE Spline(CONST i0,i1:longint; VAR k:longint);
-      CONST precision=32;
+      CONST precision=16;
             dt=1/precision;
       VAR M:array of T_point;
           C:array of double;
@@ -1223,7 +1225,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
         for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
 
-        setLength(screenRow,k+precision*(n)+1);
+        setLength(screenRow,k+precision*(n)+2);
         for i:=0 to n-1 do begin
           cub0:=M[i  ]*(1/6);
           cub1:=M[i+1]*(1/6);
@@ -1242,6 +1244,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
           end;
         end;
         screenRow[k]:=input[i1];
+        inc(k);
+        screenRow[k].valid:=false;
         inc(k);
       end;
 
