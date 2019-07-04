@@ -48,7 +48,7 @@ PROCEDURE ensureHelpForm;
          (PageControl<>nil) and (PageControl.activePage=page)
       then THelpForm(helperForm).toggleUpdate()
       else begin
-        if pageControl<>nil
+        if PageControl<>nil
         then PageControl.activePage:=page
         else helperForm.showComponent(true);
         THelpForm(helperForm).toggleUpdate();
