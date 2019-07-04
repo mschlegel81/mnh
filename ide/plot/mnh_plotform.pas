@@ -583,6 +583,7 @@ PROCEDURE TplotForm.dockChanged;
       if mainFormCoordinatesLabel<>nil then
          mainFormCoordinatesLabel.caption:='';
     end else StatusBar.visible:=false;
+    Resize;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;

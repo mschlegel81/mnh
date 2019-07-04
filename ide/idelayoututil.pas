@@ -399,8 +399,10 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
     if myComponentParent=newSite then exit;
     prevSite:=myComponentParent;
     if newSite=cpNone
-    then ManualDock(nil)
-    else begin
+    then begin
+      ManualDock(nil);
+      ShowInTaskBar:=stAlways;
+    end else begin
       ManualDock(mainForm.dockSites[newSite]^.PageControl);
       lastDock:=newSite;
     end;
@@ -409,7 +411,6 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
     dockChanged;
     mainForm.dockSites[prevSite]^.fixSize;
     mainForm.dockSites[newSite ]^.fixSize;
-    if newSite=cpNone then ShowInTaskBar:=stAlways;
     showComponent(false);
   end;
 
