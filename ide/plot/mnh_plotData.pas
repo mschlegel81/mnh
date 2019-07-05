@@ -609,11 +609,19 @@ PROCEDURE T_plotSeries.flushFramesToDisk;
     enterCriticalSection(seriesCs);
     cleanupTimeout:=now+1/(24*60*60);
     try
-      for k:=0 to length(frame)-1 do if (now<cleanupTimeout) and (frame[k]^.cachedImage.image<>nil)
-      then frame[k]^.doneImage(fcm_inMemoryPng);
-      if (now<cleanupTimeout) then
-      for k:=0 to length(frame)-1 do if (now<cleanupTimeout)
-      then frame[k]^.doneImage(fcm_tempFile);
+      if settings.cacheAnimationFrames then begin
+        //First move cache from images to in-memory PNGs
+        for k:=0 to length(frame)-1 do if (now<cleanupTimeout) and (frame[k]^.cachedImage.image<>nil)
+        then frame[k]^.doneImage(fcm_inMemoryPng);
+        //If there is time left, move cache from in-memory PNGs to temp files
+        if (now<cleanupTimeout) then
+        for k:=0 to length(frame)-1 do if (now<cleanupTimeout)
+        then frame[k]^.doneImage(fcm_tempFile);
+      end else begin
+        //If caching is disabled, clear all caches (if there are any)
+        for k:=0 to length(frame)-1 do if (now<cleanupTimeout)
+        then frame[k]^.doneImage(fcm_none);
+      end;
     finally
       leaveCriticalSection(seriesCs);
     end;
