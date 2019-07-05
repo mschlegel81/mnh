@@ -140,24 +140,33 @@ TYPE
       FUNCTION getRowStatementCount:longint;
   end;
 
+  T_frameCacheMode=(fcm_none,fcm_retainImage,fcm_inMemoryPng,fcm_tempFile);
+
   P_plotSeriesFrame=^T_plotSeriesFrame;
   T_plotSeriesFrame=object
     private
       backgroundPreparation:boolean;
       frameCS:TRTLCriticalSection;
-      image:TImage;
-      dumpIsUpToDate:boolean;
-      dumpName:string;
-      postedWidth  ,renderedWidth  ,
-      postedHeight ,renderedHeight :longint;
-      postedQuality,renderedQuality:byte;
+
+      cachedImage:record
+        image:TImage;
+        dumpIsUpToDate:boolean;
+        dumpName:string;
+        inMemoryDump:TMemoryStream;
+        renderedWidth  ,
+        renderedHeight :longint;
+        renderedQuality:byte;
+      end;
+
+      postedWidth  ,
+      postedHeight :longint;
+      postedQuality:byte;
       plotData:T_plot;
       PROCEDURE performPostedPreparation;
     public
       CONSTRUCTOR create(VAR currentPlot:T_plot);
       DESTRUCTOR destroy;
-      PROCEDURE invalidate;
-      PROCEDURE clearImage(CONST doDump:boolean=false);
+      PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
       PROCEDURE obtainImage(VAR target:TImage; CONST quality:byte; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint; CONST quality:byte);
       PROCEDURE postPreparation(CONST width,height:longint; CONST quality:byte);
@@ -168,6 +177,7 @@ TYPE
       frame:array of P_plotSeriesFrame;
       framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
       seriesCs:TRTLCriticalSection;
+      weHadAMemoryPanic:boolean;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
       PROCEDURE flushFramesToDisk;
@@ -258,12 +268,15 @@ CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
   begin
     initCriticalSection(frameCS);
     enterCriticalSection(frameCS);
-    image:=nil;
-    dumpIsUpToDate:=false;
-    dumpName:='';
-    renderedWidth :=-1;
-    renderedHeight:=-1;
-    renderedQuality:=255;
+    with cachedImage do begin
+      image:=nil;
+      dumpIsUpToDate:=false;
+      dumpName:='';
+      inMemoryDump:=nil;
+      renderedWidth :=-1;
+      renderedHeight:=-1;
+      renderedQuality:=255;
+    end;
     backgroundPreparation:=false;
     plotData.createWithDefaults;
     plotData.copyFrom(currentPlot);
@@ -274,12 +287,8 @@ DESTRUCTOR T_plotSeriesFrame.destroy;
   begin
     enterCriticalSection(frameCS);
     try
-      clearImage(false);
-      if dumpName<>'' then DeleteFile(dumpName);
-      dumpName:='';
-      renderedWidth :=-1;
-      renderedHeight:=-1;
-      renderedQuality:=255;
+      doneImage(fcm_none);
+      if cachedImage.dumpName<>'' then DeleteFile(cachedImage.dumpName);
       plotData.destroy;
     finally
       leaveCriticalSection(frameCS);
@@ -287,71 +296,90 @@ DESTRUCTOR T_plotSeriesFrame.destroy;
     end;
   end;
 
-PROCEDURE T_plotSeriesFrame.invalidate;
+PROCEDURE T_plotSeriesFrame.doneImage(CONST cacheMode:T_frameCacheMode);
   begin
     enterCriticalSection(frameCS);
     try
-      clearImage(false);
-      renderedWidth :=-1;
-      renderedHeight:=-1;
-      renderedQuality:=255;
-    finally
-      leaveCriticalSection(frameCS);
-    end;
-  end;
-
-PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
-  VAR tempIntfImage: TLazIntfImage;
-      bmpWriter:TFPWriterPNG;
-  begin
-    enterCriticalSection(frameCS);
-    try
-      if doDump and not(dumpIsUpToDate) and (image<>nil) then begin
-        bmpWriter:=TFPWriterPNG.create;
-        if dumpName='' then dumpName:=getTempFileName;
-        tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-        tempIntfImage.saveToFile(dumpName,bmpWriter);
-        tempIntfImage.free;
-        bmpWriter.free;
+      with cachedImage do case cacheMode of
+        fcm_none       : begin
+          //Don't retain; clear all data and mark as invalid
+          renderedHeight:=-1;
+          renderedWidth :=-1;
+          renderedQuality:=255;
+          if fileExists(dumpName) then DeleteFile(dumpName);
+          dumpName:='';
+          if inMemoryDump<>nil then FreeAndNil(inMemoryDump);
+          if image<>nil then FreeAndNil(image);
+        end;
+        fcm_retainImage: begin
+          if (inMemoryDump<>nil) and dumpIsUpToDate then begin
+            //If we have an in memory dump then prefer this (compressed memory)
+            if image<>nil then FreeAndNil(image);
+          end else
+          //Just retain the image; clear in MemoryDump is present
+          if inMemoryDump<>nil then FreeAndNil(inMemoryDump);
+        end;
+        fcm_inMemoryPng: begin
+          if (not(dumpIsUpToDate) or (inMemoryDump=nil)) and (image<>nil) then begin
+            inMemoryDump:=TMemoryStream.create;
+            image.picture.PNG.saveToStream(inMemoryDump);
+          end;
+          if fileExists(dumpName) then DeleteFile(dumpName);
+          dumpName:='';
+          if image<>nil then FreeAndNil(image);
+        end;
+        fcm_tempFile: begin
+          //Offload all data to temp file
+          if (not(dumpIsUpToDate) or not(fileExists(dumpName))) and (image<>nil) then begin
+            if dumpName='' then dumpName:=getTempFileName;
+            image.picture.PNG.saveToFile(dumpName);
+          end else if (inMemoryDump<>nil) and dumpIsUpToDate and not(fileExists(dumpName)) then begin
+            if dumpName='' then dumpName:=getTempFileName;
+            inMemoryDump.Seek(0,soBeginning);
+            inMemoryDump.saveToFile(dumpName);
+          end;
+          if inMemoryDump<>nil then FreeAndNil(inMemoryDump);
+          if image<>nil then FreeAndNil(image);
+        end;
       end;
-      if not(doDump) then dumpName:='';
-      if image<>nil then FreeAndNil(image);
     finally
       leaveCriticalSection(frameCS);
     end;
   end;
 
 PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
-  VAR tempIntfImage: TLazIntfImage;
-      bmpReader:TFPReaderPNG;
+  VAR imageIsPrepared:boolean=false;
   begin
     enterCriticalSection(frameCS);
     try
-      if (renderedQuality=quality) and
-         (renderedHeight =height) and
-         (renderedWidth  =width) and
-         ((image<>nil) or (dumpName<>'') and fileExists(dumpName)) then begin
-        if image=nil then begin
-          //load image
+      if (cachedImage.renderedQuality=quality) and
+         (cachedImage.renderedWidth  =width  ) and
+         (cachedImage.renderedHeight =height ) then begin
+        if cachedImage.image<>nil then imageIsPrepared:=true
+        else with cachedImage do if inMemoryDump<>nil then begin
           image:=TImage.create(nil);
           image.SetInitialBounds(0,0,width,height);
-          tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
-          bmpReader:=TFPReaderPNG.create;
-          tempIntfImage.loadFromFile(dumpName,bmpReader);
-          bmpReader.destroy;
-          image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
+          inMemoryDump.Seek(0,soBeginning);
+          image.picture.PNG.loadFromStream(inMemoryDump);
           dumpIsUpToDate:=true;
-          tempIntfImage.free;
+          imageIsPrepared:=true;
+        end else if (dumpName<>'') and fileExists(dumpName) then begin
+          image:=TImage.create(nil);
+          image.SetInitialBounds(0,0,width,height);
+          image.picture.PNG.loadFromFile(dumpName);
+          dumpIsUpToDate:=true;
+          imageIsPrepared:=true;
         end;
-      end else begin
+      end;
+      if not(imageIsPrepared) then begin
         enterCriticalSection(globalTextRenderingCs);
-        if image<>nil then FreeAndNil(image);
+        if cachedImage.image<>nil then FreeAndNil(cachedImage.image);
         leaveCriticalSection(globalTextRenderingCs);
-        image:=plotData.obtainPlot(width,height,quality);
-        dumpIsUpToDate:=false;
-        renderedQuality:=quality;
-        renderedHeight :=height;
-        renderedWidth  :=width;
+        cachedImage.image:=plotData.obtainPlot(width,height,quality);
+        cachedImage.dumpIsUpToDate:=false;
+        cachedImage.renderedQuality:=quality;
+        cachedImage.renderedHeight :=height;
+        cachedImage.renderedWidth  :=width;
       end;
     finally
       leaveCriticalSection(frameCS);
@@ -400,7 +428,7 @@ PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte;
     try
       prepareImage(target.width,target.height,quality);
       timing.wait;
-      target.Canvas.draw(0,0,image.picture.Bitmap);
+      target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
     finally
       leaveCriticalSection(frameCS);
     end;
@@ -570,7 +598,7 @@ PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOp
   begin
     enterCriticalSection(seriesCs);
     frame[index]^.plotData.scalingOptions:=value;
-    frame[index]^.invalidate;
+    frame[index]^.doneImage(fcm_none);
     leaveCriticalSection(seriesCs);
   end;
 
@@ -581,7 +609,11 @@ PROCEDURE T_plotSeries.flushFramesToDisk;
     enterCriticalSection(seriesCs);
     cleanupTimeout:=now+1/(24*60*60);
     try
-      for k:=0 to length(frame)-1 do if now<cleanupTimeout then frame[k]^.clearImage(settings.cacheAnimationFrames);
+      for k:=0 to length(frame)-1 do if (now<cleanupTimeout) and (frame[k]^.cachedImage.image<>nil)
+      then frame[k]^.doneImage(fcm_inMemoryPng);
+      if (now<cleanupTimeout) then
+      for k:=0 to length(frame)-1 do if (now<cleanupTimeout)
+      then frame[k]^.doneImage(fcm_tempFile);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -610,6 +642,7 @@ PROCEDURE T_plotSeries.clear;
       for k:=0 to length(frame)-1 do dispose(frame[k],destroy);
       setLength(frame,0);
       for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
+      weHadAMemoryPanic:=false;
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -627,6 +660,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
 
   PROCEDURE handleImagesToFree;
     VAR k,j:longint;
+        cacheMode:T_frameCacheMode;
     begin
       //remove current from list
       k:=0;
@@ -638,7 +672,13 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one, dump to file
       k:=length(framesWithImagesAllocated)-1;
-      if (framesWithImagesAllocated[k]<>nil) and (not(isMemoryInComfortZone) or not(settings.cacheAnimationFrames)) then framesWithImagesAllocated[k]^.clearImage(settings.cacheAnimationFrames);
+      if settings.cacheAnimationFrames then begin
+        if not(isMemoryInComfortZone) then weHadAMemoryPanic:=true;
+        if weHadAMemoryPanic
+        then cacheMode:=fcm_inMemoryPng
+        else cacheMode:=fcm_retainImage;
+      end else cacheMode:=fcm_none;
+      if (framesWithImagesAllocated[k]<>nil) then framesWithImagesAllocated[k]^.doneImage(cacheMode);
       //shift
       move(framesWithImagesAllocated[0],
            framesWithImagesAllocated[1],
@@ -682,7 +722,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       enterCriticalSection(globalTextRenderingCs);
       storeImage.destroy;
       leaveCriticalSection(globalTextRenderingCs);
-      frame[index]^.clearImage(false);
+      frame[index]^.doneImage(fcm_none);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -1688,6 +1728,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         else currentPlot.clear;
         animation.clear;
         if pullSettingsToGui<>nil then pullSettingsToGui();
+        animation.weHadAMemoryPanic:=false;
       end;
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);
