@@ -153,10 +153,7 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
     if rbExportToPng.checked
     then renderToPng
     else createScript;
-
-    ProgressBar1.position:=0;
     Application.ProcessMessages;
-
     exporting:=false;
     enableAll;
   end;
@@ -173,6 +170,7 @@ PROCEDURE TExportPlotForm.rbExportToPngChange(Sender: TObject);
     if rbExportToPng.checked
     then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
     else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
+    enableOkButton;
   end;
 
 PROCEDURE TExportPlotForm.widthEditChange(Sender: TObject);
