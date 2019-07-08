@@ -75,16 +75,49 @@ sample(9)->begin
 end;
 
 sample(10)->begin
-  plot([0.5,2,1,2,-1,2],'bar f');
-
+  local data:=[0.5,2,1,2,-1,2];
+  plot(data,'bar f blue');
+  addPlot(data,'. l i red');
+  explainPlot("You can easily create bar plots. Note that the last value is not shown in this style.\nYou can add impulses to any style");
 end;
 
+sample(11)->begin
+  setOptions(['logscaleX'=>true,'logscaleY'=>true]);
+  local data:=[0.5,2,1,2,-1,2];
+  plot(data,'bar f blue');
+  addPlot(data,'. l i red');
+  explainPlot('Of course you can also plot in logarithmic scale');
+end;
 
-sample(10);
-//begin
-//  clearAnimation;
-//  [0..6].each(case,
-//    resetOptions,
-//    sample(case),
-//    addAnimationFrame);
-//end;
+sample(12)->begin
+  ([0..100]/10).each(x,[x,sin(x)+0.1*x], //Note that the upper and lower bounds are entered alternatingly
+                       [x,sin(x)-0.2*x])
+  .plot('tube red f');
+  explainPlot('This is how you create a tube plot');
+end;
+
+sample(13)->begin
+  ([0..100]/10).each(x,[x  ,sin(x)+0.1*x], //Note that the upper and lower bounds are entered alternatingly
+                       [x+1,sin(x)-0.2*x])
+  .plot('tube red f');
+  explainPlot('In a tube plot the upper and lower bound do not have to be aligned');
+end;
+
+sample(14)->begin
+  local h:=1/5;
+  local P:=[-20..20]/5;
+  P:=P.cross(P);
+  local style:='TI0 box fs 0 HUE'&([-20..20]/40+0.5);
+  plot();
+  P.group(P.map({20+round(20*sin($x.sqr.agg(+).sqrt))}))
+   .each(g,addPlot(g[1].each(x,x-h/2,x+h/2),style[g[0]]));
+  explainPlot('You can emulate other plot styles using the builtin styles');
+end;
+
+main->begin
+  clearAnimation;
+  [0..14].each(case,
+    resetOptions,
+    sample(case),
+    addAnimationFrame);
+end;
