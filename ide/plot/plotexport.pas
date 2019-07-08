@@ -9,6 +9,8 @@ USES
   StdCtrls, EditBtn, ComCtrls,
   mnh_plotData;
 
+CONST EXECUTE_BUTTON_CAPTION:array[false..true] of string=('Create Script','Render to file(s)');
+
 TYPE
   TExportPlotForm = class(TForm)
     GroupBox3: TGroupBox;
@@ -170,6 +172,7 @@ PROCEDURE TExportPlotForm.rbExportToPngChange(Sender: TObject);
     if rbExportToPng.checked
     then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
     else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
+    OKButton.caption:=EXECUTE_BUTTON_CAPTION[rbExportToPng.checked];
     enableOkButton;
   end;
 
