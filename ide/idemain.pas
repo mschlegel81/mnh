@@ -214,6 +214,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       if icDebugger            in activeComponents then ensureDebuggerForm;
       if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
       if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
+      if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
       //Apply splitter positions:
       FormResize(self);
 
