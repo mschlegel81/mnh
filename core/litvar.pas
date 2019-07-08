@@ -495,6 +495,8 @@ USES sysutils, math,
 VAR
   intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
+  stringSingletonsCs:TRTLCriticalSection;
+  stringSingletons: array of P_stringLiteral;
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
   begin
@@ -673,11 +675,34 @@ FUNCTION newIntLiteral(CONST value: T_bigInt): P_abstractIntLiteral;
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;
+  VAR i:longint;
   begin
-    if (length(value)<=1) and not(enforceNewString) then begin
-      if length(value)=1 then result:=P_stringLiteral(charLit[value[1]]   .rereferenced)
-                         else result:=P_stringLiteral(emptyStringSingleton.rereferenced);
-    end else new(result, create(value));
+    if not(enforceNewString) then begin
+      if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
+      if length(value)=0 then exit(P_stringLiteral(emptyStringSingleton.rereferenced));
+      result:=nil;
+      enterCriticalSection(stringSingletonsCs);
+      for i:=0 to length(stringSingletons)-1 do if stringSingletons[i]^.val=value then result:=P_stringLiteral(stringSingletons[i]^.rereferenced);
+      leaveCriticalSection(stringSingletonsCs);
+      if result<>nil then exit(result);
+    end;
+    new(result, create(value));
+  end;
+
+FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;
+  VAR i:longint;
+  begin
+    if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
+    if length(value)=0 then exit(P_stringLiteral(emptyStringSingleton.rereferenced));
+    enterCriticalSection(stringSingletonsCs);
+    i:=0;
+    while (i<length(stringSingletons)) and (stringSingletons[i]^.val<>value) do inc(i);
+    if i>=length(stringSingletons) then begin
+      setLength(stringSingletons,i+1);
+      new(stringSingletons[i],create(value));
+    end;
+    result:=P_stringLiteral(stringSingletons[i]^.rereferenced);
+    leaveCriticalSection(stringSingletonsCs);
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;
@@ -2451,14 +2476,14 @@ FUNCTION T_mapLiteral.put(CONST key,newValue:P_literal; CONST incRefs:boolean):P
     result:=@self;
   end;
 
-FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(newStringLiteral(key), newStringLiteral(newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newStringLiteral(key), newIntLiteral   (newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newStringLiteral(key), newRealLiteral  (newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newStringLiteral(key), newBoolLiteral  (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(newSingletonString(key), newStringLiteral(newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newSingletonString(key), newIntLiteral   (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newSingletonString(key), newRealLiteral  (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newSingletonString(key), newBoolLiteral  (newValue),false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   begin
     if incRefs then newValue^.rereference;
-    result:=put(newStringLiteral(key),
+    result:=put(newSingletonString(key),
                 newValue,false);
   end;
 
@@ -3780,6 +3805,8 @@ INITIALIZATION
   boolLit[true ].create(true);
   voidLit.create();
   emptyStringSingleton.create('');
+  initCriticalSection(stringSingletonsCs);
+  setLength(stringSingletons,0);
   for i:=low(intLit) to high(intLit) do intLit[i].create(i);
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
@@ -3797,4 +3824,8 @@ FINALIZATION
   nanLit   .destroy;
   infLit   .destroy;
   negInfLit.destroy;
+  enterCriticalSection(stringSingletonsCs);
+  for i:=0 to length(stringSingletons)-1 do dispose(stringSingletons[i],destroy);
+  leaveCriticalSection(stringSingletonsCs);
+  doneCriticalSection(stringSingletonsCs);
 end.
