@@ -31,7 +31,7 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -134,7 +134,7 @@ FUNCTION TDisplayImageForm.getIdeComponentType: T_ideComponent;
     result:=icImage;
   end;
 
-PROCEDURE TDisplayImageForm.performSlowUpdate;
+PROCEDURE TDisplayImageForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 
