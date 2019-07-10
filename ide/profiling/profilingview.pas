@@ -32,7 +32,7 @@ TYPE
     PROCEDURE StringGrid2HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
     PROCEDURE StringGrid2KeyPress(Sender: TObject; VAR key: char);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean;index: integer);
     PROCEDURE StringGrid3KeyPress(Sender: TObject; VAR key: char);
@@ -198,7 +198,7 @@ FUNCTION TprofilingOutputForm.getIdeComponentType: T_ideComponent;
     result:=icProfilingOutput;
   end;
 
-PROCEDURE TprofilingOutputForm.performSlowUpdate; begin end;
+PROCEDURE TprofilingOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean); begin end;
 PROCEDURE TprofilingOutputForm.performFastUpdate; begin end;
 
 PROCEDURE TprofilingOutputForm.setProfilingList(CONST list: T_profilingList);

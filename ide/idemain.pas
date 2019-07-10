@@ -638,7 +638,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       try
         slowUpdating:=true;
         if workspace.savingRequested then saveIdeSettings;
-        performSlowUpdates;
+        performSlowUpdates(runnerModel.anyRunning(false));
         drawMemoryUsage;
 
         FormDropFiles(Sender,ipcModel.getFilesToOpen);

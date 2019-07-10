@@ -37,7 +37,7 @@ TYPE
     PROCEDURE treeViewDblClick(Sender: TObject);
 
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -349,7 +349,7 @@ FUNCTION TOutlineForm.getIdeComponentType: T_ideComponent;
     result:=icOutline;
   end;
 
-PROCEDURE TOutlineForm.performSlowUpdate;
+PROCEDURE TOutlineForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 

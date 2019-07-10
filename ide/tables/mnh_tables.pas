@@ -49,7 +49,7 @@ TYPE
     PROCEDURE stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
 
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -300,7 +300,7 @@ FUNCTION TtableForm.getIdeComponentType: T_ideComponent;
     result:=icTable;
   end;
 
-PROCEDURE TtableForm.performSlowUpdate;
+PROCEDURE TtableForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 

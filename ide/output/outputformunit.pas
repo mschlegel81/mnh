@@ -66,7 +66,7 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -196,8 +196,9 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
     updateWordWrap;
   end;
 
-PROCEDURE TOutputForm.performSlowUpdate;
+PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
+    if not(isEvaluationRunning) then cbFreezeOutput.checked:=false;
     if cbFreezeOutput.checked
     then OutputSynEdit.color:=CL_INACTIVE_GREY
     else OutputSynEdit.color:=clWhite;

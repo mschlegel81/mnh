@@ -120,7 +120,7 @@ TYPE
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -313,7 +313,7 @@ PROCEDURE TplotForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
-    doPlot();
+    if relatedPlot<>nil then relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
@@ -340,25 +340,25 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
     miAntiAliasing1.checked:=true;
-    doPlot;
+    relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing2Click(Sender: TObject);
   begin
     miAntiAliasing2.checked:=true;
-    doPlot;
+    relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing3Click(Sender: TObject);
   begin
     miAntiAliasing3.checked:=true;
-    doPlot;
+    relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing4Click(Sender: TObject);
   begin
     miAntiAliasing4.checked:=true;
-    doPlot;
+    relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
@@ -466,7 +466,6 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
   begin
-    performSlowUpdate;
     if (myComponentParent<>cpNone) then mainForm.ActiveControl:=self;
     if ssLeft in Shift then begin
       lastMouseX:=x;
@@ -511,7 +510,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
       if Assigned(onPlotRescale) then onPlotRescale(Sender);
       lastMouseX:=x;
       lastMouseY:=y;
-      doPlot;
+      if relatedPlot<>nil then relatedPlot^.logPlotChanged;
     end;
   end;
 
@@ -528,9 +527,9 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
     result:=icPlot;
   end;
 
-PROCEDURE TplotForm.performSlowUpdate;
+PROCEDURE TplotForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
-    if (relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
+    if not(isEvaluationRunning) and(relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;

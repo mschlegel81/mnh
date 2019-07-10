@@ -20,7 +20,7 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE openHtmlButtonClick(Sender: TObject);
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE UpdateToggleBoxChange(Sender: TObject);
     PROCEDURE dockChanged; override;
@@ -85,7 +85,7 @@ PROCEDURE THelpForm.openHtmlButtonClick(Sender: TObject);
     OpenURL(currentLink);
   end;
 
-PROCEDURE THelpForm.performSlowUpdate;
+PROCEDURE THelpForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
 
   end;

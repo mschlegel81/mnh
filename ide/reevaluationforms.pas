@@ -35,7 +35,7 @@ PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
     begin
       if not(slowUpdating) then begin
         slowUpdating:=true;
-        performSlowUpdates;
+        performSlowUpdates(runner.isRunning);
         {$ifdef debugMode}
         writeln(runner.stateString);
         {$endif}

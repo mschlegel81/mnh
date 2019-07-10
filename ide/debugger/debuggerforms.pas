@@ -31,7 +31,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE tbHaltClick(Sender: TObject);
     PROCEDURE tbMicroStepClick(Sender: TObject);
@@ -120,7 +120,7 @@ PROCEDURE TDebuggerForm.FormDestroy(Sender: TObject);
     unregisterFontControl(inlineVariablesTreeView);
   end;
 
-PROCEDURE TDebuggerForm.performSlowUpdate;
+PROCEDURE TDebuggerForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 

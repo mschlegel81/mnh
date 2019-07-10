@@ -17,7 +17,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -59,7 +59,7 @@ FUNCTION TAssistanceForm.getIdeComponentType: T_ideComponent;
     result:=icAssistance;
   end;
 
-PROCEDURE TAssistanceForm.performSlowUpdate;
+PROCEDURE TAssistanceForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 

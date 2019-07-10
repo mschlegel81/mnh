@@ -36,7 +36,7 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoInputClick(Sender: TObject);
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE quickInputEditChange(Sender: TObject);
     PROCEDURE dockChanged; override;
@@ -142,7 +142,7 @@ PROCEDURE TQuickEvalForm.FormResize(Sender: TObject);
     updateWordWrap;
   end;
 
-PROCEDURE TQuickEvalForm.performSlowUpdate;
+PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
   end;
 
