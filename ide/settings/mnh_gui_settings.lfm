@@ -277,36 +277,36 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 165
-      ClientWidth = 235
+      ClientHeight = 211
+      ClientWidth = 296
       ParentFont = False
       object Panel1: TPanel
         Left = 0
-        Height = 23
+        Height = 28
         Top = 0
-        Width = 235
+        Width = 296
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 235
+        ClientHeight = 28
+        ClientWidth = 296
         ParentFont = False
         TabOrder = 0
         object Label1: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 31
+          Width = 36
           Align = alLeft
           Caption = 'CPUs:'
           ParentColor = False
           ParentFont = False
         end
         object workerThreadCountEdit: TEdit
-          Left = 31
-          Height = 23
+          Left = 36
+          Height = 28
           Top = 0
-          Width = 204
+          Width = 260
           Align = alClient
           NumbersOnly = True
           OnEditingDone = workerThreadCountEditEditingDone
@@ -317,32 +317,32 @@ object SettingsForm: TSettingsForm
       end
       object Panel2: TPanel
         Left = 0
-        Height = 23
-        Top = 23
-        Width = 235
+        Height = 28
+        Top = 28
+        Width = 296
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 235
+        ClientHeight = 28
+        ClientWidth = 296
         ParentFont = False
         TabOrder = 1
         object Label6: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 107
+          Width = 131
           Align = alLeft
           Caption = 'Memory Limit (MB):'
           ParentColor = False
           ParentFont = False
         end
         object memLimitEdit: TEdit
-          Left = 107
-          Height = 23
+          Left = 131
+          Height = 28
           Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 128
+          Width = 165
           Align = alClient
           NumbersOnly = True
           OnEditingDone = memLimitEditEditingDone
@@ -355,31 +355,31 @@ object SettingsForm: TSettingsForm
       end
       object Panel3: TPanel
         Left = 0
-        Height = 23
-        Top = 46
-        Width = 235
+        Height = 28
+        Top = 56
+        Width = 296
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 235
+        ClientHeight = 28
+        ClientWidth = 296
         ParentFont = False
         TabOrder = 2
         object Label4: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 52
+          Width = 64
           Align = alLeft
           Caption = 'Autosave:'
           ParentColor = False
           ParentFont = False
         end
         object autosaveComboBox: TComboBox
-          Left = 52
+          Left = 64
           Height = 28
           Top = 0
-          Width = 183
+          Width = 232
           Align = alClient
           ItemHeight = 20
           OnChange = autosaveComboBoxChange
@@ -390,11 +390,11 @@ object SettingsForm: TSettingsForm
       end
       object miSaveBeforeRun: TCheckBox
         Left = 0
-        Height = 19
-        Top = 69
-        Width = 235
+        Height = 24
+        Top = 84
+        Width = 296
         Align = alTop
-        Caption = 'Autosave before each execution'
+        Caption = 'Autosave on execution'
         OnChange = miSaveBeforeRunChange
         ParentFont = False
         TabOrder = 3

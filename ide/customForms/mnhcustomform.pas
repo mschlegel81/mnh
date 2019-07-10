@@ -91,7 +91,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -486,9 +486,8 @@ FUNCTION TscriptedForm.getIdeComponentType: T_ideComponent;
     result:=icCustomForm;
   end;
 
-PROCEDURE TscriptedForm.performSlowUpdate;
+PROCEDURE TscriptedForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
-
   end;
 
 PROCEDURE TscriptedForm.performFastUpdate;

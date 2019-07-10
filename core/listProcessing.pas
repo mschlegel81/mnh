@@ -558,9 +558,6 @@ PROCEDURE T_mapTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:
     clearMapPayload;
     setLength(mapPayload.mapParameter,length(x));
     for k:=0 to length(x)-1 do mapPayload.mapParameter[k]:=x[k];
-    {$ifdef debugMode}
-    for k:=1 to length(x)-1 do if x[k]<>nil then for i:=0 to k-1 do if pointer(x[i])=pointer(x[k]) then raise Exception.create('Adding duplicate map parameter');
-    {$endif}
     nextToAggregate:=nil;
     inherited defineAndEnqueueOrEvaluate(taskEnv,recycler);
   end;

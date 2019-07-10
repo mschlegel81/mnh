@@ -12,6 +12,7 @@ object profilingOutputForm: TprofilingOutputForm
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  PopupMenu = PopupMenu1
   LCLVersion = '2.0.2.0'
   object GroupBox1: TGroupBox
     Left = 0
@@ -23,6 +24,7 @@ object profilingOutputForm: TprofilingOutputForm
     ClientHeight = 340
     ClientWidth = 227
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 0
     object StringGrid1: TStringGrid
       Left = 0
@@ -34,6 +36,7 @@ object profilingOutputForm: TprofilingOutputForm
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 0
       OnHeaderClick = StringGrid1HeaderClick
       OnKeyPress = StringGrid1KeyPress
@@ -86,6 +89,7 @@ object profilingOutputForm: TprofilingOutputForm
       ClientHeight = 115
       ClientWidth = 455
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 0
       object StringGrid2: TStringGrid
         Left = 0
@@ -97,6 +101,7 @@ object profilingOutputForm: TprofilingOutputForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
         ParentFont = False
+        PopupMenu = PopupMenu1
         TabOrder = 0
         OnHeaderClick = StringGrid2HeaderClick
         OnHeaderSized = StringGrid2HeaderSized
@@ -141,6 +146,7 @@ object profilingOutputForm: TprofilingOutputForm
       ClientHeight = 194
       ClientWidth = 455
       ParentFont = False
+      PopupMenu = PopupMenu1
       TabOrder = 2
       object StringGrid3: TStringGrid
         Left = 0
@@ -152,6 +158,7 @@ object profilingOutputForm: TprofilingOutputForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
         ParentFont = False
+        PopupMenu = PopupMenu1
         TabOrder = 0
         OnHeaderClick = StringGrid2HeaderClick
         OnHeaderSized = StringGrid3HeaderSized

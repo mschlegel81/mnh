@@ -18,7 +18,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE StackGridSelection(Sender: TObject; aCol, aRow: integer);
     PROCEDURE dockChanged; override;
@@ -63,9 +63,8 @@ PROCEDURE TDebuggerVarForm.FormDestroy(Sender: TObject);
     variablesTreeViewModel.destroy;
   end;
 
-PROCEDURE TDebuggerVarForm.performSlowUpdate;
+PROCEDURE TDebuggerVarForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
-
   end;
 
 PROCEDURE TDebuggerVarForm.performFastUpdate;

@@ -20,7 +20,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -74,7 +74,7 @@ PROCEDURE TBreakpointsForm.FormDestroy(Sender: TObject);
     unregisterFontControl(BreakpointsListBox);
   end;
 
-PROCEDURE TBreakpointsForm.performSlowUpdate;
+PROCEDURE TBreakpointsForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   VAR oldSelected:longint=-1;
       loc:T_searchTokenLocation;
   begin

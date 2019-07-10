@@ -1802,7 +1802,8 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
     enterCriticalSection(adapterCs);
     try
       globalRowData:=newListLiteral();
-      result:='plain script;';
+      result:='#!'+settings.fullFlavourLocation+' -GUI';
+      myGenerics.append(result,'plain script;');
 
       commands:='resetOptions;';
       myGenerics.append(commands,'clearAnimation;');

@@ -20,7 +20,7 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
 
     FUNCTION getIdeComponentType:T_ideComponent; override;
-    PROCEDURE performSlowUpdate; override;
+    PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
@@ -148,7 +148,7 @@ FUNCTION TVarTreeViewForm.getIdeComponentType: T_ideComponent;
     result:=icVariableView;
   end;
 
-PROCEDURE TVarTreeViewForm.performSlowUpdate; begin end;
+PROCEDURE TVarTreeViewForm.performSlowUpdate(CONST isEvaluationRunning:boolean); begin end;
 PROCEDURE TVarTreeViewForm.performFastUpdate; begin end;
 
 PROCEDURE TVarTreeViewForm.dockChanged;

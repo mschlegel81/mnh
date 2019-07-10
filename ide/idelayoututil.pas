@@ -42,7 +42,7 @@ TYPE
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
-      PROCEDURE performSlowUpdate; virtual; abstract;
+      PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); virtual; abstract;
       PROCEDURE performFastUpdate; virtual; abstract;
       PROCEDURE getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
       PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -121,7 +121,7 @@ PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
 FUNCTION getFontSize(CONST c:T_controlType): longint;
 PROCEDURE setFontSize (CONST c:T_controlType; CONST value: longint);
 
-PROCEDURE performSlowUpdates;
+PROCEDURE performSlowUpdates(CONST isEvaluationRunning:boolean);
 PROCEDURE performFastUpdates;
 FUNCTION  focusedEditor:TSynEdit;
 FUNCTION  typeOfFocusedControl:T_controlType;
@@ -587,10 +587,10 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: intege
     dockChanged;
   end;
 
-PROCEDURE performSlowUpdates;
+PROCEDURE performSlowUpdates(CONST isEvaluationRunning:boolean);
   VAR f:T_mnhComponentForm;
   begin
-    for f in activeForms do f.performSlowUpdate;
+    for f in activeForms do f.performSlowUpdate(isEvaluationRunning);
   end;
 
 PROCEDURE performFastUpdates;
