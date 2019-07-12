@@ -551,9 +551,6 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST expr: P_expressionLiteral);
 
 PROCEDURE T_mapTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
   VAR k:longint;
-      {$ifdef debugMode}
-      i:longint;
-      {$endif}
   begin
     clearMapPayload;
     setLength(mapPayload.mapParameter,length(x));

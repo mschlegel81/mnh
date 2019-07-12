@@ -701,6 +701,7 @@ PROCEDURE TplotForm.doPlot;
       if relatedPlot^.animation.frameCount<>0 then begin
         relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
       end else begin
+        //TODO: Prepare plot in background
         relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
         relatedPlot^.logPlotDone;
       end;
