@@ -3805,6 +3805,7 @@ INITIALIZATION
   boolLit[true ].create(true);
   voidLit.create();
   emptyStringSingleton.create('');
+  initialize(stringSingletons);
   initCriticalSection(stringSingletonsCs);
   setLength(stringSingletons,0);
   for i:=low(intLit) to high(intLit) do intLit[i].create(i);

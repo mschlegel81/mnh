@@ -1138,29 +1138,35 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     end;
 
   PROCEDURE drawPolygons;
-    PROCEDURE screenRowPoly(CONST i0,i1:longint);
-      VAR points:array of TPoint;
-          i:longint;
+    VAR points:array of TPoint;
+    PROCEDURE screenRowPoly(CONST i0,i1:longint); inline;
+      VAR i:longint;
       begin
         if (i0<0) or (i1<i0+1) then exit;
-        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        target.Brush.color:=scaleAndColor.solidColor;
-        target.Brush.style:=scaleAndColor.solidStyle;
-        setLength(points,i1-i0+1);
-        for i:=0 to i1-i0 do begin
-          points[i].x:=screenRow[i0+i].x;
-          points[i].y:=screenRow[i0+i].y;
+        if scaleAndColor.solidStyle=bsClear then begin
+          target.MoveTo(screenRow[i1].x, screenRow[i1].y);
+          for i:=i0 to i1 do target.LineTo(screenRow[i].x, screenRow[i].y);
+        end else begin
+          setLength(points,i1-i0+1);
+          for i:=0 to i1-i0 do begin
+            points[i].x:=screenRow[i0+i].x;
+            points[i].y:=screenRow[i0+i].y;
+          end;
+          target.Polygon(points);
         end;
-        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-        target.Polygon(points);
-        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
       end;
+
     VAR i,j:longint;
     begin
-      target.Pen.style:=psSolid;
+      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+      if (scaleAndColor.lineWidth<=0)
+      then target.Pen.style:=psClear
+      else target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
+      target.Brush.color:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
       j:=-1;
       for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
         if j>=0 then screenRowPoly(j,i-1);
@@ -1168,6 +1174,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       end else if j<0 then j:=i;
       i:=length(screenRow)-1;
       if j>=0 then screenRowPoly(j,i);
+      setLength(points,0);
     end;
 
   PROCEDURE prepareBSplines;
@@ -1384,7 +1391,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
                     screenRow[i].y);
     end;
 
+  {$ifdef debugMode}
+  VAR timer:TEpikTimer;
+  {$endif}
   begin
+    {$ifdef debugMode}
+    timer:=TEpikTimer.create(nil);
+    timer.clear;
+    timer.start;
+    {$endif}
     screenBox:=boundingBoxOf(0,0,intendedWidth*scalingFactor,intendedHeight*scalingFactor);
     target.LockCanvas;
     //Clear:------------------------------------------------------------------
@@ -1441,6 +1456,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     except
       yBaseLine:=0;
     end;
+    {$ifdef debugMode}
+    writeln('Grid drawn in ',timer.elapsed*1000:0:3,'ms @',intendedWidth,'x',intendedHeight,' in canvas of ',target.width,'x',target.height);
+    timer.clear; timer.start;
+    {$endif}
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
@@ -1465,21 +1484,48 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       if (ps_bspline   in row[rowId].style.style) or
          (ps_cosspline in row[rowId].style.style) or
          (ps_straight  in row[rowId].style.style) then drawStraightLines;
+      {$ifdef debugMode}
+      writeln('Row #',rowId,' drawn in ',timer.elapsed*1000:0:3,'ms');
+      timer.clear; timer.start;
+      {$endif}
     end;
     //===============================================================:row data
     target.UnlockCanvas;
+    {$ifdef debugMode}
+    FreeAndNil(timer);
+    {$endif}
   end;
 
 PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint);
   VAR txt:P_customText;
+  {$ifdef debugMode}
+  VAR timer:TEpikTimer;
+  {$endif}
   begin
+    {$ifdef debugMode}
+    timer:=TEpikTimer.create(nil);
+    timer.clear;
+    timer.start;
+    {$endif}
     for txt in customText do txt^.renderText(intendedWidth,intendedHeight,scalingOptions,target);
+    {$ifdef debugMode}
+    writeln('Custom text drawn in ',timer.elapsed*1000:0:3,'ms');
+    FreeAndNil(timer);
+    {$endif}
   end;
 
 PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
+  {$ifdef debugMode}
+  VAR timer:TEpikTimer;
+  {$endif}
   begin
+    {$ifdef debugMode}
+    timer:=TEpikTimer.create(nil);
+    timer.clear;
+    timer.start;
+    {$endif}
     enterCriticalSection(globalTextRenderingCs);
     try
       target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
@@ -1520,6 +1566,10 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     finally
       leaveCriticalSection(globalTextRenderingCs);
     end;
+    {$ifdef debugMode}
+    writeln('Coordinate system drawn in ',timer.elapsed*1000:0:3,'ms');
+    FreeAndNil(timer);
+    {$endif}
   end;
 
 PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
