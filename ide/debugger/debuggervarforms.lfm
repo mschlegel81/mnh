@@ -12,6 +12,7 @@ object DebuggerVarForm: TDebuggerVarForm
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  PopupMenu = PopupMenu1
   LCLVersion = '2.0.2.0'
   object Splitter1: TSplitter
     Cursor = crVSplit
@@ -20,6 +21,7 @@ object DebuggerVarForm: TDebuggerVarForm
     Top = 125
     Width = 400
     Align = alTop
+    PopupMenu = PopupMenu1
     ResizeAnchor = akTop
   end
   object VariablesTree: TTreeView
@@ -29,6 +31,7 @@ object DebuggerVarForm: TDebuggerVarForm
     Width = 400
     Align = alClient
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 1
   end
   object StackGrid: TStringGrid
@@ -43,6 +46,7 @@ object DebuggerVarForm: TDebuggerVarForm
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goDblClickAutoSize, goSmoothScroll]
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 2
     OnSelection = StackGridSelection
     Cells = (
