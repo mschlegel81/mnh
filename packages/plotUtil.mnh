@@ -1,38 +1,57 @@
-private prepareGeometry(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2)->begin
-  local stretch:=0.5*sqrt(3);
-  local kx:=sqrt((x1-x0)/(y1-y0)*triangleCount/2*stretch).round.max(1);
-  local ky:=sqrt((y1-y0)/(x1-x0)*triangleCount/2/stretch).round.max(1);
-  local hx:=(x1-x0)/(kx-0.5);
-  local hy:=(y1-y0)/(ky-1);
-  local N:=[0..kx-1].each(ix,
-           [0..ky-1].each(iy,[x0+(ix+(iy and 1)*0.5)*hx,
-                              y0+ iy                *hy]),|);
-  local T:=cross([0..kx-2],[0..ky-2])
-           .each(i,(i[1] and 1)=0 ? [i      ,i+[0,1],i+[1,0]] :
-                                    [i      ,i+[0,1],i+[1,1]],
-                   (i[1] and 1)=0 ? [i+[1,0],i+[1,1],i+[0,1]] :
-                                    [i      ,i+[1,0],i+[1,1]])|
-   [1..ky-2].each(iy,(iy and 1)=1 ? [[0   ,iy-1],[0   ,iy],[0   ,iy+1]] :
-                                    [[kx-1,iy-1],[kx-1,iy],[kx-1,iy+1]]);
-  //Fill out gaps in the corners
-  T:=T.map({$tri.map({$i[0]*ky+$i[1]})});
-  N|=[[x1,y0]];
-  T|=[[size(N)-1,ky*(kx-1),ky*(kx-1)+1]];
-  (ky and 1)=1
-  ? begin
-      N|=[[x1,y1]];
-      T|=[[size(N)-1,kx*ky-1,kx*ky-2]];
-    end
-  : begin
-      N|=[[x0,y1]];
-      T|=[[size(N)-1,ky-1,ky-2]];
-    end;
+private hexPoints(x0,x1,y0,y1,n)->
+begin
+  // kx*ky = n
+  // kx/ky = (x1-x0)/(y1-y0)*sqrt(0.5)
+  // kx    = ky   * (x1-x0)/(y1-y0)*sqrt(0.5)
+  // kx    = n/kx * (x1-x0)/(y1-y0)*sqrt(0.5)
+  // kx    = sqrt(n    * (x1-x0)/(y1-y0)*sqrt(0.5))
+  local kx:=max(2,round(sqrt(n*(x1-x0)/(y1-y0)*sqrt(0.5))));
+  local ky:=max(2,n div (kx*2)*2+1);
+  local edges:=[];
 
-  local sample:=F((x0+x1)/2,(y0+y1)/2);
-  [sample.isNumeric        ? N.pMap({$x|F@$x}) :
-   sample.isNumericList(3) ? N.pMap({   F@$x}) :
-   fail("Invalid function ",F,"\nShould return Numeric or NumericList(3) but returns ",sample.typeOf),
-   T];
+  local outIdx:=0;
+  local P:=[0..ky-1].cross([0..kx-1]).each(c,
+  begin
+    local ix:=c[1];
+    local iy:=c[0];
+    ix==(kx-1) AND (iy and 1)=1 ? void :
+    begin
+      ////Straight upward neighbor:
+      ix in [0,kx-1] AND (iy and 1)=0 AND iy<ky-1
+      ? edges||=[outIdx,outIdx+kx+kx-1]
+      : void;
+      ////Right neighbor:
+      ix<kx-1-(iy and 1)
+      ? edges||=[outIdx,outIdx+1]
+      : void;
+      //upper right neighbor
+      ix<kx-1 AND iy<ky-1
+      ? edges||=[outIdx,outIdx+kx]
+      : void;
+      //upper left neighbor:
+      (1-(iy and 1))<=ix<kx AND iy<ky-1
+      ? edges||=[outIdx,outIdx+kx-1]
+      : void;
+      outIdx+=1;
+      [ix+0.5*(iy and 1),
+       iy*sqrt(0.5)];
+    end;
+  end);
+
+  local edgesByPoint:=edges.each(edge,[edge[0],edge],[edge[1],edge])
+                           .group(0)
+                           .each(g,[g[0,0],g.getInner(1)])
+                           .toMap;
+  local triangles:= edges.each(edge,intersect(edgesByPoint[edge[0]].flatten,
+                                              edgesByPoint[edge[1]].flatten)
+                                    .minus(edge)
+                                    .each(k,sort(edge|k)),|)
+                         .unique;
+  local f:=[(x1-x0)/P.getInner(0).max,
+            (y1-y0)/P.getInner(1).max];
+  local o:=[x0,y0];
+  P:=P.map({$p*f+o});
+  [P,triangles];
 end;
 
 //*Returns a list of edges in the polyon (in node index space)
@@ -60,12 +79,13 @@ end;
 USE customFormUtil;
 
 @SuppressUnusedWarning=all
-contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->begin
-  local geometry:=prepareGeometry(F,x0,x1,y0,y1,triangleCount);
-  local nodes    :=geometry[0];
+contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->
+  plot() orElse addContourPlot(F,x0,x1,y0,y1,triangleCount,contourLevels,qualityLevel,interactive);
+addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->begin
+  local geometry:=hexPoints(x0,x1,y0,y1,triangleCount);
+  local nodes    :=geometry[0].map({$p|(F@$p)});
   local triangles:=geometry[1];
   //Convert geometry to a list of adjacent edges
-  plot();
   local edgePairs:=[].toSet;
   local edgeList:=[].toSet;
   triangles.each(tri,begin
@@ -119,45 +139,38 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
     newLabel.withCaption({'y='&y}),
     newLabel.withCaption({'f(x,y)='&f}),
     newPlotLink.withMouseMoved({begin
-    x:=$x;
-    y:=$y;
-    f:=F($x,$y);
-    local lines:=dataForLevel(f);
-    lines.size==0 ? void : addPlot(lines,'black');
-    display;
-    lines.size==0 ? void : removePlot;
-  end}),
+      x:=$x;
+      y:=$y;
+      f:=F($x,$y);
+      local lines:=dataForLevel(f);
+      lines.size==0 ? void : addPlot(lines,'black');
+      display;
+      lines.size==0 ? void : removePlot;
+    end}),
     newPlotDock]);
 end;
 
-densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
-  local xSamples:=sqrt((x1-x0)/(y1-y0)*sampleCount).round.max(1);
-  local ySamples:=sqrt((y1-y0)/(x1-x0)*sampleCount).round.max(1);
-  local hx:=(x1-x0)/xSamples;
-  local hy:=(y1-y0)/ySamples;
-  local samples:=cross(x0+hx*([0..xSamples-1]+0.5),
-                       y0+hy*([0..ySamples-1]+0.5)).pMap({$x||(f@$x)});
+densityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->
+  plot() orElse addDensityPlot(F,x0,x1,y0,y1,sampleCount,interactive);
 
-  samples.getInner(2).isNumericList
-  ? void
-  : fail('f must return a numeric result');
+addDensityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
+  local geometry:=hexPoints(x0,x1,y0,y1,sampleCount);
+  local nodes    :=geometry[0];
+  local triangles:=geometry[1].pEach(t,
+    [nodes[t],F@(nodes[t].agg(+)/nodes[t].size)]);
 
-  local z0:=samples.getInner(2).min;
-  local z1:=samples.getInner(2).max;
+  local z0:=triangles.getInner(1).min;
+  local z1:=triangles.getInner(1).max;
   z1:=1/(z1-z0);
-  local c:={format('polygon 0 TI0 RGB%s,%s,%s',
+  local c:={format('polygon fs 0 TI0 RGB%s,%s,%s',
   1-max(2*$x-1       ,0),
   1-max(1-2*$x,2*$x-1,0),
   1-max(1-2*$x       ,0))};
   local style:={c(($z-z0)*z1)};
 
-  local d0:=[hx,-hx,-hx, hx]/2;
-  local d1:=[hy, hy,-hy,-hy]/2;
-
-  plot();
-  samples
-  .pMap({[$s[0]+d0,$s[1]+d1,style($s[2])]})
-  .each(polygon,addPlot@polygon);
+  triangles
+  .pMap({[$s[0],style($s[1])]})
+  .each(polygon, addPlot@polygon);
 
   interactive ? void : return void;
 
@@ -170,10 +183,11 @@ densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean
     newLabel.withCaption({'y='&y}),
     newLabel.withCaption({'f(x,y)='&f}),
     newPlotLink.withMouseMoved({begin
-    x:=$x;
-    y:=$y;
-    f:=f($x,$y);
-  end})]);
+      x:=$x;
+      y:=$y;
+      f:=F($x,$y);
+    end}),
+    newPlotDock]);
 end;
 
 private PLOT_STYLE_KEYS:=['scale','color','ti','style','style2'];
@@ -192,6 +206,7 @@ private modifyStyle(S:PlotStyle,key in PLOT_STYLE_KEYS,value)->begin
 end;
 
 @SuppressUnusedWarning=all
+@Override
 toString(style:PlotStyle)->style.getInner(1).join(" ");
 
 LINE     :=['style'=>'line'     ].toMap.toPlotStyle; LINE     (S:PlotStyle)->modifyStyle(S,'style','line'     );
