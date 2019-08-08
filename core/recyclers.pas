@@ -68,8 +68,8 @@ TYPE
       PROCEDURE clearCache; virtual;
       PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_messages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
-      FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
+      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
   end;
@@ -276,13 +276,13 @@ FUNCTION T_abstractRule.complainAboutUnused(CONST adapters: P_messages): boolean
 
 PROCEDURE T_abstractRule.clearCache; begin end;
 PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_messages); begin end;
-FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
+FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;
   begin
     new(parList,create(1));
     parList^.append(singleParameter,true);
-    if replaces(ruleTokenType,callLocation,parList,firstRep,lastRep,context,recycler)
+    if replaces(callLocation,parList,firstRep,lastRep,context,recycler)
     then begin
       result:=(firstRep<>     nil          ) and
               (firstRep^.next=nil          ) and

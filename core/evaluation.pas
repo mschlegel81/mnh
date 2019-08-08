@@ -352,11 +352,11 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
+      if (first^.tokType=tt_userRule) then begin
         {$ifdef useTryCatchBlocks}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context,recycler)) then begin
+          if not(P_rule(first^.data)^.replaces(first^.location,parameterListLiteral,firstReplace,lastReplace,@context,recycler)) then begin
             context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
@@ -429,6 +429,12 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         end;
       end else begin
         context.raiseError('Trying to apply a rule which is no rule!',errorLocation);
+        {$ifdef debugMode}
+        writeln('***********');
+        writeln('* No-rule token has type: ',first^.tokType);
+        writeln('* No-rule token reads   : ',first^.singleTokenToString);
+        writeln('***********');
+        {$endif}
         exit;
       end;
       recycler.disposeToken(first);
@@ -803,7 +809,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       stack.popLink(first);   // -> ? | [ ...
       first^.tokType:=tt_literal; // -> ? | <NewList>
       didSubstitution:=true;
-      if (stack.topType in [tt_blockLocalVariable,tt_localUserRule,tt_importedUserRule]) then begin
+      if (stack.topType in [tt_blockLocalVariable,tt_userRule]) then begin
         // x # [y]:=... -> x<<[y]|...;
         stack.popLink(first);
         if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
@@ -867,9 +873,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       location:=first^.location;;
       ruleToken:=recycler.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
-      if (ruleToken^.tokType in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule])
+      if (ruleToken^.tokType=tt_userRule)
       then begin
-        ruleToken^.data:=P_rule(ruleToken^.data)^.getFunctionPointer(context,recycler,ruleToken^.tokType,ruleToken^.location);
+        ruleToken^.data:=P_rule(ruleToken^.data)^.getFunctionPointer(context,recycler,ruleToken^.location);
         ruleToken^.tokType:=tt_literal;
         first:=ruleToken;
       end else begin
@@ -1209,10 +1215,10 @@ end}
           end else applyRule(first^.next,first^.next^.next);
         end;
 
-{cT[0]=}tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
+{cT[0]=}tt_userRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_listBraceOpen: begin
-            if (cTokType[0] in [tt_localUserRule,tt_importedUserRule]) and
+            if (cTokType[0]=tt_userRule) and
                (P_rule(first^.data)^.getRuleType in [rt_datastore,rt_mutable]) then begin
               stack.push(first);
               didSubstitution:=true;
@@ -1238,7 +1244,7 @@ end}
           else context.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
 {cT[0]=}tt_pseudoFuncPointer: case cTokType[1] of
-          tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
+          tt_userRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
             first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
             first^.tokType:=tt_literal;

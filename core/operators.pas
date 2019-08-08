@@ -154,7 +154,7 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
       parList:=newListLiteral(1);
       parList^.append(operand,true);
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,@context,recycler) then begin
+      if rule^.replaces(tokenLocation,parList,ruleOut,dummy,@context,recycler) then begin
         result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         disposeLiteral(parList);
@@ -191,7 +191,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       parList:=newListLiteral(2);
       parList^.append(LHS,true)^.append(RHS,true);
       inc(P_context(context)^.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context,P_recycler(recycler)^) then begin
+      if rule^.replaces(tokenLocation,parList,ruleOut,dummy,context,P_recycler(recycler)^) then begin
         result:=P_context(context)^.reduceToLiteral(ruleOut,P_recycler(recycler)^).literal;
         dec(P_context(context)^.callDepth);
         disposeLiteral(parList);
@@ -332,7 +332,7 @@ FUNCTION outerFunc_id intFuncSignature;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+      if rule^.replaces(tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
         result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);
@@ -429,7 +429,7 @@ FUNCTION outerFunc_id intFuncSignature;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+      if rule^.replaces(tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
         result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);
@@ -477,7 +477,7 @@ boolIntOperator;
         exit(nil);
       end;
       inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
+      if rule^.replaces(tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
         result:=context.reduceToLiteral(ruleOut,recycler).literal;
         dec(context.callDepth);
         exit(result);

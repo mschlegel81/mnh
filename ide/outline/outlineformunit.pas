@@ -98,7 +98,7 @@ CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
               {rt_customTypeCheck} 4,
               {rt_duckTypeCheck}   4,
               {rt_customTypeCast}  5,
-              {rt_customOperator}  6);
+              {rt_customOperator}  6,-1);
 
 CONSTRUCTOR T_outlineSettings.create;
   begin

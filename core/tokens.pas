@@ -226,11 +226,9 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_typeCheck: result:=':'+C_typeCheckInfo[getTypeCheck].name;
       tt_modifier : result:=C_modifierInfo[getModifier].name;
       tt_identifier,
-      tt_localUserRule,
-      tt_importedUserRule,
+      tt_userRule,
       tt_intrinsicRule,
       tt_rulePutCacheValue,
-      tt_customTypeRule,
       tt_parameterIdentifier,
       tt_blockLocalVariable,
       tt_eachIndex,
@@ -252,7 +250,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
 FUNCTION T_token.hash:T_hashInt;
   begin
     result:=T_hashInt(tokType);
-    if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule,tt_typeCheck] then result:=result*31+T_hashInt(data);
+    if tokType in [tt_intrinsicRule,tt_userRule,tt_rulePutCacheValue,tt_typeCheck] then result:=result*31+T_hashInt(data);
     if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
                     tt_mutate,tt_assignExistingBlockLocal..tt_mut_nestedDrop,
                     tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])
@@ -274,7 +272,7 @@ FUNCTION T_token.equals(CONST other:T_token):boolean;
 
   begin
     if tokType<>other.tokType then exit(false);
-    if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule,tt_typeCheck] then exit(data=other.data);
+    if tokType in [tt_intrinsicRule,tt_userRule,tt_rulePutCacheValue,tt_typeCheck] then exit(data=other.data);
     if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
                     tt_mutate,tt_assignExistingBlockLocal..tt_mut_nestedDrop,
                     tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])

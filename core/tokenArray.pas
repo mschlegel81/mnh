@@ -185,7 +185,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
+        tt_identifier,tt_userRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil)
@@ -194,7 +194,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
-              if (t^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+              if (t^.tokType = tt_userRule) then begin
                 rule:=t^.data;
                 if rule^.getRuleType in C_mutableRuleTypes then begin
                   t^.data:=rule;
@@ -315,7 +315,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     references:=token^.location; //default: references itself
 
     tokenText:=safeTokenToString(token);
-    if (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
+    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal]) then
     case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
       tt_eachParameter: begin
         token^.tokType:=tt_eachParameter;
@@ -354,7 +354,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
         end;
       end;
     end;
-    if (linksTo=nothing) and (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck]) then begin
+    if (linksTo=nothing) and (token^.tokType in [tt_userRule,tt_customTypeCheck]) then begin
       references:=P_abstractRule(token^.data)^.getLocation;
     end;
   end;
@@ -369,11 +369,9 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     case token^.tokType of
       tt_identifier         ,
       tt_parameterIdentifier,
-      tt_localUserRule      ,
-      tt_importedUserRule   ,
+      tt_userRule      ,
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
-      tt_customTypeRule     ,
       tt_eachParameter,
       tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
       else exit(false);
@@ -419,17 +417,16 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule,tt_eachParameter,tt_each,tt_parallelEach];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
         tt_each,tt_parallelEach: result.idWithoutIsPrefix:=token^.txt;
-        tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule:
+        tt_customTypeCheck,tt_userRule:
                                  result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
         else                     result.idWithoutIsPrefix:=tokenText;
       end;
-      result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
-                                         (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
+      result.mightBeUsedInOtherPackages:=(token^.tokType in [tt_userRule,tt_customTypeCheck]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of
@@ -462,7 +459,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
         if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
       end;
-      tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+      tt_userRule, tt_customTypeCheck: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
@@ -800,7 +797,7 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
       tt_each,tt_parallelEach: begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) and
-           (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
+           (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
            (n[3]<>nil) and (n[3]^.tokType=tt_separatorComma) then begin
           nextToken^.txt:=n[2]^.txt;
           nextToken^.data:=nil;
@@ -900,7 +897,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
@@ -952,7 +949,7 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(lastTokenized^.txt   ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(lastTokenized^.txt,lastLocation,tt_blockLocalVariable) of

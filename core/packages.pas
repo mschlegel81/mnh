@@ -487,7 +487,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         exit;
       end;
       first:=recycler.disposeToken(first);
-      if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+      if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
         helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
@@ -582,7 +582,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       first:=recycler.disposeToken(first);
       while first<>nil do begin
         j:=-1;
-        if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+        if first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
           if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
@@ -690,7 +690,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
       if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
-      if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
+      if not(statement.firstToken^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.firstToken^.location);
         recycler.cascadeDisposeToken(statement.firstToken);
         recycler.cascadeDisposeToken(ruleBody);
@@ -698,7 +698,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       p:=statement.firstToken;
       while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
-        if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
+        if (p^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
           globals.primaryContext.messages^.raiseSimpleError('Declaration head contains qualified ID.',p^.location);
           recycler.cascadeDisposeToken(statement.firstToken);
           recycler.cascadeDisposeToken(ruleBody);
@@ -804,7 +804,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         loc:=statement.firstToken^.location;
         statement.firstToken:=recycler.disposeToken(statement.firstToken);
       end;
-      if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
+      if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) or
          (statement.firstToken^.next<>nil) then begin
         if statement.firstToken<>nil then loc:=statement.firstToken^.location;
         globals.primaryContext.messages^.raiseSimpleError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
@@ -830,16 +830,15 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       t:=statement.firstToken;
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,globals.primaryContext.messages);
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) then case t^.next^.tokType of tt_customTypeRule,tt_type: begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and ((t^.next^.tokType=tt_type) or (t^.next^.tokType=tt_userRule) and (P_rule(t^.next^.data)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck,rt_customTypeCast])) then begin
           newNext:=t^.next^.next;
-          if t^.next^.tokType=tt_customTypeRule
-          then t^.tokType:=tt_customTypeCheck
-          else t^.tokType:=tt_typeCheck;
+          if t^.next^.tokType=tt_type
+          then t^.tokType:=tt_typeCheck
+          else t^.tokType:=tt_customTypeCheck;
           t^.txt    :=t^.next^.txt;
           t^.data   :=t^.next^.data;
           recycler.disposeToken(t^.next);
           t^.next:=newNext;
-        end;
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
         else if t^.tokType in C_closingBrackets then dec(level)
@@ -987,7 +986,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         {$endif}
         if profile then globals.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
+        if mainRule^.replaces(packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
         then globals.primaryContext.reduceExpression(t,recycler)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
@@ -1179,7 +1178,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
     or importedRules.containsKey('toString',toStringRule)
     then begin
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
-      if toStringRule^.replaces(tt_localUserRule,location,parameters,toReduce,dummy,context,recycler)
+      if toStringRule^.replaces(location,parameters,toReduce,dummy,context,recycler)
       then stringOut:=P_context(context)^.reduceToLiteral(toReduce,recycler).literal;
       disposeLiteral(parameters);
     end;
@@ -1469,18 +1468,18 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
-  PROCEDURE assignLocalRule(CONST tt:T_tokenType); inline;
+  PROCEDURE assignLocalRule; inline;
     begin
-      token.tokType:=tt;
+      token.tokType:=tt_userRule;
       token.data:=userRule;
       {$ifdef fullVersion}
       if markAsUsed then userRule^.setIdResolved;
       {$endif}
     end;
 
-  PROCEDURE assignImportedRule(CONST tt:T_tokenType); inline;
+  PROCEDURE assignImportedRule; inline;
     begin
-      token.tokType:=tt;
+      token.tokType:=tt_userRule;
       token.data:=userRule;
       {$ifdef fullVersion}
       userRule^.setIdResolved;
@@ -1491,15 +1490,11 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
-      then assignLocalRule(tt_customTypeRule)
-      else assignLocalRule(tt_localUserRule );
+      assignLocalRule;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
-      then assignImportedRule(tt_customTypeRule  )
-      else assignImportedRule(tt_importedUserRule);
+      assignImportedRule;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -1510,11 +1505,11 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
       if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
-        assignLocalRule(tt_customTypeRule);
+        assignLocalRule;
         exit;
       end;
       if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
-        assignImportedRule(tt_customTypeRule);
+        assignImportedRule;
         exit;
       end;
     end;

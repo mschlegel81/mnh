@@ -268,7 +268,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
-          tt_identifier, tt_eachParameter, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
+          tt_identifier, tt_eachParameter, tt_userRule, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
@@ -1037,7 +1037,7 @@ FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST c
 
 FUNCTION T_subruleExpression.getInlineValue: P_literal;
   begin
-    if (length(preparedBody)<>1) or not(typ in C_subruleExpressionTypes) then exit(nil);
+    if (length(preparedBody)<>1) or not(typ in C_subruleExpressionTypes) or (pattern.arity>0) then exit(nil);
     with preparedBody[0] do if token.tokType=tt_literal then begin
       result:=token.data;
       result^.rereference;
@@ -1282,13 +1282,11 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages);
               functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
             end;
             {$ifdef fullVersion}
-            tt_localUserRule,
-            tt_customTypeRule,
-            tt_customTypeCheck,
-            tt_importedUserRule:P_abstractRule(token.data)^.setIdResolved;
+            tt_userRule,
+            tt_customTypeCheck:P_abstractRule(token.data)^.setIdResolved;
             {$endif}
           end;
-          if token.tokType in [tt_localUserRule,tt_importedUserRule] then begin
+          if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) then begin
             inlineValue:=P_abstractRule(token.data)^.getInlineValue;
             if inlineValue<>nil then begin
               token.data:=inlineValue;
