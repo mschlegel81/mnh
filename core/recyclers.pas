@@ -68,7 +68,7 @@ TYPE
       PROCEDURE clearCache; virtual;
       PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_messages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
+      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
