@@ -46,8 +46,9 @@ TYPE
       idResolved:boolean;
       {$endif}
       id:T_idString;
-      declarationStart:T_tokenLocation;
       ruleType:T_ruleType;
+    protected
+      declarationStart:T_tokenLocation;
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy; virtual;
@@ -70,6 +71,8 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
   end;

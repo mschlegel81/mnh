@@ -55,7 +55,6 @@ TYPE
       customOperatorRules:T_customOperatorArray;
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
       PROCEDURE clearCustomOperators;
-      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
@@ -1043,21 +1042,6 @@ PROCEDURE T_abstractPackage.clearCustomOperators;
   VAR op:T_tokenType;
   begin
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do customOperatorRules[op]:=nil;
-  end;
-
-FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
-  VAR op:T_tokenType;
-  begin
-    result:=false;
-    for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do
-    if customOperatorRules[op] =nil then begin
-      customOperatorRules[op]:=importedPackage^.customOperatorRules[op];
-      result:=result or (customOperatorRules[op]<>nil);
-    end else if (importedPackage^.customOperatorRules[op]<>nil) and (importedPackage^.customOperatorRules[op]<>customOperatorRules[op]) then begin
-      connector^.postTextMessage(mt_el2_warning,customOperatorRules[op]^.getLocation,
-        'Custom operator '+C_tokenDefaultId[op]+' hides operator defined '
-        + ansistring(importedPackage^.customOperatorRules[op]^.getLocation));
-    end;
   end;
 
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);

@@ -75,7 +75,6 @@ TYPE
       anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
       {$endif}
-
       PROCEDURE resolveRuleIds(CONST messages:P_messages);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
@@ -525,6 +524,31 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         first:P_token;
 
     PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
+      PROCEDURE resetImportedOperators;
+        VAR op:T_tokenType;
+        begin
+          for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do if customOperatorRule[op]<>nil then P_operatorDelegatorRule(customOperatorRule[op])^.clearImported;
+        end;
+
+      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
+        VAR op:T_tokenType;
+            customRule:P_abstractRule;
+            newRule:P_operatorDelegatorRule;
+        begin
+          result:=false;
+          for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do begin
+            customRule:=importedPackage^.customOperatorRule[op];
+            if (customRule<>nil) and (customRule^.getRuleType=rt_delegate) and (P_operatorDelegatorRule(customRule)^.getLocalRule<>nil) then begin
+              if customOperatorRules[op]=nil then begin
+                new(newRule,create(op,@self));
+                customOperatorRules[op]:=newRule;
+                packageRules.put(newRule^.getId,newRule);
+              end;
+              P_operatorDelegatorRule(customOperatorRules[op])^.mergeImported(customRule);
+            end;
+          end;
+        end;
+
       VAR i,j:longint;
           rulesSet:T_ruleMap.KEY_VALUE_LIST;
           dummyRule:P_rule;
@@ -558,6 +582,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
           end;
         end;
+        resetImportedOperators;
         for i:=0 to length(packageUses)-1 do begin
           if mergeCustomOps(packageUses[i].pack,globals.primaryContext.messages) {$ifdef fullVersion} or suppressUnusedImport {$endif}
           then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
@@ -1229,6 +1254,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
 
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
+      operatorBeingOverridden,
       op:T_tokenType;
       hidden:P_intFuncCallback=nil;
       m:T_modifier;
@@ -1249,7 +1275,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         end;
       end;
       if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
-        for op in allOperators do if operatorName[op]=ruleId then ruleType:=rt_customOperator;
+        for op in allOperators do if operatorName[op]=ruleId then begin
+          ruleType:=rt_customOperator;
+          operatorBeingOverridden:=op;
+        end;
       if ruleType=rt_customOperator then begin
         for m in [modifier_mutable,
                   modifier_datastore,
@@ -1276,27 +1305,22 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      metaData,modifier_private in modifiers));
         rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,metaData,modifier_private in modifiers,modifier_plain in modifiers));
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
+        rt_customOperator : new(P_operatorDelegatorRule    (result),create(operatorBeingOverridden,@self));
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       newRuleCreated:=true;
       if modifier_curry in modifiers then result^.allowCurrying:=true;
       packageRules.put(ruleId,result);
-      if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
-        for op in allOperators do if operatorName[op]=ruleId
-        then begin
-          if op in overridableOperators then begin
-            customOperatorRules[op]:=result;
-            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenDefaultId[op]);
-            result^.allowCurrying:=false;
-            {$ifdef fullVersion}
-            result^.setIdResolved;
-            {$endif}
-          end else messages^.raiseSimpleError('Operator '+C_tokenDefaultId[op]+' cannot be overridden',ruleDeclarationStart);
-          exit(result);
-        end;
-        result^.hiddenRule:=hidden;
-        if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading builtin rule "'+ruleId+'"');
-      end else result^.hiddenRule:=nil;
+      if ruleType=rt_customOperator then begin
+        if operatorBeingOverridden in overridableOperators then begin
+          customOperatorRules[operatorBeingOverridden]:=result;
+          if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenDefaultId[operatorBeingOverridden]);
+          result^.allowCurrying:=false;
+          {$ifdef fullVersion}
+          result^.setIdResolved;
+          {$endif}
+        end else messages^.raiseSimpleError('Operator '+C_tokenDefaultId[operatorBeingOverridden]+' cannot be overridden',ruleDeclarationStart);
+      end else if intrinsicRuleMap.containsKey(ruleId,hidden) then result^.hiddenRule:=hidden;
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
       then messages^.raiseSimpleError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
@@ -1428,10 +1452,14 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
   FUNCTION rulesList:P_mapLiteral;
     VAR allRules:array of P_rule;
         rule:P_rule;
+        fromRule:P_mapLiteral;
     begin
       allRules:=packageRules.valueSet;
       result:=newMapLiteral();
-      for rule in allRules do result^.put(rule^.getId,rule^.inspect(includeRulePointer,P_context(context)^,recycler),false);
+      for rule in allRules do begin
+        fromRule:=rule^.inspect(includeRulePointer,P_context(context)^,recycler);
+        if fromRule<>nil then result^.put(rule^.getId,fromRule,false);
+      end;
     end;
 
   begin

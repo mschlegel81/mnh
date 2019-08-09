@@ -27,30 +27,9 @@ TYPE
     PROCEDURE checkParameters(VAR context:T_context); virtual;
     {$endif}
     FUNCTION isFallbackPossible(CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
+    FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
+    FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
     FUNCTION commonArity:longint; virtual;
-  end;
-
-  P_ruleDelegate=^T_ruleDelegate;
-  T_ruleDelegate=object(T_rule)
-    private
-      rules:array of P_rule;
-    public
-      CONSTRUCTOR create(CONST id:T_idString; CONST declaredInPackage:P_abstractPackage);
-
-      PROCEDURE addRule(CONST rule:P_rule);
-      //From T_abstractRule
-      FUNCTION hasPublicSubrule:boolean; virtual;
-      {$ifdef fullVersion}
-      FUNCTION getDocTxt:string; virtual;
-      {$endif}
-      FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
-      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
-      //From T_rule
-      FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
-      {$ifdef fullVersion}
-      PROCEDURE checkParameters(VAR context:T_context); virtual;
-      {$endif}
-      FUNCTION commonArity:longint; virtual;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -76,6 +55,35 @@ TYPE
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
       FUNCTION commonArity:longint; virtual;
+  end;
+
+  P_operatorDelegatorRule=^T_operatorDelegatorRule;
+  T_operatorDelegatorRule=object(T_ruleWithSubrules)
+    private
+      intOperator:T_tokenType;
+      isUnary:boolean;
+      localRule:P_ruleWithSubrules;
+      imported:array of P_ruleWithSubrules;
+    public
+      CONSTRUCTOR create(CONST op:T_tokenType; CONST declaredInPackage:P_abstractPackage);
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_messages); virtual;
+      FUNCTION hasPublicSubrule:boolean; virtual;
+      FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
+      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
+      {$ifdef fullVersion}
+      FUNCTION getDocTxt: ansistring; virtual;
+      PROCEDURE checkParameters(VAR context:T_context); virtual;
+      {$endif}
+      {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
+      FUNCTION commonArity:longint; virtual;
+
+      PROCEDURE clearImported;
+      PROCEDURE mergeImported(CONST rulesFromOtherPackage:P_abstractRule);
+      PROPERTY getLocalRule:P_ruleWithSubrules read localRule;
   end;
 
   P_protectedRuleWithSubrules=^T_protectedRuleWithSubrules;
@@ -197,67 +205,42 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_conte
     end;
   end;
 
-CONSTRUCTOR T_ruleDelegate.create(CONST id: T_idString; CONST declaredInPackage: P_abstractPackage);
+CONSTRUCTOR T_operatorDelegatorRule.create(CONST op:T_tokenType; CONST declaredInPackage:P_abstractPackage);
   begin
-    inherited create(id,packageTokenLocation(declaredInPackage),rt_delegate);
-    setLength(rules,0);
+    inherited create(operatorName[op],packageTokenLocation(declaredInPackage),rt_delegate);
+    intOperator:=op;
+    localRule:=nil;
+    setLength(imported,0);
+    isUnary:=op in unaryOperators;
   end;
 
-PROCEDURE T_ruleDelegate.addRule(CONST rule: P_rule);
-  VAR r:P_rule;
-      isLocal:boolean;
-      insertAtIndex:longint;
-      i:longint;
+DESTRUCTOR T_operatorDelegatorRule.destroy;
   begin
-    if (rule=nil) or (rule^.getId<>getId) then exit;
-    if not(rule^.getRuleType in [rt_normal,rt_memoized,rt_synchronized,rt_customOperator]) then exit;
-    isLocal:= rule^.getLocation.package=getLocation.package;
-    if not(isLocal) and not(rule^.hasPublicSubrule) then exit;
-    for r in rules do if r=rule then exit;
-
-    if isLocal
-    then insertAtIndex:=0
-    else begin
-      if (length(rules)>0) and (rules[0]^.getLocation.package=getLocation.package)
-      then insertAtIndex:=1
-      else insertAtIndex:=0;
-    end;
-
-    setLength(rules,length(rules)+1);
-    for i:=length(rules)-1 downto insertAtIndex+1 do rules[i]:=rules[i-1];
-    rules[insertAtIndex]:=rule;
+    if localRule<>nil then dispose(localRule,destroy);
+    inherited destroy;
   end;
 
-FUNCTION T_ruleDelegate.hasPublicSubrule: boolean;
-  VAR r:P_rule;
+PROCEDURE T_operatorDelegatorRule.clearImported;
   begin
-    for r in rules do if r^.hasPublicSubrule then exit(true);
-    result:=false;
+    setLength(imported,0);
   end;
 
-FUNCTION T_ruleDelegate.getDocTxt: string;
-  VAR r:P_rule;
+PROCEDURE T_operatorDelegatorRule.mergeImported(CONST rulesFromOtherPackage:P_abstractRule);
+  VAR operatorToAdd:P_ruleWithSubrules;
+      r:P_ruleWithSubrules;
   begin
-    result:='';
-    for r in rules do result:=result+r^.getDocTxt;
+    if (rulesFromOtherPackage=nil) or (rulesFromOtherPackage^.getRuleType<>rt_delegate) then exit;
+    operatorToAdd:=P_operatorDelegatorRule(rulesFromOtherPackage)^.localRule;
+    if operatorToAdd=nil then exit;
+    for r in imported do if r=operatorToAdd then exit;
+    setLength(imported,length(imported)+1);
+    imported[length(imported)-1]:=operatorToAdd;
   end;
 
-FUNCTION T_ruleDelegate.isReportable(OUT value: P_literal): boolean;
+FUNCTION T_operatorDelegatorRule.isReportable(OUT value: P_literal): boolean;
   begin
     value:=nil;
     result:=false;
-  end;
-
-FUNCTION T_ruleDelegate.getFunctionPointer(VAR context: T_context; VAR recycler: T_recycler; CONST location: T_tokenLocation): P_expressionLiteral;
-  begin
-    raise Exception.create('T_ruleDelegate.getFunctionPointer was called');
-    result:=nil;
-  end;
-
-PROCEDURE T_ruleDelegate.checkParameters(VAR context: T_context);
-  VAR r:P_rule;
-  begin
-    for r in rules do r^.checkParameters(context);
   end;
 
 FUNCTION T_rule.isFallbackPossible(CONST callLocation: T_tokenLocation;
@@ -313,24 +296,45 @@ FUNCTION T_rule.isFallbackPossible(CONST callLocation: T_tokenLocation;
     end;
   end;
 
+FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal;
+  VAR parList:P_listLiteral;
+      firstRep,lastRep:P_token;
+  begin
+    if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
+      P_context(context)^.raiseError('Stack overflow in rule '+getId+' ('+string(getLocation)+')',callLocation,mt_el4_systemError);
+      exit(nil);
+    end;
+    inc(P_context(context)^.callDepth);
+    parList:=P_listLiteral(newListLiteral(2)^.append(p1,true)^.append(p2,true));
+    if replaces(callLocation,parList,firstRep,lastRep,context,recycler,false)
+    then result:=P_context(context)^.reduceToLiteral(firstRep,recycler).literal
+    else result:=nil;
+    dec(P_context(context)^.callDepth);
+    disposeLiteral(parList);
+  end;
+
+FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal;
+  VAR firstRep,lastRep:P_token;
+  begin
+    if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
+      P_context(context)^.raiseError('Stack overflow in rule '+getId+' ('+string(getLocation)+')',callLocation,mt_el4_systemError);
+      exit(nil);
+    end;
+    inc(P_context(context)^.callDepth);
+    if replaces(callLocation,parList,firstRep,lastRep,context,recycler,false)
+    then result:=P_context(context)^.reduceToLiteral(firstRep,recycler).literal
+    else result:=nil;
+    dec(P_context(context)^.callDepth);
+  end;
+
 FUNCTION T_rule.commonArity: longint;
   begin
     result:=-1;
   end;
 
-FUNCTION T_ruleDelegate.commonArity: longint;
-  VAR r:P_rule;
-      first:boolean=true;
+FUNCTION T_operatorDelegatorRule.commonArity: longint;
   begin
-    for r in rules do begin
-      if first then begin
-        result:=r^.commonArity;
-        if result=-1 then exit(-1);
-      end else begin
-        if r^.commonArity<>result then exit(-1);
-      end;
-      first:=false;
-    end;
+    if isUnary then result:=1 else result:=2;
   end;
 
 FUNCTION T_ruleWithSubrules.commonArity:longint;
@@ -370,6 +374,13 @@ PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_context);
   begin
     if length(subrules)=1 then
     for s in subrules do s^.checkParameters(context);
+  end;
+
+PROCEDURE T_operatorDelegatorRule.checkParameters(VAR context: T_context);
+  VAR r:P_rule;
+  begin
+    if localRule<>nil then localRule^.checkParameters(context);
+    for r in imported do           r^.checkParameters(context);
   end;
 {$endif}
 
@@ -505,6 +516,15 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     clearCache;
   end;
 
+PROCEDURE T_operatorDelegatorRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
+  begin
+    if localRule=nil then begin
+      new(localRule,create(getId,rule^.getLocation));
+      declarationStart:=rule^.getLocation;
+    end;
+    localRule^.addOrReplaceSubRule(rule,context);
+  end;
+
 PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
   begin
     inherited addOrReplaceSubRule(rule,context);
@@ -556,6 +576,11 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
     result:=(getRuleType=rt_customTypeCheck) or subrules[0]^.hasValidValidCustomTypeCheckPattern(false);
   end;
 
+PROCEDURE T_operatorDelegatorRule.resolveIds(CONST adapters:P_messages);
+  begin
+    if localRule<>nil then localRule^.resolveIds(adapters);
+  end;
+
 PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages);
   VAR s:P_subruleExpression;
   begin
@@ -566,6 +591,14 @@ FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
   VAR s:P_subruleExpression;
   begin
     for s in subrules do if s^.isPublic then exit(true);
+    result:=false;
+  end;
+
+FUNCTION T_operatorDelegatorRule.hasPublicSubrule: boolean;
+  VAR r:P_rule;
+  begin
+    if (localRule<>nil) and localRule^.hasPublicSubrule then exit(true);
+    for r in imported do if r^.hasPublicSubrule then exit(true);
     result:=false;
   end;
 
@@ -603,11 +636,11 @@ FUNCTION T_ruleWithSubrules.getInlineValue: P_literal;
                           else result:=nil;
   end;
 
-FUNCTION T_ruleDelegate.replaces(CONST callLocation: T_tokenLocation; CONST param: P_listLiteral; OUT firstRep, lastRep: P_token; CONST context: P_abstractContext; VAR recycler: T_recycler; CONST calledFromDelegator: boolean): boolean;
+FUNCTION T_operatorDelegatorRule.replaces(CONST callLocation: T_tokenLocation; CONST param: P_listLiteral; OUT firstRep, lastRep: P_token; CONST context: P_abstractContext; VAR recycler: T_recycler; CONST calledFromDelegator: boolean): boolean;
   VAR r:P_rule;
   begin
-    for r in rules do if r^.replaces(callLocation,param,firstRep,lastRep,context,recycler,true) then exit(true);
-    for r in rules do if r^.isFallbackPossible(callLocation,param,firstRep,lastRep,P_context(context)^,recycler) then exit(true);
+    if (localRule<>nil) and localRule^.replaces(callLocation,param,firstRep,lastRep,context,recycler,true) then exit(true);
+    for r in imported do if         r^.replaces(callLocation,param,firstRep,lastRep,context,recycler,true) then exit(true);
     result:=false;
   end;
 
@@ -839,6 +872,13 @@ FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_cont
       {$endif};
   end;
 
+FUNCTION T_operatorDelegatorRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
+  begin
+    if localRule=nil
+    then result:=nil
+    else result:=localRule^.inspect(includeFunctionPointer,context,recycler);
+  end;
+
 FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler): P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
@@ -928,6 +968,11 @@ FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycl
     new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
   end;
 
+FUNCTION T_operatorDelegatorRule.getFunctionPointer(VAR context: T_context; VAR recycler: T_recycler; CONST location: T_tokenLocation): P_expressionLiteral;
+  begin
+    result:=getIntrinsicRuleAsExpression(intFuncForOperator[intOperator]);
+  end;
+
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
@@ -962,6 +1007,14 @@ FUNCTION T_mutableRule.getFunctionPointer(VAR context:T_context; VAR recycler:T_
   end;
 
 {$ifdef fullVersion}
+FUNCTION T_operatorDelegatorRule.getDocTxt: string;
+  VAR r:P_rule;
+  begin
+    if localRule<>nil then result:=localRule^.getDocTxt
+                      else result:='';
+    for r in imported do   result:=result+BoolToStr(result='','',C_lineBreakChar)+r^.getDocTxt;
+  end;
+
 FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
   VAR s:P_subruleExpression;
   begin
