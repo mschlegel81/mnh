@@ -212,6 +212,9 @@ CONSTRUCTOR T_operatorDelegatorRule.create(CONST op:T_tokenType; CONST declaredI
     localRule:=nil;
     setLength(imported,0);
     isUnary:=op in unaryOperators;
+    {$ifdef fullVersion}
+    setIdResolved;
+    {$endif}
   end;
 
 DESTRUCTOR T_operatorDelegatorRule.destroy;
