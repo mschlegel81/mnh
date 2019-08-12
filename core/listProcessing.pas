@@ -84,6 +84,7 @@ TYPE
     end;
     mapResult:T_arrayOfLiteral;
     nextToAggregate:P_mapTask;
+    tasksPerSecond:double;
     CONSTRUCTOR createMapTask(CONST expr:P_expressionLiteral);
     PROCEDURE defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
@@ -285,6 +286,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
   VAR firstToAggregate:P_mapTask=nil;
       lastToAggregate:P_mapTask=nil;
       resultLiteral:P_listLiteral;
+      tasksPerSecond:double=1E-3;
   VAR recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
         fill:longint;
@@ -299,9 +301,11 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
-        for resultElement in toAggregate^.mapResult do
-        resultLiteral^.append(resultElement,false);
+        for resultElement in toAggregate^.mapResult do resultLiteral^.append(resultElement,false);
+        tasksPerSecond:=tasksPerSecond*0.9+
+           toAggregate^.tasksPerSecond*0.1;
         with recycling do if fill<length(dat) then begin
+          setLength(toAggregate^.mapResult,0);
           dat[fill]:=toAggregate;
           inc(fill);
         end else dispose(toAggregate,destroy);
@@ -339,7 +343,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
         if isMemoryInComfortZone
-        then setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
+        then setLength(nextToEnqueue,min(16384,round(max(1,    tasksPerSecond))))
         else setLength(nextToEnqueue,1);
         enqueueFill:=0;
         result:=true;
@@ -384,6 +388,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
                                 CONST output:P_compoundLiteral);
   VAR firstToAggregate:P_filterTask=nil;
       lastToAggregate:P_filterTask=nil;
+      tasksPerSecond:double=1E-3;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_filterTask;
         fill:longint;
@@ -405,6 +410,8 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
           for resultElement in toAggregate^.mapResult do
             P_collectionLiteral(output)^.append(resultElement,true);
         end;
+        tasksPerSecond:=tasksPerSecond*0.9+
+           toAggregate^.tasksPerSecond*0.1;
         with recycling do if fill<length(dat) then begin
           dat[fill]:=toAggregate;
           inc(fill);
@@ -442,7 +449,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
         if isMemoryInComfortZone
-        then setLength(nextToEnqueue,max(length(nextToEnqueue),ceil(elementsProcessed/(ENQUEUE_QUOTIENT*settings.cpuCount))))
+        then setLength(nextToEnqueue,min(16384,round(max(1,tasksPerSecond))))
         else setLength(nextToEnqueue,1);
         enqueueFill:=0;
         result:=true;
@@ -522,8 +529,12 @@ CONSTRUCTOR T_filterTask.createFilterTask(CONST expr: P_expressionLiteral);
 PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
   VAR k:longint;
       j:longint=0;
+      wallClockAtStart:double;
   begin
+    enterCriticalSection(taskCs);
+    wallClockAtStart:=context^.wallclockTime;
     context^.beginEvaluation;
+    leaveCriticalSection(taskCs);
     try
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
@@ -537,8 +548,11 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
+      enterCriticalSection(taskCs);
+      tasksPerSecond:=min(1E6,length(mapPayload.mapParameter)/(context^.wallclockTime-wallClockAtStart));
       clearMapPayload;
       context^.finalizeTaskAndDetachFromParent(@recycler);
+      leaveCriticalSection(taskCs);
     end;
   end;
 
@@ -563,8 +577,12 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   VAR k:longint;
       j:longint=0;
       lit:P_literal;
+      wallClockAtStart:double;
   begin
+    enterCriticalSection(taskCs);
+    wallClockAtStart:=context^.wallclockTime;
     context^.beginEvaluation;
+    leaveCriticalSection(taskCs);
     try
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
@@ -581,8 +599,11 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
         setLength(mapResult,j);
       end;
     finally
+      enterCriticalSection(taskCs);
+      tasksPerSecond:=min(1E6,length(mapPayload.mapParameter)/(context^.wallclockTime-wallClockAtStart));
       clearMapPayload;
       context^.finalizeTaskAndDetachFromParent(@recycler);
+      leaveCriticalSection(taskCs);
     end;
   end;
 

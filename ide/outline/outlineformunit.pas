@@ -220,7 +220,8 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     isLocal:=mainPackage;
     isPublic:=true;
     location:=packageTokenLocation(package);
-    for rule in package^.declaredRules(containingModel.ruleSorting) do if rule^.hasPublicSubrule or mainPackage then begin
+    for rule in package^.declaredRules(containingModel.ruleSorting) do if (rule^.hasPublicSubrule or mainPackage) and
+    not((rule^.getRuleType=rt_delegate) and (P_operatorDelegatorRule(rule)^.getLocalRule=nil)) then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
         new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
