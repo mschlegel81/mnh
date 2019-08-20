@@ -55,9 +55,11 @@ TYPE
       customOperatorRules:T_customOperatorArray;
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
       PROCEDURE clearCustomOperators;
-      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
+      {$ifdef fullVersion}
+      anyCalled:boolean;
+      {$endif}
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
       FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
@@ -185,7 +187,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
+        tt_identifier,tt_globalVariable: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil)
@@ -194,16 +196,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
-              if (t^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+              if (t^.tokType = tt_globalVariable) then begin
                 rule:=t^.data;
-                if rule^.getRuleType in C_mutableRuleTypes then begin
-                  t^.data:=rule;
-                  t^.tokType:=t^.next^.tokType;
-                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
-                  t^.txt:=t^.txt;
-                  t^.next:=recycler.disposeToken(t^.next);
-                end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
-              end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+                t^.data:=rule;
+                t^.tokType:=t^.next^.tokType;
+                if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
+                t^.txt:=t^.txt;
+                t^.next:=recycler.disposeToken(t^.next);
+              end else messages^.raiseSimpleError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
             end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
@@ -315,7 +315,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     references:=token^.location; //default: references itself
 
     tokenText:=safeTokenToString(token);
-    if (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
+    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal,tt_globalVariable,tt_customType]) then
     case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
       tt_eachParameter: begin
         token^.tokType:=tt_eachParameter;
@@ -354,8 +354,9 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
         end;
       end;
     end;
-    if (linksTo=nothing) and (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck]) then begin
-      references:=P_abstractRule(token^.data)^.getLocation;
+    if (linksTo=nothing) then case token^.tokType of
+      tt_userRule,tt_globalVariable   : references:=P_abstractRule(token^.data)^.getLocation;
+      tt_customType,tt_customTypeCheck: references:=P_typedef(token^.data)^.getLocation;
     end;
   end;
 
@@ -369,11 +370,11 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     case token^.tokType of
       tt_identifier         ,
       tt_parameterIdentifier,
-      tt_localUserRule      ,
-      tt_importedUserRule   ,
+      tt_userRule      ,
+      tt_globalVariable,
+      tt_customType,
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
-      tt_customTypeRule     ,
       tt_eachParameter,
       tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
       else exit(false);
@@ -419,17 +420,16 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule,tt_eachParameter,tt_each,tt_parallelEach];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
-        tt_each,tt_parallelEach: result.idWithoutIsPrefix:=token^.txt;
-        tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule:
-                                 result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
-        else                     result.idWithoutIsPrefix:=tokenText;
+        tt_each,tt_parallelEach:           result.idWithoutIsPrefix:=token^.txt;
+        tt_customType,tt_customTypeCheck:  result.idWithoutIsPrefix:=P_typedef(token^.data)^.getId;
+        tt_userRule,tt_globalVariable:     result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
+        else                               result.idWithoutIsPrefix:=tokenText;
       end;
-      result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
-                                         (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
+      result.mightBeUsedInOtherPackages:=(token^.tokType in [tt_userRule,tt_globalVariable]) and (P_abstractRule(token^.data)^.hasPublicSubrule) or (token^.tokType in [tt_customTypeCheck,tt_customType]);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of
@@ -462,12 +462,16 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
         if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
       end;
-      tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+      tt_userRule, tt_globalVariable: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
-         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
+        result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
+      tt_customType, tt_customTypeCheck: begin
+
+      end;
+
       tt_type,tt_typeCheck:
         result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:
@@ -800,7 +804,7 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
       tt_each,tt_parallelEach: begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) and
-           (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
+           (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
            (n[3]<>nil) and (n[3]^.tokType=tt_separatorComma) then begin
           nextToken^.txt:=n[2]^.txt;
           nextToken^.data:=nil;
@@ -900,7 +904,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
@@ -952,7 +956,7 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(lastTokenized^.txt   ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(lastTokenized^.txt,lastLocation,tt_blockLocalVariable) of
@@ -1046,21 +1050,6 @@ PROCEDURE T_abstractPackage.clearCustomOperators;
   VAR op:T_tokenType;
   begin
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do customOperatorRules[op]:=nil;
-  end;
-
-FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackage; CONST connector:P_messages):boolean;
-  VAR op:T_tokenType;
-  begin
-    result:=false;
-    for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do
-    if customOperatorRules[op] =nil then begin
-      customOperatorRules[op]:=importedPackage^.customOperatorRules[op];
-      result:=result or (customOperatorRules[op]<>nil);
-    end else if (importedPackage^.customOperatorRules[op]<>nil) and (importedPackage^.customOperatorRules[op]<>customOperatorRules[op]) then begin
-      connector^.postTextMessage(mt_el2_warning,customOperatorRules[op]^.getLocation,
-        'Custom operator '+C_tokenDefaultId[op]+' hides operator defined '
-        + ansistring(importedPackage^.customOperatorRules[op]^.getLocation));
-    end;
   end;
 
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);

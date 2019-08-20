@@ -527,7 +527,7 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   begin
     t:=tok;
     while t<>nil do begin
-      if (t^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
+      if (t^.tokType in [tt_identifier, tt_userRule, tt_parameterIdentifier, tt_intrinsicRule])
       and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
@@ -597,7 +597,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           appendOptional;
           parts[i].first:=recycler.disposeToken(parts[i].first);
           assertNil(parts[i].first);
-        end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+        end else if (parts[i].first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType]) then begin
           //Identified parameter: f(x)->
           rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
           parts[i].first:=recycler.disposeToken(parts[i].first);
@@ -639,7 +639,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               parts[i].first:=recycler.disposeToken(parts[i].first);
 
               if (parts[i].first=nil) then fail(parts[i].first) else
-              if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+              if parts[i].first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
                 rulePatternElement.restrictionId:=parts[i].first^.txt;
                 parts[i].first:=recycler.disposeToken(parts[i].first);
                 assertNil(parts[i].first);
@@ -655,16 +655,13 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
 
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              rulePatternElement.customTypeCheck:=P_abstractRule(parts[i].first^.data)^.getTypedef;
+              rulePatternElement.customTypeCheck:=parts[i].first^.data;
               rulePatternElement.builtinTypeCheck:=rulePatternElement.customTypeCheck^.builtinTypeCheck;
               rulePatternElement.restrictionIdx  :=rulePatternElement.customTypeCheck^.builtinSuperParameter;
               rulePatternElement.skipCustomCheck :=rulePatternElement.customTypeCheck^.isDucktyping and
                                                    rulePatternElement.customTypeCheck^.isAlwaysTrue;
               {$ifdef debugMode}
-              if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule '+P_abstractRule(parts[i].first^.data)^.getId+' did not return a type definition');
-              {$endif}
-              {$ifdef fullVersion}
-              P_abstractRule(parts[i].first^.data)^.setIdResolved;
+              if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule did not return a type definition');
               {$endif}
               parts[i].first:=recycler.disposeToken(parts[i].first);
 

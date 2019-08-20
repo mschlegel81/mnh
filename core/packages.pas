@@ -34,7 +34,6 @@ USES //my utilities:
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
   T_ruleSorting=(rs_none,rs_byNameCaseSensitive,rs_byNameCaseInsensitive,rs_byLocation);
 
@@ -63,7 +62,7 @@ TYPE
       secondaryPackages:T_packageList;
       extendedPackages:array of P_extendedPackage;
 
-      runAfter:array of P_subruleExpression;
+      //runAfter:array of P_subruleExpression;
 
       isPlainScript:boolean;
       commentOnPlainMain:ansistring;
@@ -72,12 +71,8 @@ TYPE
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
-      anyCalled:boolean;
       suppressAllUnusedWarnings:boolean;
       {$endif}
-
-      PROCEDURE resolveRuleIds(CONST messages:P_messages);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean):P_rule;
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
       public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
@@ -89,7 +84,7 @@ TYPE
     protected
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
-      packageRules,importedRules:T_ruleMap;
+      ruleMap:T_ruleMap;
       PROCEDURE clear(CONST includeSecondaries:boolean);
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
@@ -106,7 +101,7 @@ TYPE
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
-      FUNCTION declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleList;
+      FUNCTION declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleMapEntries;
       FUNCTION usedPackages:T_packageList;
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -487,7 +482,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         exit;
       end;
       first:=recycler.disposeToken(first);
-      if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+      if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
         helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
@@ -526,8 +521,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
     PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
       VAR i,j:longint;
-          rulesSet:T_ruleMap.KEY_VALUE_LIST;
-          dummyRule:P_rule;
           {$ifdef fullVersion}
           attribute:string;
           suppressUnusedImport:boolean=false;
@@ -550,18 +543,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             setLength(packageUses,length(packageUses)-1);
           end else inc(i);
         end;
-        if globals.primaryContext.continueEvaluation then for i:=length(packageUses)-1 downto 0 do begin
-          rulesSet:=packageUses[i].pack^.packageRules.entrySet;
-          for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
-            if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
-            then importedRules.put(rulesSet[j].key,rulesSet[j].value);
-            importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
-          end;
-        end;
-        for i:=0 to length(packageUses)-1 do begin
-          if mergeCustomOps(packageUses[i].pack,globals.primaryContext.messages) {$ifdef fullVersion} or suppressUnusedImport {$endif}
-          then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
-        end;
+        ruleMap.clearImports;
+        if globals.primaryContext.continueEvaluation
+        then for i:=0 to length(packageUses)-1 do ruleMap.addImports(@packageUses[i].pack^.ruleMap);
+        {$ifdef fullVersion}
+        for i:=0 to length(packageUses)-1 do packageUses[i].pack^.anyCalled:=suppressUnusedImport;
+        {$endif}
+        customOperatorRules:=ruleMap.getOperators;
+        ruleMap.resolveRuleIds(nil,ON_DELEGATION);
       end;
 
     begin
@@ -582,7 +571,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       first:=recycler.disposeToken(first);
       while first<>nil do begin
         j:=-1;
-        if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+        if first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
           if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
@@ -643,35 +632,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         rulePattern:T_pattern;
         ruleBody:P_token;
         subRule:P_subruleExpression;
-        ruleGroup:P_rule=nil;
-        inlineValue:P_literal;
-        newRuleCreated:boolean=false;
-    PROCEDURE addRuleToRunAfter(CONST ex:P_subruleExpression);
-      begin
-        if not(ex^.canApplyToNumberOfParameters(0)) then begin
-          globals.primaryContext.messages^.raiseSimpleError('Attribute //@'+EXECUTE_AFTER_ATTRIBUTE+' is only allowed for nullary functions',ex^.getLocation);
-          exit;
-        end;
-        setLength(runAfter,length(runAfter)+1);
-        runAfter[length(runAfter)-1]:=ex;
-        ex^.rereference;
-      end;
-
-    PROCEDURE declareTypeCastRule;
-      VAR castRule:P_typeCastRule;
-          otherRule:P_rule;
-      begin
-        if not(P_typeCheckRule(ruleGroup)^.castRuleIsValid) then exit;
-        new(castRule,create(P_typeCheckRule(ruleGroup)^.getTypedef,P_typeCheckRule(ruleGroup)));
-        if packageRules.containsKey(castRule^.getId,otherRule) then begin
-          globals.primaryContext.messages^.raiseSimpleError(
-            'Cannot declare implicit typecast rule '+castRule^.getId+C_lineBreakChar+
-            'because a rule of the same name already exists '+ansistring(otherRule^.getLocation)+C_lineBreakChar+
-            'Please overload the implicit typecast rule after the type definition',
-          ruleGroup^.getLocation);
-          dispose(castRule,destroy);
-        end else packageRules.put(castRule^.getId,castRule);
-      end;
 
     begin
       ruleDeclarationStart:=statement.firstToken^.location;
@@ -690,7 +650,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
       if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
-      if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
+      if not(statement.firstToken^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.firstToken^.location);
         recycler.cascadeDisposeToken(statement.firstToken);
         recycler.cascadeDisposeToken(ruleBody);
@@ -698,7 +658,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       p:=statement.firstToken;
       while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
-        if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
+        if (p^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
           globals.primaryContext.messages^.raiseSimpleError('Declaration head contains qualified ID.',p^.location);
           recycler.cascadeDisposeToken(statement.firstToken);
           recycler.cascadeDisposeToken(ruleBody);
@@ -745,58 +705,15 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData.setComment(join(statement.comments,C_lineBreakChar));
         metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
         formatMetaData(metaData,ruleDeclarationStart,@globals.primaryContext,recycler);
-        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData,newRuleCreated);
-
-        if (globals.primaryContext.messages^.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
-        then globals.primaryContext.messages^.raiseSimpleError('Mutable rules are quasi variables and must therefore not accept any arguments',ruleDeclarationStart);
-        if globals.primaryContext.messages^.continueEvaluation then begin
-          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,recycler,metaData));
-          //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
-          if (ruleGroup^.getRuleType in C_mutableRuleTypes)
-          then begin
-            if (usecase<>lu_forCodeAssistance)
-            then begin
-                   inlineValue:=subRule^.getInlineValue;
-                   P_mutableRule(ruleGroup)^.setMutableValue(inlineValue,true);
-                   inlineValue^.unreference;
-                 end
-            else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
-            {$ifdef fullVersion}
-            if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
-              if P_mutableRule(ruleGroup)^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE then suppressAllUnusedWarnings:=true;
-              if (modifier_private in ruleModifiers)
-              then globals.primaryContext.messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules')
-              else ruleGroup^.setIdResolved;
-            end else if suppressAllUnusedWarnings then P_mutableRule(ruleGroup)^.metaData.addSuppressUnusedWarningAttribute;
-            {$endif}
-            dispose(subRule,destroy);
-          end else begin
-            if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
-            {$ifdef fullVersion}
-            if subRule^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE
-            then suppressAllUnusedWarnings:=true
-            else if suppressAllUnusedWarnings then subRule^.metaData.addSuppressUnusedWarningAttribute;
-            {$endif}
-            P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,globals.primaryContext);
-            if (P_ruleWithSubrules(ruleGroup)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) and globals.primaryContext.messages^.continueEvaluation then declareTypeCastRule;
-          end;
-          statement.firstToken:=nil;
-        end else begin
-          recycler.cascadeDisposeToken(statement.firstToken);
-          recycler.cascadeDisposeToken(ruleBody);
-        end;
-      end else begin
-        recycler.cascadeDisposeToken(statement.firstToken);
-        recycler.cascadeDisposeToken(ruleBody);
-      end;
-      if newRuleCreated and not(globals.primaryContext.messages^.continueEvaluation) then packageRules.dropKey(ruleId);
+        new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,recycler,metaData));
+        ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext,recycler,metaData,subRule);
+      end else recycler.cascadeDisposeToken(ruleBody);
     end;
 
   PROCEDURE parseDataStore;
     VAR ruleModifiers:T_modifierSet=[];
         loc:T_tokenLocation;
         metaData:T_ruleMetaData;
-        newRuleCreated:boolean;
     begin
       if not(continueDatastoreDeclaration) then exit;
       while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
@@ -804,7 +721,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         loc:=statement.firstToken^.location;
         statement.firstToken:=recycler.disposeToken(statement.firstToken);
       end;
-      if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
+      if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) or
          (statement.firstToken^.next<>nil) then begin
         if statement.firstToken<>nil then loc:=statement.firstToken^.location;
         globals.primaryContext.messages^.raiseSimpleError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
@@ -815,9 +732,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       metaData.setComment(join(statement.comments,C_lineBreakChar));
       metaData.setAttributes(statement.attributes,statement.firstToken^.location,globals.primaryContext.messages);
       formatMetaData(metaData,statement.firstToken^.location,@globals.primaryContext,recycler);
-      ensureRuleId(statement.firstToken^.txt,
-                   ruleModifiers,
-                   statement.firstToken^.location,globals.primaryContext.messages,metaData,newRuleCreated);
+      ruleMap.declare(statement.firstToken^.txt,
+                      ruleModifiers,
+                      statement.firstToken^.location,
+                      globals.primaryContext,
+                      recycler,
+                      metaData,
+                      nil);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
@@ -830,16 +751,15 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       t:=statement.firstToken;
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then resolveId(t^.next^,globals.primaryContext.messages);
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) then case t^.next^.tokType of tt_customTypeRule,tt_type: begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType in [tt_type,tt_customType]) then begin
           newNext:=t^.next^.next;
-          if t^.next^.tokType=tt_customTypeRule
-          then t^.tokType:=tt_customTypeCheck
-          else t^.tokType:=tt_typeCheck;
+          if t^.next^.tokType=tt_type
+          then t^.tokType:=tt_typeCheck
+          else t^.tokType:=tt_customTypeCheck;
           t^.txt    :=t^.next^.txt;
           t^.data   :=t^.next^.data;
           recycler.disposeToken(t^.next);
           t^.next:=newNext;
-        end;
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
         else if t^.tokType in C_closingBrackets then dec(level)
@@ -923,6 +843,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end else if globals.primaryContext.messages^.continueEvaluation then begin
       case usecase of
         lu_forDirectExecution:begin
+          customOperatorRules:=ruleMap.getOperators;
           {$ifdef fullVersion}
           globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
           {$endif}
@@ -976,9 +897,10 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin
       if not(readyForUsecase=lu_forCallingMain) or not(globals.primaryContext.messages^.continueEvaluation) then exit;
-      if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
-        globals.primaryContext.messages^.raiseSimpleError('The specified package contains no main rule.',packageTokenLocation(@self));
-      end else begin
+      mainRule:=ruleMap.getLocalMain;
+      if mainRule=nil
+      then globals.primaryContext.messages^.raiseSimpleError('The specified package contains no main rule.',packageTokenLocation(@self))
+      else begin
         parametersForMain:=newListLiteral(length(mainParameters));
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
 
@@ -987,7 +909,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         {$endif}
         if profile then globals.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
+        if mainRule^.replaces(packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
         then globals.primaryContext.reduceExpression(t,recycler)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
@@ -1021,8 +943,9 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     VAR rule:P_rule;
         pack:P_package;
     begin
-      for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(globals.primaryContext);
-      for rule in packageRules.valueSet do rule^.checkParameters(globals.primaryContext);
+      for pack in secondaryPackages do
+        for rule in pack^.ruleMap.getAllLocalRules do
+          rule^.checkParameters(globals.primaryContext);
     end;
   {$endif}
 
@@ -1077,7 +1000,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       logReady(newCodeHash);
       {$ifdef fullVersion}
       if gui_started then begin
-        resolveRuleIds(globals.primaryContext.messages);
+        ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION);
         complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
@@ -1085,6 +1008,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       exit;
     end;
     if globals.primaryContext.messages^.continueEvaluation then begin
+      customOperatorRules:=ruleMap.getOperators;
       readyForUsecase:=usecase;
       logReady(newCodeHash);
       if usecase=lu_forCallingMain
@@ -1100,11 +1024,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     then finalize(globals.primaryContext,recycler);
   end;
 
-PROCEDURE disposeRule(VAR rule:P_rule);
-  begin
-    dispose(rule,destroy);
-  end;
-
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_: P_package);
   begin
     inherited create(provider);
@@ -1113,9 +1032,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_:
     setLength(secondaryPackages,0);
     setLength(extendedPackages,0);
     setLength(packageUses,0);
-    setLength(runAfter,0);
-    packageRules.create(@disposeRule);
-    importedRules.create;
+    ruleMap.create(@self);
     {$ifdef fullVersion}
     pseudoCallees:=blankProfilingCalls;
     anyCalled:=false;
@@ -1129,8 +1046,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     anyCalled:=false;
     suppressAllUnusedWarnings:=false;
     {$endif}
-    for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
-    setLength(runAfter,0);
+    ruleMap.clear;
     if includeSecondaries then begin
       for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
       setLength(secondaryPackages,0);
@@ -1139,47 +1055,38 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     setLength(extendedPackages,0);
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy; setLength(packageUses,0);
     clearCustomOperators;
-    packageRules.clear;
-    importedRules.clear;
     readyForUsecase:=lu_NONE;
   end;
 
 PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
-  VAR rule:P_rule;
-      i:longint;
+  VAR i:longint;
   begin
-    for rule in packageRules.valueSet do
-      if rule^.getRuleType=rt_datastore
-      then P_datastoreRule(rule)^.writeBack(messages);
+    ruleMap.writeBackDatastores(messages);
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(messages,recurse);
   end;
 
 PROCEDURE T_package.finalize(VAR context:T_context; VAR recycler:T_recycler);
-  VAR rule:P_rule;
-      i:longint;
+  VAR i:longint;
   begin
-    for i:=0 to length(runAfter)-1 do begin
-      runAfter[i]^.evaluate(packageTokenLocation(@self),@context,@recycler,nil);
-    end;
+    ruleMap.executeAfterRules(context,recycler);
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
     funcs_server.onPackageFinalization(@self);
     funcs_ipc   .onPackageFinalization(@self);
     funcs_format.onPackageFinalization(@self);
-    for rule in packageRules.valueSet do if rule^.getRuleType=rt_datastore then P_datastoreRule(rule)^.writeBack(context.messages);
+    ruleMap.writeBackDatastores(context.messages);
     if isMain then context.getGlobals^.stopWorkers(recycler);
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string;
-  VAR toStringRule:P_rule;
+  VAR toStringRule:T_ruleMapEntry;
       toReduce,dummy:P_token;
       parameters:P_listLiteral;
       stringOut:P_literal=nil;
   begin
-    if packageRules .containsKey('toString',toStringRule)
-    or importedRules.containsKey('toString',toStringRule)
+    if ruleMap.containsKey('toString',toStringRule) and (toStringRule.entryType=tt_userRule)
     then begin
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
-      if toStringRule^.replaces(tt_localUserRule,location,parameters,toReduce,dummy,context,recycler)
+      if P_rule(toStringRule.value)^.replaces(location,parameters,toReduce,dummy,context,recycler)
       then stringOut:=P_context(context)^.reduceToLiteral(toReduce,recycler).literal;
       disposeLiteral(parameters);
     end;
@@ -1197,113 +1104,19 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
   end;
 
 FUNCTION T_package.getTypeMap:T_typeMap;
-  VAR r:P_rule;
-
-  PROCEDURE addDef(CONST def:P_typedef);
-    begin result.put(def^.getName,def); end;
   begin
-    result.create();
-    for r in importedRules.valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);
-    for r in packageRules .valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);
+    result:=ruleMap.getTypeMap;
   end;
 
 DESTRUCTOR T_package.destroy;
   {$ifdef fullVersion}VAR c:T_profileCategory;{$endif}
   begin
     clear(true);
-    packageRules.destroy;
-    importedRules.destroy;
+    ruleMap.destroy;
     {$ifdef fullVersion}
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
     {$endif}
     inherited destroy;
-  end;
-
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; CONST messages:P_messages; VAR metaData:T_ruleMetaData; OUT newRuleCreated:boolean): P_rule;
-  PROCEDURE raiseModifierComplaint;
-    VAR m:T_modifier;
-        s:string='';
-    begin
-      for m:=low(T_modifier) to high(T_modifier) do if m in modifiers then s:=s+C_modifierInfo[m].name+' ';
-      messages^.raiseSimpleError('Invalid combination of modifiers: '+s,ruleDeclarationStart);
-    end;
-
-  VAR ruleType:T_ruleType=rt_normal;
-      i:longint;
-      op:T_tokenType;
-      hidden:P_intFuncCallback=nil;
-      m:T_modifier;
-  begin
-    newRuleCreated:=false;
-    i:=0;
-    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_curry]) do inc(i);
-    if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
-    else begin
-      raiseModifierComplaint;
-      exit(nil);
-    end;
-    if not(packageRules.containsKey(ruleId,result)) then begin
-      if (ruleId=MAIN_RULE_ID) then begin
-        if modifiers<>[] then begin
-          messages^.raiseSimpleError('main rules must not have any modifiers',ruleDeclarationStart);
-          exit;
-        end;
-      end;
-      if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
-        for op in allOperators do if operatorName[op]=ruleId then ruleType:=rt_customOperator;
-      if ruleType=rt_customOperator then begin
-        for m in [modifier_mutable,
-                  modifier_datastore,
-                  modifier_plain,
-                  modifier_synchronized,
-                  modifier_customType,
-                  modifier_customDuckType] do if m in modifiers then messages^.raiseSimpleError('modifier '+C_modifierInfo[m].name+' is not allowed when overriding operators',ruleDeclarationStart);
-        if modifier_curry    in modifiers then messages^.postTextMessage(mt_el3_evalError,ruleDeclarationStart,'curry modifier is forbidden when overloading operators');
-        if modifier_private  in modifiers then messages^.postTextMessage(mt_el2_warning  ,ruleDeclarationStart,'private modifier is ignored when overloading operators' );
-        if modifier_memoized in modifiers then messages^.postTextMessage(mt_el2_warning  ,ruleDeclarationStart,'memoized modifier is ignored when overloading operators');
-      end;
-
-      if (ruleType=rt_customTypeCheck) and not(ruleId[1] in ['A'..'Z']) then
-        messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Type rules should begin with an uppercase letter');
-      end;
-      if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
-        messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Rule '+ruleId+' hides implicit typecheck rule');
-
-      case ruleType of
-        rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
-        rt_customTypeCheck,
-        rt_duckTypeCheck  : new(P_typeCheckRule            (result),create(ruleId,ruleDeclarationStart,ruleType=rt_duckTypeCheck));
-        rt_customTypeCast : raise Exception.create('Custom type casts should not be created this way.');
-        rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      metaData,modifier_private in modifiers));
-        rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,metaData,modifier_private in modifiers,modifier_plain in modifiers));
-        rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
-        else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
-      end;
-      newRuleCreated:=true;
-      if modifier_curry in modifiers then result^.allowCurrying:=true;
-      packageRules.put(ruleId,result);
-      if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
-        for op in allOperators do if operatorName[op]=ruleId
-        then begin
-          if op in overridableOperators then begin
-            customOperatorRules[op]:=result;
-            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenDefaultId[op]);
-            result^.allowCurrying:=false;
-            {$ifdef fullVersion}
-            result^.setIdResolved;
-            {$endif}
-          end else messages^.raiseSimpleError('Operator '+C_tokenDefaultId[op]+' cannot be overridden',ruleDeclarationStart);
-          exit(result);
-        end;
-        result^.hiddenRule:=hidden;
-        if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then messages^.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading builtin rule "'+ruleId+'"');
-      end else result^.hiddenRule:=nil;
-    end else begin
-      if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
-      then messages^.raiseSimpleError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
-      else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
-      then messages^.raiseSimpleError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart);
-    end;
   end;
 
 FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
@@ -1313,49 +1126,18 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
     result:='';
   end;
 
-PROCEDURE T_package.resolveRuleIds(CONST messages:P_messages);
-  VAR rule:P_rule;
-  begin
-    for rule in packageRules.valueSet do rule^.resolveIds(messages);
-  end;
-
 {$ifdef fullVersion}
 PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString; CONST forCompletion:boolean);
-  FUNCTION typeToIsType(CONST id:T_idString):T_idString;
-    begin
-      result:=id;
-      result[1]:=upCase(result[1]);
-      result:='is'+result;
-    end;
-
-  PROCEDURE wput(CONST s:ansistring; CONST packageOrNil:P_objectWithPath); inline;
-    begin
-      userDefinedRules.put(s);
-      if forCompletion and (pos(ID_QUALIFY_CHARACTER,s)<=0) then begin
-        userDefinedRules.put(ID_QUALIFY_CHARACTER+s);
-        if packageOrNil<>nil then userDefinedRules.put(packageOrNil^.getId+ID_QUALIFY_CHARACTER+s);
-      end;
-    end;
-
-  VAR rule:P_rule;
-      use :P_package;
+  VAR use :P_package;
   begin
-    for rule in packageRules.valueSet do begin
-      wput(rule^.getId,nil);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId),nil);
-    end;
-    for rule in importedRules.valueSet do  begin
-      wput(rule^.getId,rule^.getLocation.package);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId),rule^.getLocation.package);
-    end;
+    userDefinedRules.put(ruleMap.keySet);
     if not(forCompletion) then for use in secondaryPackages do userDefinedRules.put(use^.getId);
   end;
 
 PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages);
-  VAR rule:P_rule;
-      import:T_packageReference;
+  VAR import:T_packageReference;
   begin
-    for rule in packageRules.valueSet do rule^.complainAboutUnused(messages);
+    ruleMap.complainAboutUnused(messages);
     for import in packageUses do if not(import.pack^.anyCalled) then
       messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
@@ -1367,7 +1149,8 @@ FUNCTION T_package.getHelpOnMain: ansistring;
       i:longint;
   begin
     if isPlainScript then exit('Plain script: '+commentOnPlainMain);
-    if not(packageRules.containsKey(MAIN_RULE_ID,mainRule))
+    mainRule:=ruleMap.getLocalMain;
+    if mainRule=nil
     then exit('The package contains no main rule')
     else begin
       result:='Try one of the following:'+LineEnding;
@@ -1390,20 +1173,28 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id: string): boolean;
 FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
 PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
-  PROCEDURE addRule(CONST rule:P_rule);
+  PROCEDURE addRule(CONST entry:T_ruleMapEntry);
     VAR value:P_literal;
-        reportId:string;
+        rule:P_rule;
+        variable:P_variable;
     begin
-      if not(rule^.isReportable(value)) then exit;
-      reportId:=filenameToPackageId(rule^.getLocation.package^.getPath)+'.'+rule^.getId;
-      if (rule^.getRuleType=rt_datastore) and not(P_datastoreRule(rule)^.isInitialized) then reportId:=reportId+' (uninitialized)';
-      variableReport.addEntry(reportId,value,true);
+      case entry.entryType of
+        tt_userRule: begin
+          rule:=P_rule(entry.value);
+          if not(rule^.isReportable(value)) then exit;
+          variableReport.addEntry(filenameToPackageId(rule^.getLocation.package^.getPath)+'.'+rule^.getId,value,true);
+        end;
+        tt_globalVariable: begin
+          variable:=P_variable(entry.value);
+          if not(variable^.isReportable(value)) then exit;
+          variableReport.addEntry(filenameToPackageId(rule^.getLocation.package^.getPath)+'.'+rule^.getId,value,true);
+        end;
+      end;
     end;
 
-  VAR rule:P_rule;
+  VAR entry:T_ruleMapEntry;
   begin
-    for rule in importedRules.valueSet do addRule(rule);
-    for rule in packageRules.valueSet do addRule(rule);
+    for entry in ruleMap.valueSet do addRule(entry);
   end;
 {$endif}
 
@@ -1426,22 +1217,13 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
                        .appendString(extendedPackages[i]^.getPath),false);
     end;
 
-  FUNCTION rulesList:P_mapLiteral;
-    VAR allRules:array of P_rule;
-        rule:P_rule;
-    begin
-      allRules:=packageRules.valueSet;
-      result:=newMapLiteral();
-      for rule in allRules do result^.put(rule^.getId,rule^.inspect(includeRulePointer,P_context(context)^,recycler),false);
-    end;
-
   begin
     result:=newMapLiteral^.put('id'      ,getId)^
                           .put('path'    ,getPath)^
                           .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
                           .put('includes',includeList,false)^
-                          .put('declares',rulesList,false)^
+                          .put('declares',ruleMap.inspect(P_context(context)^,recycler,includeRulePointer),false)^
                           .put('plain script',newBoolLiteral(isPlainScript),false);
   end;
 
@@ -1453,7 +1235,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       key:string;
   begin
     setLength(result,0);
-    for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck,rt_duckTypeCheck,rt_customTypeCast]) then
+    for rule in ruleMap.getAllLocalRules do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck,rt_duckTypeCheck,rt_customTypeCast]) then
     for subRule in P_ruleWithSubrules(rule)^.getSubrules do begin
       matchesAll:=true;
       for key in attributeKeys do matchesAll:=matchesAll and subRule^.metaData.hasAttribute(key,caseSensitive);
@@ -1466,57 +1248,24 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
 {$endif}
 
 PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
-  VAR userRule:P_rule;
-      intrinsicFuncPtr:P_intFuncCallback;
-      ruleId:T_idString;
-  PROCEDURE assignLocalRule(CONST tt:T_tokenType); inline;
-    begin
-      token.tokType:=tt;
-      token.data:=userRule;
-      {$ifdef fullVersion}
-      if markAsUsed then userRule^.setIdResolved;
-      {$endif}
-    end;
-
-  PROCEDURE assignImportedRule(CONST tt:T_tokenType); inline;
-    begin
-      token.tokType:=tt;
-      token.data:=userRule;
-      {$ifdef fullVersion}
-      userRule^.setIdResolved;
-      P_package(userRule^.getLocation.package)^.anyCalled:=true;
-      {$endif}
-    end;
-
+  VAR intrinsicFuncPtr:P_intFuncCallback;
+      entry:T_ruleMapEntry;
   begin
-    ruleId   :=token.txt;
-    if packageRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
-      then assignLocalRule(tt_customTypeRule)
-      else assignLocalRule(tt_localUserRule );
+    if ruleMap.containsKey(token.txt,entry) then begin
+      token.tokType:=entry.entryType;
+      token.data   :=entry.value;
+      {$ifdef fullVersion}
+      if markAsUsed then case entry.entryType of
+        tt_userRule:       P_rule    (entry.value)^.setIdResolved;
+        tt_globalVariable: P_variable(entry.value)^.setIdResolved;
+      end;
+      {$endif}
       exit;
     end;
-    if importedRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
-      then assignImportedRule(tt_customTypeRule  )
-      else assignImportedRule(tt_importedUserRule);
-      exit;
-    end;
-    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+    if intrinsicRuleMap.containsKey(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
-    end;
-    ruleId:=isTypeToType(ruleId);
-    if ruleId<>'' then begin
-      if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
-        assignLocalRule(tt_customTypeRule);
-        exit;
-      end;
-      if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
-        assignImportedRule(tt_customTypeRule);
-        exit;
-      end;
     end;
     if messagesOrNil<>nil then messagesOrNil^.raiseSimpleError('Cannot resolve ID "'+token.txt+'"',token.location);
   end;
@@ -1529,28 +1278,35 @@ FUNCTION T_package.usedPackages: T_packageList;
     for i:=0 to length(result)-1 do result[i]:=packageUses[i].pack;
   end;
 
-FUNCTION T_package.declaredRules(CONST ruleSorting:T_ruleSorting): T_ruleList;
-  VAR tmp:P_rule;
+FUNCTION T_package.declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleMapEntries;
+  VAR tmp:T_ruleMapEntry;
       i,j:longint;
   begin
-    result:=packageRules.valueSet;
+    result:=ruleMap.valueSet;
+    j:=0;
+    for i:=0 to length(result)-1 do if not(result[i].isImportedOrDelegateWithoutLocal) then begin
+      result[j]:=result[i];
+      inc(j);
+    end;
+    setLength(result,j);
+
     case ruleSorting of
       rs_byNameCaseSensitive:
         for i:=1 to length(result)-1 do
         for j:=0 to i-1 do
-        if result[i]^.getId<result[j]^.getId then begin
+        if result[i].value^.getId<result[j].value^.getId then begin
           tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
         end;
       rs_byNameCaseInsensitive:
         for i:=1 to length(result)-1 do
         for j:=0 to i-1 do
-        if uppercase(result[i]^.getId)<uppercase(result[j]^.getId) then begin
+        if uppercase(result[i].value^.getId)<uppercase(result[j].value^.getId) then begin
           tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
         end;
       rs_byLocation:
         for i:=1 to length(result)-1 do
         for j:=0 to i-1 do
-        if result[i]^.getLocation<result[j]^.getLocation then begin
+        if result[i].value^.getLocation<result[j].value^.getLocation then begin
           tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
         end;
     end;

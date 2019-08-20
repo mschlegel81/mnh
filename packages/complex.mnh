@@ -41,6 +41,14 @@ OPERATOR_MINUS(x:Numeric,y:Complex)->[x-y[0],y[1]].toComplex;
 OPERATOR_MINUS(x:Complex,y:Numeric)->[x[0]-y,x[1]].toComplex;
 
 @Override
+COMPARATOR_EQ(x:Numeric,y:Complex)->y[1]=0 AND y[0]=x;
+COMPARATOR_EQ(y:Complex,x:Numeric)->y[1]=0 AND y[0]=x;
+
+@Override
+COMPARATOR_NEQ(x:Numeric,y:Complex)->!(y[1]=0 AND y[0]=x);
+COMPARATOR_NEQ(y:Complex,x:Numeric)->!(y[1]=0 AND y[0]=x);
+
+@Override
 sqr(x:Complex)->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]].toComplex;
 
 //*Returns exponential of complex x

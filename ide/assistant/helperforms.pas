@@ -39,10 +39,14 @@ PROCEDURE ensureHelpForm;
   VAR helperForm:T_mnhComponentForm;
       page:TTabSheet;
       PageControl:TPageControl;
+      previouslyActiveControl:TWinControl;
   begin
+    previouslyActiveControl:=mainForm.ActiveControl;
     helperForm:=getFormOfType(icHelp);
-    if helperForm=nil then dockNewForm(THelpForm.create(Application))
-    else begin
+    if helperForm=nil then begin
+      dockNewForm(THelpForm.create(Application));
+      mainForm.ActiveControl:=previouslyActiveControl;
+    end else begin
       helperForm.getParents(page,PageControl);
       if (PageControl= nil) and (helperForm.Focused) or
          (PageControl<>nil) and (PageControl.activePage=page)
@@ -51,7 +55,6 @@ PROCEDURE ensureHelpForm;
         if PageControl<>nil
         then PageControl.activePage:=page
         else helperForm.showComponent(true);
-        THelpForm(helperForm).toggleUpdate();
       end;
     end;
   end;

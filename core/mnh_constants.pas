@@ -108,9 +108,10 @@ CONST
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
     //identifier and resolved identifiers
-    tt_identifier, tt_parameterIdentifier, tt_localUserRule,
-    tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
-    tt_customTypeRule,
+    tt_identifier, tt_parameterIdentifier, tt_userRule,
+    tt_intrinsicRule, tt_rulePutCacheValue,
+    tt_customType,
+    tt_globalVariable,
     tt_blockLocalVariable,
     tt_eachParameter,
     tt_eachIndex,
@@ -235,11 +236,11 @@ CONST
   {tt_aggregatorExpressionLiteral}'',
   {tt_identifier}                 '',
   {tt_parameterIdentifier}        '',
-  {tt_localUserRule}              '',
-  {tt_importedUserRule}           '',
+  {tt_userRule}                   '',
   {tt_intrinsicRule}              '',
   {tt_rulePutCacheValue}          '',
-  {tt_customTypeRule}             '',
+  {tt_customType}                 '',
+  {tt_globalVariable}             '',
   {tt_blockLocalVariable}         '',
   {tt_eachParameter}              '',
   {tt_eachIndex}                  '',
@@ -343,11 +344,11 @@ CONST
 {tt_aggregatorExpressionLiteral}(defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'An aggregator expression literal'; helpLink:''),
 {tt_identifier}                 (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'An identifier (unresolved)'; helpLink:''),
 {tt_parameterIdentifier}        (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A parameter identifier'; helpLink:'/types.html#expressions'),
-{tt_localUserRule}              (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A local user rule'; helpLink:'/functions.html#declarations'),
-{tt_importedUserRule}           (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'An imported user rule'; helpLink:'/functions.html#declarations'),
+{tt_userRule}                   (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A local user rule'; helpLink:'/functions.html#declarations'),
 {tt_intrinsicRule}              (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'A built in rule'; helpLink:''),
 {tt_rulePutCacheValue}          (defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'A put-cache-value call'; helpLink:''),
-{tt_customTypeRule}             (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A custom type rule'; helpLink:'/functions.html#typeMod'),
+{tt_customType}                 (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A custom type'; helpLink:'/functions.html#typeMod'),
+{tt_globalVariable}             (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A global variable'; helpLink:'/functions.html#mutableMod'),
 {tt_blockLocalVariable}         (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A block-local variable'; helpLink:'/functions.html#localMod'),
 {tt_eachParameter}              (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'each parameter'; helpLink:'/specials.html#each'),
 {tt_eachIndex}                  (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'each index'; helpLink:'/specials.html#each'),
@@ -622,54 +623,57 @@ CONST
        (txt:'true';            reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
        (txt:'main';            reservedWordClass:rwc_not_reserved  ; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
   {$endif}
-  C_ruleTypeString: array[tt_localUserRule..tt_customTypeRule] of string = (
-    'user function (local)',
-    'user function (imported)',
+  C_ruleTypeString: array[tt_userRule..tt_rulePutCacheValue] of string = (
+    'user function',
     'built in function',
-    'put-cache rule',
-    'custom type');
+    'put-cache rule');
 
 TYPE
   T_ruleType=(rt_normal,
               rt_memoized,
-              rt_mutable,
-              rt_datastore,
               rt_synchronized,
               rt_customTypeCheck,
               rt_duckTypeCheck,
               rt_customTypeCast,
-              rt_customOperator);
-CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
-      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable,rt_datastore,rt_customTypeCheck,rt_duckTypeCheck];
+              rt_customOperator,
+              rt_delegate);
+  T_variableType=(vt_mutable,vt_datastore,vt_plainDatastore);
+
+CONST C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_customTypeCheck,rt_duckTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
       '',
       'memoized ',
-      'mutable ',
-      'datastore ',
       'synchronized ',
       'type ',
       'ducktype ',
       'typecast ',
-      'custom operator ');
-      C_validModifierCombinations:array[0..15] of record
+      'custom operator ',
+      'delegate ');
+      C_validModifierCombinations:array[0..19] of record
         modifiers:T_modifierSet;
+        metaType:T_tokenType;
         ruleType:T_ruleType;
-      end=((modifiers:[];                                                   ruleType:rt_normal),
-           (modifiers:[modifier_private];                                   ruleType:rt_normal),
-           (modifiers:[modifier_memoized];                                  ruleType:rt_memoized),
-           (modifiers:[modifier_memoized,modifier_private];                 ruleType:rt_memoized),
-           (modifiers:[modifier_mutable];                                   ruleType:rt_mutable),
-           (modifiers:[modifier_mutable,modifier_private];                  ruleType:rt_mutable),
-           (modifiers:[modifier_datastore];                                 ruleType:rt_datastore),
-           (modifiers:[modifier_datastore   ,modifier_private];             ruleType:rt_datastore),
-           (modifiers:[modifier_plain,modifier_datastore];                  ruleType:rt_datastore),
-           (modifiers:[modifier_plain,modifier_datastore,modifier_private]; ruleType:rt_datastore),
-           (modifiers:[modifier_memoized];                                  ruleType:rt_memoized),
-           (modifiers:[modifier_memoized,modifier_private];                 ruleType:rt_memoized),
-           (modifiers:[modifier_synchronized];                              ruleType:rt_synchronized),
-           (modifiers:[modifier_synchronized,modifier_private];             ruleType:rt_synchronized),
-           (modifiers:[modifier_customType];                                ruleType:rt_customTypeCheck),
-           (modifiers:[modifier_customDuckType];                            ruleType:rt_duckTypeCheck));
+        variableType:T_variableType;
+      end=((modifiers:[];                                                       metaType: tt_userRule;       ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_private];                                       metaType: tt_userRule;       ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry];                                         metaType: tt_userRule;       ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_private];                        metaType: tt_userRule;       ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized];                                      metaType: tt_userRule;       ruleType:rt_memoized       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_private];                     metaType: tt_userRule;       ruleType:rt_memoized       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized];                       metaType: tt_userRule;       ruleType:rt_memoized       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_private];      metaType: tt_userRule;       ruleType:rt_memoized       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_synchronized];                                  metaType: tt_userRule;       ruleType:rt_synchronized   ; variableType:vt_mutable       ),
+           (modifiers:[modifier_synchronized,modifier_private];                 metaType: tt_userRule;       ruleType:rt_synchronized   ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_synchronized];                   metaType: tt_userRule;       ruleType:rt_synchronized   ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_synchronized,modifier_private];  metaType: tt_userRule;       ruleType:rt_synchronized   ; variableType:vt_mutable       ),
+           (modifiers:[modifier_mutable];                                       metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_mutable,modifier_private];                      metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_datastore];                                     metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_datastore    ),
+           (modifiers:[modifier_datastore   ,modifier_private];                 metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_datastore    ),
+           (modifiers:[modifier_plain,modifier_datastore];                      metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_plainDatastore),
+           (modifiers:[modifier_plain,modifier_datastore,modifier_private];     metaType: tt_globalVariable; ruleType:rt_normal         ; variableType:vt_plainDatastore),
+           (modifiers:[modifier_customType];                                    metaType: tt_customType;     ruleType:rt_customTypeCheck; variableType:vt_mutable       ),
+           (modifiers:[modifier_customDuckType];                                metaType: tt_customType;     ruleType:rt_duckTypeCheck  ; variableType:vt_mutable       ));
 
 TYPE
   T_sideEffect=(se_inputViaAsk,

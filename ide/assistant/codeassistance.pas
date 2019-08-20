@@ -356,7 +356,7 @@ FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setO
     try
       package^.updateLists(wordsInEditor,true);
       for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-      result:=(package^.packageRules .size>0) or (package^.importedRules.size>0) or not(localIdInfos^.isEmpty);
+      result:=(package^.ruleMap.size>0) or not(localIdInfos^.isEmpty);
     finally
       leaveCriticalSection(responseCs);
     end;

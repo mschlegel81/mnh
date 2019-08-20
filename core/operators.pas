@@ -7,7 +7,6 @@ USES mnh_constants,
      tokenArray,
      contexts,
      litVar,
-     tokens,
      subrules,
      recyclers,
      funcs;
@@ -140,31 +139,12 @@ FUNCTION arithmeticNegationOf_impl intFuncSignature;
   end;
 
 FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
-  VAR parList:P_listLiteral;
-      rule   :P_abstractRule =nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
+  VAR rule   :P_abstractRule =nil;
   begin
+    result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
-        exit(newVoidLiteral);
-      end;
-      parList:=newListLiteral(1);
-      parList^.append(operand,true);
-      inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,@context,recycler) then begin
-        result:=context.reduceToLiteral(ruleOut,recycler).literal;
-        dec(context.callDepth);
-        disposeLiteral(parList);
-        if result=nil
-        then exit(newVoidLiteral)
-        else exit(result);
-      end;
-      dec(context.callDepth);
-      disposeLiteral(parList);
-    end;
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,operand,nil,recycler,@context);
+    if result=nil then
     result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
     if result=nil then begin
       context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
@@ -177,32 +157,12 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer): P_literal;
-  VAR parList:P_listLiteral;
-      rule   :P_abstractRule =nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
+  VAR rule   :P_abstractRule =nil;
   begin
+    result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
-        P_context(context)^.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
-        exit(newVoidLiteral);
-      end;
-      parList:=newListLiteral(2);
-      parList^.append(LHS,true)^.append(RHS,true);
-      inc(P_context(context)^.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context,P_recycler(recycler)^) then begin
-        result:=P_context(context)^.reduceToLiteral(ruleOut,P_recycler(recycler)^).literal;
-        dec(P_context(context)^.callDepth);
-        disposeLiteral(parList);
-        if result=nil
-        then exit(newVoidLiteral)
-        else exit(result);
-      end;
-      dec(P_context(context)^.callDepth);
-      disposeLiteral(parList);
-    end;
-    result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,LHS,RHS,P_recycler(recycler)^,context);
+    if result=nil then result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
     if result=nil then begin
       P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
@@ -320,24 +280,12 @@ FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
   end;
 
 FUNCTION outerFunc_id intFuncSignature;
-  VAR rule   :P_abstractRule =nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
+  VAR rule:P_abstractRule;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.raiseError('Stack overflow in overridden comparator',tokenLocation,mt_el4_systemError);
-        exit(nil);
-      end;
-      inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
-        result:=context.reduceToLiteral(ruleOut,recycler).literal;
-        dec(context.callDepth);
-        exit(result);
-      end else dec(context.callDepth);
-    end;
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
@@ -418,23 +366,11 @@ comparator_implementation;
 
 FUNCTION outerFunc_id intFuncSignature;
   VAR rule   :P_abstractRule=nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
-        exit(nil);
-      end;
-      inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
-        result:=context.reduceToLiteral(ruleOut,recycler).literal;
-        dec(context.callDepth);
-        exit(result);
-      end else dec(context.callDepth);
-    end;
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
@@ -466,23 +402,11 @@ boolIntOperator;
 
 {$define genericOuter:=FUNCTION outerFunc_id intFuncSignature;
   VAR rule   :P_abstractRule=nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
-        exit(nil);
-      end;
-      inc(context.callDepth);
-      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context,recycler) then begin
-        result:=context.reduceToLiteral(ruleOut,recycler).literal;
-        dec(context.callDepth);
-        exit(result);
-      end else dec(context.callDepth);
-    end;
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
       if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
