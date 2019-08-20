@@ -507,7 +507,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     begin
       if not(context.checkSideEffects('<mutation>',first^.location,[se_alterPackageState])) then exit;
       newValue:=first^.next^.data;
-      P_mutableRule(first^.data)^.setMutableValue(newValue,false);
+      P_variable(first^.data)^.setMutableValue(newValue,false);
       first:=recycler.disposeToken(first);
       didSubstitution:=true;
     end;
@@ -533,7 +533,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             first^.data:=newValue;
           end;
         end else begin
-          newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context,recycler);
+          newValue:=P_variable(first^.data)^.mutateInline(kind,newValue,first^.location,context,recycler);
           if context.messages^.continueEvaluation then begin
             first:=recycler.disposeToken(first);
             disposeLiteral(first^.data);
@@ -570,6 +570,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
+        //TODO: Handle tt_globalVariable here
         if tokType=tt_blockLocalVariable then begin
           expression:=context.valueScope^.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
@@ -809,7 +810,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       stack.popLink(first);   // -> ? | [ ...
       first^.tokType:=tt_literal; // -> ? | <NewList>
       didSubstitution:=true;
-      if (stack.topType in [tt_blockLocalVariable,tt_userRule]) then begin
+      if (stack.topType in [tt_blockLocalVariable,tt_globalVariable]) then begin
         // x # [y]:=... -> x<<[y]|...;
         stack.popLink(first);
         if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
@@ -846,7 +847,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         end else begin
           if first^.tokType=tt_blockLocalVariable
           then newLit:=context.valueScope^.getVariableValue(first^.txt)
-          else newLit:=P_mutableRule(first^.data)^.getValue(context,recycler);
+          else newLit:=P_variable(first^.data)^.getValue(context,recycler);
           if newLit<>nil then begin
             first^.data:=newLit;
             first^.tokType:=tt_literal;
@@ -979,7 +980,7 @@ end}
       initTokTypes;
 
       //writeln(cTokType[-1],' # ',cTokType[0],' ',cTokType[1],' ',cTokType[2]);
-      //writeln(stack.toString(first,20));
+      //writeln(stack.toString(first,50));
 
       {$ifdef fullVersion}
       debugRun:=debugRun and context.stepping(first,@stack);
@@ -1058,11 +1059,6 @@ end}
           end;
  {cT[-1]=}tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
-              if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then begin
-                {$ifdef fullVersion}
-                context.callStackPop(first);
-                {$endif}
-              end;
               stack.popDestroy(recycler);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
@@ -1130,6 +1126,24 @@ end}
 {cT[0]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: begin
           stack.push(first);
           didSubstitution:=true;
+        end;
+{cT[0]=}tt_globalVariable:
+        if cTokType[-1]=tt_nameOf then begin
+          first^.data:=newStringLiteral(first^.txt);
+          first^.tokType:=tt_literal;
+          stack.popDestroy(recycler);
+          didSubstitution:=true;
+        end else if cTokType[1]=tt_listBraceOpen then begin
+          stack.push(first);
+          didSubstitution:=true;
+        end else begin
+          first^.data:=P_variable(first^.data)^.getValue(context,recycler);
+          if first^.data<>nil then begin
+            first^.tokType:=tt_literal;
+            didSubstitution:=true;
+          end else begin
+            context.raiseError('Cannot find value for global variable "'+first^.txt+'"',errorLocation);
+          end;
         end;
 {cT[0]=}tt_blockLocalVariable:
         if cTokType[-1]=tt_nameOf then begin
@@ -1218,8 +1232,7 @@ end}
 {cT[0]=}tt_userRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_listBraceOpen: begin
-            if (cTokType[0]=tt_userRule) and
-               (P_rule(first^.data)^.getRuleType in [rt_datastore,rt_mutable]) then begin
+            if (cTokType[0]=tt_globalVariable) then begin
               stack.push(first);
               didSubstitution:=true;
             end else applyRule(nil,first^.next);
@@ -1251,6 +1264,7 @@ end}
             first^.next:=recycler.disposeToken(first^.next);
             didSubstitution:=true;
           end;
+          //TODO: Handle tt_globalVariable here;
           tt_blockLocalVariable: begin
             first^.data:=newStringLiteral(first^.next^.txt);
             first^.tokType:=tt_literal;

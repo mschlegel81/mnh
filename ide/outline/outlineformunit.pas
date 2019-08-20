@@ -60,7 +60,7 @@ TYPE
       location:T_searchTokenLocation;
       children:array of P_outlineNode;
 
-      PROCEDURE updateWithRule(CONST rule:P_rule; CONST inMainPackage:boolean);
+      PROCEDURE updateWithEntry(CONST rule:T_ruleMapEntry; CONST inMainPackage:boolean);
       PROCEDURE updateWithSubrule(CONST subRule:P_subruleExpression; CONST ruleId:string; CONST inMainPackage:boolean);
       PROCEDURE updateWithPackage(CONST package:P_package; CONST mainPackage:boolean);
       CONSTRUCTOR createBlank(CONST inModel:TOutlineForm; CONST node:TTreeNode);
@@ -89,16 +89,6 @@ PROCEDURE ensureOutlineForm;
   end;
 
 {$R *.lfm}
-
-CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
-              {rt_memoized}        0,
-              {rt_mutable}         1,
-              {rt_datastore}       2,
-              {rt_synchronized}    3,
-              {rt_customTypeCheck} 4,
-              {rt_duckTypeCheck}   4,
-              {rt_customTypeCast}  5,
-              {rt_customOperator}  6,6);
 
 CONSTRUCTOR T_outlineSettings.create;
   begin
@@ -154,52 +144,107 @@ PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CO
     associatedNode.text:=ruleId+subRule^.patternString;
   end;
 
-PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:boolean);
-  VAR ruleId:string;
-      subrules:T_subruleArray;
+PROCEDURE T_outlineNode.updateWithEntry(CONST rule: T_ruleMapEntry; CONST inMainPackage:boolean);
+  VAR subrules:T_subruleArray;
       subRule:P_subruleExpression;
       relevantSubruleCount:longint=0;
       childIdx:longint=0;
       keepCount:longint;
-  FUNCTION opRuleName:string;
-    VAR tt:T_tokenType;
+
+  FUNCTION canHaveChildren:boolean;
     begin
-      result:='';
-      if rule^.getRuleType=rt_customOperator then begin
-        for tt:=low(operatorName) to high(operatorName) do if
-        operatorName[tt]=rule^.getId then exit(C_tokenDefaultId[tt]);
-      end else result:=rule^.getId;
+      result:=(rule.entryType=tt_userRule);
+    end;
+
+  FUNCTION getRuleId:string;
+    VAR local:P_rule;
+        tt:T_tokenType;
+    begin
+      result:=rule.value^.getId;
+      if (rule.entryType=tt_userRule) then begin
+        local:=P_rule(rule.value);
+        if (local^.getRuleType=rt_delegate) then local:=P_delegatorRule(local)^.getLocalRule;
+        if local=nil then exit(result);
+        if local^.getRuleType=rt_customOperator
+        then begin
+          for tt:=low(operatorName) to high(operatorName) do if
+          operatorName[tt]=local^.getId then exit(C_tokenDefaultId[tt]);
+        end;
+      end;
+    end;
+
+  FUNCTION outlineIconIndex(CONST rule:T_ruleMapEntry):longint;
+    //ICONS:
+    //  memoized         0
+    //  mutable          1
+    //  datastore        2
+    //  synchronized     3
+    //  customTypeCheck  4
+    //  duckTypeCheck    4
+    //  customTypeCast   5
+    //  customOperator   6
+    VAR localRule:P_rule;
+    begin
+      case rule.entryType of
+        tt_customType    : result:=4;
+        tt_globalVariable: if P_variable(rule.value)^.getVariableType=vt_mutable
+                           then result:=1
+                           else result:=2;
+        tt_userRule: begin
+          localRule:=P_rule(rule.value);
+          if localRule^.getRuleType=rt_delegate then localRule:=P_delegatorRule(localRule)^.getLocalRule;
+          if localRule=nil then result:=-1
+          else case localRule^.getRuleType of
+            rt_memoized      : result:= 0;
+            rt_synchronized  : result:= 3;
+            rt_customTypeCheck,
+            rt_duckTypeCheck : result:= 4;
+            rt_customTypeCast: result:= 5;
+            rt_customOperator: result:= 6;
+            else               result:=-1;
+          end;
+        end
+        else result:=-1;
+      end;
+    end;
+
+  FUNCTION extractSubrules:T_subruleArray;
+    VAR local:P_rule;
+    begin
+      setLength(result,0);
+      if (rule.entryType=tt_userRule) then begin
+        local:=P_rule(rule.value);
+        if (local^.getRuleType=rt_delegate) then local:=P_delegatorRule(local)^.getLocalRule;
+        if local<>nil then result:=P_ruleWithSubrules(local)^.getSubrules;
+      end;
     end;
 
   begin
     isLocal:=inMainPackage;
-    isPublic:=rule^.hasPublicSubrule;
-    location:=rule^.getLocation;
+    isPublic:=rule.hasPublicSubrule;
+    location:=rule.value^.getLocation;
 
-    ruleId:=opRuleName;
-    if rule^.getRuleType in C_mutableRuleTypes then begin
-      associatedNode.text:=ruleId;
-      associatedNode.ImageIndex:=outlineIconIndex[rule^.getRuleType];
+    associatedNode.text:=getRuleId;
+    associatedNode.ImageIndex:=outlineIconIndex(rule);
+    if not(canHaveChildren) then begin
       for childIdx:=0 to length(children)-1 do dispose(children[childIdx],destroy);
       setLength(children,0);
     end else begin
-      associatedNode.text:=ruleId;
-      associatedNode.ImageIndex:=outlineIconIndex[rule^.getRuleType];
-      subrules:=P_ruleWithSubrules(rule)^.getSubrules;
+      subrules:=extractSubrules;
       for subRule in subrules do if inMainPackage or (subRule^.isPublic) then inc(relevantSubruleCount);
       if relevantSubruleCount<=1 then begin
-         for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
+         for subRule in subrules do if inMainPackage or (subRule^.isPublic) then begin
            isLocal:=inMainPackage;
            isPublic:=subRule^.isPublic;
            location:=subRule^.getLocation;
-           associatedNode.text:=ruleId+subRule^.patternString;
+           associatedNode.text:=getRuleId+subRule^.patternString;
          end;
-      end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
+      end else for subRule in subrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
           setLength(children,childIdx+1);
           new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
         end;
-        children[childIdx]^.updateWithSubrule(subRule,ruleId,inMainPackage);
+        children[childIdx]^.updateWithSubrule(subRule,getRuleId,inMainPackage);
         inc(childIdx);
       end;
       keepCount:=childIdx;
@@ -212,7 +257,7 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
   end;
 
 PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPackage:boolean);
-  VAR rule:P_rule;
+  VAR entry:T_ruleMapEntry;
       childIdx:longint=0;
       keepCount:longint;
   begin
@@ -220,13 +265,13 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     isLocal:=mainPackage;
     isPublic:=true;
     location:=packageTokenLocation(package);
-    for rule in package^.declaredRules(containingModel.ruleSorting) do if (rule^.hasPublicSubrule or mainPackage) and
-    not((rule^.getRuleType=rt_delegate) and (P_operatorDelegatorRule(rule)^.getLocalRule=nil)) then begin
+    for entry in package^.declaredRules(containingModel.ruleSorting) do if (entry.hasPublicSubrule or mainPackage) and
+    not(entry.isImportedOrDelegateWithoutLocal) then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
         new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
       end;
-      children[childIdx]^.updateWithRule(rule,mainPackage);
+      children[childIdx]^.updateWithEntry(entry,mainPackage);
       inc(childIdx);
     end;
     keepCount:=childIdx;

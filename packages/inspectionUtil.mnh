@@ -8,7 +8,7 @@ end,|).toMap;
 
 ducktype RuleInfoMap(M:Map)->
   M.isMap AND
-  M['subrules'].isList AND
+  isList(M['subrules'] orElse []) AND
   M['location'].isString;
 
 ducktype RuleInfo(L:List(2))->
@@ -16,7 +16,10 @@ ducktype RuleInfo(L:List(2))->
   L[1].isRuleInfoMap;
 
 ruleAttributes(info:RuleInfo)->info[1].ruleAttributes;
-ruleAttributes(info:RuleInfoMap)->info['subrules'].each(sub,sub['attributes'],aggregator({mergeMaps($x,$y,::orElse)}));
+ruleAttributes(info:RuleInfoMap)->
+  mergeMaps(info['attributes'] orElse [].toMap,
+            (info['subrules'] orElse []).each(sub,sub['attributes'],aggregator({mergeMaps($x,$y,::orElse)}))
+            orElse [].toMap,::orElse);
 
 getFunction(info:RuleInfo)->info[1].getFunction;
 getFunction(info:RuleInfoMap)->info['function'] orElse {void};

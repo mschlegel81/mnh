@@ -65,11 +65,13 @@ TYPE
       PROPERTY attributeValue[index:longint]:string read getAttributeValue write setAttributeValue;
   end;
 
+  T_resolveIdContext=(ON_DECLARATION,ON_DELEGATION,ON_EVALUATION);
+
   P_inlineExpression=^T_inlineExpression;
   T_inlineExpression=object(T_expression)
     private
       subruleCallCs:TRTLCriticalSection;
-      functionIdsReady:boolean;
+      functionIdsReady:(NOT_READY,IDS_RESOLVED,IDS_RESOLVED_AND_INLINED);
       pattern:T_pattern;
       preparedBody:array of T_preparedToken;
       customId:T_idString;
@@ -88,7 +90,7 @@ TYPE
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
-      PROCEDURE resolveIds(CONST messages:P_messages);
+      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString='');
@@ -97,7 +99,7 @@ TYPE
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       //Pattern related:
-      FUNCTION arity:longint; virtual;
+      FUNCTION arity:T_arityInfo; virtual;
       FUNCTION isVariadic:boolean;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       PROPERTY getPattern:T_pattern read pattern;
@@ -122,12 +124,12 @@ TYPE
   P_subruleExpression=^T_subruleExpression;
   T_subruleExpression=object(T_inlineExpression)
     private
-      parent:P_abstractRule;
       publicSubrule:boolean;
     public
+      parent:P_abstractRule;
       PROPERTY metaData:T_ruleMetaData read meta;
 
-      CONSTRUCTOR create(CONST parent_:P_abstractRule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
+      CONSTRUCTOR create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
       FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
@@ -155,7 +157,7 @@ TYPE
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-      FUNCTION arity:longint; virtual;
+      FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
       FUNCTION getId:T_idString; virtual;
@@ -185,7 +187,7 @@ T_builtinExpression=object(T_expression)
     DESTRUCTOR destroy; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
     FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-    FUNCTION arity:longint; virtual;
+    FUNCTION arity:T_arityInfo; virtual;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
     FUNCTION getId:T_idString; virtual;
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
@@ -268,7 +270,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
-          tt_identifier, tt_eachParameter, tt_userRule, tt_parameterIdentifier, tt_intrinsicRule: begin
+          tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
@@ -300,7 +302,7 @@ CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location:
     meta.create;
     customId:='';
     initCriticalSection(subruleCallCs);
-    functionIdsReady:=false;
+    functionIdsReady:=NOT_READY;
     setLength(preparedBody,0);
     indexOfSave:=-1;
     saveValueStore:=nil;
@@ -314,15 +316,15 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
     constructExpression(rep,context,recycler,declAt);
   end;
 
-CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_abstractRule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
+CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
   begin
     init(et_subrule,declAt);
+    parent:=nil;
     meta.destroy;
     meta:=meta_;
     publicSubrule:=not(isPrivate);
     pattern:=pat;
     constructExpression(rep,context,recycler,declAt);
-    parent:=parent_;
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation:T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
@@ -492,7 +494,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       try
         currentlyEvaluating:=true;
 
-        if not(functionIdsReady) then resolveIds(context.messages);
+        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
         blocking:=typ in C_subruleExpressionTypes;
         firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
         lastRep:=firstRep;
@@ -891,8 +893,8 @@ FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_context
 FUNCTION T_builtinExpression.getParameterNames: P_listLiteral;
   VAR i:longint;
   begin
-    result:=newListLiteral(arity);
-    for i:=0 to arity-1 do result^.appendString('$'+intToStr(i));
+    result:=newListLiteral(arity.minPatternLength);
+    for i:=0 to arity.minPatternLength-1 do result^.appendString('$'+intToStr(i));
   end;
 
 FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=newListLiteral(); end;
@@ -984,11 +986,11 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR c
   VAR toReduce,dummy,t:P_token;
       k:longint;
   begin
-    if not(functionIdsReady) then begin
+    if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then begin
       enterCriticalSection(subruleCallCs);
       try
-        resolveIds(nil);
-        functionIdsReady:=true;
+        resolveIds(nil,ON_EVALUATION);
+        functionIdsReady:=IDS_RESOLVED_AND_INLINED;
         for k:=0 to length(preparedBody)-1 do if preparedBody[k].token.tokType=tt_identifier then preparedBody[k].token.tokType:=tt_blockLocalVariable;
       finally
         leaveCriticalSection(subruleCallCs);
@@ -1100,9 +1102,23 @@ FUNCTION T_builtinExpression.equals(CONST other:P_literal):boolean;
     result:=(other^.literalType=lt_expression) and (P_expressionLiteral(other)^.typ=et_builtin) and (P_builtinExpression(other)^.func=func);
   end;
 
-FUNCTION T_inlineExpression .arity: longint; begin result:=pattern.arity; end;
-FUNCTION T_builtinExpression.arity: longint; begin result:=C_arityKind[getMeta(func).arityKind].fixedParameters; end;
-FUNCTION T_builtinGeneratorExpression.arity: longint; begin result:=0; end;
+FUNCTION T_inlineExpression .arity: T_arityInfo;
+  begin
+    result.minPatternLength:=pattern.arity;
+    if pattern.isVariadic
+    then result.maxPatternLength:=maxLongint
+    else result.maxPatternLength:=result.minPatternLength;
+  end;
+
+FUNCTION T_builtinExpression.arity: T_arityInfo;
+  begin
+    result.minPatternLength:=C_arityKind[getMeta(func).arityKind].fixedParameters;
+    if C_arityKind[getMeta(func).arityKind].variadic
+    then result.maxPatternLength:=maxLongint
+    else result.maxPatternLength:=result.minPatternLength;
+  end;
+
+FUNCTION T_builtinGeneratorExpression.arity: T_arityInfo; begin result.minPatternLength:=0; result.minPatternLength:=0; end;
 
 FUNCTION T_expression.containsReturnToken:boolean; begin result:=false; end;
 FUNCTION T_inlineExpression.containsReturnToken:boolean;
@@ -1266,27 +1282,33 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
     end;
   end;
 
-PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages);
+PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
   VAR i:longint;
       inlineValue:P_literal;
-
+      idsReady:boolean;
   begin
     enterCriticalSection(subruleCallCs);
     try
-      if not(functionIdsReady) then begin
-        functionIdsReady:=true;
+      if (functionIdsReady=NOT_READY) or
+         (functionIdsReady=IDS_RESOLVED) and (resolveIdContext in [ON_DELEGATION,ON_EVALUATION]) then begin
+        idsReady:=true;
         for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
           case token.tokType of
             tt_identifier: if (parIdx<0) then begin
               P_abstractPackage(token.location.package)^.resolveId(token,messages);
-              functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
+              idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
-            {$ifdef fullVersion}
-            tt_userRule,
-            tt_customTypeCheck:P_abstractRule(token.data)^.setIdResolved;
-            {$endif}
+            tt_userRule, tt_globalVariable: begin
+              if resolveIdContext=ON_DELEGATION then begin
+                token.tokType:=tt_identifier;
+                P_abstractPackage(token.location.package)^.resolveId(token,messages);
+              end;
+              {$ifdef fullVersion}
+              P_abstractRule(token.data)^.setIdResolved;
+              {$endif}
+            end;
           end;
-          if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) then begin
+          if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
             inlineValue:=P_abstractRule(token.data)^.getInlineValue;
             if inlineValue<>nil then begin
               token.data:=inlineValue;
@@ -1295,6 +1317,10 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages);
           end;
         end;
       end;
+      if idsReady then case resolveIdContext of
+        ON_EVALUATION: functionIdsReady:=IDS_RESOLVED_AND_INLINED
+        else           functionIdsReady:=IDS_RESOLVED;
+      end else functionIdsReady:=NOT_READY;
     finally
       leaveCriticalSection(subruleCallCs);
     end;
@@ -1498,7 +1524,7 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity);
+    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;

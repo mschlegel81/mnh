@@ -57,6 +57,9 @@ TYPE
       PROCEDURE clearCustomOperators;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
+      {$ifdef fullVersion}
+      anyCalled:boolean;
+      {$endif}
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
       FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
@@ -184,7 +187,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier,tt_userRule: if inPackage<>nil then begin
+        tt_identifier,tt_globalVariable: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil)
@@ -193,16 +196,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
-              if (t^.tokType = tt_userRule) then begin
+              if (t^.tokType = tt_globalVariable) then begin
                 rule:=t^.data;
-                if rule^.getRuleType in C_mutableRuleTypes then begin
-                  t^.data:=rule;
-                  t^.tokType:=t^.next^.tokType;
-                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
-                  t^.txt:=t^.txt;
-                  t^.next:=recycler.disposeToken(t^.next);
-                end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
-              end else messages^.raiseSimpleError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+                t^.data:=rule;
+                t^.tokType:=t^.next^.tokType;
+                if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
+                t^.txt:=t^.txt;
+                t^.next:=recycler.disposeToken(t^.next);
+              end else messages^.raiseSimpleError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
             end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
@@ -314,7 +315,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
     references:=token^.location; //default: references itself
 
     tokenText:=safeTokenToString(token);
-    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal]) then
+    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal,tt_globalVariable,tt_customType]) then
     case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
       tt_eachParameter: begin
         token^.tokType:=tt_eachParameter;
@@ -353,8 +354,9 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
         end;
       end;
     end;
-    if (linksTo=nothing) and (token^.tokType in [tt_userRule,tt_customTypeCheck]) then begin
-      references:=P_abstractRule(token^.data)^.getLocation;
+    if (linksTo=nothing) then case token^.tokType of
+      tt_userRule,tt_globalVariable   : references:=P_abstractRule(token^.data)^.getLocation;
+      tt_customType,tt_customTypeCheck: references:=P_typedef(token^.data)^.getLocation;
     end;
   end;
 
@@ -369,6 +371,8 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       tt_identifier         ,
       tt_parameterIdentifier,
       tt_userRule      ,
+      tt_globalVariable,
+      tt_customType,
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
       tt_eachParameter,
@@ -416,16 +420,16 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
-        tt_each,tt_parallelEach: result.idWithoutIsPrefix:=token^.txt;
-        tt_customTypeCheck,tt_userRule:
-                                 result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
-        else                     result.idWithoutIsPrefix:=tokenText;
+        tt_each,tt_parallelEach:           result.idWithoutIsPrefix:=token^.txt;
+        tt_customType,tt_customTypeCheck:  result.idWithoutIsPrefix:=P_typedef(token^.data)^.getId;
+        tt_userRule,tt_globalVariable:     result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
+        else                               result.idWithoutIsPrefix:=tokenText;
       end;
-      result.mightBeUsedInOtherPackages:=(token^.tokType in [tt_userRule,tt_customTypeCheck]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
+      result.mightBeUsedInOtherPackages:=(token^.tokType in [tt_userRule,tt_globalVariable]) and (P_abstractRule(token^.data)^.hasPublicSubrule) or (token^.tokType in [tt_customTypeCheck,tt_customType]);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of
@@ -458,12 +462,16 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
         if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
       end;
-      tt_userRule, tt_customTypeCheck: begin
+      tt_userRule, tt_globalVariable: begin
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
-         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
+        result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
+      tt_customType, tt_customTypeCheck: begin
+
+      end;
+
       tt_type,tt_typeCheck:
         result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:

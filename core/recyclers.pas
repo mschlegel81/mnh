@@ -42,12 +42,12 @@ TYPE
   P_abstractRule=^T_abstractRule;
   T_abstractRule=object(T_objectWithIdAndLocation)
     private
-      {$ifdef fullVersion}
-      idResolved:boolean;
-      {$endif}
       id:T_idString;
       ruleType:T_ruleType;
     protected
+      {$ifdef fullVersion}
+      idResolved:boolean;
+      {$endif}
       declarationStart:T_tokenLocation;
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType);
@@ -56,6 +56,7 @@ TYPE
       FUNCTION getRootId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       PROPERTY getRuleType:T_ruleType read ruleType;
+      FUNCTION innerRuleType:T_ruleType; virtual;
 
       FUNCTION hasPublicSubrule:boolean; virtual; abstract;
 
@@ -67,7 +68,6 @@ TYPE
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
-      PROCEDURE resolveIds({$WARN 5024 OFF}CONST adapters:P_messages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
@@ -256,6 +256,11 @@ FUNCTION T_abstractRule.getId: T_idString;            begin result:=id; end;
 FUNCTION T_abstractRule.getRootId:T_idString;         begin result:=id; end;
 FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
 
+FUNCTION T_abstractRule.innerRuleType:T_ruleType;
+  begin
+    result:=ruleType;
+  end;
+
 FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;
   begin
     result:=(C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+'in '+getLocation.package^.getPath);
@@ -278,7 +283,6 @@ FUNCTION T_abstractRule.complainAboutUnused(CONST adapters: P_messages): boolean
 {$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
-PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_messages); begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;

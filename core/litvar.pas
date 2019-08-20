@@ -208,6 +208,8 @@ TYPE
     customType:P_typedef;
   end;
 
+  T_arityInfo=record minPatternLength,maxPatternLength:longint; end;
+
   P_compoundLiteral  = ^T_compoundLiteral;
   P_listLiteral      = ^T_listLiteral    ;
   P_setLiteral       = ^T_setLiteral     ;
@@ -226,7 +228,7 @@ TYPE
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual; abstract;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
-      FUNCTION arity:longint; virtual; abstract;
+      FUNCTION arity:T_arityInfo; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
 
       PROCEDURE makeStateful  (CONST context:P_abstractContext; CONST location:T_tokenLocation);
@@ -242,7 +244,9 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
   end;
 
-  T_typedef=object
+  { T_typedef }
+
+  T_typedef=object(T_objectWithIdAndLocation)
     private
       name:T_idString;
       super:P_typedef;
@@ -264,6 +268,8 @@ TYPE
       PROPERTY builtinSuperParameter:longint read builtinsuperModifier;
       PROPERTY isDucktyping:boolean read ducktyping;
       PROPERTY isAlwaysTrue:boolean read alwaysTrue;
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getLocation:T_tokenLocation; virtual;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -439,9 +445,11 @@ TYPE
 
 CONST
   NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
-
+  NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
+
+FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;
 FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef profilingFlavour}{$ifndef debugMode} inline; {$endif}{$endif}
@@ -599,6 +607,15 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
          headByMessageType(m)^
         .appendString(ansistring(m^.getLocation))^
         .appendString(join(m^.messageText,C_lineBreakChar)),false);
+  end;
+
+FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;
+  begin
+    if (x.maxPatternLength<0) then result:=y else
+    if (y.maxPatternLength<0) then result:=x else begin
+      result.minPatternLength:=min(x.minPatternLength,y.minPatternLength);
+      result.maxPatternLength:=max(x.maxPatternLength,y.maxPatternLength);
+    end;
   end;
 
 FUNCTION exp(CONST x:double):double; inline;
@@ -836,7 +853,10 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
+CONSTRUCTOR T_typedef.create(CONST id: T_idString;
+  CONST builtinCheck: T_typeCheck; CONST builtinCheckPar: longint;
+  CONST super_: P_typedef; CONST typerule: P_expressionLiteral;
+  CONST ducktyping_, alwaysTrue_: boolean);
   begin
     name        :=id;
     super       :=super_;
@@ -852,7 +872,9 @@ DESTRUCTOR T_typedef.destroy;
     disposeLiteral(ducktyperule);
   end;
 
-FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):boolean;
+FUNCTION T_typedef.matchesLiteral(CONST L: P_literal;
+  CONST location: T_tokenLocation; CONST threadContext: P_abstractContext;
+  CONST recycler: pointer): boolean;
   VAR T:P_typedef;
   begin
     result:=false;
@@ -867,7 +889,9 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
     if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil));
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral;
+  CONST location: T_tokenLocation; CONST threadContext: P_abstractContext;
+  CONST recycler: pointer): P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
@@ -884,7 +908,9 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
+FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation;
+  CONST threadContext: P_abstractContext; CONST recycler: pointer
+  ): P_typableLiteral;
   begin
     result:=nil;
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
@@ -906,12 +932,25 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if (result=nil) then threadContext^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
-FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages; CONST recycler:pointer):P_literal;
+FUNCTION T_typedef.uncast(CONST L: P_literal; CONST location: T_tokenLocation;
+  CONST threadContext: P_abstractContext; CONST adapters: P_messages;
+  CONST recycler: pointer): P_literal;
   begin
     if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
     result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
     if result<>nil then P_typableLiteral(result)^.customType:=nil;
   end;
+
+FUNCTION T_typedef.getId: T_idString;
+  begin
+    result:=name;
+  end;
+
+FUNCTION T_typedef.getLocation: T_tokenLocation;
+  begin
+    result:=ducktyperule^.getLocation;
+  end;
+
 //=====================================================================================================================
 
 CONSTRUCTOR G_literalKeyMap.create();
@@ -1544,7 +1583,7 @@ FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: bool
       result:='('+dat[0]^.toString(lengthLimit);
       for i:=1 to fill-1 do if remainingLength>0 then begin
         remainingLength:=lengthLimit-length(result);
-        result:=result+','+dat[i]^.toString;
+        result:=result+','+dat[i]^.toString(remainingLength);
       end else begin
         result:=result+',... ';
         break;
@@ -1724,7 +1763,7 @@ FUNCTION T_expressionLiteral.typeString:string;
     else if expressionType in C_statefulExpressionTypes
     then result:=C_typeCheckInfo[tc_typeCheckStatefulExpression].name
     else result:=C_typeInfo     [literalType                   ].name;
-    result:=result+'('+intToStr(arity)+')';
+    result:=result+'('+intToStr(arity.minPatternLength)+')';
   end;
 
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;

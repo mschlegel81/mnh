@@ -227,6 +227,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_modifier : result:=C_modifierInfo[getModifier].name;
       tt_identifier,
       tt_userRule,
+      tt_customType,
+      tt_globalVariable,
       tt_intrinsicRule,
       tt_rulePutCacheValue,
       tt_parameterIdentifier,
