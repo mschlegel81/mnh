@@ -71,7 +71,6 @@ TYPE
       readyForUsecase:T_packageLoadUsecase;
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
-      suppressAllUnusedWarnings:boolean;
       {$endif}
       PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
       public
@@ -1044,7 +1043,6 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
   begin
     {$ifdef fullVersion}
     anyCalled:=false;
-    suppressAllUnusedWarnings:=false;
     {$endif}
     ruleMap.clear;
     if includeSecondaries then begin

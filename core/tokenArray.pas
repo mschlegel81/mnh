@@ -207,6 +207,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
             end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
+        tt_userRule: P_abstractRule(t^.data)^.setIdResolved;
         tt_modifier:
         if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
         else
