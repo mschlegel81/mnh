@@ -179,6 +179,13 @@ TYPE
       {$endif}
       FUNCTION getValueOrElseVoid(VAR context:T_context; VAR recycler:T_recycler):P_literal;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
+
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
   end;
 
   P_datastore=^T_datastore;
@@ -1410,6 +1417,28 @@ FUNCTION T_variable.getValue(VAR context: T_context; VAR recycler: T_recycler
       system.leaveCriticalSection(rule_cs);
     end;
   end;
+
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
+  CONST p1, p2: P_literal; VAR recycler: T_recycler;
+  CONST context: P_abstractContext): P_literal;
+begin
+  raise Exception.create('T_variable.evaluateToLiteral must not be called');
+end;
+
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
+  CONST parList: P_listLiteral; VAR recycler: T_recycler;
+  CONST context: P_abstractContext): P_literal;
+begin
+  raise Exception.create('T_variable.evaluateToLiteral must not be called');
+end;
+
+FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation;
+  CONST param: P_listLiteral; OUT firstRep, lastRep: P_token;
+  CONST context: P_abstractContext; VAR recycler: T_recycler;
+  CONST calledFromDelegator: boolean): boolean;
+begin
+  raise Exception.create('T_variable.replaces must not be called');
+end;
 
 FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
