@@ -142,7 +142,7 @@ end;
 
 //*Create a file test.bat for testcase by testcase heaptracing
 main('makebat',exeName)->begin
-  local batname:=myPath.extractFileDirectory.extractFileDirectory&'/test.bat';
+  local batname:=myPath.extractFileDirectory.extractFileDirectory&'/test_reg.bat';
   local batLines:=
   allDemos.filter({!skipFile($f)})
           .map(::extractFileNameOnly)
@@ -151,5 +151,12 @@ main('makebat',exeName)->begin
                   d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
-  void;
+  //------------------------------------------------------------------------------
+  batname:=myPath.extractFileDirectory.extractFileDirectory&'/test_noValidate.bat';
+  batLines:=
+  allDemos.filter({!skipFile($f)})
+          .each(d,exeName&' '&join(d|testParameters(d),' ')&' 2> test_'&index&'_'&extractFileNameOnly(d)&'.log',
+                  d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
+  writeFileLines(batname,batLines,"\r\n");
+  print(batname,' created');
 end;
