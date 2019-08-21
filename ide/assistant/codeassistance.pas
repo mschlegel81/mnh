@@ -213,7 +213,7 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
     enterCriticalSection(highlightingData.highlightingCs);
     try
       highlightingData.userRules.clear;
-      package^.updateLists(highlightingData.userRules,false);
+      package^.ruleMap.updateLists(highlightingData.userRules,false);
       highlightingData.localIdInfos.copyFrom(localIdInfos);
       setLength(highlightingData.warnLocations,length(localErrors));
       k:=0;
@@ -354,7 +354,7 @@ FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setO
   begin
     enterCriticalSection(responseCs);
     try
-      package^.updateLists(wordsInEditor,true);
+      package^.ruleMap.updateLists(wordsInEditor,true);
       for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
       result:=(package^.ruleMap.size>0) or not(localIdInfos^.isEmpty);
     finally

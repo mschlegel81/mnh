@@ -217,6 +217,9 @@ TYPE
   P_ruleMap=^T_ruleMap;
   T_ruleMap=object(T_basicRuleMap)
     private
+      {$ifdef fullVersion}
+      suppressAllUnusedWarnings,
+      {$endif}
       merging:boolean;
       afterRules:array of P_subruleExpression;
       localPackage:P_abstractPackage;
@@ -244,6 +247,7 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
+      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(CONST messages:P_messages);
       {$endif}
   end;
@@ -332,6 +336,9 @@ CONSTRUCTOR T_ruleMap.create(CONST package: P_abstractPackage);
     localPackage:=package;
     setLength(afterRules,0);
     merging:=false;
+    {$ifdef fullVersion}
+    suppressAllUnusedWarnings:=false;
+    {$endif}
   end;
 
 PROCEDURE T_ruleMap.clear;
@@ -340,6 +347,9 @@ PROCEDURE T_ruleMap.clear;
     inherited clear;
     for i:=0 to length(afterRules)-1 do disposeLiteral(afterRules[i]);
     setLength(afterRules,0);
+    {$ifdef fullVersion}
+    suppressAllUnusedWarnings:=false;
+    {$endif}
   end;
 
 FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
@@ -353,7 +363,7 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
       newEntry:T_ruleMapEntry;
   begin
     result:=false;
-    for entryToMerge in other^.valueSet do if not(entryToMerge.isImportedOrDelegateWithoutLocal) then begin
+    for entryToMerge in other^.valueSet do if not(entryToMerge.isImported) and entryToMerge.hasPublicSubrule then begin
       newEntry.isImported:=true;
       newEntry.entryType :=entryToMerge.entryType;
       newEntry.value     :=entryToMerge.value;
@@ -643,6 +653,9 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
     end;
 
   begin
+    {$ifdef fullVersion}
+    suppressAllUnusedWarnings:=suppressAllUnusedWarnings or (metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE);
+    {$endif}
     if checkModifiers then case metaType of
       tt_userRule:       declareRule;
       tt_globalVariable: declareVariable;
@@ -728,9 +741,26 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
   end;
 
 {$ifdef fullVersion}
+PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
+  VAR entry:KEY_VALUE_PAIR;
+  begin
+    for entry in entrySet do if not(T_ruleMapEntry(entry.value).isImported) or T_ruleMapEntry(entry.value).hasPublicSubrule then begin
+      if forCompletion then begin
+        userDefinedRules.put(entry.key);
+        if not(isQualified(entry.key)) and (T_ruleMapEntry(entry.value).entryType<>tt_customType)
+        then userDefinedRules.put(ID_QUALIFY_CHARACTER+entry.key);
+      end else begin
+        if not(isQualified(entry.key))
+        then userDefinedRules.put(entry.key);
+        userDefinedRules.put(T_ruleMapEntry(entry.value).value^.getLocation.package^.getId);
+      end;
+    end;
+  end;
+
 PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
   VAR entry:T_ruleMapEntry;
   begin
+    if suppressAllUnusedWarnings then exit;
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
       tt_userRule:
         P_rule(entry.value)^.complainAboutUnused(messages);
@@ -742,7 +772,7 @@ PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
         ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
       end;
       tt_customType: begin
-        //TODO: Implement me!
+        //TODO: Implement me?
       end;
     end;
   end;
@@ -1127,6 +1157,7 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
   begin
+    raise Exception.create('Really? I mean, this should not be called!');
   end;
 
 PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -1172,6 +1203,7 @@ PROCEDURE T_delegatorRule.setIdResolved;
   begin
     if localRule<>nil then localRule^.setIdResolved;
     for r in imported do r^.setIdResolved;
+    idResolved:=true;
   end;
 
 PROCEDURE T_typeCastRule.setIdResolved;

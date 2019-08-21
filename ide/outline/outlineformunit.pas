@@ -266,7 +266,8 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     isPublic:=true;
     location:=packageTokenLocation(package);
     for entry in package^.declaredRules(containingModel.ruleSorting) do if (entry.hasPublicSubrule or mainPackage) and
-    not(entry.isImportedOrDelegateWithoutLocal) then begin
+    not(entry.isImportedOrDelegateWithoutLocal) and
+    not(entry.entryType=tt_customType) then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
         new(children[childIdx],createBlank(containingModel,containingModel.outlineTreeView.items.addChild(associatedNode,'')));
