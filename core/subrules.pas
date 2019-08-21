@@ -266,7 +266,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=-1;
           end;
           tt_return: begin
-            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.raiseError('return statements are currently only allowed in subrules',token.location);
+            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.raiseError('return statements are currently only allowed in subrules, not in inline expressions',token.location);
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;

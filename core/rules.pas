@@ -179,6 +179,13 @@ TYPE
       {$endif}
       FUNCTION getValueOrElseVoid(VAR context:T_context; VAR recycler:T_recycler):P_literal;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
+
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
+      {Part of T_abstractRule, but should not be called an throws exception}
+      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
   end;
 
   P_datastore=^T_datastore;
@@ -210,6 +217,7 @@ TYPE
   P_ruleMap=^T_ruleMap;
   T_ruleMap=object(T_basicRuleMap)
     private
+      merging:boolean;
       afterRules:array of P_subruleExpression;
       localPackage:P_abstractPackage;
       FUNCTION mergeEntry(CONST id:T_idString; entry:T_ruleMapEntry):boolean;
@@ -242,9 +250,7 @@ TYPE
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
 IMPLEMENTATION
-USES mySys
-     {$ifdef fullVersion},debuggingVar{$endif}
-     , operators,fileWrappers;
+USES mySys, operators,fileWrappers;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
   begin
@@ -296,7 +302,9 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
        end else begin
          earlierEntry.value:=wrapRuleInDelegator(P_ruleWithSubrules(earlierEntry.value));
          earlierEntry.isImported:=false;
+         merging:=true;
          put(id,earlierEntry);
+         merging:=false;
        end;
        P_delegatorRule(earlierEntry.value)^.addRule(P_rule(entry.value));
       end else begin
@@ -309,7 +317,7 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
 
 PROCEDURE T_ruleMap.disposeValue(VAR v: VALUE_TYPE);
   begin
-    if not(v.isImported) then begin
+    if not(v.isImported or merging) then begin
       case v.entryType of
         tt_globalVariable: dispose(P_variable(v.value),destroy);
         tt_customType    : begin end
@@ -323,6 +331,7 @@ CONSTRUCTOR T_ruleMap.create(CONST package: P_abstractPackage);
     inherited create;
     localPackage:=package;
     setLength(afterRules,0);
+    merging:=false;
   end;
 
 PROCEDURE T_ruleMap.clear;
@@ -357,7 +366,10 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
       if newEntry.value<>nil then begin
         //Qualified entries are always added
         put(qualifiedId(newEntry.value),newEntry);
-        if not(isQualified(entryToMerge.value^.getId)) then begin
+
+        if not(isQualified(entryToMerge.value^.getId)) and
+          (entryToMerge.value^.getId<>MAIN_RULE_ID) then //"main" of imported packages can only be accessed using its qualified id "<package>.main"
+        begin
           if mergeEntry(entryToMerge.value^.getId,newEntry) then result:=true;
         end;
       end;
@@ -561,13 +573,11 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
       entryForId.entryType :=tt_globalVariable;
       entryForId.value     :=newVar;
       if subRule<>nil then begin
-        variableValue:=subRule^.evaluateToLiteral(subRule^.getLocation,@context,@recycler,nil,nil).literal;
+        variableValue:=subRule^.getInlineValue;
         disposeLiteral(subRule);
-        if context.continueEvaluation
-        then newVar^.setMutableValue(variableValue,true)
-        else begin
-          dispose(newVar,destroy);
-          exit;
+        if variableValue<>nil then begin
+          newVar^.setMutableValue(variableValue,true);
+          disposeLiteral(variableValue);
         end;
       end;
       put(ruleId,entryForId);
@@ -644,11 +654,11 @@ FUNCTION T_ruleMap.getLocalMain: P_rule;
   VAR entry:T_ruleMapEntry;
   begin
     if containsKey(MAIN_RULE_ID,entry) then begin
-      if entry.entryType<>tt_userRule then exit(nil);
-      if entry.isImported then exit(nil);
-      if P_rule(entry.value)^.getRuleType=rt_delegate
-      then result:=P_delegatorRule(entry.value)^.localRule
-      else result:=P_rule         (entry.value);
+      if (entry.entryType<>tt_userRule) or
+         (entry.isImported) or
+         (P_rule(entry.value)^.getRuleType<>rt_normal)
+      then raise Exception.create('main in '+localPackage^.getPath+' has unexpected type')
+      else result:=P_rule(entry.value);
     end else result:=nil;
   end;
 
@@ -694,7 +704,12 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages;
   VAR entry:T_ruleMapEntry;
   begin
     for entry in valueSet do
-    if not(entry.isImported) and (entry.entryType=tt_userRule) then P_rule(entry.value)^.resolveIds(messages,resolveIdContext);
+    if not(entry.isImported) and (entry.entryType=tt_userRule) then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'Calling resolveIds for ',entry.value^.getId,' ',string(entry.value^.getLocation));
+      {$endif}
+      P_rule(entry.value)^.resolveIds(messages,resolveIdContext);
+    end;
   end;
 
 FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
@@ -1410,6 +1425,28 @@ FUNCTION T_variable.getValue(VAR context: T_context; VAR recycler: T_recycler
       system.leaveCriticalSection(rule_cs);
     end;
   end;
+
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
+  CONST p1, p2: P_literal; VAR recycler: T_recycler;
+  CONST context: P_abstractContext): P_literal;
+begin
+  raise Exception.create('T_variable.evaluateToLiteral must not be called');
+end;
+
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
+  CONST parList: P_listLiteral; VAR recycler: T_recycler;
+  CONST context: P_abstractContext): P_literal;
+begin
+  raise Exception.create('T_variable.evaluateToLiteral must not be called');
+end;
+
+FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation;
+  CONST param: P_listLiteral; OUT firstRep, lastRep: P_token;
+  CONST context: P_abstractContext; VAR recycler: T_recycler;
+  CONST calledFromDelegator: boolean): boolean;
+begin
+  raise Exception.create('T_variable.replaces must not be called');
+end;
 
 FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin

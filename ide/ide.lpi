@@ -116,7 +116,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="84">
+    <Units Count="85">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -553,6 +553,10 @@
         <Filename Value="../core/funcs_list.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit83>
+      <Unit84>
+        <Filename Value="../core/funcs_types.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit84>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
