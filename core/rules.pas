@@ -247,6 +247,7 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
+      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(CONST messages:P_messages);
       {$endif}
   end;
@@ -362,7 +363,7 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
       newEntry:T_ruleMapEntry;
   begin
     result:=false;
-    for entryToMerge in other^.valueSet do if not(entryToMerge.isImportedOrDelegateWithoutLocal) then begin
+    for entryToMerge in other^.valueSet do if not(entryToMerge.isImported) and entryToMerge.hasPublicSubrule then begin
       newEntry.isImported:=true;
       newEntry.entryType :=entryToMerge.entryType;
       newEntry.value     :=entryToMerge.value;
@@ -740,6 +741,22 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
   end;
 
 {$ifdef fullVersion}
+PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
+  VAR entry:KEY_VALUE_PAIR;
+  begin
+    for entry in entrySet do if not(T_ruleMapEntry(entry.value).isImported) or T_ruleMapEntry(entry.value).hasPublicSubrule then begin
+      if forCompletion then begin
+        userDefinedRules.put(entry.key);
+        if not(isQualified(entry.key)) and (T_ruleMapEntry(entry.value).entryType<>tt_customType)
+        then userDefinedRules.put(ID_QUALIFY_CHARACTER+entry.key);
+      end else begin
+        if not(isQualified(entry.key))
+        then userDefinedRules.put(entry.key);
+        userDefinedRules.put(T_ruleMapEntry(entry.value).value^.getLocation.package^.getId);
+      end;
+    end;
+  end;
+
 PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
   VAR entry:T_ruleMapEntry;
   begin

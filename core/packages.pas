@@ -97,7 +97,6 @@ TYPE
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string; virtual;
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
       {$ifdef fullVersion}
-      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       FUNCTION declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleMapEntries;
@@ -1125,13 +1124,6 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString; CONST forCompletion:boolean);
-  VAR use :P_package;
-  begin
-    userDefinedRules.put(ruleMap.keySet);
-    if not(forCompletion) then for use in secondaryPackages do userDefinedRules.put(use^.getId);
-  end;
-
 PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages);
   VAR import:T_packageReference;
   begin

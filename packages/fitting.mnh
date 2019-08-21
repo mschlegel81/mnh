@@ -1,7 +1,13 @@
 private average(L:NumericList)->L.agg(+)/L.size;
 
-private fitParameters(xy:List)->fitParameters(xy.getInner(0),xy.getInner(1));
-private fitParameters(x:NumericList,y:NumericList)->begin
+fitParameters(y:NumericList)->begin
+  local mx:=(y.size-1)/2;
+  local my:=y.average;
+  local linearTerm:=average(([0..y.size-1]-mx)*(y-my))/(sqr(y.size)-1)*12;
+  [my-linearTerm*mx,linearTerm];
+end;
+fitParameters(xy:List)->fitParameters(xy.getInner(0),xy.getInner(1));
+fitParameters(x:NumericList,y:NumericList)->begin
   local mx:=x.average;
   local my:=y.average;
   local linearTerm:=average((x-mx)*(y-my))/average(sqr(x-mx));

@@ -23,9 +23,11 @@ object OutlineForm: TOutlineForm
     ImagesWidth = 27
     ParentFont = False
     PopupMenu = OutlinePopupMenu
+    ReadOnly = True
     TabOrder = 0
     OnDblClick = treeViewDblClick
     OnKeyDown = treeViewKeyDown
+    Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object OutlinePopupMenu: TPopupMenu
     Images = outlineGlyphs
