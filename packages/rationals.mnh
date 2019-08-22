@@ -1,6 +1,22 @@
 type RegularContinuedFraction(x:IntList)->x.size>=1;
 type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
 
+decomposeDouble(d:Real)->begin
+  local bits:=d.serialize.bytes.tail(2).ord.each(byte,(2^[0..7] and byte)>0,|);
+  local signum  :=bits[63] ? -1 : 1;
+  local exponent:=bits[[62..62-10]].ord.composeDigits(2)-1023;
+  local rawMantissa:=bits.head(52).ord.reverseList;//;
+
+  ['signum'  =>signum  ,
+   'exponent'=>exponent,
+   'mantissa'=>rawMantissa.composeDigits(2,52)+1,
+   'raw mantissa'=>rawMantissa,
+   'rational'=>exponent<=52
+               ? [ rawMantissa.composeDigits(2)+2^52                 ,2^(52-exponent)]
+               : [(rawMantissa.composeDigits(2)+2^52)*2^(exponent-52),1              ]
+   ].toMap;
+end;
+
 //*Returns rational number r in canonical form or as integer
 @SuppressUnusedWarning=all
 shortenRational(r:IntList)->begin
@@ -35,7 +51,13 @@ end;
 
 @Override
 //*Converts continued fraction f to a rational number
-toRational(x:Real)->x.toRegularContinuedFraction.toRational;
+toRational(x:Real)->begin
+  local cf:=x.decomposeDouble['rational'].toRational.toRegularContinuedFraction;
+  //Try to pick a simpler representation still returning the same real value
+  local i:=cf.size-1;
+  while(i>1 AND cf.head(i-1).toRegularContinuedFraction.toReal=x,i-=1);
+  cf.head(i).toRegularContinuedFraction.toRational;
+end;
 
 @Override
 toString(r:Rational)->r[1]=1 ? r[0].toString : r.join("/");
@@ -73,39 +95,8 @@ OPERATOR_DIVREAL(a:Real    ,b:Rational)->a/b.toReal;
 @Override
 OPERATOR_POT(a:Rational,p>=0)->(a.toBuiltin^p).toRational;
 
-//*Helper function returning adjacent values representable as a double
-private nextReal(x:Real,sig in [-1,1])->begin
-  local increment:=sig*2^(floor(ln(abs(x))/ln(2.0))-53);
-  while(x+increment==x,increment*=2);
-  x+increment;
-end;
-private nextReal(x:Real,0)->x;
-
-//*Converts r to a continued fraction with max. 1000 entries
 @Override
-toRegularContinuedFraction(r:Real)->
-  [0,-1,1].each(i,
-  begin
-    local x0:=
-    local x:=r.nextReal(i);
-    local cf:=[];
-    //Trace reconstruction of r from the generated continued fraction
-    //in order to abort as soon as r is perfectly reconstructable
-    local reconstruct:=[0,Inf];
-    while(x<Inf AND (reconstruct[0]!=reconstruct[1]!=x0) AND cf.size<1000,begin
-      cf|=(local trunc:=floor(x));
-      reconstruct:=reconstruct.tail|(cf.toRegularContinuedFraction.toReal);
-      x:=1/(x-trunc);
-    end);
-    cf[cf.size-1]==1
-    ? begin
-        cf[cf.size-2]+=1;
-        cf[cf.size-1]:=void;
-      end
-    : void;
-    cf;
-  end).sort({size($x)<=size($y)}).head.toRegularContinuedFraction;
-
+toRegularContinuedFraction(r:Real)->r.toRational.toRegularContinuedFraction;
 
 //*Converts rational number r to a continued fraction
 @Override

@@ -717,12 +717,8 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages;
   VAR entry:T_ruleMapEntry;
   begin
     for entry in valueSet do
-    if not(entry.isImported) and (entry.entryType=tt_userRule) then begin
-      {$ifdef debugMode}
-      writeln(stdErr,'Calling resolveIds for ',entry.value^.getId,' ',string(entry.value^.getLocation));
-      {$endif}
-      P_rule(entry.value)^.resolveIds(messages,resolveIdContext);
-    end;
+    if not(entry.isImported) and (entry.entryType=tt_userRule)
+    then P_rule(entry.value)^.resolveIds(messages,resolveIdContext);
   end;
 
 FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
@@ -734,9 +730,6 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
         result^.put(entry.value^.getId,P_rule(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
       tt_globalVariable:
         result^.put(entry.value^.getId,P_variable(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
-      tt_customType: begin
-        //TODO: Implement me!
-      end;
     end;
   end;
 
@@ -770,9 +763,6 @@ PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
         'Unused rule '+entry.value^.getId+
         '; you can suppress this warning with '+
         ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
-      end;
-      tt_customType: begin
-        //TODO: Implement me?
       end;
     end;
   end;

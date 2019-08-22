@@ -570,7 +570,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
-        //TODO: Handle tt_globalVariable here
         if tokType=tt_blockLocalVariable then begin
           expression:=context.valueScope^.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
@@ -1264,7 +1263,6 @@ end}
             first^.next:=recycler.disposeToken(first^.next);
             didSubstitution:=true;
           end;
-          //TODO: Handle tt_globalVariable here;
           tt_blockLocalVariable: begin
             first^.data:=newStringLiteral(first^.next^.txt);
             first^.tokType:=tt_literal;

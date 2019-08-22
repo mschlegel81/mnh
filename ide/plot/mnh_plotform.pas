@@ -695,15 +695,16 @@ PROCEDURE TplotForm.doPlot;
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
     try
-      updateInteractiveSection;
-      plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+      if relatedPlot^.isPlotChanged then begin
+        updateInteractiveSection;
+        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
 
-      if relatedPlot^.animation.frameCount<>0 then begin
-        relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
-      end else begin
-        //TODO: Prepare plot in background
-        relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
-        relatedPlot^.logPlotDone;
+        if relatedPlot^.animation.frameCount<>0 then begin
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+        end else begin
+          relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
+          relatedPlot^.logPlotDone;
+        end;
       end;
     finally
       relatedPlot^.doneGuiInteraction;
