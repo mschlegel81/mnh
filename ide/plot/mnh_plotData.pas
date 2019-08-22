@@ -84,10 +84,11 @@ TYPE
   T_plotDropRowRequest=object(T_payloadMessage)
     private
       count:longint;
+      dropRows:boolean;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      CONSTRUCTOR create(CONST numberOfRowsToDrop:longint);
+      CONSTRUCTOR create(CONST numberOfRowsToDrop:longint; CONST dropRows_:boolean);
   end;
 
   P_plotDisplayRequest=^T_plotDisplayRequest;
@@ -120,6 +121,7 @@ TYPE
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
+      PROCEDURE removeCustomText(CONST numberOfEntriesToRemove:longint);
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -479,10 +481,11 @@ FUNCTION T_plotDropRowRequest.internalType: shortstring;
     result:='T_plotDropRowRequest';
   end;
 
-CONSTRUCTOR T_plotDropRowRequest.create(CONST numberOfRowsToDrop: longint);
+CONSTRUCTOR T_plotDropRowRequest.create(CONST numberOfRowsToDrop: longint; CONST dropRows_:boolean);
   begin
     inherited create(mt_plot_dropRow);
     count:=numberOfRowsToDrop;
+    dropRows:=dropRows_;
   end;
 
 FUNCTION T_plotRenderRequest.internalType: shortstring;
@@ -859,6 +862,20 @@ PROCEDURE T_plot.addCustomText(CONST text: P_customText);
     try
       setLength(customText,length(customText)+1);
       customText[length(customText)-1]:=text;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
+  end;
+
+PROCEDURE T_plot.removeCustomText(CONST numberOfEntriesToRemove:longint);
+  VAR i0,i:longint;
+  begin
+    if numberOfEntriesToRemove<=0 then exit;
+    system.enterCriticalSection(cs);
+    try
+      i0:=length(customText)-numberOfEntriesToRemove; if i0<0 then i0:=0;
+      for i:=i0 to length(customText)-1 do dispose(customText[i],destroy);
+      setLength(customText,i0);
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -1391,15 +1408,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
                     screenRow[i].y);
     end;
 
-  {$ifdef debugMode}
-  VAR timer:TEpikTimer;
-  {$endif}
   begin
-    {$ifdef debugMode}
-    timer:=TEpikTimer.create(nil);
-    timer.clear;
-    timer.start;
-    {$endif}
     screenBox:=boundingBoxOf(0,0,intendedWidth*scalingFactor,intendedHeight*scalingFactor);
     target.LockCanvas;
     //Clear:------------------------------------------------------------------
@@ -1456,10 +1465,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     except
       yBaseLine:=0;
     end;
-    {$ifdef debugMode}
-    writeln('Grid drawn in ',timer.elapsed*1000:0:3,'ms @',intendedWidth,'x',intendedHeight,' in canvas of ',target.width,'x',target.height);
-    timer.clear; timer.start;
-    {$endif}
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
@@ -1484,48 +1489,21 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       if (ps_bspline   in row[rowId].style.style) or
          (ps_cosspline in row[rowId].style.style) or
          (ps_straight  in row[rowId].style.style) then drawStraightLines;
-      {$ifdef debugMode}
-      writeln('Row #',rowId,' drawn in ',timer.elapsed*1000:0:3,'ms');
-      timer.clear; timer.start;
-      {$endif}
     end;
     //===============================================================:row data
     target.UnlockCanvas;
-    {$ifdef debugMode}
-    FreeAndNil(timer);
-    {$endif}
   end;
 
 PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint);
   VAR txt:P_customText;
-  {$ifdef debugMode}
-  VAR timer:TEpikTimer;
-  {$endif}
   begin
-    {$ifdef debugMode}
-    timer:=TEpikTimer.create(nil);
-    timer.clear;
-    timer.start;
-    {$endif}
     for txt in customText do txt^.renderText(intendedWidth,intendedHeight,scalingOptions,target);
-    {$ifdef debugMode}
-    writeln('Custom text drawn in ',timer.elapsed*1000:0:3,'ms');
-    FreeAndNil(timer);
-    {$endif}
   end;
 
 PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
-  {$ifdef debugMode}
-  VAR timer:TEpikTimer;
-  {$endif}
   begin
-    {$ifdef debugMode}
-    timer:=TEpikTimer.create(nil);
-    timer.clear;
-    timer.start;
-    {$endif}
     enterCriticalSection(globalTextRenderingCs);
     try
       target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
@@ -1566,10 +1544,6 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     finally
       leaveCriticalSection(globalTextRenderingCs);
     end;
-    {$ifdef debugMode}
-    writeln('Coordinate system drawn in ',timer.elapsed*1000:0:3,'ms');
-    FreeAndNil(timer);
-    {$endif}
   end;
 
 PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
@@ -1799,7 +1773,9 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         styleOptions:='';
       end;
       mt_plot_dropRow:
-        currentPlot.removeRows(P_plotDropRowRequest(message)^.count);
+        if P_plotDropRowRequest(message)^.dropRows
+        then currentPlot.removeRows      (P_plotDropRowRequest(message)^.count)
+        else currentPlot.removeCustomText(P_plotDropRowRequest(message)^.count);
       mt_plot_renderRequest: begin
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
         then setString(currentPlot.renderToString(width,height,quality))
