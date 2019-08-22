@@ -283,7 +283,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
           vr_equal : exit(e.restrictionType in [tt_comparatorNeq,tt_comparatorGrt]);
           vr_lesser: exit(e.restrictionType in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorGrt,tt_comparatorGeq]);
         end;
-      tt_operatorIn: exit(false); //TODO: this is too naive
+      tt_operatorIn: exit(false);
       else exit(true);
     end;
   end;
