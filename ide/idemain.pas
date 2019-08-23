@@ -180,7 +180,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
-    subTimerCounter:=0;
+    subTimerCounter:=-10;
     ideLayoutUtil.mainForm:=self;
 
     initializePlotForm(PlotPositionLabel);
@@ -225,7 +225,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
-    timer.enabled:=true;
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
@@ -234,6 +233,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     miIncFontSize.ShortCut:=16605;
     {$endif}
     miFocusEditorClick(Sender);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
@@ -714,8 +714,8 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     end;
 
   begin
-    fastUpdates;
     inc(subTimerCounter);
+    if subTimerCounter>0 then fastUpdates;
     if subTimerCounter>50 then begin
       slowUpdates;
       subTimerCounter:=0;
