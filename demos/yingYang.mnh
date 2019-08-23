@@ -1,5 +1,6 @@
 #!/usr/bin/mnh -GUI
 main->begin
+  resetOptions;
   setOptions([['axisStyleX',0],['axisStyleY',0],['autoscaleFactor',0.99]].toMap);
   plot();
   addPlot({[sin($t),cos($t)]},0,pi,100,'black polygon fs 0');

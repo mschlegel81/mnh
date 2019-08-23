@@ -1,4 +1,4 @@
-#!/usr/bin/mnh_light -out ?.log(1)
+#!/usr/bin/mnh_light +out ?.log(1)
 private datastore sequences:=[];
 private datastore names    :=[];
 private datastore foundImplementations:=[].toMap;
@@ -142,7 +142,7 @@ private memoized serve_('download',...)->begin
   sequences:=rangeGenerator(0,maxSeries).pMap({seriesMap[$i] orElse []});
   respond('Datastores generated - '&(names.size)&' entries');
   foundImplementations:=[].toMap;
-  response.join("\n").compress;
+  response;
 end; //downloadData
 
 private serve_('id'     ,...)->map(...,{$s.clean(['0'..'9'],'').softCast}).filter(::isInt).pMap(::info);
@@ -165,14 +165,18 @@ private serve_('continue',start:IntList,additional>0)->begin
   ? 'No matches'
   : begin
       local parts:=[1..additional].pEach(s,matching.getInner(1).map({$seq.head(s)}).toSet.size);
-      local matching:=matching.group(1).pMap({[$g.size,
-                               $g.head(10).getInner(0).pMap({format(IDFormat,$id)}).join(", ")&($g.size<=10 ? '' : '...'),
-                               $g[0,1].join(",")]}).sort(0);
+      matching:=matching
+        .group(1)
+        .pEach(g,
+          [g[1].size,
+           g[1].head(10).getInner(0).pMap({format(IDFormat,$id)}).join(", ")&(g.size<=10 ? '' : '...'),
+           g[0].join(",")])
+        .sort(0);
      ((format("There are\t%s\tsequences starting with %s",matching.getInner(0).agg(+),start.join(","))|
        format("\t%{$1}s\tdifferent options for the next %{$0}s digit%{$0=1?'':'s'}s",[1..additional],parts)).join("\n").formatTabs|
        format("%{$x[0]}s\tentries (%{$x[1]}s)\n\tsay: %{$x[2]}s",matching.trailing(5).reverseList).join("\n").formatTabs).join("\n");
     end;
-end.compress;
+end;
 
 private serve_('validate')->
   implemented.mergeMaps(foundImplementations,::orElse)
@@ -203,10 +207,10 @@ private serve_('validate')->
       : [2,"Sequence "&(IDFormat.format(id))&' IS INVALID AT INDEX  %3d'.format(maxValidated)];
   end : [3,format('No sequence found for id '&IDFormat,seq[0])])
   .group(0)
-  .each(g,[g[0,0],g.getInner(1)])
+  .each(g,[g[0],g[1].getInner(1)])
   .sort
   .each(category,category[0]==0 ? category[1].size&' sequences validated successfully' : category[1].join("\n"))
-  .join("\n").compress;
+  .join("\n");
 
 
 private serve_('statistics')->begin
@@ -227,14 +231,14 @@ private serve_('statistics')->begin
     "\nAverage series length: "&(sizes.agg(+)/sizes.size);
   end)&
   format("\n\nThere are implementations available for %s series ", implemented.mergeMaps(foundImplementations,{$0 orElse $1}).size);
-end.compress;
+end;
 
 USE '..\..\packages\generators.mnh';
 private serve_('gen',seriesId,count)->begin
   local seriesIdx:=seriesId.clean(['0'..'9'],'').softCast;
   local n:=count.softCast;
-  n.isInt AND n>0 ? void : return compress('Parameter '&escape(count)&' is no positive integer');
-  seriesIdx.isInt and seriesIdx>0 ? void : return compress('Parameter '&escape(seriesId)&' is no valid series id');
+  n.isInt AND n>0 ? void : return 'Parameter '&escape(count)&' is no positive integer';
+  seriesIdx.isInt and seriesIdx>0 ? void : return 'Parameter '&escape(seriesId)&' is no valid series id';
   local f:=implementationOf(seriesIdx);
   f.isVoid
   ? note('No implementation found - using fallback') orElse
@@ -243,7 +247,7 @@ private serve_('gen',seriesId,count)->begin
   f.head(n);
 end;
 
-private serve_('class')->implemented.mergeMaps(foundImplementations,::orElse).map({$x[1,1]}).elementFrequency.map({$x.join("\t")}).join("\n").compress;
+private serve_('class')->implemented.mergeMaps(foundImplementations,::orElse).map({$x[1,1]}).elementFrequency.map({$x.join("\t")}).join("\n");
 private serve_('class',className)->
   implemented.mergeMaps(foundImplementations,::orElse)
     .pMap({$entry[1,1]==className ? $entry[0] : void})
@@ -269,15 +273,14 @@ private serve_('scan')->begin
     : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
     end : void).toMap;
   resetTimeout(foundImplementations.size&' Implementations found');
-end.compress;
+end;
 
 private serve_('duplicates')->
   sequences.each(seq,[index,seq]).group(1).pMap({$group.size>1 ? [$group.getInner(0).sort,$group[0,1]] : void})
   .sort(0)
   .each(g,
     "Sequence:\t",g[1]==[] ? "[]" : g[1].join(","),"\n",
-    'Occurs ',g[0].size,"x:\t",IDFormat.format(g[0]).join(", "),"\n",&)
-  .compress;
+    'Occurs ',g[0].size,"x:\t",IDFormat.format(g[0]).join(", "),"\n",&);
 
 private serve_('numberFrequencies')->
   sequences.pMap({$seq[0<$seq<1E6]}).flatten.elementFrequency.sort.resetTimeout;

@@ -11,7 +11,7 @@ begin
          runningTask[0],
          timeSpentNow,
          local timeSpentTotal:=timeSpentNow+(allTasks[runningTask[0]] orElse 0));
-  allTasks<<[runningTask[0],timeSpentTotal];
+  allTasks[runningTask[0]]:=timeSpentTotal;
   runningTask:=[];
 end;
 
@@ -26,7 +26,7 @@ end;
 
 //*Resumes a task
 main('?')->size(allTasks)>0
-           ? main(ask('Task to resume',allTasks.getInner(0)))
+           ? main(ask('Task to resume',allTasks.getInner(0).toList))
            : print('There are no tasks to resume.');
 
 //*Resumes a task or starts a new one
@@ -37,7 +37,7 @@ main(taskName)->begin
       print('Resmuming task ',taskName);
     end
   : begin
-      allTasks<<[taskName,0];
+      allTasks[taskName]:=0;
       print('New task ',taskName);
     end;
   runningTask:=[taskName,systime];
