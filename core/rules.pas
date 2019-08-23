@@ -213,9 +213,8 @@ TYPE
   end;
 
   T_ruleMapEntries=array of T_ruleMapEntry;
-  T_basicRuleMap=specialize G_stringKeyMap<T_ruleMapEntry>;
   P_ruleMap=^T_ruleMap;
-  T_ruleMap=object(T_basicRuleMap)
+  T_ruleMap=object(specialize G_stringKeyMap<T_ruleMapEntry>)
     private
       {$ifdef fullVersion}
       suppressAllUnusedWarnings,
@@ -403,8 +402,8 @@ FUNCTION T_ruleMap.getOperators: T_customOperatorArray;
   end;
 
 PROCEDURE T_ruleMap.clearImports;
-  VAR entries:T_basicRuleMap.KEY_VALUE_LIST;
-      entry  :T_basicRuleMap.KEY_VALUE_PAIR;
+  VAR entries:KEY_VALUE_LIST;
+      entry  :KEY_VALUE_PAIR;
   begin
     entries:=entrySet;
     for entry in entries do if (T_ruleMapEntry(entry.value).isImportedOrDelegateWithoutLocal)

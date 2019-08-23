@@ -62,8 +62,6 @@ TYPE
       secondaryPackages:T_packageList;
       extendedPackages:array of P_extendedPackage;
 
-      //runAfter:array of P_subruleExpression;
-
       isPlainScript:boolean;
       commentOnPlainMain:ansistring;
 
