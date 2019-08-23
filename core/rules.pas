@@ -954,9 +954,6 @@ CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T
     inherited create(ruleId,startAt,ruleTyp);
     if (ruleTyp=rt_customOperator) or not(intrinsicRuleMap.containsKey(ruleId,hiddenRule)) then begin
       hiddenRule:=nil;
-      {$ifdef fullVersion}
-      idResolved:=true;
-      {$endif}
     end;
     allowCurrying:=false;
     setLength(subrules,0);
