@@ -469,6 +469,8 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     recycler.cleanup;
 
     editor.BeginUpdate(true);
+    //TODO: Only refactor the found lines
+    if length(tempAssistanceResponse^.findUsagesOf(ref))>0 then
     with editor do for lineIndex:=0 to lines.count-1 do begin
       lineTxt:=lines[lineIndex];
       if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;

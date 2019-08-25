@@ -66,6 +66,7 @@ TYPE
       PROCEDURE ensureTraceInError(VAR error:T_errorMessage);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
+
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;

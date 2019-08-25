@@ -90,7 +90,7 @@ TYPE
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
-      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString='');
@@ -164,7 +164,7 @@ TYPE
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
@@ -193,12 +193,12 @@ T_builtinExpression=object(T_expression)
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
 end;
 
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
   begin
-    predigest(rep,nil,context.messages,recycler);
+    predigest(rep,nil,context.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
     if (rep^.tokType<>tt_expBraceOpen) then begin
       context.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -208,7 +208,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
     while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
       case t^.tokType of
         tt_expBraceOpen: begin
-          digestInlineExpression(t,context,recycler);
+          digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
           if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
         end;
       end;
@@ -494,7 +494,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       try
         currentlyEvaluating:=true;
 
-        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
+        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION{$ifdef fullVersion},nil{$endif});
         blocking:=typ in C_subruleExpressionTypes;
         firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
         lastRep:=firstRep;
@@ -989,7 +989,7 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR c
     if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then begin
       enterCriticalSection(subruleCallCs);
       try
-        resolveIds(nil,ON_EVALUATION);
+        resolveIds(nil,ON_EVALUATION{$ifdef fullVersion},nil{$endif});
         functionIdsReady:=IDS_RESOLVED_AND_INLINED;
         for k:=0 to length(preparedBody)-1 do if preparedBody[k].token.tokType=tt_identifier then preparedBody[k].token.tokType:=tt_blockLocalVariable;
       finally
@@ -1282,7 +1282,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
     end;
   end;
 
-PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR i:longint;
       inlineValue:P_literal;
       idsReady:boolean;
@@ -1308,6 +1308,9 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
               {$endif}
             end;
           end;
+          {$ifdef fullVersion}
+          if functionCallInfos<>nil then functionCallInfos^.add(@token);
+          {$endif}
           if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
             inlineValue:=P_abstractRule(token.data)^.getInlineValue;
             if inlineValue<>nil then begin
@@ -1623,7 +1626,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
       temp:=first^.last;
       temp^.next:=recycler.newToken(location,'',tt_expBraceClose);
     end;
-    digestInlineExpression(first,context,recycler);
+    digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
     if (context.messages^.continueEvaluation) and (first^.next<>nil) then context.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.messages^.continueEvaluation) then begin
       recycler.cascadeDisposeToken(first);
@@ -1651,7 +1654,7 @@ FUNCTION toExpression_imp intFuncSignature;
       first^.next      :=recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
       first^.next^.next:=recycler.newToken(tokenLocation,'',tt_expBraceClose);
       //Reduce to inline expression
-      digestInlineExpression(first,context,recycler);
+      digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;

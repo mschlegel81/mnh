@@ -284,7 +284,7 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
 PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
-    package.load(lu_forCallingMain,globals,recycler,mainParameters);
+    package.load(lu_forCallingMain,globals,recycler,mainParameters,nil,nil);
     globals.afterEvaluation(recycler);
     messages.setExitCode;
   end;
@@ -349,7 +349,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',package.getPath); {$endif}
-      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
       if globals.primaryContext.messages^.continueEvaluation then begin
         for scriptType in T_scriptType do
         for subRule in package.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
@@ -411,17 +411,17 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
     if parentProvider=nil then begin
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
       globals.resetForEvaluation(@package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
       globals.afterEvaluation(recycler);
     end else begin
       package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
       while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
-        package.interpret(stmt,lu_forDirectExecution,globals,recycler);
+        package.interpret(stmt,lu_forDirectExecution,globals,recycler,nil,nil);
         stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
       end;
       if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
@@ -477,7 +477,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
     SetCurrentDir(evalRequest.folder);
-    package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
+    package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters,nil,nil);
     globals.afterEvaluation(recycler);
     package.clear(true);
   end;

@@ -284,7 +284,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters,recycler);
       if wantHelpDisplay then begin
-        package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
+        package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
         consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
         wantHelpDisplay:=false;
@@ -294,7 +294,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         exit;
       end;
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package^.load(loadMode,globals,recycler,mainParameters);
+      package^.load(loadMode,globals,recycler,mainParameters{$ifdef fullVersion},nil,nil{$endif});
       if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin

@@ -42,8 +42,9 @@ TYPE
       referenceCount:longint;
       localErrors,externalErrors:T_storedMessages;
       localIdInfos:P_localIdInfos;
+      functionCallInfos:P_functionCallInfos;
       responseStateHash:T_hashInt;
-      CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos);
+      CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos; CONST functionCallInfos_:P_functionCallInfos);
       DESTRUCTOR destroy;
     public
       package:P_package;
@@ -52,6 +53,7 @@ TYPE
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       FUNCTION explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
       FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST oldId,newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
+      FUNCTION  findUsagesOf(CONST location:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION  getImportablePackages:T_arrayOfString;
       FUNCTION  resolveImport(CONST id:string):string;
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
@@ -74,6 +76,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
       initialStateHash:T_hashInt;
       package:P_package;
       localIdInfos:P_localIdInfos;
+      functionCallInfos:P_functionCallInfos;
       loadMessages:T_storedMessages;
   begin
     if givenGlobals=nil then begin
@@ -91,10 +94,11 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; VAR recycler
     globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(localIdInfos,create);
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos);
+    new(functionCallInfos,create);
+    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
-    new(result,create(package,loadMessages,initialStateHash,localIdInfos));
+    new(result,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
     globals^.afterEvaluation(recycler);
     if givenGlobals=nil then begin
       dispose(globals,destroy);
@@ -319,7 +323,7 @@ PROCEDURE T_highlightingData.clearLocalIdInfos;
     end;
   end;
 
-CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos);
+CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos; CONST functionCallInfos_:P_functionCallInfos);
   VAR m:P_storedMessage;
       level:longint;
   begin
@@ -330,7 +334,7 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
       package:=package_;
       responseStateHash:=stateHash_;
       localIdInfos:=localIdInfos_;
-
+      functionCallInfos:=functionCallInfos_;
       setLength(localErrors,0);
       setLength(externalErrors,0);
       for level:=4 downto 1 do for m in messages do
@@ -407,6 +411,16 @@ FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(CONST location: T_searc
     end;
   end;
 
+FUNCTION T_codeAssistanceResponse.findUsagesOf(CONST location:T_searchTokenLocation):T_searchTokenLocations;
+  begin
+    enterCriticalSection(responseCs);
+    try
+      result:=functionCallInfos^.whoReferencesLocation(location);
+    finally
+      leaveCriticalSection(responseCs);
+    end;
+  end;
+
 FUNCTION T_codeAssistanceResponse.resolveImport(CONST id:string):string;
   begin
     enterCriticalSection(responseCs);
@@ -438,6 +452,7 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
       for m in externalErrors do disposeMessage_(m);
       setLength(externalErrors,0);
       dispose(localIdInfos,destroy);
+      dispose(functionCallInfos,destroy);
       dispose(package,destroy);
     finally
       leaveCriticalSection(responseCs);

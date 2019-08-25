@@ -42,6 +42,7 @@ TYPE
     unqualifiedId:T_idString;
     FUNCTION qualifiedId:string;
   end;
+  T_builtinFunctionMetaDatas=array of T_builtinFunctionMetaData;
   T_intrinsicRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
 
 VAR

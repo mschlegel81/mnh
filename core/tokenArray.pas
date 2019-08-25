@@ -104,6 +104,26 @@ TYPE
   end;
 
   {$ifdef fullVersion}
+  T_functionCallInfo=record
+    targetKind  :T_tokenType;
+    targetData  :pointer;
+    referencedAt:T_tokenLocation;
+  end;
+
+  P_functionCallInfos=^T_functionCallInfos;
+  T_functionCallInfos=object
+    fill:longint;
+    dat:array of T_functionCallInfo;
+    usedOperators:T_tokenTypeSet;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE clear;
+    PROCEDURE add(CONST token:P_token);
+    PROCEDURE cleanup;
+    FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+    FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
+  end;
+
   T_tokenInfo=record
     infoText,fullLine:ansistring;
     CaretX:longint;
@@ -175,12 +195,12 @@ TYPE
   end;
 
 PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 USES sysutils,math;
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
   begin
@@ -192,7 +212,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil)
           {$ifdef fullVersion}
-          else P_abstractRule(t^.data)^.setIdResolved
+          else P_abstractRule(t^.data)^.setIdResolved;
+          if functionCallInfos<>nil then functionCallInfos^.add(t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
@@ -207,11 +228,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
             end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
-        tt_userRule: begin {$ifdef fullVersion} P_abstractRule(t^.data)^.setIdResolved; {$endif} end;
-        tt_modifier:
-        if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
-        else
-        if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+        tt_userRule: begin
+          {$ifdef fullVersion}
+          P_abstractRule(t^.data)^.setIdResolved;
+          if functionCallInfos<>nil then functionCallInfos^.add(t);
+          {$endif}
+        end;
+        tt_modifier: if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        else if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;
           t^.txt:=t^.next^.txt;
@@ -227,8 +251,81 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
         end;
-        end;
+        {$ifdef fullVersion}
+        else if functionCallInfos<>nil then functionCallInfos^.add(t);
+        {$endif}
+      end;
       t:=t^.next;
+    end;
+  end;
+
+CONSTRUCTOR T_functionCallInfos.create;
+  begin
+    clear;
+  end;
+
+DESTRUCTOR T_functionCallInfos.destroy;
+  begin
+    clear;
+  end;
+
+PROCEDURE T_functionCallInfos.clear;
+  begin
+    setLength(dat,0);
+    fill:=0;
+    usedOperators:=[];
+  end;
+
+PROCEDURE T_functionCallInfos.add(CONST token: P_token);
+  begin
+    if (token=nil) then exit;
+    if token^.tokType in overridableOperators then include(usedOperators,token^.tokType);
+    if not(token^.tokType in [tt_userRule,tt_intrinsicRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then exit;
+    if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
+    dat[fill].referencedAt:=token^.location;
+    dat[fill].targetKind  :=token^.tokType;
+    dat[fill].targetData  :=token^.data;
+    inc(fill);
+  end;
+
+PROCEDURE T_functionCallInfos.cleanup;
+  VAR temporary:specialize G_stringKeyMap<T_functionCallInfo>;
+      info:T_functionCallInfo;
+  begin
+    setLength(dat,fill);
+    temporary.create();
+    for info in dat do temporary.put(string(info.referencedAt),info);
+    dat:=temporary.valueSet;
+    temporary.destroy;
+    fill:=length(dat);
+  end;
+
+FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
+  VAR info:T_functionCallInfo;
+      found:T_setOfPointer;
+      func:pointer;
+      k:longint=0;
+      op:T_tokenType;
+  begin
+    found.create;
+    for op in usedOperators do found.put(intFuncForOperator[op]);
+    for info in dat do if info.targetKind=tt_intrinsicRule then found.put(info.targetData);
+    setLength(result,found.size);
+    for func in found.values do begin
+      result[k]:=getMeta(func);
+      inc(k);
+    end;
+    found.destroy;
+  end;
+
+FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
+  VAR info:T_functionCallInfo;
+  begin
+    setLength(result,0);
+    for info in dat do if (info.targetKind in [tt_userRule,tt_intrinsicRule,tt_customType,tt_customTypeCheck]) and (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
+    then begin
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=info.referencedAt;
     end;
   end;
 
@@ -905,7 +1002,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier,tt_userRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:begin
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
@@ -916,6 +1013,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
             t^.tokType:=idType;
             if idType=tt_eachIndex then t^.location:=idLoc;
           end;
+        end;
       end;
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;

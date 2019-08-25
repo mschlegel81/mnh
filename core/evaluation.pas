@@ -182,7 +182,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           end;
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
-            digestInlineExpression(t,context,recycler);
+            digestInlineExpression(t,context,recycler{$ifdef fullVersion},nil{$endif});
             if context.messages^.continueEvaluation
             then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
           end else context.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
@@ -1174,7 +1174,7 @@ end}
           context.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
 {cT[0]=}tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_expBraceOpen: begin
-          digestInlineExpression(first,context,recycler);
+          digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
           didSubstitution:=true;
         end;
 {cT[0]=}tt_braceClose: if cTokType[-1]=tt_parList_constructor then begin
