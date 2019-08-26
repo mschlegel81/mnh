@@ -46,7 +46,9 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
 
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
+  {$ifdef fullVersion}
   P_functionCallInfos=^T_functionCallInfos;
+  {$endif}
 
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
