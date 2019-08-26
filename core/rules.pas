@@ -248,6 +248,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(CONST messages:P_messages);
+      PROCEDURE fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
       {$endif}
   end;
 
@@ -749,6 +750,11 @@ PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCom
         userDefinedRules.put(T_ruleMapEntry(entry.value).value^.getLocation.package^.getId);
       end;
     end;
+  end;
+
+PROCEDURE T_ruleMap.fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
+  begin
+    resolveRuleIds(nil,ON_DELEGATION,functionCallInfos);
   end;
 
 PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);

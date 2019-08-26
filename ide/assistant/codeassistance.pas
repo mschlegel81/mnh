@@ -335,6 +335,7 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
       responseStateHash:=stateHash_;
       localIdInfos:=localIdInfos_;
       functionCallInfos:=functionCallInfos_;
+      functionCallInfos^.cleanup;
       setLength(localErrors,0);
       setLength(externalErrors,0);
       for level:=4 downto 1 do for m in messages do

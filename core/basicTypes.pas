@@ -31,6 +31,8 @@ TYPE
     FUNCTION getLocation:T_tokenLocation; virtual; abstract;
   end;
 
+  T_objectsWithIdAndLocation=array of P_objectWithIdAndLocation;
+
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
 FUNCTION lineLocation(CONST loc:T_tokenLocation):T_tokenLocation;
 OPERATOR := (CONST x: T_tokenLocation): ansistring;

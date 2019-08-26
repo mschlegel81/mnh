@@ -71,7 +71,9 @@ IMPLEMENTATION
 VAR fileByIDCache:specialize G_stringKeyMap<string>;
     lastFileCacheWorkingDir:string='';
     fileByIdCs:TRTLCriticalSection;
-
+//TODO: Move file cache to workspace (?)
+//TODO: Implement background task to scan for all mnh files on the current system
+//TODO: Extend code assistance response with "using packages" -> this usage info can be cached as well
 PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
   begin
     enterCriticalSection(fileByIdCs);

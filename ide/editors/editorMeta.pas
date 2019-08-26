@@ -451,6 +451,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
       lineIndex:longint;
       lineTxt:string;
       recycler:T_recycler;
+
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
     begin
@@ -460,6 +461,17 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     end;
 
   VAR tempAssistanceResponse:P_codeAssistanceResponse;
+  FUNCTION usedInLines:T_arrayOfLongint;
+    VAR location:T_searchTokenLocation;
+        localName:string;
+    begin
+      localName:=pseudoName();
+      if ref.fileName=localName
+      then result:=ref.line-1
+      else result:=C_EMPTY_LONGINT_ARRAY;
+      for location in tempAssistanceResponse^.findUsagesOf(ref) do if location.fileName=localName then appendIfNew(result,location.line-1);
+    end;
+
   begin
     if (language<>LANG_MNH) then exit;
     if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
@@ -469,9 +481,7 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     recycler.cleanup;
 
     editor.BeginUpdate(true);
-    //TODO: Only refactor the found lines
-    if length(tempAssistanceResponse^.findUsagesOf(ref))>0 then
-    with editor do for lineIndex:=0 to lines.count-1 do begin
+    with editor do for lineIndex in usedInLines do begin
       lineTxt:=lines[lineIndex];
       if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
     end;

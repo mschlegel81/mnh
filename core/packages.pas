@@ -93,7 +93,7 @@ TYPE
       PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string; virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
       {$ifdef fullVersion}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
@@ -123,7 +123,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed:dword=4294967295):T_storedMessages;
-      FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler):T_storedMessages;
+      FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler{$ifdef fullVersion}; OUT functionCallInfos:P_functionCallInfos{$endif}):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
@@ -260,14 +260,17 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler):T_storedMessages;
+FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler{$ifdef fullVersion}; OUT functionCallInfos:P_functionCallInfos{$endif}):T_storedMessages;
   VAR errorHolder:T_messagesErrorHolder;
       m:P_storedMessage;
   begin
     errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
     globals.primaryContext.messages:=@errorHolder;
     globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-    packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
+    {$ifdef fullVersion}
+    new(functionCallInfos,create);
+    {$endif}
+    packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,functionCallInfos{$endif});
     globals.afterEvaluation(recycler);
     result:=errorHolder.storedMessages(true);
     for m in result do m^.rereferenced;
@@ -1186,7 +1189,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCateg
   end;
 {$endif}
 
-FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
@@ -1205,7 +1208,36 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
                        .appendString(extendedPackages[i]^.getPath),false);
     end;
 
+  {$ifdef fullVersion}
+  FUNCTION builtinCallList:P_listLiteral;
+    VAR builtin:T_builtinFunctionMetaData;
+    begin
+      result:=newListLiteral();
+      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin.qualifiedId);
+    end;
+
+  FUNCTION customCallList:P_listLiteral;
+    VAR userDef:P_objectWithIdAndLocation;
+        qualifier:string;
+    begin
+      result:=newListLiteral();
+      for userDef in functionCallInfos^.calledCustomFunctions do begin
+        if userDef^.getLocation.package=@self
+        then qualifier:=''
+        else qualifier:=userDef^.getLocation.package^.getId+ID_QUALIFY_CHARACTER;
+        result^.append(newListLiteral(2)^.appendString(qualifier+userDef^.getId)^.appendString(userDef^.getLocation),false);
+      end;
+    end;
+  {$endif}
+
   begin
+    {$ifdef fullVersion}
+    if (functionCallInfos=nil) or (functionCallInfos^.fill=0) then begin
+      if functionCallInfos=nil then new(functionCallInfos,create);
+      ruleMap.fillCallInfos(functionCallInfos);
+    end;
+    {$endif}
+
     result:=newMapLiteral^.put('id'      ,getId)^
                           .put('path'    ,getPath)^
                           .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
@@ -1213,6 +1245,13 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
                           .put('includes',includeList,false)^
                           .put('declares',ruleMap.inspect(P_context(context)^,recycler,includeRulePointer),false)^
                           .put('plain script',newBoolLiteral(isPlainScript),false);
+    {$ifdef fullVersion}
+    functionCallInfos^.cleanup;
+    result^.put('called builtin',builtinCallList,false)
+          ^.put('used rules',customCallList,false);
+    dispose(functionCallInfos,destroy);
+    functionCallInfos:=nil;
+    {$endif}
   end;
 
 {$ifdef fullVersion}

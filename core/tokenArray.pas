@@ -46,6 +46,8 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
 
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
+  P_functionCallInfos=^T_functionCallInfos;
+
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
     private
@@ -76,7 +78,7 @@ TYPE
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -87,7 +89,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -110,7 +112,8 @@ TYPE
     referencedAt:T_tokenLocation;
   end;
 
-  P_functionCallInfos=^T_functionCallInfos;
+  //TODO: Extend IDE by "find usages"
+  //TODO: Config data: IDE-Only functions; use to find appropriate shebang per IDE
   T_functionCallInfos=object
     fill:longint;
     dat:array of T_functionCallInfo;
@@ -121,6 +124,7 @@ TYPE
     PROCEDURE add(CONST token:P_token);
     PROCEDURE cleanup;
     FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+    FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
     FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
   end;
 
@@ -259,6 +263,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
     end;
   end;
 
+{$ifdef fullVersion}
 CONSTRUCTOR T_functionCallInfos.create;
   begin
     clear;
@@ -291,13 +296,17 @@ PROCEDURE T_functionCallInfos.add(CONST token: P_token);
 PROCEDURE T_functionCallInfos.cleanup;
   VAR temporary:specialize G_stringKeyMap<T_functionCallInfo>;
       info:T_functionCallInfo;
+      newDat:temporary.VALUE_TYPE_ARRAY;
+      k:longint;
   begin
     setLength(dat,fill);
     temporary.create();
     for info in dat do temporary.put(string(info.referencedAt),info);
-    dat:=temporary.valueSet;
+    newDat:=temporary.valueSet;
+    fill:=length(newDat);
+    setLength(dat,fill);
+    for k:=0 to length(dat)-1 do dat[k]:=newDat[k];
     temporary.destroy;
-    fill:=length(dat);
   end;
 
 FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
@@ -308,7 +317,7 @@ FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
       op:T_tokenType;
   begin
     found.create;
-    for op in usedOperators do found.put(intFuncForOperator[op]);
+    for op in usedOperators do if (op>=low(intFuncForOperator)) and (op<=high(intFuncForOperator)) then found.put(intFuncForOperator[op]);
     for info in dat do if info.targetKind=tt_intrinsicRule then found.put(info.targetData);
     setLength(result,found.size);
     for func in found.values do begin
@@ -318,16 +327,37 @@ FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
     found.destroy;
   end;
 
+FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
+  VAR info:T_functionCallInfo;
+      found:T_setOfPointer;
+      func:pointer;
+      k:longint=0;
+  begin
+    found.create;
+    for info in dat do if info.targetKind<>tt_intrinsicRule then found.put(info.targetData);
+    setLength(result,found.size);
+    for func in found.values do begin
+      result[k]:=func;
+      inc(k);
+    end;
+    found.destroy;
+  end;
+
 FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
   VAR info:T_functionCallInfo;
   begin
     setLength(result,0);
-    for info in dat do if (info.targetKind in [tt_userRule,tt_intrinsicRule,tt_customType,tt_customTypeCheck]) and (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
-    then begin
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=info.referencedAt;
+    for info in dat do begin
+      writeln('Location here is ',string(info.referencedAt),' ',info.targetKind);
+      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
+         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
+      then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=info.referencedAt;
+      end;
     end;
   end;
+{$endif}
 
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
   begin
@@ -1202,14 +1232,20 @@ PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_m
     extender^.resolveId(token,adaptersOrNil{$ifdef fullVersion},markAsUsed{$endif});
   end;
 
-FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
   begin
+    {$ifdef fullVersion}
+    if functionCallInfos<>nil then new(functionCallInfos,create);
+    {$endif}
     result:=newMapLiteral;
   end;
 
-FUNCTION T_extendedPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
   begin
-    result:=extender^.inspect(includeRulePointer,context,recycler);
+    {$ifdef fullVersion}
+    if functionCallInfos=nil then new(functionCallInfos,create);
+    {$endif}
+    result:=extender^.inspect(includeRulePointer,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
   end;
 
 FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider):boolean;
