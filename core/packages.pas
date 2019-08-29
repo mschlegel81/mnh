@@ -128,6 +128,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
+      FUNCTION  usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
       {$endif}
   end;
 
@@ -328,6 +329,31 @@ PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
   VAR recycler:T_recycler;
   begin recycler.initRecycler; execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),recycler); recycler.cleanup; end;
+
+FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
+  VAR recycler:T_recycler;
+      ref:T_packageReference;
+      ext:P_extendedPackage;
+  begin
+    try
+      recycler.initRecycler;
+      package.replaceCodeProvider(newCodeProvider(fileName));
+      globals.resetForEvaluation(@package,@package.reportVariables,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
+
+      setLength(result,0);
+      for ref in package.packageUses      do append(result,ref.path);
+      for ext in package.extendedPackages do append(result,ext^.getPath);
+      sortUnique(result);
+      dropValues(result,'');
+    finally
+      globals.afterEvaluation(recycler);
+      package.clear(true);
+      globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+      enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+      recycler.cleanup;
+    end;
+  end;
 
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
   VAR messages:T_storedMessages;
@@ -1354,7 +1380,6 @@ FUNCTION T_package.getExtended(CONST idOrPath:string):P_abstractPackage;
     for e in extendedPackages do if (e^.getId=idOrPath) or (e^.getPath=unescapeString(idOrPath,1,dummy)) then exit(e);
     result:=nil;
   end;
-
 {$endif}
 
 {$undef include_implementation}

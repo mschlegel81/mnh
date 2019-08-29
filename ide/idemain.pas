@@ -223,6 +223,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       miKeepStackTrace.checked:=runnerModel.stackTracing;
 
       workspace.fileHistory.updateHistoryMenu;
+      workspace.fileHistory.postUsageScan();
     end;
     stream.destroy;
     runnerModel.ensureEditScripts;

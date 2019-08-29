@@ -67,13 +67,12 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
 PROCEDURE ensurePath(CONST path:ansistring);
 FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
 
+VAR logFolderCallback:PROCEDURE(CONST name:string) of object=nil;
 IMPLEMENTATION
 VAR fileByIDCache:specialize G_stringKeyMap<string>;
     lastFileCacheWorkingDir:string='';
     fileByIdCs:TRTLCriticalSection;
-//TODO: Move file cache to workspace (?)
-//TODO: Implement background task to scan for all mnh files on the current system
-//TODO: Extend code assistance response with "using packages" -> this usage info can be cached as well
+
 PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
   begin
     enterCriticalSection(fileByIdCs);
@@ -135,7 +134,10 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     begin
       if (findFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
-      then result:=expandFileName(path+info.name);
+      then begin
+        result:=expandFileName(path+info.name);
+        if (logFolderCallback<>nil) then logFolderCallback(path);
+      end;
       sysutils.findClose(info);
       if result<>'' then exit;
 
@@ -171,10 +173,13 @@ FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
     VAR info: TSearchRec;
     begin
       if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0)
-      then repeat
-        if ((info.Attr and faDirectory)<>faDirectory) then
-        appendIfNew(result,path+info.name);
-      until (findNext(info)<>0) ;
+      then begin
+        repeat
+          if ((info.Attr and faDirectory)<>faDirectory) then
+          appendIfNew(result,path+info.name);
+        until (findNext(info)<>0) ;
+        if (logFolderCallback<>nil) then logFolderCallback(path);
+      end;
       sysutils.findClose(info);
 
       if findFirst(path+'*', faAnyFile, info) = 0
