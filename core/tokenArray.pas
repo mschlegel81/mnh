@@ -350,7 +350,6 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
   begin
     setLength(result,0);
     for info in dat do begin
-      writeln('Location here is ',string(info.referencedAt),' ',info.targetKind);
       if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
          (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
       then begin

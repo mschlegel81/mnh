@@ -417,6 +417,7 @@ FUNCTION T_codeAssistanceResponse.findUsagesOf(CONST location:T_searchTokenLocat
     enterCriticalSection(responseCs);
     try
       result:=functionCallInfos^.whoReferencesLocation(location);
+      if length(result)=0 then result:=localIdInfos^.whoReferencesLocation(location);
     finally
       leaveCriticalSection(responseCs);
     end;

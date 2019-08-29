@@ -87,7 +87,7 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
   private
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint):boolean;
-    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
+    FUNCTION doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false):boolean;
 
     PROCEDURE setFile(CONST fileName:string);
     PROCEDURE saveFile(CONST fileName:string='');
@@ -446,7 +446,7 @@ FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean;
     else result:=false;
   end;
 
-PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean);
+FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean):boolean;
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
@@ -473,7 +473,8 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     end;
 
   begin
-    if (language<>LANG_MNH) then exit;
+    result:=false;
+    if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
 
     recycler.initRecycler;
@@ -481,9 +482,10 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     recycler.cleanup;
 
     editor.BeginUpdate(true);
-    with editor do for lineIndex in usedInLines do begin
+    with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
       if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
+      result:=true;
     end;
     editor.EndUpdate;
     disposeCodeAssistanceResponse(tempAssistanceResponse);
