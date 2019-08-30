@@ -8,23 +8,23 @@ main(rootFolder,...)->begin
   local ignoredFileCount:=0;
   local sizeGroups:=group(filesToCheck,filesToCheck.pEach(file,file.fileInfo['size'] orElse warn('Cannot access ',file) orElse -1))
     .each(sizeGroup,
-           size(sizeGroup)<=1 //filter out groups with only one element
+           size(sizeGroup[1])<=1 //filter out groups with only one element
            ? void
-           : (fileInfo(sizeGroup[0])['size']==[] OR fileInfo(sizeGroup[0])['size']<256) //filter out group of files smaller than 256 bytes
+           : (sizeGroup[0]<256) //filter out group of files smaller than 256 bytes
              ? begin ignoredFileCount+=size(sizeGroup); void; end
              : sizeGroup);
   print('Excluding  ',ignoredFileCount,' files due to indeterminate or negligible file size');
   print('Checking ',sizeGroups.size,' file groups (by file size)');
   sizeGroups.size>0
-  ? print('Max. group size: ',sizeGroups.each(g,size(g),aggregator(max)),' files')
+  ? print('Max. group size: ',sizeGroups.each(g,size(g[1]),aggregator(max)),' files')
   : void;
   sizeGroups
   .pEach(sizeGroup,
-        group(sizeGroup,fileStats(sizeGroup)) //group files by equal hashes within size group
+        group(sizeGroup[1],fileStats(sizeGroup[1])) //group files by equal hashes within size group
         .each(hashGroup,
-               size(hashGroup)<=1 // if group has only one element, it cannot contain duplicates
+               size(hashGroup[1])<=1 // if group has only one element, it cannot contain duplicates
                ? void
-               : [hashGroup.head.fileInfo['size'] orElse 0,hashGroup]),|)
+               : [sizeGroup[0],hashGroup[1]]),|)
   .map({[$x[0]*$x[1].size,$x]})
   .sort
   .getInner(1)

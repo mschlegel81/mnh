@@ -87,7 +87,7 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
   private
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint):boolean;
-    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false);
+    FUNCTION doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false):boolean;
 
     PROCEDURE setFile(CONST fileName:string);
     PROCEDURE saveFile(CONST fileName:string='');
@@ -393,8 +393,15 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
+  FUNCTION optionalAdditionals:T_arrayOfString;
+    begin
+      if workspace.checkUsingScripts and not(isPseudoFile)
+      then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
+      else result:=C_EMPTY_STRING_ARRAY;
+    end;
+
   begin
-    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()));
+    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()),optionalAdditionals);
   end;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
@@ -409,6 +416,7 @@ PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistance
       editor.highlighter:=highlighter;
       editor.Repaint;
     end;
+    if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,latestAssistanceReponse^.package^.usedAndExtendedPackages);
   end;
 
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
@@ -446,11 +454,13 @@ FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean;
     else result:=false;
   end;
 
-PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean);
+FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, newId: string; CONST renameInOtherEditors: boolean):boolean;
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
       recycler:T_recycler;
+      fileName:string;
+
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
     begin
@@ -460,18 +470,41 @@ PROCEDURE T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, n
     end;
 
   VAR tempAssistanceResponse:P_codeAssistanceResponse;
+  FUNCTION usedInLines:T_arrayOfLongint;
+    VAR location:T_searchTokenLocation;
+        localName:string;
+    begin
+      localName:=pseudoName();
+      if ref.fileName=localName
+      then result:=ref.line-1
+      else result:=C_EMPTY_LONGINT_ARRAY;
+      for location in tempAssistanceResponse^.findUsagesOf(ref) do if location.fileName=localName then appendIfNew(result,location.line-1);
+    end;
+
   begin
-    if (language<>LANG_MNH) then exit;
-    if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+    result:=false;
+    if (language<>LANG_MNH) then exit(false);
+    if renameInOtherEditors then begin
+      for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+      if not(isPseudoFile) then for fileName in workspace.fileHistory.findScriptsUsing(fileInfo.filePath) do begin
+        if not(workspace.hasEditorForFile(fileName)) then begin
+          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false);
+          if meta<>nil then begin
+            if not(meta^.doRename(ref,oldId,newId,false)) then workspace.closeQuietly(meta);
+          end;
+        end;
+      end;
+    end;
 
     recycler.initRecycler;
-    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),recycler);
+    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),C_EMPTY_STRING_ARRAY,recycler);
     recycler.cleanup;
 
     editor.BeginUpdate(true);
-    with editor do for lineIndex:=0 to lines.count-1 do begin
+    with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
       if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
+      result:=true;
     end;
     editor.EndUpdate;
     disposeCodeAssistanceResponse(tempAssistanceResponse);

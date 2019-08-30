@@ -1,17 +1,14 @@
 UNIT funcs;
 INTERFACE
 {$i func_defines.inc}
-USES sysutils,Classes,
-     myGenerics,myStringUtil,
+USES myGenerics,
      mnh_constants,
      basicTypes,
      mnh_messages,
      out_adapters,
      litVar,
      recyclers,
-     contexts
-     {$ifdef fullVersion},
-     mnh_doc{$endif};
+     contexts;
 TYPE
   T_arityKind=(ak_nullary,
                ak_unary,
@@ -42,6 +39,7 @@ TYPE
     unqualifiedId:T_idString;
     FUNCTION qualifiedId:string;
   end;
+  T_builtinFunctionMetaDatas=array of T_builtinFunctionMetaData;
   T_intrinsicRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
 
 VAR
@@ -59,6 +57,10 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 
 IMPLEMENTATION
+USES sysutils,Classes,
+     myStringUtil
+     {$ifdef fullVersion},
+     mnh_doc{$endif};
 VAR builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
 
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
@@ -305,6 +307,14 @@ FUNCTION assert_impl intFuncSignature;
     end;
   end;
 
+FUNCTION allBuiltinFunctions intFuncSignature;
+  VAR id:string;
+  begin
+    if (params<>nil) and (params^.size>0) then exit(nil);
+    result:=newSetLiteral();
+    for id in intrinsicRuleMap.keySet do if isQualified(id) then setResult^.appendString(id);
+  end;
+
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
   begin
     if builtinExpressionMap.containsKey(p,result) then exit(P_expressionLiteral(result^.rereferenced));
@@ -330,6 +340,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
   system.initCriticalSection(print_cs);
 FINALIZATION
   builtinExpressionMap.destroy;

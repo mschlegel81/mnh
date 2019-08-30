@@ -134,26 +134,29 @@ FUNCTION inspect_imp intFuncSignature;
       if context.checkSideEffects('inspect',tokenLocation,[se_readFile]) then new(tempPackage,create(newFileCodeProvider(fileName),nil));
     end;
 
-  PROCEDURE loadTemporaryPackage;
+  PROCEDURE loadTemporaryPackage({$ifdef fullVersion}OUT functionCallInfos:P_functionCallInfos{$endif});
     VAR msg:T_storedMessages;
         k:longint;
     begin
-      msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler);
+      msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler{$ifdef fullVersion},functionCallInfos{$endif});
       loadMessages:=messagesToLiteralForSandbox( msg,C_errorsAndWarnings);
       for k:=0 to length(msg)-1 do disposeMessage(msg[k]);
       setLength(msg,0);
     end;
 
+  {$ifdef fullVersion}
+  VAR functionCallInfos:P_functionCallInfos=nil;
+  {$endif}
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,@context,recycler)
+    if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif})
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
-        if inspectedPackageIsTemporary then loadTemporaryPackage;
-        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),@context,recycler);
+        if inspectedPackageIsTemporary then loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
+        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),@context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         if inspectedPackageIsTemporary then dispose(tempPackage,destroy);
         exit(result);
@@ -163,22 +166,25 @@ FUNCTION inspect_imp intFuncSignature;
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
-      loadTemporaryPackage;
-      result:=tempPackage^.inspect(false,@context,recycler)^.put('messages',loadMessages,false);
+      loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
+      result:=tempPackage^.inspect(false,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;
 
 FUNCTION inspectAll_imp intFuncSignature;
   VAR main,p:P_package;
+      {$ifdef fullVersion}
+      functionCallInfos:P_functionCallInfos=nil;
+      {$endif}
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       main:=P_package(tokenLocation.package)^.mainPackage;
       result:=newMapLiteral;
       for p in main^.secondaryPackages do
-      mapResult^.put(p   ^.getPath,p   ^.inspect(true,@context,recycler),false);
-      mapResult^.put(main^.getPath,main^.inspect(true,@context,recycler),false);
+      mapResult^.put(p   ^.getPath,p   ^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
+      mapResult^.put(main^.getPath,main^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
     end;
   end;
 

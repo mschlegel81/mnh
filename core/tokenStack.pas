@@ -66,6 +66,7 @@ TYPE
       PROCEDURE ensureTraceInError(VAR error:T_errorMessage);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
+
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
@@ -84,6 +85,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
+      FUNCTION whoReferencesLocation(CONST location:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
       PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
@@ -151,6 +153,22 @@ FUNCTION T_localIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longi
         declaredAt:=entry.validFrom;
         exit(entry.tokenType);
       end;
+  end;
+
+FUNCTION T_localIdInfos.whoReferencesLocation(CONST location:T_searchTokenLocation):T_searchTokenLocations;
+  VAR entry:T_localIdInfo;
+      i:longint;
+      i0:longint=0;
+  begin
+    setLength(result,0);
+    for entry in infos do if location=entry.validFrom then begin
+      setLength(result,i0+entry.validUntil.line-entry.validFrom.line+1);
+      for i:=i0 to entry.validUntil.line-entry.validFrom.line do begin
+        result[i0+i]:=location;
+        result[i0+i].line:=location.line+i;
+      end;
+      i0:=length(result);
+    end;
   end;
 
 FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;

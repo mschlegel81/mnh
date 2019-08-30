@@ -29,7 +29,7 @@ TYPE
     allowCurrying:boolean;
     FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION inspect({$WARN 5024 OFF}CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
-    PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
+    PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif}); virtual;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_context); virtual;
     PROCEDURE setIdResolved; virtual;
@@ -48,7 +48,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType=rt_normal);
       DESTRUCTOR destroy; virtual;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
-      PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif}); virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
@@ -75,7 +75,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST declaredInPackage:P_abstractPackage);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif}); virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
@@ -213,9 +213,8 @@ TYPE
   end;
 
   T_ruleMapEntries=array of T_ruleMapEntry;
-  T_basicRuleMap=specialize G_stringKeyMap<T_ruleMapEntry>;
   P_ruleMap=^T_ruleMap;
-  T_ruleMap=object(T_basicRuleMap)
+  T_ruleMap=object(specialize G_stringKeyMap<T_ruleMapEntry>)
     private
       {$ifdef fullVersion}
       suppressAllUnusedWarnings,
@@ -236,19 +235,20 @@ TYPE
                         CONST modifiers: T_modifierSet;
                         CONST ruleDeclarationStart: T_tokenLocation;
                         VAR context:T_context;
-                        VAR recycler:T_recycler;
                         VAR metaData:T_ruleMetaData;
-                        subRule:P_subruleExpression);
+                        subRule:P_subruleExpression
+                        {$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
       FUNCTION getLocalMain:P_rule;
       FUNCTION getAllLocalRules:T_ruleList;
       PROCEDURE executeAfterRules(VAR context:T_context; VAR recycler:T_recycler);
       PROCEDURE writeBackDatastores(CONST messages:P_messages);
       FUNCTION getTypeMap:T_typeMap;
-      PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+      PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
-      PROCEDURE complainAboutUnused(CONST messages:P_messages);
+      PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
+      PROCEDURE fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
       {$endif}
   end;
 
@@ -359,14 +359,14 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
       if not(isQualified(result)) then result:=other^.localPackage^.getId + ID_QUALIFY_CHARACTER + result;
     end;
 
-  VAR entryToMerge:T_ruleMapEntry;
+  VAR entryToMerge:T_ruleMap.KEY_VALUE_PAIR;
       newEntry:T_ruleMapEntry;
   begin
     result:=false;
-    for entryToMerge in other^.valueSet do if not(entryToMerge.isImported) and entryToMerge.hasPublicSubrule then begin
+    for entryToMerge in other^.entrySet do if not(entryToMerge.value.isImported) and entryToMerge.value.hasPublicSubrule then begin
       newEntry.isImported:=true;
-      newEntry.entryType :=entryToMerge.entryType;
-      newEntry.value     :=entryToMerge.value;
+      newEntry.entryType :=entryToMerge.value.entryType;
+      newEntry.value     :=entryToMerge.value.value;
       if (newEntry.entryType=tt_userRule) and (P_abstractRule(newEntry.value)^.getRuleType=rt_delegate)
       then begin
         newEntry.value:=P_delegatorRule(newEntry.value)^.localRule;
@@ -377,10 +377,10 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
         //Qualified entries are always added
         put(qualifiedId(newEntry.value),newEntry);
 
-        if not(isQualified(entryToMerge.value^.getId)) and
-          (entryToMerge.value^.getId<>MAIN_RULE_ID) then //"main" of imported packages can only be accessed using its qualified id "<package>.main"
+        if not(isQualified(entryToMerge.key)) and
+          (entryToMerge.key<>MAIN_RULE_ID) then //"main" of imported packages can only be accessed using its qualified id "<package>.main"
         begin
-          if mergeEntry(entryToMerge.value^.getId,newEntry) then result:=true;
+          if mergeEntry(entryToMerge.key,newEntry) then result:=true;
         end;
       end;
     end;
@@ -403,8 +403,8 @@ FUNCTION T_ruleMap.getOperators: T_customOperatorArray;
   end;
 
 PROCEDURE T_ruleMap.clearImports;
-  VAR entries:T_basicRuleMap.KEY_VALUE_LIST;
-      entry  :T_basicRuleMap.KEY_VALUE_PAIR;
+  VAR entries:KEY_VALUE_LIST;
+      entry  :KEY_VALUE_PAIR;
   begin
     entries:=entrySet;
     for entry in entries do if (T_ruleMapEntry(entry.value).isImportedOrDelegateWithoutLocal)
@@ -415,9 +415,12 @@ PROCEDURE T_ruleMap.clearImports;
   end;
 
 PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
-  CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation;
-  VAR context: T_context; VAR recycler: T_recycler;
-  VAR metaData: T_ruleMetaData; subRule: P_subruleExpression);
+                            CONST modifiers: T_modifierSet;
+                            CONST ruleDeclarationStart: T_tokenLocation;
+                            VAR context: T_context;
+                            VAR metaData: T_ruleMetaData;
+                            subRule: P_subruleExpression
+                            {$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR metaType    :T_tokenType;
       ruleType    :T_ruleType;
       variableType:T_variableType;
@@ -545,7 +548,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
         entryForId.entryType:=tt_userRule;
         entryForId.value:=rule;
 
-        if mergeEntry(ruleId,entryForId) then resolveRuleIds(nil,ON_DELEGATION);
+        if mergeEntry(ruleId,entryForId) then resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
       end;
 
       {$ifdef debugMode}
@@ -649,7 +652,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
         entryForId.value:=castRule;
         if mergeEntry('to'+ruleId,entryForId) then needIdRefresh:=true;
       end;
-      if needIdRefresh then resolveRuleIds(nil,ON_DELEGATION);
+      if needIdRefresh then resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
     end;
 
   begin
@@ -712,13 +715,12 @@ FUNCTION T_ruleMap.getTypeMap: T_typeMap;
     result.put(entry.value^.getId,P_typedef(entry.value));
   end;
 
-PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages;
-  CONST resolveIdContext: T_resolveIdContext);
+PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages; CONST resolveIdContext: T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR entry:T_ruleMapEntry;
   begin
     for entry in valueSet do
     if not(entry.isImported) and (entry.entryType=tt_userRule)
-    then P_rule(entry.value)^.resolveIds(messages,resolveIdContext);
+    then P_rule(entry.value)^.resolveIds(messages,resolveIdContext{$ifdef fullVersion}, functionCallInfos{$endif});
   end;
 
 FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
@@ -750,20 +752,21 @@ PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCom
     end;
   end;
 
-PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
+PROCEDURE T_ruleMap.fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
+  begin
+    resolveRuleIds(nil,ON_DELEGATION,functionCallInfos);
+  end;
+
+PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages; CONST functionCallInfos:P_functionCallInfos);
   VAR entry:T_ruleMapEntry;
   begin
     if suppressAllUnusedWarnings then exit;
-    for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
-      tt_userRule:
-        P_rule(entry.value)^.complainAboutUnused(messages);
-      tt_globalVariable:  begin
-        if not(P_variable(entry.value)^.idResolved) then
-        messages^.postTextMessage(mt_el2_warning,entry.value^.getLocation,
-        'Unused rule '+entry.value^.getId+
-        '; you can suppress this warning with '+
-        ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
-      end;
+    for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) and (entry.entryType in [tt_userRule,tt_globalVariable]) then begin
+      if not(P_abstractRule(entry.value)^.isIdResolved) and
+         (functionCallInfos<>nil) and
+         functionCallInfos^.isLocationReferenced(P_objectWithIdAndLocation(entry.value)^.getLocation)
+      then P_abstractRule(entry.value)^.setIdResolved;
+      P_abstractRule(entry.value)^.complainAboutUnused(messages);
     end;
   end;
 {$endif}
@@ -954,9 +957,6 @@ CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T
     inherited create(ruleId,startAt,ruleTyp);
     if (ruleTyp=rt_customOperator) or not(intrinsicRuleMap.containsKey(ruleId,hiddenRule)) then begin
       hiddenRule:=nil;
-      {$ifdef fullVersion}
-      idResolved:=true;
-      {$endif}
     end;
     allowCurrying:=false;
     setLength(subrules,0);
@@ -1145,20 +1145,20 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
     result:=(getRuleType=rt_customTypeCheck) or subrules[0]^.hasValidValidCustomTypeCheckPattern(false);
   end;
 
-PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
+PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   begin
     raise Exception.create('Really? I mean, this should not be called!');
   end;
 
-PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
+PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   begin
-    if localRule<>nil then localRule^.resolveIds(adapters,resolveIdContext);
+    if localRule<>nil then localRule^.resolveIds(adapters,resolveIdContext{$ifdef fullVersion}, functionCallInfos{$endif});
   end;
 
-PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages; CONST resolveIdContext:T_resolveIdContext);
+PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR s:P_subruleExpression;
   begin
-    for s in subrules do s^.resolveIds(adapters,resolveIdContext);
+    for s in subrules do s^.resolveIds(adapters,resolveIdContext{$ifdef fullVersion}, functionCallInfos{$endif});
   end;
 
 FUNCTION T_delegatorRule.hasPublicSubrule: boolean;

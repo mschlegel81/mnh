@@ -63,18 +63,16 @@ pageSet(rawParameters,parameters)->begin
    ['/plotImg.png',imageCode]].toMap;
 end;
 
-memoized unhandled(method,request,protocol)->begin
-  print("Unhandled request.",
-        "\n  Method  : ",method  .escape,
-        "\n  Request : ",request .escape,
-        "\n  Protocol: ",protocol.escape);
+memoized unhandled(requestMap)->begin
+  print("Unhandled request.");
+  printf('%s',requestMap.map({$x[0].toString&"\t"&$x[1].toString}));
   httpError;
 end;
 
 serve(requestMap:Map)->begin
   local request:=requestMap['request','path'];
   pageSet(request.extractRawParameters,request.extractParameters)[request.extractPath]
-  orElse unhandled@(requestMap.getAll(['method','path','protocol']));
+  orElse unhandled(requestMap);
 end;
 
 @demo_for=httpServer, plotting

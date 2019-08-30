@@ -71,19 +71,6 @@ FUNCTION hash_imp intFuncSignature;
     then result:=newIntLiteral(arg0^.hash);
   end;
 
-FUNCTION listBuiltin_imp intFuncSignature;
-  VAR keys:T_arrayOfString;
-      key:ansistring;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      keys:=intrinsicRuleMap.keySet;
-      result:=newSetLiteral;
-      for key in keys do setResult^.appendString(key);
-      setLength(keys,0);
-    end;
-  end;
-
 FUNCTION listSideEffects_imp intFuncSignature;
   VAR se:T_sideEffect;
   begin
@@ -171,7 +158,6 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary{$ifdef fullVersion},'myPath;//returns the path to the current package'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary{$ifdef fullVersion},'executor;//returns the path to the currently executing instance of MNH'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,ak_unary  {$ifdef fullVersion},'hash(x);//Returns the builtin hash for the given literal'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listSideEffects',@listSideEffects_imp,ak_nullary{$ifdef fullVersion},'listSideEffects;//Returns a list of all side effects, e.g. as parameters for interpret'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,ak_unary  {$ifdef fullVersion},'ord(x);//Returns the ordinal value of x'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,ak_nullary{$ifdef fullVersion},'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH'{$endif});

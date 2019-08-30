@@ -229,6 +229,29 @@ CONST
     (10,10),(11,11),
     (1,1),(1,1),(1,1));            //unary (prefix) operators
 
+  allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_unaryOpMinus];
+  unaryOperators:T_tokenTypeSet=[tt_unaryOpNegate..tt_unaryOpMinus];
+  overridableOperators:T_tokenTypeSet=[
+  tt_comparatorEq     ,
+  tt_comparatorNeq    ,
+  tt_comparatorLeq    ,
+  tt_comparatorGeq    ,
+  tt_comparatorLss    ,
+  tt_comparatorGrt    ,
+  tt_operatorAnd      ,
+  tt_operatorOr       ,
+  tt_operatorXor      ,
+  tt_operatorPlus     ,
+  tt_operatorMinus    ,
+  tt_operatorMult     ,
+  tt_operatorDivReal  ,
+  tt_operatorDivInt   ,
+  tt_operatorMod      ,
+  tt_operatorPot      ,
+  tt_operatorStrConcat,
+  tt_unaryOpNegate,
+  tt_unaryOpMinus];
+
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_compatibleBegin:array[tt_endBlock..tt_endExpression] of T_tokenType=(tt_beginBlock,tt_beginRule,tt_beginExpression);
   C_tokenDefaultId:array[T_tokenType] of string=(

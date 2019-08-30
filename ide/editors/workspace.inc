@@ -24,6 +24,7 @@ T_workspace=object(T_serializable)
     newFileLineEnding,overwriteLineEnding:byte;
 
     fileHistory:T_fileHistory;
+    checkUsingScripts:boolean; //nonpersistent
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList;
@@ -41,6 +42,7 @@ T_workspace=object(T_serializable)
   public
     FUNCTION createNewFile:P_editorMeta;
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
+    FUNCTION hasEditorForFile(CONST fileName:string):boolean;
 
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
@@ -135,7 +137,7 @@ FUNCTION editorContent_impl intFuncSignature;
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     savedAt:=now+1; //= now + 24h
-
+    checkUsingScripts:=false;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;
@@ -323,6 +325,13 @@ FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_e
     except
       result:=nil;
     end;
+  end;
+
+FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
+  VAR meta:P_editorMeta;
+  begin
+    for meta in metas do if meta^.pseudoName=fileName then exit(true);
+    result:=false;
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;

@@ -46,6 +46,10 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
 
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
+  {$ifdef fullVersion}
+  P_functionCallInfos=^T_functionCallInfos;
+  {$endif}
+
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
     private
@@ -76,7 +80,7 @@ TYPE
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -87,7 +91,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -104,6 +108,39 @@ TYPE
   end;
 
   {$ifdef fullVersion}
+  T_functionCallInfo=record
+    targetKind  :T_tokenType;
+    targetData  :pointer;
+    referencedAt:T_tokenLocation;
+  end;
+
+  T_importedCallInfo=record
+    targetLocation,
+    referencedAt:T_searchTokenLocation;
+  end;
+  T_importedCallInfos=array of T_importedCallInfo;
+
+  T_functionCallInfos=object
+    private
+      fill:longint;
+      dat:array of T_functionCallInfo;
+      usedOperators:T_tokenTypeSet;
+      imported:T_importedCallInfos;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      PROCEDURE add(CONST token:P_token);
+      PROCEDURE cleanup;
+      FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+      FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
+      FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
+      FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+      FUNCTION exportLocations:T_importedCallInfos;
+      PROCEDURE importLocations(CONST loc:T_importedCallInfos);
+      FUNCTION isEmpty:boolean;
+  end;
+
   T_tokenInfo=record
     infoText,fullLine:ansistring;
     CaretX:longint;
@@ -175,12 +212,12 @@ TYPE
   end;
 
 PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 USES sysutils,math;
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
   begin
@@ -192,7 +229,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil)
           {$ifdef fullVersion}
-          else P_abstractRule(t^.data)^.setIdResolved
+          else P_abstractRule(t^.data)^.setIdResolved;
+          if functionCallInfos<>nil then functionCallInfos^.add(t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
@@ -207,11 +245,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
             end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
-        tt_userRule: begin {$ifdef fullVersion} P_abstractRule(t^.data)^.setIdResolved; {$endif} end;
-        tt_modifier:
-        if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
-        else
-        if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+        tt_userRule: begin
+          {$ifdef fullVersion}
+          P_abstractRule(t^.data)^.setIdResolved;
+          if functionCallInfos<>nil then functionCallInfos^.add(t);
+          {$endif}
+        end;
+        tt_modifier: if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        else if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;
           t^.txt:=t^.next^.txt;
@@ -227,10 +268,171 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
         end;
-        end;
+        {$ifdef fullVersion}
+        else if functionCallInfos<>nil then functionCallInfos^.add(t);
+        {$endif}
+      end;
       t:=t^.next;
     end;
   end;
+
+{$ifdef fullVersion}
+CONSTRUCTOR T_functionCallInfos.create;
+  begin
+    clear;
+  end;
+
+DESTRUCTOR T_functionCallInfos.destroy;
+  begin
+    clear;
+  end;
+
+PROCEDURE T_functionCallInfos.clear;
+  begin
+    setLength(dat,0);
+    setLength(imported,0);
+    fill:=0;
+    usedOperators:=[];
+  end;
+
+PROCEDURE T_functionCallInfos.add(CONST token: P_token);
+  begin
+    if (token=nil) then exit;
+    if token^.tokType in overridableOperators then include(usedOperators,token^.tokType);
+    if not(token^.tokType in [tt_userRule,tt_intrinsicRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then exit;
+    if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
+    dat[fill].referencedAt:=token^.location;
+    dat[fill].targetKind  :=token^.tokType;
+    dat[fill].targetData  :=token^.data;
+    inc(fill);
+  end;
+
+PROCEDURE T_functionCallInfos.cleanup;
+  VAR temporary:specialize G_stringKeyMap<T_functionCallInfo>;
+      info:T_functionCallInfo;
+      newDat:temporary.VALUE_TYPE_ARRAY;
+      k:longint;
+  begin
+    setLength(dat,fill);
+    temporary.create();
+    for info in dat do temporary.put(string(info.referencedAt),info);
+    newDat:=temporary.valueSet;
+    fill:=length(newDat);
+    setLength(dat,fill);
+    for k:=0 to length(dat)-1 do dat[k]:=newDat[k];
+    temporary.destroy;
+  end;
+
+FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
+  VAR info:T_functionCallInfo;
+      found:T_setOfPointer;
+      func:pointer;
+      k:longint=0;
+      op:T_tokenType;
+  begin
+    if fill<>length(dat) then cleanup;
+    found.create;
+    for op in usedOperators do if (op>=low(intFuncForOperator)) and (op<=high(intFuncForOperator)) then found.put(intFuncForOperator[op]);
+    for info in dat do if info.targetKind=tt_intrinsicRule then found.put(info.targetData);
+    setLength(result,found.size);
+    for func in found.values do begin
+      result[k]:=getMeta(func);
+      inc(k);
+    end;
+    found.destroy;
+  end;
+
+FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
+  VAR info:T_functionCallInfo;
+      found:T_setOfPointer;
+      func:pointer;
+      k:longint=0;
+  begin
+    if fill<>length(dat) then cleanup;
+    found.create;
+    for info in dat do if info.targetKind<>tt_intrinsicRule then found.put(info.targetData);
+    setLength(result,found.size);
+    for func in found.values do begin
+      result[k]:=func;
+      inc(k);
+    end;
+    found.destroy;
+  end;
+
+FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
+  VAR info:T_functionCallInfo;
+      inf2:T_importedCallInfo;
+  begin
+    if fill<>length(dat) then cleanup;
+    setLength(result,0);
+    for info in dat do begin
+      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
+         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
+      then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=info.referencedAt;
+      end;
+    end;
+    for inf2 in imported do begin
+      if inf2.targetLocation=loc then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=inf2.referencedAt;
+      end;
+    end;
+  end;
+
+FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+  VAR info:T_functionCallInfo;
+      inf2:T_importedCallInfo;
+  begin
+    if fill<>length(dat) then cleanup;
+    result:=false;
+    for info in dat do begin
+      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
+         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
+      then exit(true);
+    end;
+    for inf2 in imported do if inf2.targetLocation=loc then exit(true);
+  end;
+
+FUNCTION T_functionCallInfos.exportLocations:T_importedCallInfos;
+  VAR info:T_functionCallInfo;
+      k:longint=0;
+  begin
+    if fill<>length(dat) then cleanup;
+    setLength(result,length(dat));
+    for info in dat do if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
+      result[k].targetLocation:=P_objectWithIdAndLocation(info.targetData)^.getLocation;
+      result[k].referencedAt  :=info.referencedAt;
+      inc(k);
+    end;
+    setLength(result,k);
+  end;
+
+PROCEDURE T_functionCallInfos.importLocations(CONST loc:T_importedCallInfos);
+  VAR importCount:longint;
+  PROCEDURE addIfNew(CONST info:T_importedCallInfo);
+    VAR k:longint;
+    begin
+      //One location cannot reference multiple targets
+      for k:=0 to importCount-1 do if imported[k].referencedAt=info.referencedAt then exit();
+      imported[importCount]:=info;
+      inc(importCount);
+    end;
+
+  VAR info:T_importedCallInfo;
+  begin
+    importCount:=length(imported);
+    setLength(imported,importCount+length(loc));
+    for info in loc do addIfNew(info);
+    setLength(imported,importCount);
+  end;
+
+FUNCTION T_functionCallInfos.isEmpty:boolean;
+  begin
+    result:=fill=0;
+  end;
+{$endif}
 
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
   begin
@@ -905,7 +1107,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier,tt_userRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule:begin
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
@@ -916,6 +1118,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
             t^.tokType:=idType;
             if idType=tt_eachIndex then t^.location:=idLoc;
           end;
+        end;
       end;
       lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
       t:=t^.next;
@@ -1104,14 +1307,20 @@ PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_m
     extender^.resolveId(token,adaptersOrNil{$ifdef fullVersion},markAsUsed{$endif});
   end;
 
-FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
   begin
+    {$ifdef fullVersion}
+    if functionCallInfos<>nil then new(functionCallInfos,create);
+    {$endif}
     result:=newMapLiteral;
   end;
 
-FUNCTION T_extendedPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler):P_mapLiteral;
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
   begin
-    result:=extender^.inspect(includeRulePointer,context,recycler);
+    {$ifdef fullVersion}
+    if functionCallInfos=nil then new(functionCallInfos,create);
+    {$endif}
+    result:=extender^.inspect(includeRulePointer,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
   end;
 
 FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider):boolean;
