@@ -62,6 +62,14 @@ DESTRUCTOR T_fileHistory.destroy;
     setLength(fileItems,0);
     setLength(folderItems,0);
     fileWrappers.logFolderCallback:=nil;
+    with scriptUsage do begin
+      EnterCriticalsection(cs);
+      setLength(dat,0);
+      setLength(foldersScanned,0);
+      scanning:=false;
+      LeaveCriticalsection(cs);
+      DoneCriticalsection(cs);
+    end;
   end;
 
 FUNCTION T_fileHistory.getSerialVersion: dword; begin result:=176494; end;

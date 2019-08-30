@@ -409,6 +409,7 @@ PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistance
       editor.highlighter:=highlighter;
       editor.Repaint;
     end;
+    if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,latestAssistanceReponse^.package^.usedAndExtendedPackages);
   end;
 
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
@@ -451,6 +452,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       lineIndex:longint;
       lineTxt:string;
       recycler:T_recycler;
+      fileName:string;
 
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
@@ -475,7 +477,17 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
   begin
     result:=false;
     if (language<>LANG_MNH) then exit(false);
-    if renameInOtherEditors then for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+    if renameInOtherEditors then begin
+      for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
+      if not(isPseudoFile) then for fileName in workspace.fileHistory.findScriptsUsing(fileInfo.filePath) do begin
+        if not(workspace.hasEditorForFile(fileName)) then begin
+          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false);
+          if meta<>nil then begin
+            if not(meta^.doRename(ref,oldId,newId,false)) then workspace.closeQuietly(meta);
+          end;
+        end;
+      end;
+    end;
 
     recycler.initRecycler;
     tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),recycler);

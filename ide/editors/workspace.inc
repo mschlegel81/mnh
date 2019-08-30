@@ -41,6 +41,7 @@ T_workspace=object(T_serializable)
   public
     FUNCTION createNewFile:P_editorMeta;
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
+    FUNCTION hasEditorForFile(CONST fileName:string):boolean;
 
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
@@ -323,6 +324,13 @@ FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_e
     except
       result:=nil;
     end;
+  end;
+
+FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
+  VAR meta:P_editorMeta;
+  begin
+    for meta in metas do if meta^.pseudoName=fileName then exit(true);
+    result:=false;
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
