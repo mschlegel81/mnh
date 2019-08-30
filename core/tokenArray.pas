@@ -672,7 +672,10 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_customType, tt_customTypeCheck: begin
-
+        result.infoText+=C_lineBreakChar+ECHO_MARKER+BoolToStr(P_typedef(token^.data)^.isDucktyping,
+                                                               C_ruleTypeText[rt_duckTypeCheck],
+                                                               C_ruleTypeText[rt_customTypeCheck])+token^.txt+' '+ansistring(P_typedef(token^.data)^.getLocation)
+        +C_lineBreakChar+P_typedef(token^.data)^.getDocTxt;
       end;
 
       tt_type,tt_typeCheck:
