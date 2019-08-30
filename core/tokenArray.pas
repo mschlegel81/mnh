@@ -120,27 +120,25 @@ TYPE
   end;
   T_importedCallInfos=array of T_importedCallInfo;
 
-  //TODO: Extend IDE by "find usages"
-  //TODO: Config data: IDE-Only functions; use to find appropriate shebang per IDE
   T_functionCallInfos=object
     private
-    fill:longint;
-    dat:array of T_functionCallInfo;
-    usedOperators:T_tokenTypeSet;
-    imported:T_importedCallInfos;
+      fill:longint;
+      dat:array of T_functionCallInfo;
+      usedOperators:T_tokenTypeSet;
+      imported:T_importedCallInfos;
     public
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE clear;
-    PROCEDURE add(CONST token:P_token);
-    PROCEDURE cleanup;
-    FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
-    FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
-    FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
-    FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
-    FUNCTION exportLocations:T_importedCallInfos;
-    PROCEDURE importLocations(CONST loc:T_importedCallInfos);
-    FUNCTION isEmpty:boolean;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      PROCEDURE add(CONST token:P_token);
+      PROCEDURE cleanup;
+      FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+      FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
+      FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
+      FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+      FUNCTION exportLocations:T_importedCallInfos;
+      PROCEDURE importLocations(CONST loc:T_importedCallInfos);
+      FUNCTION isEmpty:boolean;
   end;
 
   T_tokenInfo=record
@@ -375,9 +373,7 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
         result[length(result)-1]:=info.referencedAt;
       end;
     end;
-    writeln('REF:: looking for usages of ',string(loc),' in ',length(imported),' imported call infos');
     for inf2 in imported do begin
-      writeln('REF: ',string(inf2.referencedAt),' -> ',string(inf2.targetLocation));
       if inf2.targetLocation=loc then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=inf2.referencedAt;
@@ -421,7 +417,6 @@ PROCEDURE T_functionCallInfos.importLocations(CONST loc:T_importedCallInfos);
       //One location cannot reference multiple targets
       for k:=0 to importCount-1 do if imported[k].referencedAt=info.referencedAt then exit();
       imported[importCount]:=info;
-      writeln('Imported reference: ',string(info.referencedAt),' -> ',string(info.targetLocation));
       inc(importCount);
     end;
 

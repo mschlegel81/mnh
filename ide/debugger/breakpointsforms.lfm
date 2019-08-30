@@ -23,6 +23,7 @@ object BreakpointsForm: TBreakpointsForm
     OnDblClick = BreakpointsListBoxDblClick
     OnKeyDown = BreakpointsListBoxKeyDown
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 0
   end
   object MainMenu1: TMainMenu
