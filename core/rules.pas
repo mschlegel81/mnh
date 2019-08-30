@@ -359,14 +359,14 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
       if not(isQualified(result)) then result:=other^.localPackage^.getId + ID_QUALIFY_CHARACTER + result;
     end;
 
-  VAR entryToMerge:T_ruleMapEntry;
+  VAR entryToMerge:T_ruleMap.KEY_VALUE_PAIR;
       newEntry:T_ruleMapEntry;
   begin
     result:=false;
-    for entryToMerge in other^.valueSet do if not(entryToMerge.isImported) and entryToMerge.hasPublicSubrule then begin
+    for entryToMerge in other^.entrySet do if not(entryToMerge.value.isImported) and entryToMerge.value.hasPublicSubrule then begin
       newEntry.isImported:=true;
-      newEntry.entryType :=entryToMerge.entryType;
-      newEntry.value     :=entryToMerge.value;
+      newEntry.entryType :=entryToMerge.value.entryType;
+      newEntry.value     :=entryToMerge.value.value;
       if (newEntry.entryType=tt_userRule) and (P_abstractRule(newEntry.value)^.getRuleType=rt_delegate)
       then begin
         newEntry.value:=P_delegatorRule(newEntry.value)^.localRule;
@@ -377,10 +377,10 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
         //Qualified entries are always added
         put(qualifiedId(newEntry.value),newEntry);
 
-        if not(isQualified(entryToMerge.value^.getId)) and
-          (entryToMerge.value^.getId<>MAIN_RULE_ID) then //"main" of imported packages can only be accessed using its qualified id "<package>.main"
+        if not(isQualified(entryToMerge.key)) and
+          (entryToMerge.key<>MAIN_RULE_ID) then //"main" of imported packages can only be accessed using its qualified id "<package>.main"
         begin
-          if mergeEntry(entryToMerge.value^.getId,newEntry) then result:=true;
+          if mergeEntry(entryToMerge.key,newEntry) then result:=true;
         end;
       end;
     end;
