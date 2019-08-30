@@ -8,12 +8,15 @@ ALWAYS_IGNORED_CODES:=[1023,1022,1021,1008,3104,9022,9015,1002];
 
 IGNORED_PATTERNS:=['3rd_party',
                   'mnhcustomform.*\(5092\)',
+                  'myGenerics.*\(5092\)',
                   '/ide/.*\(5024\)',
                   '\(5066\).*Symbol "UTF8CharacterLength" is deprecated: "Use UTF8CodepointSize instead."',
                   '/core/litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
+                  '/core/litvar.*\(5058\).*"stringSingletonsCs"',
                   '/core/func_defines\.inc.*\(5024\)',
                   '/core/out_adapters\.pas.*\(5024\)',
                   '/core/profiling\.pas.*\(5024\)',
+                  '/core/profiling\.pas.*\(5092\).*"locationToIdMap"',
                   '/core/operators.*\(5059\)',
                   '/core/funcs_files.*\(6018\)',
                   '/core/listProcessing.*\(5089\).*"nextToEnqueue"'

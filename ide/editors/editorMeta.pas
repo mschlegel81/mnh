@@ -395,7 +395,7 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
 PROCEDURE T_editorMeta.triggerCheck;
   FUNCTION optionalAdditionals:T_arrayOfString;
     begin
-      if workspace.checkUsingScripts and not(isPseudoFile)
+      if (language_=LANG_MNH) and workspace.checkUsingScripts and not(isPseudoFile)
       then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
       else result:=C_EMPTY_STRING_ARRAY;
     end;

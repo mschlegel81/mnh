@@ -775,7 +775,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           newNext:=t^.next^.next;
           if t^.next^.tokType=tt_type
           then t^.tokType:=tt_typeCheck
-          else t^.tokType:=tt_customTypeCheck;
+          else begin
+            t^.tokType:=tt_customTypeCheck;
+            {$ifdef fullVersion}
+            ruleMap.markTypeAsUsed(t^.next^.data);
+            {$endif}
+          end;
           t^.txt    :=t^.next^.txt;
           t^.data   :=t^.next^.data;
           recycler.disposeToken(t^.next);
@@ -1308,8 +1313,8 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
       token.data   :=entry.value;
       {$ifdef fullVersion}
       if markAsUsed then case entry.entryType of
-        tt_userRule:       P_rule    (entry.value)^.setIdResolved;
-        tt_globalVariable: P_variable(entry.value)^.setIdResolved;
+        tt_userRule,tt_globalVariable: P_abstractRule(entry.value)^.setIdResolved;
+        tt_customType,tt_customTypeCheck: ruleMap.markTypeAsUsed(P_typedef(entry.value));
       end;
       {$endif}
       exit;
