@@ -114,12 +114,21 @@ TYPE
     referencedAt:T_tokenLocation;
   end;
 
+  T_importedCallInfo=record
+    targetLocation,
+    referencedAt:T_searchTokenLocation;
+  end;
+  T_importedCallInfos=array of T_importedCallInfo;
+
   //TODO: Extend IDE by "find usages"
   //TODO: Config data: IDE-Only functions; use to find appropriate shebang per IDE
   T_functionCallInfos=object
+    private
     fill:longint;
     dat:array of T_functionCallInfo;
     usedOperators:T_tokenTypeSet;
+    imported:T_importedCallInfos;
+    public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clear;
@@ -128,6 +137,10 @@ TYPE
     FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
     FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
     FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
+    FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+    FUNCTION exportLocations:T_importedCallInfos;
+    PROCEDURE importLocations(CONST loc:T_importedCallInfos);
+    FUNCTION isEmpty:boolean;
   end;
 
   T_tokenInfo=record
@@ -279,6 +292,7 @@ DESTRUCTOR T_functionCallInfos.destroy;
 PROCEDURE T_functionCallInfos.clear;
   begin
     setLength(dat,0);
+    setLength(imported,0);
     fill:=0;
     usedOperators:=[];
   end;
@@ -318,6 +332,7 @@ FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
       k:longint=0;
       op:T_tokenType;
   begin
+    if fill<>length(dat) then cleanup;
     found.create;
     for op in usedOperators do if (op>=low(intFuncForOperator)) and (op<=high(intFuncForOperator)) then found.put(intFuncForOperator[op]);
     for info in dat do if info.targetKind=tt_intrinsicRule then found.put(info.targetData);
@@ -335,6 +350,7 @@ FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
       func:pointer;
       k:longint=0;
   begin
+    if fill<>length(dat) then cleanup;
     found.create;
     for info in dat do if info.targetKind<>tt_intrinsicRule then found.put(info.targetData);
     setLength(result,found.size);
@@ -347,7 +363,9 @@ FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
 
 FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
   VAR info:T_functionCallInfo;
+      inf2:T_importedCallInfo;
   begin
+    if fill<>length(dat) then cleanup;
     setLength(result,0);
     for info in dat do begin
       if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
@@ -357,6 +375,67 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
         result[length(result)-1]:=info.referencedAt;
       end;
     end;
+    writeln('REF:: looking for usages of ',string(loc),' in ',length(imported),' imported call infos');
+    for inf2 in imported do begin
+      writeln('REF: ',string(inf2.referencedAt),' -> ',string(inf2.targetLocation));
+      if inf2.targetLocation=loc then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=inf2.referencedAt;
+      end;
+    end;
+  end;
+
+FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+  VAR info:T_functionCallInfo;
+      inf2:T_importedCallInfo;
+  begin
+    if fill<>length(dat) then cleanup;
+    result:=false;
+    for info in dat do begin
+      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
+         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
+      then exit(true);
+    end;
+    for inf2 in imported do if inf2.targetLocation=loc then exit(true);
+  end;
+
+FUNCTION T_functionCallInfos.exportLocations:T_importedCallInfos;
+  VAR info:T_functionCallInfo;
+      k:longint=0;
+  begin
+    if fill<>length(dat) then cleanup;
+    setLength(result,length(dat));
+    for info in dat do if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
+      result[k].targetLocation:=P_objectWithIdAndLocation(info.targetData)^.getLocation;
+      result[k].referencedAt  :=info.referencedAt;
+      inc(k);
+    end;
+    setLength(result,k);
+  end;
+
+PROCEDURE T_functionCallInfos.importLocations(CONST loc:T_importedCallInfos);
+  VAR importCount:longint;
+  PROCEDURE addIfNew(CONST info:T_importedCallInfo);
+    VAR k:longint;
+    begin
+      //One location cannot reference multiple targets
+      for k:=0 to importCount-1 do if imported[k].referencedAt=info.referencedAt then exit();
+      imported[importCount]:=info;
+      writeln('Imported reference: ',string(info.referencedAt),' -> ',string(info.targetLocation));
+      inc(importCount);
+    end;
+
+  VAR info:T_importedCallInfo;
+  begin
+    importCount:=length(imported);
+    setLength(imported,importCount+length(loc));
+    for info in loc do addIfNew(info);
+    setLength(imported,importCount);
+  end;
+
+FUNCTION T_functionCallInfos.isEmpty:boolean;
+  begin
+    result:=fill=0;
   end;
 {$endif}
 

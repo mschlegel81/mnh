@@ -24,6 +24,7 @@ T_workspace=object(T_serializable)
     newFileLineEnding,overwriteLineEnding:byte;
 
     fileHistory:T_fileHistory;
+    checkUsingScripts:boolean; //nonpersistent
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList;
@@ -136,7 +137,7 @@ FUNCTION editorContent_impl intFuncSignature;
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     savedAt:=now+1; //= now + 24h
-
+    checkUsingScripts:=false;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;

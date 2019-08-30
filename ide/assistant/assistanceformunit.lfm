@@ -16,8 +16,8 @@ object AssistanceForm: TAssistanceForm
   LCLVersion = '2.0.2.0'
   inline AssistanceEdit: TSynEdit
     Left = 0
-    Height = 300
-    Top = 0
+    Height = 276
+    Top = 24
     Width = 400
     Align = alClient
     Font.Height = -11
@@ -480,6 +480,16 @@ object AssistanceForm: TAssistanceForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
     end
+  end
+  object checkImportingFilesCheckbox: TCheckBox
+    Left = 0
+    Height = 24
+    Top = 0
+    Width = 400
+    Align = alTop
+    Caption = 'try to check importing files'
+    OnChange = checkImportingFilesCheckboxChange
+    TabOrder = 1
   end
   object MainMenu1: TMainMenu
     left = 146

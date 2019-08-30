@@ -11,6 +11,7 @@ T_fileHistory=object(T_serializable)
 
     scriptUsage:record
       cs:TRTLCriticalSection;
+      destructionPending:boolean;
       dat:array of record usedScript,usingScript:string; end;
       foldersScanned:T_arrayOfString;
       scanning:boolean;
@@ -50,6 +51,7 @@ CONSTRUCTOR T_fileHistory.create(CONST historyRootItem: TMenuItem);
 
     initialize(scriptUsage);
     with scriptUsage do begin
+      destructionPending:=false;
       initCriticalSection(cs);
       setLength(dat,0);
       setLength(foldersScanned,0);
@@ -63,12 +65,13 @@ DESTRUCTOR T_fileHistory.destroy;
     setLength(folderItems,0);
     fileWrappers.logFolderCallback:=nil;
     with scriptUsage do begin
-      EnterCriticalsection(cs);
+      destructionPending:=true;
+      enterCriticalSection(cs);
       setLength(dat,0);
       setLength(foldersScanned,0);
       scanning:=false;
-      LeaveCriticalsection(cs);
-      DoneCriticalsection(cs);
+      leaveCriticalSection(cs);
+      doneCriticalSection(cs);
     end;
   end;
 
@@ -154,17 +157,8 @@ PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
   end;
 
 PROCEDURE T_fileHistory.logFolder(CONST folderName:string);
-  VAR fullName:string;
-      item:string;
-      isNew:boolean=true;
   begin
-    fullName:=expandFileName(folderName);
-    appendIfNew(folderItems,fullName);
-    for item in folderItems do isNew:=isNew and (item<>folderName);
-    if isNew then begin
-      append(folderItems,fullName);
-      postUsageScan();
-    end;
+    appendIfNew(folderItems,expandFileName(folderName));
   end;
 
 FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
@@ -198,6 +192,9 @@ FUNCTION T_fileHistory.findScriptsUsing(CONST scriptName:string):T_arrayOfString
       try
         setLength(result,0);
         for i:=0 to length(dat)-1 do if dat[i].usedScript=scriptName then appendIfNew(result,dat[i].usingScript);
+        {$ifdef debugMode}
+        writeln('T_fileHistory.findScriptsUsing found ',length(result),' scripts using ',scriptName);
+        {$endif}
       finally
         leaveCriticalSection(scriptUsage.cs);
       end;
@@ -235,6 +232,10 @@ FUNCTION scanScripts(p:pointer):ptrint;
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
       try
+        {$ifdef debugMode}
+        writeln(stdErr,'fileHistory/scanScripts: scan started. ',length(scriptUsage.foldersScanned),' folders have been scanned, ',length(folderItems),' folders are logged as relevant [',scriptUsage.destructionPending,']');
+        {$endif}
+
         //Determine folders to scan:
         setLength(foldersToScan,0);
         append(foldersToScan,folderItems);
@@ -242,17 +243,23 @@ FUNCTION scanScripts(p:pointer):ptrint;
         //Update scriptUsage.foldersScanned
         append(scriptUsage.foldersScanned,foldersToScan);
 
+        {$ifdef debugMode}
+        writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned [',scriptUsage.destructionPending,']');
+        {$endif}
         //Determine scripts to scan:
         setLength(scriptsToScan,0);
-        for folder in foldersToScan do begin
+        for folder in foldersToScan do if not(scriptUsage.destructionPending) then begin
           list:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
           for script in list do append(scriptsToScan,script);
           list.free;
         end;
         sortUnique(scriptsToScan);
+        {$ifdef debugMode}
+        writeln(stdErr,'fileHistory/scanScripts: ',length(scriptsToScan),' scripts must be scanned [',scriptUsage.destructionPending,']');
+        {$endif}
 
         //Load scripts
-        for script in scriptsToScan do
+        for script in scriptsToScan do if not(scriptUsage.destructionPending) then
         for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
           setLength(scriptUsage.dat,length(scriptUsage.dat)+1);
           scriptUsage.dat[length(scriptUsage.dat)-1].usingScript:=script;
@@ -264,6 +271,8 @@ FUNCTION scanScripts(p:pointer):ptrint;
       finally
         scriptUsage.scanning:=false;
         leaveCriticalSection(scriptUsage.cs);
+        setLength(foldersToScan,0);
+        setLength(scriptsToScan,0);
       end;
     end;
     result:=1;

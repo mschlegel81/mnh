@@ -223,7 +223,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       miKeepStackTrace.checked:=runnerModel.stackTracing;
 
       workspace.fileHistory.updateHistoryMenu;
-      workspace.fileHistory.postUsageScan();
     end;
     stream.destroy;
     runnerModel.ensureEditScripts;
@@ -650,6 +649,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           close;
         end else begin
           workspace.checkForFileChanges;
+          workspace.fileHistory.postUsageScan();
         end;
       finally
         slowUpdating:=false;

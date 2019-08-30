@@ -393,8 +393,15 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;
+  FUNCTION optionalAdditionals:T_arrayOfString;
+    begin
+      if workspace.checkUsingScripts and not(isPseudoFile)
+      then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
+      else result:=C_EMPTY_STRING_ARRAY;
+    end;
+
   begin
-    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()));
+    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()),optionalAdditionals);
   end;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
@@ -490,7 +497,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     end;
 
     recycler.initRecycler;
-    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),recycler);
+    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),C_EMPTY_STRING_ARRAY,recycler);
     recycler.cleanup;
 
     editor.BeginUpdate(true);

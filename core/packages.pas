@@ -76,7 +76,7 @@ TYPE
       private
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
-      PROCEDURE complainAboutUnused(CONST messages:P_messages);
+      PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
       {$endif}
     protected
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
@@ -86,6 +86,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
+
       DESTRUCTOR destroy; virtual;
 
       FUNCTION getHelpOnMain:ansistring;
@@ -101,6 +102,7 @@ TYPE
       FUNCTION usedPackages:T_packageList;
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
+      FUNCTION usedAndExtendedPackages:T_arrayOfString;
       {$endif}
     end;
 
@@ -332,20 +334,13 @@ PROCEDURE T_sandbox.runUninstallScript;
 
 FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
   VAR recycler:T_recycler;
-      ref:T_packageReference;
-      ext:P_extendedPackage;
   begin
     try
       recycler.initRecycler;
       package.replaceCodeProvider(newCodeProvider(fileName));
       globals.resetForEvaluation(@package,@package.reportVariables,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
-
-      setLength(result,0);
-      for ref in package.packageUses      do append(result,ref.path);
-      for ext in package.extendedPackages do append(result,ext^.getPath);
-      sortUnique(result);
-      dropValues(result,'');
+      result:=package.usedAndExtendedPackages;
     finally
       globals.afterEvaluation(recycler);
       package.clear(true);
@@ -963,17 +958,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       end;
     end;
 
-  {$ifdef fullVersion}
-  PROCEDURE checkParameters;
-    VAR rule:P_rule;
-        pack:P_package;
-    begin
-      for pack in secondaryPackages do
-        for rule in pack^.ruleMap.getAllLocalRules do
-          rule^.checkParameters(globals.primaryContext);
-    end;
-  {$endif}
-
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       newCodeHash:T_hashInt;
@@ -986,6 +970,24 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
               (stmt.firstToken^.next^.txt='script') and
               (stmt.firstToken^.next^.next=nil);
     end;
+
+  {$ifdef fullVersion}
+  PROCEDURE afterLoadForAssistance;
+    PROCEDURE checkParameters;
+      VAR rule:P_rule;
+          pack:P_package;
+      begin
+        for pack in secondaryPackages do
+          for rule in pack^.ruleMap.getAllLocalRules do
+            rule^.checkParameters(globals.primaryContext);
+      end;
+
+    begin
+      ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION,functionCallInfos);
+      complainAboutUnused(globals.primaryContext.messages,functionCallInfos);
+      checkParameters;
+    end;
+  {$endif}
 
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
@@ -1024,11 +1026,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       readyForUsecase:=usecase;
       logReady(newCodeHash);
       {$ifdef fullVersion}
-      if gui_started then begin
-        ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION{$ifdef fullVersion},functionCallInfos{$endif});
-        complainAboutUnused(globals.primaryContext.messages);
-        checkParameters;
-      end;
+      afterLoadForAssistance;
       {$endif}
       exit;
     end;
@@ -1151,10 +1149,10 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages);
+PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
   VAR import:T_packageReference;
   begin
-    ruleMap.complainAboutUnused(messages);
+    ruleMap.complainAboutUnused(messages,functionCallInfos);
     for import in packageUses do if not(import.pack^.anyCalled) then
       messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
@@ -1258,7 +1256,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
 
   begin
     {$ifdef fullVersion}
-    if (functionCallInfos=nil) or (functionCallInfos^.fill=0) then begin
+    if (functionCallInfos=nil) or functionCallInfos^.isEmpty then begin
       if functionCallInfos=nil then new(functionCallInfos,create);
       ruleMap.fillCallInfos(functionCallInfos);
     end;
@@ -1380,6 +1378,18 @@ FUNCTION T_package.getExtended(CONST idOrPath:string):P_abstractPackage;
     for e in extendedPackages do if (e^.getId=idOrPath) or (e^.getPath=unescapeString(idOrPath,1,dummy)) then exit(e);
     result:=nil;
   end;
+
+FUNCTION T_package.usedAndExtendedPackages:T_arrayOfString;
+  VAR ref:T_packageReference;
+      ext:P_extendedPackage;
+  begin
+    setLength(result,0);
+    for ref in packageUses      do append(result,ref.path);
+    for ext in extendedPackages do append(result,ext^.getPath);
+    sortUnique(result);
+    dropValues(result,'');
+  end;
+
 {$endif}
 
 {$undef include_implementation}

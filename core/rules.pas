@@ -247,7 +247,7 @@ TYPE
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
-      PROCEDURE complainAboutUnused(CONST messages:P_messages);
+      PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
       PROCEDURE fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
       {$endif}
   end;
@@ -757,20 +757,16 @@ PROCEDURE T_ruleMap.fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
     resolveRuleIds(nil,ON_DELEGATION,functionCallInfos);
   end;
 
-PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages);
+PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages; CONST functionCallInfos:P_functionCallInfos);
   VAR entry:T_ruleMapEntry;
   begin
     if suppressAllUnusedWarnings then exit;
-    for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
-      tt_userRule:
-        P_rule(entry.value)^.complainAboutUnused(messages);
-      tt_globalVariable:  begin
-        if not(P_variable(entry.value)^.idResolved) then
-        messages^.postTextMessage(mt_el2_warning,entry.value^.getLocation,
-        'Unused rule '+entry.value^.getId+
-        '; you can suppress this warning with '+
-        ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
-      end;
+    for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) and (entry.entryType in [tt_userRule,tt_globalVariable]) then begin
+      if not(P_abstractRule(entry.value)^.isIdResolved) and
+         (functionCallInfos<>nil) and
+         functionCallInfos^.isLocationReferenced(P_objectWithIdAndLocation(entry.value)^.getLocation)
+      then P_abstractRule(entry.value)^.setIdResolved;
+      P_abstractRule(entry.value)^.complainAboutUnused(messages);
     end;
   end;
 {$endif}
