@@ -983,6 +983,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       end;
 
     begin
+      customOperatorRules:=ruleMap.getOperators;
       ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION,functionCallInfos);
       complainAboutUnused(globals.primaryContext.messages,functionCallInfos);
       checkParameters;
