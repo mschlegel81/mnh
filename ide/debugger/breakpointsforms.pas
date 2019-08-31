@@ -15,8 +15,7 @@ TYPE
     MenuItem1: TMenuItem;
     PopupMenu1: TPopupMenu;
     PROCEDURE BreakpointsListBoxDblClick(Sender: TObject);
-    PROCEDURE BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word;
-      Shift: TShiftState);
+    PROCEDURE BreakpointsListBoxKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;

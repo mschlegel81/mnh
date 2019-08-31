@@ -246,6 +246,7 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
+      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos);
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
       PROCEDURE fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
@@ -736,6 +737,23 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
   end;
 
 {$ifdef fullVersion}
+PROCEDURE T_ruleMap.markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos);
+  VAR relatedCastRule,
+      relatedCheckRule:T_ruleMapEntry;
+      typeName:string;
+      typedef:P_typedef;
+  begin
+    if (token=nil) or not(token^.tokType in [tt_customType,tt_customTypeCheck]) then exit;
+    typedef:=P_typedef(token^.data);
+    typeName:=typedef^.getName;
+    if containsKey('to'+typeName,relatedCastRule) and (relatedCastRule.entryType=tt_userRule)
+    then P_abstractRule(relatedCastRule.value)^.setIdResolved else
+    if containsKey('is'+typeName,relatedCheckRule) and (relatedCheckRule.entryType=tt_userRule)
+    then P_abstractRule(relatedCheckRule.value)^.setIdResolved;
+
+    if functionCallInfos<>nil then functionCallInfos^.add(token);
+  end;
+
 PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
   VAR entry:KEY_VALUE_PAIR;
   begin

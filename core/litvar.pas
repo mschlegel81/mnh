@@ -244,8 +244,6 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
   end;
 
-  { T_typedef }
-
   T_typedef=object(T_objectWithIdAndLocation)
     private
       name:T_idString;
@@ -270,6 +268,7 @@ TYPE
       PROPERTY isAlwaysTrue:boolean read alwaysTrue;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
+      FUNCTION getDocTxt:string;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -949,6 +948,11 @@ FUNCTION T_typedef.getId: T_idString;
 FUNCTION T_typedef.getLocation: T_tokenLocation;
   begin
     result:=ducktyperule^.getLocation;
+  end;
+
+FUNCTION T_typedef.getDocTxt:string;
+  begin
+    result:=ECHO_MARKER+ducktyperule^.getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
   end;
 
 //=====================================================================================================================
