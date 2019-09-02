@@ -174,13 +174,14 @@ A225509->rangeGenerator(2).filter(isKnoedel(-5));
 A225514->rangeGenerator(2).filter(isKnoedel(-10));
 
 USE strongPseudoprimes;
+sumOfProperDividers(n>1)->n.factorize.elementFrequency.each(x,(x[0]^(x[1]+1)-1)/(x[0]-1),*)-n;
+sumOfProperDividers(n<=1)->0;
+
 private aliquotSequenceGenerator(startValue)->{begin
   local i:=startValue;
 save;
   local r:=i;
-  i:=i<=1
-     ? 0
-     : i.factorize.subSets.pEach(s,s.agg(*) orElse 1,+)-i;
+  i:=sumOfProperDividers(i);
   r;
 end}.toGenerator;
 
@@ -273,6 +274,21 @@ save;
   r;
 end}.toIteratableExpression;
 
+@class=Aliquot
+//*These are actually non-Aliquot numbers aka "untouchable Numbers"
+A005114->{begin
+  local touched:=[1].toSet;
+  local scanned:=3;
+  local prev:=1;
+save;
+  prev+=1;
+  while(true,begin
+    while(scanned<prev^2,touched|=sumOfProperDividers(scanned+=1));
+    prev in touched
+    ? prev+=1
+    : return prev;
+  end);
+end}.toIteratableExpression;
 
 @class=Collatz
 A008873->collatzGenerator(97);
