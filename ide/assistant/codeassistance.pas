@@ -94,6 +94,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,nil,@secondaryCallInfos);
       functionCallInfos^.importLocations(secondaryCallInfos.exportLocations);
       secondaryCallInfos.destroy;
+      globals^.primaryContext.messages^.clearFlags;
       user.destroy;
     end;
   VAR script:string;
