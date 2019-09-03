@@ -132,6 +132,7 @@ TYPE
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
     FUNCTION getPlotQuality:byte;
+    PROCEDURE updateInteractiveSection;
   public
     onPlotRescale:TNotifyEvent;
     onPlotMouseMove,
@@ -313,7 +314,11 @@ PROCEDURE TplotForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
-    if relatedPlot<>nil then relatedPlot^.logPlotChanged;
+    if relatedPlot<>nil then begin
+      updateInteractiveSection;
+      plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+      relatedPlot^.logPlotChanged;
+    end;
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
@@ -529,7 +534,7 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TplotForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
-    if not(isEvaluationRunning) and(relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
+    if (relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
@@ -544,9 +549,8 @@ PROCEDURE TplotForm.performFastUpdate;
     relatedPlot^.startGuiInteraction;
     try
       if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
-
         if animateCheckBox.checked and
-           //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
+           //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
            (frameInterval-eTimer.elapsed<0.05) and
            relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
         then begin
@@ -678,26 +682,25 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
     end;
   end;
 
-PROCEDURE TplotForm.doPlot;
-  PROCEDURE updateInteractiveSection;
-    begin
-      AnimationGroupBox.visible:=(relatedPlot^.animation.frameCount>0);
-      AnimationGroupBox.enabled:=(relatedPlot^.animation.frameCount>0);
-      if relatedPlot^.animation.frameCount>0 then begin
-        AnimationGroupBox.AutoSize:=true;
-      end else begin
-        AnimationGroupBox.AutoSize:=false;
-        AnimationGroupBox.height:=0;
-      end;
+PROCEDURE TplotForm.updateInteractiveSection;
+  begin
+    AnimationGroupBox.visible:=(relatedPlot^.animation.frameCount>0);
+    AnimationGroupBox.enabled:=(relatedPlot^.animation.frameCount>0);
+    if relatedPlot^.animation.frameCount>0 then begin
+      AnimationGroupBox.AutoSize:=true;
+    end else begin
+      AnimationGroupBox.AutoSize:=false;
+      AnimationGroupBox.height:=0;
     end;
+  end;
 
+PROCEDURE TplotForm.doPlot;
   begin
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
     try
       if relatedPlot^.isPlotChanged then begin
         updateInteractiveSection;
-        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
 
         if relatedPlot^.animation.frameCount<>0 then begin
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
