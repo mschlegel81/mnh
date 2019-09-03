@@ -179,7 +179,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       provider:=codeAssistanceRequest;
       codeAssistanceRequest:=nil;
       leaveCriticalSection(codeAssistanceCs);
-      if provider<>nil then begin;
+      if provider<>nil then begin
         response:=doCodeAssistanceSynchronously(provider,codeAssisanceAdditionals,recycler,globals,@adapters);
         lastEvaluationEnd:=now;
         enterCriticalSection(codeAssistanceCs);
@@ -312,13 +312,12 @@ FUNCTION T_highlightingData.isErrorLocation(CONST lineIndex, tokenStart, tokenEn
     enterCriticalSection(highlightingCs);
     try
       result:=0;
-      for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
+      for k:=0 to length(warnLocations)-1 do if result<2 then with warnLocations[k] do
       if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
-        if isError then begin
-          leaveCriticalSection(highlightingCs);
-          exit(2);
-        end
-        else if result<1 then result:=1;
+        if isError
+        then result:=2
+        else if   result< 1
+             then result:=1;
       end;
     finally
       leaveCriticalSection(highlightingCs);
