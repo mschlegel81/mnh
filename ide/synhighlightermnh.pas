@@ -2,7 +2,7 @@ UNIT SynHighlighterMnh;
 INTERFACE
 
 USES
-  sysutils, Classes, Controls, Graphics,
+  Classes, Controls, Graphics,
   SynEditTypes, SynEditHighlighter,
   myGenerics,myStringUtil,
   mnh_constants,
@@ -112,6 +112,7 @@ TYPE
 
 PROCEDURE initLists;
 IMPLEMENTATION
+USES sysutils;
 VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
     builtinRules:T_setOfString;

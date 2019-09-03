@@ -232,10 +232,6 @@ FUNCTION scanScripts(p:pointer):ptrint;
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
       try
-        {$ifdef debugMode}
-        writeln(stdErr,'fileHistory/scanScripts: scan started. ',length(scriptUsage.foldersScanned),' folders have been scanned, ',length(folderItems),' folders are logged as relevant [',scriptUsage.destructionPending,']');
-        {$endif}
-
         //Determine folders to scan:
         setLength(foldersToScan,0);
         append(foldersToScan,folderItems);
@@ -244,7 +240,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         append(scriptUsage.foldersScanned,foldersToScan);
 
         {$ifdef debugMode}
-        writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned [',scriptUsage.destructionPending,']');
+        if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned [',scriptUsage.destructionPending,']');
         {$endif}
         //Determine scripts to scan:
         setLength(scriptsToScan,0);
@@ -255,7 +251,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         end;
         sortUnique(scriptsToScan);
         {$ifdef debugMode}
-        writeln(stdErr,'fileHistory/scanScripts: ',length(scriptsToScan),' scripts must be scanned [',scriptUsage.destructionPending,']');
+        if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(scriptsToScan),' scripts must be scanned [',scriptUsage.destructionPending,']');
         {$endif}
 
         //Load scripts

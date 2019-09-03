@@ -220,6 +220,7 @@ TYPE
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       PROPERTY isPlotChanged:boolean read plotChangedSinceLastDisplay;
+      FUNCTION isEmpty:boolean;
   end;
 
 FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
@@ -1814,6 +1815,11 @@ PROCEDURE T_plotSystem.startGuiInteraction;
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
     leaveCriticalSection(adapterCs);
+  end;
+
+FUNCTION T_plotSystem.isEmpty:boolean;
+  begin
+    result:=(length(currentPlot.row)=0) and (length(currentPlot.customText)=0) and (animation.frameCount=0);
   end;
 
 FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
