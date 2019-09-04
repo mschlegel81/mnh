@@ -11,9 +11,6 @@ USES
   editorMeta,editorMetaBase,closeDialog;
 
 TYPE
-
-  { TSaveFileDialog }
-
   TSaveFileDialog = class(TForm)
     Button1: TButton;
     CancelButton: TButton;

@@ -77,6 +77,11 @@ DESTRUCTOR T_fileHistory.destroy;
 
 FUNCTION T_fileHistory.getSerialVersion: dword; begin result:=176494; end;
 
+FUNCTION canonicalFileName(CONST s:string):string;
+  begin
+    result:=replaceAll(replaceAll(replaceAll(expandFileName(s),'\','/'),'//','/'),'/',DirectorySeparator);
+  end;
+
 FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   FUNCTION readArray(OUT items:T_arrayOfString):boolean;
     VAR i,count:longint;
@@ -85,7 +90,7 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       count:=stream.readNaturalNumber;
       if count>FILE_HISTORY_MAX_SIZE then exit(false);
       setLength(items,count);
-      for i:=0 to count-1 do items[i]:=stream.readAnsiString;
+      for i:=0 to count-1 do items[i]:=canonicalFileName(stream.readAnsiString);
       result:=stream.allOkay;
     end;
 
@@ -133,7 +138,7 @@ FUNCTION T_fileHistory.polishHistory: boolean;
     end;
     for i:=1 to length(fileItems)-1 do
     if (fileItems[i]<>'') then for j:=0 to i-1 do
-    if SameFileName(expandFileName(fileItems[i]),expandFileName(fileItems[j])) then begin
+    if SameFileName(fileItems[i],fileItems[j]) then begin
       fileItems[i]:='';
       result:=true;
     end;
@@ -150,7 +155,7 @@ FUNCTION T_fileHistory.polishHistory: boolean;
 
 PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
   begin
-    prepend(fileItems,fileName);
+    prepend(fileItems,canonicalFileName(fileName));
     logFolder(ExtractFileDir(fileName));
     polishHistory;
     updateHistoryMenu;
@@ -158,7 +163,7 @@ PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
 
 PROCEDURE T_fileHistory.logFolder(CONST folderName:string);
   begin
-    appendIfNew(folderItems,expandFileName(folderName));
+    appendIfNew(folderItems,canonicalFileName(folderName));
   end;
 
 FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
@@ -285,6 +290,15 @@ PROCEDURE T_fileHistory.clear;
   begin
     setLength(fileItems,0);
     setLength(folderItems,0);
+    with scriptUsage do begin
+      enterCriticalSection(cs);
+      try
+        setLength(dat,0);
+        setLength(foldersScanned,0);
+      finally
+        leaveCriticalSection(cs);
+      end;
+    end;
   end;
 
 PROCEDURE T_fileHistory.updateHistoryMenu;
