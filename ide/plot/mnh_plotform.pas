@@ -317,9 +317,9 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     if relatedPlot<>nil then begin
       updateInteractiveSection;
-      plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
       relatedPlot^.logPlotChanged;
     end;
+    plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
@@ -550,6 +550,7 @@ PROCEDURE TplotForm.performFastUpdate;
     relatedPlot^.startGuiInteraction;
     try
       if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
+        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
            //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
            (frameInterval-eTimer.elapsed<0.05) and
@@ -702,7 +703,7 @@ PROCEDURE TplotForm.doPlot;
     try
       if relatedPlot^.isPlotChanged then begin
         updateInteractiveSection;
-
+        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if relatedPlot^.animation.frameCount<>0 then begin
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
         end else begin
