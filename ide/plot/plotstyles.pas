@@ -300,7 +300,9 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
 
   VAR scalingFactor,ideal:double;
   begin
-    result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
+    DefaultFormatSettings.DecimalSeparator:='.';
+    SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+    result.solidColor:=longint(color [cc_red]) or longint(color [cc_green]) shl 8 or longint(color [cc_blue]) shl 16;
     result.solidStyle:=bsClear;
     if ps_filled in style then begin
       if sampleIndex=SINGLE_SAMPLE_INDEX then case transparentIndex and 3 of
@@ -323,9 +325,9 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
     end else begin
       if ideal=0 then result.lineWidth:=0
                  else result.lineWidth:=1;
-      result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
-                    or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
-                    or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
+      result.lineColor:=longint (toByte(color[cc_red  ]*ideal + 255*(1-ideal)))
+                    or (longint (toByte(color[cc_green]*ideal + 255*(1-ideal))) shl  8)
+                    or (longint (toByte(color[cc_blue ]*ideal + 255*(1-ideal))) shl 16);
     end;
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
@@ -346,6 +348,8 @@ FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparent
     enterCriticalSection(styleCS);
     try
       if not(styleMap.containsKey(styleString,result)) then begin
+        DefaultFormatSettings.DecimalSeparator:='.';
+        SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
         result.init();
         result.parseStyle(styleString);
         styleMap.put(styleString,result);
