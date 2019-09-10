@@ -963,20 +963,16 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     VAR points:array[0..4] of TPoint;
     begin
       if (scaleAndColor.solidStyle=bsClear) and not(withBorder) then exit;
+      target.Brush.color:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
       points[0].x:=x0; points[0].y:=y0;
       points[1].x:=x1; points[1].y:=y1;
       points[2].x:=x2; points[2].y:=y2;
       points[3].x:=x3; points[3].y:=y3;
       points[4].x:=x0; points[4].y:=y0;
-      enterCriticalSection(globalTextRenderingCs);
       if not(withBorder) then target.Pen.style:=psClear;
-      target.Brush.color:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      leaveCriticalSection(globalTextRenderingCs);
       target.Polygon(points);
-      enterCriticalSection(globalTextRenderingCs);
       if not(withBorder) then target.Pen.style:=psSolid;
-      leaveCriticalSection(globalTextRenderingCs);
     end;
 
   PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
@@ -990,12 +986,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawStraightLines;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       for i:=0 to length(screenRow)-1 do begin
         if screenRow[i].valid then begin
@@ -1014,12 +1008,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawStepsLeft;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       for i:=0 to length(screenRow)-1 do begin
         if screenRow[i].valid then begin
@@ -1038,12 +1030,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawStepsRight;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       for i:=0 to length(screenRow)-1 do begin
         if screenRow[i].valid then begin
@@ -1062,12 +1052,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawBars;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       for i:=0 to length(screenRow)-1 do begin
         if screenRow[i].valid then begin
@@ -1084,12 +1072,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawBoxes;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       i:=0;
       while i+1<length(screenRow) do begin
@@ -1113,11 +1099,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
           i:longint;
       begin
         if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
-        enterCriticalSection(globalTextRenderingCs);
         if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
         target.Brush.color:=scaleAndColor.solidColor;
         target.Brush.style:=scaleAndColor.solidStyle;
-        leaveCriticalSection(globalTextRenderingCs);
         if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
           cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
           cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
@@ -1129,17 +1113,13 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         end else begin
           target.Ellipse(x0,y0,x1,y1);
         end;
-        enterCriticalSection(globalTextRenderingCs);
         if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
-        leaveCriticalSection(globalTextRenderingCs);
       end;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       lastWasValid:=false;
       i:=0;
       while i+1<length(screenRow) do begin
@@ -1155,12 +1135,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     begin
       i:=0;
       while i+3<length(screenRow) do begin
-        enterCriticalSection(globalTextRenderingCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
-        leaveCriticalSection(globalTextRenderingCs);
         if scaleAndColor.lineWidth>0 then begin
           if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
                                                                             screenRow[i+2].x,screenRow[i+2].y);
@@ -1199,7 +1177,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     VAR i,j:longint;
     begin
       if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-      enterCriticalSection(globalTextRenderingCs);
       if (scaleAndColor.lineWidth<=0)
       then target.Pen.style:=psClear
       else target.Pen.style:=psSolid;
@@ -1208,7 +1185,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       target.Pen.EndCap:=pecRound;
       target.Brush.color:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
-      leaveCriticalSection(globalTextRenderingCs);
       j:=-1;
       for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
         if j>=0 then screenRowPoly(j,i-1);
@@ -1365,12 +1341,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawPluses;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
         target.line(screenRow[i].x-scaleAndColor.symbolWidth,
                     screenRow[i].y,
@@ -1386,12 +1360,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawCrosses;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      leaveCriticalSection(globalTextRenderingCs);
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
         target.line(screenRow[i].x-scaleAndColor.symbolRadius,
                     screenRow[i].y-scaleAndColor.symbolRadius,
@@ -1407,11 +1379,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawDots;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psClear;
       target.Brush.style:=bsSolid;
       target.Brush.color:=scaleAndColor.solidColor;
-      leaveCriticalSection(globalTextRenderingCs);
       if scaleAndColor.symbolWidth>=1 then begin
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
           target.Ellipse(screenRow[i].x-scaleAndColor.symbolWidth,
@@ -1428,12 +1398,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
   PROCEDURE drawImpulses;
     VAR i:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecSquare;
-      leaveCriticalSection(globalTextRenderingCs);
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
         target.line(screenRow[i].x,
                     yBaseLine,
@@ -1445,23 +1413,19 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     screenBox:=boundingBoxOf(0,0,intendedWidth*scalingFactor,intendedHeight*scalingFactor);
     target.LockCanvas;
     //Clear:------------------------------------------------------------------
-    enterCriticalSection(globalTextRenderingCs);
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
-    target.Pen.style:=psSolid;
-    leaveCriticalSection(globalTextRenderingCs);
     target.FillRect(0, 0, intendedWidth*scalingFactor, intendedHeight*scalingFactor);
 
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
+    target.Pen.style:=psSolid;
     //minor grid:-------------------------------------------------------------
     scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
-    enterCriticalSection(globalTextRenderingCs);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
-    leaveCriticalSection(globalTextRenderingCs);
     if (gse_fineGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if not(major) then begin
       lastY:=round(pos*scalingFactor);
@@ -1475,10 +1439,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     //-------------------------------------------------------------:minor grid
     //major grid:-------------------------------------------------------------
     scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
-    enterCriticalSection(globalTextRenderingCs);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
-    leaveCriticalSection(globalTextRenderingCs);
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
       {$Q-}
@@ -1550,23 +1512,19 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
       cSysX:=scalingOptions.axisTrafo['x'].screenMin;
       cSysY:=scalingOptions.axisTrafo['y'].screenMin;
       //clear border:-----------------------------------------------------------
-      enterCriticalSection(globalTextRenderingCs);
       target.Brush.style:=bsSolid;
       target.Brush.color:=clWhite;
       target.Pen.style:=psClear;
       target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
-      leaveCriticalSection(globalTextRenderingCs);
       if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
       if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
       //-----------------------------------------------------------:clear border
       //coordinate system:======================================================
       //axis:-------------------------------------------------------------------
-      enterCriticalSection(globalTextRenderingCs);
       target.Pen.style:=psSolid;
       target.Pen.color:=clBlack;
       target.Pen.width:=1;
-      leaveCriticalSection(globalTextRenderingCs);
       if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
       if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
       //-------------------------------------------------------------------:axis
