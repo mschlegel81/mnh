@@ -1,6 +1,6 @@
 UNIT plotstyles;
 INTERFACE
-USES sysutils,math,FPCanvas;
+USES sysutils,math,FPCanvas,BGRABitmapTypes;
 TYPE
   T_plotStyle=(ps_none,
                ps_straight,
@@ -43,24 +43,21 @@ CONST
      {ps_impulse   }   ('impulse'  , 'i'),
      {ps_polygon   }   ('polygon'  , 'p'),
      {ps_ellipse   }   ('ellipse'  , 'e'));
-  SINGLE_SAMPLE_INDEX=4;
-
 TYPE
   T_scaleAndColor = record
     lineWidth   ,
     symbolRadius,
-    symbolWidth ,
+    symbolWidth :longint;
     lineColor   ,
-    solidColor  :longint;
+    solidColor  :TBGRAPixel;
     solidStyle  :TFPBrushStyle;
   end;
 
-  T_styleTemplateDefault =(std_defaultColor,std_defaultTransparentIdx);
+  T_styleTemplateDefault =(std_defaultColor);
   T_styleTemplateDefaults=set of T_styleTemplateDefault;
 
   T_style = object
     private
-      transparentIndex:byte;
       PROCEDURE parseStyle(CONST styleString: ansistring);
       PROCEDURE setDefaults(CONST index:longint; VAR transparentCount:longint);
     public
@@ -70,7 +67,7 @@ TYPE
       styleModifier: double;
       PROCEDURE init();
       FUNCTION toString:ansistring;
-      FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;
+      FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
   end;
 
   T_gridStyleElement=(gse_tics,gse_coarseGrid,gse_fineGrid);
@@ -121,7 +118,6 @@ CONST C_defaultColor: array[0..7] of record
 
 PROCEDURE T_style.init();
   begin
-    transparentIndex:=0;
     style:=[];
     defaults:=[low(T_styleTemplateDefault)..high(T_styleTemplateDefault)];
     color:=C_defaultColor[0].color;
@@ -242,13 +238,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
           mightBeColor:=false;
         end;
         if mightBeColor then begin
-          if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor]
-          else begin
-            if (copy(part,1,2)='TI') then begin
-              transparentIndex:=strToIntDef(copy(part,3,length(part)-2),-1) and 255;
-              defaults-=[std_defaultTransparentIdx];
-            end;
-          end;
+          if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor];
         end;
       end;
     until options = '';
@@ -257,14 +247,6 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
 
 PROCEDURE T_style.setDefaults(CONST index:longint; VAR transparentCount:longint);
   begin
-    if ((ps_filled  in style) or
-        (ps_bar     in style) or
-        (ps_tube    in style) or
-        (ps_polygon in style)) and not(ps_fillSolid in style) then begin
-      if std_defaultTransparentIdx in defaults
-      then transparentIndex:=transparentCount and 255;
-      inc(transparentCount);
-    end;
     if std_defaultColor in defaults then color:=C_defaultColor[index mod length(C_defaultColor)].color;
   end;
 
@@ -276,57 +258,31 @@ FUNCTION T_style.toString:ansistring;
     for s in style do result+=C_styleName[s,0]+' ';
     result+='RGB'+floatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
                  +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
-                 +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4)+' TI'+intToStr(transparentIndex and 3);
+                 +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4);
   end;
 
-FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;
+FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
   FUNCTION toByte(CONST d:double):byte;
     begin
       if d>255 then result:=255 else if d<0 then result:=0 else result:=round(d);
     end;
-  FUNCTION roundToInt(CONST x:double):longint;
-    CONST subLineWidthDelta:array[0..3,0..3] of byte=(
-          {0.0  }(0,0,0,0),
-          {0.25 }(0,1,0,0),
-          {0.5  }(0,1,1,0),
-          {0.75 }(0,1,1,1));
-    VAR intPart:longint;
-        fracPart4:longint;
-    begin
-      intPart:=trunc(x);
-      fracPart4:=trunc(frac(x)*4);
-      result:=intPart+subLineWidthDelta[fracPart4,sampleIndex and 3];
-    end;
 
   VAR scalingFactor,ideal:double;
   begin
-    result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
+    if (ps_filled in style) and not(ps_fillSolid in style)
+    then result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue],100)
+    else result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue]);
+
     result.solidStyle:=bsClear;
-    if ps_filled in style then begin
-      if sampleIndex=SINGLE_SAMPLE_INDEX then case transparentIndex and 3 of
-        0: result.solidStyle:=bsFDiagonal ;
-        1: result.solidStyle:=bsBDiagonal ;
-        2: result.solidStyle:=bsHorizontal;
-        3: result.solidStyle:=bsVertical  ;
-      end else begin
-        if (sampleIndex-transparentIndex) and 3=0
-        then result.solidStyle:=bsSolid
-        else result.solidStyle:=bsClear;
-      end;
-    end;
-    if ps_fillSolid in style then result.solidStyle:=bsSolid;
+    if (ps_filled in style) or (ps_fillSolid in style) then result.solidStyle:=bsSolid;
     scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
     result.lineColor:=result.solidColor;
     ideal:=styleModifier*scalingFactor;
-    if (sampleIndex<>SINGLE_SAMPLE_INDEX) or (ideal>0.9375) then begin
-      result.lineWidth:=roundToInt(ideal);
-    end else begin
-      if ideal=0 then result.lineWidth:=0
-                 else result.lineWidth:=1;
-      result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
-                    or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
-                    or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
-    end;
+    if ideal=0 then result.lineWidth:=0
+               else result.lineWidth:=1;
+    result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
+                  or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
+                  or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;

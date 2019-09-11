@@ -25,17 +25,14 @@ TYPE
     GroupBox2: TGroupBox;
     Label2: TLabel;
     Label3: TLabel;
-    Label4: TLabel;
     OutputFileNameEdit: TFileNameEdit;
     Label1: TLabel;
     Panel1: TPanel;
     rbExportAll: TRadioButton;
     rbExportCurrentOnly: TRadioButton;
-    QualityTrackbar: TTrackBar;
     PROCEDURE cancelButtonClick(Sender: TObject);
     PROCEDURE okButtonClick(Sender: TObject);
     PROCEDURE OutputFileNameEditEditingDone(Sender: TObject);
-    PROCEDURE QualityTrackbarChange(Sender: TObject);
     PROCEDURE rbExportToPngChange(Sender: TObject);
     PROCEDURE widthEditChange(Sender: TObject);
   private
@@ -95,8 +92,7 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
                                      frameIndex,
                                      psys^.animation.frameCount),
                                 renderWidth,
-                                renderHeight,
-                                QualityTrackbar.position,true);
+                                renderHeight,true);
         end;
       end else begin
         ProgressBar1.max:=1;
@@ -106,12 +102,11 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
                OutputFileNameEdit.caption,
                renderWidth,
                renderHeight,
-               QualityTrackbar.position,false)
+               false)
         else psys^.currentPlot.renderToFile(
                OutputFileNameEdit.caption,
                renderWidth,
-               renderHeight,
-               QualityTrackbar.position);
+               renderHeight);
         ProgressBar1.position:=1;
         Application.ProcessMessages;
       end;
@@ -160,11 +155,6 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
     enableAll;
   end;
 
-PROCEDURE TExportPlotForm.QualityTrackbarChange(Sender: TObject);
-  begin
-    enableOkButton;
-  end;
-
 PROCEDURE TExportPlotForm.rbExportToPngChange(Sender: TObject);
   begin
     GroupBox1.visible:=rbExportToPng.checked;
@@ -189,8 +179,6 @@ PROCEDURE TExportPlotForm.enableOkButton;
       i:=strToIntDef(s,10000);
       if i<=0 then exit(false);
       if i>9999 then exit(false);
-      if i>4999 then exit((QualityTrackbar.position=0) or
-                          (QualityTrackbar.position=2));
       result:=true;
     end;
 

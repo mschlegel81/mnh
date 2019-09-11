@@ -39,5 +39,5 @@ main->begin
   addPlot(sc(4),'l  4 GREY0.75');
   addPlot(sc(5),'l  2 GREY0.5');
   addPlot(sc(6),'l  1 black');
-  plot.renderToFile(replace(myPath&"#","mnh#","png"),768,768,3);
+  plot.renderToFile(replace(myPath&"#","mnh#","png"),768,768);
 end;

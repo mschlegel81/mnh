@@ -10,14 +10,8 @@ USES sysutils,
      out_adapters,
      plotstyles,plotMath,
      litVar,
-     EpikTimer;
-TYPE
-  T_plotQuality=0..3;
-CONST
-  PLOT_QUALITY_LOW     =0;
-  PLOT_QUALITY_MEDIUM_1=1;
-  PLOT_QUALITY_MEDIUM_2=2;
-  PLOT_QUALITY_HIGH    =3;
+     EpikTimer,
+     BGRABitmap,BGRACanvas;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
   T_timedPlotExecution=object
@@ -66,15 +60,15 @@ TYPE
     private
       targetIsString:boolean;
       fileName:string;
-      width,height,quality:longint;
+      width,height:longint;
 
       retrieved:boolean;
       outputString:string;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_,quality_:longint);
-      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
+      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint);
+      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint);
       PROCEDURE setString(CONST s:string);
       FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
       PROPERTY isRenderToStringRequest:boolean read targetIsString;
@@ -113,10 +107,10 @@ TYPE
       transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
-      PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
-      PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
-      PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-      FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
+      PROCEDURE drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
+      PROCEDURE drawCoordSys(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
+      PROCEDURE drawCustomText(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint);
+      FUNCTION  obtainPlot(CONST width,height:longint):TImage;
 
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
@@ -133,9 +127,9 @@ TYPE
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
-      PROCEDURE renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
-      PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
-      FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
+      PROCEDURE renderPlot(VAR plotImage: TImage);
+      PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint);
+      FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
       FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
@@ -148,7 +142,6 @@ TYPE
   T_plotSeriesFrame=object
     private
       backgroundPreparation:boolean;
-      frameCS:TRTLCriticalSection;
 
       cachedImage:record
         image:TImage;
@@ -157,21 +150,19 @@ TYPE
         inMemoryDump:TMemoryStream;
         renderedWidth  ,
         renderedHeight :longint;
-        renderedQuality:byte;
       end;
 
       postedWidth  ,
       postedHeight :longint;
-      postedQuality:byte;
       plotData:T_plot;
       PROCEDURE performPostedPreparation;
     public
       CONSTRUCTOR create(VAR currentPlot:T_plot);
       DESTRUCTOR destroy;
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
-      PROCEDURE obtainImage(VAR target:TImage; CONST quality:byte; CONST timing:T_timedPlotExecution);
-      PROCEDURE prepareImage(CONST width,height:longint; CONST quality:byte);
-      PROCEDURE postPreparation(CONST width,height:longint; CONST quality:byte);
+      PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
+      PROCEDURE prepareImage(CONST width,height:longint);
+      PROCEDURE postPreparation(CONST width,height:longint);
   end;
 
   T_plotSeries=object
@@ -188,10 +179,10 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       FUNCTION frameCount:longint;
-      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST quality:byte; CONST timing:T_timedPlotExecution);
-      PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint; CONST exportingAll:boolean);
+      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST timing:T_timedPlotExecution);
+      PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
-      FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
+      FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
@@ -230,7 +221,8 @@ IMPLEMENTATION
 USES FPReadPNG,
      FPWritePNG,
      IntfGraphics,
-     myStringUtil;
+     myStringUtil,
+     BGRABitmapTypes;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -269,8 +261,6 @@ PROCEDURE T_timedPlotExecution.wait;
 
 CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
   begin
-    initCriticalSection(frameCS);
-    enterCriticalSection(frameCS);
     with cachedImage do begin
       image:=nil;
       dumpIsUpToDate:=false;
@@ -278,37 +268,33 @@ CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
       inMemoryDump:=nil;
       renderedWidth :=-1;
       renderedHeight:=-1;
-      renderedQuality:=255;
     end;
     backgroundPreparation:=false;
     plotData.createWithDefaults;
     plotData.copyFrom(currentPlot);
-    leaveCriticalSection(frameCS);
   end;
 
 DESTRUCTOR T_plotSeriesFrame.destroy;
   begin
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     try
       doneImage(fcm_none);
       if cachedImage.dumpName<>'' then DeleteFile(cachedImage.dumpName);
-      plotData.destroy;
     finally
-      leaveCriticalSection(frameCS);
-      doneCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
+      plotData.destroy;
     end;
   end;
 
 PROCEDURE T_plotSeriesFrame.doneImage(CONST cacheMode:T_frameCacheMode);
   begin
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     try
       with cachedImage do case cacheMode of
         fcm_none       : begin
           //Don't retain; clear all data and mark as invalid
           renderedHeight:=-1;
           renderedWidth :=-1;
-          renderedQuality:=255;
           if fileExists(dumpName) then DeleteFile(dumpName);
           dumpName:='';
           if inMemoryDump<>nil then FreeAndNil(inMemoryDump);
@@ -346,17 +332,16 @@ PROCEDURE T_plotSeriesFrame.doneImage(CONST cacheMode:T_frameCacheMode);
         end;
       end;
     finally
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
     end;
   end;
 
-PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
+PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint);
   VAR imageIsPrepared:boolean=false;
   begin
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     try
-      if (cachedImage.renderedQuality=quality) and
-         (cachedImage.renderedWidth  =width  ) and
+      if (cachedImage.renderedWidth  =width  ) and
          (cachedImage.renderedHeight =height ) then begin
         if cachedImage.image<>nil then imageIsPrepared:=true
         else with cachedImage do if inMemoryDump<>nil then begin
@@ -378,25 +363,24 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quali
         enterCriticalSection(globalTextRenderingCs);
         if cachedImage.image<>nil then FreeAndNil(cachedImage.image);
         leaveCriticalSection(globalTextRenderingCs);
-        cachedImage.image:=plotData.obtainPlot(width,height,quality);
+        cachedImage.image:=plotData.obtainPlot(width,height);
         cachedImage.dumpIsUpToDate:=false;
-        cachedImage.renderedQuality:=quality;
         cachedImage.renderedHeight :=height;
         cachedImage.renderedWidth  :=width;
       end;
     finally
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
     end;
   end;
 
 PROCEDURE T_plotSeriesFrame.performPostedPreparation;
   begin
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     try
-      prepareImage(postedWidth,postedHeight,postedQuality);
+      prepareImage(postedWidth,postedHeight);
     finally
       backgroundPreparation:=false;
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
     end;
   end;
 
@@ -406,34 +390,33 @@ FUNCTION preparationThread(p:pointer):ptrint;
     result:=0
   end;
 
-PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST quality:byte);
+PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
   begin
     if backgroundPreparation then exit;
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     if backgroundPreparation then begin
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
       exit;
     end;
     try
       backgroundPreparation:=true;
       postedHeight:=height;
       postedWidth:=width;
-      postedQuality:=quality;
       beginThread(@preparationThread,@self);
     finally
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
     end;
   end;
 
-PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte; CONST timing:T_timedPlotExecution);
+PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
   begin
-    enterCriticalSection(frameCS);
+    enterCriticalSection(plotData.cs);
     try
-      prepareImage(target.width,target.height,quality);
+      prepareImage(target.width,target.height);
       timing.wait;
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
     finally
-      leaveCriticalSection(frameCS);
+      leaveCriticalSection(plotData.cs);
     end;
   end;
 
@@ -494,26 +477,24 @@ FUNCTION T_plotRenderRequest.internalType: shortstring;
     result:='T_plotRenderRequest';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_, quality_: longint);
+CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_: longint);
   begin
     inherited create(mt_plot_renderRequest);
     targetIsString:=false;
     fileName:=filename_;
     width:=width_;
     height:=height_;
-    quality:=quality_;
     retrieved:=false;
     outputString:='';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_, quality_: longint);
+CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint);
   begin
     inherited create(mt_plot_renderRequest);
     targetIsString:=true;
     fileName:='';
     width:=width_;
     height:=height_;
-    quality:=quality_;
     retrieved:=false;
     outputString:='';
   end;
@@ -667,7 +648,7 @@ FUNCTION T_plotSeries.frameCount: longint;
     leaveCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST quality: byte; CONST timing:T_timedPlotExecution);
+PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST timing:T_timedPlotExecution);
   VAR current:P_plotSeriesFrame;
 
   PROCEDURE handleImagesToFree;
@@ -708,13 +689,13 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     try
       current:=frame[frameIndex];
       handleImagesToFree;
-      current^.obtainImage(target,quality,timing);
+      current^.obtainImage(target,timing);
     finally
       leaveCriticalSection(seriesCs);
     end;
   end;
 
-PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint; CONST exportingAll:boolean);
+PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
   VAR storeImage:TImage;
   begin
     enterCriticalSection(seriesCs);
@@ -724,12 +705,12 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     end;
     try
       {$ifndef unix}
-      if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height,quality);
+      if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height);
       {$endif}
 
       storeImage:=TImage.create(nil);
       storeImage.SetInitialBounds(0,0,width,height);
-      frame[index]^.obtainImage(storeImage,quality,timedPlotExecution(nil,0));
+      frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
       storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
       enterCriticalSection(globalTextRenderingCs);
       storeImage.destroy;
@@ -753,7 +734,7 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
     end;
   end;
 
-FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
+FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height:longint):boolean;
   {$ifndef unix}VAR nextToPrepare:longint;{$endif}
   begin
     enterCriticalSection(seriesCs);
@@ -777,7 +758,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
           if nextToPrepare=frameIndex then inc(nextToPrepare);
           if cycle then nextToPrepare:=nextToPrepare mod length(frame);
           if (nextToPrepare>=0) and (nextToPrepare<length(frame))
-          then frame[nextToPrepare]^.postPreparation(width,height,quality);
+          then frame[nextToPrepare]^.postPreparation(width,height);
         end;
         {$endif}
       end;
@@ -945,12 +926,7 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
     end;
   end; end;
 
-PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, intendedHeight, scalingFactor: longint; VAR gridTic: T_ticInfos; CONST sampleIndex: byte);
-  CONST darts_delta:array[0..4,0..1] of single=(( 0.12, 0.24),
-                                                (-0.12,-0.24),
-                                                ( 0.24,-0.12),
-                                                (-0.24, 0.12),
-                                                (0,0));
+PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
   VAR rowId, i, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
@@ -963,7 +939,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     VAR points:array[0..4] of TPoint;
     begin
       if (scaleAndColor.solidStyle=bsClear) and not(withBorder) then exit;
-      target.Brush.color:=scaleAndColor.solidColor;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       points[0].x:=x0; points[0].y:=y0;
       points[1].x:=x1; points[1].y:=y1;
@@ -1100,9 +1076,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       begin
         if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
         if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-        target.Brush.color:=scaleAndColor.solidColor;
+        target.Brush.BGRAColor:=scaleAndColor.solidColor;
         target.Brush.style:=scaleAndColor.solidStyle;
-        if (abs(x1-x0)>intendedWidth*scalingFactor) or (abs(y1-y0)>intendedHeight*scalingFactor) then begin
+        if (abs(x1-x0)>intendedWidth) or (abs(y1-y0)>intendedHeight) then begin
           cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
           cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
           for i:=0 to 100 do begin
@@ -1140,10 +1116,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
         if scaleAndColor.lineWidth>0 then begin
-          if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
-                                                                            screenRow[i+2].x,screenRow[i+2].y);
-          if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
-                                                                            screenRow[i+3].x,screenRow[i+3].y);
+          if screenRow[i  ].valid and screenRow[i+2].valid then begin
+            target.MoveTo(screenRow[i  ].x,screenRow[i  ].y);
+            target.LineTo(screenRow[i+2].x,screenRow[i+2].y);
+          end;
+          if screenRow[i+1].valid and screenRow[i+3].valid then begin
+            target.MoveTo(screenRow[i+1].x,screenRow[i+1].y);
+            target.LineTo(screenRow[i+3].x,screenRow[i+3].y);
+          end;
         end;
         if screenRow[i  ].valid and screenRow[i+2].valid and
            screenRow[i+1].valid and screenRow[i+3].valid then
@@ -1183,7 +1163,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      target.Brush.color:=scaleAndColor.solidColor;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       j:=-1;
       for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
@@ -1346,14 +1326,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        target.line(screenRow[i].x-scaleAndColor.symbolWidth,
-                    screenRow[i].y,
-                    screenRow[i].x+scaleAndColor.symbolWidth,
-                    screenRow[i].y);
-        target.line(screenRow[i].x,
-                    screenRow[i].y-scaleAndColor.symbolWidth,
-                    screenRow[i].x,
-                    screenRow[i].y+scaleAndColor.symbolWidth);
+        target.MoveTo(screenRow[i].x-scaleAndColor.symbolWidth,
+                      screenRow[i].y);
+        target.LineTo(screenRow[i].x+scaleAndColor.symbolWidth,
+                      screenRow[i].y);
+        target.MoveTo(screenRow[i].x,
+                      screenRow[i].y-scaleAndColor.symbolWidth);
+        target.LineTo(screenRow[i].x,
+                      screenRow[i].y+scaleAndColor.symbolWidth);
       end;
     end;
 
@@ -1365,14 +1345,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        target.line(screenRow[i].x-scaleAndColor.symbolRadius,
-                    screenRow[i].y-scaleAndColor.symbolRadius,
-                    screenRow[i].x+scaleAndColor.symbolRadius,
-                    screenRow[i].y+scaleAndColor.symbolRadius);
-        target.line(screenRow[i].x+scaleAndColor.symbolRadius,
-                    screenRow[i].y-scaleAndColor.symbolRadius,
-                    screenRow[i].x-scaleAndColor.symbolRadius,
-                    screenRow[i].y+scaleAndColor.symbolRadius);
+        target.MoveTo(screenRow[i].x-scaleAndColor.symbolRadius,
+                      screenRow[i].y-scaleAndColor.symbolRadius);
+        target.LineTo(screenRow[i].x+scaleAndColor.symbolRadius,
+                      screenRow[i].y+scaleAndColor.symbolRadius);
+        target.MoveTo(screenRow[i].x+scaleAndColor.symbolRadius,
+                      screenRow[i].y-scaleAndColor.symbolRadius);
+        target.LineTo(screenRow[i].x-scaleAndColor.symbolRadius,
+                      screenRow[i].y+scaleAndColor.symbolRadius);
       end;
     end;
 
@@ -1381,7 +1361,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
     begin
       target.Pen.style:=psClear;
       target.Brush.style:=bsSolid;
-      target.Brush.color:=scaleAndColor.solidColor;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
       if scaleAndColor.symbolWidth>=1 then begin
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
           target.Ellipse(screenRow[i].x-scaleAndColor.symbolWidth,
@@ -1403,73 +1383,74 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecSquare;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-        target.line(screenRow[i].x,
-                    yBaseLine,
-                    screenRow[i].x,
-                    screenRow[i].y);
+        target.MoveTo(screenRow[i].x, yBaseLine     );
+        target.LineTo(screenRow[i].x, screenRow[i].y);
     end;
 
   begin
-    screenBox:=boundingBoxOf(0,0,intendedWidth*scalingFactor,intendedHeight*scalingFactor);
-    target.LockCanvas;
+    screenBox:=boundingBoxOf(0,0,intendedWidth,intendedHeight);
     //Clear:------------------------------------------------------------------
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
-    target.FillRect(0, 0, intendedWidth*scalingFactor, intendedHeight*scalingFactor);
+    target.FillRect(0, 0, intendedWidth, intendedHeight);
 
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
     target.Pen.style:=psSolid;
     //minor grid:-------------------------------------------------------------
-    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
+    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth,intendedHeight);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_fineGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if not(major) then begin
-      lastY:=round(pos*scalingFactor);
-      target.line(0, lastY, intendedWidth*scalingFactor, lastY);
+      lastY:=round(pos);
+      target.MoveTo(0            , lastY);
+      target.LineTo(intendedWidth, lastY);
     end;
     if (gse_fineGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if not(major) then begin
-      lastX:=round(pos*scalingFactor);
-      target.line(lastX, 0, lastX, intendedHeight*scalingFactor);
+      lastX:=round(pos);
+      target.MoveTo(lastX, 0);
+      target.LineTo(lastX, intendedHeight);
     end;
     //-------------------------------------------------------------:minor grid
     //major grid:-------------------------------------------------------------
-    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
+    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth,intendedHeight);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
       {$Q-}
-      lastY:=round(pos*scalingFactor);
+      lastY:=round(pos);
       {$Q+}
-      target.line(0, lastY, intendedWidth*scalingFactor, lastY);
+      target.MoveTo(0, lastY);
+      target.LineTo(intendedWidth, lastY);
     end;
     if (gse_coarseGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
       {$Q-}
-      lastX:=round(pos*scalingFactor);
+      lastX:=round(pos);
       {$Q+}
-      target.line(lastX, 0, lastX, intendedHeight*scalingFactor);
+      target.MoveTo(lastX, 0);
+      target.LineTo(lastX, intendedHeight);
     end;
     //-------------------------------------------------------------:major grid
     //========================================================:coordinate grid
     try
       if scalingOptions.axisTrafo['y'].logscale
-      then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin*scalingFactor
-      else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0)*scalingFactor);
+      then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
+      else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0));
       if      yBaseLine<0 then yBaseLine:=0
-      else if yBaseLine>=intendedHeight*scalingFactor then yBaseLine:=intendedHeight*scalingFactor-1;
+      else if yBaseLine>=intendedHeight then yBaseLine:=intendedHeight-1;
     except
       yBaseLine:=0;
     end;
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
-      screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
-      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
+      screenRow:=scalingOptions.transformRow(row[rowId].sample);
+      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight);
       if ps_stepLeft  in row[rowId].style.style then drawStepsLeft;
       if ps_stepRight in row[rowId].style.style then drawStepsRight;
       if ps_bar       in row[rowId].style.style then drawBars;
@@ -1492,52 +1473,59 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth, int
          (ps_straight  in row[rowId].style.style) then drawStraightLines;
     end;
     //===============================================================:row data
-    target.UnlockCanvas;
   end;
 
-PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint);
+PROCEDURE T_plot.drawCustomText(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight: longint);
   VAR txt:P_customText;
   begin
     for txt in customText do txt^.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
-PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      target.Font.size:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
+      target.Font.height:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
       target.Font.color:=clBlack;
       cSysX:=scalingOptions.axisTrafo['x'].screenMin;
       cSysY:=scalingOptions.axisTrafo['y'].screenMin;
       //clear border:-----------------------------------------------------------
       target.Brush.style:=bsSolid;
-      target.Brush.color:=clWhite;
+      target.Brush.BGRAColor.FromRGB(255,255,255);
       target.Pen.style:=psClear;
       target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
-      if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
-      if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
+      {if (scalingOptions.axisStyle['y']<>[]) then} target.FillRect(0,0,cSysX,intendedHeight);
+      {if (scalingOptions.axisStyle['x']<>[]) then} target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
       //-----------------------------------------------------------:clear border
       //coordinate system:======================================================
       //axis:-------------------------------------------------------------------
       target.Pen.style:=psSolid;
       target.Pen.color:=clBlack;
       target.Pen.width:=1;
-      if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
-      if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
+      if (scalingOptions.axisStyle['y']<>[]) then begin
+        target.MoveTo(cSysX, 0);
+        target.LineTo(cSysX, cSysY);
+      end;
+      if (scalingOptions.axisStyle['x']<>[]) then begin
+        target.MoveTo(intendedWidth, cSysY);
+        target.LineTo(cSysX        , cSysY);
+      end;
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
       if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
         y:=round(pos);
-        target.line(cSysX-5, y, cSysX, y);
+        target.MoveTo(cSysX-5, y);
+        target.LineTo(cSysX  , y);
         target.textOut(cSysX-5-target.textWidth(txt),
                             y-target.textHeight(txt) shr 1, txt);
       end;
       if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
         x:=round(pos);
-        target.line(x, cSysY+5, x, cSysY);
+        target.MoveTo(x, cSysY+5);
+        target.LineTo(x, cSysY);
         target.textOut(x-target.textWidth(txt) shr 1, cSysY+5, txt);
       end;
       //-------------------------------------------------------------------:tics
@@ -1547,144 +1535,49 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     end;
   end;
 
-PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
-  VAR ARect: TRect;
-      X, Y: integer;
-  begin
-    X:=round(source.width*factor);
-    Y:=round(source.height*factor);
-    ARect:=rect(0, 0, X, Y);
-    dest.Canvas.AntialiasingMode:=amOn;
-    dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
-  end;
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
+  VAR gridTics:T_ticInfos;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality);
-  VAR renderImage:array[0..3] of TImage;
-      temp:TImage;
-      gridTics:T_ticInfos;
-      k:byte;
-
-  PROCEDURE avgRenderImages;
-    VAR src:array[0..3] of TLazIntfImage;
-        dest:TLazIntfImage;
-        srcLine :array[0..3] of PByte;
-        destLine:PByte;
-
-        x,y,k:longint;
-    begin
-      dest:=plotImage.picture.Bitmap.CreateIntfImage;
-      for k:=0 to 3 do src[k]:=renderImage[k].picture.Bitmap.CreateIntfImage;
-      for y:=0 to renderImage[k].height-1 do begin
-        for k:=0 to 3 do srcLine[k]:=src[k].GetDataLineStart(y);
-        destLine                   :=dest  .GetDataLineStart(y);
-        for x:=0 to {$ifdef UNIX}4{$else}3{$endif}*plotImage.width-1 do begin
-          destLine^:=(longint(srcLine[0]^)+
-                      longint(srcLine[1]^)+
-                      longint(srcLine[2]^)+
-                      longint(srcLine[3]^)) shr 2;
-          for k:=0 to 3 do inc(srcLine[k]);
-          inc(destLine);
-        end;
-      end;
-      for k:=0 to 3 do src[k].destroy;
-      plotImage.picture.Bitmap.LoadFromIntfImage(dest);
-      dest.destroy;
-    end;
-
+  VAR bgrabmp:TBGRABitmap;
   begin
     if (plotImage.width<5) or (plotImage.height<5) then exit;
     initialize(gridTics);
     system.enterCriticalSection(cs);
     try
-      scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);
-      case quality of
-        PLOT_QUALITY_LOW:
-          begin
-            renderImage[0]:=TImage.create(nil);
-            renderImage[0].SetInitialBounds(0,0,plotImage.width,plotImage.height);
-            drawGridAndRows(renderImage[0].Canvas,plotImage.width,plotImage.height,1,gridTics,SINGLE_SAMPLE_INDEX);
-            drawCoordSys(renderImage[0].Canvas,plotImage.width,plotImage.height,gridTics);
-            drawCustomText(renderImage[0].Canvas,plotImage.width,plotImage.height);
-            scale(renderImage[0],plotImage,1);
-            enterCriticalSection(globalTextRenderingCs);
-            renderImage[0].destroy;
-            leaveCriticalSection(globalTextRenderingCs);
-          end;
-        PLOT_QUALITY_MEDIUM_1:
-          begin
-            renderImage[0]:=TImage.create(nil);
-            renderImage[0].SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
-            drawGridAndRows(renderImage[0].Canvas,plotImage.width,plotImage.height,2,gridTics,SINGLE_SAMPLE_INDEX);
-            scale(renderImage[0],plotImage,0.5);
-            enterCriticalSection(globalTextRenderingCs);
-            renderImage[0].destroy;
-            leaveCriticalSection(globalTextRenderingCs);
-            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
-            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
-          end;
-        PLOT_QUALITY_MEDIUM_2:
-          begin
-            for k:=0 to 3 do begin
-              renderImage[k]:=TImage.create(nil);
-              renderImage[k].SetInitialBounds(0,0,plotImage.width,plotImage.height);
-              drawGridAndRows(renderImage[k].Canvas,plotImage.width,plotImage.height,1,gridTics,k);
-            end;
-            avgRenderImages;
-            enterCriticalSection(globalTextRenderingCs);
-            for k:=0 to 3 do renderImage[k].destroy;
-            leaveCriticalSection(globalTextRenderingCs);
-            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
-            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
-          end;
-        PLOT_QUALITY_HIGH:
-          begin
-            temp:=TImage.create(nil);
-            temp.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
-            for k:=0 to 3 do begin
-              drawGridAndRows(temp.Canvas,plotImage.width,plotImage.height,2,gridTics,k);
-              renderImage[k]:=TImage.create(nil);
-              renderImage[k].SetInitialBounds(0,0,plotImage.width,plotImage.height);
-              scale(temp,renderImage[k],0.5);
-            end;
-            enterCriticalSection(globalTextRenderingCs);
-            temp.destroy;
-            leaveCriticalSection(globalTextRenderingCs);
-            avgRenderImages;
-            enterCriticalSection(globalTextRenderingCs);
-            for k:=0 to 3 do renderImage[k].destroy;
-            leaveCriticalSection(globalTextRenderingCs);
-            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
-            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
-          end;
-      end;
+      bgrabmp:=TBGRABitmap.create(plotImage.width,plotImage.height,BGRAWhite);
+      scalingOptions.updateForPlot(bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,row,gridTics);
+      drawGridAndRows(bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,gridTics);
+      drawCoordSys   (bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,gridTics);
+      drawCustomText (bgrabmp.CanvasBGRA,plotImage.width,plotImage.height);
+      bgrabmp.draw(plotImage.Canvas,0,0,false);
+      bgrabmp.free;
     finally
       system.leaveCriticalSection(cs);
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width, height: longint; CONST quality: T_plotQuality): TImage;
+FUNCTION T_plot.obtainPlot(CONST width, height: longint): TImage;
   begin
     result:=TImage.create(nil);
     result.SetInitialBounds(0,0,width,height);
-    renderPlot(result,quality);
+    renderPlot(result);
   end;
 
-PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height,
-  supersampling: longint);
+PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longint);
   VAR storeImage:TImage;
   begin
-    storeImage:=obtainPlot(width,height,supersampling);
+    storeImage:=obtainPlot(width,height);
     storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
     leaveCriticalSection(globalTextRenderingCs);
   end;
 
-FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
+FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
   VAR storeImage: TImage;
       memStream: TStringStream;
   begin
-    storeImage:=obtainPlot(width,height,supersampling);
+    storeImage:=obtainPlot(width,height);
     memStream := TStringStream.create('');
     storeImage.picture.PNG.saveToStream(memStream);
     memStream.position:=0;
@@ -1779,8 +1672,8 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         else currentPlot.removeCustomText(P_plotDropRowRequest(message)^.count);
       mt_plot_renderRequest: begin
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
-        then setString(currentPlot.renderToString(width,height,quality))
-        else currentPlot.renderToFile(fileName,   width,height,quality);
+        then setString(currentPlot.renderToString(width,height))
+        else currentPlot.renderToFile(fileName,   width,height);
         P_plotRenderRequest(message)^.fileName:='';
       end;
       mt_plot_retrieveOptions:

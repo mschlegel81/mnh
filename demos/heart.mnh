@@ -4,5 +4,5 @@ h(x)->[12*sin(x)-4*sin(3*x),
 main->begin
   setOptions([['axisStyleX',0],['axisStyleY',0],['autoscaleFactor',0.95]]);
   plot(::h,0,2*pi,1000,'red p fs');
-  renderToFile(changeFileExt(myPath,'.png'),768,768,0);
+  renderToFile(changeFileExt(myPath,'.png'),768,768);
 end;

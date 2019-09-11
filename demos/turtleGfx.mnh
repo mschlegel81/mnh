@@ -54,4 +54,4 @@ end;
 
 @demo_for=plotting/turtle, string operations
 //*For reg-test
-main->plot.setOptions([['axisStyleX',0],['axisStyleY',0]]) and plot(turtle(0,59,'F',[1..100].each(i,repeat('F',i),'+',&))) and renderToFile(replace(myPath,'.mnh','.png'),768,768,3);
+main->plot.setOptions([['axisStyleX',0],['axisStyleY',0]]) and plot(turtle(0,59,'F',[1..100].each(i,repeat('F',i),'+',&))) and renderToFile(replace(myPath,'.mnh','.png'),768,768);

@@ -187,17 +187,17 @@ expectations:=
   '][[[]]][][       NOT o.k.','[][][][]]][[     NOT o.k.','][]][][[][[[]]   NOT o.k.','[[]]]][[][]][[][ NOT o.k.'],
  'barnsleyFern'=>
  ['FDLinux'=>
-  ['png hash: D047DA3F'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: B5F2A8F0'],
+  ['png hash: FBAF5086'],
   'FDWin64'=>
-  ['png hash: B5F2A8F0'],
+  ['png hash: FBAF5086'],
   'FOLinux'=>
-  ['png hash: D047DA3F'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: B5F2A8F0'],
+  ['png hash: FBAF5086'],
   'FOWin64'=>
-  ['png hash: B5F2A8F0']].toMap,
+  ['png hash: FBAF5086']].toMap,
  'benford'=>
  ['actual expected','   300   301.03','   177   176.09','   125   124.94','    96    96.91','    80    79.18','    67    66.95',
   '    57    57.99','    53    51.15','    45    45.76'],
@@ -513,7 +513,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.71428571428571430157','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -747,7 +747,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.71428571428571428569','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -979,7 +979,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.7142857142857143','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -1212,7 +1212,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.71428571428571430157','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -1446,7 +1446,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.71428571428571428569','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -1678,7 +1678,7 @@ expectations:=
    "in> byteLength(\"Test öäü\");",'out> 11',"in> length(['Text','AbC']);",'out> [4,3]',"in> lower('Test');","out> 'test'",
    "in> lower(['Text','AbC']);","out> ['text','abc']","in> upper('Test');","out> 'TEST'","in> upper(['Text','AbC']);",
    "out> ['TEXT','ABC']",'in> t :=[0..1000]*2*pi/1000;','in> plot(t, sin(t));','out> void',
-   "in> plot.renderToFile('plotDemo1.png', 600, 300, 3);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
+   "in> plot.renderToFile('plotDemo1.png', 600, 300);",'out> void','in> abs({$x});','out> {abs($x)}','in> abs(3);','out> 3',
    'in> abs(-5/7);','out> 0.7142857142857143','in> abs([-2..2]);','out> [2,1,0,1,2]',"in> chars('Test');",
    "out> ['T','e','s','t']","in> pos('o','Hello World');",'out> 4',"in> pos(',',['Hello','Test','1,2,3']);",'out> [Inf,Inf,1]',
    "in> pos(['a','b'],'cdb');",'out> [Inf,2]',"in> repeat('-', 10);","out> '----------'","in> replace('[[][]][]][][','[]','');",
@@ -3296,17 +3296,17 @@ expectations:=
   'The number of solutions for 0..9 (nonunique) is: 2860'],
  'fractalPlant'=>
  ['FDLinux'=>
-  ['png hash: EDF0954D'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: 9974E0AF'],
+  ['png hash: 872A15B1'],
   'FDWin64'=>
-  ['png hash: 9974E0AF'],
+  ['png hash: 872A15B1'],
   'FOLinux'=>
-  ['png hash: EDF0954D'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: 9974E0AF'],
+  ['png hash: 872A15B1'],
   'FOWin64'=>
-  ['png hash: 9974E0AF']].toMap,
+  ['png hash: 872A15B1']].toMap,
  'fractran'=>
  ['0: 2^1 = 2','1: 3^1*5^1 = 15','2: 3^1*5^2*11^1 = 825','3: 5^2*29^1 = 725','4: 5^2*7^1*11^1 = 1925','5: 5^2*7^1*13^1 = 2275',
   '6: 5^2*17^1 = 425','7: 2^1*3^1*5^1*13^1 = 390','8: 2^1*3^1*5^1*11^1 = 330','9: 2^1*5^1*29^1 = 290',
@@ -3597,17 +3597,17 @@ expectations:=
   '28    | Alan   | Alan        | Zombies','      |        | Me          | Things'],
  'heart'=>
  ['FDLinux'=>
-  ['png hash: C6370245'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: 9C14B8DC'],
+  ['png hash: FDAABCF9'],
   'FDWin64'=>
-  ['png hash: 9C14B8DC'],
+  ['png hash: FDAABCF9'],
   'FOLinux'=>
-  ['png hash: C6370245'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: 9C14B8DC'],
+  ['png hash: FDAABCF9'],
   'FOWin64'=>
-  ['png hash: 9C14B8DC']].toMap,
+  ['png hash: FDAABCF9']].toMap,
  'helloWorld'=>
  ['Hello world'],
  'hereDoc'=>
@@ -3739,17 +3739,17 @@ expectations:=
   '20  5 56 49 32 35 42 27 ','23  2 21 34 43 28 15 12 ',' 4 19 24 31 14 17 26 29 ',' 1 22  3 18 25 30 13 16 '],
  'kochCurve'=>
  ['FDLinux'=>
-  ['png hash: 16EE64D8'],
+  ['png hash: D9D85243'],
   'FDWin32'=>
-  ['png hash: 6B4A67AC'],
+  ['png hash: 8BDD9E6F'],
   'FDWin64'=>
-  ['png hash: 6B4A67AC'],
+  ['png hash: 8BDD9E6F'],
   'FOLinux'=>
-  ['png hash: 16EE64D8'],
+  ['png hash: D9D85243'],
   'FOWin32'=>
-  ['png hash: 6B4A67AC'],
+  ['png hash: 8BDD9E6F'],
   'FOWin64'=>
-  ['png hash: 6B4A67AC']].toMap,
+  ['png hash: 8BDD9E6F']].toMap,
  'lastSundays'=>
  ['25.01.2015','22.02.2015','29.03.2015','26.04.2015','31.05.2015','28.06.2015','26.07.2015','30.08.2015','27.09.2015',
   '25.10.2015','29.11.2015','27.12.2015'],
@@ -5357,17 +5357,17 @@ expectations:=
    'Root found at   1.0','Root found at   2.0']].toMap,
  'rotatingCube'=>
  ['FDLinux'=>
-  ['png hash: 52375ADC'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: 88CD08DE'],
+  ['png hash: D61227E6'],
   'FDWin64'=>
-  ['png hash: 88CD08DE'],
+  ['png hash: 2255D199'],
   'FOLinux'=>
-  ['png hash: 52375ADC'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: 88CD08DE'],
+  ['png hash: D61227E6'],
   'FOWin64'=>
-  ['png hash: 88CD08DE']].toMap,
+  ['png hash: 2255D199']].toMap,
  'rsa'=>
  ['Creating key pair',' private key: [128143,593].toKey','  public key: [128143,65537].toKey','',
   'Cipher: 102030405060708090 with public...','        104399454243902252327','Decipher with private...',
@@ -5509,17 +5509,17 @@ expectations:=
  ],
  'sierpinskiCurve'=>
  ['FDLinux'=>
-  ['png hash: 37D0AE13'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: 8A550BE2'],
+  ['png hash: EA370538'],
   'FDWin64'=>
-  ['png hash: 8A550BE2'],
+  ['png hash: EA370538'],
   'FOLinux'=>
-  ['png hash: 37D0AE13'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: 8A550BE2'],
+  ['png hash: EA370538'],
   'FOWin64'=>
-  ['png hash: 8A550BE2']].toMap,
+  ['png hash: EA370538']].toMap,
  'sierpinskiTriangle'=>
  ['                               A                                                               ',
   '                              A A                                                             ',
@@ -6314,17 +6314,17 @@ expectations:=
  ['0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110'],
  'travellingSalesmanProblem'=>
  ['FDLinux'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 4D026C66'],
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 50CCF09F'],
   'FDWin32'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 11E92285'],
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021'],
   'FDWin64'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 11E92285'],
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021'],
   'FOLinux'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 4D026C66'],
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 50CCF09F'],
   'FOWin32'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 11E92285'],
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021'],
   'FOWin64'=>
-  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 11E92285']].toMap,
+  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021']].toMap,
  'treePrint'=>
  ['\','+--1','+--2','+--\','|  +--3','|  |  +--X','|  |  +--Y','|  |  \--Z','|  \--4','|     \--5','\--\','   +--a','   +--b',
   '   \--c'],
@@ -6334,17 +6334,17 @@ expectations:=
   'The largest prime which is both left- and right truncatable is 739397'],
  'turtleGfx'=>
  ['FDLinux'=>
-  ['png hash: FE122CBC'],
+  ['png hash: 50CCF09F'],
   'FDWin32'=>
-  ['png hash: D09CE30C'],
+  ['png hash: D0F82633'],
   'FDWin64'=>
-  ['png hash: D09CE30C'],
+  ['png hash: D0F82633'],
   'FOLinux'=>
-  ['png hash: FE122CBC'],
+  ['png hash: 50CCF09F'],
   'FOWin32'=>
-  ['png hash: D09CE30C'],
+  ['png hash: D0F82633'],
   'FOWin64'=>
-  ['png hash: D09CE30C']].toMap,
+  ['png hash: D0F82633']].toMap,
  'ulam'=>
  ['          XX                                        XX          XX                      XX          XX                  ',
   '                   XX                XX          XX    XX          XX                                        XX         ',
