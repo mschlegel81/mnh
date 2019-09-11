@@ -158,30 +158,6 @@ object plotForm: TplotForm
         OnClick = miCacheFramesClick
       end
     end
-    object MenuItem1: TMenuItem
-      Caption = '&Quality'
-      object miAntiAliasing1: TMenuItem
-        Caption = '&Low'
-        Checked = True
-        RadioItem = True
-        OnClick = miAntiAliasing1Click
-      end
-      object miAntiAliasing2: TMenuItem
-        Caption = 'Medium (&1)'
-        RadioItem = True
-        OnClick = miAntiAliasing2Click
-      end
-      object miAntiAliasing3: TMenuItem
-        Caption = 'Medium (&2)'
-        RadioItem = True
-        OnClick = miAntiAliasing3Click
-      end
-      object miAntiAliasing4: TMenuItem
-        Caption = '&High'
-        RadioItem = True
-        OnClick = miAntiAliasing4Click
-      end
-    end
     object MenuItem2: TMenuItem
       Caption = '&Grid'
       object MenuItem3: TMenuItem

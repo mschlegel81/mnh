@@ -56,12 +56,10 @@ TYPE
     animationFPSLabel: TLabel;
     frameIndexLabel: TLabel;
     MainMenu: TMainMenu;
-    MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
     miCacheFrames: TMenuItem;
     miRenderToFile: TMenuItem;
-    miAntiAliasing4: TMenuItem;
     miIncFontSize: TMenuItem;
     miDecFontSize: TMenuItem;
     miAutoReset: TMenuItem;
@@ -79,9 +77,6 @@ TYPE
     miXTics: TMenuItem;
     miYGrid: TMenuItem;
     miYFinerGrid: TMenuItem;
-    miAntiAliasing1: TMenuItem;
-    miAntiAliasing2: TMenuItem;
-    miAntiAliasing3: TMenuItem;
     plotImage: TImage;
     PopupMenu1: TPopupMenu;
     StatusBar: TStatusBar;
@@ -94,10 +89,6 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE frameTrackBarChange(Sender: TObject);
-    PROCEDURE miAntiAliasing1Click(Sender: TObject);
-    PROCEDURE miAntiAliasing2Click(Sender: TObject);
-    PROCEDURE miAntiAliasing3Click(Sender: TObject);
-    PROCEDURE miAntiAliasing4Click(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
@@ -131,7 +122,6 @@ TYPE
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
-    FUNCTION getPlotQuality:byte;
     PROCEDURE updateInteractiveSection;
   public
     onPlotRescale:TNotifyEvent;
@@ -317,9 +307,9 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     if relatedPlot<>nil then begin
       updateInteractiveSection;
-      plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
       relatedPlot^.logPlotChanged;
     end;
+    plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
@@ -336,35 +326,11 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
     animationFrameIndex:=frameTrackBar.position;
     relatedPlot^.startGuiInteraction;
     try
-      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(nil,0));
     finally
       relatedPlot^.doneGuiInteraction;
     end;
     animateCheckBox.checked:=false;
-  end;
-
-PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
-  begin
-    miAntiAliasing1.checked:=true;
-    relatedPlot^.logPlotChanged;
-  end;
-
-PROCEDURE TplotForm.miAntiAliasing2Click(Sender: TObject);
-  begin
-    miAntiAliasing2.checked:=true;
-    relatedPlot^.logPlotChanged;
-  end;
-
-PROCEDURE TplotForm.miAntiAliasing3Click(Sender: TObject);
-  begin
-    miAntiAliasing3.checked:=true;
-    relatedPlot^.logPlotChanged;
-  end;
-
-PROCEDURE TplotForm.miAntiAliasing4Click(Sender: TObject);
-  begin
-    miAntiAliasing4.checked:=true;
-    relatedPlot^.logPlotChanged;
   end;
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
@@ -550,12 +516,13 @@ PROCEDURE TplotForm.performFastUpdate;
     relatedPlot^.startGuiInteraction;
     try
       if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
+        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
            //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
            (frameInterval-eTimer.elapsed<0.05) and
-           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality)
+           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(eTimer,frameInterval));
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval));
           eTimer.clear;
           eTimer.start;
           inc(framesSampled);
@@ -588,14 +555,6 @@ PROCEDURE TplotForm.dockChanged;
          mainFormCoordinatesLabel.caption:='';
     end else StatusBar.visible:=false;
     resize;
-  end;
-
-FUNCTION TplotForm.getPlotQuality: byte;
-  begin
-    if      miAntiAliasing4.checked then result:=PLOT_QUALITY_HIGH
-    else if miAntiAliasing3.checked then result:=PLOT_QUALITY_MEDIUM_2
-    else if miAntiAliasing2.checked then result:=PLOT_QUALITY_MEDIUM_1
-    else                                 result:=PLOT_QUALITY_LOW;
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui();
@@ -702,11 +661,11 @@ PROCEDURE TplotForm.doPlot;
     try
       if relatedPlot^.isPlotChanged then begin
         updateInteractiveSection;
-
+        plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if relatedPlot^.animation.frameCount<>0 then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality,timedPlotExecution(nil,0));
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(nil,0));
         end else begin
-          relatedPlot^.currentPlot.renderPlot(plotImage,getPlotQuality);
+          relatedPlot^.currentPlot.renderPlot(plotImage);
           relatedPlot^.logPlotDone;
         end;
       end;

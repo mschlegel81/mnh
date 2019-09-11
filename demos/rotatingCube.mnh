@@ -9,12 +9,16 @@ private cubePoints(t:Numeric)->
   end);
 
 private LINES:=[[0,1,3,2,0,4,5,7,6,4],[1,5],[2,6],[3,7]];
+private FACES:=[[0,1,3,2],[4,5,7,6],
+                [0,2,6,4],[1,3,7,5],
+                [0,1,5,4],[2,3,7,6]];
 
 @demo_for=plotting
 drawCube(t)->begin
   setOptions([['x0',-0.6],['x1',0.6],['y0',-0.6],['y1',0.6],['preserveAspect',true],['autoscaleX',false],['autoscaleY',false],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]);
   local p:=cubePoints(t);
   plot(p,'black .');
+  FACES.each(f,addPlot(p[f],'f polygon 0'));
   LINES.each(l,addPlot(p[l],'black'));
   void;
 end;
@@ -29,5 +33,5 @@ end;
 //*Renders to a file (for regression test)
 main->begin
   drawCube(0.5);
-  renderToFile(changeFileExt(myPath,'.png'),768,768,3);
+  renderToFile(changeFileExt(myPath,'.png'),768,768);
 end;

@@ -55,14 +55,14 @@ object ExportPlotForm: TExportPlotForm
   end
   object GroupBox1: TGroupBox
     Left = 2
-    Height = 113
+    Height = 81
     Top = 109
     Width = 307
     Align = alTop
     AutoSize = True
     BorderSpacing.Around = 2
     Caption = 'Rendering'
-    ClientHeight = 88
+    ClientHeight = 56
     ClientWidth = 303
     ParentFont = False
     TabOrder = 2
@@ -86,18 +86,6 @@ object ExportPlotForm: TExportPlotForm
       Top = 28
       Width = 45
       Caption = 'Height'
-      ParentColor = False
-      ParentFont = False
-    end
-    object Label4: TLabel
-      AnchorSideLeft.Control = Label3
-      AnchorSideTop.Control = QualityTrackbar
-      AnchorSideRight.Control = QualityTrackbar
-      Left = 0
-      Height = 20
-      Top = 56
-      Width = 47
-      Caption = 'Quality'
       ParentColor = False
       ParentFont = False
     end
@@ -132,28 +120,11 @@ object ExportPlotForm: TExportPlotForm
       TabOrder = 1
       Text = '600'
     end
-    object QualityTrackbar: TTrackBar
-      AnchorSideLeft.Control = widthEdit
-      AnchorSideTop.Control = heightEdit
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = widthEdit
-      AnchorSideRight.Side = asrBottom
-      Left = 63
-      Height = 32
-      Top = 56
-      Width = 240
-      Max = 3
-      OnChange = QualityTrackbarChange
-      Position = 0
-      Anchors = [akTop, akLeft, akRight]
-      ParentFont = False
-      TabOrder = 2
-    end
   end
   object GroupBox2: TGroupBox
     Left = 2
     Height = 73
-    Top = 224
+    Top = 192
     Width = 307
     Align = alTop
     AutoSize = True
@@ -189,7 +160,7 @@ object ExportPlotForm: TExportPlotForm
   object okButton: TButton
     Left = 0
     Height = 32
-    Top = 299
+    Top = 267
     Width = 311
     Align = alTop
     Caption = 'Render to file'
@@ -201,7 +172,7 @@ object ExportPlotForm: TExportPlotForm
   object cancelButton: TButton
     Left = 0
     Height = 32
-    Top = 331
+    Top = 299
     Width = 311
     Align = alTop
     Cancel = True
@@ -214,7 +185,7 @@ object ExportPlotForm: TExportPlotForm
   object ProgressBar1: TProgressBar
     Left = 0
     Height = 25
-    Top = 363
+    Top = 331
     Width = 311
     Align = alTop
     ParentFont = False

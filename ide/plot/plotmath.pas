@@ -6,7 +6,8 @@ USES sysutils,
      myStringUtil,
      basicTypes,
      plotstyles,
-     litVar;
+     litVar,
+     BGRACanvas;
 CONST
   MIN_VALUE_FOR:array[false..true] of double=(-1E100, 1E-100);
   MAX_VALUE_FOR:array[false..true] of double=( 1E100,  1E100);
@@ -99,8 +100,8 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE setDefaults;
-    PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
-    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
+    PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
+    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte=1; CONST subPixelDx:double=0; CONST subPixelDy:double=0):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
     FUNCTION getOptionString:string;
@@ -127,7 +128,7 @@ TYPE
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
     FUNCTION clone:P_customText;
     DESTRUCTOR destroy;
-    PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TCanvas);
+    PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TBGRACanvas);
     PROCEDURE setAnchor(CONST s:string);
     PROCEDURE setForeground(CONST r,g,b:double);
     PROCEDURE setBackground(CONST r,g,b:double);
@@ -273,16 +274,16 @@ DESTRUCTOR T_customText.destroy;
 
 FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint;
   begin
-    result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/1000);
+    result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/500);
   end;
 
-PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalingOptions; CONST target: TCanvas);
+PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalingOptions; CONST target: TBGRACanvas);
   VAR tempRow:T_dataRow;
       toPaint:T_rowToPaint;
       x,y,
       i,k,
       textWidth,textHeight:longint;
-      oldFont:TFont;
+      oldFont:TBGRAFont;
   begin
     if length(text)=0 then exit;
 
@@ -307,8 +308,8 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       oldFont     :=target.Font;
 
       if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
-      if isNan(fontSize) then target.Font.size:=absFontSize(xRes,yRes,opt.relativeFontSize)
-                         else target.Font.size:=absFontSize(xRes,yRes,            fontSize);
+      if isNan(fontSize) then target.Font.height:=absFontSize(xRes,yRes,opt.relativeFontSize)
+                         else target.Font.height:=absFontSize(xRes,yRes,            fontSize);
       target.Font.color:=foreground;
       if transparentBackground then target.Brush.style:=bsClear
       else begin
@@ -434,7 +435,7 @@ PROCEDURE T_scalingOptions.setDefaults;
     autoscaleFactor:=1;
   end;
 
-PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
+PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
 
   VAR validSampleCount:longint=0;
   FUNCTION getSamplesBoundingBox:T_boundingBox;
@@ -675,10 +676,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
       enterCriticalSection(globalTextRenderingCs);
       try
         if gse_tics in axisStyle['y']
-        then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
+        then newX0:=Canvas.textWidth(ticSampleText)+5
         else newX0:=0;
         if gse_tics in axisStyle['x']
-        then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
+        then newY0:=aimHeight-Canvas.textHeight(ticSampleText)-5
         else newY0:=aimHeight;
       finally
         leaveCriticalSection(globalTextRenderingCs);
@@ -712,7 +713,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
+      Canvas.Font.height:=absoluteFontSize(aimWidth,aimHeight);
       ticSampleText:='.0E12';
       updateBorders;
     finally

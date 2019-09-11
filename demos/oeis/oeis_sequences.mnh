@@ -319,6 +319,18 @@ A033479->collatzGenerator(9);
 @class=Collatz
 A033481->collatzGenerator(21);
 
+//*Van Eck's sequence
+A181391->{begin
+  local seq:=[];
+save;
+  local ocurredAt:=indexOf(seq.trailing=seq).leading;
+  local nextTerm:=ocurredAt==[]
+                  ? 0
+                  : (seq.size-1-max(ocurredAt));
+  seq|=nextTerm;
+  nextTerm;
+end}.toIteratableExpression;
+
 @SuppressUnusedWarning
 USE '..\happyNumbers.mnh','..\..\packages\inspectionUtil.mnh';
 memoized implemented->

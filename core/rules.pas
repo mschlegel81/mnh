@@ -1471,6 +1471,7 @@ FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
   CONST context: P_abstractContext): P_literal;
 begin
   raise Exception.create('T_variable.evaluateToLiteral must not be called');
+  result:=nil;
 end;
 
 FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
@@ -1478,6 +1479,7 @@ FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
   CONST context: P_abstractContext): P_literal;
 begin
   raise Exception.create('T_variable.evaluateToLiteral must not be called');
+  result:=nil;
 end;
 
 FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation;
@@ -1486,6 +1488,7 @@ FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation;
   CONST calledFromDelegator: boolean): boolean;
 begin
   raise Exception.create('T_variable.replaces must not be called');
+  result:=false;
 end;
 
 FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;

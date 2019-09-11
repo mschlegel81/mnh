@@ -249,7 +249,7 @@ upper(['Text','AbC']);
 //#plot
 t:=[0..1000]*2*pi/1000;
 plot(t,sin(t));
-plot.renderToFile('plotDemo1.png',600,300,3);
+plot.renderToFile('plotDemo1.png',600,300);
     
 abs({$x});
 

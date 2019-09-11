@@ -16,7 +16,7 @@ end;
 private main_impl(filename:String,xRes:Int,yRes:Int)->begin
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]);
   plot.plot(barnsleyFern(100000),"0.4 . green");
-  plot.renderToFile(filename,xRes,yRes,1);
+  plot.renderToFile(filename,xRes,yRes);
 end;
 
 @demo_for=fractal, plotting

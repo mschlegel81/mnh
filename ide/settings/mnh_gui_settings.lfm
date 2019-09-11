@@ -21,10 +21,10 @@ object SettingsForm: TSettingsForm
     Height = 244
     Top = 0
     Width = 304
-    ActivePage = TabSheet_display
+    ActivePage = TabSheet_install
     Align = alClient
     ParentFont = False
-    TabIndex = 0
+    TabIndex = 3
     TabOrder = 0
     OnChange = PageControlChange
     object TabSheet_display: TTabSheet
@@ -164,26 +164,26 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_lineEnding: TTabSheet
       Caption = 'line ending'
-      ClientHeight = 165
-      ClientWidth = 235
+      ClientHeight = 211
+      ClientWidth = 296
       ParentFont = False
       object GroupBox1: TGroupBox
         Left = 0
-        Height = 77
+        Height = 97
         Top = 0
-        Width = 235
+        Width = 296
         Align = alTop
         AutoSize = True
         Caption = 'new files'
-        ClientHeight = 52
-        ClientWidth = 231
+        ClientHeight = 72
+        ClientWidth = 292
         ParentFont = False
         TabOrder = 0
         object rb_saveNewDefault: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Top = 0
-          Width = 231
+          Width = 292
           Align = alTop
           Caption = 'System default'
           Checked = True
@@ -194,9 +194,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNewLinux: TRadioButton
           Left = 0
-          Height = 19
-          Top = 19
-          Width = 231
+          Height = 24
+          Top = 24
+          Width = 292
           Align = alTop
           Caption = 'Linux'
           OnChange = rb_saveNewDefaultChange
@@ -205,9 +205,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNewWindows: TRadioButton
           Left = 0
-          Height = 19
-          Top = 38
-          Width = 231
+          Height = 24
+          Top = 48
+          Width = 292
           Align = alTop
           Caption = 'Windows'
           OnChange = rb_saveNewDefaultChange
@@ -217,21 +217,21 @@ object SettingsForm: TSettingsForm
       end
       object GroupBox2: TGroupBox
         Left = 0
-        Height = 96
-        Top = 77
-        Width = 235
+        Height = 121
+        Top = 97
+        Width = 296
         Align = alTop
         AutoSize = True
         Caption = 'existing files'
-        ClientHeight = 71
-        ClientWidth = 231
+        ClientHeight = 96
+        ClientWidth = 292
         ParentFont = False
         TabOrder = 1
         object rb_saveDefault: TRadioButton
           Left = 0
-          Height = 19
-          Top = 19
-          Width = 231
+          Height = 24
+          Top = 24
+          Width = 292
           Align = alTop
           Caption = 'System defult'
           OnChange = rb_saveDefaultChange
@@ -240,9 +240,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveLinux: TRadioButton
           Left = 0
-          Height = 19
-          Top = 38
-          Width = 231
+          Height = 24
+          Top = 48
+          Width = 292
           Align = alTop
           Caption = 'Linux'
           OnChange = rb_saveDefaultChange
@@ -251,9 +251,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveWindows: TRadioButton
           Left = 0
-          Height = 19
-          Top = 57
-          Width = 231
+          Height = 24
+          Top = 72
+          Width = 292
           Align = alTop
           Caption = 'Windows'
           OnChange = rb_saveDefaultChange
@@ -262,9 +262,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNoChange: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Top = 0
-          Width = 231
+          Width = 292
           Align = alTop
           Caption = 'Don''t change'
           Checked = True
@@ -402,14 +402,14 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 165
-      ClientWidth = 235
+      ClientHeight = 211
+      ClientWidth = 296
       ParentFont = False
       object installButton: TButton
         Left = 0
-        Height = 25
+        Height = 30
         Top = 0
-        Width = 235
+        Width = 296
         Align = alTop
         AutoSize = True
         Caption = 'Create file associations'
@@ -419,9 +419,9 @@ object SettingsForm: TSettingsForm
       end
       object uninstallButton: TButton
         Left = 0
-        Height = 25
-        Top = 25
-        Width = 235
+        Height = 30
+        Top = 30
+        Width = 296
         Align = alTop
         AutoSize = True
         Caption = 'Uninstall and quit immediately'
@@ -431,9 +431,9 @@ object SettingsForm: TSettingsForm
       end
       object restorePacksAndDemosButton: TButton
         Left = 0
-        Height = 25
-        Top = 50
-        Width = 235
+        Height = 30
+        Top = 60
+        Width = 296
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
@@ -444,8 +444,8 @@ object SettingsForm: TSettingsForm
       object togglePortableButton: TButton
         Left = 0
         Height = 31
-        Top = 75
-        Width = 235
+        Top = 120
+        Width = 296
         Align = alTop
         Caption = 'togglePortableButton'
         OnClick = togglePortableButtonClick
@@ -457,9 +457,9 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Control = togglePortableButton
         AnchorSideTop.Side = asrBottom
         Left = 0
-        Height = 15
-        Top = 100
-        Width = 70
+        Height = 20
+        Top = 151
+        Width = 88
         Align = alCustom
         Caption = 'light location'
         ParentColor = False
@@ -472,19 +472,32 @@ object SettingsForm: TSettingsForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_install
         AnchorSideRight.Side = asrBottom
-        Left = 88
-        Height = 23
-        Top = 125
-        Width = 165
+        Left = 93
+        Height = 28
+        Top = 151
+        Width = 203
         FilterIndex = 0
         HideDirectories = False
         ButtonWidth = 29
         NumGlyphs = 1
         Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 5
         MaxLength = 0
         ParentFont = False
         TabOrder = 4
         OnEditingDone = FileNameEdit1EditingDone
+      end
+      object clearFileHistoryButton: TButton
+        Left = 0
+        Height = 30
+        Top = 90
+        Width = 296
+        Align = alTop
+        AutoSize = True
+        Caption = 'Clear file/folder history'
+        OnClick = clearFileHistoryButtonClick
+        ParentFont = False
+        TabOrder = 5
       end
     end
   end

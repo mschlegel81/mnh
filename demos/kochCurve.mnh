@@ -15,7 +15,7 @@ private kochCurve(depth,LX,LY)->transpose([runningSum(LX),runningSum(LY)]);
 private main_impl(filename:String,xRes:Int,yRes:Int)->
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]) and
   plot.plot(kochCurve(7),"0.5") and
-  plot.renderToFile(filename,xRes,yRes,3);
+  plot.renderToFile(filename,xRes,yRes);
 
 //*Plots a Koch Curve to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x").get(0)),softCast(split(resolution,"x").get(1)));

@@ -28,6 +28,7 @@ TYPE
     FileNameEdit1: TFileNameEdit;
     Label8: TLabel;
     miSaveBeforeRun: TCheckBox;
+    clearFileHistoryButton: TButton;
     TableFontButton: TButton;
     GeneralFontButton: TButton;
     GroupBox1: TGroupBox;
@@ -64,6 +65,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
     PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
@@ -212,6 +214,13 @@ PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
 PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
   begin
     settings.lightFlavourLocation:=FileNameEdit1.fileName;
+  end;
+
+PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
+  begin
+    workspace.fileHistory.clear;
+    workspace.fileHistory.logFolder(getPackagesRoot);
+    workspace.fileHistory.logFolder(getDemosRoot);
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);

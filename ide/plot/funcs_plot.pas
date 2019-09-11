@@ -238,19 +238,19 @@ FUNCTION resetOptions_impl intFuncSignature;
     if (params=nil) or (params^.size=0) then begin
       opt.setDefaults;
       new(postOptionsMessage,createPostRequest(opt,[low(T_scalingOptionElement)..high(T_scalingOptionElement)]));
-      context.messages^.postCustomMessage(postOptionsMessage);
+      context.messages^.postCustomMessage(postOptionsMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
 FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
-      width, height, quality: longint;
+      width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
     if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile])) then exit(nil);
     result:=nil;
-    if (params<>nil) and (params^.size>=3) and
+    if (params<>nil) and (params^.size=3) and
       (arg0^.literalType = lt_string) and
       (arg1^.literalType in [lt_smallint,lt_bigint]) and
       (arg2^.literalType in [lt_smallint,lt_bigint]) and
@@ -259,12 +259,9 @@ FUNCTION renderToFile_impl intFuncSignature;
       fileName:=str0^.value;
       width :=int1^.intValue;
       height:=int2^.intValue;
-      if params^.size>3 then quality:=int3^.intValue
-                        else quality:=0;
-      if (str0^.value = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
         fileName:=ChangeFileExt(str0^.value,'.png');
-        new(renderRequest,createRenderToFileRequest(fileName,width,height,quality));
+        new(renderRequest,createRenderToFileRequest(fileName,width,height));
         context.messages^.postCustomMessage(renderRequest,true);
       except
         on e:Exception do begin
@@ -277,21 +274,18 @@ FUNCTION renderToFile_impl intFuncSignature;
   end;
 
 FUNCTION renderToString_impl intFuncSignature;
-  VAR width, height, quality: longint;
+  VAR width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and
+    if (params<>nil) and (params^.size=2) and
       (arg0^.literalType in [lt_smallint,lt_bigint]) and
       (arg1^.literalType in [lt_smallint,lt_bigint]) and
       ((params^.size = 2) or (params^.size = 3) and
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      if params^.size>2 then quality:=int2^.intValue
-                        else quality:=0;
-      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
-      new(renderRequest,createRenderToStringRequest(width,height,quality));
+      new(renderRequest,createRenderToStringRequest(width,height));
       context.messages^.postCustomMessage(renderRequest^.rereferenced,true);
       result:=newStringLiteral(renderRequest^.getStringWaiting(context.messages));
       renderRequest^.setString('');
@@ -429,10 +423,10 @@ INITIALIZATION
     'setOptions(key:string,value);//Sets a single plot option');
   funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
     'resetOptions;//Sets the default plot options');
-  funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
-    'renderToFile(filename<>'',width>=1,height>=1,[quality in [0..3]]);//Renders the current plot to a file.');
-  funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_variadic_2,
-    'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
+  funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_ternary,
+    'renderToFile(filename<>'',width>=1,height>=1]);//Renders the current plot to a file.');
+  funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
+    'renderToString(width,height);//Renders the current plot to a string.');
   funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
   funcs.registerRule(PLOT_NAMESPACE,'removeText',@removeText_imp, ak_variadic,
