@@ -436,7 +436,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
   end;
 
 FUNCTION renderPlotToCurrentImage intFuncSignature;
-  VAR width, height, quality: longint;
+  VAR width, height: longint;
       renderRequest:P_plotRenderRequest;
 
       imgStream:TStringStream;
@@ -444,18 +444,14 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       plotPic  :P_rawImage;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and
+    if (params<>nil) and (params^.size=2) and
       (arg0^.literalType in [lt_smallint,lt_bigint]) and
       (arg1^.literalType in [lt_smallint,lt_bigint]) and
       ((params^.size = 2) or (params^.size = 3) and
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      if params^.size>2 then quality:=int2^.intValue
-                        else quality:=0;
-      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
-
-      new(renderRequest,createRenderToStringRequest(width,height,quality));
+      new(renderRequest,createRenderToStringRequest(width,height));
       context.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
@@ -631,7 +627,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
-  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
+  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_binary,'renderPlotToCurrentImage(width,height);//Renders the current plot to the current image');
   registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
   lastWorkflowStart:=now-ONE_MINUTE;
 FINALIZATION
