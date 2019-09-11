@@ -267,7 +267,7 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
       if d>255 then result:=255 else if d<0 then result:=0 else result:=round(d);
     end;
 
-  VAR scalingFactor,ideal:double;
+  VAR scalingFactor,idealLineWidth:double;
   begin
     if (ps_filled in style) and not(ps_fillSolid in style)
     then result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue],100)
@@ -275,14 +275,13 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
 
     result.solidStyle:=bsClear;
     if (ps_filled in style) or (ps_fillSolid in style) then result.solidStyle:=bsSolid;
+
     scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
-    result.lineColor:=result.solidColor;
-    ideal:=styleModifier*scalingFactor;
-    if ideal=0 then result.lineWidth:=0
-               else result.lineWidth:=1;
-    result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
-                  or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
-                  or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
+    idealLineWidth:=styleModifier*scalingFactor;
+    if      idealLineWidth<1/255 then begin result.lineWidth:=0;                    idealLineWidth:=0; end
+    else if idealLineWidth<1     then       result.lineWidth:=1
+                                 else begin result.lineWidth:=round(idealLineWidth); idealLineWidth:=1; end;
+    result.lineColor.FromRGB(color[cc_red],color[cc_green],color[cc_blue],toByte(idealLineWidth*255));
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
