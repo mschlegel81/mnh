@@ -114,9 +114,15 @@ sample(14)->begin
   explainPlot('You can emulate other plot styles using the builtin styles');
 end;
 
+sample(15)->begin
+  plot([-0.1,0],'blue box fs');
+  ([1..10]/10).each(alpha,addPlot([[alpha-0.09,-0.05],[alpha-0.01, 0.1]],'box fs RGB1,0,0,'&alpha));
+  explainPlot('You may also specify colors as RGBA or as HSVA.');
+end;
+
 main->begin
   clearAnimation;
-  [0..14].each(case,
+  [0..15].each(case,
     resetOptions,
     sample(case),
     addAnimationFrame);
