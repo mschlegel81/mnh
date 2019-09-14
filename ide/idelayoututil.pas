@@ -623,7 +623,7 @@ FUNCTION typeOfFocusedControl:T_controlType;
     {$endif}
 
     for c in T_controlType do
-    for e in fontControls[ctEditor] do if e=mainForm.ActiveControl then exit(c);
+    for e in fontControls[c] do if e=mainForm.ActiveControl then exit(c);
   end;
 
 PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);

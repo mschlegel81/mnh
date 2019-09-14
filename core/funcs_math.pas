@@ -189,8 +189,6 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
     end;
 
   VAR big:T_bigInt;
-      sub:P_literal;
-      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if relevantDigits=0 then begin

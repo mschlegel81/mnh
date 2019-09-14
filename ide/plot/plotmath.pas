@@ -100,7 +100,7 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE setDefaults;
-    PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
+    PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST samples:T_allSamples; VAR grid:T_ticInfos);
     FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte=1; CONST subPixelDx:double=0; CONST subPixelDy:double=0):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
@@ -128,7 +128,7 @@ TYPE
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
     FUNCTION clone:P_customText;
     DESTRUCTOR destroy;
-    PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TBGRACanvas);
+    PROCEDURE renderText(CONST opt:T_scalingOptions; CONST target:TBGRACanvas);
     PROCEDURE setAnchor(CONST s:string);
     PROCEDURE setForeground(CONST r,g,b:double);
     PROCEDURE setBackground(CONST r,g,b:double);
@@ -277,7 +277,7 @@ FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint
     result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/500);
   end;
 
-PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalingOptions; CONST target: TBGRACanvas);
+PROCEDURE T_customText.renderText(CONST opt: T_scalingOptions; CONST target: TBGRACanvas);
   VAR tempRow:T_dataRow;
       toPaint:T_rowToPaint;
       x,y,
@@ -289,8 +289,8 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
 
     if absolutePosition then begin
       try
-        x:=     round(p[0]*xRes);
-        y:=yRes-round(p[1]*yRes);
+        x:=              round(p[0]*target.width);
+        y:=target.height-round(p[1]*target.height);
       except
         exit;
       end;
@@ -308,8 +308,8 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       oldFont     :=target.Font;
 
       if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
-      if isNan(fontSize) then target.Font.height:=absFontSize(xRes,yRes,opt.relativeFontSize)
-                         else target.Font.height:=absFontSize(xRes,yRes,            fontSize);
+      if isNan(fontSize) then target.Font.height:=absFontSize(target.width,target.height,opt.relativeFontSize)
+                         else target.Font.height:=absFontSize(target.width,target.height,            fontSize);
       target.Font.BGRAColor:=foreground;
       if transparentBackground then target.Brush.style:=bsClear
       else begin
@@ -341,7 +341,7 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
         cta_top     ,cta_center     ,cta_bottom     :dec(x,textWidth shr 1);
       end;
       target.Pen.style:=psClear;
-      if (x<=xRes) and (x+textWidth>=0) and (y<=yRes) and (y+textHeight>=0) then begin
+      if (x<=target.width) and (x+textWidth>=0) and (y<=target.height) and (y+textHeight>=0) then begin
         if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+textWidth,y+textHeight);
         for k:=0 to length(text)-1 do begin
           target.textOut(x,
@@ -435,7 +435,7 @@ PROCEDURE T_scalingOptions.setDefaults;
     autoscaleFactor:=1;
   end;
 
-PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
+PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST samples: T_allSamples; VAR grid: T_ticInfos);
 
   VAR validSampleCount:longint=0;
   FUNCTION getSamplesBoundingBox:T_boundingBox;
@@ -679,8 +679,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST aimWid
         then newX0:=Canvas.textWidth(ticSampleText)+5
         else newX0:=0;
         if gse_tics in axisStyle['x']
-        then newY0:=aimHeight-Canvas.textHeight(ticSampleText)-5
-        else newY0:=aimHeight;
+        then newY0:=Canvas.height-Canvas.textHeight(ticSampleText)-5
+        else newY0:=Canvas.height;
       finally
         leaveCriticalSection(globalTextRenderingCs);
       end;
@@ -691,7 +691,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST aimWid
               (axisTrafo['y'].screenRange[0]<newY0);
 
       axisTrafo['x'].screenRange[0]:=newX0;
-      axisTrafo['x'].screenRange[1]:=aimWidth;
+      axisTrafo['x'].screenRange[1]:=Canvas.width;
       axisTrafo['y'].screenRange[0]:=newY0;
       axisTrafo['y'].screenRange[1]:=0;
       axisTrafo['x'].prepare;
@@ -713,7 +713,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST aimWid
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      Canvas.Font.height:=absoluteFontSize(aimWidth,aimHeight);
+      Canvas.Font.height:=absoluteFontSize(Canvas.width,Canvas.height);
       ticSampleText:='.0E12';
       updateBorders;
     finally
