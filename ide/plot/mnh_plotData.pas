@@ -162,6 +162,9 @@ TYPE
       PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint);
       PROCEDURE postPreparation(CONST width,height:longint);
+
+      FUNCTION isImagePreparedForResolution(CONST width,height:longint):boolean;
+      FUNCTION hasResolution(CONST width,height:longint):boolean;
   end;
 
   T_plotSeries=object
@@ -183,6 +186,7 @@ TYPE
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
+      PROCEDURE resolutionChanged(CONST newWidth,newHeight:longint);
   end;
 
   F_execPlotCallback=PROCEDURE of object;
@@ -393,9 +397,9 @@ FUNCTION preparationThread(p:pointer):ptrint;
 
 PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
   begin
-    if backgroundPreparation then exit;
+    if backgroundPreparation or isImagePreparedForResolution(width,height) then exit;
     enterCriticalSection(plotData.cs);
-    if backgroundPreparation then begin
+    if backgroundPreparation or isImagePreparedForResolution(width,height) then begin
       leaveCriticalSection(plotData.cs);
       exit;
     end;
@@ -408,6 +412,23 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
     finally
       leaveCriticalSection(plotData.cs);
     end;
+  end;
+
+FUNCTION T_plotSeriesFrame.isImagePreparedForResolution(CONST width,height:longint):boolean;
+  begin
+    enterCriticalSection(plotData.cs);
+    result:=(cachedImage.renderedWidth=width) and
+            (cachedImage.renderedHeight=height) and
+            (cachedImage.image<>nil);
+    leaveCriticalSection(plotData.cs);
+  end;
+
+FUNCTION T_plotSeriesFrame.hasResolution(CONST width,height:longint):boolean;
+  begin
+    enterCriticalSection(plotData.cs);
+    result:=(cachedImage.renderedWidth=width) and
+            (cachedImage.renderedHeight=height);
+    leaveCriticalSection(plotData.cs);
   end;
 
 PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
@@ -737,7 +758,10 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height:longint):boolean;
-  {$ifndef unix}VAR nextToPrepare:longint;{$endif}
+  {$ifndef unix}
+  VAR toPrepare,
+      lastToPrepare:longint;
+  {$endif}
   begin
     enterCriticalSection(seriesCs);
     try
@@ -756,14 +780,30 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          nextToPrepare:=frameIndex+(settings.cpuCount-1);
-          if nextToPrepare=frameIndex then inc(nextToPrepare);
-          if cycle then nextToPrepare:=nextToPrepare mod length(frame);
-          if (nextToPrepare>=0) and (nextToPrepare<length(frame))
-          then frame[nextToPrepare]^.postPreparation(width,height);
+          if not(weHadAMemoryPanic) and isMemoryInComfortZone and settings.cacheAnimationFrames then begin
+            if cycle then lastToPrepare:=frameIndex+length(frame)-1
+                     else lastToPrepare:=           length(frame)-1;
+          end else begin
+            lastToPrepare:=frameIndex+settings.cpuCount;
+            if (lastToPrepare>=length(frame)) and not(cycle) then lastToPrepare:=length(frame)-1;
+          end;
+          for toPrepare:=frameIndex+1 to lastToPrepare do
+            if (preparationThreadsRunning<settings.cpuCount) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
         end;
         {$endif}
       end;
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
+  end;
+
+PROCEDURE T_plotSeries.resolutionChanged(CONST newWidth,newHeight:longint);
+  VAR i:longint;
+  begin
+    enterCriticalSection(seriesCs);
+    try
+      for i:=0 to length(frame)-1 do if not(frame[i]^.hasResolution(newWidth,newHeight)) and
+                                        not(frame[i]^.hasResolution(-1,-1)) then frame[i]^.doneImage(fcm_none);
     finally
       leaveCriticalSection(seriesCs);
     end;

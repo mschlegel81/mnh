@@ -310,6 +310,7 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
       relatedPlot^.logPlotChanged;
     end;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+    relatedPlot^.animation.resolutionChanged(plotImage.width,plotImage.height);
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
