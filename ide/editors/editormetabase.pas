@@ -30,6 +30,8 @@ CONST editCommandToggleComment    =ecUserDefinedFirst;
       editCommandMoveLineDown     =ecUserDefinedFirst+5;
       editCommandEscapeSelection  =ecUserDefinedFirst+6;
       editCommandUnescapeSelection=ecUserDefinedFirst+7;
+      editCommandMarkWord         =ecUserDefinedFirst+8;
+      editCommandJumpToDeclaration=ecUserDefinedFirst+9;
 TYPE T_language=(LANG_MNH   = 0,
                  LANG_CPP   = 1,
                  LANG_CSS   = 2,
@@ -415,6 +417,10 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     addKeystroke(ecUndo              ,scAlt + backspaceKey);
     addKeystroke(ecRedo              ,scShift + scAlt + backspaceKey);
     addKeystroke(ecLineBreak         ,enterKey);
+    if isRealEditor then
+    addKeystroke(editCommandMarkWord ,enterKey+scAlt);
+    if isRealEditor then
+    addKeystroke(editCommandJumpToDeclaration,enterKey+scCtrl);
     addKeystroke(ecSelectAll         ,scCtrl + ord('A'));
     addKeystroke(ecCopy              ,scCtrl + ord('C'));
     addKeystroke(ecBlockUnindent     ,scCtrl + ord('U'));

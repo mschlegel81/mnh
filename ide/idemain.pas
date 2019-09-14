@@ -92,6 +92,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+    PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE MemoryUsageShapeMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
@@ -163,6 +164,11 @@ PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of 
   begin
     if length(FileNames)=0 then exit;
     editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
+  end;
+
+PROCEDURE TIdeMainForm.FormKeyPress(Sender: TObject; VAR key: char);
+  begin
+    if typeOfFocusedControl=ctPlot then TplotForm(mainForm.ActiveControl).FormKeyPress(Sender,key);
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
@@ -253,10 +259,10 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
     finalizeCodeAssistance;
     {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
-    {$ifdef debugMode} writeln('Destroying runner'); {$endif}
-    runnerModel.destroy;
     {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
+    {$ifdef debugMode} writeln('Destroying runner'); {$endif}
+    runnerModel.destroy;
     {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
   end;
@@ -299,11 +305,10 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
     for cp in PAGES do dockSites[cp]^.updateAbsSizeByRelSize;
   end;
 
-PROCEDURE TIdeMainForm.MemoryUsageShapeMouseUp(Sender: TObject;
-  button: TMouseButton; Shift: TShiftState; X, Y: integer);
-begin
-  memoryCleaner.callCleanupMethods;
-end;
+PROCEDURE TIdeMainForm.MemoryUsageShapeMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    memoryCleaner.callCleanupMethods;
+  end;
 
 PROCEDURE TIdeMainForm.miAboutClick(Sender: TObject);
   begin

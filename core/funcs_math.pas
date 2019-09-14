@@ -182,15 +182,13 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       while (i>y) and (i>-19) do begin pot:=pot*10; dec(i); end;
       if not((x^.literalType=lt_smallint) or P_bigIntLiteral(x)^.value.canBeRepresentedAsInt64()) then begin
         raiseNotApplicableError(funcName[roundingMode],x,location,context,' because it is a big integer');
-        exit(newVoidLiteral);
+        exit(nil);
       end;
       xv:=x^.intValue;
       result:=newIntLiteral((xv div pot) * pot);
     end;
 
   VAR big:T_bigInt;
-      sub:P_literal;
-      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if relevantDigits=0 then begin
@@ -203,17 +201,6 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
                    big.fromFloat(P_realLiteral(x)^.value,roundingMode);
                    result:=newIntLiteral(big);
                  end;
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType(true);
-          iter  :=P_collectionLiteral(x)^.iteratableList;
-          for sub in iter do collResult^.append(customRound(sub,0,roundingMode,location,context,recycler),false);
-          disposeLiteral(iter);
-          if collResult^.containsError then begin
-            raiseNotApplicableError(funcName[roundingMode],x,location,context);
-            disposeLiteral(result);
-          end;
-        end;
         else raiseNotApplicableError(funcName[roundingMode],x,location,context);
       end;
     end else begin
@@ -224,29 +211,6 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then result:=myRound(P_realLiteral(x)^.value,relevantDigits)
                  else raiseNotApplicableError(funcName[roundingMode],x,location,context);
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList:
-          begin
-            result:=newListLiteral;
-            iter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in iter do P_listLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context,recycler),false);
-            disposeLiteral(iter);
-            if collResult^.containsError then begin
-              disposeLiteral(result);
-              raiseNotApplicableError(funcName[roundingMode],x,location,context);
-            end;
-          end;
-
-        lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet:  begin
-            result:=newSetLiteral;
-            iter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in iter do P_setLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context,recycler),false);
-            disposeLiteral(iter);
-            if collResult^.containsError then begin
-              disposeLiteral(result);
-              raiseNotApplicableError(funcName[roundingMode],x,location,context);
-            end;
-          end;
-
         else raiseNotApplicableError(funcName[roundingMode],x,location,context);
       end;
     end;
@@ -255,9 +219,9 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
 FUNCTION round_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression])
     then result:=customRound(arg0,0             ,RM_DEFAULT,tokenLocation,context,recycler) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression]) and (arg1^.literalType in [lt_smallint,lt_bigint])
     then result:=customRound(arg0,int1^.intValue,RM_DEFAULT,tokenLocation,context,recycler)
     else result:=genericVectorization('round',params,tokenLocation,context,recycler);
   end;
@@ -265,9 +229,9 @@ FUNCTION round_imp intFuncSignature;
 FUNCTION ceil_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression])
     then result:=customRound(arg0,0             ,RM_UP,tokenLocation,context,recycler) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression]) and (arg1^.literalType in [lt_smallint,lt_bigint])
     then result:=customRound(arg0,int1^.intValue,RM_UP,tokenLocation,context,recycler)
     else result:=genericVectorization('ceil',params,tokenLocation,context,recycler);
   end;
@@ -275,9 +239,9 @@ FUNCTION ceil_imp intFuncSignature;
 FUNCTION floor_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression])
     then result:=customRound(arg0,0             ,RM_DOWN,tokenLocation,context,recycler) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real,lt_expression]) and (arg1^.literalType in [lt_smallint,lt_bigint])
     then result:=customRound(arg0,int1^.intValue,RM_DOWN,tokenLocation,context,recycler)
     else result:=genericVectorization('floor',params,tokenLocation,context,recycler);
   end;

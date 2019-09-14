@@ -2,7 +2,7 @@
 memoized
 private ackermann(  0,n>0)->n+1;
 //Possible extensions (instead of memoization)
-//      ackermann(  1,n>0)->2+n;//=2^(n+3)-3
+//      ackermann(  1,n>0)->2+n;//=2+(n+3)-3
 //      ackermann(  2,n>0)->       2*(n+3)-3;
 //      ackermann(  3,n>0)->       2^(n+3)-3;
 private ackermann(m>0,n=0)->ackermann(m-1,1);

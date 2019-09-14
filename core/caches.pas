@@ -24,7 +24,6 @@ TYPE
     cached: array of record
       data:array of T_cacheEntry;
     end;
-    PROCEDURE resortBin(CONST binIdx:longint);
     PROCEDURE polish;
   public
     CONSTRUCTOR create(ruleCS:TRTLCriticalSection);
@@ -42,13 +41,7 @@ PROCEDURE polishAllCaches;
   begin
     enterCriticalSection(allCacheCs);
     try
-      for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.tryEnterCriticalsection(criticalSection)<>0 then begin
-        try
-          polish;
-        finally
-          system.leaveCriticalSection(criticalSection);
-        end;
-      end;
+      for i:=0 to length(allCaches)-1 do P_cache(allCaches[i])^.polish;
     finally
       leaveCriticalSection(allCacheCs);
     end;
@@ -76,23 +69,12 @@ DESTRUCTOR T_cache.destroy;
     clear;
   end;
 
-PROCEDURE T_cache.resortBin(CONST binIdx:longint);
-  VAR i,j:longint;
-      swapTmp:T_cacheEntry;
-  begin
-    with cached[binIdx] do
-    for i:=1 to length(data)-1 do for j:=0 to i-1 do
-    if data[i].lastUse>data[j].lastUse then begin
-      swapTmp:=data[i];
-      data[i]:=data[j];
-      data[j]:=swapTmp;
-    end;
-  end;
-
 PROCEDURE T_cache.polish;
   VAR binIdx,i,j: longint;
       dropThreshold:longint;
   begin
+    enterCriticalSection(criticalSection);
+    try
     dropThreshold:=useCounter - fill shr 1;
     for binIdx:=0 to length(cached)-1 do
     with cached[binIdx] do begin
@@ -107,7 +89,9 @@ PROCEDURE T_cache.polish;
         dec(fill);
       end;
       setLength(data, j);
-      resortBin(binIdx);
+    end;
+    finally
+      leaveCriticalSection(criticalSection);
     end;
   end;
 
@@ -136,7 +120,6 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       setLength(redistribute,0);
       k:=0; j:=-1;
       for i:=0 to length(cached)-1 do begin
-        resortBin(i);
         if length(cached[i].data)>k then begin
           k:=length(cached[i].data);
           j:=i;
@@ -148,22 +131,27 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       hash:T_hashInt;
       binIdx: T_hashInt;
   begin
+    enterCriticalSection(criticalSection);
+    try
     hash:=key^.hash;
     binIdx:=hash and (length(cached)-1);
     with cached[binIdx] do begin
       i := 0;
       while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
-      if (i<length(data))
-      then exit
-      else setLength(data, i+1);
-      inc(fill);
-      data[i].key     :=P_listLiteral(key^.rereferenced);
-      data[i].keyHash :=hash;
-      data[i].value   :=value^.rereferenced;
-      data[i].lastUse :=useCounter;
+      if (i>=length(data)) then begin
+        setLength(data, i+1);
+        inc(fill);
+        data[i].key     :=P_listLiteral(key^.rereferenced);
+        data[i].keyHash :=hash;
+        data[i].value   :=value^.rereferenced;
+        data[i].lastUse :=useCounter;
+      end;
     end;
     inc(useCounter);
     if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
+    finally
+      leaveCriticalSection(criticalSection);
+    end;
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
@@ -171,33 +159,43 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       hash:T_hashInt;
       binIdx: T_hashInt;
   begin
-    hash:=key^.hash;
-    binIdx:=hash and (length(cached)-1);
-    with cached[binIdx] do begin
-      i := 0;
-      while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
-      if i>=length(data) then result:=nil
-      else begin
-        inc(useCounter);
-        data[i].lastUse:=useCounter;
-        result:=data[i].value;
+    enterCriticalSection(criticalSection);
+    try
+      hash:=key^.hash;
+      binIdx:=hash and (length(cached)-1);
+      with cached[binIdx] do begin
+        i := 0;
+        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
+        if i>=length(data) then result:=nil
+        else begin
+          inc(useCounter);
+          data[i].lastUse:=useCounter;
+          result:=data[i].value;
+        end;
       end;
+    finally
+      leaveCriticalSection(criticalSection);
     end;
   end;
 
 PROCEDURE T_cache.clear;
   VAR i, j: longint;
   begin
-    for i := 0 to (length(cached)-1) do with cached[i] do begin
-      for j := 0 to length(data)-1 do with data[j] do begin
-        disposeLiteral(key);
-        disposeLiteral(value);
+    enterCriticalSection(criticalSection);
+    try
+      for i := 0 to (length(cached)-1) do with cached[i] do begin
+        for j := 0 to length(data)-1 do with data[j] do begin
+          disposeLiteral(key);
+          disposeLiteral(value);
+        end;
+        setLength(data, 0);
       end;
-      setLength(data, 0);
+      setLength(cached,MIN_BIN_COUNT);
+      fill := 0;
+      useCounter:=0;
+    finally
+      leaveCriticalSection(criticalSection);
     end;
-    setLength(cached,MIN_BIN_COUNT);
-    fill := 0;
-    useCounter:=0;
   end;
 
 INITIALIZATION

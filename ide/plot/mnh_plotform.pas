@@ -310,6 +310,7 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
       relatedPlot^.logPlotChanged;
     end;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+    relatedPlot^.animation.resolutionChanged(plotImage.width,plotImage.height);
   end;
 
 PROCEDURE TplotForm.FormShow(Sender: TObject);
@@ -435,8 +436,7 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if (myComponentParent<>cpNone) then mainForm.ActiveControl:=self;
     if ssLeft in Shift then begin
@@ -446,8 +446,7 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: integer);
+PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
       statusText:string;
   begin

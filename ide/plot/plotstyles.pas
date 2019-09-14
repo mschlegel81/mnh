@@ -20,7 +20,7 @@ TYPE
                ps_polygon,
                ps_ellipse);
   T_plotStyles=set of T_plotStyle;
-  T_colorChannel = (cc_red, cc_green, cc_blue);
+  T_colorChannel = (cc_red, cc_green, cc_blue,cc_alpha);
   T_color = array[T_colorChannel] of byte;
 
 CONST
@@ -59,7 +59,7 @@ TYPE
   T_style = object
     private
       PROCEDURE parseStyle(CONST styleString: ansistring);
-      PROCEDURE setDefaults(CONST index:longint; VAR transparentCount:longint);
+      PROCEDURE setDefaults(CONST index:longint);
     public
       defaults:T_styleTemplateDefaults;
       style: T_plotStyles;
@@ -75,10 +75,10 @@ TYPE
 
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
 OPERATOR :=(CONST b:byte):T_gridStyle;
-OPERATOR :=(CONST c:T_color):longint;
-FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparentCount:longint):T_style;
+OPERATOR :=(CONST c:T_color):TBGRAPixel;
+FUNCTION getStyle(CONST index:longint; CONST styleString:string):T_style;
 IMPLEMENTATION
-USES myGenerics,mySys;
+USES myGenerics,mySys,myStringUtil;
 VAR styleCS:TRTLCriticalSection;
     styleMap:specialize G_stringKeyMap<T_style>;
 CONST GSE_BYTE:array[T_gridStyleElement] of byte=(1,2,4);
@@ -96,25 +96,23 @@ OPERATOR :=(CONST b:byte):T_gridStyle;
     for se in T_gridStyleElement do if (GSE_BYTE[se] and b)>0 then include(result,se);
   end;
 
-OPERATOR :=(CONST c:T_color):longint;
+OPERATOR :=(CONST c:T_color):TBGRAPixel;
   begin
-    result:=c[cc_red  ]
-        or (c[cc_green] shl  8)
-        or (c[cc_blue ] shl 16);
+    result.FromRGB(c[cc_red],c[cc_green],c[cc_blue],c[cc_alpha]);
   end;
 
 CONST C_defaultColor: array[0..7] of record
         name: string;
         color: T_color;
       end =
-      ((name: 'black' ; color:(  0,  0,  0)),
-       (name: 'red'   ; color:(255,  0,  0)),
-       (name: 'blue'  ; color:(  0,  0,255)),
-       (name: 'green' ; color:(  0,128,  0)),
-       (name: 'purple'; color:(192,  0,192)),
-       (name: 'orange'; color:(255, 96,  0)),
-       (name: 'yellow'; color:(255,255,  0)),
-       (name: 'cyan'  ; color:(  0,128,128)));
+      ((name: 'black' ; color:(  0,  0,  0,255)),
+       (name: 'red'   ; color:(255,  0,  0,255)),
+       (name: 'blue'  ; color:(  0,  0,255,255)),
+       (name: 'green' ; color:(  0,128,  0,255)),
+       (name: 'purple'; color:(192,  0,192,255)),
+       (name: 'orange'; color:(255, 96,  0,255)),
+       (name: 'yellow'; color:(255,255,  0,255)),
+       (name: 'cyan'  ; color:(  0,128,128,255)));
 
 PROCEDURE T_style.init();
   begin
@@ -125,8 +123,8 @@ PROCEDURE T_style.init();
   end;
 
 PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
-  FUNCTION parseColorOption(colorOption: shortstring; OUT r, g, b: byte): boolean;
-    PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
+  FUNCTION parseColorOption(colorOption: shortstring; OUT color:T_color): boolean;
+    FUNCTION HSV2RGB(H,S,V: single):T_color;
       VAR hi,p,q,t: byte;
       begin
         while H<0 do H:=H+1;
@@ -137,21 +135,20 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         p:=round(V*(1-S));
         q:=round(V*(1-S*H));
         t:=round(V*(1-S*(1-H)));
+        result[cc_alpha]:=255;
         case hi of
-          0, 6: begin r:=round(V); g:=t; b:=p; end;
-          1:    begin r:=q; g:=round(V); b:=p; end;
-          2:    begin r:=p; g:=round(V); b:=t; end;
-          3:    begin r:=p; g:=q; b:=round(V); end;
-          4:    begin r:=t; g:=p; b:=round(V); end;
-          5:    begin r:=round(V); g:=p; b:=q; end;
+          0, 6: begin result[cc_red]:=round(V); result[cc_green]:=t;        result[cc_blue]:=p; end;
+          1:    begin result[cc_red]:=q;        result[cc_green]:=round(V); result[cc_blue]:=p; end;
+          2:    begin result[cc_red]:=p;        result[cc_green]:=round(V); result[cc_blue]:=t; end;
+          3:    begin result[cc_red]:=p;        result[cc_green]:=q;        result[cc_blue]:=round(V); end;
+          4:    begin result[cc_red]:=t;        result[cc_green]:=p;        result[cc_blue]:=round(V); end;
+          5:    begin result[cc_red]:=round(V); result[cc_green]:=p;        result[cc_blue]:=q; end;
         end;
       end;
 
-    VAR rStr: string = '';
-        gStr: string = '';
-        bStr: string = '';
-        i: longint;
+    VAR colorParts:T_arrayOfString;
         isHSV: boolean;
+        i:longint;
     begin
       result:=false;
       for i:=0 to length(C_defaultColor)-1 do
@@ -162,44 +159,33 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
       if not(result) and ((copy(colorOption, 1, 3) = 'RGB') or (copy(colorOption, 1, 3) = 'HSV')) then begin
         isHSV:=(copy(colorOption, 1, 3) = 'HSV');
         colorOption:=copy(colorOption, 4, length(colorOption)-3);
-        i:=pos(',', colorOption);
-        if i>0 then begin
-          rStr:=copy(colorOption, 1, i-1);
-          colorOption:=copy(colorOption, i+1, length(colorOption));
-          i:=pos(',', colorOption);
-        end;
-        if i>0 then begin
-          gStr:=copy(colorOption, 1, i-1);
-          colorOption:=copy(colorOption, i+1, length(colorOption));
-          i:=pos(',', colorOption);
-        end;
-        if i>0 then begin
-          bStr:=copy(colorOption, 1, i-1);
-          colorOption:=copy(colorOption, i+1, length(colorOption));
-          i:=pos(',', colorOption);
-        end else bStr:=colorOption;
-        if (rStr<>'') and (gStr<>'') and (bStr<>'') then begin
-          if isHSV then HSV2RGB(strToFloatDef(rStr,0),
-                    max(0,min(1,strToFloatDef(gStr,0))),
-                    max(0,min(1,strToFloatDef(bStr,0))), r, g, b)
+        colorParts:=split(colorOption,',');
+        if (length(colorParts)>=3) and (length(colorParts)<=4) then begin
+          if isHSV then color:=HSV2RGB(strToFloatDef(colorParts[0],0),
+                           max(0,min(1,strToFloatDef(colorParts[1],0))),
+                           max(0,min(1,strToFloatDef(colorParts[2],0))))
           else begin
-            r:=round(255*max(0, min(1, strToFloatDef(rStr, 0))));
-            g:=round(255*max(0, min(1, strToFloatDef(gStr, 0))));
-            b:=round(255*max(0, min(1, strToFloatDef(bStr, 0))));
+            color[cc_red  ]:=round(255*max(0, min(1, strToFloatDef(colorParts[0], 0))));
+            color[cc_green]:=round(255*max(0, min(1, strToFloatDef(colorParts[1], 0))));
+            color[cc_blue ]:=round(255*max(0, min(1, strToFloatDef(colorParts[2], 0))));
           end;
+          if length(colorParts)=4
+          then color[cc_alpha]:=round(255*max(0, min(1, strToFloatDef(colorParts[3], 0))))
+          else color[cc_alpha]:=255;
           result:=true;
         end;
       end;
       if not(result) and (copy(colorOption, 1, 3) = 'HUE') then begin
         colorOption:=copy(colorOption, 4, length(colorOption)-3);
-        HSV2RGB(strToFloatDef(colorOption, 0), 1, 1, r, g, b);
+        color:=HSV2RGB(strToFloatDef(colorOption, 0), 1, 1);
         result:=true;
       end;
       if not(result) and (copy(colorOption, 1, 4) = 'GREY') then begin
         colorOption:=copy(colorOption, 5, length(colorOption)-4);
-        r:=round(255*max(0, min(1, strToFloatDef(colorOption, 0))));
-        g:=r;
-        b:=r;
+        color[cc_red  ]:=round(255*max(0, min(1, strToFloatDef(colorOption, 0))));
+        color[cc_green]:=color[cc_red];
+        color[cc_blue ]:=color[cc_red];
+        color[cc_alpha]:=255;
         result:=true;
       end;
     end;
@@ -238,14 +224,14 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
           mightBeColor:=false;
         end;
         if mightBeColor then begin
-          if parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]) then defaults-=[std_defaultColor];
+          if parseColorOption(part, color) then defaults-=[std_defaultColor];
         end;
       end;
     until options = '';
     if (style-[ps_filled,ps_fillSolid])=[] then include(style,ps_straight);
   end;
 
-PROCEDURE T_style.setDefaults(CONST index:longint; VAR transparentCount:longint);
+PROCEDURE T_style.setDefaults(CONST index:longint);
   begin
     if std_defaultColor in defaults then color:=C_defaultColor[index mod length(C_defaultColor)].color;
   end;
@@ -257,8 +243,9 @@ FUNCTION T_style.toString:ansistring;
     if styleModifier<>1 then result:=floatToStr(styleModifier)+' ';
     for s in style do result+=C_styleName[s,0]+' ';
     result+='RGB'+floatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
-                 +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
-                 +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4);
+           +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
+           +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4);
+    if color[cc_alpha]<>255 then result+=','+floatToStrF(color[cc_alpha]/255,ffGeneral,3,4);
   end;
 
 FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
@@ -267,22 +254,21 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
       if d>255 then result:=255 else if d<0 then result:=0 else result:=round(d);
     end;
 
-  VAR scalingFactor,ideal:double;
+  VAR scalingFactor,idealLineWidth:double;
   begin
     if (ps_filled in style) and not(ps_fillSolid in style)
-    then result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue],100)
-    else result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue]);
+    then result.solidColor.FromRGB(color [cc_red],color [cc_green],color [cc_blue],toByte(color[cc_alpha]*0.4))
+    else result.solidColor:=color;
 
     result.solidStyle:=bsClear;
     if (ps_filled in style) or (ps_fillSolid in style) then result.solidStyle:=bsSolid;
+
     scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
-    result.lineColor:=result.solidColor;
-    ideal:=styleModifier*scalingFactor;
-    if ideal=0 then result.lineWidth:=0
-               else result.lineWidth:=1;
-    result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
-                  or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
-                  or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
+    idealLineWidth:=styleModifier*scalingFactor;
+    if      idealLineWidth<1/255 then begin result.lineWidth:=0;                    idealLineWidth:=0; end
+    else if idealLineWidth<1     then       result.lineWidth:=1
+                                 else begin result.lineWidth:=round(idealLineWidth); idealLineWidth:=1; end;
+    result.lineColor.FromRGB(color[cc_red],color[cc_green],color[cc_blue],toByte(idealLineWidth*color[cc_alpha]));
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
@@ -297,7 +283,7 @@ PROCEDURE clearStyles;
     end;
   end;
 
-FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparentCount:longint):T_style;
+FUNCTION getStyle(CONST index:longint; CONST styleString:string):T_style;
   begin
     enterCriticalSection(styleCS);
     try
@@ -306,7 +292,7 @@ FUNCTION getStyle(CONST index:longint; CONST styleString:string; VAR transparent
         result.parseStyle(styleString);
         styleMap.put(styleString,result);
       end;
-      result.setDefaults(index,transparentCount);
+      result.setDefaults(index);
     finally
       leaveCriticalSection(styleCS);
     end;

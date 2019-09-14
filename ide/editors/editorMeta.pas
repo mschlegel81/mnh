@@ -33,6 +33,7 @@ USES  //basic classes
   mnh_messages;
 
 TYPE
+P_editorMeta=^T_editorMeta;
 P_editorMetaProxy=^T_editorMetaProxy;
 T_editorMetaProxy=object(T_codeProvider)
   private
@@ -49,7 +50,6 @@ T_editorMetaProxy=object(T_codeProvider)
     FUNCTION fixate:P_editorMetaProxy;
 end;
 
-P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_basicEditorMeta)
   private
     metaIndex:longint;
@@ -100,7 +100,6 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer); virtual;
     PROCEDURE onClearBookmark(Sender: TObject; VAR mark: TSynEditMark);
     PROCEDURE onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
-    PROCEDURE editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     //Inherited overrides
     DESTRUCTOR destroy; virtual;
@@ -153,11 +152,16 @@ FUNCTION T_editorMetaProxy.getLines: T_arrayOfString;
       accessed:boolean;
   begin
     if fixated then exit(lines);
-    meta:=workspace.getExistingEditorForPath(filePath);
-    if meta=nil then begin
-      result:=fileLines(filePath,accessed);
-      if not(accessed) then exit(C_EMPTY_STRING_ARRAY);
-    end else result:=meta^.getLines;
+    enterCriticalSection(workspace.workspaceCs);
+    try
+      meta:=workspace.getExistingEditorForPath(filePath);
+      if meta=nil then begin
+        result:=fileLines(filePath,accessed);
+        if not(accessed) then result:=C_EMPTY_STRING_ARRAY;
+      end else result:=meta^.getLines;
+    finally
+      leaveCriticalSection(workspace.workspaceCs);
+    end;
   end;
 
 FUNCTION T_editorMetaProxy.getPath: ansistring;
@@ -169,11 +173,16 @@ FUNCTION T_editorMetaProxy.isPseudoFile: boolean;
   VAR meta:P_editorMeta;
   begin
     if fixated then exit(pseudo);
-    meta:=workspace.getExistingEditorForPath(filePath);
-    if meta=nil then begin
-      result:=not(fileExists(filePath))
-    end else begin
-      result:=meta^.isPseudoFile;
+    enterCriticalSection(workspace.workspaceCs);
+    try
+      meta:=workspace.getExistingEditorForPath(filePath);
+      if meta=nil then begin
+        result:=not(fileExists(filePath))
+      end else begin
+        result:=meta^.isPseudoFile;
+      end;
+    finally
+      leaveCriticalSection(workspace.workspaceCs);
     end;
   end;
 
@@ -214,7 +223,6 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     paintedWithStateHash:=0;
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
-    editor_.OnKeyUp             :=@editorKeyUp;
     editor_.OnMouseDown         :=@editorMouseDown;
     editor_.OnProcessCommand    :=@processUserCommand;
     editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
@@ -595,12 +603,12 @@ PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEdit
     end;
 
   begin
-    if command=editCommandPageRight      then begin command:=ecNone; cycleEditors(true ); end else
-    if command=editCommandPageLeft       then begin command:=ecNone; cycleEditors(false); end else
-    if command=editCommandToggleBookmark then begin
-      toggleBreakpoint;
-      command:=ecNone;
-    end else if (command>=ecGotoMarker0) and (command<=ecGotoMarker9)
+    if command=editCommandPageRight         then begin command:=ecNone; cycleEditors(true ); end else
+    if command=editCommandPageLeft          then begin command:=ecNone; cycleEditors(false); end else
+    if command=editCommandToggleBookmark    then begin command:=ecNone; toggleBreakpoint;    end else
+    if command=editCommandMarkWord          then begin command:=ecNone; setUnderCursor(true,false); end else
+    if command=editCommandJumpToDeclaration then begin command:=ecNone; setUnderCursor(false,true); workspace.openLocation(underCursor.location); end else
+    if (command>=ecGotoMarker0) and (command<=ecGotoMarker9)
     then workspace.openBookmarkLocation(command-ecGotoMarker0)
     else inherited processUserCommand(Sender,command,AChar,data);
   end;
@@ -614,20 +622,6 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
   begin
     if not(Assigned(mark)) then exit;
     for other in workspace.metas do if (other<>@self) then other^.clearBookmark(mark.BookmarkNumber);
-  end;
-
-PROCEDURE T_editorMeta.editorKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
-  VAR jump,mark:boolean;
-  begin
-    if language_<>LANG_MNH
-    then workspace.keyUpForJumpToLocation(Sender,key,Shift)
-    else begin
-      jump:=(key=13) and (ssCtrl in Shift);
-      mark:=(key=13) and (ssAlt  in Shift);
-      if not(jump or mark) then exit;
-      setUnderCursor(mark,jump);
-      if jump then workspace.openLocation(underCursor.location);
-    end;
   end;
 
 PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);

@@ -24,13 +24,13 @@ private flavourDependentScripts:=
    'printfUsageDemo',
    'rk4',
    'relevantDigitsTest',
+   'rotatingCube',
    'root',
    'shannonEntropy',
    'thieleInterpolation',
-   'travellingSalesmanProblem',
    'test_rationals',
    'testPackages',
-   EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
+   EXAMPLES_LOG_NAME];
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
 private memoized allFlavours->BUILDS.filter({$B['doTest']}).map({$B['flavour']});

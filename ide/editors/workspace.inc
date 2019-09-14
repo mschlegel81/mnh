@@ -1,6 +1,7 @@
 {$ifdef includeInterface}
 T_workspace=object(T_serializable)
   private
+    workspaceCs:TRTLCriticalSection;
     savedAt:double; //nonpersistent
     scriptMenu:T_submenuModel; //nonpersistent
 
@@ -136,6 +137,7 @@ FUNCTION editorContent_impl intFuncSignature;
 
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
+    initCriticalSection(workspaceCs);
     savedAt:=now+1; //= now + 24h
     checkUsingScripts:=false;
     mainForm:=ide;
@@ -161,10 +163,13 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
+    enterCriticalSection(workspaceCs);
     fileHistory.destroy;
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
     setLength(metas,0);
     scriptMenu.destroy;
+    leaveCriticalSection(workspaceCs);
+    doneCriticalSection(workspaceCs);
   end;
 
 FUNCTION T_workspace.getSerialVersion: dword;
@@ -319,19 +324,25 @@ FUNCTION T_workspace.createNewFile:P_editorMeta;
 FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_editorMeta;
   VAR meta:P_editorMeta;
   begin
+    enterCriticalSection(workspaceCs);
     try
       result:=nil;
-      for meta in metas do if SameFileName(meta^.pseudoName,pathOrPseudoName) then exit(meta);
-    except
-      result:=nil;
+      for meta in metas do if (result=nil) and SameFileName(meta^.pseudoName,pathOrPseudoName) then result:=meta;
+    finally
+      leaveCriticalSection(workspaceCs);
     end;
   end;
 
 FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
   VAR meta:P_editorMeta;
   begin
-    for meta in metas do if meta^.pseudoName=fileName then exit(true);
-    result:=false;
+    enterCriticalSection(workspaceCs);
+    try
+      result:=false;
+      for meta in metas do if not(result) and (meta^.pseudoName=fileName) then result:=true;
+    finally
+      leaveCriticalSection(workspaceCs);
+    end;
   end;
 
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
@@ -370,14 +381,19 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
 
   VAR f:string;
   begin
-    if useCurrentPageAsFallback
-    then result:=currentEditor
-    else result:=nil;
+    enterCriticalSection(workspaceCs);
+    try
+      if useCurrentPageAsFallback
+      then result:=currentEditor
+      else result:=nil;
 
-    for f in FileNames do openSingleFile(f);
-    if result<>nil then begin
-      inputPageControl.activePage:=result^.tabsheet;
-      result^.activate;
+      for f in FileNames do openSingleFile(f);
+      if result<>nil then begin
+        inputPageControl.activePage:=result^.tabsheet;
+        result^.activate;
+      end;
+    finally
+      leaveCriticalSection(workspaceCs);
     end;
   end;
 
@@ -409,14 +425,19 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
 FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolean;
   VAR meta:P_editorMeta;
   begin
-    if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
-    meta:=addOrGetEditorMetaForFiles(location.fileName,false);
-    if meta=nil then exit(false);
-    inputPageControl.activePage:=meta^.tabsheet;
-    meta^.setCaret(location);
-    inputPageControl.activePage:=meta^.tabsheet;
-    mainForm.ActiveControl:=meta^.editor;
-    result:=true;
+    enterCriticalSection(workspaceCs);
+    try
+      if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
+      meta:=addOrGetEditorMetaForFiles(location.fileName,false);
+      if meta=nil then exit(false);
+      inputPageControl.activePage:=meta^.tabsheet;
+      meta^.setCaret(location);
+      inputPageControl.activePage:=meta^.tabsheet;
+      mainForm.ActiveControl:=meta^.editor;
+      result:=true;
+    finally
+      leaveCriticalSection(workspaceCs);
+    end;
   end;
 
 PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -485,31 +506,36 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose:P_editorMeta);
       newCurrent:P_editorMeta;
       mark:TSynEditMark;
   begin
-    //Editor shall be closed
-    if not(toClose^.isPseudoFile) then begin
-      //Copy marks
-      for k:=0 to toClose^.editor.Marks.count-1 do begin
-        setLength(oldMarkers,length(oldMarkers)+1);
-        mark:=toClose^.editor.Marks[k];
-        oldMarkers[length(oldMarkers)-1].location:=toClose^.markLocation(mark.line,mark.column);
-        if mark.IsBookmark
-        then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
-        else oldMarkers[length(oldMarkers)-1].markIndex:=10;
+    enterCriticalSection(workspaceCs);
+    try
+      //Editor shall be closed
+      if not(toClose^.isPseudoFile) then begin
+        //Copy marks
+        for k:=0 to toClose^.editor.Marks.count-1 do begin
+          setLength(oldMarkers,length(oldMarkers)+1);
+          mark:=toClose^.editor.Marks[k];
+          oldMarkers[length(oldMarkers)-1].location:=toClose^.markLocation(mark.line,mark.column);
+          if mark.IsBookmark
+          then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
+          else oldMarkers[length(oldMarkers)-1].markIndex:=10;
+        end;
       end;
+
+      //actually close editor...
+      k:=0;
+      while (k<length(metas)) and (metas[k]<>toClose) do inc(k);
+      if k>length(metas) then raise Exception.create('Invalid state; Found editor to close but cannot determine index');
+      sheetToDestroy:=metas[k]^.tabsheet;
+      dispose(metas[k],destroy);
+      FreeAndNil(sheetToDestroy);
+      metas[k]:=metas[length(metas)-1];
+      setLength(metas,length(metas)-1);
+
+      newCurrent:=currentEditor;
+      if newCurrent<>nil then newCurrent^.activate;
+    finally
+      leaveCriticalSection(workspaceCs);
     end;
-
-    //actually close editor...
-    k:=0;
-    while (k<length(metas)) and (metas[k]<>toClose) do inc(k);
-    if k>length(metas) then raise Exception.create('Invalid state; Found editor to close but cannot determine index');
-    sheetToDestroy:=metas[k]^.tabsheet;
-    dispose(metas[k],destroy);
-    FreeAndNil(sheetToDestroy);
-    metas[k]:=metas[length(metas)-1];
-    setLength(metas,length(metas)-1);
-
-    newCurrent:=currentEditor;
-    if newCurrent<>nil then newCurrent^.activate;
   end;
 
 PROCEDURE T_workspace.closeCurrentFile;
@@ -556,9 +582,13 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
       then exit(false)
       else toSave^.fileInfo.filePath:=expandFileName(newName);
     end;
-
-    toSave^.saveFile(newName);
-    fileHistory.fileClosed(newName);
+    enterCriticalSection(workspaceCs);
+    try
+      toSave^.saveFile(newName);
+      fileHistory.fileClosed(newName);
+    finally
+      leaveCriticalSection(workspaceCs);
+    end;
     result:=true;
   end;
 

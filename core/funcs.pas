@@ -201,7 +201,10 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       end;
       disposeLiteral(setIter);
     end else result:=nil;
-    if not(allOkay) then disposeLiteral(result);
+    if not(allOkay) then begin
+      disposeLiteral(result);
+      result:=nil;
+    end;
   end;
 
 {$WARN 5024 OFF}

@@ -104,12 +104,11 @@ TYPE
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
       customText:array of P_customText;
-      transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
-      PROCEDURE drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
-      PROCEDURE drawCoordSys(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
-      PROCEDURE drawCustomText(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint);
+      PROCEDURE drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
+      PROCEDURE drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
+      PROCEDURE drawCustomText(CONST target: TBGRACanvas);
       FUNCTION  obtainPlot(CONST width,height:longint):TImage;
 
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
@@ -163,6 +162,9 @@ TYPE
       PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint);
       PROCEDURE postPreparation(CONST width,height:longint);
+
+      FUNCTION isImagePreparedForResolution(CONST width,height:longint):boolean;
+      FUNCTION hasResolution(CONST width,height:longint):boolean;
   end;
 
   T_plotSeries=object
@@ -184,6 +186,7 @@ TYPE
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
+      PROCEDURE resolutionChanged(CONST newWidth,newHeight:longint);
   end;
 
   F_execPlotCallback=PROCEDURE of object;
@@ -384,17 +387,19 @@ PROCEDURE T_plotSeriesFrame.performPostedPreparation;
     end;
   end;
 
+VAR preparationThreadsRunning:longint=0;
 FUNCTION preparationThread(p:pointer):ptrint;
   begin
     P_plotSeriesFrame(p)^.performPostedPreparation;
+    interlockedDecrement(preparationThreadsRunning);
     result:=0
   end;
 
 PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
   begin
-    if backgroundPreparation then exit;
+    if backgroundPreparation or isImagePreparedForResolution(width,height) then exit;
     enterCriticalSection(plotData.cs);
-    if backgroundPreparation then begin
+    if backgroundPreparation or isImagePreparedForResolution(width,height) then begin
       leaveCriticalSection(plotData.cs);
       exit;
     end;
@@ -402,10 +407,28 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
       backgroundPreparation:=true;
       postedHeight:=height;
       postedWidth:=width;
+      interLockedIncrement(preparationThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(plotData.cs);
     end;
+  end;
+
+FUNCTION T_plotSeriesFrame.isImagePreparedForResolution(CONST width,height:longint):boolean;
+  begin
+    enterCriticalSection(plotData.cs);
+    result:=(cachedImage.renderedWidth=width) and
+            (cachedImage.renderedHeight=height) and
+            (cachedImage.image<>nil);
+    leaveCriticalSection(plotData.cs);
+  end;
+
+FUNCTION T_plotSeriesFrame.hasResolution(CONST width,height:longint):boolean;
+  begin
+    enterCriticalSection(plotData.cs);
+    result:=(cachedImage.renderedWidth=width) and
+            (cachedImage.renderedHeight=height);
+    leaveCriticalSection(plotData.cs);
   end;
 
 PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
@@ -735,7 +758,10 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height:longint):boolean;
-  {$ifndef unix}VAR nextToPrepare:longint;{$endif}
+  {$ifndef unix}
+  VAR toPrepare,
+      lastToPrepare:longint;
+  {$endif}
   begin
     enterCriticalSection(seriesCs);
     try
@@ -754,14 +780,30 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          nextToPrepare:=frameIndex+(settings.cpuCount div 2);
-          if nextToPrepare=frameIndex then inc(nextToPrepare);
-          if cycle then nextToPrepare:=nextToPrepare mod length(frame);
-          if (nextToPrepare>=0) and (nextToPrepare<length(frame))
-          then frame[nextToPrepare]^.postPreparation(width,height);
+          if not(weHadAMemoryPanic) and isMemoryInComfortZone and settings.cacheAnimationFrames then begin
+            if cycle then lastToPrepare:=frameIndex+length(frame)-1
+                     else lastToPrepare:=           length(frame)-1;
+          end else begin
+            lastToPrepare:=frameIndex+settings.cpuCount;
+            if (lastToPrepare>=length(frame)) and not(cycle) then lastToPrepare:=length(frame)-1;
+          end;
+          for toPrepare:=frameIndex+1 to lastToPrepare do
+            if (preparationThreadsRunning<settings.cpuCount) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
         end;
         {$endif}
       end;
+    finally
+      leaveCriticalSection(seriesCs);
+    end;
+  end;
+
+PROCEDURE T_plotSeries.resolutionChanged(CONST newWidth,newHeight:longint);
+  VAR i:longint;
+  begin
+    enterCriticalSection(seriesCs);
+    try
+      for i:=0 to length(frame)-1 do if not(frame[i]^.hasResolution(newWidth,newHeight)) and
+                                        not(frame[i]^.hasResolution(-1,-1)) then frame[i]^.doneImage(fcm_none);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -804,7 +846,6 @@ PROCEDURE T_plot.clear;
       setLength(row, 0);
       for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
       setLength(customText,0);
-      transparentCount:=0;
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -818,7 +859,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       index:=length(row);
       setLength(row, index+1);
       row[index].create(rowData);
-      row[index].style:=getStyle(index,styleOptions,transparentCount);
+      row[index].style:=getStyle(index,styleOptions);
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -926,7 +967,7 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
     end;
   end; end;
 
-PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
   VAR rowId, i, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
@@ -963,7 +1004,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       lastWasValid:=false;
@@ -985,7 +1026,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       lastWasValid:=false;
@@ -1007,7 +1048,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       lastWasValid:=false;
@@ -1029,7 +1070,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       lastWasValid:=false;
@@ -1049,7 +1090,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       lastWasValid:=false;
@@ -1075,10 +1116,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
           i:longint;
       begin
         if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
-        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-        target.Brush.BGRAColor:=scaleAndColor.solidColor;
-        target.Brush.style:=scaleAndColor.solidStyle;
-        if (abs(x1-x0)>intendedWidth) or (abs(y1-y0)>intendedHeight) then begin
+        if (abs(x1-x0)>target.width) or (abs(y1-y0)>target.height) then begin
           cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
           cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
           for i:=0 to 100 do begin
@@ -1089,13 +1127,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
         end else begin
           target.Ellipse(x0,y0,x1,y1);
         end;
-        if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
       end;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
       lastWasValid:=false;
       i:=0;
       while i+1<length(screenRow) do begin
@@ -1105,16 +1145,21 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
                       screenRow[i+1].x, screenRow[i+1].y);
         inc(i, 2);
       end;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawTubes;
     begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+
       i:=0;
       while i+3<length(screenRow) do begin
-        target.Pen.style:=psSolid;
-        target.Pen.color:=scaleAndColor.lineColor;
-        target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecRound;
         if scaleAndColor.lineWidth>0 then begin
           if screenRow[i  ].valid and screenRow[i+2].valid then begin
             target.MoveTo(screenRow[i  ].x,screenRow[i  ].y);
@@ -1133,6 +1178,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
                        screenRow[i+1].x,screenRow[i+1].y,false);
         inc(i,2);
       end;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawPolygons;
@@ -1157,12 +1203,11 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i,j:longint;
     begin
       if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-      if (scaleAndColor.lineWidth<=0)
-      then target.Pen.style:=psClear
-      else target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       j:=-1;
@@ -1173,6 +1218,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
       i:=length(screenRow)-1;
       if j>=0 then screenRowPoly(j,i);
       setLength(points,0);
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE prepareBSplines;
@@ -1322,7 +1368,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
@@ -1341,7 +1387,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
@@ -1379,7 +1425,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
-      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecSquare;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
@@ -1388,37 +1434,37 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     end;
 
   begin
-    screenBox:=boundingBoxOf(0,0,intendedWidth,intendedHeight);
+    screenBox:=boundingBoxOf(0,0,target.width,target.height);
     //Clear:------------------------------------------------------------------
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
-    target.FillRect(0, 0, intendedWidth, intendedHeight);
+    target.FillRect(0, 0, target.width, target.height);
 
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
     target.Pen.style:=psSolid;
     //minor grid:-------------------------------------------------------------
-    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth,intendedHeight);
-    target.Pen.color:=scaleAndColor.lineColor;
+    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(target.width,target.height);
+    target.Pen.BGRAColor:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_fineGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if not(major) then begin
       lastY:=round(pos);
-      target.MoveTo(0            , lastY);
-      target.LineTo(intendedWidth, lastY);
+      target.MoveTo(0           , lastY);
+      target.LineTo(target.width, lastY);
     end;
     if (gse_fineGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if not(major) then begin
       lastX:=round(pos);
       target.MoveTo(lastX, 0);
-      target.LineTo(lastX, intendedHeight);
+      target.LineTo(lastX, target.height);
     end;
     //-------------------------------------------------------------:minor grid
     //major grid:-------------------------------------------------------------
-    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth,intendedHeight);
-    target.Pen.color:=scaleAndColor.lineColor;
+    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(target.width,target.height);
+    target.Pen.BGRAColor:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
@@ -1426,7 +1472,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
       lastY:=round(pos);
       {$Q+}
       target.MoveTo(0, lastY);
-      target.LineTo(intendedWidth, lastY);
+      target.LineTo(target.width, lastY);
     end;
     if (gse_coarseGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
@@ -1434,7 +1480,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
       lastX:=round(pos);
       {$Q+}
       target.MoveTo(lastX, 0);
-      target.LineTo(lastX, intendedHeight);
+      target.LineTo(lastX, target.height);
     end;
     //-------------------------------------------------------------:major grid
     //========================================================:coordinate grid
@@ -1443,14 +1489,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
       then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
       else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0));
       if      yBaseLine<0 then yBaseLine:=0
-      else if yBaseLine>=intendedHeight then yBaseLine:=intendedHeight-1;
+      else if yBaseLine>=target.height then yBaseLine:=target.height-1;
     except
       yBaseLine:=0;
     end;
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample);
-      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight);
+      scaleAndColor:=row[rowId].style.getLineScaleAndColor(target.width,target.height);
       if ps_stepLeft  in row[rowId].style.style then drawStepsLeft;
       if ps_stepRight in row[rowId].style.style then drawStepsRight;
       if ps_bar       in row[rowId].style.style then drawBars;
@@ -1475,19 +1521,19 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,
     //===============================================================:row data
   end;
 
-PROCEDURE T_plot.drawCustomText(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight: longint);
+PROCEDURE T_plot.drawCustomText(CONST target: TBGRACanvas);
   VAR txt:P_customText;
   begin
-    for txt in customText do txt^.renderText(intendedWidth,intendedHeight,scalingOptions,target);
+    for txt in customText do txt^.renderText(scalingOptions,target);
   end;
 
-PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
     enterCriticalSection(globalTextRenderingCs);
     try
-      target.Font.height:=scalingOptions.absoluteFontSize(intendedWidth,intendedHeight);
+      target.Font.height:=scalingOptions.absoluteFontSize(target.width,target.height);
       target.Font.color:=clBlack;
       cSysX:=scalingOptions.axisTrafo['x'].screenMin;
       cSysY:=scalingOptions.axisTrafo['y'].screenMin;
@@ -1497,20 +1543,20 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; CONST intendedWidth,int
       target.Pen.style:=psClear;
       target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
-      {if (scalingOptions.axisStyle['y']<>[]) then} target.FillRect(0,0,cSysX,intendedHeight);
-      {if (scalingOptions.axisStyle['x']<>[]) then} target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
+      target.FillRect(0,0,cSysX,target.height);
+      target.FillRect(cSysX,cSysY,target.width,target.height);
       //-----------------------------------------------------------:clear border
       //coordinate system:======================================================
       //axis:-------------------------------------------------------------------
       target.Pen.style:=psSolid;
-      target.Pen.color:=clBlack;
+      target.Pen.BGRAColor.FromRGB(0,0,0);
       target.Pen.width:=1;
       if (scalingOptions.axisStyle['y']<>[]) then begin
         target.MoveTo(cSysX, 0);
         target.LineTo(cSysX, cSysY);
       end;
       if (scalingOptions.axisStyle['x']<>[]) then begin
-        target.MoveTo(intendedWidth, cSysY);
+        target.MoveTo(target.width, cSysY);
         target.LineTo(cSysX        , cSysY);
       end;
       //-------------------------------------------------------------------:axis
@@ -1545,10 +1591,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
     system.enterCriticalSection(cs);
     try
       bgrabmp:=TBGRABitmap.create(plotImage.width,plotImage.height,BGRAWhite);
-      scalingOptions.updateForPlot(bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,row,gridTics);
-      drawGridAndRows(bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,gridTics);
-      drawCoordSys   (bgrabmp.CanvasBGRA,plotImage.width,plotImage.height,gridTics);
-      drawCustomText (bgrabmp.CanvasBGRA,plotImage.width,plotImage.height);
+      scalingOptions.updateForPlot(bgrabmp.CanvasBGRA,row,gridTics);
+      drawGridAndRows             (bgrabmp.CanvasBGRA,gridTics);
+      drawCoordSys                (bgrabmp.CanvasBGRA,gridTics);
+      drawCustomText              (bgrabmp.CanvasBGRA);
+      plotImage.Canvas.clear;
       bgrabmp.draw(plotImage.Canvas,0,0,false);
       bgrabmp.free;
     finally
@@ -1595,7 +1642,6 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
     try
-      transparentCount:=p.transparentCount;
       scalingOptions:=p.scalingOptions;
       //copy rows:
       for i:=0 to length(row)-1 do row[i].destroy;

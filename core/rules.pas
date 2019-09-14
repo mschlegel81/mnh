@@ -1289,7 +1289,6 @@ FUNCTION T_memoizedRule.replaces(CONST callLocation:T_tokenLocation; CONST param
 {$MACRO ON}
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
-system.leaveCriticalSection(rule_cs);
 exit}
   VAR lit:P_literal;
       useParam:P_listLiteral;
@@ -1305,26 +1304,10 @@ exit}
       lastRep:=lastRep^.next;
     end;
 
-  FUNCTION enterCriticalSectionWithDeadlockDetection:boolean; inline;
-    CONST millesecondsBeforeRetry=10;
-    begin
-      while (tryEnterCriticalsection(rule_cs)=0) do begin
-        if not(P_context(context)^.messages^.continueEvaluation) then exit(false);
-        ThreadSwitch;
-        sleep(millesecondsBeforeRetry);
-      end;
-      result:=true;
-    end;
-
   begin
     result:=false;
     if param=nil then useParam:=newListLiteral
                  else useParam:=param;
-
-    if not(enterCriticalSectionWithDeadlockDetection) then begin
-      P_context(context)^.raiseError('Deadlock detected, trying to access memoized rule '+getId,callLocation);
-      exit(false);
-    end;
     lit:=cache.get(useParam);
     if lit<>nil then begin
       lit^.rereference;
@@ -1390,52 +1373,6 @@ FUNCTION T_typeCheckRule.replaces(CONST callLocation:T_tokenLocation; CONST para
     lastRep:=firstRep;
     result:=true;
   end;
-
-//FUNCTION T_variable.replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
-//  begin
-//    result:=(not(privateRule) or (getLocation.package=callLocation.package)) and ((param=nil) or (param^.size=0));
-//    if result then begin
-//      {$ifdef fullVersion}
-//      if tco_stackTrace in P_context(context)^.threadOptions
-//      then P_context(context)^.callStackPush(callLocation,@self,newCallParametersNode(param));
-//      {$endif}
-//      system.enterCriticalSection(rule_cs);
-//      try
-//        firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
-//      finally
-//        system.leaveCriticalSection(rule_cs);
-//      end;
-//      lastRep:=firstRep;
-//      called:=true;
-//      {$ifdef fullVersion}
-//      if tco_stackTrace in P_context(context)^.threadOptions
-//      then P_context(context)^.callStackPop(firstRep);
-//      {$endif}
-//    end else result:=isFallbackPossible(callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
-//  end;
-
-//FUNCTION T_datastore.replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
-//  begin
-//    result:=(not(privateRule) or (getLocation.package=callLocation.package)) and ((param=nil) or (param^.size=0));
-//    if result then begin
-//      {$ifdef fullVersion}
-//      if tco_stackTrace in P_context(context)^.threadOptions
-//      then P_context(context)^.callStackPush(callLocation,@self,newCallParametersNode(param));
-//      {$endif}
-//      system.enterCriticalSection(rule_cs);
-//      try
-//        readDataStore(P_context(context)^,recycler);
-//        firstRep:=recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
-//        lastRep:=firstRep;
-//      finally
-//        system.leaveCriticalSection(rule_cs);
-//      end;
-//      {$ifdef fullVersion}
-//      if tco_stackTrace in P_context(context)^.threadOptions
-//      then P_context(context)^.callStackPop(firstRep);
-//      {$endif}
-//    end else result:=isFallbackPossible(callLocation,param,firstRep,lastRep,P_context(context)^,recycler);
-//  end;
 
 FUNCTION T_typeCheckRule.getFirstParameterTypeWhitelist: T_literalTypeSet;
   begin
