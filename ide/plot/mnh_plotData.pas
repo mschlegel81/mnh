@@ -104,7 +104,6 @@ TYPE
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
       customText:array of P_customText;
-      transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
       PROCEDURE drawGridAndRows(CONST target: TBGRACanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
@@ -384,9 +383,11 @@ PROCEDURE T_plotSeriesFrame.performPostedPreparation;
     end;
   end;
 
+VAR preparationThreadsRunning:longint=0;
 FUNCTION preparationThread(p:pointer):ptrint;
   begin
     P_plotSeriesFrame(p)^.performPostedPreparation;
+    interlockedDecrement(preparationThreadsRunning);
     result:=0
   end;
 
@@ -402,6 +403,7 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
       backgroundPreparation:=true;
       postedHeight:=height;
       postedWidth:=width;
+      interLockedIncrement(preparationThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(plotData.cs);
@@ -804,7 +806,6 @@ PROCEDURE T_plot.clear;
       setLength(row, 0);
       for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
       setLength(customText,0);
-      transparentCount:=0;
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -818,7 +819,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       index:=length(row);
       setLength(row, index+1);
       row[index].create(rowData);
-      row[index].style:=getStyle(index,styleOptions,transparentCount);
+      row[index].style:=getStyle(index,styleOptions);
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -1600,7 +1601,6 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
     try
-      transparentCount:=p.transparentCount;
       scalingOptions:=p.scalingOptions;
       //copy rows:
       for i:=0 to length(row)-1 do row[i].destroy;

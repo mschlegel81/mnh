@@ -233,8 +233,8 @@ FUNCTION T_dataRow.toNewLiteralForExport:P_listLiteral;
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
-  CONST BLACK:T_color=(0,0,0);
-        WHITE:T_color=(255,255,255);
+  CONST BLACK:T_color=(0,0,0,255);
+        WHITE:T_color=(255,255,255,255);
   begin
     p[0]:=x;
     p[1]:=y;
@@ -310,11 +310,11 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
       if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
       if isNan(fontSize) then target.Font.height:=absFontSize(xRes,yRes,opt.relativeFontSize)
                          else target.Font.height:=absFontSize(xRes,yRes,            fontSize);
-      target.Font.color:=foreground;
+      target.Font.BGRAColor:=foreground;
       if transparentBackground then target.Brush.style:=bsClear
       else begin
         target.Brush.style:=bsSolid;
-        target.Brush.color:=background;
+        target.Brush.BGRAColor:=background;
       end;
 
       textWidth :=0;
