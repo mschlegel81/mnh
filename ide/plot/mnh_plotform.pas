@@ -388,6 +388,7 @@ PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
 
 PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
   begin
+    animateCheckBox.checked:=false;
     relatedPlot^.startGuiInteraction;
     try
       exportPlotForm.showModalFor(relatedPlot,animationFrameIndex);
