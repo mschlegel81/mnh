@@ -306,12 +306,17 @@ FUNCTION T_workspace.currentEditor: P_editorMeta;
 FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
   VAR i:longint;
   begin
-    i:=length(metas);
-    setLength(metas,i+1);
-    new(result,create(nextMetaIndex));
-    inc(nextMetaIndex);
-    metas[i]:=result;
-    result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
+    enterCriticalSection(workspaceCs);
+    try
+      i:=length(metas);
+      setLength(metas,i+1);
+      new(result,create(nextMetaIndex));
+      inc(nextMetaIndex);
+      metas[i]:=result;
+      result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
+    finally
+      leaveCriticalSection(workspaceCs);
+    end;
   end;
 
 FUNCTION T_workspace.createNewFile:P_editorMeta;
