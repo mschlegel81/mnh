@@ -9,7 +9,8 @@ USES Classes, sysutils, LCLType, types,
      litVar,
      funcs,
      codeAssistance;
-
+CONST
+  COMPLETION_LIST_TARGET_SIZE=100;
 TYPE
 T_completionLogic=object
   private
@@ -25,6 +26,7 @@ T_completionLogic=object
     DESTRUCTOR destroy;
     PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
+    FUNCTION fillFilteredItems(CONST part:string):longint;
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
 end;
@@ -133,8 +135,9 @@ PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAss
     quickEdit:=isQuickEdit;
   end;
 
+CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' '];
+
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
-  CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' '];
   VAR i:longint;
   begin
     {$ifdef debugMode}
@@ -156,13 +159,64 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     end;
   end;
 
+FUNCTION T_completionLogic.fillFilteredItems(CONST part:string):longint;
+  FUNCTION hasExactPrefix(CONST txt:string):boolean;
+    begin
+      result:=startsWith(txt,part);
+    end;
+
+  FUNCTION hasCaseInsensitivePrefix(CONST txt:string):boolean;
+    begin
+      result:=startsWith(uppercase(txt),uppercase(part));
+    end;
+  VAR allWords,
+      words:T_arrayOfString;
+      w    :string;
+      k    :longint=0;
+  begin
+    ensureWordsInEditorForCompletion;
+    allWords:=wordsInEditor.values;
+    setLength(words,length(allWords));
+    for w in allWords do if hasExactPrefix(w) then begin
+      words[k]:=w; inc(k);
+    end;
+    if k>0 //if we have at least one exact match, then we are done here
+    then begin
+      setLength(words,k);
+      sort(words);
+    end else begin
+      setLength(words,k+length(allWords));
+      for w in allWords do if hasCaseInsensitivePrefix(w) then begin
+        words[k]:=w; inc(k);
+      end;
+      setLength(words,k);
+      if k<COMPLETION_LIST_TARGET_SIZE
+      then append(words,getListOfSimilarWords(part,allWords,COMPLETION_LIST_TARGET_SIZE-k,false));
+      sortUnique(words);
+    end;
+
+    SynCompletion.ItemList.clear;
+    for w in words do SynCompletion.ItemList.add(w);
+    if SynCompletion.ItemList.count>0 then result:=0 else result:=-1;
+
+    //cleanup
+    setLength(allWords,0);
+    setLength(words   ,0);
+  end;
+
 PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
   VAR s:string;
-      w:string;
       i:longint;
+  FUNCTION indexOfLastDelimiter:longint;
+    VAR k:longint;
+    begin
+      result:=0;
+      for k:=1 to length(s) do if s[k] in delimiters then result:=k;
+    end;
+
   begin
     s:=SynCompletion.CurrentString;
-    i:=LastDelimiter('.',s);
+    i:=indexOfLastDelimiter;
     if i>1 then begin
       s:=copy(s,i,length(s));
       {$ifdef debugMode}
@@ -176,22 +230,14 @@ PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
       writeln(stdErr,'        DEBUG: Completion start reset "',s,'"')
       {$endif}
     end;
-
-    ensureWordsInEditorForCompletion;
-    SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do SynCompletion.ItemList.add(w);
+    fillFilteredItems(s);
   end;
 
 PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
   VAR s:string;
-      w:string;
   begin
     s:=SynCompletion.CurrentString;
-
-    ensureWordsInEditorForCompletion;
-    SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do  SynCompletion.ItemList.add(w);
-    if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
+    APosition:=fillFilteredItems(s);
   end;
 
 FINALIZATION
