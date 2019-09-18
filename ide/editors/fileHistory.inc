@@ -60,6 +60,7 @@ CONSTRUCTOR T_fileHistory.create(CONST historyRootItem: TMenuItem);
   end;
 
 DESTRUCTOR T_fileHistory.destroy;
+  VAR waitCount:longint=0;
   begin
     setLength(fileItems,0);
     setLength(folderItems,0);
@@ -67,9 +68,14 @@ DESTRUCTOR T_fileHistory.destroy;
     with scriptUsage do begin
       destructionPending:=true;
       enterCriticalSection(cs);
+      while scanning and (waitCount<200) do begin
+        leaveCriticalSection(cs);
+        sleep(10);
+        inc(waitCount);
+        enterCriticalSection(cs);
+      end;
       setLength(dat,0);
       setLength(foldersScanned,0);
-      scanning:=false;
       leaveCriticalSection(cs);
       doneCriticalSection(cs);
     end;
@@ -281,7 +287,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
 
 PROCEDURE T_fileHistory.postUsageScan();
   begin
-    if scriptUsage.scanning then exit;
+    if scriptUsage.scanning or scriptUsage.destructionPending then exit;
     scriptUsage.scanning:=true;
     beginThread(@scanScripts,@self);
   end;

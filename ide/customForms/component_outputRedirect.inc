@@ -25,7 +25,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
 
 FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
   begin
-    result:=length(synOutAdapter^.storedMessages)>0;
+    result:=synOutAdapter^.fill>0;
   end;
 
 PROCEDURE T_secondaryOutputMemoMeta.update;

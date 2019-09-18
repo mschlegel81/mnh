@@ -83,19 +83,19 @@ CONSTRUCTOR T_treeAdapter.create(CONST defaultCaption_: string);
   end;
 
 FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
-  VAR m:P_storedMessage;
-      tree:TVarTreeViewForm;
+  VAR tree:TVarTreeViewForm;
       caption:string;
+      i:longint;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
     try
-      for m in storedMessages do case m^.messageType of
+      for i:=0 to collectedFill-1 do case collected[i]^.messageType of
         mt_displayVariableTree:
           begin
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
             tree:=addChild(TVarTreeViewForm.create(nil));
-            with P_treeDisplayRequest(m)^ do begin
+            with P_treeDisplayRequest(collected[i])^ do begin
               if treeCaption=''
               then caption:=defaultCaption+' ('+intToStr(length(children))+')'
               else caption:=treeCaption;
@@ -106,7 +106,7 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
           end;
         mt_startOfEvaluation:
           begin
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
             destroyAllChildren;
           end;
       end;

@@ -163,8 +163,8 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
-    enterCriticalSection(workspaceCs);
     fileHistory.destroy;
+    enterCriticalSection(workspaceCs);
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
     setLength(metas,0);
     scriptMenu.destroy;

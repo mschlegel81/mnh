@@ -730,24 +730,23 @@ CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter(CONST plot:P_guiPlotSyst
   end;
 
 FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
-  VAR m:P_storedMessage;
-      k:longint;
+  VAR i,k:longint;
       newForm:TscriptedForm;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
     try
-      for m in storedMessages do begin
-        case m^.messageType of
+      for i:=0 to collectedFill-1 do begin
+        case collected[i]^.messageType of
           mt_endOfEvaluation: begin
             for k:=0 to length(scriptedForms)-1 do begin
               scriptedForms[k].adapter:=nil;
               FreeAndNil(scriptedForms[k]);
             end;
             setLength(scriptedForms,0);
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
           end;
-          mt_displayCustomForm: with P_customFormRequest(m)^ do begin
+          mt_displayCustomForm: with P_customFormRequest(collected[i])^ do begin
             newForm:=TscriptedForm.create(nil);
             newForm.displayPending:=true;
             newForm.caption:=setupTitle;
@@ -758,7 +757,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
             setCreatedForm(newForm);
             dockNewForm(newForm);
             newForm.showAndConnectAll;
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
           end;
         end;
       end;

@@ -296,7 +296,8 @@ FUNCTION T_storedMessage.prefix: shortstring;
 CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
   begin
     inherited create(messageType_,loc);
-    txt:=message;
+    setLength(txt,0);
+    append(txt,message);
   end;
 
 CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);

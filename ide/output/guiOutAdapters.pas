@@ -65,21 +65,21 @@ CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
   end;
 
 FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
-  VAR message:P_storedMessage;
+  VAR i:longint;
   begin
     system.enterCriticalSection(adapterCs);
     try
       result:=[];
-      for message in storedMessages do begin
-        include(result,message^.messageType);
-        case message^.messageType of
+      for i:=0 to collectedFill-1 do begin
+        include(result,collected[i]^.messageType);
+        case collected[i]^.messageType of
           mt_guiEditScriptsLoaded,
-          mt_guiEdit_done:        form.onEditFinished(message);
-          mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(message));
+          mt_guiEdit_done:        form.onEditFinished(collected[i]);
+          mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(collected[i]));
           mt_endOfEvaluation    : form.onEndOfEvaluation;
         end;
       end;
-      if length(storedMessages)>0 then clear;
+      if collectedFill>0 then clear;
     finally
       system.leaveCriticalSection(adapterCs);
     end;

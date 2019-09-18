@@ -128,19 +128,20 @@ CONSTRUCTOR T_tableAdapter.create(CONST defaultCaption_: string);
   end;
 
 FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
-  VAR m:P_storedMessage;
+  VAR i:longint;
       tab:TtableForm;
       caption:string;
+
   begin
     result:=[];
     enterCriticalSection(adapterCs);
     try
-      for m in storedMessages do case m^.messageType of
+      for i:=0 to collectedFill-1 do case collected[i]^.messageType of
         mt_displayTable:
           begin
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
             tab:=addChild(TtableForm.create(nil));
-            with P_tableDisplayRequest(m)^ do begin
+            with P_tableDisplayRequest(collected[i])^ do begin
               if tableCaption=''
               then caption:=defaultCaption+' ('+intToStr(length(children))+')'
               else caption:=tableCaption;
@@ -152,7 +153,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
           end;
         mt_startOfEvaluation:
           begin
-            include(result,m^.messageType);
+            include(result,collected[i]^.messageType);
             destroyAllChildren;
           end;
       end;

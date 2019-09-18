@@ -1511,7 +1511,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
       context.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
-      oldMessages^.postCustomMessages(collector.storedMessages);
+      oldMessages^.postCustomMessages(collector.getStoredMessages);
       dataRow.init();
     end;
     context.messages:=oldMessages;

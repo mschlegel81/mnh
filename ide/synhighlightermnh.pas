@@ -472,7 +472,7 @@ PROCEDURE TMnhOutputSyn.next;
           end else inc(run,3);
         else begin
           fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
-          run:=3; //This is the length of the invisible char
+          run:=length(tokenKindByPrefix[specialLineCase].marker)+1; //This is the length of the invisible char
           while (fLine[run]<>#0) do inc(run);
           exit;
         end;

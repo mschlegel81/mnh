@@ -180,10 +180,12 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
 
   PROCEDURE flushBuffer;
     VAR i:longint;
+        edit:TSynEdit;
     begin
-      if length(linesToWrite)>=outputLinesLimit then ensureSynEdit.lines.clear
-      else while ensureSynEdit.lines.count+length(linesToWrite)>outputLinesLimit do SynEdit.lines.delete(0);
-      for i:=bufferOffset to length(linesToWrite)-1+bufferOffset do ensureSynEdit.lines.append(linesToWrite[i mod outputLinesLimit]);
+      edit:=ensureSynEdit;
+      if length(linesToWrite)>=outputLinesLimit then edit.lines.clear
+      else while edit.lines.count+length(linesToWrite)>outputLinesLimit do edit.lines.delete(0);
+      for i:=bufferOffset to length(linesToWrite)-1+bufferOffset do edit.lines.append(linesToWrite[i mod outputLinesLimit]);
       linesToWrite:=C_EMPTY_STRING_ARRAY;
       bufferOffset:=0;
     end;
@@ -348,7 +350,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       if SynEdit<>nil then SynEdit.enabled:=not(lastWasDirectPrint);
     end;
 
-  VAR m:P_storedMessage;
+  VAR i:longint;
   begin
     if not(forceFlush or autoflush) then exit;
     system.enterCriticalSection(adapterCs);
@@ -356,9 +358,9 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
     startOutput;
     try
       removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
-      for m in storedMessages do begin
-        include(result,m^.messageType);
-        singleMessageOut(m);
+      for i:=0 to collectedFill-1 do begin
+        include(result,collected[i]^.messageType);
+        singleMessageOut(collected[i]);
       end;
       clear;
     finally
