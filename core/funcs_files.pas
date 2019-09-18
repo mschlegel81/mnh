@@ -224,17 +224,15 @@ FUNCTION appendFileLines_impl intFuncSignature;
 
 FUNCTION execSync_impl intFuncSignature;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): int64;
-    CONST READ_BYTES = 2048;
-    VAR stdErrDummy:array[0..READ_BYTES-1] of byte;
+    CONST READ_BYTES = 8192;
+    VAR ReadBuffer:array[0..READ_BYTES-1] of byte;
         memStream  : TMemoryStream;
         tempProcess: TProcessUTF8;
         n          : longint;
-        BytesRead  : longint;
         sleepTime  : longint = 1;
     begin
-      initialize(stdErrDummy);
+      initialize(ReadBuffer);
       memStream := TMemoryStream.create;
-      BytesRead := 0;
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
       for n := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[n]);
@@ -245,15 +243,13 @@ FUNCTION execSync_impl intFuncSignature;
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.messages^.continueEvaluation do begin
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(stdErrDummy,length(stdErrDummy));
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
           if tempProcess.running then begin
             if tempProcess.output.NumBytesAvailable>0
-            then begin
-              memStream.setSize(BytesRead+READ_BYTES);
-              n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
-              sleepTime:=0;
-              inc(BytesRead, n);
-            end else begin
+            then repeat
+              n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+              memStream.write(ReadBuffer, n);
+            until n=0 else begin
               n:=0;
               inc(sleepTime);
               sleep(sleepTime);
@@ -262,17 +258,16 @@ FUNCTION execSync_impl intFuncSignature;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(stdErrDummy,length(stdErrDummy));
-          memStream.setSize(BytesRead+READ_BYTES);
-          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
-          if n>0 then inc(BytesRead, n);
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
+          n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+          memStream.write(ReadBuffer, n);
         until n<=0;
         result := tempProcess.ExitCode;
       except
         result := $ffffffff;
       end;
       tempProcess.free;
-      memStream.setSize(BytesRead);
+      memStream.position:=0;
       output := TStringList.create;
       output.loadFromStream(memStream);
       memStream.free;
