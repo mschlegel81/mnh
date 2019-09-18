@@ -1879,7 +1879,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         mt_plot_addAnimationFrame: begin
           result:=true;
           //if there are pending tasks then store else process
-          if (length(storedMessages)>0)
+          if (collectedFill>0)
           then inherited append(message)
           else processMessage(message);
         end;
@@ -1909,10 +1909,10 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       //it does not make sense to render multiple plots in one run
       //Lookup the last display request;
       lastDisplayIndex:=-1;
-      for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
+      for i:=0 to collectedFill-1 do if collected[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
       //process messages
-      for i:=0 to length(storedMessages)-1 do begin
-        m:=storedMessages[i];
+      for i:=0 to collectedFill-1 do begin
+        m:=collected[i];
         include(result,m^.messageType);
         if m^.messageType=mt_plot_postDisplay
         then begin

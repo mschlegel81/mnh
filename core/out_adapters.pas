@@ -69,13 +69,19 @@ TYPE
 
   P_collectingOutAdapter = ^T_collectingOutAdapter;
   T_collectingOutAdapter = object(T_abstractOutAdapter)
-    storedMessages:T_storedMessages;
-    CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
-    DESTRUCTOR destroy; virtual;
-    FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-    PROCEDURE removeDuplicateStoredMessages(CONST messageTypesToDrop:T_messageTypeSet=[mt_clearConsole..mt_timing_info]);
-    PROCEDURE clear; virtual;
-    FUNCTION typesOfStoredMessages:T_messageTypeSet;
+    protected
+      collected:T_storedMessages;
+      collectedFill:longint;
+    public
+      CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+      PROCEDURE removeDuplicateStoredMessages(CONST messageTypesToDrop:T_messageTypeSet=[mt_clearConsole..mt_timing_info]);
+      PROCEDURE clear; virtual;
+      FUNCTION typesOfStoredMessages:T_messageTypeSet;
+      FUNCTION getStoredMessages:T_storedMessages;
+      PROPERTY fill:longint read collectedFill;
+      PROCEDURE cleanupOnMemoryPanic;
   end;
 
   {$ifdef fullVersion}
@@ -485,7 +491,7 @@ FUNCTION T_messagesRedirector.storedMessages(CONST filterDuplicates:boolean): T_
     enterCriticalSection(messagesCs);
     try
       if filterDuplicates then collector.removeDuplicateStoredMessages;
-      result:=collector.storedMessages;
+      result:=collector.getStoredMessages;
     finally
       leaveCriticalSection(messagesCs);
     end;
@@ -496,7 +502,7 @@ FUNCTION T_messagesErrorHolder.storedMessages(CONST filterDuplicates: boolean): 
     enterCriticalSection(messagesCs);
     try
       if filterDuplicates then collector.removeDuplicateStoredMessages;
-      result:=collector.storedMessages;
+      result:=collector.getStoredMessages;
     finally
       leaveCriticalSection(messagesCs);
     end;
@@ -636,10 +642,10 @@ FUNCTION T_messagesDistributor.collectedMessageTypes: T_messageTypeSet;
   end;
 
 FUNCTION T_messagesErrorHolder.collectedMessageTypes: T_messageTypeSet;
-  VAR m:P_storedMessage;
+  VAR i:longint;
   begin
     if parentMessages=nil then result:=[] else result:=parentMessages^.collectedMessageTypes;
-    for m in collector.storedMessages do include(result,m^.messageType);
+    for i:=0 to collector.collectedFill-1 do include(result,collector.collected[i]^.messageType);
   end;
 
 FUNCTION T_messagesDummy.collectedMessageTypes: T_messageTypeSet;
@@ -938,12 +944,16 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
 CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
   begin
     inherited create(typ,messageTypesToInclude_);
-    setLength(storedMessages,0);
+    setLength(collected,0);
+    collectedFill:=0;
+    memoryCleaner.registerObjectForCleanup(@cleanupOnMemoryPanic);
   end;
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
-    clear;
+    memoryCleaner.unregisterObjectForCleanup(@cleanupOnMemoryPanic);
+    setLength(collected,0);
+    collectedFill:=0;
     inherited destroy;
   end;
 
@@ -957,8 +967,9 @@ FUNCTION T_collectingOutAdapter.append(CONST message: P_storedMessage):boolean;
     if result then begin
       system.enterCriticalSection(adapterCs);
       try
-        setLength(storedMessages,length(storedMessages)+1);
-        storedMessages[length(storedMessages)-1]:=message^.rereferenced;
+        if collectedFill>=length(collected) then setLength(collected,round(1+1.2*length(collected)));
+        collected[collectedFill]:=message^.rereferenced;
+        inc(collectedFill);
       finally
         system.leaveCriticalSection(adapterCs);
       end;
@@ -969,42 +980,72 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages(CONST messageType
   VAR i,j,k:longint;
       isDuplicate:boolean=false;
   begin
-    if length(storedMessages)<=1 then exit;
-    k:=1;
-    for j:=1 to length(storedMessages)-1 do begin
-      isDuplicate:=false;
-      if storedMessages[j]^.messageType in messageTypesToDrop then
-      for i:=0 to k-1 do isDuplicate:=isDuplicate or storedMessages[i]^.equals(storedMessages[j]);
-      if not(isDuplicate) then begin
-        storedMessages[k]:=storedMessages[j];
-        inc(k);
-      end else begin
-        disposeMessage(storedMessages[j]);
-      end;
+    enterCriticalSection(adapterCs);
+    if collectedFill<=1 then begin
+      leaveCriticalSection(adapterCs);
+      exit;
     end;
-    setLength(storedMessages,k);
+    try
+      k:=1;
+      for j:=1 to collectedFill-1 do begin
+        isDuplicate:=false;
+        if collected[j]^.messageType in messageTypesToDrop then
+        for i:=0 to k-1 do isDuplicate:=isDuplicate or collected[i]^.equals(collected[j]);
+        if not(isDuplicate) then begin
+          collected[k]:=collected[j];
+          inc(k);
+        end else begin
+          disposeMessage(collected[j]);
+        end;
+      end;
+      collectedFill:=k;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
+  end;
+
+PROCEDURE T_collectingOutAdapter.cleanupOnMemoryPanic;
+  begin
+    enterCriticalSection(adapterCs);
+    try
+      setLength(collected,collectedFill);
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
   end;
 
 PROCEDURE T_collectingOutAdapter.clear;
-  VAR m:P_storedMessage;
+  VAR i:longint;
   begin
     system.enterCriticalSection(adapterCs);
     try
       inherited clear;
-      for m in storedMessages do disposeMessage_(m);
-      setLength(storedMessages,0);
+      for i:=0 to collectedFill-1 do disposeMessage(collected[i]);
+      collectedFill:=0;
     finally
       system.leaveCriticalSection(adapterCs);
     end;
   end;
 
 FUNCTION T_collectingOutAdapter.typesOfStoredMessages:T_messageTypeSet;
-  VAR m:P_storedMessage;
+  VAR i:longint;
   begin
     system.enterCriticalSection(adapterCs);
     try
       result:=[];
-      for m in storedMessages do include(result,m^.messageType);
+      for i:=0 to collectedFill-1 do include(result,collected[i]^.messageType);
+    finally
+      system.leaveCriticalSection(adapterCs);
+    end;
+  end;
+
+FUNCTION T_collectingOutAdapter.getStoredMessages:T_storedMessages;
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(adapterCs);
+    try
+      setLength(result,collectedFill);
+      for i:=0 to length(result)-1 do result[i]:=collected[i];
     finally
       system.leaveCriticalSection(adapterCs);
     end;
@@ -1014,11 +1055,11 @@ FUNCTION T_collectingOutAdapter.typesOfStoredMessages:T_messageTypeSet;
 FUNCTION T_textFileOutAdapter.flush:boolean;
   VAR handle:text;
       s:string;
-      m:P_storedMessage;
+      i:longint;
   begin
     enterCriticalSection(adapterCs);
     try
-      if length(storedMessages)>0 then begin
+      if collectedFill>0 then begin
         result:=true;
         try
           assign(handle,outputFileName);
@@ -1026,11 +1067,11 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
           then system.append(handle)
           else rewrite(handle);
           forceRewrite:=false;
-          for m in storedMessages do begin
-            case m^.messageType of
-              mt_printline  : for s in m^.messageText do writeln(handle,s);
-              mt_printdirect: for s in m^.messageText do write  (handle,s);
-              else for s in m^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
+          for i:=0 to collectedFill-1 do begin
+            case collected[i]^.messageType of
+              mt_printline  : for s in collected[i]^.messageText do writeln(handle,s);
+              mt_printdirect: for s in collected[i]^.messageText do write  (handle,s);
+              else for s in collected[i]^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
             end;
           end;
           clear;
@@ -1056,7 +1097,7 @@ FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
     result:=inherited append(message);
     enterCriticalSection(adapterCs);
     try
-      if length(storedMessages)>100 then flush;
+      if collectedFill>100 then flush;
     finally
       leaveCriticalSection(adapterCs);
     end;

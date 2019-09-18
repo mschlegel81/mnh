@@ -75,16 +75,16 @@ CONSTRUCTOR T_profileAdapter.create();
   end;
 
 FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
-  VAR m:P_storedMessage;
+  VAR i:longint;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
     try
-      for m in storedMessages do case m^.messageType of
+      for i:=0 to collectedFill-1 do case collected[i]^.messageType of
         mt_profile_call_info:
           begin
-            include(result,m^.messageType);
-            ensureProfileView.setProfilingList(P_profileMessage(m)^.content);
+            include(result,collected[i]^.messageType);
+            ensureProfileView.setProfilingList(P_profileMessage(collected[i])^.content);
           end;
       end;
       clear;
