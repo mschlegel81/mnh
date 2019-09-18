@@ -585,8 +585,8 @@ FUNCTION T_imageSystem.append(CONST message: P_storedMessage): boolean;
         mt_image_close,
         mt_image_obtainImageData,
         mt_image_obtainDimensions:begin
-          if length(storedMessages)=0 then processMessage(message)
-                                      else inherited append(message);
+          if collectedFill=0 then processMessage(message)
+                             else inherited append(message);
           result:=true;
         end;
         else result:=false;
@@ -602,7 +602,7 @@ FUNCTION T_imageSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
     enterCriticalSection(adapterCs);
     try
       result:=typesOfStoredMessages;
-      for m in storedMessages do processMessage(m);
+      for m in getStoredMessages do processMessage(m);
       clear;
     finally
       leaveCriticalSection(adapterCs);
