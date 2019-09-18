@@ -114,7 +114,9 @@ TYPE
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
+      {$ifdef debugMode}
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+      {$endif}
   end;
 
   T_flaggedAdapter=record
@@ -288,6 +290,7 @@ FUNCTION fileFlushThread(p:pointer):ptrint;
       end else inc(k);
       sleep(100);
     end;
+    for messageConnector in allConnectors do messageConnector^.flushAllFiles;
     result:=interlockedDecrement(flushThreadsRunning);
   end;
 
@@ -951,9 +954,11 @@ CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST message
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
+    enterCriticalSection(adapterCs);
     memoryCleaner.unregisterObjectForCleanup(@cleanupOnMemoryPanic);
+    clear;
     setLength(collected,0);
-    collectedFill:=0;
+    leaveCriticalSection(adapterCs);
     inherited destroy;
   end;
 
@@ -1092,16 +1097,19 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messag
     lastOutput:=now;
   end;
 
+{$ifdef debugMode}
 FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
   begin
-    result:=inherited append(message);
+    result:=false;
     enterCriticalSection(adapterCs);
     try
+      result:=inherited append(message);
       if collectedFill>100 then flush;
     finally
       leaveCriticalSection(adapterCs);
     end;
   end;
+{$endif}
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin

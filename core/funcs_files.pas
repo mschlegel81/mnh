@@ -249,7 +249,7 @@ FUNCTION execSync_impl intFuncSignature;
             then repeat
               n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
               memStream.write(ReadBuffer, n);
-            until n=0 else begin
+            until n<=0 else begin
               n:=0;
               inc(sleepTime);
               sleep(sleepTime);

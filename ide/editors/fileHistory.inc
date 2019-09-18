@@ -67,12 +67,12 @@ DESTRUCTOR T_fileHistory.destroy;
     fileWrappers.logFolderCallback:=nil;
     with scriptUsage do begin
       destructionPending:=true;
-      EnterCriticalsection(cs);
+      enterCriticalSection(cs);
       while scanning and (waitCount<200) do begin
-        LeaveCriticalsection(cs);
+        leaveCriticalSection(cs);
         sleep(10);
         inc(waitCount);
-        EnterCriticalsection(cs);
+        enterCriticalSection(cs);
       end;
       setLength(dat,0);
       setLength(foldersScanned,0);
