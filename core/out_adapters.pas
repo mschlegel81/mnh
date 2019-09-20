@@ -949,15 +949,12 @@ CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST message
     inherited create(typ,messageTypesToInclude_);
     setLength(collected,0);
     collectedFill:=0;
-    memoryCleaner.registerObjectForCleanup(@cleanupOnMemoryPanic);
   end;
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
     enterCriticalSection(adapterCs);
-    memoryCleaner.unregisterObjectForCleanup(@cleanupOnMemoryPanic);
     clear;
-    setLength(collected,0);
     leaveCriticalSection(adapterCs);
     inherited destroy;
   end;
@@ -972,7 +969,7 @@ FUNCTION T_collectingOutAdapter.append(CONST message: P_storedMessage):boolean;
     if result then begin
       system.enterCriticalSection(adapterCs);
       try
-        if collectedFill>=length(collected) then setLength(collected,round(1+1.2*length(collected)));
+        if collectedFill>=length(collected) then setLength(collected,round(1+1.5*length(collected)));
         collected[collectedFill]:=message^.rereferenced;
         inc(collectedFill);
       finally
@@ -1009,16 +1006,6 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages(CONST messageType
     end;
   end;
 
-PROCEDURE T_collectingOutAdapter.cleanupOnMemoryPanic;
-  begin
-    enterCriticalSection(adapterCs);
-    try
-      setLength(collected,collectedFill);
-    finally
-      leaveCriticalSection(adapterCs);
-    end;
-  end;
-
 PROCEDURE T_collectingOutAdapter.clear;
   VAR i:longint;
   begin
@@ -1027,6 +1014,7 @@ PROCEDURE T_collectingOutAdapter.clear;
       inherited clear;
       for i:=0 to collectedFill-1 do disposeMessage(collected[i]);
       collectedFill:=0;
+      setLength(collected,length(collected) div 2);
     finally
       system.leaveCriticalSection(adapterCs);
     end;
