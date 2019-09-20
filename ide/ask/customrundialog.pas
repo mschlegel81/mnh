@@ -9,6 +9,9 @@ USES
   EditBtn,mnh_settings, editorMeta;
 
 TYPE
+
+  { TCustomRunForm }
+
   TCustomRunForm = class(TForm)
     Button1: TButton;
     scriptParamEdit: TComboBox;
@@ -32,6 +35,7 @@ TYPE
     PROCEDURE customLocRbChange(Sender: TObject);
     PROCEDURE DirectoryEditChange(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     PROCEDURE fullVersionRbChange(Sender: TObject);
     PROCEDURE guiFlagCbChange(Sender: TObject);
     PROCEDURE headlessFlagCbChange(Sender: TObject);
@@ -80,13 +84,6 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean; OUT mainParameters:string)
 PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
   begin
     with runnerModel.externalRunOptions do begin
-      if not(fileExists(settings.lightFlavourLocation)) then begin
-        callLightFlavour:=false;
-        lightVersionRb.enabled:=false;
-      end;
-      if callLightFlavour
-      then lightVersionRb.checked:=true
-      else fullVersionRb.checked :=true;
       guiFlagCb     .checked:=clf_GUI in flags;
       quietFlagCb   .checked:=clf_QUIET in flags;
       silentFlagCb  .checked:=clf_SILENT in flags;
@@ -102,6 +99,17 @@ PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
         DirectoryEdit.caption:=customFolder;
       end;
     end;
+  end;
+
+procedure TCustomRunForm.FormShow(Sender: TObject);
+  begin
+    if not(fileExists(settings.lightFlavourLocation)) then begin
+      callLightFlavour:=false;
+      lightVersionRb.enabled:=false;
+    end;
+    if callLightFlavour
+    then lightVersionRb.checked:=true
+    else fullVersionRb.checked :=true;
   end;
 
 PROCEDURE TCustomRunForm.customLocRbChange(Sender: TObject);

@@ -81,7 +81,6 @@ TYPE
       FUNCTION typesOfStoredMessages:T_messageTypeSet;
       FUNCTION getStoredMessages:T_storedMessages;
       PROPERTY fill:longint read collectedFill;
-      PROCEDURE cleanupOnMemoryPanic;
   end;
 
   {$ifdef fullVersion}
