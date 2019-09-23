@@ -1110,7 +1110,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier,tt_userRule,tt_intrinsicRule:begin
+        tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType,tt_customTypeCheck:begin
           if lastWasLocalModifier then begin
             t^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
@@ -1163,7 +1163,7 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
           localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
           localIdStack.addId(lastTokenized^.txt   ,lastLocation,tt_eachParameter);
         end;
-        tt_identifier,tt_userRule,tt_intrinsicRule:
+        tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType,tt_customTypeCheck:
           if lastWasLocalModifier then begin
             lastTokenized^.tokType:=tt_blockLocalVariable;
             case localIdStack.addId(lastTokenized^.txt,lastLocation,tt_blockLocalVariable) of

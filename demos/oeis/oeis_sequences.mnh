@@ -376,8 +376,8 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   //zero based index
   local base:=(ln(sequence)/ln([0..sequence.size-1])).filter({!isNan($x) AND !isInfinite($x)});
   base:=(base.agg(+)/base.size);
-  sequence==          round([0..sequence.size-1]^base)
-  ? return [format(sequence==[0..sequence.size-1]^round(base)
+  sequence==      try({round([0..sequence.size-1]^base)},[""])
+  ? return [format(sequence==try({[0..sequence.size-1]^round(base)},[""])
            ?       'rangeGenerator(0)^%{round($0)}s'
            : 'round(rangeGenerator(0)^%s)',base),'power series']
   : void;
@@ -385,7 +385,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   //one based index
   base:=(ln(sequence)/ln([1..sequence.size])).filter({!isNan($x) AND !isInfinite($x)});
   base:=(base.agg(+)/base.size);
-  sequence==          round([1..sequence.size]^base)
+  sequence==           round([1..sequence.size]^base)
   ? return [format(sequence==[1..sequence.size]^round(base)
            ?       'rangeGenerator(1)^%{round($1)}s'
            : 'round(rangeGenerator(1)^%s)',base),'power series']
@@ -395,7 +395,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   base:=(ln(sequence)/[0..sequence.size-1]).filter({!isNan($x) AND !isInfinite($x)});
   base:=base.exp.sort[base.size div 2];
 
-  sequence==                round(base^ [0..sequence.size-1])
+  sequence==                 round(base ^[0..sequence.size-1])
   ? return [format(sequence==round(base)^[0..sequence.size-1]
            ? '%{round($0)}s^rangeGenerator(0)'
            : 'round(%s^rangeGenerator(0))',base),'exponential series']
@@ -405,7 +405,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   base:=(ln(sequence)/[1..sequence.size]).filter({!isNan($x) AND !isInfinite($x)});
   base:=base.exp.sort[base.size div 2];
 
-  sequence==                round(base^ [1..sequence.size])
+  sequence==                 round(base ^[1..sequence.size])
   ? return [format(sequence==round(base)^[1..sequence.size-1]
            ? '%{round($0)}s^rangeGenerator(1)'
            : 'round(%s^rangeGenerator(1))',base),'exponential series']
