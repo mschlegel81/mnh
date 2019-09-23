@@ -208,6 +208,7 @@ object IdeMainForm: TIdeMainForm
       Top = 1
       Width = 217
       Align = alClient
+      Alignment = taRightJustify
       ParentColor = False
       ParentFont = False
     end
