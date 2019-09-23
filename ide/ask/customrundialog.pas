@@ -35,7 +35,7 @@ TYPE
     PROCEDURE customLocRbChange(Sender: TObject);
     PROCEDURE DirectoryEditChange(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
-    procedure FormShow(Sender: TObject);
+    PROCEDURE FormShow(Sender: TObject);
     PROCEDURE fullVersionRbChange(Sender: TObject);
     PROCEDURE guiFlagCbChange(Sender: TObject);
     PROCEDURE headlessFlagCbChange(Sender: TObject);
@@ -101,13 +101,13 @@ PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
     end;
   end;
 
-procedure TCustomRunForm.FormShow(Sender: TObject);
+PROCEDURE TCustomRunForm.FormShow(Sender: TObject);
   begin
     if not(fileExists(settings.lightFlavourLocation)) then begin
-      callLightFlavour:=false;
+      runnerModel.externalRunOptions.callLightFlavour:=false;
       lightVersionRb.enabled:=false;
     end;
-    if callLightFlavour
+    if runnerModel.externalRunOptions.callLightFlavour
     then lightVersionRb.checked:=true
     else fullVersionRb.checked :=true;
   end;
