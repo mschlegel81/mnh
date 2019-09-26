@@ -359,8 +359,6 @@ DESTRUCTOR T_filterGenerator.destroy;
   end;
 
 FUNCTION filter_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
