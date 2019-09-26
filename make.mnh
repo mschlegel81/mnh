@@ -97,7 +97,7 @@ private buildExe(B:Map)->
   ? begin
       ensureCodeHash;
       ensureBuildNumber;
-      tprint('Building ',B['targetDest']);
+      tprint('Building ',B['targetDest'].systemSpecificFilename);
       local compilerOutput:=head(exec@(B['compilerCall']));
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max) orElse 0);
       compilerOutput:=sepLine|

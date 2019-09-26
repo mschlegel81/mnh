@@ -208,8 +208,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         //---------------------------------------------process other body parts (if any)
       end;
 
-    VAR iterator:P_expressionLiteral;
-        iteratorSource:P_literal;
+    VAR input:P_literal;
         i:longint;
         eachLocation:T_tokenLocation;
 
@@ -245,23 +244,21 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         exit;
       end;
       if not(parseBodyOk) then exit;
-      iteratorSource:=P_literal(first^.data);
-      iterator:=newIterator(iteratorSource);
+      input:=P_literal(first^.data);
       first^.next:=recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context,recycler)
-        else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context,recycler);
+        then processListParallel(input,bodyRule,aggregator,eachLocation,context,recycler)
+        else processListSerial  (input,bodyRule,aggregator,eachLocation,context,recycler);
       end else begin
         if eachType = tt_parallelEach then context.messages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
-        aggregate(iterator,aggregator,eachLocation,context,recycler);
+        aggregate(input,aggregator,eachLocation,context,recycler);
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
-      disposeLiteral(iterator);
-      disposeLiteral(iteratorSource);
+      disposeLiteral(input);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
