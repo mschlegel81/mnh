@@ -651,6 +651,7 @@ PROCEDURE TplotForm.updateInteractiveSection;
     end else begin
       AnimationGroupBox.AutoSize:=false;
       AnimationGroupBox.height:=0;
+      animateCheckBox.checked:=false;
     end;
   end;
 

@@ -256,7 +256,7 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
       end;
     end else new(result,create);
     with result^ do begin
-      options           :=parentThread^.options;
+      options           :=parentThread^.options-[tco_spawnWorker];
       allowedSideEffects:=parentThread^.allowedSideEffects;
       {$ifdef fullVersion}
       callStack.clear;
@@ -776,7 +776,7 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      if ((context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) or not(isMemoryInComfortZone)) and not(isVolatile)
+      if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) or not(isMemoryInComfortZone))
       then evaluate(recycler)
       else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
     finally
@@ -836,7 +836,6 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
     end;
-
   begin
     system.enterCriticalSection(cs);
     try

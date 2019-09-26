@@ -119,7 +119,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="86">
+    <Units Count="87">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -564,6 +564,10 @@
         <Filename Value="../core/funcs_math.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit85>
+      <Unit86>
+        <Filename Value="../core/builtinGenerators.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit86>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

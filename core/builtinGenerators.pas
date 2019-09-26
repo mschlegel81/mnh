@@ -359,30 +359,11 @@ DESTRUCTOR T_filterGenerator.destroy;
   end;
 
 FUNCTION filter_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       case arg0^.literalType of
-        lt_emptyList,
-        lt_emptySet,
-        lt_emptyMap: result:=arg0^.rereferenced;
-        lt_map:begin
-          result:=newMapLiteral;
-          iter:=map0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x,nil) then
-            mapResult^.put(P_listLiteral(x)^.value[0],P_listLiteral(x)^.value[1],true);
-          disposeLiteral(iter);
-        end;
-        lt_list..lt_stringList,
-        lt_set ..lt_stringSet: begin
-          result:=collection0^.newOfSameType(false);
-          iter:=collection0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,@recycler,true,x,nil) then
-            collResult^.append(x,true);
-          disposeLiteral(iter);
-        end;
+        lt_list..lt_map: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
@@ -391,28 +372,12 @@ FUNCTION filter_imp intFuncSignature;
   end;
 
 FUNCTION parallelFilter_imp intFuncSignature;
-  VAR iterator:P_expressionLiteral;
   begin
     result:=nil;
     if not(tco_spawnWorker in context.threadOptions) or (context.callDepth>STACK_DEPTH_LIMIT-16) or not(isMemoryInComfortZone) then exit(filter_imp(params,tokenLocation,context,recycler));
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       case arg0^.literalType of
-        lt_emptyList,
-        lt_emptySet,
-        lt_emptyMap: result:=arg0^.rereferenced;
-        lt_map:begin
-          result:=newMapLiteral;
-          iterator:=newIterator(map0);
-          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler,P_mapLiteral(result));
-          disposeLiteral(iterator);
-        end;
-        lt_list..lt_stringList,
-        lt_set ..lt_stringSet: begin
-          result:=collection0^.newOfSameType(false);
-          iterator:=newIterator(collection0);
-          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,recycler,P_collectionLiteral(result));
-          disposeLiteral(iterator);
-        end;
+        lt_list..lt_map: result:=processFilterParallel(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;

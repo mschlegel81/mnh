@@ -171,15 +171,6 @@ FUNCTION toMap_imp intFuncSignature;
     end;
   end;
 
-FUNCTION toGenerator_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression) then begin
-      result:=arg0^.rereferenced;
-      P_expressionLiteral(result)^.makeIteratable(@context,tokenLocation);
-    end;
-  end;
-
 {$MACRO ON}
 {$define GENERIC_TYPE_CHECK:=FUNCTION FUNC_ID intFuncSignature;
   begin
@@ -247,9 +238,6 @@ INITIALIZATION
   BUILTIN_TOSET:=
   registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,ak_unary{$ifdef fullVersion},'toSet(X);#Casts X to set or wraps a scalar in a set'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,ak_unary{$ifdef fullVersion},'toMap(X:Collection);#Casts X to map or throws an error if not possible'{$endif});
-  registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
-  registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
-                                                                            ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});
   registerRule(TYPECAST_NAMESPACE,'typeOf'             ,@typeOf_imp         ,ak_unary     {$ifdef fullVersion},'typeOf(x); //Returns a description of x''s type'{$endif});
   registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,ak_unary     {$ifdef fullVersion},'isVoid(x); //Returns true if x is void (or no arguments were given)'{$endif});
   registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,ak_unary     {$ifdef fullVersion},'isScalar(x); //Returns true if x is a scalar'{$endif});

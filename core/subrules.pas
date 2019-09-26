@@ -171,6 +171,7 @@ FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONS
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
+VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
 USES sysutils;
 
@@ -904,14 +905,12 @@ FUNCTION newBuiltinExpression(CONST f: P_intFuncCallback; CONST meta:T_builtinFu
     new(P_builtinExpression(result),create(f,meta));
   end;
 
-VAR identifiedInternalFunctionTally:longint=0;
 CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
   VAR loc:T_tokenLocation;
   begin
     loc.package:=@MNH_PSEUDO_PACKAGE;
     loc.column:=1;
-    loc.line:=identifiedInternalFunctionTally;
-    interLockedIncrement(identifiedInternalFunctionTally);
+    loc.line:=interLockedIncrement(identifiedInternalFunctionTally);
     inherited create(et_builtin,loc);
     id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
     func:=f;
