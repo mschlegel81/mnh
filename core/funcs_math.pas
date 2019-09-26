@@ -977,9 +977,11 @@ FUNCTION euklideanNorm_impl intFuncSignature;
   VAR k:longint;
       total:double=0;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_intList,lt_realList]) then begin
-      for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
-      result:=newRealLiteral(sqrt(total));
+    if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType in [lt_numList,lt_intList,lt_realList]) then begin
+        for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
+        result:=newRealLiteral(sqrt(total));
+      end else result:=genericVectorization('euklideanNorm',params,tokenLocation,context,recycler);
     end else result:=nil;
   end;
 
