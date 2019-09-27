@@ -164,6 +164,7 @@ PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of 
   begin
     if length(FileNames)=0 then exit;
     editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
+    BringToFront;
   end;
 
 PROCEDURE TIdeMainForm.FormKeyPress(Sender: TObject; VAR key: char);
