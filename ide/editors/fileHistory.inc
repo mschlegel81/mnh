@@ -86,6 +86,7 @@ FUNCTION T_fileHistory.getSerialVersion: dword; begin result:=176494; end;
 FUNCTION canonicalFileName(CONST s:string):string;
   begin
     result:=replaceAll(replaceAll(replaceAll(expandFileName(s),'\','/'),'//','/'),'/',DirectorySeparator);
+    if result[length(result)]=DirectorySeparator then result:=copy(result,1,length(result)-1);
   end;
 
 FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
