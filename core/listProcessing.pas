@@ -243,7 +243,6 @@ PROCEDURE processListParallel(CONST input:P_literal;
         eachParameter:=x^.rereferenced;
       end;
       inc(enqueueFill);
-      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         inc(processed,enqueueFill);
         defineAndEnqueueTask;
@@ -381,7 +380,7 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
       end;
     end;
 
-  PROCEDURE createTask(CONST x:T_arrayOfLiteral); {$ifndef debugMode} inline; {$endif}
+  PROCEDURE createTask(CONST x:T_arrayOfLiteral);
     VAR task:P_mapTask;
     begin
       with recycling do if fill>0 then begin
@@ -402,13 +401,12 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
   VAR nextToEnqueue:T_arrayOfLiteral;
       enqueueFill:longint=0;
       elementsProcessed:longint=0;
-  FUNCTION enqueueValue(CONST x:P_literal):boolean;
+  FUNCTION enqueueValue(CONST x:P_literal):boolean; {$ifndef debugMode} inline; {$endif}
     begin
       nextToEnqueue[enqueueFill]:=x;
       if x<>nil then x^.rereference;
       inc(enqueueFill);
       inc(elementsProcessed);
-      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
         if isMemoryInComfortZone
@@ -518,7 +516,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
       end;
     end;
 
-  PROCEDURE createTask(CONST x:T_arrayOfLiteral); {$ifndef debugMode} inline; {$endif}
+  PROCEDURE createTask(CONST x:T_arrayOfLiteral);
     VAR task:P_filterTask;
     begin
       with recycling do if fill>0 then begin
@@ -539,12 +537,11 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
   VAR nextToEnqueue:T_arrayOfLiteral;
       enqueueFill:longint=0;
       elementsProcessed:longint=0;
-  FUNCTION enqueueValue(CONST x:P_literal):boolean;
+  FUNCTION enqueueValue(CONST x:P_literal):boolean; {$ifndef debugMode} inline; {$endif}
     begin
       nextToEnqueue[enqueueFill]:=x^.rereferenced;
       inc(enqueueFill);
       inc(elementsProcessed);
-      if not(isMemoryInComfortZone) and (enqueueFill<length(nextToEnqueue)) then setLength(nextToEnqueue,enqueueFill);
       if enqueueFill>=length(nextToEnqueue) then begin
         createTask(nextToEnqueue);
         if isMemoryInComfortZone
