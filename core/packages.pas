@@ -1044,7 +1044,11 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
     end else begin
       readyForUsecase:=lu_NONE;
-      if isMain and isPlainScript then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+      if isMain and
+         isPlainScript and
+         not(globals.primaryContext.continueEvaluation) and
+         not(FlagGUINeeded in globals.primaryContext.messages^.getFlags)
+      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
     end;
 
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
@@ -1172,11 +1176,11 @@ FUNCTION T_package.getHelpOnMain: ansistring;
     if mainRule=nil
     then exit('The package contains no main rule')
     else begin
-      result:='Try one of the following:'+LineEnding;
+      result:='';
       docText:=mainRule^.getCmdLineHelpText;
-      for i:=0 to 1 do result:=result+LineEnding+docText[i];
+      for i:=0 to 1 do result+=LineEnding+docText[i];
       dropFirst(docText,2);
-      result:=result+LineEnding+join(formatTabs(docText),LineEnding);
+      result+=LineEnding+join(formatTabs(docText),LineEnding);
     end;
   end;
 

@@ -14,7 +14,7 @@ object QuickEvalForm: TQuickEvalForm
   OnDestroy = FormDestroy
   OnResize = FormResize
   PopupMenu = OutputPopupMenu
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.4.0'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
     Height = 24
@@ -24,7 +24,7 @@ object QuickEvalForm: TQuickEvalForm
     Caption = 'evaluate in current package'
     ParentFont = False
     PopupMenu = OutputPopupMenu
-    TabOrder = 0
+    TabOrder = 2
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
@@ -48,7 +48,7 @@ object QuickEvalForm: TQuickEvalForm
     ParentColor = False
     ParentFont = False
     PopupMenu = OutputPopupMenu
-    TabOrder = 2
+    TabOrder = 0
     Gutter.Width = 66
     Gutter.MouseActions = <>
     RightGutter.Width = 0
@@ -546,7 +546,7 @@ object QuickEvalForm: TQuickEvalForm
     ParentColor = False
     ParentFont = False
     PopupMenu = OutputPopupMenu
-    TabOrder = 3
+    TabOrder = 1
     Gutter.Width = 66
     Gutter.MouseActions = <>
     RightGutter.Width = 0
