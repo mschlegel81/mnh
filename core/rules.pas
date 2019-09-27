@@ -1223,12 +1223,12 @@ PROCEDURE T_typeCastRule.setIdResolved;
 {$endif}
 
 FUNCTION T_ruleWithSubrules.getCmdLineHelpText: T_arrayOfString;
-  VAR i:longint;
-      txt:string;
+  VAR sub:P_subruleExpression;
+      txt:string='';
   begin
-    txt:=inherited getCmdLineHelpText[0];
-    for i:=0 to length(subrules)-1 do txt:=txt+C_lineBreakChar+subrules[i]^.getCmdLineHelpText();
+    for sub in subrules do txt+=sub^.getCmdLineHelpText()+C_lineBreakChar;
     result:=formatTabs(split(txt));
+    prepend(result,inherited getCmdLineHelpText[0]);
   end;
 
 FUNCTION T_ruleWithSubrules.isReportable(OUT value: P_literal): boolean;
