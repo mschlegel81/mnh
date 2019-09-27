@@ -41,6 +41,7 @@ OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 OPERATOR = (CONST x,y:T_searchTokenLocation):boolean;
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;
+OPERATOR < (CONST x,y:T_searchTokenLocation):boolean;
 FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION positionIsBeforeLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
@@ -101,11 +102,20 @@ OPERATOR = (CONST x,y:T_searchTokenLocation):boolean;
 
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;
   begin
-    if (x.package^.getPath<y.package^.getPath) then exit(true);
-    if (x.package^.getPath>y.package^.getPath) then exit(false);
-    if (x.line            <y.line            ) then exit(true);
-    if (x.line            >y.line            ) then exit(false);
+    if x.package^.getPath<y.package^.getPath then exit(true);
+    if x.package^.getPath>y.package^.getPath then exit(false);
+    if x.line            <y.line             then exit(true);
+    if x.line            >y.line             then exit(false);
     result:=x.column      <y.column;
+  end;
+
+OPERATOR < (CONST x,y:T_searchTokenLocation):boolean;
+  begin
+    if x.fileName  <y.fileName then exit(true);
+    if x.fileName  >y.fileName then exit(false);
+    if x.line      <y.line     then exit(true);
+    if x.line      >y.line     then exit(false);
+    result:=x.column<y.column;
   end;
 
 FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
