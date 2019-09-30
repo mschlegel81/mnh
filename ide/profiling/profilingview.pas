@@ -21,6 +21,7 @@ TYPE
     StringGrid1: TStringGrid;
     StringGrid2: TStringGrid;
     StringGrid3: TStringGrid;
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE StringGrid1HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
@@ -41,6 +42,7 @@ TYPE
     grid1Sorting:byte;
     grid2Sorting:byte;
     grid2Autosized:boolean;
+    canOpenLocation:boolean;
     profilingList:T_profilingList;
     PROCEDURE setProfilingList(CONST list:T_profilingList);
     PROCEDURE fillGrid1;
@@ -52,7 +54,8 @@ TYPE
   P_profileAdapter=^T_profileAdapter;
   T_profileAdapter=object(T_abstractGuiOutAdapter)
     defaultCaption:string;
-    CONSTRUCTOR create();
+    canOpenLocation:boolean;
+    CONSTRUCTOR create(CONST fullIdeMode:boolean);
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
   end;
 
@@ -70,9 +73,10 @@ FUNCTION ensureProfileView:TprofilingOutputForm;
     result:=myProfilingForm;
   end;
 
-CONSTRUCTOR T_profileAdapter.create();
+CONSTRUCTOR T_profileAdapter.create(CONST fullIdeMode:boolean);
   begin
     inherited create(at_profilingView,[mt_profile_call_info]);
+    canOpenLocation:=fullIdeMode;
   end;
 
 FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
@@ -86,6 +90,7 @@ FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSe
           begin
             include(result,collected[i]^.messageType);
             ensureProfileView.setProfilingList(P_profileMessage(collected[i])^.content);
+            ensureProfileView.canOpenLocation:=canOpenLocation;
           end;
       end;
       clear;
@@ -149,6 +154,11 @@ PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
+PROCEDURE TprofilingOutputForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    if not(canOpenLocation) then CloseAction:=caFree;
+  end;
+
 PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
   begin
     unregisterFontControl(StringGrid1);
@@ -164,7 +174,7 @@ PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,aRow: 
 PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: char);
   VAR i:longint;
   begin
-    if key=#13 then begin
+    if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
       workspace.openLocation(profilingList[i].calleeLocation);
     end else writeln('StringGridKeyPress ',ord(key));
@@ -174,7 +184,7 @@ PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: cha
   VAR i,j:longint;
       loc:T_searchTokenLocation;
   begin
-    if key=#13 then begin
+    if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid2.selection.top-1;
       workspace.openLocation(profilingList[i].callers[j].location);
@@ -185,7 +195,7 @@ PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: cha
   VAR i,j:longint;
       loc:T_searchTokenLocation;
   begin
-    if key=#13 then begin
+    if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid3.selection.top-1;
       workspace.openLocation(profilingList[i].callees[j].location);
@@ -284,15 +294,9 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
         StringGrid3.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callees[i].time.timeSpent_exclusive*1E3)+'ms';
       end;
       if not(grid2Autosized) then begin
-        StringGrid2.AutoSizeColumn(1);
-        StringGrid2.AutoSizeColumn(2);
-        StringGrid2.AutoSizeColumn(3);
-        StringGrid2.AutoSizeColumn(4);
-        StringGrid3.AutoSizeColumn(1);
-        StringGrid3.AutoSizeColumn(2);
-        StringGrid3.AutoSizeColumn(3);
-        StringGrid3.AutoSizeColumn(4);
         for i:=0 to 4 do begin
+          StringGrid2.AutoSizeColumn(i);
+          StringGrid3.AutoSizeColumn(i);
           if StringGrid2.ColWidths[i]< StringGrid3.ColWidths[i] then
              StringGrid2.ColWidths[i]:=StringGrid3.ColWidths[i] else
              StringGrid3.ColWidths[i]:=StringGrid2.ColWidths[i];

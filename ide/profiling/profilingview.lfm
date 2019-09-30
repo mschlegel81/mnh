@@ -10,6 +10,7 @@ object profilingOutputForm: TprofilingOutputForm
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = MainMenu1
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
