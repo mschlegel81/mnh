@@ -108,18 +108,6 @@ TYPE
     PROCEDURE   evaluate(VAR recycler:T_recycler); virtual;
   end;
 
-  T_listProcessingLocation=object(T_objectWithIdAndLocation)
-    id:string;
-    location:T_tokenLocation;
-    CONSTRUCTOR create(CONST name:string);
-    FUNCTION getId:T_idString; virtual;
-    FUNCTION getLocation:T_tokenLocation; virtual;
-  end;
-
-VAR EACH_LOCATION,
-    PEACH_LOCATION,
-    AGG_LOGATION:T_listProcessingLocation;
-
 PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
 {$MACRO ON}
 {$define processX:=
@@ -144,9 +132,6 @@ end}
       x:P_literal;
       proceed:boolean=true;
   begin
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPush(eachLocation,@EACH_LOCATION,nil);
-    {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
@@ -163,9 +148,6 @@ end}
       x:=input;
       processX;
     end;
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPop(nil);
-    {$endif}
   end;
 
 PROCEDURE processListParallel(CONST input:P_literal;
@@ -276,9 +258,6 @@ PROCEDURE processListParallel(CONST input:P_literal;
 end}
 
   begin
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPush(eachLocation,@PEACH_LOCATION,nil);
-    {$endif}
     recycling.fill:=0;
     earlyAborting:=aggregator^.isEarlyAbortingAggregator;
     for rule in rulesList do earlyAborting:=earlyAborting or P_inlineExpression(rule)^.containsReturnToken;
@@ -308,9 +287,6 @@ end}
       dat[fill]^.clearContext;
       dispose(dat[fill],destroy);
     end;
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPop(nil);
-    {$endif}
   end;
 
 FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
@@ -586,9 +562,6 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
   VAR x:T_evaluationResult;
       iter:T_arrayOfLiteral;
   begin
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPush(location,@AGG_LOGATION,nil);
-    {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(location,@context,@recycler,nil,nil);
       while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) do begin
@@ -608,9 +581,6 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       x.literal:=input;
       aggregator^.addToAggregation(x,false,location,@context,recycler);
     end;
-    {$ifdef fullVersion}
-    if tco_stackTrace in context.threadOptions then context.callStackPop(nil);
-    {$endif}
   end;
 
 PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context; VAR recycler:T_recycler);
@@ -619,20 +589,6 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
     new(task,create(future));
     task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),recycler);
   end;
-
-CONSTRUCTOR T_listProcessingLocation.create(CONST name: string);
-  begin
-    location.package:=@MNH_PSEUDO_PACKAGE;
-    location.column:=1;
-    location.line:=interLockedIncrement(identifiedInternalFunctionTally);
-    id:=C_namespaceString[DEFAULT_BUILTIN_NAMESPACE]+ID_QUALIFY_CHARACTER+name;
-  end;
-
-FUNCTION T_listProcessingLocation.getId: T_idString;
-  begin result:=id; end;
-
-FUNCTION T_listProcessingLocation.getLocation: T_tokenLocation;
-  begin result:=location; end;
 
 CONSTRUCTOR T_futureTask.create(CONST future: P_futureLiteral);
   begin
@@ -927,9 +883,5 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_context; VAR recycler
     leaveCriticalSection(criticalSection);
   end;
 
-INITIALIZATION
-  EACH_LOCATION .create('each');
-  PEACH_LOCATION.create('pEach');
-  AGG_LOGATION  .create('agg');
 end.
 

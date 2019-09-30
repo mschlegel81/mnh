@@ -46,6 +46,7 @@ FUNCTION unaryNoOp_impl intFuncSignature;
 FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
+      containsError:boolean=false;
   begin
     result:=nil;
     case x^.literalType of
@@ -58,11 +59,11 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
         for y in iter do begin
           yNeg:=logicalNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
-          then P_collectionLiteral(result)^.containsError:=true
+          then containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
         end;
         disposeLiteral(iter);
-        if P_collectionLiteral(result)^.containsError then begin
+        if containsError then begin
           raiseNotApplicableError('! (logical negation)',x,opLocation,context);
           disposeLiteral(result);
         end;
@@ -81,6 +82,7 @@ FUNCTION logicalNegationOf_impl intFuncSignature;
 FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
+      containsError:boolean=false;
   begin
     result:=nil;
     case x^.literalType of
@@ -95,11 +97,11 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
         for y in iter do begin
           yNeg:=arithmeticNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
-          then P_collectionLiteral(result)^.containsError:=true
+          then containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
         end;
         disposeLiteral(iter);
-        if P_collectionLiteral(result)^.containsError then begin
+        if containsError then begin
           raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context);
           disposeLiteral(result);
         end;
@@ -126,10 +128,6 @@ FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; C
     if result=nil then begin
       context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
-    end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
-      disposeLiteral(result);
-      result:=newVoidLiteral;
     end;
   end;
 
@@ -142,10 +140,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     if result=nil then result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
     if result=nil then begin
       P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
-      result:=newVoidLiteral;
-    end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
-      disposeLiteral(result);
       result:=newVoidLiteral;
     end;
   end;

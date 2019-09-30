@@ -317,7 +317,6 @@ TYPE
     private
       myHash:T_hashInt;
     public
-    containsError:boolean;
     FUNCTION toSet :P_setLiteral;
     FUNCTION toList:P_listLiteral;
     FUNCTION toMap(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_mapLiteral;
@@ -1411,6 +1410,7 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
       i,j:longint;
       innerList:P_listLiteral;
       doneRow:boolean;
+      containsError:boolean=false;
   begin
     if literalType=lt_emptyList then exit(P_listLiteral(rereferenced));
     for i:=0 to fill-1 do
@@ -1419,20 +1419,20 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
     else innerSize:=max(innerSize,1);
 
     result:=newListLiteral;
-    for i:=0 to innerSize-1 do if not(result^.containsError) then begin
+    for i:=0 to innerSize-1 do if not(containsError) then begin
       if filler=nil then begin
         innerList:=newListLiteral;
         doneRow:=false;
-        for j:=0 to fill-1 do if not(result^.containsError) then begin
+        for j:=0 to fill-1 do if not(containsError) then begin
           if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i) then
-          begin innerList^.append(P_listLiteral(dat[j])^.dat[i],true); result^.containsError:=doneRow or result^.containsError; end
+          begin innerList^.append(P_listLiteral(dat[j])^.dat[i],true); containsError:=doneRow or containsError; end
           else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then
-          begin innerList^.append(              dat[j]         ,true); result^.containsError:=doneRow or result^.containsError; end
+          begin innerList^.append(              dat[j]         ,true); containsError:=doneRow or containsError; end
           else doneRow:=true;
         end;
       end else begin
         innerList:=newListLiteral(fill);
-        for j:=0 to fill-1 do if not(result^.containsError) then begin
+        for j:=0 to fill-1 do if not(containsError) then begin
           if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i)
           then                                                          innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
           else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
@@ -1441,6 +1441,7 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
       end;
       result^.append(innerList,false);
     end;
+    if containsError then disposeLiteral(result);
   end;
 
 CONST listType:array[false..true,false..true,false..true,false..true] of T_literalType=
@@ -2375,7 +2376,7 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
 PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
   begin
     case L^.literalType of
-      lt_error     : begin inc(others); containsError:=true; literalType:=lt_list; end;
+      lt_error     : begin inc(others); literalType:=lt_list; end;
       lt_boolean   : begin inc(booleans); if literalType in [lt_emptyList,lt_booleanList] then literalType:=lt_booleanList                                      else literalType:=lt_list; end;
       lt_bigint,
       lt_smallint  : begin inc(ints);     case literalType of lt_emptyList,lt_intList: literalType:=lt_intList; lt_realList,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
@@ -2383,7 +2384,7 @@ PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
       lt_string    : begin inc(strings);  if literalType in [lt_emptyList,lt_stringList] then literalType:=lt_stringList                                        else literalType:=lt_list; end;
       lt_expression,
       lt_void      : begin inc(others); literalType:=lt_list; end;
-      else           begin inc(others); literalType:=lt_list; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
+      else           begin inc(others); literalType:=lt_list; end;
     end;
     myHash:=0;
   end;
@@ -2391,7 +2392,7 @@ PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
 PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
   begin
     case L^.literalType of
-      lt_error     : begin inc(others); containsError:=true; literalType:=lt_set; end;
+      lt_error     : begin inc(others); literalType:=lt_set; end;
       lt_boolean   : begin inc(booleans); if literalType in [lt_emptySet,lt_booleanSet] then literalType:=lt_booleanSet                                   else literalType:=lt_set; end;
       lt_bigint,
       lt_smallint  : begin inc(ints);     case literalType of lt_emptySet,lt_intSet: literalType:=lt_intSet; lt_realSet,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
@@ -2399,7 +2400,7 @@ PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
       lt_string    : begin inc(strings);  if literalType in [lt_emptySet,lt_stringSet] then literalType:=lt_stringSet                                     else literalType:=lt_set; end;
       lt_expression,
       lt_void      : begin inc(others); literalType:=lt_set; end;
-      else           begin inc(others); literalType:=lt_set; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
+      else           begin inc(others); literalType:=lt_set; end;
     end;
     myHash:=0;
   end;
@@ -2427,8 +2428,8 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P
       result^.put(P_listLiteral(pair)^.value[0],
                   P_listLiteral(pair)^.value[1],true);
     end else begin
-      result^.containsError:=true;
       context^.raiseError('Literal of type '+pair^.typeString+' cannot be interpreted as key-value-pair',location);
+      disposeLiteral(result);
     end;
     disposeLiteral(iter);
   end;

@@ -182,7 +182,6 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: cha
 
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
   VAR i,j:longint;
-      loc:T_searchTokenLocation;
   begin
     if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
@@ -193,7 +192,6 @@ PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: cha
 
 PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
   VAR i,j:longint;
-      loc:T_searchTokenLocation;
   begin
     if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
