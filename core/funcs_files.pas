@@ -393,9 +393,9 @@ FUNCTION fileInfo_imp intFuncSignature;
       VAR a:P_setLiteral;
           att:T_fileAttrib;
       begin
-        a:=newSetLiteral;
+        a:=newSetLiteral(4);
         for att in info.attributes do a^.appendString(C_fileAttribName[att]);
-        result:=newMapLiteral^
+        result:=newMapLiteral(4)^
                 .put('path'      ,info.filePath)^
                 .put('time'      ,info.time)^
                 .put('size'      ,info.size)^
@@ -424,7 +424,7 @@ FUNCTION fileInfo_imp intFuncSignature;
         disposeLiteral(iter);
       end;
       lt_emptyList: result:=newListLiteral(0);
-      lt_emptySet : result:=newSetLiteral;
+      lt_emptySet : result:=newSetLiteral(0);
     end;
   end; //fileInfo_imp
 

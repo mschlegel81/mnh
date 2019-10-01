@@ -727,7 +727,7 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages; CONST resolveIdCo
 FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
   VAR entry:T_ruleMapEntry;
   begin
-    result:=newMapLiteral;
+    result:=newMapLiteral(size);
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
       tt_userRule:
         result^.put(entry.value^.getId,P_rule(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
@@ -1441,7 +1441,7 @@ FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
   begin
-    result:=newMapLiteral^
+    result:=newMapLiteral(3)^
       .put('type'    ,newStringLiteral(C_ruleTypeText[getRuleType]),false)^
       .put('location',newStringLiteral(getLocation                ),false)
       {$ifdef fullVersion}
@@ -1483,7 +1483,7 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR contex
     VAR sub:P_subruleExpression;
     begin
       result:=newListLiteral(length(subrules)+1);
-      result^.append(newMapLiteral^
+      result^.append(newMapLiteral(5)^
         .put('pattern'   ,'()'           )^
         .put('location'  ,getLocation    )^
         .put('type'      ,privateOrPublic)^
@@ -1508,7 +1508,7 @@ FUNCTION T_variable.inspect(CONST includeFunctionPointer: boolean;
     end;
 
   begin
-    result:=newMapLiteral^
+    result:=newMapLiteral(4)^
       .put('type'      ,newStringLiteral(privateOrPublic+' '+C_varTypeText[varType]),false)^
       .put('location'  ,newStringLiteral(getLocation ),false)^
       .put('comment'   ,newStringLiteral(meta.comment),false)^

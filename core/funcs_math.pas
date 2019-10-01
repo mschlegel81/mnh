@@ -485,7 +485,7 @@ FUNCTION permutations_impl intFuncSignature;
       iter:=compound0^.iteratableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
-      result:=newSetLiteral;
+      result:=newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
       disposeLiteral(iter);
     end;

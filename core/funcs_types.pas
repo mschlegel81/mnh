@@ -158,7 +158,7 @@ FUNCTION toSet_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_scalarTypes
-      then result:=newSetLiteral^.append(arg0,true)
+      then result:=newSetLiteral(1)^.append(arg0,true)
       else result:=compound0^.toSet;
     end;
   end;

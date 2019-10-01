@@ -448,7 +448,7 @@ FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpres
     case input^.literalType of
       lt_emptyList,lt_emptySet,lt_emptyMap                                       : exit(P_compoundLiteral(input^.rereferenced));
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: result:=newListLiteral;
-      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : result:=newSetLiteral;
+      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : result:=newSetLiteral(0);
       lt_map                                                                     : result:=newListLiteral;
     end;
     iter:=input^.iteratableList;
@@ -534,7 +534,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
     case input^.literalType of
       lt_emptyList,lt_emptySet,lt_emptyMap                                       : exit(P_compoundLiteral(input^.rereferenced));
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: output:=newListLiteral;
-      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : output:=newSetLiteral;
+      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : output:=newSetLiteral(input^.size);
       lt_map                                                                     : output:=newListLiteral;
     end;
     recycling.fill:=0;

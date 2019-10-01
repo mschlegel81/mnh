@@ -1270,13 +1270,13 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
     end;
     {$endif}
 
-    result:=newMapLiteral^.put('id'      ,getId)^
-                          .put('path'    ,getPath)^
-                          .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
-                          .put('uses'    ,usesList,false)^
-                          .put('includes',includeList,false)^
-                          .put('declares',ruleMap.inspect(P_context(context)^,recycler,includeRulePointer),false)^
-                          .put('plain script',newBoolLiteral(isPlainScript),false);
+    result:=newMapLiteral(7)^.put('id'      ,getId)^
+                             .put('path'    ,getPath)^
+                             .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
+                             .put('uses'    ,usesList,false)^
+                             .put('includes',includeList,false)^
+                             .put('declares',ruleMap.inspect(P_context(context)^,recycler,includeRulePointer),false)^
+                             .put('plain script',newBoolLiteral(isPlainScript),false);
     {$ifdef fullVersion}
     functionCallInfos^.cleanup;
     result^.put('called builtin',builtinCallList,false)

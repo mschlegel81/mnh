@@ -118,7 +118,7 @@ FUNCTION getOptions intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       opt:=getOptionsViaAdapters(context.messages);
-      result:=newMapLiteral^
+      result:=newMapLiteral(13)^
         .put('x0'             ,opt.axisTrafo['x'].worldMin)^
         .put('x1'             ,opt.axisTrafo['x'].worldMax)^
         .put('y0'             ,opt.axisTrafo['y'].worldMin)^

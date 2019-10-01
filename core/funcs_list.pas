@@ -145,7 +145,7 @@ FUNCTION getElementFreqency intFuncSignature;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
-      result:=newMapLiteral;
+      result:=newMapLiteral(100);
       iter:=compound0^.iteratableList;
       for x in iter do P_mapLiteral(result)^.put(x,newIntLiteral(1),false);
       exit(result);
@@ -165,7 +165,7 @@ FUNCTION getElementFreqency intFuncSignature;
       exit(nil);
     end;
     freqList:=freqMap.keyValueList;
-    result:=newMapLiteral;
+    result:=newMapLiteral(100);
     for i:=0 to length(freqList)-1 do P_mapLiteral(result)^.put(freqList[i].key^.rereferenced,freqList[i].value,false);
     freqMap.destroy;
   end;
@@ -269,9 +269,7 @@ FUNCTION getAll_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_compoundTypes) then begin
-      if arg1^.literalType in C_listTypes
-      then result:=newListLiteral
-      else result:=newSetLiteral;
+      result:=P_collectionLiteral(arg1)^.newOfSameType(true);
       iter:=compound1^.iteratableList;
       for sub in iter do if result<>nil then begin
         got:=compound0^.get(sub);
@@ -461,13 +459,13 @@ FUNCTION group_imp intFuncSignature;
       {$ifdef fullVersion}
       if (aggregator<>nil) then context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(groupLoc),nil);
       {$endif}
-      groupMap.create();
+      groupMap.create(100);
       for inputIndex:=0 to length(keyList)-1 do if context.messages^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       disposeLiteral(keyList);
 
       groupList:=groupMap.keyValueList;
-      result:=newMapLiteral();
+      result:=newMapLiteral(groupMap.fill);
       for groupEntry in groupList do mapResult^.put(groupEntry.key^.rereferenced,
                                                     groupEntry.value,
                                                     false);

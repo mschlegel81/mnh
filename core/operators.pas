@@ -225,9 +225,9 @@ FUNCTION operator_In       intFuncSignature;
         lhsX ,rhsX :P_literal;
     begin
       if (LHS^.literalType in C_setTypes) and (RHS^.literalType in C_setTypes) then begin
-        result:=newSetLiteral;
         lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
         rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
+        result:=newSetLiteral(length(lhsIt)+length(rhsIt));
         for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
         disposeLiteral(lhsIt);
         disposeLiteral(rhsIt);
@@ -941,7 +941,7 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         lt_list..lt_emptyList: exit(newListLiteral(P_listLiteral(RHS)^.size+1)^
                                     .append   (LHS,true)^
                                     .appendAll(P_listLiteral(RHS)));
-        lt_set ..lt_emptySet : exit(newSetLiteral^
+        lt_set ..lt_emptySet : exit(newSetLiteral(P_setLiteral(RHS)^.size)^
                                     .append   (LHS,true)^
                                     .appendAll(P_setLiteral(RHS)));
       end;
@@ -956,19 +956,19 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(newSetLiteral^
+        lt_boolean..lt_string: exit(newSetLiteral(P_setLiteral(LHS)^.size)^
                                     .appendAll(P_setLiteral(LHS))^
                                     .append(RHS,true));
         lt_list..lt_emptyList: exit(newListLiteral^
                                     .appendAll(P_setLiteral (LHS))^
                                     .appendAll(P_listLiteral(RHS)));
-        lt_set ..lt_emptyMap : exit(newSetLiteral^
+        lt_set ..lt_emptyMap : exit(newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
                                     .appendAll(P_setLiteral     (LHS))^
                                     .appendAll(P_compoundLiteral(RHS)));
       end;
       lt_map..lt_emptyMap: case RHS^.literalType of
         defaultRHSCases;
-        lt_map..lt_emptyMap:  exit(newMapLiteral^
+        lt_map..lt_emptyMap:  exit(newMapLiteral(P_mapLiteral(LHS)^.size)^
                                    .putAll(P_mapLiteral(LHS))^
                                    .putAll(P_mapLiteral(RHS)));
         lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(true)^
@@ -998,7 +998,7 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
       lt_set ..lt_emptySet : case RHS^.literalType of
         lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
         lt_error:      exit(RHS^.rereferenced)
-        else exit(newSetLiteral^
+        else exit(newSetLiteral(P_setLiteral(LHS)^.size)^
              .appendAll(P_setLiteral(LHS))^
              .append(RHS,true,true));
       end;

@@ -96,7 +96,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       driveType:=GetDriveType(PChar(DriveLetter));
       if not(driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK])
       then exit(nil);
-      infoMap:=newMapLiteral;
+      infoMap:=newMapLiteral(5);
       case driveType of
         DRIVE_REMOVABLE: infoMap^.put('type','removable');
         DRIVE_FIXED:     infoMap^.put('type','fixed'    );
@@ -119,7 +119,7 @@ FUNCTION driveInfo_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral;
+      result:=newMapLiteral(4);
       for c:='A' to 'Z' do begin
         info:=infoForLetter(c);
         if info<>nil then mapResult^.put(c,info,false);
@@ -138,7 +138,7 @@ FUNCTION getEnv_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral;
+      result:=newMapLiteral(30);
       for envString in getEnvironment do begin
         envTuple:=split(envString,'=');
         envKey:=envTuple[0];
@@ -189,7 +189,7 @@ FUNCTION time_imp intFuncSignature;
       context.callStackPop(nil);
       {$endif}
       if res<>nil then begin
-        result:=newMapLiteral
+        result:=newMapLiteral(3)
           ^.put('expression',arg0^.toString(100))
           ^.put('time',t );
         if res^.literalType<>lt_void then P_mapLiteral(result)^.put('result',res,false)

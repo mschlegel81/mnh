@@ -100,7 +100,7 @@ FUNCTION ord_imp intFuncSignature;
         end else begin
           if x^.literalType in C_listTypes
           then result:=newListLiteral(P_compoundLiteral(x)^.size)
-          else result:=newSetLiteral;
+          else result:=newSetLiteral (P_compoundLiteral(x)^.size);
           iter:=P_compoundLiteral(x)^.iteratableList;
           for sub in iter do if context.messages^.continueEvaluation then
             collResult^.append(recurse(sub),false);
@@ -118,7 +118,7 @@ FUNCTION ord_imp intFuncSignature;
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newMapLiteral^
+    result:=newMapLiteral(15)^
       .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^

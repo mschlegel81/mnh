@@ -287,12 +287,11 @@ TYPE
          MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
     VAR bin:array of BIN_ENTRY;
         fill:longint;
-    CONSTRUCTOR create();
+    CONSTRUCTOR create(CONST expectedSize:longint=0);
     CONSTRUCTOR createClone(VAR map:MY_TYPE);
     DESTRUCTOR destroy;
     PROCEDURE rehash(CONST grow:boolean);
     PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
-    PROCEDURE rehashForExpectedSize(CONST expectedFill:longint);
     FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
@@ -388,7 +387,7 @@ TYPE
   T_setLiteral=object(T_collectionLiteral)
     private
       dat:T_literalKeyBooleanValueMap;
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST expectedSize:longint);
       CONSTRUCTOR createClone(VAR original:T_setLiteral);
       PROCEDURE modifyType(CONST L:P_literal); {$ifndef profilingFlavour}inline;{$endif}
     public
@@ -413,7 +412,7 @@ TYPE
   T_mapLiteral=object(T_compoundLiteral)
     private
       dat:T_literalKeyLiteralValueMap;
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST expectedSize:longint);
       CONSTRUCTOR createClone(VAR original:T_mapLiteral);
     public
       DESTRUCTOR destroy; virtual;
@@ -462,8 +461,8 @@ FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; inline;
 FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
-FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;  inline;
-FUNCTION newMapLiteral                                : P_mapLiteral;  inline;
+FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral;  inline;
+FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;  inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
@@ -738,10 +737,10 @@ FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral
     if b<>nil then result^.append(b,true);
   end;
 
-FUNCTION newSetLiteral(CONST expectedSize:longint=0): P_setLiteral;        begin new(result,create); if expectedSize>0 then result^.dat.rehashForExpectedSize(expectedSize); end;
-FUNCTION newMapLiteral                              : P_mapLiteral;        begin new(result,create);              end;
-FUNCTION newVoidLiteral                             : P_voidLiteral;       begin result:=P_voidLiteral(voidLit       .rereferenced); end;
-FUNCTION newBoolLiteral(CONST value: boolean)       : P_boolLiteral;       begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
+FUNCTION newSetLiteral(CONST expectedSize:longint): P_setLiteral;  begin new(result,create(expectedSize));  end;
+FUNCTION newMapLiteral(CONST expectedSize:longint): P_mapLiteral;  begin new(result,create(expectedSize));  end;
+FUNCTION newVoidLiteral                           : P_voidLiteral; begin result:=P_voidLiteral(voidLit       .rereferenced); end;
+FUNCTION newBoolLiteral(CONST value: boolean)     : P_boolLiteral; begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
   FUNCTION exponentRepresentation:shortstring;
@@ -956,11 +955,16 @@ FUNCTION T_typedef.getDocTxt:string;
 
 //=====================================================================================================================
 
-CONSTRUCTOR G_literalKeyMap.create();
+CONSTRUCTOR G_literalKeyMap.create(CONST expectedSize:longint=0);
+  VAR k:longint;
   begin
-    setLength(bin,1);
-    bin[0].binFill:=0;
-    setLength(bin[0].arr,2);
+    k:=4;
+    while expectedSize>=k*HASH_GROWTH_THRESHOLD_FACTOR do inc(k,k);
+    setLength(bin,k);
+    for k:=0 to length(bin)-1 do begin
+      bin[k].binFill:=0;
+      setLength(bin[k].arr,2);
+    end;
     fill:=0;
   end;
 
@@ -1037,25 +1041,25 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
     if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
-PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
-  VAR targetSize:longint;
-      i:longint;
-  begin
-    if fill=0 then begin
-      i:=length(bin);
-      targetSize:=i;
-      while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
-      setLength(bin,targetSize);
-      while (i<length(bin)) do begin
-        with bin[i] do begin
-          binFill:=0;
-          setLength(arr,2);
-        end;
-        inc(i);
-      end;
-    end else while expectedFill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
-  end;
-
+//PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
+//  VAR targetSize:longint;
+//      i:longint;
+//  begin
+//    if fill=0 then begin
+//      i:=length(bin);
+//      targetSize:=i;
+//      while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
+//      setLength(bin,targetSize);
+//      while (i<length(bin)) do begin
+//        with bin[i] do begin
+//          binFill:=0;
+//          setLength(arr,2);
+//        end;
+//        inc(i);
+//      end;
+//    end else while expectedFill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
+//  end;
+//
 FUNCTION G_literalKeyMap.putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
   VAR j:longint=0;
   begin
@@ -1247,7 +1251,7 @@ CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
     fill:=0;
   end;
 
-CONSTRUCTOR T_setLiteral.create;
+CONSTRUCTOR T_setLiteral.create(CONST expectedSize:longint);
   begin
     inline_init(lt_emptySet);
     myHash  :=0;
@@ -1256,7 +1260,7 @@ CONSTRUCTOR T_setLiteral.create;
     strings :=0;
     booleans:=0;
     others  :=0;
-    dat.create();
+    dat.create(expectedSize);
   end;
 
 CONSTRUCTOR T_setLiteral.createClone(VAR original:T_setLiteral);
@@ -1273,11 +1277,11 @@ CONSTRUCTOR T_setLiteral.createClone(VAR original:T_setLiteral);
     for key in dat.keySet do key^.rereference;
   end;
 
-CONSTRUCTOR T_mapLiteral.create;
+CONSTRUCTOR T_mapLiteral.create(CONST expectedSize:longint);
   begin
     inline_init(lt_emptyMap);
     myHash:=0;
-    dat.create();
+    dat.create(expectedSize);
   end;
 
 CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
@@ -1748,7 +1752,7 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
   end;
 //=============================================================:?.isInRelationTo
 FUNCTION T_listLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin if initSize then result:=newListLiteral(fill) else result:=newListLiteral(); end;
-FUNCTION T_setLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newSetLiteral; if initSize then P_setLiteral(result)^.dat.rehashForExpectedSize(dat.fill); end;
+FUNCTION T_setLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral;  begin if initSize then result:=newSetLiteral(dat.fill) else result:=newSetLiteral(0); end;
 FUNCTION T_literal.typeString:string;
   begin
     result:=C_typeInfo[literalType].name;
@@ -2027,8 +2031,7 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
         exit(result);
       end;
       lt_intSet, lt_emptySet: begin
-        result:=newSetLiteral;
-        P_setLiteral(result)^.dat.rehashForExpectedSize(P_setLiteral(accessor)^.size);
+        result:=newSetLiteral(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.iteratableList;
         for idx in iter do begin
           if                                    P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
@@ -2423,7 +2426,7 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P
   begin
     if literalType in C_mapTypes then exit(P_mapLiteral(rereferenced));
     iter:=iteratableList;
-    result:=newMapLiteral;
+    result:=newMapLiteral(length(iter));
     for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
       result^.put(P_listLiteral(pair)^.value[0],
                   P_listLiteral(pair)^.value[1],true);
@@ -2932,8 +2935,8 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
         inAll:boolean;
         k:longint;
     begin
-      result:=newSetLiteral();
       iter:=P_setLiteral(params^.value[smallestSetIndex])^.iteratableList;
+      result:=newSetLiteral(length(iter));
       for elem in iter do begin
         inAll:=true;
         for k:=0 to params^.size-1 do inAll:=inAll and ((k=smallestSetIndex) or P_setLiteral(params^.value[k])^.contains(elem));
@@ -2954,8 +2957,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
     if allSets then exit(resultByContains);
     if params^.size>16 then exit(resultByRecursion);
 
-    counterSet.create;
-    counterSet.rehashForExpectedSize(maxSubsetSize);
+    counterSet.create(maxSubsetSize div 2);
     for i:=0 to params^.size-1 do begin
       iter:=P_compoundLiteral(params^.value[i])^.iteratableList;
       for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
@@ -2977,14 +2979,13 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
            (params^.value[0]^.literalType in C_compoundTypes) and
            (params^.value[1]^.literalType in C_compoundTypes))
     then exit(nil);
-    result:=newSetLiteral;
     iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
+    result:=newSetLiteral(length(iter));
     if params^.value[1]^.literalType in C_setTypes then begin
       s:=P_setLiteral(params^.value[1]);
       for L in iter do if not(s^.contains(L)) then result^.append(L,true);
       disposeLiteral(iter);
     end else begin
-      result^.dat.rehashForExpectedSize(length(iter));
       for L in iter do result^.dat.put(L,true);
       disposeLiteral(iter);
       iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
@@ -3330,8 +3331,8 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString);
         lt_emptyList: result:=newListLiteral;
-        lt_emptySet : result:=newSetLiteral;
-        lt_emptyMap : result:=newMapLiteral;
+        lt_emptySet : result:=newSetLiteral(0);
+        lt_emptyMap : result:=newMapLiteral(0);
         lt_void     : result:=newVoidLiteral;
         lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
@@ -3357,7 +3358,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
         lt_map: begin
-          result:=newMapLiteral;
+          result:=newMapLiteral(0);
           listSize:=stream^.readNaturalNumber;
           for i:=0 to listSize-1 do if stream^.allOkay then begin
             mapKey  :=literalFromStream254();
@@ -3455,8 +3456,8 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
         lt_emptyList: result:=newListLiteral;
-        lt_emptySet : result:=newSetLiteral;
-        lt_emptyMap : result:=newMapLiteral;
+        lt_emptySet : result:=newSetLiteral(0);
+        lt_emptyMap : result:=newMapLiteral(0);
         lt_void     : result:=newVoidLiteral;
         lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
@@ -3482,7 +3483,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
         lt_map: begin
-          result:=newMapLiteral;
+          result:=newMapLiteral(0);
           listSize:=stream^.readNaturalNumber;
           for i:=0 to listSize-1 do if stream^.allOkay then begin
             mapKey  :=literalFromStream253();
@@ -3568,8 +3569,8 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
         lt_emptyList: result:=newListLiteral;
-        lt_emptySet : result:=newSetLiteral;
-        lt_emptyMap : result:=newMapLiteral;
+        lt_emptySet : result:=newSetLiteral(0);
+        lt_emptyMap : result:=newMapLiteral(0);
         lt_void     : result:=newVoidLiteral;
         lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
@@ -3592,7 +3593,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
         lt_map: begin
-          result:=newMapLiteral;
+          result:=newMapLiteral(0);
           listSize:=stream^.readNaturalNumber;
           for i:=0 to listSize-1 do if stream^.allOkay then begin
             mapKey  :=literalFromStream252();
