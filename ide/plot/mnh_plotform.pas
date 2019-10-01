@@ -82,7 +82,6 @@ TYPE
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
-    PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
@@ -291,11 +290,6 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     eTimer.start;
     initDockMenuItems(MainMenu,nil);
     initDockMenuItems(PopupMenu1,nil);
-  end;
-
-PROCEDURE TplotForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
-  begin
-
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);

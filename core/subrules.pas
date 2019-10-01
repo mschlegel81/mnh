@@ -1129,7 +1129,7 @@ FUNCTION T_inlineExpression.containsReturnToken:boolean;
 
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   begin
-    result:=newMapLiteral;
+    result:=newMapLiteral(0);
     P_mapLiteral(result)^.put('pattern' ,pattern.toString)^
                          .put('location',getLocation     )^
                          .put('type'    ,C_expressionTypeString[typ]);
@@ -1246,7 +1246,7 @@ PROCEDURE T_subruleExpression.checkParameters(VAR context:T_context);
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;
   begin
-    result:=newMapLiteral();
+    result:=newMapLiteral(0);
     for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
   end;
 

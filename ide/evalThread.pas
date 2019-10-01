@@ -135,7 +135,7 @@ FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        
 FUNCTION newStdOutAdapter    (CONST caption:string; CONST running:TIsRunningFunc; CONST typesToInclude:T_messageTypeSet):P_lazyInitializedOutAdapter;        begin new(result,create(running,caption,typesToInclude)); end;
 FUNCTION newCustomFormAdapter(CONST plot:P_guiPlotSystem):P_customFormAdapter;  begin new(result,createCustomFormAdapter(plot)); end;
 FUNCTION newGuiEventsAdapter (CONST guiForm:T_mnhIdeForm):P_guiEventsAdapter;   begin new(result,create(guiForm)); end;
-FUNCTION newProfilingAdapter                             :P_profileAdapter;     begin new(result,create); end;
+FUNCTION newProfilingAdapter (CONST ideAdapter:boolean  ):P_profileAdapter;     begin new(result,create(ideAdapter)); end;
 
 CONSTRUCTOR T_abstractEvaluation.init(CONST kind: T_evaluationKind);
   begin
@@ -180,7 +180,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
-    messages.addOutAdapter(newProfilingAdapter                  ,true);
+    messages.addOutAdapter(newProfilingAdapter (true)           ,true);
     {$ifdef debugMode}
     messages.addConsoleOutAdapter('v');
     {$endif}
@@ -227,12 +227,15 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     inherited init(ek_normal);
     new(console,create(cmdLineInterpretation.verbosityString));
     messages.addOutAdapter(console,true);
+    //Do not show profiling info as text; is shown as GUI component
+    console^.enableMessageType(false,[mt_profile_call_info]);
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
     messages.addOutAdapter(newImigAdapter      ('MNH image')    ,true);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+    messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
     if cmdLineInterpretation.profilingRun
     then evalRequest.contextType:=ect_profiling

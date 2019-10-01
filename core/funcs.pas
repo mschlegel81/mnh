@@ -181,8 +181,8 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         end else P_listLiteral(result)^.append(fp,false);
       end;
     end else if firstSet>=0 then begin
-      result:=newSetLiteral();
       setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
+      result:=newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
@@ -314,7 +314,7 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR id:string;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=newSetLiteral();
+    result:=newSetLiteral(intrinsicRuleMap.size);
     for id in intrinsicRuleMap.keySet do if isQualified(id) then setResult^.appendString(id);
   end;
 

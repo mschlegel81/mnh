@@ -1107,6 +1107,8 @@ void orElse 42; //orElse returns the right-hand-side if the left-hand-side is vo
 
 //==END REG TEST==
 
+driveInfo;
+
 wrapTextInHttp('Test');
 
 //#sleep
@@ -1155,8 +1157,6 @@ fileExists('testLog.mnh');
 folderExists('folderName');
 
 mnhInfo;
-
-driveInfo;
 
 myPath;
 

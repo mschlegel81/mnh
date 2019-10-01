@@ -1,19 +1,20 @@
 object profilingOutputForm: TprofilingOutputForm
-  Left = 756
+  Left = 765
   Height = 365
   Top = 401
-  Width = 696
+  Width = 687
   Caption = 'Profiling Output'
   ClientHeight = 365
-  ClientWidth = 696
+  ClientWidth = 687
   DesignTimePPI = 120
   DragKind = dkDock
   DragMode = dmAutomatic
   Menu = MainMenu1
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.4.0'
   object GroupBox1: TGroupBox
     Left = 0
     Height = 365
@@ -72,22 +73,22 @@ object profilingOutputForm: TprofilingOutputForm
     Left = 237
     Height = 365
     Top = 0
-    Width = 459
+    Width = 450
     Align = alClient
     BevelOuter = bvNone
     ClientHeight = 365
-    ClientWidth = 459
+    ClientWidth = 450
     ParentFont = False
     TabOrder = 2
     object GroupBox2: TGroupBox
       Left = 0
       Height = 140
       Top = 0
-      Width = 459
+      Width = 450
       Align = alTop
       Caption = '...is called by:'
       ClientHeight = 115
-      ClientWidth = 455
+      ClientWidth = 446
       ParentFont = False
       PopupMenu = PopupMenu1
       TabOrder = 0
@@ -95,7 +96,7 @@ object profilingOutputForm: TprofilingOutputForm
         Left = 0
         Height = 115
         Top = 0
-        Width = 455
+        Width = 446
         Align = alClient
         AutoEdit = False
         FixedCols = 0
@@ -132,7 +133,7 @@ object profilingOutputForm: TprofilingOutputForm
       Left = 0
       Height = 6
       Top = 140
-      Width = 459
+      Width = 450
       Align = alTop
       ResizeAnchor = akTop
     end
@@ -140,11 +141,11 @@ object profilingOutputForm: TprofilingOutputForm
       Left = 0
       Height = 219
       Top = 146
-      Width = 459
+      Width = 450
       Align = alClient
       Caption = '...calls:'
       ClientHeight = 194
-      ClientWidth = 455
+      ClientWidth = 446
       ParentFont = False
       PopupMenu = PopupMenu1
       TabOrder = 2
@@ -152,7 +153,7 @@ object profilingOutputForm: TprofilingOutputForm
         Left = 0
         Height = 194
         Top = 0
-        Width = 455
+        Width = 446
         Align = alClient
         AutoEdit = False
         FixedCols = 0

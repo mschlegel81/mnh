@@ -21,6 +21,7 @@ TYPE
     StringGrid1: TStringGrid;
     StringGrid2: TStringGrid;
     StringGrid3: TStringGrid;
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE StringGrid1HeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
@@ -40,6 +41,8 @@ TYPE
   private
     grid1Sorting:byte;
     grid2Sorting:byte;
+    grid2Autosized:boolean;
+    canOpenLocation:boolean;
     profilingList:T_profilingList;
     PROCEDURE setProfilingList(CONST list:T_profilingList);
     PROCEDURE fillGrid1;
@@ -51,7 +54,8 @@ TYPE
   P_profileAdapter=^T_profileAdapter;
   T_profileAdapter=object(T_abstractGuiOutAdapter)
     defaultCaption:string;
-    CONSTRUCTOR create();
+    canOpenLocation:boolean;
+    CONSTRUCTOR create(CONST fullIdeMode:boolean);
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
   end;
 
@@ -69,9 +73,10 @@ FUNCTION ensureProfileView:TprofilingOutputForm;
     result:=myProfilingForm;
   end;
 
-CONSTRUCTOR T_profileAdapter.create();
+CONSTRUCTOR T_profileAdapter.create(CONST fullIdeMode:boolean);
   begin
     inherited create(at_profilingView,[mt_profile_call_info]);
+    canOpenLocation:=fullIdeMode;
   end;
 
 FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
@@ -85,6 +90,7 @@ FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSe
           begin
             include(result,collected[i]^.messageType);
             ensureProfileView.setProfilingList(P_profileMessage(collected[i])^.content);
+            ensureProfileView.canOpenLocation:=canOpenLocation;
           end;
       end;
       clear;
@@ -117,21 +123,25 @@ PROCEDURE TprofilingOutputForm.StringGrid1HeaderClick(Sender: TObject;
     else grid1Sorting:=index*2;
     sortProfilingList(profilingList,grid1Sorting);
     fillGrid1;
+    fillGrids2and3;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol,
-  aRow: integer; aState: TGridDrawState);
+PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol, aRow: integer; aState: TGridDrawState);
   VAR style:TTextStyle;
       myGrid:TStringGrid;
-begin
-  if Sender.ClassType<>TStringGrid.ClassType then exit;
-  myGrid:=TStringGrid(Sender);
-  style:=myGrid.Canvas.TextStyle;
-  if (aCol>=1) and (aRow>=1)
-  then style.Alignment:=taRightJustify
-  else style.Alignment:=taLeftJustify;
-  myGrid.Canvas.TextStyle:=style;
-end;
+  begin
+    if Sender.ClassType<>TStringGrid.ClassType then exit;
+    myGrid:=TStringGrid(Sender);
+    style:=myGrid.Canvas.TextStyle;
+    if (aRow>=1) then begin
+      if (aCol>=1) then style.Alignment:=taRightJustify
+                   else begin
+                     style.Alignment:=taLeftJustify;
+                     style.EndEllipsis:=true;
+                   end;
+    end else style.Alignment:=taLeftJustify;
+    myGrid.Canvas.TextStyle:=style;
+  end;
 
 PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
   begin
@@ -144,6 +154,11 @@ PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
+PROCEDURE TprofilingOutputForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    if not(canOpenLocation) then CloseAction:=caFree;
+  end;
+
 PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
   begin
     unregisterFontControl(StringGrid1);
@@ -151,16 +166,38 @@ PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
     unregisterFontControl(StringGrid3);
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,
-  aRow: integer);
+PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,aRow: integer);
   begin
     fillGrids2and3;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject;
-  VAR key: char);
+PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: char);
+  VAR i:longint;
   begin
-    if key=#13 then workspace.openLocation(guessLocationFromString( StringGrid1.Cells[1,StringGrid1.selection.top],false));
+    if (key=#13) and canOpenLocation then begin
+      i:=StringGrid1.selection.top-1;
+      workspace.openLocation(profilingList[i].calleeLocation);
+    end else writeln('StringGridKeyPress ',ord(key));
+  end;
+
+PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
+  VAR i,j:longint;
+  begin
+    if (key=#13) and canOpenLocation then begin
+      i:=StringGrid1.selection.top-1;
+      j:=StringGrid2.selection.top-1;
+      workspace.openLocation(profilingList[i].callers[j].location);
+    end;
+  end;
+
+PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
+  VAR i,j:longint;
+  begin
+    if (key=#13) and canOpenLocation then begin
+      i:=StringGrid1.selection.top-1;
+      j:=StringGrid3.selection.top-1;
+      workspace.openLocation(profilingList[i].callees[j].location);
+    end;
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject;
@@ -175,18 +212,6 @@ PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject;
   begin
     if IsColumn then
     StringGrid2.ColWidths[index]:=StringGrid3.ColWidths[index];
-  end;
-
-PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject;
-  VAR key: char);
-  begin
-    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid2.Cells[1,StringGrid2.selection.top],false));
-  end;
-
-PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject;
-  VAR key: char);
-  begin
-    if key=#13 then workspace.openLocation(guessLocationFromString(StringGrid3.Cells[1,StringGrid3.selection.top],false));
   end;
 
 PROCEDURE TprofilingOutputForm.dockChanged;
@@ -205,14 +230,30 @@ PROCEDURE TprofilingOutputForm.setProfilingList(CONST list: T_profilingList);
   VAR k:longint;
   begin
     profilingList:=list;
-    if grid1Sorting<>255 then                                        sortProfilingList(profilingList        ,grid1Sorting);;
+    if grid1Sorting<>255 then sortProfilingList(profilingList,grid1Sorting);;
     if grid2Sorting<>255 then for k:=0 to length(profilingList)-1 do begin
       sortCallerList(profilingList[k].callers,grid2Sorting);
       sortCallerList(profilingList[k].callees,grid2Sorting);
     end;
     fillGrid1;
+    grid2Autosized:=false;
     StringGrid2.RowCount:=1;
     StringGrid3.RowCount:=1;
+    StringGrid1.AutoSizeColumn(1);
+    StringGrid1.AutoSizeColumn(2);
+    StringGrid1.AutoSizeColumn(3);
+    StringGrid1.AutoSizeColumn(4);
+    GroupBox1.ClientWidth:=-StringGrid1.ClientWidth+StringGrid1.width+
+                            StringGrid1.ColWidths[0]
+                           +StringGrid1.ColWidths[1]
+                           +StringGrid1.ColWidths[2]
+                           +StringGrid1.ColWidths[3]
+                           +StringGrid1.ColWidths[4];
+  end;
+
+FUNCTION shortLocation(CONST l:T_searchTokenLocation):string;
+  begin
+    result:='@'+extractFileName(l.fileName)+':'+intToStr(l.line)+','+intToStr(l.column);
   end;
 
 PROCEDURE TprofilingOutputForm.fillGrid1;
@@ -221,7 +262,7 @@ PROCEDURE TprofilingOutputForm.fillGrid1;
     StringGrid1.RowCount:=1+length(profilingList);
     for i:=0 to length(profilingList)-1 do begin
       StringGrid1.Cells[0,i+1]:=profilingList[i].id;
-      StringGrid1.Cells[1,i+1]:=profilingList[i].calleeLocation;
+      StringGrid1.Cells[1,i+1]:=shortLocation(profilingList[i].calleeLocation);
       StringGrid1.Cells[2,i+1]:=intToStr(profilingList[i].aggTime.callCount);
       StringGrid1.Cells[3,i+1]:=formatFloat('0.000',profilingList[i].aggTime.timeSpent_inclusive*1E3)+'ms';
       StringGrid1.Cells[4,i+1]:=formatFloat('0.000',profilingList[i].aggTime.timeSpent_exclusive*1E3)+'ms';
@@ -236,7 +277,7 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
       StringGrid2.RowCount:=length(profilingList[k].callers)+1;
       for i:=0 to length(profilingList[k].callers)-1 do begin
         StringGrid2.Cells[0,i+1]:=profilingList[k].callers[i].id;
-        StringGrid2.Cells[1,i+1]:=profilingList[k].callers[i].location;
+        StringGrid2.Cells[1,i+1]:=shortLocation(profilingList[k].callers[i].location);
         StringGrid2.Cells[2,i+1]:=intToStr(profilingList[k].callers[i].time.callCount);
         StringGrid2.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callers[i].time.timeSpent_inclusive*1E3)+'ms';
         StringGrid2.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callers[i].time.timeSpent_exclusive*1E3)+'ms';
@@ -245,10 +286,20 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
       StringGrid3.RowCount:=length(profilingList[k].callees)+1;
       for i:=0 to length(profilingList[k].callees)-1 do begin
         StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].id;
-        StringGrid3.Cells[1,i+1]:=profilingList[k].callees[i].location;
+        StringGrid3.Cells[1,i+1]:=shortLocation(profilingList[k].callees[i].location);
         StringGrid3.Cells[2,i+1]:=intToStr(profilingList[k].callees[i].time.callCount);
         StringGrid3.Cells[3,i+1]:=formatFloat('0.000',profilingList[k].callees[i].time.timeSpent_inclusive*1E3)+'ms';
         StringGrid3.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callees[i].time.timeSpent_exclusive*1E3)+'ms';
+      end;
+      if not(grid2Autosized) then begin
+        for i:=0 to 4 do begin
+          StringGrid2.AutoSizeColumn(i);
+          StringGrid3.AutoSizeColumn(i);
+          if StringGrid2.ColWidths[i]< StringGrid3.ColWidths[i] then
+             StringGrid2.ColWidths[i]:=StringGrid3.ColWidths[i] else
+             StringGrid3.ColWidths[i]:=StringGrid2.ColWidths[i];
+        end;
+        grid2Autosized:=true;
       end;
     end else begin
       StringGrid2.RowCount:=1;

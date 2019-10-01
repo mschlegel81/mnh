@@ -169,12 +169,12 @@ PROCEDURE T_microserver.serve;
     VAR headerMap:P_mapLiteral;
         i:longint;
     begin
-      headerMap:=newMapLiteral;
-      requestMap:=newMapLiteral
+      headerMap:=newMapLiteral(8);
+      requestMap:=newMapLiteral(8)
         ^.put('request',
-          newMapLiteral^.put('method',C_httpRequestMethodName[request.method])
-                       ^.put('path',request.request)
-                       ^.put('protocol',request.protocol),false)
+          newMapLiteral(3)^.put('method',C_httpRequestMethodName[request.method])
+                          ^.put('path',request.request)
+                          ^.put('protocol',request.protocol),false)
         ^.put('header',headerMap,false)
         ^.put('body',request.body);
       for i:=0 to length(request.header)-1 do with request.header[i] do headerMap^.put(key,value);
@@ -263,7 +263,7 @@ FUNCTION extractParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       while (length(parts)<2) do append(parts,'');
-      parameters:=newMapLiteral;
+      parameters:=newMapLiteral(0);
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
@@ -359,8 +359,8 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
         s:string;
         key:string;
     begin
-      headerMap:=newMapLiteral;
-      result:=newMapLiteral^.put('body',resultText)
+      headerMap:=newMapLiteral(0);
+      result:=newMapLiteral(0)^.put('body',resultText)
       ^.put('code',client.ResponseStatusCode)
       ^.put('status',client.ResponseStatusText)
       ^.put('header',headerMap,false);

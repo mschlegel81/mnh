@@ -135,7 +135,6 @@ CONSTRUCTOR T_token.create;
 DESTRUCTOR T_token.destroy;
   begin
     undefine;
-    txt:='';
   end;
 
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: T_idString; CONST tokenType: T_tokenType; CONST ptr: pointer);
@@ -178,7 +177,6 @@ PROCEDURE T_token.undefine;
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
     end;
     data:=nil;
-    txt:='';
     tokType:=tt_EOL;
     location.package:=nil;
     location.column:=0;

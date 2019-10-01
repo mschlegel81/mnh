@@ -146,12 +146,12 @@ FUNCTION charSet_imp intFuncSignature;
           end;
           charSetUtf8.put(sub);
         end;
-        result:=newSetLiteral;
+        result:=newSetLiteral(100);
         for sub in charSetUtf8.values do result^.appendString(sub);
         charSetUtf8.destroy;
       end else begin
         for c in input^.value do include(byteSet,c);
-        result:=newSetLiteral;
+        result:=newSetLiteral(100);
         for c in byteSet do result^.appendString(c);
       end;
     end;
@@ -485,8 +485,8 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
           for k:=0 to list0^.size-1 do listResult^.appendString(innerClean(P_stringLiteral(list0^.value[k])^.value));
         end;
         lt_stringSet,lt_emptySet: begin
-          result:=newSetLiteral;
           iter:=set0^.iteratableList;
+          result:=newSetLiteral(length(iter));
           for l in iter do setResult^.appendString(innerClean(P_stringLiteral(l)^.value));
           disposeLiteral(iter);
         end;
@@ -563,7 +563,7 @@ FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_mapLiteral;
     diff.execute(aHashes,bHashes,aLen,bLen);
     freeMem(aHashes,aLen*sizeOf(integer));
     freeMem(bHashes,bLen*sizeOf(integer));
-    result:=newMapLiteral^
+    result:=newMapLiteral(4)^
             .put('adds'    ,diff.DiffStats.adds    )^
             .put('deletes' ,diff.DiffStats.deletes )^
             .put('matches' ,diff.DiffStats.matches )^

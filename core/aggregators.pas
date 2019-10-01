@@ -179,7 +179,7 @@ CONSTRUCTOR T_concatAltAggregator.create; begin inherited create(newListLiteral)
 CONSTRUCTOR T_headAggregator     .create; begin inherited create(nil);            end;
 CONSTRUCTOR T_minAggregator      .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_maxAggregator      .create; begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_setAggregator      .create; begin inherited create(newSetLiteral);  end;
+CONSTRUCTOR T_setAggregator      .create; begin inherited create(newSetLiteral(0));  end;
 CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_stringConcatAggregator.create; begin inherited create(newStringLiteral('',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin inherited create(nil); boolResult:=true;  end;

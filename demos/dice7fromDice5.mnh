@@ -13,6 +13,6 @@ private rand7of5(count:Int)->begin
   : r;
 end;
 
-simpleHist(L)->(elementFrequency(L).getInner(1)/size(L)).join("\n");
+simpleHist(L)->format("  %0.5f",elementFrequency(L).getInner(1).sort/size(L)).join("\n");
 
 main->print("Distribution of seven sided dice (100000 samples): \n",simpleHist(rand7of5(100000)));

@@ -14,8 +14,6 @@ memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0]
 private flavourDependentScripts:=
   ['continuedFractions',
    'cauchy',
-   'dice7fromDice5',
-   'jaro',
    'numInt',
    'opTest',
    'numDiff',

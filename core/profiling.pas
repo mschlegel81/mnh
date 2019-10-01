@@ -34,14 +34,15 @@ TYPE
   T_stringMap=specialize G_stringKeyMap<string>;
 
   T_callerListEntry=record
-    id,location:string;
+    id:string;
+    location:T_searchTokenLocation;
     time:T_profilingInfo;
   end;
   T_callerList=array of T_callerListEntry;
 
   T_profilingListEntry=record
     id:T_idString;
-    calleeLocation:string;
+    calleeLocation:T_searchTokenLocation;
     callers,
     callees:T_callerList;
     //aggregated values
@@ -106,12 +107,18 @@ FUNCTION blankProfilingCalls:T_packageProfilingCalls;
     for p in T_profileCategory do result[p]:=nil;
   end;
 {$ifdef fullVersion}
-FUNCTION fixLocation(CONST s:string):string;
-  CONST categorySuffixes:array[0..5] of string=(':-1,0',':-2,0',':-3,0',':-4,0',':-5,0',':-6,0');
-  VAR suffix:string;
+FUNCTION fixLocation(CONST location:T_searchTokenLocation):T_searchTokenLocation;
   begin
-    result:=s;
-    for suffix in categorySuffixes do result:=replaceOne(result,suffix,':1,1');
+    result:=location;
+    if (location.line<0) and (location.column=0) then begin
+      result.line:=1;
+      result.column:=1;
+    end;
+  end;
+
+FUNCTION fixLocation(CONST s:string):T_searchTokenLocation;
+  begin
+    result:=fixLocation(guessLocationFromString(s,false));
   end;
 
 PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
@@ -122,7 +129,7 @@ PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
         0: result:=a.id<b.id;
         1: result:=a.id>b.id;
         2: result:=a.calleeLocation<b.calleeLocation;
-        3: result:=a.calleeLocation>b.calleeLocation;
+        3: result:=b.calleeLocation<a.calleeLocation;
         4: result:=a.aggTime.callCount<b.aggTime.callCount;
         5: result:=a.aggTime.callCount>b.aggTime.callCount;
         6: result:=a.aggTime.timeSpent_inclusive<b.aggTime.timeSpent_inclusive;
@@ -149,7 +156,7 @@ PROCEDURE sortCallerList(VAR list:T_callerList; CONST sortIndex:byte);
         0: result:=a.id<b.id;
         1: result:=a.id>b.id;
         2: result:=a.location<b.location;
-        3: result:=a.location>b.location;
+        3: result:=b.location<a.location;
         4: result:=a.time.callCount          <b.time.callCount;
         5: result:=a.time.callCount          >b.time.callCount;
         6: result:=a.time.timeSpent_inclusive<b.time.timeSpent_inclusive;
@@ -270,7 +277,7 @@ FUNCTION T_calleeEntry.toProfilingListEntry(CONST locationToIdMap:T_stringMap): 
     result.aggTime.timeSpent_exclusive:=0;
     result.aggTime.timeSpent_inclusive:=0;
     result.id:=id;
-    result.calleeLocation:=fixLocation(calleeLocation);
+    result.calleeLocation:=fixLocation(T_searchTokenLocation(calleeLocation));
     entries:=callerMap.entrySet;
     setLength(result.callers,length(entries));
     for k:=0 to length(entries)-1 do begin

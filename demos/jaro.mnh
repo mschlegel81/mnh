@@ -21,7 +21,7 @@ jaroDistance(A:String,B:String)->begin
   end;
 end;
 
-private testJaro(A,B)->printf("The Jaro distance\v of\t{$0.escape}\t\n\vand\t{$1.escape}\tis\t{jaroDistance($0,$1)}",A,B);
+private testJaro(A,B)->printf("The Jaro distance\v of\t{$0.escape}\t\n\vand\t{$1.escape}\tis\t%{jaroDistance($0,$1)}0.5f",A,B);
 
 @demo_for=strings, local variables/mutation
 //*See http://rosettacode.org/wiki/Jaro_distance
