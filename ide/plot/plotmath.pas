@@ -7,7 +7,8 @@ USES sysutils,
      basicTypes,
      plotstyles,
      litVar,
-     BGRACanvas;
+     BGRACanvas,
+     types;
 CONST
   MIN_VALUE_FOR:array[false..true] of double=(-1E100, 1E-100);
   MAX_VALUE_FOR:array[false..true] of double=( 1E100,  1E100);
@@ -34,7 +35,7 @@ TYPE
   end;
 
   T_rowToPaint = array of record
-    x,y:longint;
+    point:TPoint;
     valid:boolean;
   end;
 
@@ -298,8 +299,8 @@ PROCEDURE T_customText.renderText(CONST opt: T_scalingOptions; CONST target: TBG
       tempRow.init(1);
       tempRow[0]:=p;
       toPaint:=opt.transformRow(tempRow,1,0,0);
-      x:=toPaint[0].x;
-      y:=toPaint[0].y;
+      x:=toPaint[0].point.x;
+      y:=toPaint[0].point.y;
       if not(toPaint[0].valid) then exit;
       tempRow.free;
     end;
@@ -740,8 +741,8 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor
       ty:=axisTrafo['y'].apply(row[i][1])*scalingFactor+subPixelDy;
       result[i].valid:=not(isNan(ty)) and (ty>=-2147483648) and (ty<=2147483647);
       if not(result[i].valid) then continue;
-      result[i].x:=round(tx);
-      result[i].y:=round(ty);
+      result[i].point.x:=round(tx);
+      result[i].point.y:=round(ty);
     end;
   end;
 

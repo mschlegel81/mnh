@@ -1414,8 +1414,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         screenRow:=scalingOptions.transformRow(dataRow,1,0,0);
         for i:=1 to dataRow.size-1 do
         if screenRow[i-1].valid and screenRow[i].valid then begin
-          distThreshold:=distThreshold+sqr(screenRow[i].x-screenRow[i-1].x)
-                                      +sqr(screenRow[i].y-screenRow[i-1].y);
+          distThreshold:=distThreshold+sqr(screenRow[i].point.x-screenRow[i-1].point.x)
+                                      +sqr(screenRow[i].point.y-screenRow[i-1].point.y);
           inc(distThresholdSamples);
         end;
         distThreshold:=distThreshold/distThresholdSamples;
@@ -1426,8 +1426,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         for i:=1 to dataRow.size-1 do
         if not(screenRow[i  ].valid) or
            not(screenRow[i-1].valid) or
-          (sqr(screenRow[i].x-screenRow[i-1].x)
-          +sqr(screenRow[i].y-screenRow[i-1].y)>=distThreshold) then begin
+          (sqr(screenRow[i].point.x-screenRow[i-1].point.x)
+          +sqr(screenRow[i].point.y-screenRow[i-1].point.y)>=distThreshold) then begin
           t:=tRow[i]*0.5+tRow[i-1]*0.5;
           TList^.appendReal(t);
           append(newTimes,t);
