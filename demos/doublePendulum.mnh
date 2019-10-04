@@ -6,7 +6,6 @@
 plain script;
 USE rungeKutta,GUI;
 //Animation parameters
-private secondsPerFrame:=1/40;
 private timeStepPerFrame:=0.02;
 //Physical parameters
 private l1:=($1 orElse 1).toReal; //Length of upper leg
@@ -68,16 +67,15 @@ begin
                    addPlot(trace1,'black');
                    addPlot(p2,'3 . red l');
                    addPlot(p1,'3 . black l');
-                   postDisplay;
+                   addAnimationFrame;
                  end};
+  clearAnimation(true);
   replot();
+  postDisplay;
   local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
-  local frameTime:=time;
   state1:=future(step,[state1]);
   state2:=future(step,[state2]);
   while(!plotClosed,begin
-    sleepUntil(frameTime+=secondsPerFrame);
-    frameTime:=time;
     p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);
     p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=future(step,[state2]);
     replot();
@@ -87,6 +85,7 @@ begin
   local mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;
   t:=t[mask].each(it,it,it);
 
+  clearAnimation;
   setOptions([['autoscaleX',true],['autoscaleY',true],['preserveAspect',false],['axisStyleX',3],['axisStyleY',3]]);
   plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube f');
   addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube f');

@@ -265,7 +265,7 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
 
     scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
     idealLineWidth:=styleModifier*scalingFactor;
-    if      idealLineWidth<1/255 then begin result.lineWidth:=0;                    idealLineWidth:=0; end
+    if      idealLineWidth<1/255 then begin result.lineWidth:=0;                     idealLineWidth:=0; end
     else if idealLineWidth<1     then       result.lineWidth:=1
                                  else begin result.lineWidth:=round(idealLineWidth); idealLineWidth:=1; end;
     result.lineColor.FromRGB(color[cc_red],color[cc_green],color[cc_blue],toByte(idealLineWidth*color[cc_alpha]));

@@ -224,12 +224,15 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       result:=(wrapper.readAnsiString=CODE_HASH);
       exampleCount:=wrapper.readNaturalNumber;
       result:=result and wrapper.allOkay;
-      if result then for ei:=0 to exampleCount-1 do begin
-        code:=readArrayOfString;
-        txt :=readArrayOfString;
-        html:=readArrayOfString;
-        ids :=readArrayOfString;
-        addExample(code,html,txt ,ids);
+      if result then begin
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: restoring built-in documentation');{$endif}
+        for ei:=0 to exampleCount-1 do begin
+          code:=readArrayOfString;
+          txt :=readArrayOfString;
+          html:=readArrayOfString;
+          ids :=readArrayOfString;
+          addExample(code,html,txt ,ids);
+        end;
       end;
       result:=result and wrapper.allOkay;
       wrapper.destroy;
@@ -253,6 +256,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
     if not(canRestoreExamples) then begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
       setLength(examplesToStore,0);
       //Read examples:---------------------------------------------------------------------
       setLength(code,0);
@@ -504,7 +508,6 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
       templateLineCount:longint=0;
       decompressedTemplate:T_arrayOfString;
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
     prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);

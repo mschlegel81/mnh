@@ -449,7 +449,7 @@ FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpres
       lt_emptyList,lt_emptySet,lt_emptyMap                                       : exit(P_compoundLiteral(input^.rereferenced));
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: result:=newListLiteral;
       lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : result:=newSetLiteral(0);
-      lt_map                                                                     : result:=newListLiteral;
+      else result:=newListLiteral;
     end;
     iter:=input^.iteratableList;
     for x in iter do if context.continueEvaluation and filterExpression^.evaluateToBoolean(filterLocation,@context,@recycler,true,x,nil) then P_collectionLiteral(result)^.append(x,true);

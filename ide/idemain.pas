@@ -203,8 +203,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     outlineSettings.create;
 
-    splashOnStartup;
-
     stream.createToReadFromFile(workspaceFilename);
 
     if stream.allOkay
@@ -232,6 +230,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
+    splashOnStartup;
+
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
@@ -282,21 +282,24 @@ FUNCTION anyEvaluationRunning:boolean;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   begin
-    if anyEvaluationRunning then
-    case closeDialogForm.showOnQuitWhileEvaluating of
-      cda_quitAfterEval: begin
-        quitPosted:=true;
-        if anyEvaluationRunning then CanClose:=false;
+    if anyEvaluationRunning then begin
+      ensureTimerSuspend;
+      case closeDialogForm.showOnQuitWhileEvaluating of
+        cda_quitAfterEval: begin
+          quitPosted:=true;
+          if anyEvaluationRunning then CanClose:=false;
+        end;
+        cda_dontQuit: begin
+          quitPosted:=false;
+          CanClose:=false;
+        end;
+        cda_cancelEvalAndQuit: begin
+          runnerModel.postHalt;
+          stopQuickEvaluation;
+          CanClose:=true;
+        end;
       end;
-      cda_dontQuit: begin
-        quitPosted:=false;
-        CanClose:=false;
-      end;
-      cda_cancelEvalAndQuit: begin
-        runnerModel.postHalt;
-        stopQuickEvaluation;
-        CanClose:=true;
-      end;
+      timer.enabled:=true;
     end;
   end;
 
