@@ -116,7 +116,8 @@ TYPE
   private
     animationFrameIndex:longint;
     fpsSamplingStart:TimerData;
-    avgFps:double;
+    secondsPerFrameOverhead:double;
+    secondsPerFrame:double;
     eTimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
@@ -280,7 +281,8 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset .checked:=settings.doResetPlotOnEvaluation;
     miCacheFrames .checked:=settings.cacheAnimationFrames;
-    avgFps:=0;
+    secondsPerFrameOverhead:=0;
+    secondsPerFrame:=0;
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
@@ -514,17 +516,19 @@ PROCEDURE TplotForm.performFastUpdate;
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
            //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
-           (frameInterval-eTimer.elapsed<0.05) and
+           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.05) and
            relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval-secondsPerFrameOverhead));
           eTimer.clear;
           eTimer.start;
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval));
           //FPS label:
-          avgFps:=avgFps*0.9+0.1/eTimer.elapsed(fpsSamplingStart);
+          secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9  +0.1*(eTimer.elapsed(fpsSamplingStart)-frameInterval);
+          secondsPerFrame        :=secondsPerFrame        *0.99+0.01*(eTimer.elapsed(fpsSamplingStart));
+          if secondsPerFrameOverhead<0 then secondsPerFrameOverhead:=0;
           eTimer.clear(fpsSamplingStart);
           eTimer.start(fpsSamplingStart);
-          animationFPSLabel.caption:=formatFloat('#0.00',avgFps)+'fps';
+          animationFPSLabel.caption:=formatFloat('#0.00',1/secondsPerFrame)+'fps';
           //:FPS label
         end;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
@@ -708,10 +712,14 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
   end else result:=nil; end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
+  VAR request:P_plotAddAnimationFrameRequest;
   begin if (params=nil) or (params^.size=0) then begin
     if not(gui_started) then context.messages^.logGuiNeeded;
+    new(request,create());
+    context.messages^.postCustomMessage(request);
+    sleep(round(1000*request^.getProposedSleepTime(context.messages)));
+    disposeMessage(request);
     result:=newVoidLiteral;
-    context.messages^.postSingal(mt_plot_addAnimationFrame,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION display_imp intFuncSignature;

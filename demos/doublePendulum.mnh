@@ -6,7 +6,6 @@
 plain script;
 USE rungeKutta,GUI;
 //Animation parameters
-private secondsPerFrame:=1/40;
 private timeStepPerFrame:=0.02;
 //Physical parameters
 private l1:=($1 orElse 1).toReal; //Length of upper leg
@@ -74,12 +73,9 @@ begin
   replot();
   postDisplay;
   local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
-  local frameTime:=time;
   state1:=future(step,[state1]);
   state2:=future(step,[state2]);
   while(!plotClosed,begin
-    sleepUntil(frameTime+=secondsPerFrame);
-    frameTime:=time;
     p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);
     p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=future(step,[state2]);
     replot();

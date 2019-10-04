@@ -12,6 +12,7 @@ USES sysutils,
      litVar,
      EpikTimer,
      BGRABitmap,BGRACanvas,BGRABitmapTypes;
+CONST VOLATILE_FRAMES_MAX=50;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
   T_timedPlotExecution=object
@@ -94,6 +95,18 @@ TYPE
       CONSTRUCTOR create();
       PROCEDURE waitForExecution(CONST errorFlagProvider:P_messages);
       PROCEDURE markExecuted;
+  end;
+
+  P_plotAddAnimationFrameRequest=^T_plotAddAnimationFrameRequest;
+  T_plotAddAnimationFrameRequest=object(T_payloadMessage)
+    private
+      propSleep:double;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create();
+      FUNCTION getProposedSleepTime(CONST errorFlagProvider:P_messages):double;
+      PROCEDURE markExecuted(CONST proposedSleepTime:double);
   end;
 
   P_plot =^T_plot;
@@ -257,11 +270,41 @@ FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
     disposeMessage(request);
   end;
 
+FUNCTION T_plotAddAnimationFrameRequest.internalType: shortstring;
+  begin result:='P_plotAddAnimationFrameRequest'; end;
+
+CONSTRUCTOR T_plotAddAnimationFrameRequest.create();
+  begin
+    inherited create(mt_plot_addAnimationFrame);
+    propSleep:=-1;
+  end;
+
+FUNCTION T_plotAddAnimationFrameRequest.getProposedSleepTime(CONST errorFlagProvider:P_messages):double;
+  begin
+    enterCriticalSection(messageCs);
+    while (propSleep<0) and (errorFlagProvider^.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=propSleep;
+    leaveCriticalSection(messageCs);
+  end;
+
+PROCEDURE T_plotAddAnimationFrameRequest.markExecuted(CONST proposedSleepTime:double);
+  begin
+    enterCriticalSection(messageCs);
+    if (proposedSleepTime<0) or (isNan(proposedSleepTime)) or (isInfinite(proposedSleepTime))
+    then propSleep:=0
+    else propSleep:=proposedSleepTime;
+    leaveCriticalSection(messageCs);
+  end;
+
 PROCEDURE T_timedPlotExecution.wait;
-  VAR msSleep:longint;
   begin
     if timer=nil then exit;
-    if timer.elapsed<timeout then sleep(round(900*(timeout-timer.elapsed)));
+    if timeout-timer.elapsed>0.1 then sleep(round(1000*(timeout-timer.elapsed))-100);
+    if timeout-timer.elapsed>0   then sleep(round(1000*(timeout-timer.elapsed))    );
   end;
 
 CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
@@ -748,13 +791,13 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
   end;
 
 PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
-  VAR newIdx:longint;
+  VAR k:longint=0;
   begin
     enterCriticalSection(seriesCs);
     try
-      newIdx:=length(frame);
-      setLength(frame,newIdx+1);
-      new(frame[newIdx],create(plot));
+      k:=length(frame);
+      setLength(frame,k+1);
+      new(frame[k],create(plot));
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -799,7 +842,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          if not(weHadAMemoryPanic) and isMemoryInComfortZone and settings.cacheAnimationFrames then begin
+          if not(weHadAMemoryPanic) and isMemoryInComfortZone and (settings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin
@@ -1757,8 +1800,13 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_clearAnimation,
       mt_plot_clearAnimationVolatile:
         animation.clear(message^.messageType=mt_plot_clearAnimationVolatile);
-      mt_plot_addAnimationFrame:
+      mt_plot_addAnimationFrame: begin
+        displayImmediate:=true;
         animation.addFrame(currentPlot);
+        if animation.volatile
+        then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/20)
+        else P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
+      end;
       mt_plot_postDisplay:       begin
         if doPlot<>nil then doPlot();
         displayImmediate:=true;
@@ -1903,8 +1951,15 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         mt_plot_clearAnimationVolatile,
         mt_plot_retrieveOptions,
         mt_plot_renderRequest,
-        mt_plot_queryClosedByUser,
+        mt_plot_queryClosedByUser: begin
+          result:=true;
+          //if there are pending tasks then store else process
+          if (collectedFill>0)
+          then inherited append(message)
+          else processMessage(message);
+        end;
         mt_plot_addAnimationFrame: begin
+          if not(animation.volatile) then P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
           result:=true;
           //if there are pending tasks then store else process
           if (collectedFill>0)
