@@ -68,9 +68,11 @@ begin
                    addPlot(trace1,'black');
                    addPlot(p2,'3 . red l');
                    addPlot(p1,'3 . black l');
-                   postDisplay;
+                   addAnimationFrame;
                  end};
+  clearAnimation(true);
   replot();
+  postDisplay;
   local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
   local frameTime:=time;
   state1:=future(step,[state1]);
@@ -87,6 +89,7 @@ begin
   local mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;
   t:=t[mask].each(it,it,it);
 
+  clearAnimation;
   setOptions([['autoscaleX',true],['autoscaleY',true],['preserveAspect',false],['axisStyleX',3],['axisStyleY',3]]);
   plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube f');
   addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube f');

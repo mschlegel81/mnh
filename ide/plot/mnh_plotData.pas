@@ -172,19 +172,21 @@ TYPE
       framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
       seriesCs:TRTLCriticalSection;
       weHadAMemoryPanic:boolean;
+      volatile:boolean;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
       PROCEDURE flushFramesToDisk;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      PROCEDURE clear;
+      PROCEDURE clear(CONST isVolatile:boolean=false);
       FUNCTION frameCount:longint;
       PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST timing:T_timedPlotExecution);
       PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
+      PROPERTY isSeriesVolatile:boolean read volatile;
       PROCEDURE resolutionChanged(CONST newWidth,newHeight:longint);
   end;
 
@@ -256,9 +258,10 @@ FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
   end;
 
 PROCEDURE T_timedPlotExecution.wait;
+  VAR msSleep:longint;
   begin
     if timer=nil then exit;
-    while timer.elapsed<timeout do sleep(round(900*(timeout-timer.elapsed)));
+    if timer.elapsed<timeout then sleep(round(900*(timeout-timer.elapsed)));
   end;
 
 CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
@@ -649,7 +652,7 @@ DESTRUCTOR T_plotSeries.destroy;
     doneCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.clear;
+PROCEDURE T_plotSeries.clear(CONST isVolatile:boolean=false);
   VAR k:longint;
   begin
     enterCriticalSection(seriesCs);
@@ -657,6 +660,7 @@ PROCEDURE T_plotSeries.clear;
       for k:=0 to length(frame)-1 do dispose(frame[k],destroy);
       setLength(frame,0);
       for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
+      volatile:=isVolatile;
       weHadAMemoryPanic:=false;
     finally
       leaveCriticalSection(seriesCs);
@@ -685,7 +689,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
         framesWithImagesAllocated[j]:=framesWithImagesAllocated[j+1];
         framesWithImagesAllocated[length(framesWithImagesAllocated)-1]:=nil;
       end else inc(k);
-      //deallocate the last one, dump to file
+      //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
       if settings.cacheAnimationFrames then begin
         if not(isMemoryInComfortZone) then weHadAMemoryPanic:=true;
@@ -710,7 +714,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     end;
     try
       current:=frame[frameIndex];
-      handleImagesToFree;
+      if not(volatile) then handleImagesToFree;
       current^.obtainImage(target,timing);
     finally
       leaveCriticalSection(seriesCs);
@@ -761,6 +765,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
   VAR toPrepare,
       lastToPrepare:longint;
   {$endif}
+  VAR i,j,k:longint;
   begin
     enterCriticalSection(seriesCs);
     try
@@ -768,6 +773,21 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         frameIndex:=-1;
         result:=false;
       end else begin
+        if volatile then begin
+          j:=0;
+          k:=0;
+          for i:=0 to length(frame)-1 do if (i>=frameIndex) then begin
+            frame[j]:=frame[i];
+            inc(j);
+          end else begin
+            dispose(frame[i],destroy);
+            inc(k);
+          end;
+          if k>0 then begin
+            setLength(frame,j);
+            dec(frameIndex,k);
+          end;
+        end;
         result:=true;
         inc(frameIndex);
         if frameIndex>=length(frame) then begin
@@ -1734,8 +1754,9 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         currentPlot.scalingOptions.modifyOptions(P_plotOptionsMessage(message)^.options,P_plotOptionsMessage(message)^.modified);
       mt_plot_clear:
         currentPlot.clear;
-      mt_plot_clearAnimation:
-        animation.clear;
+      mt_plot_clearAnimation,
+      mt_plot_clearAnimationVolatile:
+        animation.clear(message^.messageType=mt_plot_clearAnimationVolatile);
       mt_plot_addAnimationFrame:
         animation.addFrame(currentPlot);
       mt_plot_postDisplay:       begin
@@ -1844,7 +1865,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
 CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback; CONST isSandboxSystem:boolean);
   begin
     if executePlotCallback=nil
-    then inherited create(at_plot,C_includableMessages[at_plot]-[mt_plot_queryClosedByUser,mt_plot_addAnimationFrame,mt_plot_clearAnimation,mt_plot_postDisplay])
+    then inherited create(at_plot,C_includableMessages[at_plot]-[mt_plot_queryClosedByUser,mt_plot_addAnimationFrame,mt_plot_clearAnimation,mt_plot_clearAnimationVolatile,mt_plot_postDisplay])
     else inherited create(at_plot,C_includableMessages[at_plot]);
     sandboxed:=isSandboxSystem;
     plotChangedSinceLastDisplay:=false;
@@ -1879,6 +1900,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         mt_plot_setOptions,
         mt_plot_clear,
         mt_plot_clearAnimation,
+        mt_plot_clearAnimationVolatile,
         mt_plot_retrieveOptions,
         mt_plot_renderRequest,
         mt_plot_queryClosedByUser,

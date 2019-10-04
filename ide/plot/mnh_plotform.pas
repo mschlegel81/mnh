@@ -115,8 +115,8 @@ TYPE
     PROCEDURE dockChanged; override;
   private
     animationFrameIndex:longint;
-    fpsSamplingStart:double;
-    framesSampled:longint;
+    fpsSamplingStart:TimerData;
+    avgFps:double;
     eTimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
@@ -280,14 +280,15 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset .checked:=settings.doResetPlotOnEvaluation;
     miCacheFrames .checked:=settings.cacheAnimationFrames;
-    fpsSamplingStart:=now;
-    framesSampled:=0;
+    avgFps:=0;
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
     eTimer:=TEpikTimer.create(self);
     eTimer.clear;
     eTimer.start;
+    eTimer.clear(fpsSamplingStart);
+    eTimer.start(fpsSamplingStart);
     initDockMenuItems(MainMenu,nil);
     initDockMenuItems(PopupMenu1,nil);
   end;
@@ -516,15 +517,15 @@ PROCEDURE TplotForm.performFastUpdate;
            (frameInterval-eTimer.elapsed<0.05) and
            relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval));
           eTimer.clear;
           eTimer.start;
-          inc(framesSampled);
-          if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
-            animationFPSLabel.caption:=formatFloat('#0.00',(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
-            fpsSamplingStart:=now;
-            framesSampled:=0;
-          end;
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval));
+          //FPS label:
+          avgFps:=avgFps*0.9+0.1/eTimer.elapsed(fpsSamplingStart);
+          eTimer.clear(fpsSamplingStart);
+          eTimer.start(fpsSamplingStart);
+          animationFPSLabel.caption:=formatFloat('#0.00',avgFps)+'fps';
+          //:FPS label
         end;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
         frameTrackBar.position:=animationFrameIndex;
@@ -637,11 +638,24 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
   end;
 
 PROCEDURE TplotForm.updateInteractiveSection;
+  VAR hasInteractiveAnimation:boolean=false;
+      hasVolatileAnimation   :boolean=false;
   begin
-    AnimationGroupBox.visible:=(relatedPlot^.animation.frameCount>0);
-    AnimationGroupBox.enabled:=(relatedPlot^.animation.frameCount>0);
-    if relatedPlot^.animation.frameCount>0 then begin
+    if (relatedPlot^.animation.frameCount>0) then begin
+      if relatedPlot^.animation.isSeriesVolatile
+      then hasVolatileAnimation   :=true
+      else hasInteractiveAnimation:=true;
+    end;
+    AnimationGroupBox.visible:=hasInteractiveAnimation;
+    AnimationGroupBox.enabled:=hasInteractiveAnimation;
+    if hasInteractiveAnimation then begin
       AnimationGroupBox.AutoSize:=true;
+    end else if hasVolatileAnimation then begin
+      AnimationGroupBox.AutoSize:=false;
+      AnimationGroupBox.height:=0;
+      animateCheckBox.checked:=true;
+      cycleCheckbox.checked:=false;
+      animationSpeedTrackbar.position:=animationSpeedTrackbar.max;
     end else begin
       AnimationGroupBox.AutoSize:=false;
       AnimationGroupBox.height:=0;
@@ -685,6 +699,12 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
     if not(gui_started) then context.messages^.logGuiNeeded;
     result:=newVoidLiteral;
     context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
+  end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
+    if not(gui_started) then context.messages^.logGuiNeeded;
+    result:=newVoidLiteral;
+    if bool0^.value
+    then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilTokenLocation)
+    else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
@@ -721,7 +741,7 @@ PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
 
 INITIALIZATION
   registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_variadic,'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode');
   registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
   registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution');
   registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
