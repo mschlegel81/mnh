@@ -9,7 +9,7 @@ CONST
                  {$ifdef profilingFlavour}'P'{$else}
                    {$ifdef debugMode}'D'{$else}'O'{$endif}
                  {$endif}+{$I %FPCTargetOS%};
-  LOGO:array[0..20] of string=(
+  LOGO:array[0..21] of string=(
   ' ___      ___ ___   ___ ___   ___',
   '|   \    /   |   \ |   |   | |   |  ______',
   '|    \  /    |    \|   |   |_|   | |   ___|',
@@ -30,6 +30,7 @@ CONST
   '  Ararat Synapse (c) 1999-2003 by Lukas Gebauer                http://www.ararat.cz/synapse/',
   '  EpikTimer      (c) 2003-2014 by Tom Lisjac                   <netdxr@gmail.com>',
   '  TRegExpr lib   (c) 1999-2004 by Andrey V. Sorokin            http://RegExpStudio.com',
+  '  BGRABitmap                                                   https://github.com/bgrabitmap/',
   '  Lazarus Component Library (LCL) ');
 
   APP_NAME             ='MNH';

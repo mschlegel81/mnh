@@ -203,8 +203,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     outlineSettings.create;
 
-    splashOnStartup;
-
     stream.createToReadFromFile(workspaceFilename);
 
     if stream.allOkay
@@ -232,6 +230,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
+    splashOnStartup;
+
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,filesToOpenInEditor);
