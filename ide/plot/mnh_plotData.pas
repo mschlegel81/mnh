@@ -1090,10 +1090,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
   PROCEDURE drawBoxes;
     VAR i:longint;
     begin
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
+      if scaleAndColor.lineWidth<=0
+      then target.Pen.style:=psClear
+      else begin
+        target.Pen.style:=psSolid;
+        target.Pen.BGRAColor:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+      end;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       i:=0;
@@ -1101,7 +1105,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
         if screenRow[i  ].valid and
            screenRow[i+1].valid and
            intersect(screenBox,boundingBoxOf(screenRow[i].point.x, screenRow[i].point.y,screenRow[i+1].point.x, screenRow[i+1].point.y)) then begin
-          target.Rectangle(screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y);
+          if scaleAndColor.lineWidth<=0
+          then target.FillRect (screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y)
+          else target.Rectangle(screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y);
         end;
         inc(i, 2);
       end;
