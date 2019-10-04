@@ -223,7 +223,8 @@ IMPLEMENTATION
 USES FPReadPNG,
      FPWritePNG,
      IntfGraphics,
-     myStringUtil;
+     myStringUtil,
+     cmdLineInterpretation;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -1772,7 +1773,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
     enterCriticalSection(adapterCs);
     try
       globalRowData:=newListLiteral();
-      result:='#!'+settings.fullFlavourLocation+' -GUI';
+      result:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
       myGenerics.append(result,'plain script;');
 
       commands:='resetOptions;';
