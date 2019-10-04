@@ -65,7 +65,7 @@ sample(8)->begin
   plot([0,2,0],'fs polygon green');
   addPlot([0,1],'box f orange');
   addPlot([[1,0],[2,2]],'ellipse 2 black');
-  explainPlot("You can draw polygons, boxes and ellipses\nNote the impact of different plot qualities on the box here!");
+  explainPlot("You can draw polygons, boxes and ellipses");
 end;
 
 sample(9)->begin

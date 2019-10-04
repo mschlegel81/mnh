@@ -1216,37 +1216,59 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
     end;
 
   PROCEDURE drawTubes;
-    VAR i:longint;
+    VAR i :longint=0;
+        j0:longint=0;
+        k:longint;
+        bound:array[false..true] of array of Tpoint;
     begin
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      target.Pen.Style:=psClear;
+      if scaleAndColor.solidStyle<>bsClear then begin
+        setLength(bound[false],0);
+        setLength(bound[true ],0);
+        for i:=0 to length(screenRow)-1 do begin
+          if screenRow[i].valid then begin
+            setLength(bound[odd(i)],length(bound[odd(i)])+1);
+            bound[odd(i)][length(bound[odd(i)])-1]:=screenRow[i].point;
+          end else begin
+            j0:=length(bound[true]);
+            setLength(bound[true],j0+length(bound[false]));
+            j0+=length(bound[false])-1;
+            for k:=length(bound[false])-1 downto 0 do bound[true][j0-k]:=bound[false][k];
+            target.Polygon(bound[true]);
+            setLength(bound[true],0);
+            setLength(bound[false],0);
+          end;
+        end;
+        j0:=length(bound[true]);
+        setLength(bound[true],j0+length(bound[false]));
+        j0+=length(bound[false])-1;
+        for k:=length(bound[false])-1 downto 0 do bound[true][j0-k]:=bound[false][k];
+        target.Polygon(bound[true]);
+        setLength(bound[true],0);
+        setLength(bound[false],0);
+      end;
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-      target.Brush.BGRAColor:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-
-      i:=0;
-      while i+3<length(screenRow) do begin
-        if scaleAndColor.lineWidth>0 then begin
-          if screenRow[i  ].valid and screenRow[i+2].valid then begin
-            target.MoveTo(screenRow[i  ].point.x,screenRow[i  ].point.y);
-            target.LineTo(screenRow[i+2].point.x,screenRow[i+2].point.y);
-          end;
-          if screenRow[i+1].valid and screenRow[i+3].valid then begin
-            target.MoveTo(screenRow[i+1].point.x,screenRow[i+1].point.y);
-            target.LineTo(screenRow[i+3].point.x,screenRow[i+3].point.y);
+      if scaleAndColor.lineWidth>0 then begin
+        setLength(bound[false],0);
+        setLength(bound[true ],0);
+        for i:=0 to length(screenRow)-1 do begin
+          if screenRow[i].valid then begin
+            setLength(bound[odd(i)],length(bound[odd(i)])+1);
+            bound[odd(i)][length(bound[odd(i)])-1]:=screenRow[i].point;
+          end else begin
+            target.Polyline(bound[odd(i)]);
+            setLength(bound[odd(i)],0);
           end;
         end;
-        if screenRow[i  ].valid and screenRow[i+2].valid and
-           screenRow[i+1].valid and screenRow[i+3].valid then
-        drawCustomQuad(screenRow[i  ].point.x,screenRow[i  ].point.y,
-                       screenRow[i+2].point.x,screenRow[i+2].point.y,
-                       screenRow[i+3].point.x,screenRow[i+3].point.y,
-                       screenRow[i+1].point.x,screenRow[i+1].point.y,false);
-        inc(i,2);
+        target.Polyline(bound[false]);
+        target.Polyline(bound[true ]);
       end;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawPolygons;
