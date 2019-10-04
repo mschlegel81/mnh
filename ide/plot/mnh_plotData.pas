@@ -1219,12 +1219,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
     VAR i :longint=0;
         j0:longint=0;
         k:longint;
-        bound:array[false..true] of array of Tpoint;
+        bound:array[false..true] of array of TPoint;
     begin
       if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
-      target.Pen.Style:=psClear;
+      target.Pen.style:=psClear;
       if scaleAndColor.solidStyle<>bsClear then begin
         setLength(bound[false],0);
         setLength(bound[true ],0);
@@ -1514,13 +1514,14 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
   PROCEDURE drawImpulses;
     VAR i:longint;
     begin
-      target.Pen.style:=psSolid;
+      target.Pen.style     :=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecSquare;
-      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+      target.Pen.width    :=scaleAndColor.lineWidth;
+      target.Pen.EndCap   :=pecSquare;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
         target.MoveTo(screenRow[i].point.x, yBaseLine     );
-        target.LineTo(screenRow[i].point.x, screenRow[i].point.y);
+        target.LineTo(screenRow[i].point);
+      end;
     end;
 
   VAR i,k:longint;
