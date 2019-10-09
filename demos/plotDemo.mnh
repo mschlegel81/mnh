@@ -51,7 +51,7 @@ sample(6)->begin
   plot   (samples,'. l black');
   addPlot(samples,'. b red');
   addPlot(samples,'. c blue');
-  explainPlot("Here you can see normal line segments in black\nB-Spline approximation in red and\ncubic Spline interpolation in blue\n \nSpline interpolation can be slow if many points are involved");
+  explainPlot("Here you can see normal line segments in black\nB-Spline approximation in red and\ncubic Spline interpolation in blue");
 end;
 
 sample(7)->begin

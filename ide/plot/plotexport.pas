@@ -198,7 +198,7 @@ PROCEDURE TExportPlotForm.enableAll;
     heightEdit        .enabled:=true;
     CancelButton.ModalResult:=mrCancel;
     CancelButton.Cancel     :=true;
-    isAnimation:=psys^.animation.frameCount>0;
+    isAnimation:=(psys^.animation.frameCount>0) and not(psys^.animation.isSeriesVolatile);
     rbExportCurrentOnly.enabled:=isAnimation;
     rbExportAll.enabled:=isAnimation;
     if not(isAnimation) then rbExportCurrentOnly.checked:=true;

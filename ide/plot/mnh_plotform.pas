@@ -523,8 +523,8 @@ PROCEDURE TplotForm.performFastUpdate;
           eTimer.clear;
           eTimer.start;
           //FPS label:
-          secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9  +0.1*(eTimer.elapsed(fpsSamplingStart)-frameInterval);
-          secondsPerFrame        :=secondsPerFrame        *0.99+0.01*(eTimer.elapsed(fpsSamplingStart));
+          secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9+0.1*(eTimer.elapsed(fpsSamplingStart)-frameInterval);
+          secondsPerFrame        :=secondsPerFrame        *0.9+0.1*(eTimer.elapsed(fpsSamplingStart));
           if secondsPerFrameOverhead<0 then secondsPerFrameOverhead:=0;
           eTimer.clear(fpsSamplingStart);
           eTimer.start(fpsSamplingStart);

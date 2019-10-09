@@ -957,9 +957,16 @@ PROCEDURE T_rule.checkParameters(VAR context:T_context);
 
 PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_context);
   VAR s:P_subruleExpression;
+      patterns:T_arrayOfPpattern;
+      distinction:T_arrayOfLongint;
+      i:longint;
   begin
-    if length(subrules)=1 then
-    for s in subrules do s^.checkParameters(context);
+    if length(subrules)>1 then begin
+      setLength(patterns,length(subrules));
+      for i:=0 to length(subrules)-1 do patterns[i]:=@(subrules[i]^.getPattern);
+      distinction:=extractIdsForCaseDistinction(patterns);
+    end else distinction:=C_EMPTY_LONGINT_ARRAY;
+    for s in subrules do s^.checkParameters(distinction,context);
   end;
 
 PROCEDURE T_delegatorRule.checkParameters(VAR context: T_context);

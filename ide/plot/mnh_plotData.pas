@@ -115,6 +115,7 @@ TYPE
       cs: TRTLCriticalSection;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
+      virtualRowIndex:longint;
       customText:array of P_customText;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
@@ -906,6 +907,7 @@ PROCEDURE T_plot.clear;
     try
       for i:=0 to length(row)-1 do row[i].destroy;
       setLength(row, 0);
+      virtualRowIndex:=0;
       for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
       setLength(customText,0);
     finally
@@ -915,13 +917,24 @@ PROCEDURE T_plot.clear;
 
 PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
   VAR index:longint;
+      style:T_style;
+      firstRow:boolean=true;
+      clonedData:T_dataRow;
   begin
     system.enterCriticalSection(cs);
     try
-      index:=length(row);
-      setLength(row, index+1);
-      row[index].create(rowData);
-      row[index].style:=getStyle(index,styleOptions);
+      for style in getStyles(virtualRowIndex,styleOptions) do begin
+        index:=length(row);
+        setLength(row, index+1);
+        if firstRow then row[index].create(rowData) else begin
+          rowData.cloneTo(clonedData);
+          row[index].create(clonedData);
+        end;
+        row[index].style:=style;
+        row[index].pseudoIndex:=virtualRowIndex;
+        firstRow:=false;
+      end;
+      virtualRowIndex+=1;
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -933,8 +946,12 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
     if numberOfRowsToRemove<=0 then exit;
     system.enterCriticalSection(cs);
     try
-      i0:=length(row)-numberOfRowsToRemove; if i0<0 then i0:=0;
-      for i:=i0 to length(row)-1 do row[i].destroy;
+      virtualRowIndex-=numberOfRowsToRemove;
+      i0:=-1;
+      for i:=0 to length(row)-1 do begin
+        if i0<0 then i0:=i;
+        if row[i].pseudoIndex<=virtualRowIndex then row[i].destroy;
+      end;
       setLength(row,i0);
     finally
       system.leaveCriticalSection(cs);
@@ -1217,57 +1234,32 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
 
   PROCEDURE drawTubes;
     VAR i :longint=0;
-        j0:longint=0;
-        k:longint;
-        bound:array[false..true] of array of TPoint;
+        k :longint=0;
+        polyBetween:array of TPoint;
+        lastWasValid:boolean=false;
     begin
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       target.Pen.style:=psClear;
       if scaleAndColor.solidStyle<>bsClear then begin
-        setLength(bound[false],0);
-        setLength(bound[true ],0);
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            setLength(bound[odd(i)],length(bound[odd(i)])+1);
-            bound[odd(i)][length(bound[odd(i)])-1]:=screenRow[i].point;
-          end else begin
-            j0:=length(bound[true]);
-            setLength(bound[true],j0+length(bound[false]));
-            j0+=length(bound[false])-1;
-            for k:=length(bound[false])-1 downto 0 do bound[true][j0-k]:=bound[false][k];
-            target.Polygon(bound[true]);
-            setLength(bound[true],0);
-            setLength(bound[false],0);
-          end;
+        setLength(polyBetween,length(screenRow));
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+          polyBetween[k]:=screenRow[i].point;
+          inc(k);
         end;
-        j0:=length(bound[true]);
-        setLength(bound[true],j0+length(bound[false]));
-        j0+=length(bound[false])-1;
-        for k:=length(bound[false])-1 downto 0 do bound[true][j0-k]:=bound[false][k];
-        target.Polygon(bound[true]);
-        setLength(bound[true],0);
-        setLength(bound[false],0);
+        setLength(polyBetween,k);
+        target.Polygon(polyBetween);
       end;
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
       if scaleAndColor.lineWidth>0 then begin
-        setLength(bound[false],0);
-        setLength(bound[true ],0);
-        for i:=0 to length(screenRow)-1 do begin
-          if screenRow[i].valid then begin
-            setLength(bound[odd(i)],length(bound[odd(i)])+1);
-            bound[odd(i)][length(bound[odd(i)])-1]:=screenRow[i].point;
-          end else begin
-            target.Polyline(bound[odd(i)]);
-            setLength(bound[odd(i)],0);
-          end;
-        end;
-        target.Polyline(bound[false]);
-        target.Polyline(bound[true ]);
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+          if lastWasValid then target.LineTo(screenRow[i].point)
+                          else target.MoveTo(screenRow[i].point);
+          lastWasValid:=true;
+        end else lastWasValid:=false;
       end;
     end;
 
@@ -1311,156 +1303,13 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
       if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
-  PROCEDURE prepareBSplines;
-    CONST coeff:array[0..15,0..3] of double=((0.16666666666666666    ,0.6666666666666666 ,0.16666666666666666,0),
-                                             (0.13550617283950619    ,0.66237037037037039,0.20207407407407407,0.00004938271604938271),
-                                             (0.10849382716049384    ,0.6500740740740741 ,0.24103703703703705,0.0003950617283950617),
-                                             (0.085333333333333358   ,0.6306666666666666 ,0.28266666666666668,0.0013333333333333337),
-                                             (0.065728395061728409   ,0.605037037037037  ,0.32607407407407407,0.0031604938271604936),
-                                             (0.049382716049382734   ,0.57407407407407407,0.3703703703703704 ,0.006172839506172839),
-                                             (0.036                  ,0.5386666666666666 ,0.41466666666666674,0.01066666666666667),
-                                             (0.025283950617283949   ,0.4997037037037037 ,0.45807407407407408,0.016938271604938274),
-                                             (0.016938271604938274   ,0.45807407407407408,0.4997037037037037 ,0.025283950617283949),
-                                             (0.01066666666666667    ,0.41466666666666674,0.5386666666666666 ,0.036),
-                                             (0.0061728395061728418  ,0.3703703703703704 ,0.57407407407407407,0.04938271604938271),
-                                             (0.0031604938271604954  ,0.3260740740740741 ,0.6050370370370369 ,0.06572839506172838),
-                                             (0.0013333333333333324  ,0.2826666666666666 ,0.6306666666666667 ,0.085333333333333358),
-                                             (0.00039506172839506149 ,0.24103703703703708,0.650074074074074  ,0.10849382716049384),
-                                             (0.000049382716049382686,0.20207407407407407,0.66237037037037039,0.13550617283950619),
-                                             (0                      ,0.16666666666666666,0.6666666666666666 ,0.16666666666666666));
-    VAR input:T_rowToPaint;
-    PROCEDURE screenRowSpline(CONST i0,i1:longint; VAR k:longint);
-
-      VAR support:T_rowToPaint;
-          i,j:longint;
-      begin
-        if (i0<0) or (i1<i0+1) then exit;
-        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        j:=k+(i1-i0+4)*length(coeff)+2;
-        if length(screenRow)<j then setLength(screenRow,j);
-        setLength(support,4);
-        for i:=i0-2 to i1-1 do begin
-          if i  <i0 then support[0]:=input[i0] else support[0]:=input[i  ];
-          if i+1<i0 then support[1]:=input[i0] else support[1]:=input[i+1];
-          if i+2>i1 then support[2]:=input[i1] else support[2]:=input[i+2];
-          if i+3>i1 then support[3]:=input[i1] else support[3]:=input[i+3];
-          for j:=0 to length(coeff)-1 do begin
-            screenRow[k].point.x:=round(support[0].point.x*coeff[j,0]+
-                                        support[1].point.x*coeff[j,1]+
-                                        support[2].point.x*coeff[j,2]+
-                                        support[3].point.x*coeff[j,3]);
-            screenRow[k].point.y:=round(support[0].point.y*coeff[j,0]+
-                                        support[1].point.y*coeff[j,1]+
-                                        support[2].point.y*coeff[j,2]+
-                                        support[3].point.y*coeff[j,3]);
-            screenRow[k].valid:=true;
-            inc(k);
-          end;
-        end;
-        screenRow[k]:=input[i1];
-        inc(k);
-        screenRow[k].valid:=false;
-        inc(k);
-      end;
-
-    VAR i,j,k:longint;
-    begin
-      setLength(input,length(screenRow));
-      for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
-      setLength(screenRow,0);
-      k:=0;
-      j:=-1;
-      for i:=0 to length(input)-1 do if not(input[i].valid) then begin
-        if j>=0 then screenRowSpline(j,i-1,k);
-        j:=-1;
-      end else if j<0 then j:=i;
-      i:=length(input)-1;
-      if j>=0 then screenRowSpline(j,i,k);
-      setLength(screenRow,k);
-      setLength(input,0);
-    end;
-
-  PROCEDURE prepareSplines;
-    VAR input:T_rowToPaint;
-    PROCEDURE Spline(CONST i0,i1:longint; VAR k:longint);
-      CONST precision=16;
-            dt=1/precision;
-      VAR M:array of T_point;
-          C:array of double;
-          i,n,j:longint;
-          t:double;
-          sample,
-          cub0,cub1, off,lin :T_point;
-      begin
-        if (i0<0) or (i1<i0+1) then exit;
-        if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-        n:=i1-i0+1;
-        setLength(M,n);
-        setLength(C,n);
-        dec(n);
-        M[0]:=pointOf(input[i0].point.x,input[i0].point.y)*0.125;
-        M[n]:=pointOf(input[i1].point.x,input[i1].point.y)*(-0.5);
-        C[0]:=1/4;
-        for i:=1 to n-1 do begin
-          M[i]:=(pointOf(input[i0+i-1].point.x,
-                         input[i0+i-1].point.y)
-                -pointOf(input[i0+i  ].point.x,
-                         input[i0+i  ].point.y)*2
-                +pointOf(input[i0+i+1].point.x,
-                         input[i0+i+1].point.y))*6;
-          C[i]:=1/(4-C[i-1]);
-        end;
-        M[0]:=M[0]*0.25;
-        for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
-        for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
-
-        setLength(screenRow,k+precision*(n)+2);
-        for i:=0 to n-1 do begin
-          cub0:=M[i  ]*(1/6);
-          cub1:=M[i+1]*(1/6);
-          off :=pointOf(input[i0+i].point.x,input[i0+i].point.y)-M[i]*(1/6);
-          lin :=pointOf(input[i0+i+1].point.x-input[i0+i].point.x,
-                        input[i0+i+1].point.y-input[i0+i].point.y)-(M[i+1]-M[i])*(1/6);
-
-          t:=0;
-          for j:=0 to precision-1 do begin
-            sample:=off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t);
-            screenRow[k].point.x:=round(sample[0]);
-            screenRow[k].point.y:=round(sample[1]);
-            screenRow[k].valid:=true;
-            inc(k);
-            t+=dt;
-          end;
-        end;
-        screenRow[k]:=input[i1];
-        inc(k);
-        screenRow[k].valid:=false;
-        inc(k);
-      end;
-
-    VAR i,j,k:longint;
-    begin
-      setLength(input,length(screenRow));
-      for i:=0 to length(screenRow)-1 do input[i]:=screenRow[i];
-      setLength(screenRow,0);
-      k:=0;
-      j:=-1;
-      for i:=0 to length(input)-1 do if not(input[i].valid) then begin
-        if j>=0 then Spline(j,i-1,k);
-        j:=-1;
-      end else if j<0 then j:=i;
-      i:=length(input)-1;
-      if j>=0 then Spline(j,i,k);
-      setLength(input,0);
-    end;
-
   PROCEDURE drawPluses;
     VAR i:longint;
     begin
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
+      target.Pen.EndCap:=pecSquare;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
         target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolWidth,
                       screenRow[i].point.y);
@@ -1479,7 +1328,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
+      target.Pen.EndCap:=pecSquare;
       for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
         target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolRadius,
                       screenRow[i].point.y-scaleAndColor.symbolRadius);
@@ -1587,7 +1436,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
     end;
     //row data:===============================================================
     for currRow in row do begin
-      screenRow:=scalingOptions.transformRow(currRow.sample);
+      screenRow:=scalingOptions.transformRow(currRow.sample,currRow.style.style);
       scaleAndColor:=currRow.style.getLineScaleAndColor(target.width,target.height);
       if ps_stepLeft  in currRow.style.style then drawStepsLeft;
       if ps_stepRight in currRow.style.style then drawStepsRight;
@@ -1600,12 +1449,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
       if ps_plus      in currRow.style.style then drawPluses;
       if ps_cross     in currRow.style.style then drawCrosses;
       if ps_impulse   in currRow.style.style then drawImpulses;
-
-      if (ps_bspline  in currRow.style.style) and
-         (ps_straight in currRow.style.style) then drawStraightLines;
-      if      ps_bspline   in currRow.style.style then prepareBSplines
-      else if ps_cosspline in currRow.style.style then prepareSplines;
-
       if (ps_bspline   in currRow.style.style) or
          (ps_cosspline in currRow.style.style) or
          (ps_straight  in currRow.style.style) then drawStraightLines;
