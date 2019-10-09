@@ -118,7 +118,7 @@ FUNCTION getOptions intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       opt:=getOptionsViaAdapters(context.messages);
-      result:=newMapLiteral(13)^
+      result:=newMapLiteral(14)^
         .put('x0'             ,opt.axisTrafo['x'].worldMin)^
         .put('x1'             ,opt.axisTrafo['x'].worldMax)^
         .put('y0'             ,opt.axisTrafo['y'].worldMin)^
@@ -131,7 +131,8 @@ FUNCTION getOptions intFuncSignature;
         .put('logscaleX'      ,opt.axisTrafo['x'].logscale)^
         .put('logscaleY'      ,opt.axisTrafo['y'].logscale)^
         .put('axisStyleX'     ,byte(opt.axisStyle['x']))^
-        .put('axisStyleY'     ,byte(opt.axisStyle['y']));
+        .put('axisStyleY'     ,byte(opt.axisStyle['y']))^
+        .put('strictInput'    ,opt.strictInput);
     end;
   end;
 
@@ -199,6 +200,10 @@ FUNCTION setOptions intFuncSignature;
       end else
       if (key='axisStyleY'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
         opt.axisStyle['y']:=P_abstractIntLiteral(value)^.intValue and 7;
+        include(modified,soe_axisStyleY);
+      end else
+      if (key='strictInput'    ) and (value^.literalType=lt_boolean) then begin
+        opt.strictInput:=P_boolLiteral(value)^.value;
         include(modified,soe_axisStyleY);
       end else fail;
     end;

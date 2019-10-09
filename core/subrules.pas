@@ -173,7 +173,9 @@ VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST to
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
-USES sysutils;
+USES sysutils
+     {$ifdef fullVersion},plotstyles{$endif}
+     ;
 
 TYPE
 P_builtinExpression=^T_builtinExpression;
@@ -1397,49 +1399,34 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     end;
 
   PROCEDURE refineDataRow;
-    VAR distThreshold:double=0;
-        distThresholdSamples:longint=0;
-        i,j,k:longint;
+    VAR i,j,k:longint;
         oldTimes,newTimes:T_arrayOfDouble;
         oldRow  ,newRow  :T_dataRow;
-        screenRow:T_rowToPaint;
         t:double;
         stillOk:boolean=true;
         scalingOptions:T_scalingOptions;
 
+        refinementSteps:T_arrayOfLongint;
+        refinementRun:longint=0;
     begin
       scalingOptions:=getOptionsViaAdapters(context.messages);
-      while stillOk and (dataRow.size<samples) do begin
+      while stillOk and (dataRow.size<samples) and (refinementRun<3) do begin
         //Prepare threshold:----------------------------------------------------
-        screenRow:=scalingOptions.transformRow(dataRow,1,0,0);
-        for i:=1 to dataRow.size-1 do
-        if screenRow[i-1].valid and screenRow[i].valid then begin
-          distThreshold:=distThreshold+sqr(screenRow[i].point.x-screenRow[i-1].point.x)
-                                      +sqr(screenRow[i].point.y-screenRow[i-1].point.y);
-          inc(distThresholdSamples);
-        end;
-        distThreshold:=distThreshold/distThresholdSamples;
+        if refinementRun=0 then k:=(samples-dataRow.size) div 4 else
+        if refinementRun=1 then k:=(samples-dataRow.size) div 2 else
+                                k:=(samples-dataRow.size);
+        inc(refinementRun);
+        refinementSteps:=scalingOptions.getRefinementSteps(dataRow,k);
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
         TList:=newListLiteral;
-        for i:=1 to dataRow.size-1 do
-        if not(screenRow[i  ].valid) or
-           not(screenRow[i-1].valid) or
-          (sqr(screenRow[i].point.x-screenRow[i-1].point.x)
-          +sqr(screenRow[i].point.y-screenRow[i-1].point.y)>=distThreshold) then begin
-          t:=tRow[i]*0.5+tRow[i-1]*0.5;
+        for i:=0 to dataRow.size-2 do
+        for j:=1 to refinementSteps[i] do begin
+          t:=j/(refinementSteps[i]+1);
+          t:=tRow[i]*(1-t)+tRow[i+1]*t;
           TList^.appendReal(t);
           append(newTimes,t);
-        end;
-        //fallback: ensure that new samples are always added
-        if length(newTimes)=0 then begin
-          setLength(newTimes,length(tRow)-1);
-          for i:=1 to length(tRow)-1 do begin
-            t:=tRow[i]*0.5+tRow[i-1]*0.5;
-            TList^.appendReal(t);
-            newTimes[i-1]:=t;
-          end;
         end;
         //---------------------------------------------:Prepare new time samples
         //Prepare new point samples:--------------------------------------------

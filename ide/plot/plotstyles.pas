@@ -25,6 +25,7 @@ TYPE
 
 CONST
   C_lineStyles:T_plotStyles=[ps_straight..ps_stepRight];
+  C_stylesRequiringDiscreteSteps:T_plotStyles=[ps_stepLeft,ps_stepRight,ps_bar,ps_box,ps_dot,ps_plus,ps_cross,ps_impulse,ps_ellipse];
   C_styleName: array[T_plotStyle] of array[0..1] of string=
      {ps_none      }  (('',''),
      {ps_straight  }   ('line'     , 'l'),
@@ -55,7 +56,6 @@ TYPE
 
   T_styleTemplateDefault =(std_defaultColor);
   T_styleTemplateDefaults=set of T_styleTemplateDefault;
-
   T_style = object
     private
       PROCEDURE parseStyle(CONST styleString: ansistring);
@@ -70,17 +70,18 @@ TYPE
       FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
   end;
 
+  T_arrayOfStyle = array of T_style;
   T_gridStyleElement=(gse_tics,gse_coarseGrid,gse_fineGrid);
   T_gridStyle=set of T_gridStyleElement;
 
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
 OPERATOR :=(CONST b:byte):T_gridStyle;
 OPERATOR :=(CONST c:T_color):TBGRAPixel;
-FUNCTION getStyle(CONST index:longint; CONST styleString:string):T_style;
+FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle;
 IMPLEMENTATION
 USES myGenerics,mySys,myStringUtil;
 VAR styleCS:TRTLCriticalSection;
-    styleMap:specialize G_stringKeyMap<T_style>;
+    styleMap:specialize G_stringKeyMap<T_arrayOfStyle>;
 CONST GSE_BYTE:array[T_gridStyleElement] of byte=(1,2,4);
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
   VAR se:T_gridStyleElement;
@@ -273,6 +274,45 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
 
+FUNCTION splitIntoConsistentStyles(style:T_style):T_arrayOfStyle;
+{$MACRO ON}
+{$define recursion:=begin
+  result:=splitIntoConsistentStyles(s1);
+  rest  :=splitIntoConsistentStyles(s2);
+  i0:=length(result);
+  setLength(result,i0+length(rest));
+  for i:=0 to length(rest)-1 do result[i+i0]:=rest[i]
+end}
+  VAR s1,s2:T_style;
+      rest:T_arrayOfStyle;
+      i,i0:longint;
+  begin
+    if (ps_filled in style.style) and (ps_fillSolid in style.style) then begin
+      s1:=style; s1.style:=s1.style-[ps_filled];
+      s2:=style; s2.style:=s2.style-[ps_fillSolid];
+      recursion;
+    end else if (ps_tube in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      s1:=style; s1.style:=s1.style-[ps_tube];
+      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
+      recursion;
+    end else if (ps_bspline in style.style) and (ps_cosspline in style.style) then begin
+      s1:=style; s1.style:=s1.style-[ps_bspline];
+      s2:=style; s2.style:=s2.style-[ps_cosspline];
+      recursion;
+    end else if (ps_bspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      s1:=style; s1.style:=s1.style-[ps_bspline];
+      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
+      recursion;
+    end else if (ps_cosspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      s1:=style; s1.style:=s1.style-[ps_cosspline];
+      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
+      recursion;
+    end else begin
+      setLength(result,1);
+      result[0]:=style;
+    end;
+  end;
+
 PROCEDURE clearStyles;
   begin
     enterCriticalSection(styleCS);
@@ -283,16 +323,18 @@ PROCEDURE clearStyles;
     end;
   end;
 
-FUNCTION getStyle(CONST index:longint; CONST styleString:string):T_style;
+FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle;
+  VAR s:T_style;
   begin
     enterCriticalSection(styleCS);
     try
       if not(styleMap.containsKey(styleString,result)) then begin
-        result.init();
-        result.parseStyle(styleString);
+        s.init();
+        s.parseStyle(styleString);
+        result:=splitIntoConsistentStyles(s);
         styleMap.put(styleString,result);
       end;
-      result.setDefaults(index);
+      for s in result do s.setDefaults(index);
     finally
       leaveCriticalSection(styleCS);
     end;

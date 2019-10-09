@@ -85,16 +85,18 @@ TYPE
   T_sampleRow = object
     style: T_style;
     sample: T_dataRow;
+    pseudoIndex:longint;
     CONSTRUCTOR create(CONST row:T_dataRow);
     DESTRUCTOR destroy;
     FUNCTION toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string;
   end;
 
   T_allSamples=array of T_sampleRow;
-  T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY);
+  T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY,soe_strict);
   T_scalingOptionElements=set of T_scalingOptionElement;
   T_scalingOptions=object
-    preserveAspect  : boolean;
+    preserveAspect,
+    strictInput: boolean;
     relativeFontSize: double;
     autoscaleFactor : double;
     axisTrafo:array['x'..'y'] of T_axisTrafo;
@@ -102,8 +104,10 @@ TYPE
 
     PROCEDURE setDefaults;
     PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST samples:T_allSamples; VAR grid:T_ticInfos);
-    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte=1; CONST subPixelDx:double=0; CONST subPixelDy:double=0):T_rowToPaint;
+    FUNCTION transformRow(CONST row:T_dataRow; CONST styles:T_plotStyles):T_rowToPaint;
+    FUNCTION getRefinementSteps(CONST row:T_dataRow; CONST samplesToDistribute:longint):T_arrayOfLongint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
+    FUNCTION realToScreen(CONST p:T_point):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
     FUNCTION getOptionString:string;
     FUNCTION getOptionDiffString(CONST before:T_scalingOptions):string;
@@ -142,6 +146,54 @@ TYPE
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
+TYPE P_nonSkippingLineBuilder=^T_nonSkippingLineBuilder;
+     T_nonSkippingLineBuilder=object
+       row:T_rowToPaint;
+       fill:longint;
+       CONSTRUCTOR createNonSkippingLineBuilder;
+       DESTRUCTOR destroy; virtual;
+       FUNCTION get:T_rowToPaint; virtual;
+       PROCEDURE add(CONST nextPoint:T_point); virtual;
+       PROCEDURE skip; virtual;
+     end;
+
+     P_lineBuilder=^T_lineBuilder;
+     T_lineBuilder=object(T_nonSkippingLineBuilder)
+       buffer:array of T_point;
+       bufferFill:longint;
+       takeNext:boolean;
+       CONSTRUCTOR createLineBuilder;
+       DESTRUCTOR destroy; virtual;
+       FUNCTION get:T_rowToPaint; virtual;
+       PROCEDURE add(CONST nextPoint:T_point); virtual;
+       PROCEDURE skip; virtual;
+     end;
+
+     P_bSplineBuilder=^T_bSplineBuilder;
+     T_bSplineBuilder=object(T_lineBuilder)
+       toApproximate:array of T_point;
+       approxFill   :longint;
+
+       PROCEDURE flush;
+       CONSTRUCTOR createBSplineBuilder;
+       DESTRUCTOR destroy; virtual;
+       FUNCTION get:T_rowToPaint; virtual;
+       PROCEDURE add(CONST nextPoint:T_point); virtual;
+       PROCEDURE skip; virtual;
+     end;
+
+     P_cSplineBuilder=^T_cSplineBuilder;
+     T_cSplineBuilder=object(T_lineBuilder)
+       toInterpolate:array of T_point;
+       interpFill:longint;
+
+       PROCEDURE flush;
+       CONSTRUCTOR createCSplineBuilder;
+       DESTRUCTOR destroy; virtual;
+       FUNCTION get:T_rowToPaint; virtual;
+       PROCEDURE add(CONST nextPoint:T_point); virtual;
+       PROCEDURE skip; virtual;
+     end;
 
 FUNCTION pointOf(CONST x,y:double):T_point;
   begin
@@ -165,6 +217,280 @@ OPERATOR -(CONST x,y:T_point):T_point;
   begin
     result[0]:=x[0]-y[0];
     result[1]:=x[1]-y[1];
+  end;
+
+PROCEDURE T_bSplineBuilder.flush;
+  CONST coeff:array[0..15,0..3] of double=((0.16666666666666666    ,0.6666666666666666 ,0.16666666666666666,0),
+                                           (0.13550617283950619    ,0.66237037037037039,0.20207407407407407,0.00004938271604938271),
+                                           (0.10849382716049384    ,0.6500740740740741 ,0.24103703703703705,0.0003950617283950617),
+                                           (0.085333333333333358   ,0.6306666666666666 ,0.28266666666666668,0.0013333333333333337),
+                                           (0.065728395061728409   ,0.605037037037037  ,0.32607407407407407,0.0031604938271604936),
+                                           (0.049382716049382734   ,0.57407407407407407,0.3703703703703704 ,0.006172839506172839),
+                                           (0.036                  ,0.5386666666666666 ,0.41466666666666674,0.01066666666666667),
+                                           (0.025283950617283949   ,0.4997037037037037 ,0.45807407407407408,0.016938271604938274),
+                                           (0.016938271604938274   ,0.45807407407407408,0.4997037037037037 ,0.025283950617283949),
+                                           (0.01066666666666667    ,0.41466666666666674,0.5386666666666666 ,0.036),
+                                           (0.0061728395061728418  ,0.3703703703703704 ,0.57407407407407407,0.04938271604938271),
+                                           (0.0031604938271604954  ,0.3260740740740741 ,0.6050370370370369 ,0.06572839506172838),
+                                           (0.0013333333333333324  ,0.2826666666666666 ,0.6306666666666667 ,0.085333333333333358),
+                                           (0.00039506172839506149 ,0.24103703703703708,0.650074074074074  ,0.10849382716049384),
+                                           (0.000049382716049382686,0.20207407407407407,0.66237037037037039,0.13550617283950619),
+                                           (0                      ,0.16666666666666666,0.6666666666666666 ,0.16666666666666666));
+  VAR support:array[0..3] of T_point;
+      i,j:longint;
+  begin
+    if approxFill=1
+    then inherited add(toApproximate[0])
+    else if approxFill=2 then begin
+      inherited add(toApproximate[0]);
+      inherited add(toApproximate[1]);
+    end else if approxFill>=2 then for i:=-2 to approxFill-2 do begin
+      if i  <0            then support[0]:=toApproximate[0           ] else support[0]:=toApproximate[i  ];
+      if i+1<0            then support[1]:=toApproximate[0           ] else support[1]:=toApproximate[i+1];
+      if i+2>approxFill-1 then support[2]:=toApproximate[approxFill-1] else support[2]:=toApproximate[i+2];
+      if i+3>approxFill-1 then support[3]:=toApproximate[approxFill-1] else support[3]:=toApproximate[i+3];
+      for j:=0 to length(coeff)-1 do begin
+        inherited add(support[0]*coeff[j,0]+
+                      support[1]*coeff[j,1]+
+                      support[2]*coeff[j,2]+
+                      support[3]*coeff[j,3]);
+      end;
+    end;
+    approxFill:=0;
+  end;
+
+PROCEDURE T_cSplineBuilder.flush;
+  CONST precision=16;
+        dt=1/precision;
+  VAR M:array of T_point;
+      C:array of double;
+      i,n,j:longint;
+      t:double;
+      cub0,cub1, off,lin :T_point;
+  begin
+    if interpFill =1
+    then inherited add(toInterpolate[0])
+    else if interpFill=2 then begin
+      inherited add(toInterpolate[0]);
+      inherited add(toInterpolate[1]);
+    end else if interpFill>2 then begin
+      n:=interpFill;
+      setLength(M,n);
+      setLength(C,n);
+      dec(n);
+      M[0]:=toInterpolate[0]*0.125;
+      M[n]:=toInterpolate[n]*(-0.5);
+      C[0]:=1/4;
+      for i:=1 to n-1 do begin
+        M[i]:=(toInterpolate[i-1]-toInterpolate[i]*2+toInterpolate[i+1])*6;
+        C[i]:=1/(4-C[i-1]);
+      end;
+      M[0]:=M[0]*0.25;
+      for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
+      for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
+
+      for i:=0 to n-1 do begin
+        cub0:=M[i  ]*(1/6);
+        cub1:=M[i+1]*(1/6);
+        off :=toInterpolate[i]-M[i]*(1/6);
+        lin :=toInterpolate[i+1]-toInterpolate[i]-(M[i+1]-M[i])*(1/6);
+        t:=0;
+        for j:=0 to precision-1 do begin
+          inherited add(off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t));
+          t+=dt;
+        end;
+      end;
+      inherited add(toInterpolate[n]);
+    end;
+    interpFill:=0;
+  end;
+
+CONSTRUCTOR T_nonSkippingLineBuilder.createNonSkippingLineBuilder;
+  begin
+    setLength(row,0);
+    fill:=0;
+  end;
+
+CONSTRUCTOR T_lineBuilder.createLineBuilder;
+  begin
+    inherited createNonSkippingLineBuilder;
+    setLength(buffer,100);
+    bufferFill:=0;
+    takeNext:=true;
+  end;
+
+CONSTRUCTOR T_bSplineBuilder.createBSplineBuilder;
+  begin
+    inherited createLineBuilder;
+    setLength(toApproximate,100);
+    approxFill:=0;
+  end;
+
+CONSTRUCTOR T_cSplineBuilder.createCSplineBuilder;
+  begin
+    inherited createLineBuilder;
+    setLength(toInterpolate,100);
+    interpFill:=0;
+  end;
+
+DESTRUCTOR T_nonSkippingLineBuilder.destroy;
+  begin fill:=0; end;
+
+DESTRUCTOR T_bSplineBuilder.destroy;
+  begin
+    setLength(toApproximate,0);
+    inherited destroy;
+  end;
+
+DESTRUCTOR T_cSplineBuilder.destroy;
+  begin
+    setLength(toInterpolate,0);
+    inherited destroy;
+  end;
+
+DESTRUCTOR T_lineBuilder.destroy;
+  begin setLength(buffer,0); inherited destroy; end;
+
+FUNCTION T_nonSkippingLineBuilder.get: T_rowToPaint;
+  begin
+    if (fill>0) and not(row[fill-1].valid)
+    then setLength(row,fill-1)
+    else setLength(row,fill);
+    result:=row;
+  end;
+
+FUNCTION T_lineBuilder.get: T_rowToPaint;
+  begin
+    if bufferFill>0 then skip;
+    result:=inherited get;
+  end;
+
+FUNCTION T_bSplineBuilder.get: T_rowToPaint;
+  begin
+    flush;
+    result:=inherited get;
+  end;
+
+FUNCTION T_cSplineBuilder.get: T_rowToPaint;
+  begin
+    flush;
+    result:=inherited get;
+  end;
+
+PROCEDURE T_nonSkippingLineBuilder.add(CONST nextPoint: T_point);
+  begin
+    if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
+    row[fill].point:=point(round(nextPoint[0]),round(nextPoint[1]));
+    row[fill].valid:=true;
+    inc(fill);
+  end;
+
+PROCEDURE T_lineBuilder.add(CONST nextPoint: T_point);
+  FUNCTION isHeightLesserThanOnePixel(CONST q:T_point):boolean; inline;
+    VAR a,b:T_point;
+        t:double;
+    begin
+      a:=nextPoint-buffer[0];
+      b:=q    -buffer[0];
+      t:=(a[0]*b[0]+a[1]*b[1])/(sqr(a[0])+sqr(a[1]));
+      result:=sqr(a[0]*t-b[0])+
+              sqr(a[1]*t-b[1])<0.5;
+    end;
+
+  VAR i:longint;
+      canIgnore:boolean=true;
+  begin
+    if takeNext then begin
+      //The first nextPoint and every nextPoint after a skipped nextPoint is taken directly
+      if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
+      row[fill].point:=point(round(nextPoint[0]),round(nextPoint[1]));
+      row[fill].valid:=true;
+      inc(fill);
+      buffer[0]:=nextPoint;
+      bufferFill:=1;
+      takeNext:=false;
+      exit;
+    end;
+    if (bufferFill<2) then begin
+      //The second nextPoint goes directly to the buffer
+      buffer[bufferFill]:=nextPoint;
+      inc(bufferFill);
+      exit;
+    end;
+    //Check if the first nextPoint in the buffer and the next nextPoint to be added are
+    //suitable to represent all the points in between
+    for i:=1 to bufferFill-1 do canIgnore:=canIgnore and isHeightLesserThanOnePixel(buffer[i]);
+    if canIgnore then begin
+      //All points can be represented.
+      // - add next nextPoint to buffer
+      if bufferFill>=length(buffer) then setLength(buffer,round(length(buffer)*1.2)+1);
+      buffer[bufferFill]:=nextPoint;
+      inc(bufferFill);
+    end else begin
+      //The points cannot be represented
+      //  - add the last nextPoint of the buffer to the output row
+      //  - the last nextPoint of the buffer becomes the new first nextPoint
+      //  - the next nextPoint to be added becomes the second nextPoint in the buffer
+      if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
+      row[fill].point:=point(round(buffer[bufferFill-1][0]),round(buffer[bufferFill-1][1]));
+      row[fill].valid:=true;
+      inc(fill);
+      buffer[0]:=buffer[bufferFill-1];
+      buffer[0][0]:=round(buffer[0][0]);
+      buffer[0][1]:=round(buffer[0][1]);
+      buffer[1]:=nextPoint;
+      bufferFill:=2;
+    end;
+  end;
+
+PROCEDURE T_bSplineBuilder.add(CONST nextPoint: T_point);
+  begin
+    if approxFill>=length(toApproximate) then setLength(toApproximate,round(length(toApproximate)*1.2)+1);
+    toApproximate[approxFill]:=nextPoint;
+    inc(approxFill);
+  end;
+
+PROCEDURE T_cSplineBuilder.add(CONST nextPoint: T_point);
+  begin
+    if interpFill>=length(toInterpolate) then setLength(toInterpolate,round(length(toInterpolate)*1.2)+1);
+    toInterpolate[interpFill]:=nextPoint;
+    inc(interpFill);
+  end;
+
+PROCEDURE T_nonSkippingLineBuilder.skip;
+  begin
+    if (fill>0) and not(row[fill-1].valid) then exit;
+    if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
+    row[fill].valid:=false;
+    inc(fill);
+  end;
+
+PROCEDURE T_lineBuilder.skip;
+  begin
+    if bufferFill>0 then begin
+      if fill+1>=length(row) then setLength(row,round(length(row)*1.2)+2);
+      row[fill].point:=point(round(buffer[bufferFill-1][0]),
+                             round(buffer[bufferFill-1][1]));
+      row[fill].valid:=true;
+      inc(fill);
+      bufferFill:=0;
+      //add one more invalid point
+      row[fill].valid:=false;
+      inc(fill);
+    end else inherited skip;
+    takeNext:=true;
+  end;
+
+PROCEDURE T_bSplineBuilder.skip;
+  begin
+    flush;
+    inherited skip;
+  end;
+
+PROCEDURE T_cSplineBuilder.skip;
+  begin
+    flush;
+    inherited skip;
   end;
 
 FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
@@ -279,8 +605,7 @@ FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint
   end;
 
 PROCEDURE T_customText.renderText(CONST opt: T_scalingOptions; CONST target: TBGRACanvas);
-  VAR tempRow:T_dataRow;
-      toPaint:T_rowToPaint;
+  VAR screenLoc:T_point;
       x,y,
       i,k,
       textWidth,textHeight:longint;
@@ -296,13 +621,10 @@ PROCEDURE T_customText.renderText(CONST opt: T_scalingOptions; CONST target: TBG
         exit;
       end;
     end else begin
-      tempRow.init(1);
-      tempRow[0]:=p;
-      toPaint:=opt.transformRow(tempRow,1,0,0);
-      x:=toPaint[0].point.x;
-      y:=toPaint[0].point.y;
-      if not(toPaint[0].valid) then exit;
-      tempRow.free;
+      screenLoc:=opt.realToScreen(p);
+      for i:=0 to 1 do if isNan(screenLoc[i]) or (screenLoc[i]<-2147483648) or (screenLoc[i]>2147483647) then exit;
+      x:=round(screenLoc[0]);
+      y:=round(screenLoc[1]);
     end;
     enterCriticalSection(globalTextRenderingCs);
     try
@@ -434,6 +756,7 @@ PROCEDURE T_scalingOptions.setDefaults;
     preserveAspect:=true;
     relativeFontSize:=10;
     autoscaleFactor:=1;
+    strictInput:=false;
   end;
 
 PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST samples: T_allSamples; VAR grid: T_ticInfos);
@@ -729,27 +1052,111 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST sample
     end;
   end;
 
-FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double): T_rowToPaint;
+FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST styles:T_plotStyles): T_rowToPaint;
   VAR i:longint;
-      tx,ty:double;
+      tr:T_point=(Nan,Nan);
+      pointIsValid:boolean;
+      lineBuilder:P_nonSkippingLineBuilder;
+      otherTubeRow:T_dataRow;
   begin
-    setLength(result,row.size);
-    for i:=0 to row.size-1 do begin
-      tx:=axisTrafo['x'].apply(row[i][0])*scalingFactor+subPixelDx;
-      result[i].valid:=not(isNan(tx)) and (tx>=-2147483648) and (tx<=2147483647);
-      if not(result[i].valid) then continue;
-      ty:=axisTrafo['y'].apply(row[i][1])*scalingFactor+subPixelDy;
-      result[i].valid:=not(isNan(ty)) and (ty>=-2147483648) and (ty<=2147483647);
-      if not(result[i].valid) then continue;
-      result[i].point.x:=round(tx);
-      result[i].point.y:=round(ty);
+    //TODO: Improve handling of ps_tube
+    if ps_bspline   in styles then new(P_bSplineBuilder        (lineBuilder),createBSplineBuilder) else
+    if ps_cosspline in styles then new(P_cSplineBuilder        (lineBuilder),createCSplineBuilder) else
+    if strictInput  or (C_stylesRequiringDiscreteSteps*styles<>[])
+                              then new(P_nonSkippingLineBuilder(lineBuilder),createNonSkippingLineBuilder)
+                              else new(P_lineBuilder           (lineBuilder),createLineBuilder);
+    if ps_tube in styles then begin
+      otherTubeRow.init();
+      for i:=0 to row.size-1 do
+      if odd(i) then otherTubeRow[otherTubeRow.size]:=row[i] else begin
+        tr[0]:=axisTrafo['x'].apply(row[i][0]);
+        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
+        if pointIsValid then begin
+          tr[1]:=axisTrafo['y'].apply(row[i][1]);
+          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
+        end;
+        if pointIsValid then lineBuilder^.add(tr);
+      end;
+      lineBuilder^.skip;
+      for i:=otherTubeRow.size-1 downto 0 do begin
+        tr[0]:=axisTrafo['x'].apply(otherTubeRow[i][0]);
+        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
+        if pointIsValid then begin
+          tr[1]:=axisTrafo['y'].apply(otherTubeRow[i][1]);
+          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
+        end;
+        if pointIsValid then lineBuilder^.add(tr);
+      end;
+      otherTubeRow.free;
+    end else begin
+      for i:=0 to row.size-1 do begin
+        tr[0]:=axisTrafo['x'].apply(row[i][0]);
+        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
+        if pointIsValid then begin
+          tr[1]:=axisTrafo['y'].apply(row[i][1]);
+          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
+        end;
+        if pointIsValid then lineBuilder^.add(tr)
+                        else lineBuilder^.skip;
+      end;
     end;
+    result:=lineBuilder^.get;
+    dispose(lineBuilder,destroy);
+  end;
+
+FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesToDistribute:longint):T_arrayOfLongint;
+  FUNCTION heightOfTriangle(CONST x,y,z:T_point):double; inline;
+    VAR a,b:T_point;
+        t:double;
+    begin
+      a:=realToScreen(z)-realToScreen(x);
+      b:=realToScreen(y)-realToScreen(x);
+      t:=(a[0]*b[0]+a[1]*b[1])/(sqr(a[0])+sqr(a[1]));
+      result:=sqrt(sqr(a[0]*t-b[0])+
+                   sqr(a[1]*t-b[1]));
+    end;
+
+  VAR triangleHeights:array of double;
+      tmp:double;
+      i,k:longint;
+  begin
+    //1. Determine heights of triangles; replace Nan and infinite values by average of valid values
+    setLength(triangleHeights,row.size-2);
+    tmp:=0;
+    k  :=0;
+    for i:=0 to row.size-3 do begin
+      triangleHeights[i]:=heightOfTriangle( row[i],row[i+1],row[i+2]);
+      if not(isNan(triangleHeights[i])) and not(isInfinite(triangleHeights[i])) then begin
+        tmp+=triangleHeights[i];
+        k  +=1;
+      end;
+    end;
+    tmp:=tmp/k;
+    for i:=0 to length(triangleHeights)-1 do if isNan(triangleHeights[i]) or (isInfinite(triangleHeights[i])) then triangleHeights[i]:=tmp;
+    //2. Distribute triangle heights.
+    k:=length(triangleHeights);
+    setLength(triangleHeights,k+1);
+    triangleHeights[k]:=triangleHeights[k-1];
+    for i:=k downto 1 do triangleHeights[i]+=triangleHeights[i-1];
+    triangleHeights[0]*=2;
+    //3. Normalize and return
+    tmp:=0;
+    for k:=0 to length(triangleHeights)-1 do tmp+=triangleHeights[k];
+    tmp:=samplesToDistribute/tmp;
+    setLength(result,length(triangleHeights));
+    for k:=0 to length(result)-1 do result[k]:=round(triangleHeights[k]*tmp);
   end;
 
 FUNCTION T_scalingOptions.screenToReal(CONST x, y: integer): T_point;
   begin
     result[0]:=axisTrafo['x'].applyInverse(x);
     result[1]:=axisTrafo['y'].applyInverse(y);
+  end;
+
+FUNCTION T_scalingOptions.realToScreen(CONST p:T_point):T_point;
+  begin
+    result[0]:=axisTrafo['x'].apply(p[0]);
+    result[1]:=axisTrafo['y'].apply(p[1]);
   end;
 
 FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
@@ -798,6 +1205,7 @@ PROCEDURE T_scalingOptions.modifyOptions(CONST o:T_scalingOptions; CONST modifie
     if soe_logscaleY       in modified then axisTrafo['y'].logscale :=o.axisTrafo['y'].logscale ;
     if soe_axisStyleX      in modified then axisStyle['x']          :=o.axisStyle['x']          ;
     if soe_axisStyleY      in modified then axisStyle['y']          :=o.axisStyle['y']          ;
+    if soe_strict          in modified then strictInput             :=o.strictInput;
   end;
 
 CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
