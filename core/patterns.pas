@@ -92,8 +92,11 @@ TYPE
       FUNCTION usesStrictCustomTyping:boolean;
   end;
 
+{$ifdef fullVersion}
 FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
+{$endif}
 IMPLEMENTATION
+{$ifdef fullVersion}
 FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
@@ -115,6 +118,7 @@ FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayO
       if not(allEquivalent) then append(result,k);
     end;
   end;
+{$endif}
 
 CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
   begin
