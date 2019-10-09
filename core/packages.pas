@@ -980,6 +980,8 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
       VAR rule:P_rule;
           pack:P_package;
       begin
+        for rule in ruleMap.getAllLocalRules do
+          rule^.checkParameters(globals.primaryContext);
         for pack in secondaryPackages do
           for rule in pack^.ruleMap.getAllLocalRules do
             rule^.checkParameters(globals.primaryContext);

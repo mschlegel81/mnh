@@ -48,6 +48,7 @@ TYPE
   T_patternElementLocations=array of T_patternElementLocation;
 
   P_pattern=^T_pattern;
+  T_arrayOfPpattern=array of P_pattern;
   T_pattern=object
     private
       sig:array of T_patternElement;
@@ -91,7 +92,30 @@ TYPE
       FUNCTION usesStrictCustomTyping:boolean;
   end;
 
+FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
 IMPLEMENTATION
+FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
+  VAR minPatternLength:longint=maxLongint;
+      maxPatternLength:longint=0;
+      pattern,first:P_pattern;
+      i,k:longint;
+      allEquivalent:boolean;
+  begin
+    for pattern in patterns do begin
+      i:=length(pattern^.sig);
+      minPatternLength:=min(minPatternLength,i);
+      maxPatternLength:=max(maxPatternLength,i);
+    end;
+    result:=C_EMPTY_LONGINT_ARRAY;;
+    for i:=minPatternLength to maxPatternLength-1 do append(result,i);
+    for k:=0 to minPatternLength-1 do begin
+      allEquivalent:=true;
+      first:=patterns[0];
+      for pattern in patterns do allEquivalent:=allEquivalent and pattern^.sig[k].isEquivalent(first^.sig[k]);
+      if not(allEquivalent) then append(result,k);
+    end;
+  end;
+
 CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
   begin
     id:='';
