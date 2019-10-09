@@ -324,7 +324,15 @@ PROCEDURE clearStyles;
   end;
 
 FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle;
+  FUNCTION copyOf(CONST x:T_arrayOfStyle):T_arrayOfStyle;
+    VAR i:longint;
+    begin
+      setLength(result,length(x));
+      for i:=0 to length(x)-1 do result[i]:=x[i];
+    end;
+
   VAR s:T_style;
+      i:longint;
   begin
     enterCriticalSection(styleCS);
     try
@@ -334,7 +342,8 @@ FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle
         result:=splitIntoConsistentStyles(s);
         styleMap.put(styleString,result);
       end;
-      for s in result do s.setDefaults(index);
+      result:=copyOf(result);
+      for i:=0 to length(result)-1 do result[i].setDefaults(index);
     finally
       leaveCriticalSection(styleCS);
     end;

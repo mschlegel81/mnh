@@ -394,7 +394,7 @@ PROCEDURE T_lineBuilder.add(CONST nextPoint: T_point);
       b:=q    -buffer[0];
       t:=(a[0]*b[0]+a[1]*b[1])/(sqr(a[0])+sqr(a[1]));
       result:=sqr(a[0]*t-b[0])+
-              sqr(a[1]*t-b[1])<0.5;
+              sqr(a[1]*t-b[1])<0.3;
     end;
 
   VAR i:longint;
