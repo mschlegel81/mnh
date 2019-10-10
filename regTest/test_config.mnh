@@ -59,6 +59,7 @@ skipFile((demosRoot&'rollingCircle.mnh'      ),fullVersion)->true;
 skipFile((demosRoot&'calculator.mnh'         ),fullVersion)->true;
 skipFile((demosRoot&'fileViewer.mnh'         ),fullVersion)->true;
 skipFile((demosRoot&'plotDemo.mnh'           ),fullVersion)->true;
+skipFile((demosRoot&'platonics.mnh'          ),fullVersion)->true;
 skipFile((demosRoot&'yingYang.mnh'           ),fullVersion)->true;
 skipFile((demosRoot&'contourPlotExample.mnh' ),fullVersion)->true;
 skipFile(file in plotters                     ,false      )->true;
