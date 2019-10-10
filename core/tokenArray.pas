@@ -184,7 +184,7 @@ TYPE
     private
       blob:record
         closer:char;
-        text:string;
+        lines:T_arrayOfString;
         start:T_tokenLocation;
       end;
       input:T_arrayOfString;
@@ -766,22 +766,20 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       if pos(closer,id)<=0 then begin
         parsedLength:=length(id);
         inc(inputLocation.column,parsedLength);
-        if text='' then text:=id
-                   else text:=text+C_lineBreakChar+id;
+        append(lines,id);
       end else begin
         parsedLength:=pos(closer,id)+length(closer)-1;
         inc(inputLocation.column,parsedLength);
-        if text='' then text:=copy(id,1,pos(closer,id)-1)
-                   else text:=text+C_lineBreakChar+copy(id,1,pos(closer,id)-1);
+        append(lines,copy(id,1,pos(closer,id)-1));
         result^.txt:=closer;
         closer:=#0;
         exit(result);
       end;
-    end else if text<>'' then begin
+    end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=newStringLiteral(text);
-      text:='';
+      result^.data:=newStringLiteral(join(lines,C_lineBreakChar));
+      setLength(lines,0);
       exit(result);
     end;
     if lexingStyle=ls_retainAll then begin
@@ -1042,7 +1040,7 @@ CONSTRUCTOR T_lexer.create(CONST input_: T_arrayOfString; CONST location: T_toke
     inputColumnOffset:=location.column-inputLocation.column;
     associatedPackage:=inPackage;
 
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     resetTemp;
   end;
@@ -1056,7 +1054,7 @@ CONSTRUCTOR T_lexer.create(CONST sourcePackage:P_abstractPackage; CONST inPackag
     inputLocation.line:=1;
     inputColumnOffset:=0;
     associatedPackage:=inPackage;
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     resetTemp;
   end;
@@ -1211,7 +1209,7 @@ PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocat
     inputLocation:=location;
     inputLocation.column:=1;
     inputColumnOffset:=location.column-inputLocation.column;
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     while fetchNext(messages,recycler{$ifdef fullVersion},nil{$endif}) do begin end;
     safeAppend(firstToken,lastToken,nextStatement.firstToken);
