@@ -1306,7 +1306,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
                 P_abstractPackage(token.location.package)^.resolveId(token,messages);
               end;
               {$ifdef fullVersion}
-              P_abstractRule(token.data)^.setIdResolved;
+              if token.tokType in [tt_userRule,tt_globalVariable] then P_abstractRule(token.data)^.setIdResolved;
               {$endif}
             end;
           end;
