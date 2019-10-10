@@ -965,7 +965,9 @@ PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_context);
       setLength(patterns,length(subrules));
       for i:=0 to length(subrules)-1 do patterns[i]:=@(subrules[i]^.getPattern);
       distinction:=extractIdsForCaseDistinction(patterns);
+      for s in subrules do append(distinction,s^.getUsedParameters);
     end else distinction:=C_EMPTY_LONGINT_ARRAY;
+    sortUnique(distinction);
     for s in subrules do s^.checkParameters(distinction,context);
   end;
 

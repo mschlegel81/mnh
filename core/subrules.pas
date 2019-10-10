@@ -144,6 +144,7 @@ TYPE
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       {$ifdef fullVersion}
+      FUNCTION getUsedParameters:T_arrayOfLongint;
       PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
       {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
@@ -1234,6 +1235,13 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
   end;
 
 {$ifdef fullVersion}
+FUNCTION T_subruleExpression.getUsedParameters:T_arrayOfLongint;
+  VAR t:T_preparedToken;
+  begin
+    result:=C_EMPTY_LONGINT_ARRAY;
+    for t in preparedBody do with t do if (parIdx>=0) then append(result,parIdx);
+  end;
+
 PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
   VAR t:T_preparedToken;
       used:T_arrayOfLongint;
