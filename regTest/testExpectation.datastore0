@@ -3562,7 +3562,7 @@ expectations:=
  'helloWorld'=>
  ['Hello world'],
  'hereDoc'=>
- ['  This is a simple text...','       with a \ which would have to be escaped otherwise.','    And indentations of course.'],
+ ['','  This is a simple text...','       with a \ which would have to be escaped otherwise.','    And indentations of course.'],
  'hofstadterConway'=>
  ['range 2^ 0..2^ 1 max. a(n)/n= 1.00000000000000 @i=      1','range 2^ 1..2^ 2 max. a(n)/n= 0.66666666666667 @i=      3',
   'range 2^ 2..2^ 3 max. a(n)/n= 0.66666666666667 @i=      6','range 2^ 3..2^ 4 max. a(n)/n= 0.63636363636364 @i=     11',
