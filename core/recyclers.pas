@@ -45,9 +45,6 @@ TYPE
       id:T_idString;
       ruleType:T_ruleType;
     protected
-      {$ifdef fullVersion}
-      idResolved:boolean;
-      {$endif}
       declarationStart:T_tokenLocation;
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType);
@@ -62,9 +59,7 @@ TYPE
 
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       {$ifdef fullVersion}
-      PROCEDURE setIdResolved; virtual;
-      PROPERTY isIdResolved:boolean read idResolved;
-      FUNCTION complainAboutUnused(CONST adapters:P_messages):boolean;
+      FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual; abstract;
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
@@ -243,9 +238,6 @@ FUNCTION T_recycler.cloneSafeValueStore(CONST oldStore: P_valueScope): P_valueSc
 
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
-    {$ifdef fullVersion}
-    idResolved:=false;
-    {$endif}
     id              :=ruleId;
     declarationStart:=startAt;
     ruleType        :=ruleTyp;
@@ -265,22 +257,6 @@ FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;
   begin
     result:=(C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+'in '+getLocation.package^.getPath);
   end;
-
-{$ifdef fullVersion}
-PROCEDURE T_abstractRule.setIdResolved;
-  begin
-    idResolved:=true;
-  end;
-
-FUNCTION T_abstractRule.complainAboutUnused(CONST adapters: P_messages): boolean;
-  begin
-    result:=(id<>MAIN_RULE_ID) and not(idResolved);
-    if result then adapters^.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
-    'Unused rule '+id+
-    '; you can suppress this warning with '+
-    ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
-  end;
-{$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;

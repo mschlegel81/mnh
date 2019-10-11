@@ -32,7 +32,6 @@ TYPE
     PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif}); virtual;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_context); virtual;
-    PROCEDURE setIdResolved; virtual;
     {$endif}
     FUNCTION isFallbackPossible(CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
     FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
@@ -58,6 +57,7 @@ TYPE
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       {$ifdef fullVersion}
+      FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
       PROCEDURE checkParameters(VAR context:T_context); virtual;
       {$endif}
@@ -83,9 +83,9 @@ TYPE
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION innerRuleType:T_ruleType; virtual;
       {$ifdef fullVersion}
+      FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
       PROCEDURE checkParameters(VAR context:T_context); virtual;
-      PROCEDURE setIdResolved; virtual;
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
       FUNCTION arity:T_arityInfo; virtual;
@@ -131,9 +131,6 @@ TYPE
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION getRootId:T_idString; virtual;
-      {$ifdef fullVersion}
-      PROCEDURE setIdResolved; virtual;
-      {$endif}
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       FUNCTION arity:T_arityInfo; virtual;
   end;
@@ -175,6 +172,7 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       {$ifdef fullVersion}
+      FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
       {$endif}
       FUNCTION getValueOrElseVoid(VAR context:T_context; VAR recycler:T_recycler):P_literal;
@@ -395,9 +393,6 @@ FUNCTION T_ruleMap.getOperators: T_customOperatorArray;
       if containsKey(operatorName[op],entry)
       then begin
         result[op]:=P_abstractRule(entry.value);
-        {$ifdef fullVersion}
-        P_abstractRule(entry.value)^.setIdResolved;
-        {$endif}
       end
       else result[op]:=nil;
     end;
@@ -738,19 +733,8 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
 
 {$ifdef fullVersion}
 PROCEDURE T_ruleMap.markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos);
-  VAR relatedCastRule,
-      relatedCheckRule:T_ruleMapEntry;
-      typeName:string;
-      typedef:P_typedef;
   begin
     if (token=nil) or not(token^.tokType in [tt_customType,tt_customTypeCheck]) then exit;
-    typedef:=P_typedef(token^.data);
-    typeName:=typedef^.getName;
-    if containsKey('to'+typeName,relatedCastRule) and (relatedCastRule.entryType=tt_userRule)
-    then P_abstractRule(relatedCastRule.value)^.setIdResolved else
-    if containsKey('is'+typeName,relatedCheckRule) and (relatedCheckRule.entryType=tt_userRule)
-    then P_abstractRule(relatedCheckRule.value)^.setIdResolved;
-
     if functionCallInfos<>nil then functionCallInfos^.add(token);
   end;
 
@@ -777,14 +761,20 @@ PROCEDURE T_ruleMap.fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
 
 PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages; CONST functionCallInfos:P_functionCallInfos);
   VAR entry:T_ruleMapEntry;
+      rule:P_abstractRule;
   begin
-    if suppressAllUnusedWarnings then exit;
+    if suppressAllUnusedWarnings or (functionCallInfos=nil) then exit;
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) and (entry.entryType in [tt_userRule,tt_globalVariable]) then begin
-      if not(P_abstractRule(entry.value)^.isIdResolved) and
-         (functionCallInfos<>nil) and
-         functionCallInfos^.isLocationReferenced(P_objectWithIdAndLocation(entry.value)^.getLocation)
-      then P_abstractRule(entry.value)^.setIdResolved;
-      P_abstractRule(entry.value)^.complainAboutUnused(messages);
+      rule:=P_abstractRule(entry.value);
+      if (rule^.getId<>MAIN_RULE_ID) and
+         not(rule^.hasAnnotationMarkingAsUsed) and
+         not(functionCallInfos^.isLocationReferenced(rule^.getLocation))
+      then begin
+        messages^.postTextMessage(mt_el2_warning,P_objectWithIdAndLocation(entry.value)^.getLocation,
+        'Unused rule '+P_objectWithIdAndLocation(entry.value)^.getId+
+        '; you can suppress this warning with '+
+        ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
+      end;
     end;
   end;
 {$endif}
@@ -1018,9 +1008,6 @@ CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_
     typedef:=def;
     allowCurrying:=false;
     related:=relatedCheckRule;
-    {$ifdef fullVersion}
-    if def^.isDucktyping then setIdResolved;
-    {$endif}
   end;
 
 CONSTRUCTOR T_typeCheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
@@ -1042,9 +1029,6 @@ CONSTRUCTOR T_variable.create(CONST ruleId: T_idString;
     namedValue.create(ruleId,newVoidLiteral,false);
     initCriticalSection(rule_cs);
     meta:=meta_;
-    {$ifdef fullVersion}
-    idResolved:=false;
-    {$endif}
   end;
 
 CONSTRUCTOR T_datastore.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; VAR meta_:T_ruleMetaData; CONST datastorePackage:P_objectWithPath; CONST isPrivate:boolean; CONST variableType:T_variableType);
@@ -1119,10 +1103,6 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.messages^.raiseSimpleError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
-    {$ifdef fullVersion}
-    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) or
-       rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
-    {$endif}
     clearCache;
   end;
 
@@ -1144,10 +1124,6 @@ PROCEDURE T_typeCheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
     setLength(subrules,1);
     subrules[0]:=rule;
     rule^.parent:=@self;
-    {$ifdef fullVersion}
-    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) or
-       rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
-    {$endif}
     if typedef=nil then begin
       rulePattern:=rule^.getPattern.getFirst;
       if rulePattern.isTypeCheckOnly then begin
@@ -1207,29 +1183,6 @@ FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
 
 FUNCTION T_typeCastRule .hasPublicSubrule:boolean; begin result:=true; end;
 FUNCTION T_typeCheckRule.hasPublicSubrule:boolean; begin result:=true; end;
-
-{$ifdef fullVersion}
-PROCEDURE T_rule.setIdResolved;
-  begin
-    if declarationStart.package<>nil then P_abstractPackage(declarationStart.package)^.anyCalled:=true;
-    idResolved:=true;
-  end;
-
-PROCEDURE T_delegatorRule.setIdResolved;
-  VAR r:P_ruleWithSubrules;
-  begin
-    if localRule<>nil then localRule^.setIdResolved;
-    for r in imported do r^.setIdResolved;
-    idResolved:=true;
-  end;
-
-PROCEDURE T_typeCastRule.setIdResolved;
-  begin
-    inherited setIdResolved;
-    related^.setIdResolved;
-  end;
-
-{$endif}
 
 FUNCTION T_ruleWithSubrules.getCmdLineHelpText: T_arrayOfString;
   VAR sub:P_subruleExpression;
@@ -1452,10 +1405,7 @@ FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_cont
   begin
     result:=newMapLiteral(3)^
       .put('type'    ,newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put('location',newStringLiteral(getLocation                ),false)
-      {$ifdef fullVersion}
-      ^.put('used',newBoolLiteral(isIdResolved),false)
-      {$endif};
+      .put('location',newStringLiteral(getLocation                ),false);
   end;
 
 FUNCTION T_delegatorRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
@@ -1571,6 +1521,27 @@ FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_context; VAR recycler:T
   end;
 
 {$ifdef fullVersion}
+FUNCTION T_delegatorRule.hasAnnotationMarkingAsUsed:boolean;
+  begin
+    result:=(localRule<>nil) and (localRule^.hasAnnotationMarkingAsUsed);
+  end;
+
+FUNCTION T_ruleWithSubrules.hasAnnotationMarkingAsUsed:boolean;
+  VAR s:P_subruleExpression;
+  begin
+    for s in subrules do
+      if s^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) or
+         s^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE)
+      then exit(true);
+    result:=false;
+  end;
+
+FUNCTION T_variable.hasAnnotationMarkingAsUsed:boolean;
+  begin
+    result:=metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) or
+            metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
+  end;
+
 FUNCTION T_delegatorRule.getDocTxt: string;
   VAR r:P_rule;
   begin

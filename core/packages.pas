@@ -41,6 +41,9 @@ TYPE
     id,path:ansistring;
     pack:P_package;
     locationOfDeclaration:T_tokenLocation;
+    {$ifdef fullVersion}
+    supressUnusedWarning:boolean;
+    {$endif}
     {Creates a package reference with a given packId (or fails reporting via adapters if no package with the given ID can be found)}
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST messages:P_messages);
     {Creates a package reference with a specific path (or fails reporting via adapters if the file does not exist)}
@@ -541,14 +544,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
     PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
       VAR i,j:longint;
-          {$ifdef fullVersion}
-          attribute:string;
-          suppressUnusedImport:boolean=false;
-          {$endif}
+
       begin
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_importing,pseudoCallees);
-        for attribute in statement.attributes do if startsWith(attribute,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then suppressUnusedImport:=true;
         {$endif}
         if profile then globals.timeBaseComponent(pc_importing);
         for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,recycler,usecase=lu_forCodeAssistance);
@@ -566,14 +565,18 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         ruleMap.clearImports;
         if globals.primaryContext.continueEvaluation
         then for i:=0 to length(packageUses)-1 do ruleMap.addImports(@packageUses[i].pack^.ruleMap);
-        {$ifdef fullVersion}
-        for i:=0 to length(packageUses)-1 do packageUses[i].pack^.anyCalled:=suppressUnusedImport;
-        {$endif}
         customOperatorRules:=ruleMap.getOperators;
         ruleMap.resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
       end;
 
+    VAR {$ifdef fullVersion}
+        attribute:string;
+        suppressUnusedImport:boolean=false;
+        {$endif}
     begin
+      {$ifdef fullVersion}
+      for attribute in statement.attributes do if startsWith(attribute,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then suppressUnusedImport:=true;
+      {$endif}
       if statement.firstToken^.next=nil then begin
         globals.primaryContext.raiseError('Empty use clause',statement.firstToken^.location);
         recycler.cascadeDisposeToken(statement.firstToken);
@@ -602,6 +605,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             j:=length(packageUses);
             setLength(packageUses,j+1);
             packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
+            {$ifdef fullVersion}
+            packageUses[j].supressUnusedWarning:=suppressUnusedImport;
+            {$endif}
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
           {$ifdef fullVersion}
@@ -611,6 +617,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           j:=length(packageUses);
           setLength(packageUses,j+1);
           packageUses[j].createWithSpecifiedPath(newId,first^.location,globals.primaryContext.messages);
+          {$ifdef fullVersion}
+          packageUses[j].supressUnusedWarning:=suppressUnusedImport;
+          {$endif}
         end else if first^.tokType<>tt_separatorComma then
           globals.primaryContext.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
         if (j>0) then for i:=0 to j-1 do
@@ -1068,16 +1077,12 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_:
     ruleMap.create(@self);
     {$ifdef fullVersion}
     pseudoCallees:=blankProfilingCalls;
-    anyCalled:=false;
     {$endif}
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
   VAR i:longint;
   begin
-    {$ifdef fullVersion}
-    anyCalled:=false;
-    {$endif}
     ruleMap.clear;
     if includeSecondaries then begin
       for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
@@ -1162,8 +1167,9 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
 PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_functionCallInfos);
   VAR import:T_packageReference;
   begin
+    if functionCallInfos=nil then exit;
     ruleMap.complainAboutUnused(messages,functionCallInfos);
-    for import in packageUses do if not(import.pack^.anyCalled) then
+    for import in packageUses do if not(import.supressUnusedWarning) and not(functionCallInfos^.isPackageReferenced(import.pack)) then
       messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
 {$endif}
@@ -1315,12 +1321,6 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
     if ruleMap.containsKey(token.txt,entry) then begin
       token.tokType:=entry.entryType;
       token.data   :=entry.value;
-      {$ifdef fullVersion}
-      if markAsUsed then case entry.entryType of
-        tt_userRule,tt_globalVariable: P_abstractRule(entry.value)^.setIdResolved;
-        tt_customType,tt_customTypeCheck: ruleMap.markTypeAsUsed(@token,nil);
-      end;
-      {$endif}
       exit;
     end;
     if intrinsicRuleMap.containsKey(token.txt,intrinsicFuncPtr) then begin
