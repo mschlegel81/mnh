@@ -391,9 +391,7 @@ FUNCTION T_ruleMap.getOperators: T_customOperatorArray;
   begin
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do begin
       if containsKey(operatorName[op],entry)
-      then begin
-        result[op]:=P_abstractRule(entry.value);
-      end
+      then result[op]:=P_abstractRule(entry.value)
       else result[op]:=nil;
     end;
   end;
@@ -766,8 +764,7 @@ PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages; CONST functi
     if suppressAllUnusedWarnings or (functionCallInfos=nil) then exit;
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) and (entry.entryType in [tt_userRule,tt_globalVariable]) then begin
       rule:=P_abstractRule(entry.value);
-      if (rule^.getId<>MAIN_RULE_ID) and
-         not(rule^.hasAnnotationMarkingAsUsed) and
+      if not(rule^.hasAnnotationMarkingAsUsed) and
          not(functionCallInfos^.isLocationReferenced(rule^.getLocation))
       then begin
         messages^.postTextMessage(mt_el2_warning,P_objectWithIdAndLocation(entry.value)^.getLocation,
@@ -1528,7 +1525,10 @@ FUNCTION T_delegatorRule.hasAnnotationMarkingAsUsed:boolean;
 
 FUNCTION T_ruleWithSubrules.hasAnnotationMarkingAsUsed:boolean;
   VAR s:P_subruleExpression;
+      x:string;
   begin
+    if getId=MAIN_RULE_ID then exit(true);
+    for x in operatorName do if getId=x then exit(true);
     for s in subrules do
       if s^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) or
          s^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE)
