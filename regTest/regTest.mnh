@@ -1,21 +1,11 @@
 #!/usr/bin/mnh
-USE testExpectation,test_config,'../demos/oeis/oeis_server.mnh';
+USE testExpectation,test_config;
 
 private mutable longestCaseText:=0;
 private printCase(s:String)->begin
   longestCaseText:=max(longestCaseText,s.length);
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
   s=='' ? void : note("Testcase: ",s);
-end;
-
-ensureServer->begin
-  isIpcServerRunning(oeis_server.ipcId)
-  ? void
-  : begin
-      executor.execAsync([inspect['uses'].each(i,i[0].matches('(?i)oeis_server') ? i[1] : void,head)]);
-      sleep(1);
-      void;
-    end;
 end;
 
 testFile(scriptFileName:String,doLog:Boolean)->
@@ -85,7 +75,6 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
   local toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({forceRun OR !isTestAlreadyPassed(extractFileNameOnly($script))});
-  toRun.matches('oeis\.mnh').agg(or) orElse false ? ensureServer : void;
   local allPassed:=
   (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
   printCase("");
@@ -125,7 +114,6 @@ main('only',case)->begin
   local toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({includeTest($script)});
-  toRun.matches('oeis\.mnh').agg(or) orElse false ? ensureServer : void;
   local allPassed:=
   (toRun.map({testFile($script,false)})|((local runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
   printCase("");

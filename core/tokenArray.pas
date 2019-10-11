@@ -61,9 +61,6 @@ TYPE
       PROCEDURE clearCustomOperators;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
     public
-      {$ifdef fullVersion}
-      anyCalled:boolean;
-      {$endif}
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
       FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
@@ -136,6 +133,7 @@ TYPE
       FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
       FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+      FUNCTION isPackageReferenced(CONST pack:P_objectWithPath):boolean;
       FUNCTION exportLocations:T_importedCallInfos;
       PROCEDURE importLocations(CONST loc:T_importedCallInfos);
       FUNCTION isEmpty:boolean;
@@ -184,7 +182,7 @@ TYPE
     private
       blob:record
         closer:char;
-        text:string;
+        lines:T_arrayOfString;
         start:T_tokenLocation;
       end;
       input:T_arrayOfString;
@@ -227,9 +225,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
         tt_identifier,tt_globalVariable: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier
-          then inPackage^.resolveId(t^,nil)
+          then inPackage^.resolveId(t^,nil);
           {$ifdef fullVersion}
-          else P_abstractRule(t^.data)^.setIdResolved;
           if functionCallInfos<>nil then functionCallInfos^.add(t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
@@ -247,7 +244,6 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
         end;
         tt_userRule: begin
           {$ifdef fullVersion}
-          P_abstractRule(t^.data)^.setIdResolved;
           if functionCallInfos<>nil then functionCallInfos^.add(t);
           {$endif}
         end;
@@ -393,6 +389,20 @@ FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocatio
       then exit(true);
     end;
     for inf2 in imported do if inf2.targetLocation=loc then exit(true);
+  end;
+
+FUNCTION T_functionCallInfos.isPackageReferenced(CONST pack:P_objectWithPath):boolean;
+  VAR info:T_functionCallInfo;
+      inf2:T_importedCallInfo;
+  begin
+    if fill<>length(dat) then cleanup;
+    result:=false;
+    for info in dat do begin
+      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
+         (P_objectWithIdAndLocation(info.targetData)^.getLocation.package^.getPath=pack^.getPath)
+      then exit(true);
+    end;
+    for inf2 in imported do if inf2.targetLocation.fileName=pack^.getPath then exit(true);
   end;
 
 FUNCTION T_functionCallInfos.exportLocations:T_importedCallInfos;
@@ -766,22 +776,20 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       if pos(closer,id)<=0 then begin
         parsedLength:=length(id);
         inc(inputLocation.column,parsedLength);
-        if text='' then text:=id
-                   else text:=text+C_lineBreakChar+id;
+        append(lines,id);
       end else begin
         parsedLength:=pos(closer,id)+length(closer)-1;
         inc(inputLocation.column,parsedLength);
-        if text='' then text:=copy(id,1,pos(closer,id)-1)
-                   else text:=text+C_lineBreakChar+copy(id,1,pos(closer,id)-1);
+        append(lines,copy(id,1,pos(closer,id)-1));
         result^.txt:=closer;
         closer:=#0;
         exit(result);
       end;
-    end else if text<>'' then begin
+    end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=newStringLiteral(text);
-      text:='';
+      result^.data:=newStringLiteral(join(lines,C_lineBreakChar));
+      setLength(lines,0);
       exit(result);
     end;
     if lexingStyle=ls_retainAll then begin
@@ -1042,7 +1050,7 @@ CONSTRUCTOR T_lexer.create(CONST input_: T_arrayOfString; CONST location: T_toke
     inputColumnOffset:=location.column-inputLocation.column;
     associatedPackage:=inPackage;
 
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     resetTemp;
   end;
@@ -1056,7 +1064,7 @@ CONSTRUCTOR T_lexer.create(CONST sourcePackage:P_abstractPackage; CONST inPackag
     inputLocation.line:=1;
     inputColumnOffset:=0;
     associatedPackage:=inPackage;
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     resetTemp;
   end;
@@ -1211,7 +1219,7 @@ PROCEDURE T_lexer.rawTokenize(CONST inputTxt:string; CONST location:T_tokenLocat
     inputLocation:=location;
     inputLocation.column:=1;
     inputColumnOffset:=location.column-inputLocation.column;
-    blob.text:='';
+    setLength(blob.lines,0);
     blob.closer:=#0;
     while fetchNext(messages,recycler{$ifdef fullVersion},nil{$endif}) do begin end;
     safeAppend(firstToken,lastToken,nextStatement.firstToken);

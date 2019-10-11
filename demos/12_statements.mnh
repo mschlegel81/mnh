@@ -1,6 +1,5 @@
 private txt:=split(
-//!~
- 1. "This is a numbered list of twelve statements."
+//!~ 1. "This is a numbered list of twelve statements."
  2. "Exactly 3 of the last 6 statements are true."
  3. "Exactly 2 of the even-numbered statements are true."
  4. "If statement 5 is true, then statements 6 and 7 are both true."

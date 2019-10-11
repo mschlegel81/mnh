@@ -173,8 +173,8 @@ PROCEDURE processListParallel(CONST input:P_literal;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         for r in toAggregate^.results do aggregator^.addToAggregation(r,true,eachLocation,@context,recycler);
-        tasksPerSecond:=tasksPerSecond*0.9+
-           toAggregate^.tasksPerSecond*0.1;
+        tasksPerSecond:=tasksPerSecond*0.5+
+           toAggregate^.tasksPerSecond*0.5;
         with recycling do if fill<length(dat) then begin
           toAggregate^.dropResults;
           dat[fill]:=toAggregate;
@@ -346,8 +346,8 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         for resultElement in toAggregate^.mapResult do resultLiteral^.append(resultElement,false);
-        tasksPerSecond:=tasksPerSecond*0.9+
-           toAggregate^.tasksPerSecond*0.1;
+        tasksPerSecond:=tasksPerSecond*0.5+
+           toAggregate^.tasksPerSecond*0.5;
         with recycling do if fill<length(dat) then begin
           setLength(toAggregate^.mapResult,0);
           dat[fill]:=toAggregate;
@@ -483,8 +483,8 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
         toAggregate:=firstToAggregate;
         firstToAggregate:=P_filterTask(toAggregate^.nextToAggregate);
         for resultElement in toAggregate^.mapResult do output^.append(resultElement,true);
-        tasksPerSecond:=tasksPerSecond*0.9+
-           toAggregate^.tasksPerSecond*0.1;
+        tasksPerSecond:=tasksPerSecond*0.5+
+           toAggregate^.tasksPerSecond*0.5;
         with recycling do if fill<length(dat) then begin
           dat[fill]:=toAggregate;
           inc(fill);
