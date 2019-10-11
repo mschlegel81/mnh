@@ -1546,6 +1546,7 @@ FUNCTION T_ruleWithSubrules.hasAnnotationMarkingAsUsed:boolean;
       x:string;
   begin
     if getId=MAIN_RULE_ID then exit(true);
+    if getId=TO_STRING_RULE_ID then exit(true);
     for x in operatorName do if getId=x then exit(true);
     for s in subrules do
       if s^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) or

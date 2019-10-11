@@ -229,7 +229,7 @@ FUNCTION typeOf_imp intFuncSignature;
 INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'softCast'      ,@softCast_imp  ,ak_unary{$ifdef fullVersion},'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toBuiltin'     ,@toBuiltin_imp ,ak_unary{$ifdef fullVersion},'toBuiltin(X);#Returns X without custom type info'{$endif});
-  registerRule(TYPECAST_NAMESPACE,'toString'      ,@toString_imp  ,ak_unary{$ifdef fullVersion},'toString(X);#Casts X to string'{$endif});
+  registerRule(TYPECAST_NAMESPACE,TO_STRING_RULE_ID,@toString_imp  ,ak_unary{$ifdef fullVersion},TO_STRING_RULE_ID+'(X);#Casts X to string'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,ak_unary{$ifdef fullVersion},'toBoolean(X);#Casts X to boolean or throws an error if not possible'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,ak_unary{$ifdef fullVersion},'toInt(X);#Casts X to int or throws an error if not possible'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toReal'        ,@toReal_imp    ,ak_unary{$ifdef fullVersion},'toReal(X);#Casts X to real or throws an error if not possible'{$endif});
