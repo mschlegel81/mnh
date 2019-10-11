@@ -568,11 +568,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         customOperatorRules:=ruleMap.getOperators;
         ruleMap.resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
       end;
-
-    VAR {$ifdef fullVersion}
-        attribute:string;
+    {$ifdef fullVersion}
+    VAR attribute:string;
         suppressUnusedImport:boolean=false;
-        {$endif}
+    {$endif}
     begin
       {$ifdef fullVersion}
       for attribute in statement.attributes do if startsWith(attribute,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then suppressUnusedImport:=true;
