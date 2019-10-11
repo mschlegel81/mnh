@@ -798,6 +798,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           hasDeclareToken:=hasDeclareToken or (t^.tokType=tt_declare);
           hasAssignToken :=hasAssignToken  or (t^.tokType=tt_assign );
         end;
+        {$ifdef fullVersion}
+        if (functionCallInfos<>nil) and (level>0) then functionCallInfos^.add(nil,t);
+        {$endif}
         t:=t^.next;
       end;
       result:=nil;
