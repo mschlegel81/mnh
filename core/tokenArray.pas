@@ -109,6 +109,7 @@ TYPE
     targetKind  :T_tokenType;
     targetData  :pointer;
     referencedAt:T_tokenLocation;
+    referencedIn:pointer;
   end;
 
   T_importedCallInfo=record
@@ -127,7 +128,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE add(CONST token:P_token);
+      PROCEDURE add(CONST rulePointer:pointer; CONST token:P_token);
       PROCEDURE cleanup;
       FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
       FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
@@ -227,7 +228,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil);
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(t)
+          if functionCallInfos<>nil then functionCallInfos^.add(nil,t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
@@ -244,7 +245,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
         end;
         tt_userRule: begin
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(t);
+          if functionCallInfos<>nil then functionCallInfos^.add(nil,t);
           {$endif}
         end;
         tt_modifier: if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
@@ -265,7 +266,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           t^.next:=recycler.disposeToken(t^.next);
         end;
         {$ifdef fullVersion}
-        else if functionCallInfos<>nil then functionCallInfos^.add(t);
+        else if functionCallInfos<>nil then functionCallInfos^.add(nil,t);
         {$endif}
       end;
       t:=t^.next;
@@ -291,7 +292,7 @@ PROCEDURE T_functionCallInfos.clear;
     usedOperators:=[];
   end;
 
-PROCEDURE T_functionCallInfos.add(CONST token: P_token);
+PROCEDURE T_functionCallInfos.add(CONST rulePointer:pointer; CONST token: P_token);
   begin
     if (token=nil) then exit;
     if token^.tokType in overridableOperators then include(usedOperators,token^.tokType);
@@ -300,6 +301,7 @@ PROCEDURE T_functionCallInfos.add(CONST token: P_token);
     dat[fill].referencedAt:=token^.location;
     dat[fill].targetKind  :=token^.tokType;
     dat[fill].targetData  :=token^.data;
+    dat[fill].referencedIn:=rulePointer;
     inc(fill);
   end;
 

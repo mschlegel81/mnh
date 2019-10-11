@@ -566,7 +566,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         if globals.primaryContext.continueEvaluation
         then for i:=0 to length(packageUses)-1 do ruleMap.addImports(@packageUses[i].pack^.ruleMap);
         customOperatorRules:=ruleMap.getOperators;
-        ruleMap.resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
+        ruleMap.resolveRuleIds(nil,ON_DELEGATION);
       end;
     {$ifdef fullVersion}
     VAR attribute:string;
@@ -734,7 +734,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
         formatMetaData(metaData,ruleDeclarationStart,@globals.primaryContext,recycler);
         new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,recycler,metaData));
-        ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext,metaData,subRule{$ifdef fullVersion},functionCallInfos{$endif});
+        ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext,metaData,subRule);
       end else recycler.cascadeDisposeToken(ruleBody);
     end;
 
@@ -765,8 +765,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
                       statement.firstToken^.location,
                       globals.primaryContext,
                       metaData,
-                      nil
-                      {$ifdef fullVersion},functionCallInfos{$endif});
+                      nil);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
@@ -997,7 +996,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
 
     begin
       customOperatorRules:=ruleMap.getOperators;
-      ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION,functionCallInfos);
+      ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION);
       complainAboutUnused(globals.primaryContext.messages,functionCallInfos);
       checkParameters;
     end;
