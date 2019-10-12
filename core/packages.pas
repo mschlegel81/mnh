@@ -566,13 +566,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         if globals.primaryContext.continueEvaluation
         then for i:=0 to length(packageUses)-1 do ruleMap.addImports(@packageUses[i].pack^.ruleMap);
         customOperatorRules:=ruleMap.getOperators;
-        ruleMap.resolveRuleIds(nil,ON_DELEGATION{$ifdef fullVersion},functionCallInfos{$endif});
+        ruleMap.resolveRuleIds(nil,ON_DELEGATION);
       end;
-
-    VAR {$ifdef fullVersion}
-        attribute:string;
+    {$ifdef fullVersion}
+    VAR attribute:string;
         suppressUnusedImport:boolean=false;
-        {$endif}
+    {$endif}
     begin
       {$ifdef fullVersion}
       for attribute in statement.attributes do if startsWith(attribute,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then suppressUnusedImport:=true;
@@ -735,7 +734,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
         formatMetaData(metaData,ruleDeclarationStart,@globals.primaryContext,recycler);
         new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,recycler,metaData));
-        ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext,metaData,subRule{$ifdef fullVersion},functionCallInfos{$endif});
+        ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext,metaData,subRule);
       end else recycler.cascadeDisposeToken(ruleBody);
     end;
 
@@ -766,8 +765,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
                       statement.firstToken^.location,
                       globals.primaryContext,
                       metaData,
-                      nil
-                      {$ifdef fullVersion},functionCallInfos{$endif});
+                      nil);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
@@ -800,6 +798,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           hasDeclareToken:=hasDeclareToken or (t^.tokType=tt_declare);
           hasAssignToken :=hasAssignToken  or (t^.tokType=tt_assign );
         end;
+        {$ifdef fullVersion}
+        if (functionCallInfos<>nil) and (level>0) then functionCallInfos^.add(nil,t);
+        {$endif}
         t:=t^.next;
       end;
       result:=nil;
@@ -998,7 +999,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
 
     begin
       customOperatorRules:=ruleMap.getOperators;
-      ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION,functionCallInfos);
+      ruleMap.resolveRuleIds(globals.primaryContext.messages,ON_EVALUATION);
       complainAboutUnused(globals.primaryContext.messages,functionCallInfos);
       checkParameters;
     end;

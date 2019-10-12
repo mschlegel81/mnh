@@ -113,25 +113,26 @@ FUNCTION inspect_imp intFuncSignature;
         id      :string='';
         loadedPackage:P_package;
     begin
-      for loadedPackage in callerPackage^.mainPackage^.secondaryPackages do
-      if (loadedPackage^.getId=filenameOrId) or
-         (loadedPackage^.getPath=filenameOrId) or
-         (SameFileName(loadedPackage^.getPath,filenameOrId)) then begin
-        tempPackage:=loadedPackage;
-        inspectedPackageIsTemporary:=false;
-        exit;
+      if (callerPackage<>nil) and (callerPackage^.mainPackage<>nil) and (callerPackage<>@BLANK_ABSTRACT_PACKAGE) and (callerPackage<>@MNH_PSEUDO_PACKAGE) then begin
+        for loadedPackage in callerPackage^.mainPackage^.secondaryPackages do
+        if (loadedPackage^.getId=filenameOrId) or
+           (loadedPackage^.getPath=filenameOrId) or
+           (SameFileName(loadedPackage^.getPath,filenameOrId)) then begin
+          tempPackage:=loadedPackage;
+          inspectedPackageIsTemporary:=false;
+        end;
       end;
-
-      if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
-      then fileName:=expandFileName(filenameOrId)
-      else id      :=filenameOrId;
-      if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
-      if (fileName='') or not(fileExists(fileName)) then begin
-        context.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
-        tempPackage:=nil;
-        exit;
+      if tempPackage=nil then begin
+        if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+        then fileName:=expandFileName(filenameOrId)
+        else id      :=filenameOrId;
+        if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
+        if (fileName='') or not(fileExists(fileName)) then begin
+          context.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
+          tempPackage:=nil;
+        end else
+        if context.checkSideEffects('inspect',tokenLocation,[se_readFile]) then new(tempPackage,create(newFileCodeProvider(fileName),nil));
       end;
-      if context.checkSideEffects('inspect',tokenLocation,[se_readFile]) then new(tempPackage,create(newFileCodeProvider(fileName),nil));
     end;
 
   PROCEDURE loadTemporaryPackage({$ifdef fullVersion}OUT functionCallInfos:P_functionCallInfos{$endif});
@@ -152,16 +153,14 @@ FUNCTION inspect_imp intFuncSignature;
     if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif})
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
-
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
         if inspectedPackageIsTemporary then loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
         result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),@context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
-        if inspectedPackageIsTemporary then dispose(tempPackage,destroy);
-        exit(result);
-      end;
-      result:=newListLiteral;
+        if inspectedPackageIsTemporary
+        then dispose(tempPackage,destroy);
+      end else result:=newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
@@ -219,5 +218,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).'{$endif});
+{$endif}
+{$ifdef include_finalization}
 {$endif}
 

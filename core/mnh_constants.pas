@@ -70,6 +70,7 @@ CONST
   {$endif}
   OVERRIDE_ATTRIBUTE='Override';
   EXECUTE_AFTER_ATTRIBUTE='after';
+  TO_STRING_RULE_ID='toString';
 
 TYPE
   T_reservedWordClass=(rwc_not_reserved,

@@ -83,12 +83,13 @@ TYPE
     mapPayload:record
       mapRule:P_expressionLiteral;
       mapParameter:T_arrayOfLiteral;
+      location:T_tokenLocation;
     end;
     mapResult:T_arrayOfLiteral;
     nextToAggregate:P_mapTask;
     tasksPerSecond:double;
     CONSTRUCTOR createMapTask(CONST expr:P_expressionLiteral);
-    PROCEDURE defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
+    PROCEDURE defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler; CONST mapLocation:T_tokenLocation);
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -301,11 +302,11 @@ FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       if isExpressionNullary then while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,nil,nil).literal,false);
+        result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal,false);
         disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end else while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,x  ,nil).literal,false);
+        result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,x  ,nil).literal,false);
         disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end;
@@ -313,13 +314,13 @@ FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
       if isExpressionNullary
-      then begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,nil,nil).literal,false); end
-      else begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,x  ,nil).literal,false); end;
+      then begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal,false); end
+      else begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,x  ,nil).literal,false); end;
       disposeLiteral(iter);
     end else begin
       if isExpressionNullary
-      then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,nil  ,nil).literal,false)
-      else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,@recycler,input,nil).literal,false);
+      then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil  ,nil).literal,false)
+      else result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,input,nil).literal,false);
     end;
   end;
 
@@ -364,7 +365,7 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
         task:=dat[fill];
         task^.clearContext;
       end else new(task,createMapTask(expr));
-      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler);
+      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler,mapLocation);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -500,7 +501,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
         task:=dat[fill];
         task^.clearContext;
       end else new(task,createFilterTask(filterExpression));
-      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler);
+      task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),x,recycler,filterLocation);
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
         lastToAggregate:=task;
@@ -625,7 +626,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
-          if mapRule^.evaluateToBoolean(mapRule^.getLocation,context,@recycler,true,mapParameter[k],nil)
+          if mapRule^.evaluateToBoolean(location,context,@recycler,true,mapParameter[k],nil)
           then begin
             mapResult[j]:=mapParameter[k];
             inc(j);
@@ -649,11 +650,12 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST expr: P_expressionLiteral);
     setLength(mapPayload.mapParameter,0);
   end;
 
-PROCEDURE T_mapTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler);
+PROCEDURE T_mapTask.defineAndEnqueueOrEvaluate(CONST taskEnv:P_context; CONST x:T_arrayOfLiteral; VAR recycler:T_recycler; CONST mapLocation:T_tokenLocation);
   VAR k:longint;
   begin
     clearMapPayload;
     setLength(mapPayload.mapParameter,length(x));
+    mapPayload.location:=mapLocation;
     for k:=0 to length(x)-1 do mapPayload.mapParameter[k]:=x[k];
     nextToAggregate:=nil;
     inherited defineAndEnqueueOrEvaluate(taskEnv,recycler);
@@ -673,7 +675,7 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
       if context^.messages^.continueEvaluation then with mapPayload do begin
         setLength(mapResult,length(mapParameter));
         for k:=0 to length(mapParameter)-1 do if context^.messages^.continueEvaluation then begin
-          lit:=mapRule^.evaluateToLiteral(mapRule^.getLocation,context,@recycler,mapParameter[k],nil).literal;
+          lit:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter[k],nil).literal;
           if (lit<>nil) then begin
             if lit^.literalType=lt_void then disposeLiteral(lit)
             else begin

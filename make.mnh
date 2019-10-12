@@ -75,17 +75,11 @@ private ensureBuildNumber->begin
     end;
 end;
 
-USE oeis_server;
-
-private stopOeisServer->while(isIpcServerRunning(oeis_server.ipcId),sendIpcRequest(oeis_server.ipcId,['stop']));
-
 private myMove(source,dest:String)->fileExists(source) ? begin
   local tries:=3;
   while(fileExists(dest) AND tries>0,
     deleteFile(dest) ? void : begin
     tries-=1;
-    stopOeisServer;
-    sleep(0.5);
   end);
   assert(!fileExists(dest),'Failed deleting '+dest);
   assert(moveFile(source,dest),'File move '+source+' -> '+dest+' failed!');
@@ -199,7 +193,6 @@ main('clean')->tprint('Cleaning') orElse cleanup;
 //*Deep cleaning, including deleting all executables
 main('CLEAN')->begin
   tprint('Deep cleaning');
-  stopOeisServer;
   cleanup;
   allFiles('target').map(::verboseDelete);
   files('3rd_party/*').minus(hashFiles).map(::verboseDelete);

@@ -90,7 +90,7 @@ TYPE
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
-      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString='');
@@ -146,6 +146,7 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
       PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
+      PROCEDURE fillCallInfos(CONST infos:P_functionCallInfos);
       {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
   end;
@@ -498,7 +499,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       try
         currentlyEvaluating:=true;
 
-        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION{$ifdef fullVersion},nil{$endif});
+        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
         blocking:=typ in C_subruleExpressionTypes;
         firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
         lastRep:=firstRep;
@@ -991,7 +992,7 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR c
     if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then begin
       enterCriticalSection(subruleCallCs);
       try
-        resolveIds(nil,ON_EVALUATION{$ifdef fullVersion},nil{$endif});
+        resolveIds(nil,ON_EVALUATION);
         functionIdsReady:=IDS_RESOLVED_AND_INLINED;
         for k:=0 to length(preparedBody)-1 do if preparedBody[k].token.tokType=tt_identifier then preparedBody[k].token.tokType:=tt_blockLocalVariable;
       finally
@@ -1252,6 +1253,12 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
     for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
+
+PROCEDURE T_subruleExpression.fillCallInfos(CONST infos:P_functionCallInfos);
+  VAR t:T_preparedToken;
+  begin
+    for t in preparedBody do infos^.add(parent,@t.token);
+  end;
 {$endif}
 
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
@@ -1292,7 +1299,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
     end;
   end;
 
-PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
   VAR i:longint;
       inlineValue:P_literal;
       idsReady:boolean;
@@ -1315,9 +1322,6 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
               end;
             end;
           end;
-          {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(@token);
-          {$endif}
           if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
             inlineValue:=P_abstractRule(token.data)^.getInlineValue;
             if inlineValue<>nil then begin
