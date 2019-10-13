@@ -15,6 +15,7 @@ USES sysutils,
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
+USES mySys;
 {$i func_defines.inc}
 FUNCTION sqrt_imp intFuncSignature;
   VAR intRoot:int64;
@@ -362,6 +363,7 @@ FUNCTION subSets_impl intFuncSignature;
        T_freqMap=specialize G_literalKeyMap<longint>;
   VAR resultSets:P_listLiteral;
       acceptOnlySetsOfSize:longint=-1;
+      memoryPanic:boolean=false;
 
   PROCEDURE recurseBuildSets(CONST mustContain: T_arrayOfLiteral; CONST mightContain:T_multiset);
     VAR newMust :T_arrayOfLiteral;
@@ -369,11 +371,15 @@ FUNCTION subSets_impl intFuncSignature;
         newSet:P_collectionLiteral;
         i:longint;
     begin
+      if not(isMemoryInComfortZone) or memoryPanic then begin
+        memoryPanic:=true;
+        exit;
+      end;
       if length(mightContain)>0 then begin
         setLength(newMight,length(mightContain)-1); for i:=0 to length(newMight)-1 do newMight[i]:=mightContain[i+1];
         setLength(newMust ,length(mustContain )  ); for i:=0 to length(newMust )-1 do newMust [i]:=mustContain[i];
         recurseBuildSets(newMust,newMight);
-        for i:=1 to mightContain[0].multiplicity do begin
+        for i:=1 to mightContain[0].multiplicity do if not(memoryPanic) then begin
           setLength(newMust,length(newMust)+1);
           newMust[length(newMust)-1]:=mightContain[0].value;
           recurseBuildSets(newMust,newMight);
@@ -441,7 +447,10 @@ FUNCTION subSets_impl intFuncSignature;
 
         resultSets:=newListLiteral();
         recurseBuildSets(mustContain,mightContain);
-        result:=resultSets;
+        if memoryPanic then begin
+          if resultSets<>nil then disposeLiteral(resultSets);
+          result:=nil;
+        end else result:=resultSets;
       end else begin
         result:=newListLiteral^.append(newListLiteral                   ,false)
                               ^.append(newListLiteral^.append(arg0,true),false);
@@ -452,16 +461,21 @@ FUNCTION subSets_impl intFuncSignature;
 FUNCTION permutations_impl intFuncSignature;
   VAR mustContain,mightContain,iter:T_arrayOfLiteral;
       i:longint;
+      memoryPanic:boolean=false;
   PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
         newList:P_listLiteral;
         i,j,k:longint;
     begin
+      if memoryPanic or not(isMemoryInComfortZone) then begin
+        memoryPanic:=true;
+        exit;
+      end;
       if length(mightContain)>0 then begin
         setLength(newMust ,length(mustContain )+1);
         for k:=0 to length(mustContain)-1 do newMust[k]:=mustContain[k];
         setLength(newMight,length(mightContain)-1);
-        for i:=0 to length(mightContain)-1 do begin
+        for i:=0 to length(mightContain)-1 do if not(memoryPanic) then begin
           newMust[length(newMust)-1]:=mightContain[i];
           k:=0;
           for j:=0 to length(mightContain)-1 do if i<>j then begin
@@ -488,6 +502,10 @@ FUNCTION permutations_impl intFuncSignature;
       result:=newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
       disposeLiteral(iter);
+      if memoryPanic then begin
+        disposeLiteral(result);
+        result:=nil;
+      end;
     end;
   end;
 

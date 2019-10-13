@@ -938,16 +938,15 @@ FUNCTION T_vanDerCorputGenerator.toString(CONST lengthLimit: longint): string;
   end;
 
 FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
-  VAR k,rest:longint;
+  VAR k:longint;
       i:longint=0;
       x:double=0;
   begin
     k:=counter;
     inc(counter);
     while k>0 do begin
-      rest:=k mod base;
-      k:=k div base;
-      x:=x+rest*invTable[i];
+      x   +=(k mod base)*invTable[i];
+      k   := k div base;
       inc(i);
     end;
     result.triggeredByReturn:=false;
