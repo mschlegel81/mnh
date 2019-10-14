@@ -13,6 +13,7 @@ USES sysutils,
      subrules;
 
 IMPLEMENTATION
+USES mnh_settings;
 {$i func_defines.inc}
 TYPE
   P_listIterator=^T_listIterator;
@@ -447,9 +448,114 @@ FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST to
 FUNCTION lazyMap_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
+    if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
                                           and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       new(P_mapGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
+    end;
+  end;
+
+TYPE
+  P_futureMapGenerator=^T_futureMapGenerator;
+  T_futureMapGenerator=object(T_builtinGeneratorExpression)
+    private
+      sourceGenerator:P_expressionLiteral;
+      mapExpression:P_expressionLiteral;
+      isNullary:boolean;
+      firstToAggregate,
+      lastToAggregate:P_futureMapLiteral;
+      doneFetching:boolean;
+      PROCEDURE enqueueNext(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer);
+    public
+      CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+PROCEDURE T_futureMapGenerator.enqueueNext(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer);
+  VAR nextUnmapped:P_literal;
+      task:P_futureMapLiteral;
+      taskParameters:P_listLiteral;
+  begin
+    nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+    if nextUnmapped=nil then begin
+      doneFetching:=true;
+      exit;
+    end;
+    if nextUnmapped^.literalType=lt_void
+    then begin
+      doneFetching:=true;
+      disposeLiteral(nextUnmapped);
+      exit;
+    end;
+    if (P_context(context)^.messages^.continueEvaluation) then begin
+      taskParameters:=newListLiteral(1);
+      taskParameters^.append(nextUnmapped,false);
+      new(task,create(mapExpression,taskParameters,location));
+      task^.rereference;
+      enqueueFutureTask(task,P_context(context)^,P_recycler(recycler)^);
+      disposeLiteral(taskParameters);
+      if firstToAggregate=nil then begin
+        firstToAggregate:=task;
+        lastToAggregate:=task;
+      end else begin
+        lastToAggregate^.nextToAggregate:=task;
+        lastToAggregate:=task;
+      end;
+    end else disposeLiteral(nextUnmapped);
+  end;
+
+CONSTRUCTOR T_futureMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    sourceGenerator:=source;
+    mapExpression:=mapEx;
+    mapExpression^.rereference;
+    isNullary:=mapEx^.canApplyToNumberOfParameters(0);
+    firstToAggregate:=nil;
+    lastToAggregate:=nil;
+    doneFetching:=false;
+  end;
+
+FUNCTION T_futureMapGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:=sourceGenerator^.toString(30)+'.futureMap('+mapExpression^.toString(20)+')';
+  end;
+
+FUNCTION T_futureMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  VAR curr:P_futureMapLiteral;
+  begin
+    if firstToAggregate=nil then exit(NIL_EVAL_RESULT);
+    curr:=firstToAggregate;
+    firstToAggregate:=firstToAggregate^.nextToAggregate;
+    result:=curr^.evaluateToLiteral(location,context,recycler);
+    disposeLiteral(curr);
+    if not(doneFetching) then enqueueNext(location,context,recycler);
+  end;
+
+DESTRUCTOR T_futureMapGenerator.destroy;
+  VAR curr:P_futureMapLiteral;
+  begin
+    while firstToAggregate<>nil do begin
+      curr:=firstToAggregate;
+      firstToAggregate:=firstToAggregate^.nextToAggregate;
+      disposeLiteral(curr);
+    end;
+    disposeLiteral(sourceGenerator);
+    disposeLiteral(mapExpression);
+  end;
+
+FUNCTION futureMap_imp intFuncSignature;
+  VAR f:P_futureMapGenerator;
+      i:longint;
+  begin
+    result:=nil;
+    if not(tco_spawnWorker in context.threadOptions) then exit(lazyMap_imp(params,tokenLocation,context,recycler));
+    if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
+                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+      new(f,create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
+      for i:=1 to TASKS_TO_QUEUE_PER_CPU*settings.cpuCount do f^.enqueueNext(tokenLocation,@context,@recycler);
+      result:=f;
     end;
   end;
 
@@ -967,6 +1073,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
   registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary{$ifdef fullVersion},'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc'{$endif});
+  registerRule(LIST_NAMESPACE,'futureMap', @futureMap_imp,ak_binary{$ifdef fullVersion},'futureMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc. The tasks are processed in parallel.'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f'{$endif});
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});

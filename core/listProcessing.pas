@@ -30,6 +30,12 @@ TYPE
       PROCEDURE executeInContext(CONST context:P_context; VAR recycler:T_recycler);
   end;
 
+  P_futureMapLiteral=^T_futureMapLiteral;
+  T_futureMapLiteral=object(T_futureLiteral)
+    nextToAggregate:P_futureMapLiteral;
+    CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation);
+  end;
+
 PROCEDURE processListSerial  (CONST input:P_literal; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                               CONST eachLocation:T_tokenLocation;
                               VAR context:T_context; VAR recycler:T_recycler);
@@ -589,6 +595,12 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
   begin
     new(task,create(future));
     task^.defineAndEnqueueOrEvaluate(context.getFutureEnvironment(recycler),recycler);
+  end;
+
+CONSTRUCTOR T_futureMapLiteral.create(CONST func_: P_expressionLiteral; CONST param_: P_listLiteral; CONST loc: T_tokenLocation);
+  begin
+    inherited create(func_,param_,loc,true);
+    nextToAggregate:=nil;
   end;
 
 CONSTRUCTOR T_futureTask.create(CONST future: P_futureLiteral);
