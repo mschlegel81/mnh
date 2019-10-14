@@ -94,7 +94,7 @@ TYPE
 
       FUNCTION getHelpOnMain:ansistring;
       PROCEDURE finalize(VAR context:T_context; VAR recycler:T_recycler);
-      PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string; virtual;
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
@@ -1315,7 +1315,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 {$endif}
 
-PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
+PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages);
   VAR intrinsicFuncPtr:P_intFuncCallback;
       entry:T_ruleMapEntry;
   begin
