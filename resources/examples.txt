@@ -495,7 +495,7 @@ serialized:=input.serialize;
 print(input.toString.byteLength,' > ',serialized.byteLength);
 input==serialized.deserialize;
 
-factorize(1001);
+factorize(18447422338071909869);
 
 formatTabs("\v-2\n3\t4.3");
 

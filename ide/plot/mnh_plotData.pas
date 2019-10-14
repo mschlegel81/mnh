@@ -1522,17 +1522,27 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   VAR bgrabmp:TBGRABitmap;
   begin
     if (plotImage.width<5) or (plotImage.height<5) then exit;
-    initialize(gridTics);
     system.enterCriticalSection(cs);
     try
-      bgrabmp:=TBGRABitmap.create(plotImage.width,plotImage.height,BGRAWhite);
-      scalingOptions.updateForPlot(bgrabmp.CanvasBGRA,row,gridTics);
-      drawGridAndRows             (bgrabmp.CanvasBGRA,gridTics);
-      drawCoordSys                (bgrabmp.CanvasBGRA,gridTics);
-      drawCustomText              (bgrabmp.CanvasBGRA);
-      plotImage.Canvas.clear;
-      bgrabmp.draw(plotImage.Canvas,0,0,false);
-      bgrabmp.free;
+      if (length(row)=0) and (length(customText)=0) then begin
+        plotImage.Canvas.clear;
+        plotImage.Canvas.Brush.style:=bsSolid;
+        plotImage.Canvas.Brush.color:=clWhite;
+        plotImage.Canvas.Rectangle(0,0,plotImage.width,plotImage.height);
+        plotImage.Canvas.Pen.color:=clRed;
+        plotImage.Canvas.line(0,0,plotImage.width,plotImage.height);
+        plotImage.Canvas.line(0,plotImage.height,plotImage.width,0);
+      end else begin
+        bgrabmp:=TBGRABitmap.create(plotImage.width,plotImage.height,BGRAWhite);
+        initialize(gridTics);
+        scalingOptions.updateForPlot(bgrabmp.CanvasBGRA,row,gridTics);
+        drawGridAndRows             (bgrabmp.CanvasBGRA,gridTics);
+        drawCoordSys                (bgrabmp.CanvasBGRA,gridTics);
+        drawCustomText              (bgrabmp.CanvasBGRA);
+        plotImage.Canvas.clear;
+        bgrabmp.draw(plotImage.Canvas,0,0,false);
+        bgrabmp.free;
+      end;
     finally
       system.leaveCriticalSection(cs);
     end;

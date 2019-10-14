@@ -1117,13 +1117,12 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
     end;
 
   VAR triangleHeights:array of double;
-      tmp:double;
-      i,k:longint;
+      tmp:double=0;
+      i:longint;
+      k:longint=0;
   begin
     //1. Determine heights of triangles; replace Nan and infinite values by average of valid values
     setLength(triangleHeights,row.size-2);
-    tmp:=0;
-    k  :=0;
     for i:=0 to row.size-3 do begin
       triangleHeights[i]:=heightOfTriangle( row[i],row[i+1],row[i+2]);
       if not(isNan(triangleHeights[i])) and not(isInfinite(triangleHeights[i])) then begin
@@ -1132,7 +1131,9 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
       end;
     end;
     tmp:=tmp/k;
-    for i:=0 to length(triangleHeights)-1 do if isNan(triangleHeights[i]) or (isInfinite(triangleHeights[i])) then triangleHeights[i]:=tmp;
+    if k=0
+    then for i:=0 to length(triangleHeights)-1 do                                                                       triangleHeights[i]:=1
+    else for i:=0 to length(triangleHeights)-1 do if isNan(triangleHeights[i]) or (isInfinite(triangleHeights[i])) then triangleHeights[i]:=tmp;
     //2. Distribute triangle heights.
     k:=length(triangleHeights);
     setLength(triangleHeights,k+1);

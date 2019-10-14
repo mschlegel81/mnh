@@ -15,6 +15,7 @@ USES sysutils,
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
+USES mySys;
 {$i func_defines.inc}
 FUNCTION sqrt_imp intFuncSignature;
   VAR intRoot:int64;
@@ -31,10 +32,10 @@ FUNCTION sqrt_imp intFuncSignature;
                     else result:=newRealLiteral(fltRoot);
       end;
       lt_bigint: begin
-        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(false,isSquare);
+        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(false,RM_DOWN,isSquare);
         if isSquare then result:=newIntLiteral(bigRoot)
         else begin
-          bigRoot.destroy;
+          bigRoot.clear;
           result:=newRealLiteral(sqrt(P_bigIntLiteral(arg0)^.floatValue));
         end;
       end;
@@ -54,9 +55,7 @@ FUNCTION isqrt_imp intFuncSignature;
         result:=newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
       end;
       lt_bigint: begin
-        if (P_bigIntLiteral(arg0)^.value.relevantBits<FIXED_SIZE_DIGITS*BITS_PER_DIGIT-16)
-        then bigRoot:=T_fixedSizeNonnegativeInt(P_bigIntLiteral(arg0)^.value).iSqrt(true,isSquare).toNewBigInt
-        else bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,isSquare);
+        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,RM_DOWN,isSquare);
         result:=newListLiteral(2)^.append(newIntLiteral(bigRoot),false)^.appendBool(isSquare);
       end;
       else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
@@ -175,7 +174,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
 
   FUNCTION myRound(CONST x:P_abstractIntLiteral; CONST y:int64):P_literal; inline;
     VAR i   :longint=0;
-        pot :digitType=1;
+        pot :DigitType=1;
         xv  :int64;
     begin
       if y>=0 then exit(x^.rereferenced);
@@ -362,6 +361,7 @@ FUNCTION subSets_impl intFuncSignature;
        T_freqMap=specialize G_literalKeyMap<longint>;
   VAR resultSets:P_listLiteral;
       acceptOnlySetsOfSize:longint=-1;
+      memoryPanic:boolean=false;
 
   PROCEDURE recurseBuildSets(CONST mustContain: T_arrayOfLiteral; CONST mightContain:T_multiset);
     VAR newMust :T_arrayOfLiteral;
@@ -369,11 +369,15 @@ FUNCTION subSets_impl intFuncSignature;
         newSet:P_collectionLiteral;
         i:longint;
     begin
+      if not(isMemoryInComfortZone) or memoryPanic then begin
+        memoryPanic:=true;
+        exit;
+      end;
       if length(mightContain)>0 then begin
         setLength(newMight,length(mightContain)-1); for i:=0 to length(newMight)-1 do newMight[i]:=mightContain[i+1];
         setLength(newMust ,length(mustContain )  ); for i:=0 to length(newMust )-1 do newMust [i]:=mustContain[i];
         recurseBuildSets(newMust,newMight);
-        for i:=1 to mightContain[0].multiplicity do begin
+        for i:=1 to mightContain[0].multiplicity do if not(memoryPanic) then begin
           setLength(newMust,length(newMust)+1);
           newMust[length(newMust)-1]:=mightContain[0].value;
           recurseBuildSets(newMust,newMight);
@@ -441,7 +445,10 @@ FUNCTION subSets_impl intFuncSignature;
 
         resultSets:=newListLiteral();
         recurseBuildSets(mustContain,mightContain);
-        result:=resultSets;
+        if memoryPanic then begin
+          if resultSets<>nil then disposeLiteral(resultSets);
+          result:=nil;
+        end else result:=resultSets;
       end else begin
         result:=newListLiteral^.append(newListLiteral                   ,false)
                               ^.append(newListLiteral^.append(arg0,true),false);
@@ -452,16 +459,21 @@ FUNCTION subSets_impl intFuncSignature;
 FUNCTION permutations_impl intFuncSignature;
   VAR mustContain,mightContain,iter:T_arrayOfLiteral;
       i:longint;
+      memoryPanic:boolean=false;
   PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
         newList:P_listLiteral;
         i,j,k:longint;
     begin
+      if memoryPanic or not(isMemoryInComfortZone) then begin
+        memoryPanic:=true;
+        exit;
+      end;
       if length(mightContain)>0 then begin
         setLength(newMust ,length(mustContain )+1);
         for k:=0 to length(mustContain)-1 do newMust[k]:=mustContain[k];
         setLength(newMight,length(mightContain)-1);
-        for i:=0 to length(mightContain)-1 do begin
+        for i:=0 to length(mightContain)-1 do if not(memoryPanic) then begin
           newMust[length(newMust)-1]:=mightContain[i];
           k:=0;
           for j:=0 to length(mightContain)-1 do if i<>j then begin
@@ -488,6 +500,10 @@ FUNCTION permutations_impl intFuncSignature;
       result:=newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
       disposeLiteral(iter);
+      if memoryPanic then begin
+        disposeLiteral(result);
+        result:=nil;
+      end;
     end;
   end;
 
@@ -502,12 +518,7 @@ FUNCTION factorize_impl intFuncSignature;
         factors.smallFactors:=factorizeSmall(P_smallIntLiteral(arg0)^.value);
         setLength(factors.bigFactors,0);
       end else begin
-        if P_bigIntLiteral(arg0)^.value.canBeRepresentedAsInt1024
-        then factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value)
-        else begin
-          context.raiseError('Cannot factorize numbers larger than 2^1024',tokenLocation);
-          exit(nil);
-        end;
+        factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value,@context.continueEvaluation);
       end;
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
@@ -647,7 +658,7 @@ FUNCTION digits_impl intFuncSignature;
         lt_smallint: begin
           temp.fromInt(P_smallIntLiteral(arg0)^.value);
           result:=digitsOf(temp);
-          temp.destroy;
+          temp.clear;
         end;
         lt_emptyList: result:=arg0^.rereferenced;
         lt_intList: begin
@@ -657,7 +668,7 @@ FUNCTION digits_impl intFuncSignature;
             lt_smallint: begin
               temp.fromInt(P_smallIntLiteral(list0^.value[i])^.value);
               listResult^.append(digitsOf(temp),false);
-              temp.destroy;
+              temp.clear;
             end;
           end;
         end;
@@ -678,7 +689,7 @@ FUNCTION composeDigits_imp intFuncSignature;
   PROCEDURE clearGarbage;
     VAR i:longint;
     begin
-      for i:=0 to length(garbage)-1 do garbage[i].destroy;
+      for i:=0 to length(garbage)-1 do garbage[i].clear;
     end;
 
   FUNCTION newTempZero:T_bigInt;
@@ -747,7 +758,7 @@ FUNCTION composeDigits_imp intFuncSignature;
           fracPart*=invFloatBase;
         end;
         result:=newRealLiteral(intPart.toFloat+fracPart);
-        intPart.destroy;
+        intPart.clear;
       end else result:=newIntLiteral(intPart);
       clearGarbage;
     end;
@@ -794,18 +805,18 @@ FUNCTION gcd_impl intFuncSignature;
         then r:=P_bigIntLiteral(params^.value[k])^.value.greatestCommonDivider(r)
         else begin
           bigTemp:=bigR.greatestCommonDivider(P_bigIntLiteral(params^.value[k])^.value);
-          bigR.destroy;
+          bigR.clear;
           if bigTemp.canBeRepresentedAsInt64 then begin
             r:=bigTemp.toInt;
             workingSmall:=true;
-            bigTemp.destroy;
+            bigTemp.clear;
           end else bigR:=bigTemp;
         end;
         lt_smallint: if workingSmall
         then r:=smallGcd(r,P_smallIntLiteral(params^.value[k])^.value)
         else begin
           r:=bigR.greatestCommonDivider(P_smallIntLiteral(params^.value[k])^.value);
-          bigR.destroy;
+          bigR.clear;
           workingSmall:=true;
         end;
       end;
@@ -887,9 +898,9 @@ FUNCTION powMod_impl intFuncSignature;
       ensure(arg1,by,uy);
       ensure(arg2,bz,uz);
       result:=newIntLiteral(bx.powMod(by,bz));
-      if ux then bx.destroy;
-      if uy then by.destroy;
-      if uz then bz.destroy;
+      if ux then bx.clear;
+      if uy then by.clear;
+      if uz then bz.clear;
     end else result:=genericVectorization('powMod',params,tokenLocation,context,recycler);
   end;
 
@@ -909,11 +920,11 @@ FUNCTION modularInverse_impl intFuncSignature;
       if validResult
       then result:=newIntLiteral(intResult)
       else begin
-        intResult.destroy;
+        intResult.clear;
         result:=newRealLiteral(Nan);
       end;
-      if ux then bx.destroy;
-      if uy then by.destroy;
+      if ux then bx.clear;
+      if uy then by.clear;
     end else result:=genericVectorization('modularInverse',params,tokenLocation,context,recycler);
   end;
 
@@ -946,7 +957,7 @@ FUNCTION divMod_impl intFuncSignature;
           lt_bigint: begin
             temp.fromInt(P_smallIntLiteral(arg1)^.value);
             P_bigIntLiteral(arg0)^.value.divMod(temp,q,r);
-            temp.destroy;
+            temp.clear;
             exit(newListLiteral(2)^.append(newIntLiteral(q),false)
                                   ^.append(newIntLiteral(r),false));
           end;
