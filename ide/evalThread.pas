@@ -287,7 +287,9 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
 PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
-    package.load(lu_forCallingMain,globals,recycler,mainParameters,nil,nil);
+    if getFileToInterpretFromCommandLine=''
+    then package.load(lu_forDirectExecution,globals,recycler,mainParameters,nil,nil)
+    else package.load(lu_forCallingMain    ,globals,recycler,mainParameters,nil,nil);
     globals.afterEvaluation(recycler);
     messages.setExitCode;
   end;
