@@ -544,11 +544,11 @@ FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
           P_bigIntLiteral(LHS)^.val.divMod(P_bigIntLiteral(RHS)^.value,quotient,rest);
           if rest.isZero
           then begin
-            rest.destroy;
+            rest.clear;
             result:=newIntLiteral(quotient);
           end else begin
-            rest.destroy;
-            quotient.destroy;
+            rest.clear;
+            quotient.clear;
             result:=newRealLiteral(P_bigIntLiteral(LHS)^.val.toFloat/P_bigIntLiteral(RHS)^.val.toFloat);
           end;
         end;
@@ -563,14 +563,14 @@ FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
         end else begin
           bigRHS.fromInt(P_smallIntLiteral(RHS)^.val);
           P_bigIntLiteral(LHS)^.val.divMod(bigRHS,quotient,rest);
-          bigRHS.destroy;
+          bigRHS.clear;
           if rest.isZero
           then begin
-            rest.destroy;
+            rest.clear;
             result:=newIntLiteral(quotient);
           end else begin
-            rest.destroy;
-            quotient.destroy;
+            rest.clear;
+            quotient.clear;
             result:=newRealLiteral(P_bigIntLiteral(LHS)^.val.toFloat/P_smallIntLiteral(RHS)^.val);
           end;
         end;
@@ -659,7 +659,7 @@ FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
   begin
     if value.isBetween(low(intLit),high(intLit)) then begin
       iv:=value.toInt;
-      value.destroy;
+      value.clear;
       exit(P_bigIntLiteral(intLit[iv].rereferenced));
     end;
     new(result,create(value));
@@ -679,11 +679,11 @@ FUNCTION newIntLiteral(CONST value: T_bigInt): P_abstractIntLiteral;
   begin
     if value.isBetween(low(intLit),high(intLit)) then begin
       iv:=value.toInt;
-      value.destroy;
+      value.clear;
       exit(P_bigIntLiteral(intLit[iv].rereferenced));
     end else if value.canBeRepresentedAsInt32 then begin
       iv:=value.toInt;
-      value.destroy;
+      value.clear;
       new(P_smallIntLiteral(result),create(iv));
     end else new(P_bigIntLiteral(result),create(value));
   end;
@@ -1299,7 +1299,7 @@ CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
-DESTRUCTOR T_bigIntLiteral.destroy; begin val.destroy; end;
+DESTRUCTOR T_bigIntLiteral.destroy; begin val.clear; end;
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;

@@ -783,7 +783,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       then begin
         x.fromInt(smallX);
         result:=newIntLiteral(x.pow(exponent));
-        x.destroy;
+        x.clear;
       end else begin
         rx:=smallX;
         tx:=1;

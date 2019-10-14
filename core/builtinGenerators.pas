@@ -192,8 +192,8 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
 DESTRUCTOR T_rangeGenerator.destroy;
   begin
     if workBig then begin
-      bigNext.destroy;
-      if bounding<>bNone then bigLim.destroy;
+      bigNext.clear;
+      if bounding<>bNone then bigLim.clear;
     end;
   end;
 
@@ -787,7 +787,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location:T_tokenLocation; CONS
     if (parameters=nil) or (parameters^.size=0) then begin
       result:=evaluateToLiteral(location,context,recycler,nil,nil);
     end else if (parameters<>nil) and (parameters^.size=1) and (parameters^.value[0]^.literalType in [lt_smallint,lt_bigint]) then begin
-      range.destroy;
+      range.clear;
       if parameters^.value[0]^.literalType=lt_smallint
       then range.fromInt(P_smallIntLiteral(parameters^.value[0])^.value)
       else range.create (P_bigIntLiteral  (parameters^.value[0])^.value);
@@ -800,7 +800,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location:T_tokenLocation; CONS
 
 DESTRUCTOR T_abstractRandomGenerator.destroy;
   begin
-    range.destroy;
+    range.clear;
   end;
 
 CONSTRUCTOR T_realRandomGenerator.create(CONST seed: P_abstractIntLiteral; CONST loc: T_tokenLocation);
