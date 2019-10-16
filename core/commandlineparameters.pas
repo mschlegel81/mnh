@@ -1,6 +1,9 @@
 UNIT commandLineParameters;
 INTERFACE
-USES myGenerics,mnh_settings,out_adapters;
+USES myGenerics,mnh_settings,out_adapters
+     {$ifdef fullVersion}
+     ,funcs
+     {$endif};
 TYPE
   T_commandLineParameters=object
       fileOrCommandToInterpret:ansistring;
@@ -29,7 +32,7 @@ TYPE
       FUNCTION getCommandToInterpretFromCommandLine: ansistring;
       FUNCTION getFileToInterpretFromCommandLine: ansistring;
       {$ifdef fullVersion}
-      FUNCTION getShebang(CONST useFullVersionFunctions:boolean):ansistring;
+      FUNCTION getShebang(CONST requires:T_specialFunctionRequirements):ansistring;
       {$endif}
   private
       cmdLineParsingErrors:T_arrayOfString;
@@ -278,14 +281,16 @@ PROCEDURE T_commandLineParameters.initFromShebang(CONST shebangLine: string);
 FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
   begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
 {$ifdef fullVersion}
-FUNCTION T_commandLineParameters.getShebang(CONST useFullVersionFunctions:boolean): ansistring;
+FUNCTION T_commandLineParameters.getShebang(CONST requires:T_specialFunctionRequirements): ansistring;
   VAR k:longint;
   begin
+    reEvaluationWithGUIrequired:=reEvaluationWithGUIrequired or (sfr_needs_gui in requires);
+    suppressBeep:=suppressBeep and not(sfr_beeps in requires);
+    headless:=headless and not(sfr_asks in requires);
     result:='#!';
     if (settings.lightFlavourLocation='') or
        reEvaluationWithGUIrequired or
-       useFullVersionFunctions  or
-       profilingRun
+       (sfr_needs_full_version in requires)
     then result+=settings.fullFlavourLocation
     else result+=settings.lightFlavourLocation;
     if verbosityString<>DEF_VERBOSITY_STRING then result+=' -v'+verbosityString;
@@ -295,7 +300,6 @@ FUNCTION T_commandLineParameters.getShebang(CONST useFullVersionFunctions:boolea
     if headless                              then result+=' '+FLAG_HEADLESS;
     if pauseOnError                          then result+=' '+FLAG_PAUSE_ON_ERR;
     if pauseAtEnd                            then result+=' '+FLAG_PAUSE_ALWAYS;
-    if profilingRun                          then result+=' '+FLAG_PROFILE;
     for k:=0 to length(deferredAdapterCreations)-1 do begin
       if deferredAdapterCreations[k].appending
       then result+=' +out '+deferredAdapterCreations[k].nameAndOption
