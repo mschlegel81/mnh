@@ -221,7 +221,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
       console:P_redirectionAwareConsoleOutAdapter;
   begin
     inherited init(ek_normal);
-    new(console,create(cmdLineInterpretation.verbosityString));
+    new(console,create(commandLine.verbosityString));
     messages.addOutAdapter(console,true);
     //Do not show profiling info as text; is shown as GUI component
     console^.enableMessageType(false,[mt_profile_call_info]);
@@ -232,16 +232,16 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
-    if cmdLineInterpretation.profilingRun
+    if commandLine.profilingRun
     then evalRequest.contextType:=ect_profiling
     else evalRequest.contextType:=ect_normal;
-    if cmdLineInterpretation.headless
+    if commandLine.headless
     then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
     evalRequest.callMain:=true;
-    evalRequest.parameters:=cmdLineInterpretation.mainParameters;
-    if getFileToInterpretFromCommandLine<>''
-    then package.replaceCodeProvider(newFileCodeProvider(getFileToInterpretFromCommandLine))
-    else package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,getCommandToInterpretFromCommandLine));
+    evalRequest.parameters:=commandLine.mainParameters;
+    if commandLine.getFileToInterpretFromCommandLine<>''
+    then package.replaceCodeProvider(newFileCodeProvider(commandLine.getFileToInterpretFromCommandLine))
+    else package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,commandLine.getCommandToInterpretFromCommandLine));
     state:=es_pending;
     executeInNewThread(false);
     system.leaveCriticalSection(evaluationCs);
@@ -287,9 +287,9 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
 PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
   begin
     globals.resetForEvaluation(@package,@package.reportVariables,evalRequest.contextType,evalRequest.parameters,recycler);
-    if getFileToInterpretFromCommandLine=''
-    then package.load(lu_forDirectExecution,globals,recycler,mainParameters,nil,nil)
-    else package.load(lu_forCallingMain    ,globals,recycler,mainParameters,nil,nil);
+    if commandLine.getFileToInterpretFromCommandLine=''
+    then package.load(lu_forDirectExecution,globals,recycler,commandLine.mainParameters,nil,nil)
+    else package.load(lu_forCallingMain    ,globals,recycler,commandLine.mainParameters,nil,nil);
     globals.afterEvaluation(recycler);
     messages.setExitCode;
   end;

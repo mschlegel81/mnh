@@ -240,7 +240,7 @@ USES FPReadPNG,
      FPWritePNG,
      IntfGraphics,
      myStringUtil,
-     cmdLineInterpretation;
+     commandLineParameters;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;

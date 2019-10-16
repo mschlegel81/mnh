@@ -29,15 +29,15 @@ begin
     hideConsole;
     {$endif}
     initAskForm;
-    if reEvaluationWithGUIrequired
+    if commandLine.reEvaluationWithGUIrequired
     then Application.CreateForm(TreevaluationForm,reevaluationForm)
-    else if sendParametersToOtherInstance(filesToOpenInEditor)
+    else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);
     Application.run;
     memoryCleaner.stop;
     showConsole;
-    if pauseAtEnd or pauseOnError and ((ExitCode<>0) or profilingRun) then pauseOnce;
+    if commandLine.pauseAtEnd or commandLine.pauseOnError then pauseOnce;
   end;
 end.
 

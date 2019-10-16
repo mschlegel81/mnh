@@ -65,7 +65,6 @@ FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
-FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
 
 VAR logFolderCallback:PROCEDURE(CONST name:string) of object=nil;
 IMPLEMENTATION
@@ -102,30 +101,6 @@ FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
 PROCEDURE ensurePath(CONST path:ansistring);
   begin
     ForceDirectories(extractFilePath(expandFileName(path)));
-  end;
-
-FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
-  VAR firstFileLine:ansistring;
-      handle:textFile;
-  begin
-    if FileExistsUTF8(scriptFileName) then begin
-      try
-        assign(handle,scriptFileName);
-        reset(handle);
-        readln(handle,firstFileLine);
-        close(handle);
-      except
-        firstFileLine:='';
-      end;
-      if (copy(firstFileLine,1,2)='#!')
-      then result:=splitCommandLine(copy(firstFileLine,3,length(firstFileLine)-2))
-      else result:=C_EMPTY_STRING_ARRAY;
-      {$ifdef debugMode}
-      if length(result)>0
-      then for firstFileLine in result do writeln(stdErr,'        SHEBANG: |',firstFileLine,'|')
-      else                                writeln(stdErr,'        SHEBANG: none found');
-      {$endif}
-    end else result:=C_EMPTY_STRING_ARRAY;
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
