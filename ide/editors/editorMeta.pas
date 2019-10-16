@@ -20,7 +20,6 @@ USES  //basic classes
   litVar,
   funcs,
   debugging,
-  cmdLineInterpretation,
   evalThread,
   guiOutAdapters,
   datastores,
@@ -133,7 +132,8 @@ VAR safeCallback:F_safeCallback=nil;
 IMPLEMENTATION
 USES renameDialog,
      recyclers,
-     packages;
+     packages,
+     commandLineParameters;
 VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin

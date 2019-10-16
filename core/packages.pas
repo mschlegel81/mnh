@@ -697,6 +697,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       //:plausis
       ruleId:=trim(statement.firstToken^.txt);
       statement.firstToken:=recycler.disposeToken(statement.firstToken);
+      if isPlainScript and (ruleId=MAIN_RULE_ID) then begin
+        globals.primaryContext.raiseError('plain scripts must not have main rules',ruleDeclarationStart);
+      end;
       if not(statement.firstToken^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
         globals.primaryContext.messages^.raiseSimpleError('Invalid declaration head.',statement.firstToken^.location);
         recycler.cascadeDisposeToken(statement.firstToken);

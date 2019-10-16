@@ -234,7 +234,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     runnerModel.ensureEditScripts;
 
-    FormDropFiles(Sender,filesToOpenInEditor);
+    FormDropFiles(Sender,commandLine.filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
     {$ifdef LINUX}
     miIncFontSize.ShortCut:=16605;

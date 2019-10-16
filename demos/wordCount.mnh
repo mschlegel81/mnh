@@ -2,22 +2,23 @@ USE inputs;
 
 private BASE_CHARSET:=['a'..'z'].toSet;
 private cleanSplitString(s:StringList)->begin
-  local result:=join(s,' ')           //join lines -> processing one long string
-               .lower                 //convert to lowercase
-               .clean(BASE_CHARSET,' ',true) //retain only letters
-               .split(' ');           //split at spaces
-  result[result<>'']; //return those elements from the result list which are not empty strings
+ local result:=join(s,' ')           //join lines -> processing one long string
+              .lower                 //convert to lowercase
+              .clean(BASE_CHARSET,' ',true) //retain only letters
+              .split(' ');           //split at spaces
+ result[result<>'']; //return those elements from the result list which are not empty strings
 end;
 
-private processLinesInChunks(lines:StringList,chunkSize)->
-  group(lines,[0..size(lines)-1] div chunkSize)
-  .pEach(chunk,cleanSplitString(chunk[1]))
+private processLinesInChunks(lines:StringList,chunkSize)->begin
+  ([0..lines.size div chunkSize]*chunkSize)
+  .each(chunkStart,cleanSplitString(lines[[chunkStart..chunkStart+chunkSize-1]]))
   .flatten
   .elementFrequency;
+end;
 
 @demo_for=string processing, list processing, file processing
 private analyze(lines:StringList)->begin
-  local wordCount:=processLinesInChunks(lines,100).sort(1).reverseList;
+  local wordCount:=processLinesInChunks(lines,100000).sort(1).reverseList;
   print('Words total:    ',local total:=wordCount.getInner(1).agg(+));
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);

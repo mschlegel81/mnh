@@ -1,0 +1,29 @@
+private serverId:=myPath.hash&mnhInfo.hash;
+
+private serve(L)->
+  L.isIntList
+  ? L.factorize.flatten.unique
+  : '?';
+
+private ensureServer->begin
+  isIpcServerRunning(serverId)
+  ? return void
+  : executor.execAsync([myPath,'serve']);
+  while(!isIpcServerRunning(serverId),sleep(0.1));
+end;
+
+private askServer(L)->begin
+  ensureServer;
+  sendIpcRequest(serverId,L);
+end;
+
+main('serve')->begin
+  print('Serving for 10 seconds');
+  startIpcServer(serverId,::serve);
+  sleep(10);
+end;
+
+main->begin
+  print(askServer([1001,2348651,24]));
+  print(askServer('uptime'));
+end;

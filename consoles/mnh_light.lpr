@@ -2,16 +2,17 @@
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cthreads,{$endif}
      sysutils, mySys, mnh_settings,
-     cmdLineInterpretation;
+     cmdLineInterpretation,
+     commandLineParameters;
 
 {$R *.res}
 
 begin
   if wantMainLoopAfterParseCmdLine then begin
-    if reEvaluationWithGUIrequired
+    if commandLine.reEvaluationWithGUIrequired
     then begin
-      pauseAtEnd  :=false;
-      pauseOnError:=false;
+      commandLine.pauseAtEnd  :=false;
+      commandLine.pauseOnError:=false;
       if fileExists(settings.fullFlavourLocation)
       then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
       else begin
@@ -22,6 +23,6 @@ begin
     end else displayHelp(nil);
   end;
   memoryCleaner.stop;
-  if pauseAtEnd then pauseOnce;
+  if commandLine.pauseAtEnd then pauseOnce;
 end.
 
