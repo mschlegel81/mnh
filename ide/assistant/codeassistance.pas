@@ -16,7 +16,8 @@ USES
   out_adapters,
   contexts,
   recyclers,
-  packages;
+  packages,
+  funcs;
 
 TYPE
   T_highlightingData=object
@@ -51,11 +52,12 @@ TYPE
       PROPERTY stateHash:T_hashInt read responseStateHash;
       FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
-      FUNCTION explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
+      FUNCTION  explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
       FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST oldId,newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
       FUNCTION  findUsagesOf(CONST location:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION  getImportablePackages:T_arrayOfString;
       FUNCTION  resolveImport(CONST id:string):string;
+      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
       FUNCTION  rereferenced:P_codeAssistanceResponse;
   end;
@@ -67,7 +69,7 @@ PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 
 IMPLEMENTATION
-USES sysutils,myStringUtil;
+USES sysutils,myStringUtil,commandLineParameters;
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additionalScriptsToScan:T_arrayOfString; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
@@ -468,6 +470,16 @@ FUNCTION T_codeAssistanceResponse.resolveImport(CONST id:string):string;
     try
       if package=nil then result:=''
                      else result:=package^.getSecondaryPackageById(id);
+    finally
+      leaveCriticalSection(responseCs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceResponse.getBuiltinRestrictions:T_specialFunctionRequirements;
+  begin
+    enterCriticalSection(responseCs);
+    try
+      result:=functionCallInfos^.getBuiltinRestrictions;
     finally
       leaveCriticalSection(responseCs);
     end;

@@ -187,6 +187,6 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showVariable',@showVariable_impl,ak_variadic_1,'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a table with given caption');
+  registerRule(GUI_NAMESPACE,'showVariable',@showVariable_impl,ak_variadic_1,'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a table with given caption',sfr_needs_gui);
 end.
 

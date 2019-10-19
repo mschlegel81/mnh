@@ -748,11 +748,11 @@ PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   end;
 
 INITIALIZATION
-  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_variadic,'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode');
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
-  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution');
-  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
+  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction',sfr_needs_gui);
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_variadic,'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode',sfr_needs_gui);
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation',sfr_needs_gui);
+  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution',sfr_needs_gui);
+  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately',sfr_needs_gui);
 
 end.
 

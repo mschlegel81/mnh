@@ -232,7 +232,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep',sfr_beeps{$endif});
   {$ifdef Windows}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif});
   {$endif}

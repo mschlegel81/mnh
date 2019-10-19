@@ -781,7 +781,7 @@ DESTRUCTOR T_customFormAdapter.destroy;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
+  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed',sfr_needs_gui);
 
 end.
 

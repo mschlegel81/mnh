@@ -724,6 +724,6 @@ INITIALIZATION
   setLength(fontControls[ctEditor ],0);
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
-  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',sfr_needs_gui);
 end.
 

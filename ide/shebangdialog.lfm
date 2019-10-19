@@ -1,0 +1,325 @@
+object ShebangWizard: TShebangWizard
+  Left = 528
+  Height = 309
+  Top = 163
+  Width = 320
+  Caption = 'Shebang wizard'
+  ClientHeight = 309
+  ClientWidth = 320
+  OnCreate = FormCreate
+  OnShow = FormShow
+  LCLVersion = '2.0.4.0'
+  object GroupBox1: TGroupBox
+    Left = 0
+    Height = 67
+    Top = 0
+    Width = 320
+    Align = alTop
+    AutoSize = True
+    Caption = 'Executor'
+    ClientHeight = 48
+    ClientWidth = 316
+    ParentFont = False
+    TabOrder = 0
+    object lightVersionRb: TRadioButton
+      Left = 0
+      Height = 24
+      Top = 0
+      Width = 316
+      Align = alTop
+      Caption = 'lightVersionRb'
+      Checked = True
+      OnClick = lightVersionRbClick
+      ParentFont = False
+      TabOrder = 0
+    end
+    object fullVersionRb: TRadioButton
+      Left = 0
+      Height = 24
+      Top = 24
+      Width = 316
+      Align = alTop
+      Caption = 'fullVersionRb'
+      ParentFont = False
+      TabOrder = 1
+    end
+  end
+  object GroupBox2: TGroupBox
+    Left = 0
+    Height = 91
+    Top = 67
+    Width = 320
+    Align = alTop
+    AutoSize = True
+    Caption = 'Flags'
+    ClientHeight = 72
+    ClientWidth = 316
+    ParentFont = False
+    TabOrder = 1
+    object guiFlagCb: TCheckBox
+      AnchorSideLeft.Control = GroupBox2
+      AnchorSideTop.Control = GroupBox2
+      AnchorSideRight.Control = silentFlagCb
+      AnchorSideRight.Side = asrBottom
+      Left = 0
+      Height = 24
+      Top = 0
+      Width = 109
+      Align = alCustom
+      Anchors = [akTop, akLeft, akRight]
+      Caption = 'guiFlagCb'
+      OnClick = guiFlagCbClick
+      ParentFont = False
+      TabOrder = 0
+    end
+    object quietFlagCb: TCheckBox
+      AnchorSideLeft.Control = guiFlagCb
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = GroupBox2
+      AnchorSideRight.Control = GroupBox2
+      AnchorSideRight.Side = asrBottom
+      Left = 114
+      Height = 24
+      Top = 0
+      Width = 202
+      Align = alCustom
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 5
+      Caption = 'quietFlagCb'
+      ParentFont = False
+      TabOrder = 1
+    end
+    object silentFlagCb: TCheckBox
+      AnchorSideLeft.Control = GroupBox2
+      AnchorSideTop.Control = guiFlagCb
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = guiFlagCb
+      AnchorSideRight.Side = asrBottom
+      Left = 0
+      Height = 24
+      Top = 24
+      Width = 109
+      Align = alCustom
+      BorderSpacing.Right = 6
+      Caption = 'silentFlagCb'
+      ParentFont = False
+      TabOrder = 2
+    end
+    object headlessFlagCb: TCheckBox
+      AnchorSideLeft.Control = quietFlagCb
+      AnchorSideTop.Control = quietFlagCb
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = GroupBox2
+      AnchorSideRight.Side = asrBottom
+      Left = 114
+      Height = 24
+      Top = 24
+      Width = 202
+      Align = alCustom
+      Anchors = [akTop, akLeft, akRight]
+      Caption = 'headlessFlagCb'
+      ParentFont = False
+      TabOrder = 3
+    end
+    object pauseFlagCb: TCheckBox
+      AnchorSideLeft.Control = silentFlagCb
+      AnchorSideTop.Control = silentFlagCb
+      AnchorSideTop.Side = asrBottom
+      Left = 0
+      Height = 24
+      Top = 48
+      Width = 94
+      Align = alCustom
+      Caption = 'pauseFlag'
+      OnClick = pauseFlagCbClick
+      ParentFont = False
+      TabOrder = 4
+    end
+    object pauseOnErrorCb: TCheckBox
+      AnchorSideLeft.Control = headlessFlagCb
+      AnchorSideTop.Control = headlessFlagCb
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = GroupBox2
+      AnchorSideRight.Side = asrBottom
+      Left = 114
+      Height = 24
+      Top = 48
+      Width = 202
+      Anchors = [akTop, akLeft, akRight]
+      Caption = 'pauseOnErrorCb'
+      ParentFont = False
+      TabOrder = 5
+    end
+  end
+  object GroupBox3: TGroupBox
+    Left = 0
+    Height = 48
+    Top = 158
+    Width = 320
+    Align = alTop
+    AutoSize = True
+    Caption = 'verbosity'
+    ClientHeight = 29
+    ClientWidth = 316
+    ParentFont = False
+    TabOrder = 2
+    object verbosityCombo: TComboBox
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 316
+      Align = alClient
+      ItemHeight = 0
+      Items.Strings = (
+        ''
+        'v'
+        '1'
+        '2'
+        '3'
+        't'
+        'd'
+      )
+      ParentFont = False
+      TabOrder = 0
+    end
+  end
+  object GroupBox4: TGroupBox
+    Left = 0
+    Height = 99
+    Top = 206
+    Width = 320
+    Align = alTop
+    AutoSize = True
+    Caption = 'log'
+    ClientHeight = 80
+    ClientWidth = 316
+    ParentFont = False
+    TabOrder = 3
+    object logAppendCb: TCheckBox
+      AnchorSideLeft.Control = doLogCheckbox
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = GroupBox4
+      Left = 80
+      Height = 24
+      Top = 0
+      Width = 175
+      Align = alCustom
+      Caption = 'append to existing log'
+      Enabled = False
+      ParentFont = False
+      TabOrder = 0
+    end
+    object Label1: TLabel
+      AnchorSideLeft.Control = doLogCheckbox
+      AnchorSideTop.Control = logAppendCb
+      AnchorSideTop.Side = asrBottom
+      Left = 0
+      Height = 17
+      Top = 24
+      Width = 65
+      Align = alCustom
+      Caption = 'Filename:'
+      ParentColor = False
+      ParentFont = False
+    end
+    object logNameEdit: TEdit
+      AnchorSideLeft.Control = logAppendCb
+      AnchorSideTop.Control = logAppendCb
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = GroupBox4
+      AnchorSideRight.Side = asrBottom
+      Left = 80
+      Height = 27
+      Top = 24
+      Width = 236
+      Anchors = [akTop, akLeft, akRight]
+      Enabled = False
+      ParentFont = False
+      TabOrder = 1
+      Text = '?.log'
+    end
+    object Label2: TLabel
+      AnchorSideLeft.Control = Label1
+      AnchorSideTop.Control = verbosityCombo1
+      Left = 0
+      Height = 17
+      Top = 51
+      Width = 69
+      Caption = 'Verbosity:'
+      ParentColor = False
+      ParentFont = False
+    end
+    object verbosityCombo1: TComboBox
+      AnchorSideLeft.Control = logNameEdit
+      AnchorSideTop.Control = logNameEdit
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = logNameEdit
+      AnchorSideRight.Side = asrBottom
+      Left = 80
+      Height = 29
+      Top = 51
+      Width = 236
+      Align = alCustom
+      Anchors = [akTop, akLeft, akRight]
+      Enabled = False
+      ItemHeight = 0
+      Items.Strings = (
+        ''
+        'v'
+        '1'
+        '2'
+        '3'
+        't'
+        'd'
+      )
+      ParentFont = False
+      TabOrder = 2
+    end
+    object doLogCheckbox: TCheckBox
+      AnchorSideLeft.Control = GroupBox4
+      AnchorSideTop.Control = GroupBox4
+      Left = 0
+      Height = 24
+      Top = 0
+      Width = 80
+      Caption = 'activate'
+      OnClick = doLogCheckboxClick
+      ParentFont = False
+      TabOrder = 3
+    end
+  end
+  object Button1: TButton
+    AnchorSideLeft.Control = GroupBox4
+    AnchorSideTop.Control = GroupBox4
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Button2
+    Left = 0
+    Height = 31
+    Top = 305
+    Width = 141
+    Align = alCustom
+    Anchors = [akTop, akLeft, akRight]
+    Caption = 'OK'
+    ModalResult = 1
+    ParentFont = False
+    TabOrder = 4
+  end
+  object Button2: TButton
+    AnchorSideLeft.Control = Button1
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = GroupBox4
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = GroupBox4
+    AnchorSideRight.Side = asrBottom
+    Left = 141
+    Height = 25
+    Top = 305
+    Width = 179
+    Anchors = [akTop, akRight]
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    ParentFont = False
+    TabOrder = 5
+  end
+end

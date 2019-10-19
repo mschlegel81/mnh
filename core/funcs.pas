@@ -30,11 +30,18 @@ CONST
                           {ak_variadic_3} (fixedParameters:3;       variadic:true ));
 
 TYPE
+  {$ifdef fullVersion}
+  T_specialFunctionRequirement=(sfr_none,sfr_needs_full_version,sfr_needs_gui,sfr_beeps,sfr_asks);
+  T_specialFunctionRequirements=set of T_specialFunctionRequirement;
+  {$endif}
   P_intFuncCallback=FUNCTION intFuncSignature;
 
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
   T_builtinFunctionMetaData=object
     arityKind    :T_arityKind;
+    {$ifdef fullVersion}
+    specialRequirement:T_specialFunctionRequirement;
+    {$endif}
     namespace    :T_namespace;
     unqualifiedId:T_idString;
     FUNCTION qualifiedId:string;
@@ -48,14 +55,14 @@ VAR
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
   makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring; CONST requirement:T_specialFunctionRequirement=sfr_none;{$endif}CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
-
+OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 IMPLEMENTATION
 USES sysutils,Classes,
      myStringUtil
@@ -63,9 +70,14 @@ USES sysutils,Classes,
      mnh_doc{$endif};
 VAR builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
 
+OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
+  begin
+    result:=(x.namespace=y.namespace) and (x.unqualifiedId=y.unqualifiedId);
+  end;
+
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; {$ifdef fullVersion}CONST explanation: ansistring;{$endif} CONST fullNameOnly: boolean):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; {$ifdef fullVersion}CONST explanation: ansistring; CONST requirement:T_specialFunctionRequirement=sfr_none;{$endif} CONST fullNameOnly: boolean=false):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
@@ -75,6 +87,9 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
     meta.arityKind:=aritiyKind;
     meta.namespace:=namespace;
     meta.unqualifiedId:=name;
+    {$ifdef fullVersion}
+    meta.specialRequirement:=requirement;
+    {$endif}
     builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;

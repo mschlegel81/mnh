@@ -428,7 +428,7 @@ PROCEDURE TtableForm.fillTable;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#showTable(L:list,caption:string);//Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.');
+  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#showTable(L:list,caption:string);//Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.',sfr_needs_gui);
 
 end.
 
