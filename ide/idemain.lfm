@@ -1,14 +1,13 @@
 object IdeMainForm: TIdeMainForm
   Left = 881
-  Height = 378
+  Height = 302
   Top = 250
-  Width = 561
+  Width = 449
   AllowDropFiles = True
   Caption = 'mnh'
-  ClientHeight = 353
-  ClientWidth = 561
+  ClientHeight = 279
+  ClientWidth = 449
   Color = clWhite
-  DesignTimePPI = 120
   Menu = MainMenu
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
@@ -20,10 +19,10 @@ object IdeMainForm: TIdeMainForm
   UseDockManager = True
   LCLVersion = '2.0.4.0'
   object PageControl1: TPageControl
-    Left = 440
-    Height = 331
+    Left = 352
+    Height = 260
     Top = 0
-    Width = 121
+    Width = 97
     Align = alRight
     DockSite = True
     DragKind = dkDock
@@ -33,30 +32,30 @@ object IdeMainForm: TIdeMainForm
     Options = [nboShowCloseButtons, nboMultiLine]
   end
   object Splitter1: TSplitter
-    Left = 434
-    Height = 331
+    Left = 347
+    Height = 260
     Top = 0
-    Width = 6
+    Width = 5
     Align = alRight
     OnMoved = Splitter1Moved
     ResizeAnchor = akRight
   end
   object Panel1: TPanel
-    Left = 132
-    Height = 331
+    Left = 106
+    Height = 260
     Top = 0
-    Width = 302
+    Width = 241
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 331
-    ClientWidth = 302
+    ClientHeight = 260
+    ClientWidth = 241
     ParentFont = False
     TabOrder = 2
     object PageControl2: TPageControl
       Left = 0
-      Height = 104
-      Top = 227
-      Width = 302
+      Height = 83
+      Top = 177
+      Width = 241
       Align = alBottom
       DockSite = True
       DragKind = dkDock
@@ -68,29 +67,29 @@ object IdeMainForm: TIdeMainForm
     object Splitter2: TSplitter
       Cursor = crVSplit
       Left = 0
-      Height = 6
-      Top = 221
-      Width = 302
+      Height = 5
+      Top = 172
+      Width = 241
       Align = alBottom
       OnMoved = Splitter1Moved
       ResizeAnchor = akBottom
     end
     object Panel2: TPanel
       Left = 0
-      Height = 221
+      Height = 172
       Top = 0
-      Width = 302
+      Width = 241
       Align = alClient
       BevelOuter = bvNone
-      ClientHeight = 221
-      ClientWidth = 302
+      ClientHeight = 172
+      ClientWidth = 241
       ParentFont = False
       TabOrder = 2
       object PageControl3: TPageControl
         Left = 0
-        Height = 221
+        Height = 172
         Top = 0
-        Width = 144
+        Width = 115
         Align = alLeft
         DockSite = True
         DragKind = dkDock
@@ -100,17 +99,17 @@ object IdeMainForm: TIdeMainForm
         Options = [nboShowCloseButtons, nboMultiLine]
       end
       object Splitter3: TSplitter
-        Left = 144
-        Height = 221
+        Left = 115
+        Height = 172
         Top = 0
-        Width = 6
+        Width = 5
         OnMoved = Splitter1Moved
       end
       object EditorsPageControl: TPageControl
-        Left = 150
-        Height = 221
+        Left = 120
+        Height = 172
         Top = 0
-        Width = 152
+        Width = 121
         Align = alClient
         MultiLine = True
         ParentFont = False
@@ -121,17 +120,17 @@ object IdeMainForm: TIdeMainForm
     end
   end
   object Splitter4: TSplitter
-    Left = 126
-    Height = 331
+    Left = 101
+    Height = 260
     Top = 0
-    Width = 6
+    Width = 5
     OnMoved = Splitter1Moved
   end
   object PageControl4: TPageControl
     Left = 0
-    Height = 331
+    Height = 260
     Top = 0
-    Width = 126
+    Width = 101
     Align = alLeft
     DockSite = True
     DragKind = dkDock
@@ -142,22 +141,22 @@ object IdeMainForm: TIdeMainForm
   end
   object StatusPanel: TPanel
     Left = 0
-    Height = 22
-    Top = 331
-    Width = 561
+    Height = 19
+    Top = 260
+    Width = 449
     Align = alBottom
     AutoSize = True
-    ClientHeight = 22
-    ClientWidth = 561
+    ClientHeight = 19
+    ClientWidth = 449
     ParentFont = False
     TabOrder = 5
     object evaluationStateLabel: TLabel
       Left = 1
-      Height = 20
+      Height = 17
       Top = 1
-      Width = 166
+      Width = 133
       Align = alLeft
-      Constraints.MinWidth = 166
+      Constraints.MinWidth = 133
       ParentColor = False
       ParentFont = False
     end
@@ -166,8 +165,8 @@ object IdeMainForm: TIdeMainForm
       AnchorSideTop.Control = MemoryUsageLabel
       AnchorSideBottom.Control = MemoryUsageLabel
       AnchorSideBottom.Side = asrBottom
-      Left = 167
-      Height = 20
+      Left = 134
+      Height = 17
       Top = 1
       Width = 0
       Align = alCustom
@@ -177,36 +176,36 @@ object IdeMainForm: TIdeMainForm
       OnMouseUp = MemoryUsageShapeMouseUp
     end
     object MemoryUsageLabel: TLabel
-      Left = 167
-      Height = 20
+      Left = 134
+      Height = 17
       Top = 1
-      Width = 125
+      Width = 100
       Align = alLeft
       Alignment = taCenter
       Caption = '?'
-      Constraints.MaxWidth = 125
-      Constraints.MinWidth = 125
+      Constraints.MaxWidth = 100
+      Constraints.MinWidth = 100
       ParentColor = False
       ParentFont = False
       OnMouseUp = MemoryUsageShapeMouseUp
     end
     object EditLocationLabel: TLabel
-      Left = 317
-      Height = 20
+      Left = 254
+      Height = 17
       Top = 1
       Width = 1
       Align = alLeft
       Alignment = taCenter
-      BorderSpacing.Left = 25
-      BorderSpacing.Right = 25
+      BorderSpacing.Left = 20
+      BorderSpacing.Right = 20
       ParentColor = False
       ParentFont = False
     end
     object PlotPositionLabel: TLabel
-      Left = 343
-      Height = 20
+      Left = 275
+      Height = 17
       Top = 1
-      Width = 217
+      Width = 173
       Align = alClient
       Alignment = taRightJustify
       ParentColor = False
@@ -219,18 +218,18 @@ object IdeMainForm: TIdeMainForm
       AnchorSideRight.Side = asrBottom
       AnchorSideBottom.Control = MemoryUsageLabel
       AnchorSideBottom.Side = asrBottom
-      Left = 167
-      Height = 20
+      Left = 134
+      Height = 17
       Top = 1
-      Width = 125
+      Width = 100
       Anchors = [akTop, akLeft, akRight, akBottom]
       Brush.Style = bsClear
       OnMouseUp = MemoryUsageShapeMouseUp
     end
   end
   object MainMenu: TMainMenu
-    left = 470
-    top = 70
+    left = 376
+    top = 56
     object smFile: TMenuItem
       Caption = '&File'
       object miNew: TMenuItem
@@ -449,8 +448,8 @@ object IdeMainForm: TIdeMainForm
     end
   end
   object bookmarkImages: TImageList
-    left = 241
-    top = 66
+    left = 193
+    top = 53
     Bitmap = {
       4C690A0000001000000010000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000E5E5E5FFD7D7D7FFD6D6D6FFDCDCDCFFEBEBEBFFF0F0F000F0F0F000F0F0
@@ -778,8 +777,8 @@ object IdeMainForm: TIdeMainForm
   object breakpointImages: TImageList
     Height = 15
     Width = 15
-    left = 248
-    top = 154
+    left = 198
+    top = 123
     Bitmap = {
       4C69010000000F0000000F000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
@@ -816,23 +815,23 @@ object IdeMainForm: TIdeMainForm
     Enabled = False
     Interval = 20
     OnTimer = TimerTimer
-    left = 346
-    top = 73
+    left = 277
+    top = 58
   end
   object FindDialog1: TFindDialog
-    left = 326
-    top = 126
+    left = 261
+    top = 101
   end
   object ReplaceDialog1: TReplaceDialog
     Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
-    left = 394
-    top = 154
+    left = 315
+    top = 123
   end
   object dockImages: TImageList
     Height = 20
     Width = 30
-    left = 190
-    top = 51
+    left = 152
+    top = 41
     Bitmap = {
       4C69040000001E00000014000000CBCBCB00DDDDDDFFDBDBDBFFDBDBDBFFDBDB
       DBFFDDDDDDFFC9C9C9FFDDDDDDFFDBDBDBFFDBDBDBFFDBDBDBFFDDDDDDFFC9C9

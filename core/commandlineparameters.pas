@@ -43,6 +43,9 @@ TYPE
   private
       cmdLineParsingErrors:T_arrayOfString;
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit);
+      {$ifdef UNIX}
+      hasAnyMnhParameter:boolean;
+      {$endif}
     PROCEDURE addParameter(VAR list: T_arrayOfString; CONST index: longint);
     PROCEDURE logCmdLineParsingError(CONST s: string);
     FUNCTION parseMnhCommand(CONST param: string): boolean;
@@ -119,6 +122,9 @@ PROCEDURE T_commandLineParameters.clear;
     {$ifdef fullVersion}
     profilingRun:=false;
     setLength(filesToOpenInEditor,0);
+    {$endif}
+    {$ifdef UNIX}
+    hasAnyMnhParameter:=false;
     {$endif}
     suppressBeep:=false;
   end;
