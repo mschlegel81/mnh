@@ -307,6 +307,10 @@ object IdeMainForm: TIdeMainForm
         ShortCut = 24658
         OnClick = miRenameClick
       end
+      object miShebang: TMenuItem
+        Caption = '&Shebang...'
+        OnClick = miShebangClick
+      end
     end
     object MenuItem3: TMenuItem
       Caption = 'E&valuation'

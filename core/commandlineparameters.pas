@@ -13,6 +13,7 @@ TYPE
       pauseOnError,
       wantHelpDisplay,
       headless,
+      wantConsoleAdapter,
       reEvaluationWithGUIrequired:boolean;
       mainParameters:T_arrayOfString;
 
@@ -23,24 +24,24 @@ TYPE
 
       suppressBeep,
       wantMnhInfo:boolean;
+      executor:string;
+      deferredAdapterCreations:array of record
+        nameAndOption:string;
+        appending:boolean;
+      end;
 
       PROCEDURE clear;
       PROCEDURE initFromCommandLine;
-      PROCEDURE initFromShebang(CONST shebangLine:string);
       FUNCTION applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST guiAdapterOrNil: P_abstractOutAdapter):boolean;
 
       FUNCTION getCommandToInterpretFromCommandLine: ansistring;
       FUNCTION getFileToInterpretFromCommandLine: ansistring;
       {$ifdef fullVersion}
-      FUNCTION getShebang(CONST requires:T_specialFunctionRequirements):ansistring;
+      PROCEDURE initFromShebang(CONST shebangLine:string; CONST requires:T_specialFunctionRequirements);
+      FUNCTION getShebang:ansistring;
       {$endif}
   private
       cmdLineParsingErrors:T_arrayOfString;
-      wantConsoleAdapter:boolean;
-      deferredAdapterCreations:array of record
-        nameAndOption:string;
-        appending:boolean;
-      end;
       parsingState:(pst_initial,pst_parsingOutFileRewrite,pst_parsingOutFileAppend,pst_parsingFileToEdit);
     PROCEDURE addParameter(VAR list: T_arrayOfString; CONST index: longint);
     PROCEDURE logCmdLineParsingError(CONST s: string);
@@ -267,32 +268,36 @@ FUNCTION T_commandLineParameters.parseMnhCommand(CONST param: string): boolean;
     end;
   end;
 
-PROCEDURE T_commandLineParameters.initFromShebang(CONST shebangLine: string);
+FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
+  begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
+{$ifdef fullVersion}
+PROCEDURE T_commandLineParameters.initFromShebang(CONST shebangLine: string; CONST requires:T_specialFunctionRequirements);
   VAR k:longint;
       parameters:T_arrayOfString;
   begin
     clear;
-    parameters:=splitCommandLine(copy(shebangLine,3,length(shebangLine)-2));
-    for k:=1 to length(parameters)-1 do
-    if not(parseSingleMnhParameter(parameters[k])) then
-      logCmdLineParsingError('Invalid parameter/switch given by shebang: "'+parameters[k]+'"');
-  end;
-
-FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
-  begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
-{$ifdef fullVersion}
-FUNCTION T_commandLineParameters.getShebang(CONST requires:T_specialFunctionRequirements): ansistring;
-  VAR k:longint;
-  begin
+    if shebangLine<>'' then begin
+      parameters:=splitCommandLine(copy(shebangLine,3,length(shebangLine)-2));
+      executor:=parameters[0];
+      for k:=1 to length(parameters)-1 do
+      if not(parseSingleMnhParameter(parameters[k])) then
+        logCmdLineParsingError('Invalid parameter/switch given by shebang: "'+parameters[k]+'"');
+    end;
     reEvaluationWithGUIrequired:=reEvaluationWithGUIrequired or (sfr_needs_gui in requires);
-    suppressBeep:=suppressBeep and not(sfr_beeps in requires);
-    headless:=headless and not(sfr_asks in requires);
-    result:='#!';
+    suppressBeep               :=suppressBeep            and not(sfr_beeps in requires);
+    headless                   :=headless                and not(sfr_asks in requires);
     if (settings.lightFlavourLocation='') or
        reEvaluationWithGUIrequired or
-       (sfr_needs_full_version in requires)
-    then result+=settings.fullFlavourLocation
-    else result+=settings.lightFlavourLocation;
+       (sfr_needs_full_version in requires) or
+       (executor=settings.fullFlavourLocation)
+    then executor:=settings.fullFlavourLocation
+    else executor:=settings.lightFlavourLocation;
+  end;
+
+FUNCTION T_commandLineParameters.getShebang: ansistring;
+  VAR k:longint;
+  begin
+    result:='#!'+executor;
     if verbosityString<>DEF_VERBOSITY_STRING then result+=' -v'+verbosityString;
     if reEvaluationWithGUIrequired           then result+=' '+FLAG_GUI;
     if not(wantConsoleAdapter)               then result+=' '+FLAG_QUIET;

@@ -13,6 +13,9 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,askDialog;
 
 TYPE
+
+  { TIdeMainForm }
+
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
@@ -20,6 +23,7 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    miShebang: TMenuItem;
     miFocusEditor: TMenuItem;
     miUndockAll: TMenuItem;
     miDockAll: TMenuItem;
@@ -132,6 +136,7 @@ TYPE
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
+    PROCEDURE miShebangClick(Sender: TObject);
     PROCEDURE miToggleFullscreenClick(Sender: TObject);
     PROCEDURE miUndockAllClick(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
@@ -157,7 +162,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -544,6 +549,13 @@ PROCEDURE TIdeMainForm.miSettingsClick(Sender: TObject);
   begin
     ensureTimerSuspend;
     SettingsForm.ShowModal;
+    timer.enabled:=true;
+  end;
+
+PROCEDURE TIdeMainForm.miShebangClick(Sender: TObject);
+  begin
+    ensureTimerSuspend;
+    showShebangWizard(workspace.currentEditor);
     timer.enabled:=true;
   end;
 

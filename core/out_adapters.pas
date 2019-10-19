@@ -263,7 +263,7 @@ CONST
 
   C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation];
   C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
-
+PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
 VAR
   defaultOutputBehavior:T_messageTypeSet;
 {$ifndef fullVersion}CONST{$endif}
@@ -683,16 +683,23 @@ PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CON
     end;
   end;
 
+PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
+  begin
+    if pos('(',nameAndOption)>0 then begin
+      options :=copy(nameAndOption,  pos('(',nameAndOption),length(nameAndOption));
+      fileName:=copy(nameAndOption,1,pos('(',nameAndOption)-1);
+    end else begin
+      options:='';
+      fileName:=nameAndOption;
+    end;
+  end;
+
 FUNCTION T_messagesDistributor.addOutfile(CONST fileNameAndOptions: ansistring;
   CONST appendMode: boolean): P_textFileOutAdapter;
   VAR fileName:string;
       options:string='';
   begin
-    if pos('(',fileNameAndOptions)>0 then begin
-      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
-      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
-    end else fileName:=fileNameAndOptions;
-
+    splitIntoLogNameAndOption(fileNameAndOptions,fileName,options);
     new(result,create(fileName,options,not(appendMode)));
     addOutAdapter(result,true);
   end;

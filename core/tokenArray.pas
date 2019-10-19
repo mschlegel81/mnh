@@ -131,6 +131,7 @@ TYPE
       PROCEDURE add(CONST rulePointer:pointer; CONST token:P_token);
       PROCEDURE cleanup;
       FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+      FUNCTION getBuiltinRestrictions:T_specialFunctionRequirements;
       FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
       FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
@@ -338,6 +339,15 @@ FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
       inc(k);
     end;
     found.destroy;
+  end;
+
+FUNCTION T_functionCallInfos.getBuiltinRestrictions:T_specialFunctionRequirements;
+  VAR info:T_functionCallInfo;
+  begin
+    if fill<>length(dat) then cleanup;
+    result:=[];
+    for info in dat do if info.targetKind=tt_intrinsicRule then
+      include(result,getMeta(info.targetData).specialRequirement);
   end;
 
 FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
