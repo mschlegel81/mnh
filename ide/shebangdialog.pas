@@ -37,13 +37,12 @@ TYPE
     PROCEDURE lightVersionRbClick(Sender: TObject);
     PROCEDURE pauseFlagCbClick(Sender: TObject);
   private
-
   public
   end;
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 IMPLEMENTATION
-USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase;
+USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase,myStringUtil;
 {$R *.lfm}
 VAR ShebangWizard:TShebangWizard=nil;
 
@@ -60,7 +59,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
     requires:=assistanceData^.getBuiltinRestrictions;
     disposeCodeAssistanceResponse(assistanceData);
 
-    if (meta^.editor.lines.count>0) then begin
+    if (meta^.editor.lines.count>0) and (startsWith(meta^.editor.lines[0],'#!')) then begin
       clp.initFromShebang(meta^.editor.lines[0],requires);
       hadShebang:=true;
     end else clp.clear;
@@ -117,8 +116,8 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
         end else setLength(clp.deferredAdapterCreations,0);
 
         if hadShebang
-        then meta^.editor.lines[0]:=clp.getShebang
-        else meta^.editor.lines.Insert(0,clp.getShebang);
+        then meta^.editor.SetTextBetweenPoints(Point(1,1),Point(1,2),clp.getShebang+LineEnding)
+        else meta^.editor.SetTextBetweenPoints(Point(1,1),point(1,1),clp.getShebang+LineEnding);
       end;
     end;
   end;
