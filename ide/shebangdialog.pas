@@ -37,13 +37,12 @@ TYPE
     PROCEDURE lightVersionRbClick(Sender: TObject);
     PROCEDURE pauseFlagCbClick(Sender: TObject);
   private
-
   public
   end;
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 IMPLEMENTATION
-USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase;
+USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase,myStringUtil;
 {$R *.lfm}
 VAR ShebangWizard:TShebangWizard=nil;
 
@@ -51,20 +50,28 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
   VAR clp:T_commandLineParameters;
       requires:T_specialFunctionRequirements;
       hadShebang:boolean=false;
+      isExecutable:boolean;
       assistanceData:P_codeAssistanceResponse;
       fileName,options:string;
   begin
     if meta^.language<>LANG_MNH then exit;
-    if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
+
     assistanceData:=meta^.getCodeAssistanceDataRereferenced;
+    if assistanceData=nil then exit;
     requires:=assistanceData^.getBuiltinRestrictions;
+    isExecutable:=assistanceData^.isExecutablePackage;
     disposeCodeAssistanceResponse(assistanceData);
 
-    if (meta^.editor.lines.count>0) then begin
+    if (meta^.editor.lines.count>0) and (startsWith(meta^.editor.lines[0],'#!')) then begin
       clp.initFromShebang(meta^.editor.lines[0],requires);
       hadShebang:=true;
     end else clp.clear;
 
+    if not(isExecutable) then begin
+      if hadShebang then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),'');
+      exit;
+    end;
+    if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
       lightVersionRb.checked:=(clp.executor=settings.lightFlavourLocation);
       fullVersionRb .checked:=not(lightVersionRb.checked);
@@ -115,10 +122,9 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
           if verbosityCombo1.text<>''
           then clp.deferredAdapterCreations[0].nameAndOption+='('+verbosityCombo1.text+')';
         end else setLength(clp.deferredAdapterCreations,0);
-
         if hadShebang
-        then meta^.editor.lines[0]:=clp.getShebang
-        else meta^.editor.lines.Insert(0,clp.getShebang);
+        then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),clp.getShebang+LineEnding)
+        else meta^.editor.SetTextBetweenPoints(point(1,1),point(1,1),clp.getShebang+LineEnding);
       end;
     end;
   end;

@@ -11,7 +11,7 @@ USES
   mnh_constants,
   mnh_settings,
   ideLayoutUtil,
-  {$ifdef Windows} packages, {$endif}
+  packages,
   mnh_doc;
 
 TYPE
@@ -91,7 +91,7 @@ PROCEDURE TSplashForm.prepareDoc;
     {$endif}
     ProgressBar.visible:=true;
     ProgressBar.caption:='Initializing';
-    ensureDemosAndPackages(Application,ProgressBar);
+    sandbox^.ensureDefaultFiles(Application,ProgressBar);
     makeHtmlFromTemplate(Application,ProgressBar);
     ProgressBar.visible:=false;
   end;

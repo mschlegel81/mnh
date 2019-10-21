@@ -176,7 +176,7 @@ PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
   begin
-    ensureDemosAndPackages(nil,nil,true);
+    sandbox^.ensureDefaultFiles(nil,nil,true);
   end;
 
 PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
@@ -327,7 +327,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       else APP_STYLE:=APP_STYLE_PORTABLE;
     end;
     workspace.postSaveRequest;
-    ensureDemosAndPackages(nil,nil,false);
+    sandbox^.ensureDefaultFiles(nil,nil,false);
     htmlDocGeneratedForCodeHash:='';
     makeHtmlFromTemplate(nil,nil);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];

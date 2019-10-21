@@ -24,7 +24,7 @@ end;
 
 private ensureDefaultFilesSource->begin
   local code:=
-  format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress.base64encode)}s)',
+  format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress.base92encode)}s)',
   sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh')));
   local header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
   code:=header|code.each(f,f&(index=code.size-1 ? ');':','));

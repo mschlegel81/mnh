@@ -193,8 +193,7 @@ FUNCTION T_commandLineParameters.parseShebangParameters(fileName: string): boole
   end;
 
 {Return true when parsed successfully}
-FUNCTION T_commandLineParameters.parseSingleMnhParameter(CONST param: string
-  ): boolean;
+FUNCTION T_commandLineParameters.parseSingleMnhParameter(CONST param: string): boolean;
   VAR app:string;
   begin
     result:=false;
