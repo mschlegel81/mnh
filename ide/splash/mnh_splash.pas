@@ -11,7 +11,7 @@ USES
   mnh_constants,
   mnh_settings,
   ideLayoutUtil,
-  {$ifdef Windows} packages, {$endif}
+  packages,
   mnh_doc;
 
 TYPE
