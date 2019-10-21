@@ -244,5 +244,5 @@ INITIALIZATION
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization',sfr_needs_gui{$endif});
 end.

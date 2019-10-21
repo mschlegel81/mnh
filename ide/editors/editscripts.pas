@@ -66,11 +66,11 @@ CONST
 FUNCTION utilityScriptFileName:string;
 IMPLEMENTATION
 USES
-  sysutils;
+  sysutils,packages;
 FUNCTION utilityScriptFileName:string;
   begin
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDemosAndPackages(nil,nil);
+    if not(fileExists(result)) then sandbox^.ensureDefaultFiles(nil,nil);
   end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);

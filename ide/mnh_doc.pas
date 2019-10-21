@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils,base64,
+USES sysutils,
      myStringUtil, myGenerics, serializationUtil,
      fileWrappers,
      mnh_messages,
@@ -31,66 +31,10 @@ FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
-PROCEDURE ensureDemosAndPackages(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
-FUNCTION isRestorable(CONST fileName:string):longint;
-PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
     htmlDocGeneratedForCodeHash:string;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
-
-{$i res_defaultFiles.inc}
-PROCEDURE ensureDemosAndPackages(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
-  VAR i:longint;
-      baseDir:string;
-      fileName:string;
-      fileContent:string;
-  begin
-    if bar<>nil then begin
-      bar.caption:='Creating packages and demos';
-      bar.position:=0;
-      bar.max:=length(DEFAULT_FILES);
-      Application.ProcessMessages;
-    end;
-    baseDir:=configDir;
-    for i:=0 to length(DEFAULT_FILES)-1 do begin
-      fileName:=baseDir+DEFAULT_FILES[i,0];
-      if not(fileExists(fileName)) or overwriteExisting then begin
-        fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[i,1]));
-        writeFile(fileName,fileContent);
-      end;
-      if bar<>nil then begin
-        bar.position:=i+1;
-        bar.max:=length(DEFAULT_FILES);
-        Application.ProcessMessages;
-      end;
-    end;
-  end;
-
-FUNCTION isRestorable(CONST fileName:string):longint;
-  VAR i:longint;
-      baseDir:string;
-      expanded:string;
-  begin
-    expanded:=expandFileName(fileName);
-    baseDir:=configDir;
-    for i:=0 to length(DEFAULT_FILES)-1 do
-      if (expandFileName(baseDir+DEFAULT_FILES[i,0])=expanded)
-      or (not(FileNameCaseSensitive) and (uppercase(expandFileName(baseDir+DEFAULT_FILES[i,0]))
-                                        = uppercase(expanded))) then exit(i);
-    result:=-1;
-  end;
-
-PROCEDURE restoreDefaultFile(CONST fileName:string);
-  VAR fileIndex:longint;
-      fileContent:string;
-  begin
-    fileIndex:=isRestorable(fileName);
-    if fileIndex<0 then exit;
-    fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[fileIndex,1]));
-    writeFile(fileName,fileContent);
-  end;
-
 FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
 FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;

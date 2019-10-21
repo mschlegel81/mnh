@@ -18,6 +18,7 @@ USES //my utilities:
        mnh_html,
        tokenStack,
        debuggingVar,
+       Forms,ComCtrls,
      {$else}
        mySys,
      {$endif}
@@ -106,12 +107,9 @@ TYPE
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION usedAndExtendedPackages:T_arrayOfString;
+      FUNCTION isExecutable:boolean;
       {$endif}
     end;
-
-  {$ifdef fullVersion}
-  //T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
-  {$endif}
 
   P_sandbox=^T_sandbox;
   T_sandbox=object
@@ -134,6 +132,7 @@ TYPE
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
       FUNCTION  usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
+      PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
       {$endif}
   end;
 
@@ -142,7 +141,8 @@ FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
-USES sysutils,typinfo, FileUtil, Classes;
+USES sysutils,typinfo, FileUtil, Classes
+     {$ifdef fullVersion},commandLineParameters{$endif};
 
 VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
@@ -351,6 +351,60 @@ FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfStrin
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
       recycler.cleanup;
     end;
+  end;
+
+PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
+  {$i res_defaultFiles.inc}
+  VAR recycler:T_recycler;
+  VAR baseDir:string;
+  PROCEDURE ensureDefaultFile(CONST index:longint; CONST overwriteExisting:boolean=false);
+  VAR fileName:string;
+      fileContent:string;
+      functionCallInfos:P_functionCallInfos;
+      clp:T_commandLineParameters;
+  begin
+    fileName:=baseDir+DEFAULT_FILES[index,0];
+    if not(fileExists(fileName)) or overwriteExisting then begin
+      fileContent:=decompressString(base92Decode(DEFAULT_FILES[index,1]));
+      writeFile(fileName,fileContent);
+      try
+        package.replaceCodeProvider(newCodeProvider(fileName));
+        globals.resetForEvaluation(@package,@package.reportVariables,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+        new(functionCallInfos,create);
+        package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
+        if package.isExecutable then begin
+          clp.initFromShebang('',functionCallInfos^.getBuiltinRestrictions);
+          fileContent:=clp.getShebang+C_lineBreakChar+fileContent;
+          writeFile(fileName,fileContent);
+        end;
+        dispose(functionCallInfos,destroy);
+      finally
+        globals.afterEvaluation(recycler);
+        package.clear(true);
+        globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+      end;
+    end;
+  end;
+  VAR i:longint;
+  begin
+    recycler.initRecycler;
+    baseDir:=configDir;
+    if bar<>nil then begin
+      bar.caption:='Creating packages and demos';
+      bar.position:=0;
+      bar.max:=length(DEFAULT_FILES);
+      Application.ProcessMessages;
+    end;
+    for i:=0 to length(DEFAULT_FILES)-1 do begin
+      ensureDefaultFile(i,overwriteExisting);
+      if bar<>nil then begin
+        bar.position:=i+1;
+        bar.max:=length(DEFAULT_FILES);
+        Application.ProcessMessages;
+      end;
+    end;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+    recycler.cleanup;
   end;
 
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
@@ -1402,6 +1456,11 @@ FUNCTION T_package.usedAndExtendedPackages:T_arrayOfString;
     for ext in extendedPackages do append(result,ext^.getPath);
     sortUnique(result);
     dropValues(result,'');
+  end;
+
+FUNCTION T_package.isExecutable:boolean;
+  begin
+    result:=isPlainScript or ruleMap.containsKey(MAIN_RULE_ID);
   end;
 
 {$endif}
