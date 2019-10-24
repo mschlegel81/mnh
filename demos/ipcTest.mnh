@@ -12,18 +12,21 @@ private ensureServer->begin
   while(!isIpcServerRunning(serverId),sleep(0.1));
 end;
 
-private askServer(L)->begin
-  ensureServer;
-  sendIpcRequest(serverId,L);
-end;
-
 main('serve')->begin
   print('Serving for 10 seconds');
   startIpcServer(serverId,::serve);
-  sleep(10);
+  sleep(1);
 end;
 
 main->begin
-  print(askServer([1001,2348651,24]));
-  print(askServer('uptime'));
+  //Start server in separate instance
+  ensureServer;
+  local localId:=serverId+'X';
+  //Start server in same instance
+  startIpcServer(localId,::serve);
+  //Send request to separate instance
+  print(sendIpcRequest(serverId,[1001,2348651,24]));
+  print(sendIpcRequest(serverId,'uptime'));
+  //Send request to same instance
+  print(sendIpcRequest(serverId,[2349186352,39548345]));
 end;

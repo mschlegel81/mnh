@@ -948,9 +948,9 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
     try
       virtualRowIndex-=numberOfRowsToRemove;
       i0:=-1;
-      for i:=0 to length(row)-1 do begin
+      for i:=0 to length(row)-1 do if row[i].pseudoIndex>=virtualRowIndex then begin
         if i0<0 then i0:=i;
-        if row[i].pseudoIndex<=virtualRowIndex then row[i].destroy;
+        row[i].destroy;
       end;
       setLength(row,i0);
     finally

@@ -11,14 +11,13 @@ end;
 
 private processLinesInChunks(lines:StringList,chunkSize)->begin
   ([0..lines.size div chunkSize]*chunkSize)
-  .each(chunkStart,cleanSplitString(lines[[chunkStart..chunkStart+chunkSize-1]]))
-  .flatten
+  .each(chunkStart,cleanSplitString(lines[[chunkStart..chunkStart+chunkSize-1]]),|)
   .elementFrequency;
 end;
 
 @demo_for=string processing, list processing, file processing
 private analyze(lines:StringList)->begin
-  local wordCount:=processLinesInChunks(lines,100000).sort(1).reverseList;
+  local wordCount:=processLinesInChunks(lines,200).sort(1).reverseList;
   print('Words total:    ',local total:=wordCount.getInner(1).agg(+));
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);

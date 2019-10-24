@@ -142,8 +142,8 @@ FUNCTION sqr_imp intFuncSignature;
     if (params<>nil) and (params^.size=1)
     then case arg0^.literalType of
       lt_smallint : result:=newIntLiteral(sqr(int64(P_smallIntLiteral (arg0)^.value)));
-      lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(arg0)^.value.mult(
-                                          P_bigIntLiteral(arg0)^.value));
+      lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(arg0)^.value*
+                                          P_bigIntLiteral(arg0)^.value);
       lt_real: result:=newRealLiteral(sqr(P_realLiteral(arg0)^.value));
       else result:=genericVectorization('sqr',params,tokenLocation,context,recycler);
     end;
