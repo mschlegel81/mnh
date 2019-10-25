@@ -56,6 +56,7 @@ TYPE
     animationFPSLabel: TLabel;
     frameIndexLabel: TLabel;
     MainMenu: TMainMenu;
+    miCopyOptions: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
     miCacheFrames: TMenuItem;
@@ -92,6 +93,7 @@ TYPE
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
     PROCEDURE miCacheFramesClick(Sender: TObject);
+    PROCEDURE miCopyOptionsClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miLogscaleXClick(Sender: TObject);
@@ -143,7 +145,8 @@ USES sysutils, FileUtil,
      contexts, plotstyles,
      plotExport,
      editScripts,
-     fileWrappers;
+     fileWrappers,
+     Clipbrd;
 VAR mainFormCoordinatesLabel:TLabel;
 FUNCTION T_queryPlotClosedMessage.internalType: shortstring;
 begin
@@ -353,6 +356,12 @@ PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
   begin
     miCacheFrames .checked:=not(miCacheFrames.checked);
     settings.cacheAnimationFrames:=miCacheFrames.checked;
+  end;
+
+PROCEDURE TplotForm.miCopyOptionsClick(Sender: TObject);
+  begin
+    if Clipboard=nil then exit;
+    Clipboard.AsText:=relatedPlot^.currentPlot.options.getOptionString;
   end;
 
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
