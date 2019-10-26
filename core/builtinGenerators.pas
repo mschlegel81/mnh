@@ -526,11 +526,13 @@ FUNCTION T_futureMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation;
   VAR curr:P_futureMapLiteral;
   begin
     if firstToAggregate=nil then exit(NIL_EVAL_RESULT);
-    curr:=firstToAggregate;
-    firstToAggregate:=firstToAggregate^.nextToAggregate;
-    result:=curr^.evaluateToLiteral(location,context,recycler);
-    disposeLiteral(curr);
-    if not(doneFetching) then enqueueNext(location,context,recycler);
+    repeat
+      curr:=firstToAggregate;
+      firstToAggregate:=firstToAggregate^.nextToAggregate;
+      result:=curr^.evaluateToLiteral(location,context,recycler);
+      disposeLiteral(curr);
+      if not(doneFetching) then enqueueNext(location,context,recycler);
+    until (firstToAggregate=nil) or (result.literal<>nil) and (result.literal^.literalType<>lt_void);
   end;
 
 DESTRUCTOR T_futureMapGenerator.destroy;

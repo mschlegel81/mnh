@@ -1,7 +1,7 @@
 object plotForm: TplotForm
-  Left = 881
+  Left = 1288
   Height = 376
-  Top = 224
+  Top = 184
   Width = 584
   Caption = 'MNH plot'
   ClientHeight = 351
@@ -153,8 +153,12 @@ object plotForm: TplotForm
         OnClick = miRenderToFileClick
       end
       object miCacheFrames: TMenuItem
-        Caption = 'Cache animation Frames'
+        Caption = '&Cache animation Frames'
         OnClick = miCacheFramesClick
+      end
+      object miCopyOptions: TMenuItem
+        Caption = 'Copy &options to clipboard'
+        OnClick = miCopyOptionsClick
       end
     end
     object MenuItem2: TMenuItem
