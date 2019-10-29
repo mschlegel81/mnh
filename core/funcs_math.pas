@@ -272,7 +272,7 @@ FUNCTION max_imp intFuncSignature;
     if (params^.size=1)
     then x:=arg0
     else x:=params;
-    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(nil);
+    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes then exit(x^.rereferenced);
     it:=P_compoundLiteral(x)^.iteratableList;
     result:=it[0];
@@ -290,7 +290,7 @@ FUNCTION min_imp intFuncSignature;
     if (params^.size=1)
     then x:=arg0
     else x:=params;
-    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(nil);
+    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes then exit(x^.rereferenced);
     it:=P_compoundLiteral(x)^.iteratableList;
     result:=it[0];
