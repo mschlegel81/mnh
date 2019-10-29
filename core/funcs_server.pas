@@ -54,10 +54,31 @@ PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 
 FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
+  VAR header:T_httpHeader;
+      i:longint=0;
+      iter:T_arrayOfLiteral;
+      key,value:P_literal;
+      invalidHeader:boolean=false;
   begin
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      if params^.size=1                                     then exit(newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
+      if  params^.size=1                                    then exit(newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
       if (params^.size=2) and (arg1^.literalType=lt_string) then exit(newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
+      if (params^.size=3) and (arg1^.literalType=lt_smallint) and (arg2^.literalType in [lt_map,lt_emptyMap]) then begin
+        iter:=map2^.iteratableList;
+        setLength(header,length(iter));
+        for i:=0 to length(iter)-1 do begin
+          key  :=P_listLiteral(iter[i])^.value[0];
+          value:=P_listLiteral(iter[i])^.value[1];
+          if key  ^.literalType=lt_string then header[i].key  :=P_stringLiteral(key  )^.value else invalidHeader:=true;
+          if value^.literalType=lt_string then header[i].value:=P_stringLiteral(value)^.value else header[i].value:=value^.toString();
+        end;
+        disposeLiteral(iter);
+        setHeaderDefaults(header,length(str0^.value));
+        if invalidHeader then begin
+          context.raiseError('Invalid header map; all keys must be strings',tokenLocation);
+          exit(nil);
+        end else exit(newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
+      end;
       result:=nil;
     end else result:=nil;
   end;
@@ -449,7 +470,7 @@ INITIALIZATION
   {$WARN 5058 OFF}
   registry.create;
   registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   {$ifdef fullVersion},'startHttpServer(urlAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance'{$endif});
-  registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,ak_variadic_1{$ifdef fullVersion},'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type.'{$endif});
+  registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,ak_variadic_1{$ifdef fullVersion},'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html", code: 200)#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type with code 200.#wrapTextInHttp(s:String,code:Int,header:Map);//Wraps s in a custom http-response'{$endif});
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,ak_variadic  {$ifdef fullVersion},'httpError;//Returns http-representation of error 404.#httpError(code:Int);//Returns http-representation of given error code.'{$endif});
   registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,ak_unary     {$ifdef fullVersion},'extractParameters(request:String);//Returns the parameters of an http request as a keyValueList'{$endif});
   registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,ak_unary     {$ifdef fullVersion},'extractRawParameters(request:String);//Returns the parameter part of an http request as a string'{$endif});

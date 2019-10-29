@@ -400,8 +400,7 @@ FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; 
     VAR ref:T_searchTokenLocations;
         r  :T_searchTokenLocation;
     begin
-      //TODO: Maybe hide usage info?
-      if {showUsages and} (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
+      if (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
         ref:=functionCallInfos^.whoReferencesLocation(info.location);
         if length(ref)=0 then begin
           info.infoText+=C_lineBreakChar+C_lineBreakChar+'No reference found';

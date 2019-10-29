@@ -127,14 +127,6 @@ FUNCTION editorContent_impl intFuncSignature;
     end;
   end;
 
-//TODO: Implement this
-//FUNCTION newEditor_impl intFuncSignature;
-//  begin
-//    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
-//
-//    end;
-//  end;
-
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     initCriticalSection(workspaceCs);

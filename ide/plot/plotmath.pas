@@ -1059,7 +1059,6 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST styles:T_plot
       lineBuilder:P_nonSkippingLineBuilder;
       otherTubeRow:T_dataRow;
   begin
-    //TODO: Improve handling of ps_tube
     if ps_bspline   in styles then new(P_bSplineBuilder        (lineBuilder),createBSplineBuilder) else
     if ps_cosspline in styles then new(P_cSplineBuilder        (lineBuilder),createCSplineBuilder) else
     if strictInput  or (C_stylesRequiringDiscreteSteps*styles<>[])
