@@ -95,7 +95,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       globals^.primaryContext.messages^.postTextMessage(mt_el1_note,packageTokenLocation(@user),name+' uses '+package^.getId);
       secondaryCallInfos.create;
       user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,nil,@secondaryCallInfos);
-      functionCallInfos^.importLocations(secondaryCallInfos.exportLocations);
+      functionCallInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;
       user.destroy;

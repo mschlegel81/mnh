@@ -86,6 +86,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     end;
 
   VAR s:string;
+      i:longint;
   begin
     nameEdit.caption:=fname;
     //extension
@@ -109,7 +110,8 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
       SaveDialog1.options:=SaveDialog1.options-[ofExtensionDifferent];
     end;
     dirComboBox.text:=rootPath;
-    dirComboBox.sorted:=true;
+    i:=dirComboBox.items.IndexOf(rootPath);
+    if i>=0 then dirComboBox.ItemIndex:=i;
     selectedFile:='';
     if ShowModal=mrOk then result:=selectedFile else result:='';
   end;

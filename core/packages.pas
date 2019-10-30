@@ -1227,7 +1227,7 @@ PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages; CONST functio
   begin
     if functionCallInfos=nil then exit;
     ruleMap.complainAboutUnused(messages,functionCallInfos);
-    for import in packageUses do if not(import.supressUnusedWarning) and not(functionCallInfos^.isPackageReferenced(import.pack)) then
+    for import in packageUses do if not(import.supressUnusedWarning) and not(functionCallInfos^.isPackageReferenced(import.pack^.getPath)) then
       messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
 {$endif}
@@ -1313,19 +1313,6 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
       result:=newListLiteral();
       for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin.qualifiedId);
     end;
-
-  FUNCTION customCallList:P_listLiteral;
-    VAR userDef:P_objectWithIdAndLocation;
-        qualifier:string;
-    begin
-      result:=newListLiteral();
-      for userDef in functionCallInfos^.calledCustomFunctions do begin
-        if userDef^.getLocation.package=@self
-        then qualifier:=''
-        else qualifier:=userDef^.getLocation.package^.getId+ID_QUALIFY_CHARACTER;
-        result^.append(newListLiteral(2)^.appendString(qualifier+userDef^.getId)^.appendString(userDef^.getLocation),false);
-      end;
-    end;
   {$endif}
 
   begin
@@ -1345,8 +1332,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; CONST context:P_abs
                              .put('plain script',newBoolLiteral(isPlainScript),false);
     {$ifdef fullVersion}
     functionCallInfos^.cleanup;
-    result^.put('called builtin',builtinCallList,false)
-          ^.put('used rules',customCallList,false);
+    result^.put('called builtin',builtinCallList,false);
     dispose(functionCallInfos,destroy);
     functionCallInfos:=nil;
     {$endif}

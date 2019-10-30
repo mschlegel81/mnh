@@ -180,7 +180,9 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
       result:=newListLiteral;
       try
         if regex^.RegExpr.Exec(trip.y) then repeat
-          for i:=0 to regex^.RegExpr.SubExprMatchCount do begin
+          for i:=0 to regex^.RegExpr.SubExprMatchCount do
+          if (i=0) or (regex^.RegExpr.MatchPos[i]<>regex^.RegExpr.MatchPos[i-1]) or
+                      (regex^.RegExpr.MatchLen[i]<>regex^.RegExpr.MatchLen[i-1]) then begin
             result^.append(
               newListLiteral^.
               appendString(regex^.RegExpr.match   [i])^.
