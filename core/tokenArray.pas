@@ -105,40 +105,29 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_functionCallInfo=record
-    targetKind  :T_tokenType;
-    targetData  :pointer;
-    referencedAt:T_tokenLocation;
-    referencedIn:pointer;
-  end;
-
-  T_importedCallInfo=record
+  T_usageInfo=record
     targetLocation,
     referencedAt:T_searchTokenLocation;
   end;
-  T_importedCallInfos=array of T_importedCallInfo;
 
   T_functionCallInfos=object
     private
       fill:longint;
-      dat:array of T_functionCallInfo;
-      usedOperators:T_tokenTypeSet;
-      imported:T_importedCallInfos;
+      usedBuiltins :T_setOfPointer;
+      dat:array of T_usageInfo;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE add(CONST rulePointer:pointer; CONST token:P_token);
       PROCEDURE cleanup;
-      FUNCTION calledBuiltinFunctions:T_builtinFunctionMetaDatas;
-      FUNCTION getBuiltinRestrictions:T_specialFunctionRequirements;
-      FUNCTION calledCustomFunctions:T_objectsWithIdAndLocation;
-      FUNCTION whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
-      FUNCTION isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
-      FUNCTION isPackageReferenced(CONST pack:P_objectWithPath):boolean;
-      FUNCTION exportLocations:T_importedCallInfos;
-      PROCEDURE importLocations(CONST loc:T_importedCallInfos);
-      FUNCTION isEmpty:boolean;
+      FUNCTION  calledBuiltinFunctions:T_builtinFunctionMetaDatas;
+      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
+      FUNCTION  whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
+      FUNCTION  isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+      FUNCTION  isPackageReferenced(CONST packagePath:string):boolean;
+      FUNCTION  isEmpty:boolean;
+      PROCEDURE includeUsages(CONST other:P_functionCallInfos);
   end;
 
   T_tokenInfo=record
@@ -277,38 +266,40 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
 {$ifdef fullVersion}
 CONSTRUCTOR T_functionCallInfos.create;
   begin
+    usedBuiltins.create;
     clear;
   end;
 
 DESTRUCTOR T_functionCallInfos.destroy;
   begin
     clear;
+    usedBuiltins.destroy;
   end;
 
 PROCEDURE T_functionCallInfos.clear;
   begin
     setLength(dat,0);
-    setLength(imported,0);
+    usedBuiltins.clear;
     fill:=0;
-    usedOperators:=[];
   end;
 
 PROCEDURE T_functionCallInfos.add(CONST rulePointer:pointer; CONST token: P_token);
   begin
     if (token=nil) then exit;
-    if token^.tokType in overridableOperators then include(usedOperators,token^.tokType);
-    if not(token^.tokType in [tt_userRule,tt_intrinsicRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then exit;
-    if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
-    dat[fill].referencedAt:=token^.location;
-    dat[fill].targetKind  :=token^.tokType;
-    dat[fill].targetData  :=token^.data;
-    dat[fill].referencedIn:=rulePointer;
-    inc(fill);
+    if      token^.tokType in [tt_comparatorEq..tt_operatorConcatAlt] then usedBuiltins.put(intFuncForOperator[token^.tokType])
+    else if token^.tokType=tt_intrinsicRule                           then usedBuiltins.put(token^.data)
+    else if token^.tokType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck] then begin
+      //TODO: store reference to user defined function
+      if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
+      dat[fill].referencedAt:=token^.location;
+      dat[fill].targetLocation:=P_objectWithIdAndLocation(token^.data)^.getLocation;
+      inc(fill);
+    end;
   end;
 
 PROCEDURE T_functionCallInfos.cleanup;
-  VAR temporary:specialize G_stringKeyMap<T_functionCallInfo>;
-      info:T_functionCallInfo;
+  VAR temporary:specialize G_stringKeyMap<T_usageInfo>;
+      info:T_usageInfo;
       newDat:temporary.VALUE_TYPE_ARRAY;
       k:longint;
   begin
@@ -323,137 +314,68 @@ PROCEDURE T_functionCallInfos.cleanup;
   end;
 
 FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
-  VAR info:T_functionCallInfo;
-      found:T_setOfPointer;
-      func:pointer;
+  VAR func:pointer;
       k:longint=0;
-      op:T_tokenType;
   begin
-    if fill<>length(dat) then cleanup;
-    found.create;
-    for op in usedOperators do if (op>=low(intFuncForOperator)) and (op<=high(intFuncForOperator)) then found.put(intFuncForOperator[op]);
-    for info in dat do if info.targetKind=tt_intrinsicRule then found.put(info.targetData);
-    setLength(result,found.size);
-    for func in found.values do begin
+    setLength(result,usedBuiltins.size);
+    for func in usedBuiltins.values do begin
       result[k]:=getMeta(func);
       inc(k);
     end;
-    found.destroy;
   end;
 
 FUNCTION T_functionCallInfos.getBuiltinRestrictions:T_specialFunctionRequirements;
-  VAR info:T_functionCallInfo;
+  VAR meta:T_builtinFunctionMetaData;
   begin
-    if fill<>length(dat) then cleanup;
     result:=[];
-    for info in dat do if info.targetKind=tt_intrinsicRule then
-      include(result,getMeta(info.targetData).specialRequirement);
-  end;
-
-FUNCTION T_functionCallInfos.calledCustomFunctions:T_objectsWithIdAndLocation;
-  VAR info:T_functionCallInfo;
-      found:T_setOfPointer;
-      func:pointer;
-      k:longint=0;
-  begin
-    if fill<>length(dat) then cleanup;
-    found.create;
-    for info in dat do if info.targetKind<>tt_intrinsicRule then found.put(info.targetData);
-    setLength(result,found.size);
-    for func in found.values do begin
-      result[k]:=func;
-      inc(k);
-    end;
-    found.destroy;
+    for meta in calledBuiltinFunctions do include(result,meta.specialRequirement);
   end;
 
 FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
-  VAR info:T_functionCallInfo;
-      inf2:T_importedCallInfo;
+  VAR info:T_usageInfo;
   begin
     if fill<>length(dat) then cleanup;
     setLength(result,0);
-    for info in dat do begin
-      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
-         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
-      then begin
-        setLength(result,length(result)+1);
-        result[length(result)-1]:=info.referencedAt;
-      end;
-    end;
-    for inf2 in imported do begin
-      if inf2.targetLocation=loc then begin
-        setLength(result,length(result)+1);
-        result[length(result)-1]:=inf2.referencedAt;
-      end;
+    for info in dat do if info.targetLocation=loc then begin
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=info.referencedAt;
     end;
   end;
 
 FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
-  VAR info:T_functionCallInfo;
-      inf2:T_importedCallInfo;
+  VAR info:T_usageInfo;
   begin
     if fill<>length(dat) then cleanup;
+    for info in dat do if info.targetLocation=loc then exit(true);
     result:=false;
-    for info in dat do begin
-      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
-         (T_searchTokenLocation(P_objectWithIdAndLocation(info.targetData)^.getLocation)=loc)
-      then exit(true);
-    end;
-    for inf2 in imported do if inf2.targetLocation=loc then exit(true);
   end;
 
-FUNCTION T_functionCallInfos.isPackageReferenced(CONST pack:P_objectWithPath):boolean;
-  VAR info:T_functionCallInfo;
-      inf2:T_importedCallInfo;
+FUNCTION T_functionCallInfos.isPackageReferenced(CONST packagePath:string):boolean;
+  VAR info:T_usageInfo;
   begin
     if fill<>length(dat) then cleanup;
+    for info in dat do if info.targetLocation.fileName=packagePath then exit(true);
     result:=false;
-    for info in dat do begin
-      if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) and
-         (P_objectWithIdAndLocation(info.targetData)^.getLocation.package^.getPath=pack^.getPath)
-      then exit(true);
-    end;
-    for inf2 in imported do if inf2.targetLocation.fileName=pack^.getPath then exit(true);
-  end;
-
-FUNCTION T_functionCallInfos.exportLocations:T_importedCallInfos;
-  VAR info:T_functionCallInfo;
-      k:longint=0;
-  begin
-    if fill<>length(dat) then cleanup;
-    setLength(result,length(dat));
-    for info in dat do if (info.targetKind in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
-      result[k].targetLocation:=P_objectWithIdAndLocation(info.targetData)^.getLocation;
-      result[k].referencedAt  :=info.referencedAt;
-      inc(k);
-    end;
-    setLength(result,k);
-  end;
-
-PROCEDURE T_functionCallInfos.importLocations(CONST loc:T_importedCallInfos);
-  VAR importCount:longint;
-  PROCEDURE addIfNew(CONST info:T_importedCallInfo);
-    VAR k:longint;
-    begin
-      //One location cannot reference multiple targets
-      for k:=0 to importCount-1 do if imported[k].referencedAt=info.referencedAt then exit();
-      imported[importCount]:=info;
-      inc(importCount);
-    end;
-
-  VAR info:T_importedCallInfo;
-  begin
-    importCount:=length(imported);
-    setLength(imported,importCount+length(loc));
-    for info in loc do addIfNew(info);
-    setLength(imported,importCount);
   end;
 
 FUNCTION T_functionCallInfos.isEmpty:boolean;
   begin
     result:=fill=0;
   end;
+
+PROCEDURE T_functionCallInfos.includeUsages(CONST other:P_functionCallInfos);
+  VAR k :longint;
+      p :pointer;
+  begin
+    other^.cleanup;
+    setLength(dat,fill+other^.fill);
+    for k:=0 to other^.fill-1 do begin
+      dat[fill]:=other^.dat[k];
+      inc(fill);
+    end;
+    usedBuiltins.put(other^.usedBuiltins.values);
+  end;
+
 {$endif}
 
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
