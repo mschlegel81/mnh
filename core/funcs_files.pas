@@ -327,9 +327,9 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
           else cmdLinePar[i]:=list1^.value[i]^.toString();
       end;
       showConsole;
-      processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch);
+      processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch,i);
       if doAsynch then
-        result:=newVoidLiteral
+        result:=newIntLiteral(i)
       else begin
         result:=newIntLiteral(processExitCode);
       end;
@@ -589,7 +589,7 @@ INITIALIZATION
                                        'exec(programPath:String,parameters:flatList);//Executes the specified program with given command line parameters#'+
                                        'exec(programPath:String,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
                                        'exec(programPath:String,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output'{$endif});
-  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1{$ifdef fullVersion},'execAsync(programPath:String,parameters ...);//Starts the specified program and returns void'{$endif});
+  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1{$ifdef fullVersion},'execAsync(programPath:String,parameters ...);//Starts the specified program and returns the process id'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,ak_variadic_1{$ifdef fullVersion},'execPipeless(programPath:String,parameters ...);//Executes the specified program, waiting for exit and returns the exit code'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,ak_unary     {$ifdef fullVersion},'deleteFile(filename:String);//Deletes the given file, returning true on success and false otherwise'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,ak_unary     {$ifdef fullVersion},'deleteDir(directoryname:String);//Deletes the given directory, returning true on success and false otherwise'{$endif});

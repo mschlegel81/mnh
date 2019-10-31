@@ -29,7 +29,6 @@ TYPE
     hasKillRequest:boolean;
     CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages);
     DESTRUCTOR destroy;
-
     FUNCTION processLocally(CONST request:P_literal):P_literal;
   end;
 
