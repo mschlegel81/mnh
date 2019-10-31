@@ -1121,7 +1121,12 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     end;
 
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
-    then finalize(globals.primaryContext,recycler);
+    then begin
+      globals.startFinalization;
+      finalize(globals.primaryContext,recycler);
+      clearCachedFormats;
+      globals.stopWorkers(recycler);
+    end;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_: P_package);
@@ -1163,13 +1168,9 @@ PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boo
 PROCEDURE T_package.finalize(VAR context:T_context; VAR recycler:T_recycler);
   VAR i:longint;
   begin
-    ruleMap.executeAfterRules(context,recycler);
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
-    funcs_server.onPackageFinalization(@self);
-    funcs_ipc   .onPackageFinalization(@self);
-    funcs_format.onPackageFinalization(@self);
+    ruleMap.executeAfterRules(context,recycler);
     ruleMap.writeBackDatastores(context.messages);
-    if isMain then context.getGlobals^.stopWorkers(recycler);
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string;
