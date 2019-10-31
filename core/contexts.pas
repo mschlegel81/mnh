@@ -432,6 +432,12 @@ PROCEDURE T_evaluationGlobals.startFinalization;
       try
         finalizing:=true;
         for p in parts.values do P_detachedEvaluationPart(p)^.stopOnFinalization;
+        while (parts.size>0) do begin
+          leaveCriticalSection(access);
+          sleep(1);
+          ThreadSwitch;
+          enterCriticalSection(access);
+        end;
       finally
         leaveCriticalSection(access);
       end;
@@ -449,14 +455,6 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
       ThreadSwitch;
       sleep(1);
     end;
-    enterCriticalSection(detached.access);
-    while detached.parts.size>0 do begin
-      leaveCriticalSection(detached.access);
-      ThreadSwitch;
-      sleep(1);
-      enterCriticalSection(detached.access);
-    end;
-    leaveCriticalSection(detached.access);
   end;
 
 PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
