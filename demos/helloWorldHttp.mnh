@@ -11,3 +11,12 @@ main->begin
   //wait until server has received at least one request
   while(counter<=0,sleep(0.1));
 end;
+
+main('test')->begin
+  startHttpServer('127.0.0.1:65432',::serve,0);
+  begin
+    local response:=httpGet('http://127.0.0.1:65432/page.html');
+    print('Server responded with code: ',response['code']);
+    print(response['body']);
+  end;
+end;

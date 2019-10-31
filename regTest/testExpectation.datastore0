@@ -3561,6 +3561,9 @@ expectations:=
   ['png hash: E5962FB7']].toMap,
  'helloWorld'=>
  ['Hello world'],
+ 'helloWorldHttp'=>
+ ['Server responded with code: 200',
+  'Hello world.<br><br>method: GET<br>protocol: HTTP/1.1<br>path: /page.html<br><br>Host: 127.0.0.1:65432<br>Connection: close'],
  'hereDoc'=>
  ['','  This is a simple text...','       with a \ which would have to be escaped otherwise.','    And indentations of course.'],
  'hofstadterConway'=>
