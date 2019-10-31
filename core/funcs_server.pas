@@ -452,20 +452,6 @@ FUNCTION openUrl_imp intFuncSignature;
     else result:=nil;
   end;
 
-FUNCTION stopAllHttpServers_impl intFuncSignature;
-  VAR allKilled:boolean;
-  begin
-    if (params=nil) or (params^.size=0) and context.checkSideEffects('stopAllHttpServers',tokenLocation,[se_alterContextState,se_server]) then begin
-      killAllServers;
-      repeat
-        ThreadSwitch;
-        sleep(1);
-        allKilled:=registry.registeredCount=0;
-      until allKilled;
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
 INITIALIZATION
   {$WARN 5058 OFF}
   registry.create;
@@ -481,7 +467,6 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     {$ifdef fullVersion},'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     {$ifdef fullVersion},'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     {$ifdef fullVersion},'openUrl(URL:String);//Opens the URL in the default browser'{$endif});
-  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,ak_nullary   {$ifdef fullVersion},'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown'{$endif});
 
 FINALIZATION
   registry.destroy;
