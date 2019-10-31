@@ -63,7 +63,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
 FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string=''): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 
 VAR logFolderCallback:PROCEDURE(CONST name:string) of object=nil;
@@ -375,7 +375,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
     sysutils.findClose(info);
   end;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; CONST customFolder:string): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
   VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
@@ -388,6 +388,7 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
       if not(asynch)                     then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       tempProcess.execute;
+      pid:=tempProcess.ProcessID;
       while not(asynch) and tempProcess.running do sleep(1);
       result:=tempProcess.exitStatus;
       tempProcess.free;

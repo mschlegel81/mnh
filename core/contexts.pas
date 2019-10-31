@@ -153,8 +153,23 @@ TYPE
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
+  P_detachedEvaluationPart=^T_detachedEvaluationPart;
+  T_detachedEvaluationPart=object
+    protected
+      globals:P_evaluationGlobals;
+    public
+      CONSTRUCTOR create(CONST evaluation:P_evaluationGlobals; CONST location:T_tokenLocation);
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE stopOnFinalization; virtual; abstract;
+  end;
+
   T_evaluationGlobals=object
     private
+      detached:record
+        access:TRTLCriticalSection;
+        parts :T_setOfPointer;
+        finalizing:boolean;
+      end;
       wallClock:TEpikTimer;
       globalOptions :T_evaluationContextOptions;
       mainParameters:T_arrayOfString;
@@ -166,7 +181,6 @@ TYPE
         startOfProfiling:double;
         timeSpent:array[pc_importing..pc_interpretation] of double;
       end;
-      disposeAdaptersOnDestruction:boolean;
     public
       primaryContext:T_context;
       taskQueue:T_taskQueue;
@@ -175,6 +189,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
                                   CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
+      PROCEDURE startFinalization;
       PROCEDURE stopWorkers(VAR recycler:T_recycler);
       PROCEDURE afterEvaluation(VAR recycler:T_recycler);
       PROPERTY options:T_evaluationContextOptions read globalOptions;
@@ -195,6 +210,28 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
 IMPLEMENTATION
+CONSTRUCTOR T_detachedEvaluationPart.create(CONST evaluation: P_evaluationGlobals; CONST location:T_tokenLocation);
+  begin
+    globals:=evaluation;
+    enterCriticalSection(globals^.detached.access);
+    try
+      if globals^.detached.finalizing
+      then globals^.primaryContext.raiseError('Forbiddin in @after rule.',location,mt_el3_evalError)
+      else globals^.detached.parts.put(@self);
+    finally
+      leaveCriticalSection(globals^.detached.access);
+    end;
+  end;
+
+DESTRUCTOR T_detachedEvaluationPart.destroy;
+  begin
+    enterCriticalSection(globals^.detached.access);
+    try
+      globals^.detached.parts.drop(@self);
+    finally
+      leaveCriticalSection(globals^.detached.access);
+    end;
+  end;
 
 CONSTRUCTOR T_contextRecycler.create;
   begin
@@ -282,6 +319,11 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
 
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
   begin
+    with detached do begin
+      initCriticalSection(access);
+      parts.create;
+      finalizing:=false;
+    end;
     primaryContext.create();
     prng.create;
     prng.randomize;
@@ -297,13 +339,16 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
     primaryContext.related.childCount:=0;
 
     primaryContext.messages:=outAdapters;
-    disposeAdaptersOnDestruction:=false;
     primaryContext.allowedSideEffects:=C_allSideEffects;
     mainParameters:=C_EMPTY_STRING_ARRAY;
   end;
 
 DESTRUCTOR T_evaluationGlobals.destroy;
   begin
+    with detached do begin
+      doneCriticalSection(access);
+      parts.destroy;
+    end;
     prng.destroy;
     if wallClock<>nil then FreeAndNil(wallClock);
     {$ifdef fullVersion}
@@ -313,7 +358,6 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     debuggingStepper:=nil;
     {$endif}
     taskQueue.destroy;
-    if disposeAdaptersOnDestruction then dispose(primaryContext.messages,destroy);
     primaryContext.destroy;
   end;
 
@@ -322,6 +366,8 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
   VAR pc:T_profileCategory;
       i:longint;
   begin
+    detached.parts.clear;
+    detached.finalizing:=false;
     setLength(mainParameters,length(mainParams));
     for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
     //global options
@@ -378,7 +424,21 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     primaryContext.state:=fts_evaluating;
   end;
 
-PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler:T_recycler);
+PROCEDURE T_evaluationGlobals.startFinalization;
+  VAR p:pointer;
+  begin
+    with detached do begin
+      enterCriticalSection(access);
+      try
+        finalizing:=true;
+        for p in parts.values do P_detachedEvaluationPart(p)^.stopOnFinalization;
+      finally
+        leaveCriticalSection(access);
+      end;
+    end;
+  end;
+
+PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
   CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
   VAR timeout:double;
   begin
@@ -389,6 +449,14 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler:T_recycler);
       ThreadSwitch;
       sleep(1);
     end;
+    enterCriticalSection(detached.access);
+    while detached.parts.size>0 do begin
+      leaveCriticalSection(detached.access);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(detached.access);
+    end;
+    leaveCriticalSection(detached.access);
   end;
 
 PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);

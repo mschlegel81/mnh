@@ -13,11 +13,10 @@ USES sysutils,math,fphttpclient,lclintf,
      recyclers,
      funcs;
 
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
 TYPE
   P_microserver=^T_microserver;
-  T_microserver=object
+  T_microserver=object(T_detachedEvaluationPart)
     ip:ansistring;
     timeout:double;
     servingExpression:P_expressionLiteral;
@@ -28,7 +27,8 @@ TYPE
     socket:T_socketPair;
 
     CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE stopOnFinalization; virtual;
     PROCEDURE serve;
     PROCEDURE killQuickly;
   end;
@@ -36,20 +36,12 @@ TYPE
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
 {$i func_defines.inc}
 
-VAR registry:specialize G_instanceRegistry<P_microserver>;
-
 PROCEDURE sendKillRequest(s:P_microserver); begin s^.hasKillRequest:=true; end;
-PROCEDURE killAllServers; begin registry.forEach(@sendKillRequest); end;
 
 FUNCTION serverIsAssociatedWithPackage(s:P_microserver; package:pointer):boolean;
   begin
     result:=s^.feedbackLocation.package=package;
     if result then s^.hasKillRequest:=true;
-  end;
-
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-  begin
-    while registry.anyMatch(@serverIsAssociatedWithPackage,package) do sleep(1);
   end;
 
 FUNCTION wrapTextInHttp_impl intFuncSignature;
@@ -131,15 +123,10 @@ FUNCTION startServer_impl intFuncSignature;
     end;
   end;
 
-PROCEDURE killServerWithIp(s:P_microserver; ip:pointer);
-  begin
-    if s^.ip=PAnsiString(ip)^ then s^.killQuickly;
-  end;
-
 CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
+    inherited create(context_^.getGlobals,feedbackLocation_);
     ip:=cleanIp(ip_);
-    registry.forEach(@killServerWithIp,@ip);
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
     then timeout:=0
     else timeout:=timeout_;
@@ -148,7 +135,6 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     context:=context_;
     hasKillRequest:=false;
     socket.create(ip);
-    registry.onCreation(@self);
   end;
 
 DESTRUCTOR T_microserver.destroy;
@@ -159,8 +145,13 @@ DESTRUCTOR T_microserver.destroy;
     context^.finalizeTaskAndDetachFromParent(nil);
     contextPool.disposeContext(context);
     socket.destroy;
-    registry.onDestruction(@self);
     recycler.cleanup;
+    inherited destroy;
+  end;
+
+PROCEDURE T_microserver.stopOnFinalization;
+  begin
+    hasKillRequest:=true;
   end;
 
 PROCEDURE T_microserver.serve;
@@ -452,23 +443,8 @@ FUNCTION openUrl_imp intFuncSignature;
     else result:=nil;
   end;
 
-FUNCTION stopAllHttpServers_impl intFuncSignature;
-  VAR allKilled:boolean;
-  begin
-    if (params=nil) or (params^.size=0) and context.checkSideEffects('stopAllHttpServers',tokenLocation,[se_alterContextState,se_server]) then begin
-      killAllServers;
-      repeat
-        ThreadSwitch;
-        sleep(1);
-        allKilled:=registry.registeredCount=0;
-      until allKilled;
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
 INITIALIZATION
   {$WARN 5058 OFF}
-  registry.create;
   registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   {$ifdef fullVersion},'startHttpServer(urlAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance'{$endif});
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,ak_variadic_1{$ifdef fullVersion},'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html", code: 200)#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type with code 200.#wrapTextInHttp(s:String,code:Int,header:Map);//Wraps s in a custom http-response'{$endif});
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,ak_variadic  {$ifdef fullVersion},'httpError;//Returns http-representation of error 404.#httpError(code:Int);//Returns http-representation of given error code.'{$endif});
@@ -481,9 +457,5 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     {$ifdef fullVersion},'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     {$ifdef fullVersion},'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     {$ifdef fullVersion},'openUrl(URL:String);//Opens the URL in the default browser'{$endif});
-  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,ak_nullary   {$ifdef fullVersion},'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown'{$endif});
-
-FINALIZATION
-  registry.destroy;
 
 end.

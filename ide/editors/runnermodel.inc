@@ -133,6 +133,7 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
   VAR callParameters:T_arrayOfString;
       flag:T_cmdLineFlag;
       executor:string='';
+      pid:longint;
   begin
     callParameters:=FLAG_PAUSE_ALWAYS;
     with externalRunOptions do begin
@@ -145,7 +146,7 @@ PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     append(callParameters,workspace.currentEditor^.getPath);
     append(callParameters,splitCommandLine(trim(mainParameters)));
-    runCommandAsyncOrPipeless(executor,callParameters,true,executionDir(workspace.currentEditor));
+    runCommandAsyncOrPipeless(executor,callParameters,true,pid,executionDir(workspace.currentEditor));
   end;
 
 PROCEDURE T_runnerModel.rerun();

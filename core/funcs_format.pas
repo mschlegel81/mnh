@@ -10,10 +10,9 @@ USES sysutils,
      recyclers,
      contexts,
      funcs;
-CONST MAX_FORMATS_TO_CACHE=4096;
 
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
+PROCEDURE clearCachedFormats;
 IMPLEMENTATION
 USES out_adapters;
 TYPE
@@ -48,23 +47,6 @@ TYPE
 {$i func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
-
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-  VAR formats:cachedFormats.KEY_VALUE_LIST;
-      i:longint;
-  begin
-    enterCriticalSection(cachedFormatCS);
-    try
-      formats:=cachedFormats.entrySet;
-      for i:=0 to length(formats)-1 do
-      if formats[i].value^.inPackage=package then begin
-        dispose(formats[i].value,destroy);
-        cachedFormats.dropKey(formats[i].key);
-      end;
-    finally
-      leaveCriticalSection(cachedFormatCS);
-    end;
-  end;
 
 PROCEDURE clearCachedFormats;
   VAR f:cachedFormats.VALUE_TYPE_ARRAY;

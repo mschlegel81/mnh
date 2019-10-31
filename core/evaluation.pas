@@ -1303,6 +1303,7 @@ end}
 TYPE
   P_asyncTask=^T_asyncTask;
   T_asyncTask=record
+    //TODO: inherit from T_detachedEvaluationPart ?
     payload:P_futureLiteral;
     myContext:P_context;
   end;
