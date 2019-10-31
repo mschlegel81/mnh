@@ -449,14 +449,14 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
       ThreadSwitch;
       sleep(1);
     end;
-    EnterCriticalsection(detached.access);
+    enterCriticalSection(detached.access);
     while detached.parts.size>0 do begin
-      LeaveCriticalsection(detached.access);
+      leaveCriticalSection(detached.access);
       ThreadSwitch;
       sleep(1);
-      EnterCriticalsection(detached.access);
+      enterCriticalSection(detached.access);
     end;
-    LeaveCriticalsection(detached.access);
+    leaveCriticalSection(detached.access);
   end;
 
 PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);

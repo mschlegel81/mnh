@@ -53,7 +53,7 @@ FUNCTION cleanPath(CONST s:string):string;
 
 FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin
-    EnterCriticalsection(localServerCs);
+    enterCriticalSection(localServerCs);
     if localServers.containsKey(serverId)
     then result:=true
     else begin
@@ -61,7 +61,7 @@ FUNCTION isServerRunning(CONST serverId:string):boolean;
       checkingClient.serverId:=cleanPath(serverId);
       result:=checkingClient.ServerRunning;
     end;
-    LeaveCriticalsection(localServerCs);
+    leaveCriticalSection(localServerCs);
   end;
 
 FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
@@ -289,9 +289,9 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_token
     servingExpressionOrNil:=expression;
     servingContextOrNil:=context;
     ipcMessageConnector:=ipcMessageConnect;
-    EnterCriticalsection(localServerCs);
+    enterCriticalSection(localServerCs);
     localServers.put(serverId,@self);
-    LeaveCriticalsection(localServerCs);
+    leaveCriticalSection(localServerCs);
     hasKillRequest:=false;
     localRequest:=nil;
     localResponse:=nil;
@@ -308,9 +308,9 @@ DESTRUCTOR T_myIpcServer.destroy;
         contextPool.disposeContext(servingContextOrNil);
       end;
       if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
-      EnterCriticalsection(localServerCs);
+      enterCriticalSection(localServerCs);
       localServers.dropKey(serverId);
-      LeaveCriticalsection(localServerCs);
+      leaveCriticalSection(localServerCs);
     finally
       leaveCriticalSection(serverCs);
       doneCriticalSection(serverCs);
@@ -362,7 +362,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
   begin
     result:=nil;
     if ((params=nil) or (params^.size=0)) and context.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
-      EnterCriticalsection(localServerCs);
+      enterCriticalSection(localServerCs);
       try
         normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
         if localServers.containsKey(normalizedPath,markerServer) then begin
@@ -381,7 +381,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       except on e:Exception do
         context.messages^.raiseSimpleError(e.message,tokenLocation,mt_el4_systemError);
       end;
-      LeaveCriticalsection(localServerCs);
+      leaveCriticalSection(localServerCs);
     end;
   end;
 
@@ -423,9 +423,9 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
        (arg0^.literalType=lt_string) then begin
-      EnterCriticalsection(localServerCs);
+      enterCriticalSection(localServerCs);
       isLocal:=localServers.containsKey(str0^.value,localServer);
-      LeaveCriticalsection(localServerCs);
+      leaveCriticalSection(localServerCs);
       if isLocal
       then result:=localServer^.processLocally(arg1)
       else begin
@@ -463,14 +463,14 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  InitCriticalSection(localServerCs);
+  initCriticalSection(localServerCs);
   localServers.create();
   registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   {$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});
   registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary    {$ifdef fullVersion},'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server'{$endif});
   registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary    {$ifdef fullVersion},'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server'{$endif});
   registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1{$ifdef fullVersion},'isIpcServerRunning(serverId:String);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance'{$endif});
 FINALIZATION
-  DoneCriticalsection(localServerCs);
+  doneCriticalSection(localServerCs);
   localServers.destroy;
   if Assigned(checkingClient) then checkingClient.free;
 end.
