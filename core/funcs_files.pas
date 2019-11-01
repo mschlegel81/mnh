@@ -222,13 +222,13 @@ FUNCTION writeFileLines_impl intFuncSignature;
 FUNCTION appendFileLines_impl intFuncSignature;
   begin if context.checkSideEffects('appendFileLines',tokenLocation,[se_readFile,se_writeFile]) then result:=writeOrAppendFileLines(params,tokenLocation,context,true)  else result:=nil; end;
 
-FUNCTION execSync_impl intFuncSignature;
+FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST tee:boolean):P_literal; inline;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): int64;
     CONST READ_BYTES = 8192;
-    VAR ReadBuffer:array[0..READ_BYTES-1] of byte;
+    VAR ReadBuffer:array[0..READ_BYTES-1] of char;
         memStream  : TMemoryStream;
         tempProcess: TProcessUTF8;
-        n          : longint;
+        n,k        : longint;
         sleepTime  : longint = 1;
     begin
       initialize(ReadBuffer);
@@ -243,12 +243,16 @@ FUNCTION execSync_impl intFuncSignature;
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.messages^.continueEvaluation do begin
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+            n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
+            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+          end;
           if tempProcess.running then begin
             if tempProcess.output.NumBytesAvailable>0
             then repeat
               n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
               memStream.write(ReadBuffer, n);
+              if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
             until n<=0 else begin
               n:=0;
               inc(sleepTime);
@@ -258,8 +262,12 @@ FUNCTION execSync_impl intFuncSignature;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
+          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+            n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
+            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+          end;
           n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+          if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
           memStream.write(ReadBuffer, n);
         until n<=0;
         result := tempProcess.ExitCode;
@@ -301,6 +309,7 @@ FUNCTION execSync_impl intFuncSignature;
         else exit(nil);
       end;
       executable:=str0^.value;
+      if tee then showConsole;
       processExitCode:=runCommand(executable,cmdLinePar,output,includeStdErr);
       outputLit:=newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
@@ -308,6 +317,9 @@ FUNCTION execSync_impl intFuncSignature;
       output.free;
     end;
   end;
+
+FUNCTION execSync_impl    intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,false); end;
+FUNCTION teeExecSync_impl intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,true); end;
 
 FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean):P_literal;
   VAR executable:ansistring;
@@ -589,6 +601,8 @@ INITIALIZATION
                                        'exec(programPath:String,parameters:flatList);//Executes the specified program with given command line parameters#'+
                                        'exec(programPath:String,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
                                        'exec(programPath:String,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output'{$endif});
+  registerRule(FILES_BUILTIN_NAMESPACE,'teeExec'           ,@teeExecSync_impl,ak_variadic_1{$ifdef fullVersion},
+                                       'teeExec(...);//Behaves as exec but additionally prints out to console'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1{$ifdef fullVersion},'execAsync(programPath:String,parameters ...);//Starts the specified program and returns the process id'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,ak_variadic_1{$ifdef fullVersion},'execPipeless(programPath:String,parameters ...);//Executes the specified program, waiting for exit and returns the exit code'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,ak_unary     {$ifdef fullVersion},'deleteFile(filename:String);//Deletes the given file, returning true on success and false otherwise'{$endif});
