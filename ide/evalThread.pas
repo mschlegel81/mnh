@@ -225,10 +225,13 @@ CONSTRUCTOR T_reevaluationWithGui.create();
       console:P_redirectionAwareConsoleOutAdapter;
   begin
     inherited init(ek_normal);
-    new(console,create(commandLine.verbosityString));
-    messages.addOutAdapter(console,true);
-    //Do not show profiling info as text; is shown as GUI component
-    console^.enableMessageType(false,[mt_profile_call_info]);
+    commandLine.applyAndReturnOk(@messages,true);
+    if commandLine.wantConsoleAdapter then begin
+      new(console,create(commandLine.verbosityString));
+      messages.addOutAdapter(console,true);
+      //Do not show profiling info as text; is shown as GUI component
+      console^.enableMessageType(false,[mt_profile_call_info]);
+    end;
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);

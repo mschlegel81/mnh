@@ -32,7 +32,7 @@ TYPE
 
       PROCEDURE clear;
       PROCEDURE initFromCommandLine;
-      FUNCTION applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST guiAdapterOrNil: P_abstractOutAdapter):boolean;
+      FUNCTION applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST initAdaptersForGui:boolean=false):boolean;
 
       FUNCTION getCommandToInterpretFromCommandLine: ansistring;
       FUNCTION getFileToInterpretFromCommandLine: ansistring;
@@ -372,27 +372,25 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     wl('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
   end;
 
-FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST guiAdapterOrNil: P_abstractOutAdapter): boolean;
+FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST initAdaptersForGui:boolean=false): boolean;
   VAR i:longint;
       scriptFileName:string;
-  VAR s:ansistring;
+      s:ansistring;
   begin
     result:=true;
-    if wantMnhInfo then begin
+    if not(initAdaptersForGui) and wantMnhInfo then begin
       for s in getMnhInfo do writeln(s);
       exit(false);
     end;
     wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay or (length(cmdLineParsingErrors)>0);
-    if wantConsoleAdapter then adapters^.addConsoleOutAdapter;
+    if wantConsoleAdapter and not(initAdaptersForGui) then adapters^.addConsoleOutAdapter;
+    contexts.suppressBeep:=suppressBeep;
 
-     contexts.suppressBeep:=suppressBeep;
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
-
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters^.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
-    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
 
-    if length(cmdLineParsingErrors)>0 then begin
+    if not(initAdaptersForGui) and (length(cmdLineParsingErrors)>0) then begin
       if wantHelpDisplay then displayHelp(adapters);
 
       if adapters^.isCollecting(mt_el4_systemError)
