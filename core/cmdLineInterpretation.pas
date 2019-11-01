@@ -117,7 +117,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     if commandLine.profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_profile_call_info];
     {$endif}
     //-----------------------------------------------------
-    if commandLine.applyAndReturnOk(@consoleAdapters,nil) then begin
+    if commandLine.applyAndReturnOk(@consoleAdapters) then begin
       if (commandLine.fileOrCommandToInterpret<>'') and not(commandLine.reEvaluationWithGUIrequired) then begin
          startMemChecker(settings.memoryLimit);
          memCheckerStarted:=true;

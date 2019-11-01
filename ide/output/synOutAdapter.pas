@@ -76,16 +76,10 @@ TYPE
 
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
-//FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_abstractSynOutAdapter;
-
 IMPLEMENTATION
 USES guiOutAdapters;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
-//FUNCTION newConsoleAdapter(CONST owner:TForm; CONST outputEdit:TSynEdit):P_synOutAdapter;
-//  begin
-//    new(result,create(owner,outputEdit));
-//  end;
 
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
   VAR k:longint;

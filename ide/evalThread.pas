@@ -221,6 +221,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
       console:P_redirectionAwareConsoleOutAdapter;
   begin
     inherited init(ek_normal);
+    commandLine.applyAndReturnOk(@messages,true);
     if commandLine.wantConsoleAdapter then begin
       new(console,create(commandLine.verbosityString));
       messages.addOutAdapter(console,true);
