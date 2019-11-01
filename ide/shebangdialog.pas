@@ -90,7 +90,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 
       verbosityCombo.text:=clp.verbosityString;
 
-      if length(clp.deferredAdapterCreations)>1 then begin
+      if length(clp.deferredAdapterCreations)>0 then begin
         doLogCheckbox.checked:=true;
         logAppendCb.enabled:=true;
         logAppendCb.checked:=clp.deferredAdapterCreations[0].appending;
