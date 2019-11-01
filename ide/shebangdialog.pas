@@ -5,18 +5,25 @@ UNIT shebangDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, editorMeta;
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
+  editorMeta;
 
 TYPE
+
+  { TShebangWizard }
+
   TShebangWizard = class(TForm)
     Button1: TButton;
     Button2: TButton;
     doLogCheckbox: TCheckBox;
+    Label3: TLabel;
+    considerErrorsLabel: TLabel;
     logNameEdit: TEdit;
     Label1: TLabel;
     Label2: TLabel;
     logAppendCb: TCheckBox;
     GroupBox4: TGroupBox;
+    notExecutableHint: TPanel;
     pauseFlagCb: TCheckBox;
     pauseOnErrorCb: TCheckBox;
     verbosityCombo: TComboBox;
@@ -67,12 +74,10 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
       hadShebang:=true;
     end else clp.clear;
 
-    if not(isExecutable) then begin
-      if hadShebang then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),'');
-      exit;
-    end;
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
+      notExecutableHint.Visible:=not(isExecutable);
+
       lightVersionRb.checked:=(clp.executor=settings.lightFlavourLocation);
       fullVersionRb .checked:=not(lightVersionRb.checked);
 
