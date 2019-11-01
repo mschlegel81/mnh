@@ -76,7 +76,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
-      notExecutableHint.Visible:=not(isExecutable);
+      notExecutableHint.visible:=not(isExecutable);
 
       lightVersionRb.checked:=(clp.executor=settings.lightFlavourLocation);
       fullVersionRb .checked:=not(lightVersionRb.checked);
