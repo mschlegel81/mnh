@@ -686,7 +686,7 @@ PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CON
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
   begin
     if pos('(',nameAndOption)>0 then begin
-      options :=copy(nameAndOption,  pos('(',nameAndOption),length(nameAndOption));
+      options :=copy(nameAndOption,  pos('(',nameAndOption)+1,length(nameAndOption)-pos('(',nameAndOption)-1);
       fileName:=copy(nameAndOption,1,pos('(',nameAndOption)-1);
     end else begin
       options:='';
