@@ -695,7 +695,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       formRequest:P_customFormRequest;
   begin
     result:=nil;
-    if not(gui_started) then begin
+    if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
     end;

@@ -267,7 +267,7 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 VAR
   defaultOutputBehavior:T_messageTypeSet;
 {$ifndef fullVersion}CONST{$endif}
-  gui_started:boolean=false;
+  gui_started:(NO,ide,REEVALUATION)=NO;
 OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
 USES  myStringUtil;

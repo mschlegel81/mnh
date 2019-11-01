@@ -1693,8 +1693,8 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         displayImmediate:=false;
       end;
     end;
-    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
-      (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+    if (message^.messageType=mt_plot_renderRequest) and (gui_started<>ide) then plotChangedSinceLastDisplay:=false;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;

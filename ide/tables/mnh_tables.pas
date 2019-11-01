@@ -99,7 +99,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       tableDisplayRequest:P_tableDisplayRequest;
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
-    if not(gui_started) then begin
+    if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
     end;
@@ -113,7 +113,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
           else exit(nil);
         end;
       end;
-      if gui_started then begin
+      if (gui_started<>NO) then begin
         new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,header));
         context.messages^.postCustomMessage(tableDisplayRequest,true);
         result:=newVoidLiteral;

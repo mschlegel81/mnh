@@ -521,7 +521,7 @@ PROCEDURE TplotForm.performFastUpdate;
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
     try
-      if gui_started and (showing) and (relatedPlot^.animation.frameCount>0) then begin
+      if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
            //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
@@ -700,7 +700,7 @@ PROCEDURE TplotForm.doPlot;
 FUNCTION plotClosedByUser_impl intFuncSignature;
   VAR closedRequest:P_queryPlotClosedMessage;
   begin if (params=nil) or (params^.size=0) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(closedRequest,createRetrieveRequest);
     context.messages^.postCustomMessage(closedRequest);
     result:=newBoolLiteral(closedRequest^.getResponseWaiting(context.messages));
@@ -709,11 +709,11 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     result:=newVoidLiteral;
     context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
   end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     result:=newVoidLiteral;
     if bool0^.value
     then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilTokenLocation)
@@ -723,7 +723,7 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
 FUNCTION addAnimFrame_impl intFuncSignature;
   VAR request:P_plotAddAnimationFrameRequest;
   begin if (params=nil) or (params^.size=0) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(request,create());
     context.messages^.postCustomMessage(request);
     sleep(round(1000*request^.getProposedSleepTime(context.messages)));
@@ -734,7 +734,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest);
     displayRequest^.waitForExecution(context.messages);
@@ -745,7 +745,7 @@ FUNCTION display_imp intFuncSignature;
 FUNCTION postdisplay_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
-    if not(gui_started) then context.messages^.logGuiNeeded;
+    if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest,true);
     result:=newVoidLiteral;

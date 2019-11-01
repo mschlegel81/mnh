@@ -365,7 +365,6 @@ FUNCTION T_functionCallInfos.isEmpty:boolean;
 
 PROCEDURE T_functionCallInfos.includeUsages(CONST other:P_functionCallInfos);
   VAR k :longint;
-      p :pointer;
   begin
     other^.cleanup;
     setLength(dat,fill+other^.fill);

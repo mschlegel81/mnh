@@ -463,6 +463,7 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
   end;
 
 INITIALIZATION
+  initialize(localServerCs);
   initCriticalSection(localServerCs);
   localServers.create();
   registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   {$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});
