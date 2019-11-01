@@ -694,11 +694,6 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
     if not(enforceNewString) then begin
       if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
       if length(value)=0 then exit(P_stringLiteral(emptyStringSingleton.rereferenced));
-      result:=nil;
-      enterCriticalSection(stringSingletonsCs);
-      for i:=0 to length(stringSingletons)-1 do if stringSingletons[i]^.val=value then result:=P_stringLiteral(stringSingletons[i]^.rereferenced);
-      leaveCriticalSection(stringSingletonsCs);
-      if result<>nil then exit(result);
     end;
     new(result, create(value));
   end;
