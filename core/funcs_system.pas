@@ -221,7 +221,7 @@ FUNCTION callMemoryCleaner_impl intFuncSignature;
 
 FUNCTION assertGuiStarted_impl intFuncSignature;
   begin
-    if not(gui_started) then begin
+    if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       result:=nil;
     end else result:=newVoidLiteral;

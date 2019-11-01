@@ -653,7 +653,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
           {$endif}
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-            if not(gui_started) and (usecase<>lu_forCodeAssistance) then globals.primaryContext.messages^.logGuiNeeded;
+            if (gui_started=NO) and (usecase<>lu_forCodeAssistance) then globals.primaryContext.messages^.logGuiNeeded;
           end else begin
             j:=length(packageUses);
             setLength(packageUses,j+1);

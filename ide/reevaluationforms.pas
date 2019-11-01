@@ -84,7 +84,7 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
 
     initializePlotForm(nil);
     setupEditorMetaBase(nil);
-    gui_started:=true;
+    gui_started:=REEVALUATION;
     subTimerCounter:=0;
     runner.create();
     timer.enabled:=true;

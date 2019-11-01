@@ -13,9 +13,6 @@ USES
   closeDialog, gotoLineDialogs,SynEdit,askDialog;
 
 TYPE
-
-  { TIdeMainForm }
-
   TIdeMainForm = class(T_mnhIdeForm)
     bookmarkImages: TImageList;
     breakpointImages: TImageList;
@@ -182,7 +179,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
-    gui_started:=true;
+    gui_started:=ide;
     new(dockSites[cpNone        ],create(cpNone        ,nil         ));
     new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1));
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2));

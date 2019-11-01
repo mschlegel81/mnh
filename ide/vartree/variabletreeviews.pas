@@ -59,7 +59,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       Post:P_treeDisplayRequest;
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
-    if not(gui_started) then begin
+    if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
     end;
@@ -72,7 +72,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       end;
       new(Post,create(P_listLiteral(params^.value[0]),caption));
       context.messages^.postCustomMessage(Post,true);
-      if gui_started then result:=newVoidLiteral else result:=nil;
+      if (gui_started<>NO) then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
   end;
 
