@@ -5,16 +5,21 @@ UNIT reevaluationForms;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  Classes, sysutils, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus,
   ideLayoutUtil,askDialog,evalThread,mnh_constants,out_adapters,mnh_plotForm,editorMetaBase;
 
 TYPE
   TreevaluationForm = class(TForm)
+    miStop: TMenuItem;
+    TrayPopup: TPopupMenu;
     timer: TTimer;
+    TrayIcon: TTrayIcon;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE miStopClick(Sender: TObject);
     PROCEDURE TimerTimer(Sender: TObject);
+    PROCEDURE TrayIconClick(Sender: TObject);
   private
     fastUpdating,
     slowUpdating:boolean;
@@ -28,7 +33,7 @@ VAR
   reevaluationForm: TreevaluationForm;
 
 IMPLEMENTATION
-
+USES cmdLineInterpretation;
 {$R *.lfm}
 PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
@@ -64,6 +69,11 @@ PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
     end;
   end;
 
+PROCEDURE TreevaluationForm.TrayIconClick(Sender: TObject);
+  begin
+    TrayIcon.ShowBalloonHint;
+  end;
+
 PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
   begin
     {$ifdef debugMode}
@@ -90,6 +100,24 @@ PROCEDURE TreevaluationForm.FormDestroy(Sender: TObject);
 PROCEDURE TreevaluationForm.FormShow(Sender: TObject);
   begin
     visible:=false;
+    TrayIcon.visible:=true;
+    TrayIcon.Hint:=commandLine.fileOrCommandToInterpret;
+    TrayIcon.BalloonTitle:='mnh5';
+    TrayIcon.BalloonHint:='Running: '+commandLine.fileOrCommandToInterpret;
+  end;
+
+PROCEDURE TreevaluationForm.miStopClick(Sender: TObject);
+  CONST oneSecond=1/(24*60*60);
+  VAR timeout:double;
+  begin
+    timer.enabled:=false;
+    commandLine.pauseAtEnd  :=false;
+    commandLine.pauseOnError:=false;
+    runner.postHalt;
+    timeout:=now+oneSecond;
+    while runner.isRunning and (now<timeout) do sleep(1);
+    if runner.isRunning then halt(14) //We tried to play nice, now we force stop
+                        else close;
   end;
 
 end.
