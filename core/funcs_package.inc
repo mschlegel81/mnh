@@ -17,7 +17,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
   end;
 
 FUNCTION try_imp intFuncSignature;
-  FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
+  FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST toTryParameters:P_listLiteral; CONST inCaseOfFailure:P_literal):P_literal;
     VAR messagesLiteral:P_literal;
         tryMessages:T_messagesErrorHolder;
         oldMessages:P_messages;
@@ -26,7 +26,7 @@ FUNCTION try_imp intFuncSignature;
       tryMessages.createErrorHolder(context.messages,[mt_el3_evalError..mt_el3_userDefined]);
       context.messages:=@tryMessages;
 
-      result:=toTry^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+      result:=toTry^.evaluate(tokenLocation,@context,@recycler,toTryParameters).literal;
       if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
@@ -56,12 +56,15 @@ FUNCTION try_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) then begin
-      if (params^.size=1) then begin
-        result:=performTry(P_expressionLiteral(arg0),nil );
-      end else if (params^.size=2) then begin
-        result:=performTry(P_expressionLiteral(arg0),arg1);
-      end;
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) then begin
+      if (params^.size=1) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
+      then result:=performTry(P_expressionLiteral(arg0),nil,nil)
+      else if (params^.size=2) and (arg1^.literalType in C_listTypes) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(list1^.size))
+      then result:=performTry(P_expressionLiteral(arg0),list1,nil)
+      else if (params^.size=2) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
+      then result:=performTry(P_expressionLiteral(arg0),nil,arg1)
+      else if (params^.size=3) and (arg1^.literalType in C_listTypes) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(list1^.size))
+      then result:=performTry(P_expressionLiteral(arg0),list1,arg2);
     end;
   end;
 
@@ -208,6 +211,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,ak_variadic{$ifdef fullVersion},
              'try(E:Expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
+             'try(E:Expression,parameters:List);//Evaluates E with the given parameters - the parameter list length must match the arity of E#'+
              'try(E:Expression(0),except(1):Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
              'try(E:Expression(0),except:Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
              'try(E:Expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.'{$endif});
