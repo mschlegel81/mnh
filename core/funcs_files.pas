@@ -247,17 +247,15 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
             if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
           end;
-          if tempProcess.running then begin
-            if tempProcess.output.NumBytesAvailable>0
-            then repeat
-              n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
-              memStream.write(ReadBuffer, n);
-              if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
-            until n<=0 else begin
-              n:=0;
-              inc(sleepTime);
-              sleep(sleepTime);
-            end;
+          if tempProcess.output.NumBytesAvailable>0 then repeat
+            n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+            memStream.write(ReadBuffer, n);
+            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+          until (n<=0) or not(context.messages^.continueEvaluation)
+          else begin
+            n:=0;
+            inc(sleepTime);
+            sleep(sleepTime);
           end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
