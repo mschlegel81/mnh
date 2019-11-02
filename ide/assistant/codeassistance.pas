@@ -100,7 +100,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       globals^.primaryContext.messages^.clearFlags;
       user.destroy;
     end;
-  VAR script:string;
+  VAR script:ansistring;
   begin
     if givenGlobals=nil then begin
       adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
@@ -118,6 +118,11 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(localIdInfos,create);
     new(functionCallInfos,create);
+    {$ifdef debugMode}
+    writeln('Additional scripts to scan :',length(additionalScriptsToScan),': ');
+    for script in additionalScriptsToScan do write(script,',');
+    writeln;
+    {$endif}
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
     package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
@@ -148,7 +153,7 @@ PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
   VAR globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
-
+      clonedAdditionals:T_arrayOfString;
       provider:P_codeProvider;
       response:P_codeAssistanceResponse;
       lastEvaluationEnd:double;
@@ -181,9 +186,11 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       enterCriticalSection(codeAssistanceCs);
       provider:=codeAssistanceRequest;
       codeAssistanceRequest:=nil;
+      clonedAdditionals:=codeAssisanceAdditionals;
+      setLength(codeAssisanceAdditionals,0);
       leaveCriticalSection(codeAssistanceCs);
       if provider<>nil then begin
-        response:=doCodeAssistanceSynchronously(provider,codeAssisanceAdditionals,recycler,globals,@adapters);
+        response:=doCodeAssistanceSynchronously(provider,clonedAdditionals,recycler,globals,@adapters);
         lastEvaluationEnd:=now;
         enterCriticalSection(codeAssistanceCs);
         try

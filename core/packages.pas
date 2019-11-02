@@ -1124,7 +1124,6 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
     then begin
       globals.startFinalization;
       finalize(globals.primaryContext,recycler);
-      clearCachedFormats;
       globals.stopWorkers(recycler);
     end;
   end;
