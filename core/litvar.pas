@@ -689,7 +689,6 @@ FUNCTION newIntLiteral(CONST value: T_bigInt): P_abstractIntLiteral;
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;
-  VAR i:longint;
   begin
     if not(enforceNewString) then begin
       if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));

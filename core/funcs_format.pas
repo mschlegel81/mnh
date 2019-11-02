@@ -276,12 +276,13 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           if (pos('{',part)>0) or (pos('}',part)>0) then context.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
         end;
         if expressionString=''
-        then expressionString:=                 '['+expPart
-        else expressionString:=expressionString+','+expPart;
+        then expressionString:='['+expPart
+        else expressionString+=','+expPart;
         if part='%' then part:='%S';
       end;
 
     begin
+      result:=nil;
       //Check if a rule is needed at all:
       for i:=0 to length(parts)-1 do if odd(i) and (copy(trim(parts[i]),2,1)='{') then needSubRule:=true;
       if not(needSubRule) then exit(nil);
