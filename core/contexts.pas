@@ -170,7 +170,12 @@ TYPE
         parts :T_setOfPointer;
         finalizing:boolean;
       end;
-      wallClock:TEpikTimer;
+      wallClock:record
+        timer:TEpikTimer;
+        timerStartInSystime:double;
+        timerCorrectionFactor:double;
+        lastCorrection:double;
+      end;
       globalOptions :T_evaluationContextOptions;
       mainParameters:T_arrayOfString;
       {$ifdef fullVersion}
@@ -327,7 +332,8 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
     primaryContext.create();
     prng.create;
     prng.randomize;
-    wallClock:=nil;
+    wallClock.timer:=nil;
+    wallClock.timerCorrectionFactor:=1;
     {$ifdef fullVersion}
     profiler:=nil;
     debuggingStepper:=nil;
@@ -350,7 +356,7 @@ DESTRUCTOR T_evaluationGlobals.destroy;
       parts.destroy;
     end;
     prng.destroy;
-    if wallClock<>nil then FreeAndNil(wallClock);
+    if wallClock.timer<>nil then FreeAndNil(wallClock.timer);
     {$ifdef fullVersion}
     if profiler<>nil then dispose(profiler,destroy);
     profiler:=nil;
@@ -395,13 +401,15 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     //timing:
     with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
     //Ensure there is a wallclock if it is needed
-    if (wallClock=nil) and ((eco_profiling in globalOptions) or (eco_timing in globalOptions))
-    then wallClock:=TEpikTimer.create(nil);
+    if (wallClock.timer=nil) and ((eco_profiling in globalOptions) or (eco_timing in globalOptions))
+    then wallClock.timer:=TEpikTimer.create(nil);
 
-    if wallClock<>nil then begin;
-      wallClock.clear;
-      wallClock.start;
-      timingInfo.startOfProfiling:=wallClock.elapsed;
+    if wallClock.timer<>nil then begin;
+      wallClock.timer.clear;
+      wallClock.timer.start;
+      wallClock.timerStartInSystime:=now;
+      wallClock.lastCorrection:=now;
+      timingInfo.startOfProfiling:=wallClock.timer.elapsed*wallClock.timerCorrectionFactor;
     end;
     //evaluation state
     if evaluationContextType=ect_silent
@@ -479,7 +487,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
     FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
     FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
     begin
-      timeValue[pc_total]:=wallClock.elapsed-timingInfo.startOfProfiling;
+      timeValue[pc_total]:=wallClock.timer.elapsed*wallClock.timerCorrectionFactor-timingInfo.startOfProfiling;
       timeValue[pc_unknown]:=timeValue[pc_total];
       for cat:=low(timingInfo.timeSpent) to high(timingInfo.timeSpent) do begin
         timeValue[cat]:=timingInfo.timeSpent[cat];
@@ -506,7 +514,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
   begin
     stopWorkers(recycler);
     primaryContext.messages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
-    if (primaryContext.messages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
+    if (primaryContext.messages^.isCollecting(mt_timing_info)) and (wallClock.timer<>nil) then logTimingInfo;
     {$ifdef fullVersion}
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
     {$endif}
@@ -529,20 +537,30 @@ FUNCTION T_evaluationGlobals.isPaused:boolean;
 {$endif}
 
 FUNCTION T_context.wallclockTime: double;
+  CONST updateCorrectionInterval=10/(24*60*60); //update this every 10 seconds
   begin
-    if related.evaluation^.wallClock=nil then begin
+    if related.evaluation^.wallClock.timer=nil then begin
       enterCriticalSection(related.evaluation^.primaryContext.contextCS);
       try
-        if related.evaluation^.wallClock=nil then begin
-          related.evaluation^.wallClock:=TEpikTimer.create(nil);
-          related.evaluation^.wallClock.clear;
-          related.evaluation^.wallClock.start;
+        if related.evaluation^.wallClock.timer=nil then begin
+          related.evaluation^.wallClock.timer:=TEpikTimer.create(nil);
+          related.evaluation^.wallClock.timer.clear;
+          related.evaluation^.wallClock.timer.start;
+          related.evaluation^.wallClock.timerStartInSystime:=now;
+          related.evaluation^.wallClock.lastCorrection:=now;
         end;
       finally
         leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
       end;
     end;
-    result:=related.evaluation^.wallClock.elapsed;
+    if now-related.evaluation^.wallClock.lastCorrection>updateCorrectionInterval then begin
+      related.evaluation^.wallClock.timerCorrectionFactor:=
+        //|    time passed in systime, seconds                         |/|time passed according to timer|
+        (now-related.evaluation^.wallClock.timerStartInSystime)*24*60*60/related.evaluation^.wallClock.timer.elapsed;
+      related.evaluation^.wallClock.lastCorrection:=now;
+    end;
+    result:=related.evaluation^.wallClock.timer.elapsed*
+            related.evaluation^.wallClock.timerCorrectionFactor;
   end;
 
 PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCategory);
