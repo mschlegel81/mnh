@@ -289,7 +289,6 @@ PROCEDURE T_functionCallInfos.add(CONST rulePointer:pointer; CONST token: P_toke
     if      token^.tokType in [tt_comparatorEq..tt_operatorConcatAlt] then usedBuiltins.put(intFuncForOperator[token^.tokType])
     else if token^.tokType=tt_intrinsicRule                           then usedBuiltins.put(token^.data)
     else if token^.tokType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck] then begin
-      //TODO: store reference to user defined function
       if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
       dat[fill].referencedAt:=token^.location;
       dat[fill].targetLocation:=P_objectWithIdAndLocation(token^.data)^.getLocation;

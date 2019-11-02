@@ -165,7 +165,6 @@ TYPE
       FUNCTION getId:T_idString; virtual;
   end;
 
-//TODO: Is this used?
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
