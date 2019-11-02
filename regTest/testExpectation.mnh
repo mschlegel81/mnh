@@ -241,6 +241,14 @@ end;
 
 ELEMENTS_TO_RETAIN_ON_CLEANUP:=30;
 
+private calcThreshold(X:NumericList)->X.size<5 ? Inf : begin
+  local weights:=1.5^[0..X.size-1];
+  weights/=(weights.agg(+));
+  local weightedMean:=(X*weights).agg(+) orElse 0;
+  local weightedVariance:=(sqr(X-weightedMean)*weights).agg(+);
+  weightedMean+3*sqrt(weightedVariance);
+end;
+
 //*Limit to 30 timings per case and flavour
 //*Drop all values outside of 3 sigma environment
 main('cleanup')->begin
@@ -254,8 +262,7 @@ main('cleanup')->begin
       caseEntry[1].each(flavEntry,begin
         local flavour:=flavEntry[0];
         local times:=flavEntry[1];
-        local threshold:=times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).mean+
-                       3*times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).standardVariation;
+        local threshold:=times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).calcThreshold;
         local sizeBefore:=times.size;
         droppedTotal+=times.size;
         droppedExtremes+=trueCount(times.getInner(1)>threshold);
