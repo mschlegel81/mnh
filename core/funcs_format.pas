@@ -12,7 +12,6 @@ USES sysutils,
      funcs;
 
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
-PROCEDURE clearCachedFormats;
 IMPLEMENTATION
 USES out_adapters;
 TYPE
@@ -38,31 +37,12 @@ TYPE
     parts:T_arrayOfString;
     formats:array of T_format;
     formatSubrule:P_inlineExpression;
-    isTemporary:boolean;
-    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
     DESTRUCTOR destroy;
     FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_arrayOfString;
   end;
 
 {$i func_defines.inc}
-VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
-    cachedFormatCS:TRTLCriticalSection;
-
-PROCEDURE clearCachedFormats;
-  VAR f:cachedFormats.VALUE_TYPE_ARRAY;
-      i:longint;
-  begin
-    system.enterCriticalSection(cachedFormatCS);
-    try
-      f:=cachedFormats.valueSet;
-      for i:=0 to length(f)-1 do dispose(f[i],destroy);
-      setLength(f,0);
-      cachedFormats.clear;
-    finally
-      system.leaveCriticalSection(cachedFormatCS);
-    end;
-  end;
-
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);
   VAR parts:T_arrayOfString;
   begin
@@ -166,7 +146,7 @@ FUNCTION formatComment(CONST commentString:string; CONST tokenLocation:T_tokenLo
     oldMessages:=context^.messages;
     tryMessages.createErrorHolder(context^.messages,[mt_el3_evalError..mt_el3_userDefined]);
     context^.messages:=@tryMessages;
-    fmt.create(commentString,tokenLocation,context^,recycler,true);
+    fmt.create(commentString,tokenLocation,context^,recycler);
     dummyParams:=newListLiteral(1);
     dummyParams^.appendString(commentString);
     resultList:=fmt.format(dummyParams,tokenLocation,context^,recycler);
@@ -189,28 +169,10 @@ PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLoc
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_preparedFormatStatement;
   begin;
-    if not(context.messages^.continueEvaluation) then exit(nil);
-    if tryEnterCriticalsection(cachedFormatCS)=0 then begin
-      new(result,create(formatString,tokenLocation,context,recycler,true));
-      exit(result);
-    end;
-    if cachedFormats.containsKey(formatString,result) then begin
-      system.leaveCriticalSection(cachedFormatCS);
-      exit(result);
-    end;
-    try
-      new(result,create(formatString,tokenLocation,context,recycler));
-      if context.messages^.continueEvaluation then cachedFormats.put(formatString,result)
-      else begin
-        dispose(result,destroy);
-        result:=nil;
-      end;
-    finally
-      system.leaveCriticalSection(cachedFormatCS);
-    end;
+    new(result,create(formatString,tokenLocation,context,recycler));
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST temp:boolean=false);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
@@ -347,7 +309,6 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
   VAR i:longint;
   begin
-    isTemporary:=temp;
     inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
@@ -471,7 +432,7 @@ FUNCTION format_imp intFuncSignature;
       {$endif}
       if not(context.messages^.continueEvaluation) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
-      if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
+      dispose(preparedStatement,destroy);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
       else begin
         result:=newListLiteral;
@@ -501,7 +462,7 @@ FUNCTION printf_imp intFuncSignature;
       finally
         system.leaveCriticalSection(print_cs);
       end;
-      if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
+      dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}
     end;
@@ -593,20 +554,11 @@ FUNCTION parseTime_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  cachedFormats.create;
-  initialize(cachedFormatCS);
-  system.initCriticalSection(cachedFormatCS);
   {$ifdef fullVersion}printfLoc:={$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   {$ifdef fullVersion}formatLoc:={$endif}
   registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    {$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    {$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif});
-  memoryCleaner.registerCleanupMethod(@clearCachedFormats)
-
-FINALIZATION
-  clearCachedFormats;
-  cachedFormats.destroy;
-  system.doneCriticalSection(cachedFormatCS);
 
 end.
