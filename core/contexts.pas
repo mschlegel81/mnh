@@ -177,6 +177,7 @@ TYPE
         lastCorrection:double;
       end;
       globalOptions :T_evaluationContextOptions;
+      globalMessages:P_messages;
       mainParameters:T_arrayOfString;
       {$ifdef fullVersion}
       profiler:P_profiler;
@@ -329,6 +330,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
       parts.create;
       finalizing:=false;
     end;
+    globalMessages:=outAdapters;
     primaryContext.create();
     prng.create;
     prng.randomize;
@@ -575,6 +577,7 @@ FUNCTION T_context.getNewAsyncContext(VAR recycler:T_recycler; CONST local: bool
     if local then parentAccess:=ACCESS_READONLY
              else parentAccess:=ACCESS_BLOCKED;
     result:=contextPool.newContext(recycler,@self,parentAccess);
+    result^.messages:=related.evaluation^.globalMessages;
   end;
 
 {$ifdef fullVersion}
