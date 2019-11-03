@@ -292,8 +292,8 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
           end;
         end;
         if tempProcess.running then begin
-          {$ifdef DEBUGMODE}
-          context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Trying to stop process '+IntToStr(tempProcess.ProcessID));
+          {$ifdef debugMode}
+          context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Trying to stop process '+intToStr(tempProcess.ProcessID));
           {$endif}
           tempProcess.Terminate(999);
         end;
@@ -308,8 +308,8 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         until n<=0;
         result := tempProcess.ExitCode;
         if tempProcess.running then begin
-          {$ifdef DEBUGMODE}
-          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Trying again (!) to stop process '+IntToStr(tempProcess.ProcessID));
+          {$ifdef debugMode}
+          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Trying again (!) to stop process '+intToStr(tempProcess.ProcessID));
           {$endif}
           tempProcess.Terminate(999);
         end;

@@ -1,4 +1,4 @@
-private serverId:=myPath.hash&mnhInfo.hash;
+private serverId:=myPath.hash&mnhInfo['flavour'];
 
 private serve(L)->
   L.isIntList
