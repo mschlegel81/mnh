@@ -272,14 +272,18 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.messages^.continueEvaluation do begin
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+          if not(includeStdErr) then while (tempProcess.stdErr.NumBytesAvailable>0) and context.continueEvaluation do begin
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
             doTee;
           end;
           if tempProcess.output.NumBytesAvailable>0 then repeat
-            n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
-            memStream.write(ReadBuffer, n);
-            doTee;
+            if (tempProcess.output.NumBytesAvailable>0)
+            then n:=tempProcess.output.read(ReadBuffer,READ_BYTES)
+            else n:=0;
+            if n>0 then begin
+              memStream.write(ReadBuffer, n);
+              doTee;
+            end;
           until (n<=0) or not(context.messages^.continueEvaluation)
           else begin
             n:=0;
@@ -287,7 +291,12 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
             sleep(sleepTime);
           end;
         end;
-        if tempProcess.running then tempProcess.Terminate(999);
+        if tempProcess.running then begin
+          {$ifdef DEBUGMODE}
+          context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Trying to stop process '+IntToStr(tempProcess.ProcessID));
+          {$endif}
+          tempProcess.Terminate(999);
+        end;
         repeat
           if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
@@ -298,6 +307,12 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
           memStream.write(ReadBuffer, n);
         until n<=0;
         result := tempProcess.ExitCode;
+        if tempProcess.running then begin
+          {$ifdef DEBUGMODE}
+          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Trying again (!) to stop process '+IntToStr(tempProcess.ProcessID));
+          {$endif}
+          tempProcess.Terminate(999);
+        end;
       except
         result := $ffffffff;
       end;
