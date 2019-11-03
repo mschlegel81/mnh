@@ -222,14 +222,43 @@ FUNCTION writeFileLines_impl intFuncSignature;
 FUNCTION appendFileLines_impl intFuncSignature;
   begin if context.checkSideEffects('appendFileLines',tokenLocation,[se_readFile,se_writeFile]) then result:=writeOrAppendFileLines(params,tokenLocation,context,true)  else result:=nil; end;
 
-FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST tee:boolean):P_literal; inline;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): int64;
+FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST tee:boolean):P_literal;
+  VAR teeRoutine:P_expressionLiteral=nil;
+      includeStdErr:boolean=true;
+  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): int64;
     CONST READ_BYTES = 8192;
     VAR ReadBuffer:array[0..READ_BYTES-1] of char;
         memStream  : TMemoryStream;
         tempProcess: TProcessUTF8;
-        n,k        : longint;
+        n          : longint;
         sleepTime  : longint = 1;
+
+        teebuffer  : ansistring='';
+    PROCEDURE flushTeeBuffer; inline;
+      VAR wrappedTeeBuffer:P_stringLiteral;
+          teeCallResult:T_evaluationResult;
+      begin
+        if (length(teebuffer)>0) and (teebuffer[length(teebuffer)]=#13)
+        then setLength(teebuffer,length(teebuffer)-1);
+        if teeRoutine=nil then writeln(teebuffer)
+        else begin
+          wrappedTeeBuffer:=newStringLiteral(teebuffer);
+          teeCallResult:=teeRoutine^.evaluateToLiteral(tokenLocation,@context,@recycler,wrappedTeeBuffer,nil);
+          if teeCallResult.literal<>nil then disposeLiteral(teeCallResult.literal);
+          disposeLiteral(wrappedTeeBuffer);
+        end;
+        teebuffer:='';
+      end;
+
+    PROCEDURE doTee;
+      VAR k:longint;
+      begin if tee then begin
+        for k:=0 to n-1 do begin
+          if ReadBuffer[k]=#10 then flushTeeBuffer
+                               else teebuffer+=ReadBuffer[k];
+        end;
+      end; end;
+
     begin
       initialize(ReadBuffer);
       memStream := TMemoryStream.create;
@@ -245,12 +274,12 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         while tempProcess.running and context.messages^.continueEvaluation do begin
           if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
-            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+            doTee;
           end;
           if tempProcess.output.NumBytesAvailable>0 then repeat
             n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
             memStream.write(ReadBuffer, n);
-            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+            doTee;
           until (n<=0) or not(context.messages^.continueEvaluation)
           else begin
             n:=0;
@@ -262,10 +291,10 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         repeat
           if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
-            if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+            doTee;
           end;
           n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
-          if tee then for k:=0 to n-1 do write(ReadBuffer[k]);
+          doTee;
           memStream.write(ReadBuffer, n);
         until n<=0;
         result := tempProcess.ExitCode;
@@ -277,38 +306,38 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       output := TStringList.create;
       output.loadFromStream(memStream);
       memStream.free;
+      if tee and (length(teebuffer)>0) then flushTeeBuffer;
     end;
 
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       output:TStringList;
       outputLit:P_listLiteral;
+      k:longint;
       i:longint;
-      includeStdErr:boolean=true;
       processExitCode:int64;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string)
+    if (params<>nil) and (params^.size>=1) and (params^.size<=4) and (arg0^.literalType=lt_string)
        and context.checkSideEffects('exec',tokenLocation,[se_executingExternal]) then begin
       setLength(cmdLinePar,0);
-      if (params^.size>=2) then begin
-        if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList] then begin
+      executable:=str0^.value;
+      for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
+        lt_booleanList,lt_intList,lt_realList,lt_stringList: if k=1 then begin
           setLength(cmdLinePar,list1^.size);
           for i:=0 to list1^.size-1 do begin
             if list1^.value[i]^.literalType=lt_string
             then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
             else cmdLinePar[i]:=list1^.value[i]^.toString();
           end;
-        end else if (arg1^.literalType=lt_boolean) then includeStdErr:=bool1^.value
+        end else exit(nil);
+        lt_boolean: includeStdErr:=P_boolLiteral(params^.value[k])^.value;
+        lt_expression: if tee then teeRoutine:=P_expressionLiteral(params^.value[k]) else exit(nil);
         else exit(nil);
       end;
-      if (params^.size=3) then begin
-        if (arg2^.literalType=lt_boolean) then includeStdErr:=P_boolLiteral(arg2)^.value
-        else exit(nil);
-      end;
-      executable:=str0^.value;
-      if tee then showConsole;
-      processExitCode:=runCommand(executable,cmdLinePar,output,includeStdErr);
+
+      if tee and (teeRoutine=nil) then showConsole;
+      processExitCode:=runCommand(executable,cmdLinePar,output);
       outputLit:=newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
       result:=newListLiteral(2)^.append(outputLit,false)^.appendInt(processExitCode);
@@ -317,7 +346,7 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   end;
 
 FUNCTION execSync_impl    intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,false); end;
-FUNCTION teeExecSync_impl intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,true); end;
+FUNCTION teeExecSync_impl intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,true);  end;
 
 FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean):P_literal;
   VAR executable:ansistring;
@@ -600,7 +629,7 @@ INITIALIZATION
                                        'exec(programPath:String,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
                                        'exec(programPath:String,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'teeExec'           ,@teeExecSync_impl,ak_variadic_1{$ifdef fullVersion},
-                                       'teeExec(...);//Behaves as exec but additionally prints out to console'{$endif});
+                                       'teeExec(...);//Behaves as exec but additionally prints out to stdout#//You can add an additional expression to use instead of printing to stdout'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1{$ifdef fullVersion},'execAsync(programPath:String,parameters ...);//Starts the specified program and returns the process id'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,ak_variadic_1{$ifdef fullVersion},'execPipeless(programPath:String,parameters ...);//Executes the specified program, waiting for exit and returns the exit code'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,ak_unary     {$ifdef fullVersion},'deleteFile(filename:String);//Deletes the given file, returning true on success and false otherwise'{$endif});
