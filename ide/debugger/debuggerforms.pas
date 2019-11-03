@@ -135,7 +135,7 @@ PROCEDURE TDebuggerForm.performFastUpdate;
        button.enabled:=enabled or enableAlways;
        if enabled then button.ImageIndex:=enabledImageIndex
                   else button.ImageIndex:=enabledImageIndex+1;
-       if button.enabled and not(wasEnabledBefore) and focusOnEnable then begin
+       if button.enabled and not(wasEnabledBefore) and focusOnEnable and CanFocus then begin
          button.SetFocus;
        end;
      end;

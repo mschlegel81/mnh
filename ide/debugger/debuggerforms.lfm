@@ -14,7 +14,7 @@ object DebuggerForm: TDebuggerForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.4.0'
   inline currentExpressionEdit: TSynEdit
     Left = 0
     Height = 270
