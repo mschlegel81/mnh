@@ -118,7 +118,7 @@ FUNCTION ord_imp intFuncSignature;
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newMapLiteral(15)^
+    result:=newMapLiteral(16)^
       .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
@@ -133,7 +133,8 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('fullVersionPath' ,settings.fullFlavourLocation)^
       .put('lightVersionPath',settings.lightFlavourLocation)^
       .put('configured_cpus',settings.cpuCount)^
-      .put('configured_mem' ,settings.memoryLimit)
+      .put('configured_mem' ,settings.memoryLimit)^
+      .put('PID'            ,GetProcessID)
     else result:=nil;
   end;
 
