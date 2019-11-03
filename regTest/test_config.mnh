@@ -81,6 +81,7 @@ isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
 isSmokeTest((demosRoot&'clock.mnh'         ))->true;
 isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
 isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
+isSmokeTest((demosRoot&'teeExecTest.mnh'   ))->true;
 isSmokeTest(scriptFileName:String)->false;
 
 @SuppressUnusedWarning

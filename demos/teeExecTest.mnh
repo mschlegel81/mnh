@@ -1,0 +1,9 @@
+//*Tests the output expression feature of teeExec
+//*The output handed to this routine should give the same result as the output literal
+main->begin
+  local l:=[];
+  local output:=teeExec(executor,[myPath.extractFileDirectory&'/99bottles.mnh'],{l|=$s});
+  assert(l==output[0]);
+  //Also check the return code
+  assert(output[1]==0);
+end;
