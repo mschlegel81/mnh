@@ -56,38 +56,6 @@ findInAll(editorFile:String)->begin
   void;
 end;
 
-@utility=dependencies/find all imported files
-openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::printFileLink);
-
-private plain datastore scriptFolders:=void;
-
-@SuppressUnusedParameterWarning
-@utility=dependencies/clear file cache
-clearFileCache(editorFile:String)->scriptFolders:=void;
-
-findAllMnhScripts->
-  scriptFolders.isVoid
-  ? begin
-      local result:=(mnhInfo['targetOs']=='Linux'
-                     ? ['/']
-                     : driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':')
-                    .union([mnhInfo['configDir'].extractFileDirectory])
-                    .pEach(root,allFiles(root,'*.mnh'),|)
-                    .unique;
-      scriptFolders:=result.extractFileDirectory.unique;
-      result;
-    end
-  : scriptFolders.pEach(root,allFiles(root,'*.mnh',false),|);
-
-private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
-
-@utility=dependencies/find all importing files
-openImporting(editorFile:String)->begin
-  print('Look for: ',editorFile);
-  findAllMnhScripts.minus([editorFile]).pEach(script,editorFile in inspect(script).useAndIncPaths ? script.printFileLink : void);
-  void;
-end;
-
 @utility=diff/Compare folders (new editor)
 @newEdit
 @language=diff
@@ -104,18 +72,37 @@ compareFolders(editorFile:String)->begin
   toCompare.each(file,unifiedDiff(folder1&file,folder2&file,fileLines(folder1&file),fileLines(folder2&file),2),' ',|);
 end;
 
-@utility=List demos by category
+USE inspectionUtil;
+@utility=List demos/by category
 @SuppressUnusedParameterWarning
 demosByCategory(dummyParameter)->
 allFiles(mnhInfo['configDir'],'*.mnh')
-.each(file,file.inspect['declares']
-   .each(rule,rule[1,'subrules'].map({$sub.getAll(['location','attributes'])}),|),|)
-   .map({[$info[0],$info[1,'demo_for']]})
-   .each(entry,entry.size=2 ? entry[1].split(",").trim.map({[$d,entry[0]]}) : void,|)
-   .group(0,{[$x[0],$x[1]|$y[1]]})
-   .sort({$x[1].size>$y[1].size})
-   .each(demoGroup,
-     print('Demos for: ',demoGroup[0],"\n  ",demoGroup[1].join("\n  ")));
+  .futureMap({inspect($file)})
+  .map({$x['path']=>$x['declares'].map(::ruleAttributes).map({$att['demo_for']})})
+  .map({$x[1].size>0 ? $x[0]=>$x[1].head.split(',').trim : void})
+  .each(e,e[1].each(b,[e[0],b]),|)
+  .group(1)
+  .map({$g[0]=>$g[1].getInner(0)})
+  .sort(0)
+  .each(sample,
+    print('Examples for ',sample[0],':'),printf('  @%s:1,1',sample[1]));
+
+@utility=List demos/by used builtin functions
+@SuppressUnusedParameterWarning
+demosByFunc(dummyParameter)->
+allFiles(mnhInfo['configDir'],'*.mnh')
+allFiles(mnhInfo['configDir'],'*.mnh')
+  .map({$f.inspect.getAll(['path','called builtin','uses'])})
+  .map({'@'&$f[0]&':1,1'&(
+        $f[2].isList AND $f[2].size>0
+        ? ' or used packages'
+        : '')=>$f[1]})
+  .each(e,e[1].each(b,[e[0],b]),|)
+  .group(1)
+  .map({$g[0]=>$g[1].getInner(0)})
+  .sort(0)
+  .each(sample,
+    print(sample[0],' is used in'),printf('  %s',sample[1]));
 
 @utility=diff/file changes
 @newEdit
