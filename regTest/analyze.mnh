@@ -133,7 +133,7 @@ private analyzeFlavour(data,flavour:String)->begin
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   clearAnimation;
   groupedData.sort({$x[1].trailing<=$y[1].trailing}).each(g,begin
-    plot(g[1]);
+    plot(g[1].toList);
     drawTextAbsolute(1,1,g[0],'TR');
     addAnimationFrame;
   end);

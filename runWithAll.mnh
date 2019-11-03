@@ -1,4 +1,4 @@
-#!/usr/bin/mnh_light
+#!/usr/bin/mnh_light -headless
 USE make_config;
 barPlot(captions:List,samples:NumericList,targetWidth>0)->
 barPlot(captions     ,samples            ,targetWidth,'%s');
