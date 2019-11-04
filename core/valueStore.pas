@@ -16,6 +16,7 @@ TYPE
       value:P_literal;
       readonly:boolean;
     public
+      varCs:TRTLCriticalSection;
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
@@ -60,6 +61,7 @@ TYPE
 IMPLEMENTATION
 CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
+    initCriticalSection(varCs);
     id:=initialId;
     value:=initialValue;
     readonly:=isReadOnly;
@@ -68,15 +70,23 @@ CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValu
 
 DESTRUCTOR T_namedVariable.destroy;
   begin
+    enterCriticalSection(varCs);
     if value<>nil then disposeLiteral(value);
+    leaveCriticalSection(varCs);
+    doneCriticalSection(varCs);
   end;
 
 PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
   begin
     if readonly then raise Exception.create('Mutation of constant "'+id+'" is not allowed.');
-    disposeLiteral(value);
-    value:=newValue;
-    value^.rereference;
+    enterCriticalSection(varCs);
+    try
+      disposeLiteral(value);
+      value:=newValue;
+      value^.rereference;
+    finally
+      leaveCriticalSection(varCs);
+    end;
   end;
 
 FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
@@ -85,7 +95,12 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
       context^.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
       exit(newVoidLiteral);
     end;
-    result:=mutateVariable(value,mutation,RHS,location,context,recycler);
+    enterCriticalSection(varCs);
+    try
+      result:=mutateVariable(value,mutation,RHS,location,context,recycler);
+    finally
+      leaveCriticalSection(varCs);
+    end;
     if result=nil then result:=newVoidLiteral;
   end;
 
@@ -96,18 +111,33 @@ FUNCTION T_namedVariable.getId:T_idString;
 
 FUNCTION T_namedVariable.getValue:P_literal;
   begin
-    result:=value;
-    result^.rereference;
+    enterCriticalSection(varCs);
+    try
+      result:=value;
+      result^.rereference;
+    finally
+      leaveCriticalSection(varCs);
+    end;
   end;
 
 FUNCTION T_namedVariable.toString(CONST lengthLimit: longint): ansistring;
   begin
-    result:=id+'='+value^.toString(lengthLimit-1-length(id));
+    enterCriticalSection(varCs);
+    try
+      result:=id+'='+value^.toString(lengthLimit-1-length(id));
+    finally
+      leaveCriticalSection(varCs);
+    end;
   end;
 
 FUNCTION T_namedVariable.clone: P_namedVariable;
   begin
-    new(result,create(id,value,readonly));
+    enterCriticalSection(varCs);
+    try
+      new(result,create(id,value,readonly));
+    finally
+      leaveCriticalSection(varCs);
+    end;
   end;
 
 CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);

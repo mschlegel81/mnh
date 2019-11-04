@@ -574,7 +574,7 @@ FUNCTION T_context.getNewAsyncContext(VAR recycler:T_recycler; CONST local: bool
   VAR parentAccess:AccessLevel;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
-    if local then parentAccess:=ACCESS_READONLY
+    if local then parentAccess:=ACCESS_READWRITE
              else parentAccess:=ACCESS_BLOCKED;
     result:=contextPool.newContext(recycler,@self,parentAccess);
     result^.messages:=related.evaluation^.globalMessages;
@@ -645,7 +645,7 @@ FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
     enterCriticalSection(contextCS);
     try
-      result:=contextPool.newContext(recycler,@self,ACCESS_READONLY);
+      result:=contextPool.newContext(recycler,@self,ACCESS_READWRITE);
     finally
       leaveCriticalSection(contextCS);
     end;
