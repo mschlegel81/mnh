@@ -645,7 +645,7 @@ FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
     enterCriticalSection(contextCS);
     try
-      result:=contextPool.newContext(recycler,@self,ACCESS_READONLY);
+      result:=contextPool.newContext(recycler,@self,ACCESS_READWRITE);
     finally
       leaveCriticalSection(contextCS);
     end;
