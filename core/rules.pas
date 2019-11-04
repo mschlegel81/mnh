@@ -157,7 +157,6 @@ TYPE
   T_variable=object(T_abstractRule)
     private
       varType:T_variableType;
-      rule_cs:system.TRTLCriticalSection;
       privateRule:boolean;
       called,
       valueChangedAfterDeclaration:boolean;
@@ -1029,7 +1028,6 @@ CONSTRUCTOR T_variable.create(CONST ruleId: T_idString;
     varType:=variableType;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
-    initCriticalSection(rule_cs);
     meta:=meta_;
   end;
 
@@ -1064,10 +1062,7 @@ DESTRUCTOR T_memoizedRule.destroy;
 
 DESTRUCTOR T_variable.destroy;
   begin
-    enterCriticalSection(rule_cs);
     namedValue.destroy;
-    leaveCriticalSection(rule_cs);
-    doneCriticalSection(rule_cs);
   end;
 
 DESTRUCTOR T_datastore.destroy;
@@ -1356,15 +1351,9 @@ FUNCTION T_variable.getValueOrElseVoid(VAR context: T_context;
     if result=nil then result:=newVoidLiteral;
   end;
 
-FUNCTION T_variable.getValue(VAR context: T_context; VAR recycler: T_recycler
-  ): P_literal;
+FUNCTION T_variable.getValue(VAR context: T_context; VAR recycler: T_recycler): P_literal;
   begin
-    system.enterCriticalSection(rule_cs);
-    try
-      result:=namedValue.getValue;
-    finally
-      system.leaveCriticalSection(rule_cs);
-    end;
+    result:=namedValue.getValue;
   end;
 
 FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
@@ -1394,12 +1383,12 @@ end;
 
 FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
-    system.enterCriticalSection(rule_cs);
+    system.enterCriticalSection(namedValue.varCs);
     try
       readDataStore(context,recycler);
       result:=namedValue.getValue;
     finally
-      system.leaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
@@ -1588,7 +1577,7 @@ FUNCTION T_variable.getDocTxt: ansistring;
 PROCEDURE T_variable.setMutableValue(CONST value: P_literal;
   CONST onDeclaration: boolean);
   begin
-    system.enterCriticalSection(rule_cs);
+    system.enterCriticalSection(namedValue.varCs);
     try
       namedValue.setValue(value);
       if not(onDeclaration) then begin
@@ -1596,7 +1585,7 @@ PROCEDURE T_variable.setMutableValue(CONST value: P_literal;
         called:=true;
       end;
     finally
-      system.leaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
@@ -1623,24 +1612,24 @@ PROCEDURE T_datastore.readDataStore(VAR context:T_context; VAR recycler:T_recycl
 
 FUNCTION T_variable.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler: T_recycler): P_literal;
   begin
-    system.enterCriticalSection(rule_cs);
+    system.enterCriticalSection(namedValue.varCs);
     try
       result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
       valueChangedAfterDeclaration:=true;
       called:=true;
     finally
-      system.leaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
 FUNCTION T_datastore.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): P_literal;
   begin
-    system.enterCriticalSection(rule_cs);
+    system.enterCriticalSection(namedValue.varCs);
     try
       if not(called) and not(valueChangedAfterDeclaration) then readDataStore(context,recycler);
       result:=inherited mutateInline(mutation,RHS,location,context,recycler);
     finally
-      system.leaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
@@ -1656,7 +1645,7 @@ PROCEDURE T_datastore.writeBack(CONST adapters:P_messages);
 
 PROCEDURE T_datastore.memoryCleanup;
   begin
-    enterCriticalSection(rule_cs);
+    enterCriticalSection(namedValue.varCs);
     try
       if called and not(valueChangedAfterDeclaration) //The store has been read but not modified
          and (dataStoreMeta.fileExists)               //and the store can be re-read
@@ -1665,7 +1654,7 @@ PROCEDURE T_datastore.memoryCleanup;
         called:=false;
       end;
     finally
-      leaveCriticalSection(rule_cs);
+      leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
