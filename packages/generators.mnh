@@ -41,3 +41,20 @@ chunkIterator(iter:Iteratable,chunkSize>=1)->{begin
 save;
   next();
 end}.toIteratableExpression;
+
+private subsetMapping(elements,basePerElement)->begin
+  assert(elements.isList);
+  assert(basePerElement.isList(elements.size));
+  {begin
+     local k:=[$0];
+     [elements,basePerElement.each(b,k:=divMod(k[0],b)).getInner(1)].transpose.each(V,V[1]=0 ? void : [1..V[1]].each(i,V[0]),|);
+   end};
+end;
+
+//*Returns an iterator over all distinct subsets of C
+subSetIterator(C:Collection)->
+begin
+  local elements:=C.elementFrequency.sort;
+  local basePerElement:=elements.getInner(1)+1;
+  rangeGenerator(0,basePerElement.agg(*)-1).futureMap(subsetMapping(elements.getInner(0),basePerElement));
+end;

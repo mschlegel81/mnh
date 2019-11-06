@@ -142,7 +142,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
     htmlExporter:T_htmlExporter;
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
-USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd;
+USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,editorMetaBase,myStringUtil;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -204,7 +204,19 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
   VAR SynExporterHTML: TSynExporterHTML;
       outputStream:TMemoryStream;
       size:longint;
+      i:longint;
   begin
+    if highlighter=nil then begin
+      result:='<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><title>'
+              +title+
+              '</title></head><body text="black" bgcolor="#EEEEEE"><pre><code><font  size=3 face="Courier New">';
+      for i:=0 to content.count-1 do begin
+        if i>0 then result+=C_carriageReturnChar+C_lineBreakChar;
+        result+=replaceAll(replaceAll(replaceAll(content[i],'&','&amp;'),'<','&lt;'),'>','&gt;');
+      end;
+      result+='</font></code></pre></body></html>';
+      exit(result);
+    end;
     SynExporterHTML:=TSynExporterHTML.create(nil);
     SynExporterHTML.title:=title;
     SynExporterHTML.highlighter:=highlighter;
@@ -718,6 +730,26 @@ FUNCTION anyFormShowing_imp intFuncSignature;
     if (params=nil) or (params^.size=0) then result:=newBoolLiteral(hasAnyForm);
   end;
 
+FUNCTION formatHtmlPage_imp intFuncSignature;
+  VAR name:string;
+      language:T_language;
+      highlighter:TSynCustomHighlighter;
+      content:TStrings;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_emptyList,lt_stringList]) and (arg1^.literalType=lt_string) then begin
+      name:=str1^.value;
+      language:=languageFromExtension(extractFileExt(name));
+      highlighter:=fileTypeMeta[language].highlighter;
+      if highlighter=nil then exit(newVoidLiteral);
+      content:=TStringList.create;
+      for i:=0 to list0^.size-1 do content.append(P_stringLiteral(list0^.value[i])^.value);
+      result:=newStringLiteral(htmlExporter.textToHtml(name,content,highlighter));
+      FreeAndNil(content);
+    end;
+  end;
+
 INITIALIZATION
   initialize(lastDockLocationFor);
   setLength(activeForms,0);
@@ -725,5 +757,6 @@ INITIALIZATION
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
   registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',sfr_needs_gui);
+  registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary,'formatHtmlPage();//formats naive html');
 end.
 

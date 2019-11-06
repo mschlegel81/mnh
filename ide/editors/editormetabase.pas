@@ -104,6 +104,7 @@ VAR fileTypeMeta:array[T_language] of record
       extensions:T_arrayOfString;
       menuItem:TMenuItem;
     end;
+FUNCTION languageFromExtension(CONST extension:string; CONST fallback:T_language=LANG_TXT):T_language;
 IMPLEMENTATION
 
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
@@ -497,19 +498,20 @@ FUNCTION T_basicEditorMeta.isPseudoFile: boolean;
     result:=true;
   end;
 
-PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string;
-  CONST fallback: T_language);
-  VAR l:T_language;
+FUNCTION languageFromExtension(CONST extension:string; CONST fallback:T_language=LANG_TXT):T_language;
+  VAR extensionWithoutDot:string;
+      l:T_language;
       s:string;
-      ext:string;
   begin
-    ext:=uppercase(extensionWithoutDot);
+    extensionWithoutDot:=uppercase(replaceAll(extension,'.',''));
     for l in T_language do
-    for s in fileTypeMeta[l].extensions do if ext=s then begin
-      setLanguage(l);
-      exit;
-    end;
-    setLanguage(fallback);
+    for s in fileTypeMeta[l].extensions do if extensionWithoutDot=s then exit(l);
+    result:=fallback;
+  end;
+
+PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
+  begin
+    setLanguage(languageFromExtension(extensionWithoutDot,fallback));
   end;
 
 PROCEDURE T_basicEditorMeta.setCaret(CONST location: T_searchTokenLocation);
