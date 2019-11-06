@@ -29,33 +29,61 @@ end}
 FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
 {$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
-VAR i:longint;
-    valueToAppend:P_literal;
-    iterator:P_expressionLiteral;
-begin
-  if (params<>nil)
-     and (params^.size=2)
-     and (arg0^.literalType=lt_expression)
-     and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
-     and (arg1^.literalType in [lt_smallint,lt_bigint])
-     and (int1^.intValue>=0) then begin
-     if int1^.intValue=0 then exit(newListLiteral());
-     iterator:=P_expressionLiteral(arg0);
-     result:=newListLiteral(int1^.intValue);
-     for i:=1 to int1^.intValue do begin
-       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-       if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
-       then break
-       else listResult^.append(valueToAppend,false);
-     end;
-     exit(result);
+  VAR i:longint;
+      valueToAppend:P_literal;
+      iterator:P_expressionLiteral;
+  begin
+    if (params<>nil)
+       and (params^.size=2)
+       and (arg0^.literalType=lt_expression)
+       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
+       and (arg1^.literalType in [lt_smallint,lt_bigint])
+       and (int1^.intValue>=0) then begin
+       if int1^.intValue=0 then exit(newListLiteral());
+       iterator:=P_expressionLiteral(arg0);
+       result:=newListLiteral(int1^.intValue);
+       for i:=1 to int1^.intValue do begin
+         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+         if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
+         then break
+         else listResult^.append(valueToAppend,false);
+       end;
+       exit(result);
+    end;
+    SUB_LIST_IMPL;
   end;
-  SUB_LIST_IMPL;
-end;
 
 FUNCTION trailing_imp intFuncSignature;
 {$define CALL_MACRO:=trailing}
-SUB_LIST_IMPL;
+  VAR i:longint;
+      valueToAppend:P_literal;
+      iterator:P_expressionLiteral;
+      buffer:T_arrayOfLiteral;
+  begin
+    if (params<>nil)
+       and (params^.size=2)
+       and (arg0^.literalType=lt_expression)
+       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
+       and (arg1^.literalType in [lt_smallint,lt_bigint])
+       and (int1^.intValue>=0) then begin
+       if int1^.intValue=0 then exit(newListLiteral());
+       iterator:=P_expressionLiteral(arg0);
+       setLength(buffer,int1^.intValue);
+       for i:=0 to length(buffer)-1 do buffer[i]:=nil;
+       repeat
+         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+         if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then begin
+           if buffer[0]<>nil then disposeLiteral(buffer[0]);
+           for i:=1 to length(buffer)-1 do buffer[i-1]:=buffer[i];
+           buffer[length(buffer)-1]:=valueToAppend;
+         end;
+       until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
+       result:=newListLiteral(int1^.intValue);
+       for i:=0 to length(buffer)-1 do if buffer[i]<>nil then listResult^.append(buffer[i],false,false);
+       exit(result);
+    end;
+    SUB_LIST_IMPL;
+  end;
 
 FUNCTION tail_imp intFuncSignature;
 {$define CALL_MACRO:=tail}
