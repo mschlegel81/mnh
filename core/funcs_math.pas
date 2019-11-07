@@ -188,6 +188,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
     end;
 
   VAR big:T_bigInt;
+      f:T_myFloat;
   begin
     result:=nil;
     if relevantDigits=0 then begin
@@ -197,8 +198,16 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         lt_error,lt_smallint,lt_bigint: result:=x^.rereferenced;
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then begin
-                   big.fromFloat(P_realLiteral(x)^.value,roundingMode);
-                   result:=newIntLiteral(big);
+                   f:=P_realLiteral(x)^.value;
+                   if (-2147483646.0<f) and (f<2147483646.0)
+                   then case roundingMode of
+                     RM_DEFAULT: result:=newIntLiteral(round  (f));
+                     RM_UP     : result:=newIntLiteral(ceil64 (f));
+                     RM_DOWN   : result:=newIntLiteral(floor64(f));
+                   end else begin
+                     big.fromFloat(P_realLiteral(x)^.value,roundingMode);
+                     result:=newIntLiteral(big);
+                   end;
                  end;
         else raiseNotApplicableError(funcName[roundingMode],x,location,context);
       end;
