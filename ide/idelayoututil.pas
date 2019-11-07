@@ -141,7 +141,8 @@ VAR getFontSize_callback:F_getFontSize=nil;
     htmlExporter:T_htmlExporter;
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
-USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,editorMetaBase,myStringUtil;
+USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
+     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -733,17 +734,35 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
       highlighter:TSynCustomHighlighter;
       content:TStrings;
       i:longint;
+  PROCEDURE initMnhHighlighting;
+    VAR lineData:T_arrayOfString;
+        k:longint;
+        response:P_codeAssistanceResponse;
+    begin
+      setLength(lineData,list0^.size);
+      for k:=0 to length(lineData)-1 do lineData[k]:=P_stringLiteral(list0^.value[k])^.value;
+      response:=
+      doCodeAssistanceSynchronously(newVirtualFileCodeProvider(name,lineData),
+                                    C_EMPTY_STRING_ARRAY,
+                                    recycler,
+                                    nil,nil);
+      highlighter:=TMnhInputSyn.create(nil);
+      response^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
+      disposeCodeAssistanceResponse(response);
+    end;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_emptyList,lt_stringList]) and (arg1^.literalType=lt_string) then begin
       name:=str1^.value;
       language:=languageFromExtension(extractFileExt(name));
-      highlighter:=fileTypeMeta[language].highlighter;
-      if highlighter=nil then exit(newVoidLiteral);
+      if language=LANG_MNH then initMnhHighlighting
+                           else highlighter:=fileTypeMeta[language].highlighter;
       content:=TStringList.create;
       for i:=0 to list0^.size-1 do content.append(P_stringLiteral(list0^.value[i])^.value);
       result:=newStringLiteral(htmlExporter.textToHtml(name,content,highlighter));
       FreeAndNil(content);
+      if language=LANG_MNH then FreeAndNil(highlighter);
     end;
   end;
 
@@ -754,6 +773,6 @@ INITIALIZATION
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
   registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',sfr_needs_gui);
-  registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary,'formatHtmlPage();//formats naive html');
+  registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary,'formatHtmlPage(lines:StringList,filename:String);//formats naive html');
 end.
 
