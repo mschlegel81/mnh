@@ -62,6 +62,7 @@ PROCEDURE initAskForm;
 FUNCTION ask_impl intFuncSignature;
 VAR askForm:TaskForm;
 IMPLEMENTATION
+USES consoleAsk;
 VAR cs:TRTLCriticalSection;
 
 {$R *.lfm}
@@ -219,6 +220,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
 
 PROCEDURE initAskForm;
   begin
+    consoleAskWasReplaced;
     askForm:=TaskForm.create(nil);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@askDialog.ask_impl);
     initialize(cs);

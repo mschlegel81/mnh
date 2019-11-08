@@ -21,11 +21,23 @@ begin
   result:=nil;
   if (params<>nil) and (params^.size>=1) then begin
     if arg0^.literalType in C_listTypes then begin
-      if      (params^.size=1) then result:=list0^.CALL_MACRO
+      if      (params^.size=1)                                                    then result:=list0^.CALL_MACRO
       else if (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then result:=list0^.CALL_MACRO(int1^.intValue);
+    end else if arg0^.literalType in C_compoundTypes then begin
+      tempList:=compound0^.toList;
+      if      (params^.size=1)                                                    then result:=tempList^.CALL_MACRO
+      else if (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then result:=tempList^.CALL_MACRO(int1^.intValue);
+      disposeLiteral(tempList);
     end else if arg0^.literalType in C_scalarTypes then SCALAR_FALLBACK;
   end;
 end}
+{$define IS_GENERATOR_CASE:=
+           (params<>nil)
+       and (params^.size=2)
+       and (arg0^.literalType=lt_expression)
+       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
+       and (arg1^.literalType in [lt_smallint,lt_bigint])
+       and (int1^.intValue>=0)}
 
 FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
@@ -33,13 +45,9 @@ FUNCTION head_imp intFuncSignature;
   VAR i:longint;
       valueToAppend:P_literal;
       iterator:P_expressionLiteral;
+      tempList:P_listLiteral;
   begin
-    if (params<>nil)
-       and (params^.size=2)
-       and (arg0^.literalType=lt_expression)
-       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
-       and (arg1^.literalType in [lt_smallint,lt_bigint])
-       and (int1^.intValue>=0) then begin
+    if IS_GENERATOR_CASE then begin
        if int1^.intValue=0 then exit(newListLiteral());
        iterator:=P_expressionLiteral(arg0);
        result:=newListLiteral(int1^.intValue);
@@ -60,13 +68,9 @@ FUNCTION trailing_imp intFuncSignature;
       valueToAppend:P_literal;
       iterator:P_expressionLiteral;
       buffer:T_arrayOfLiteral;
+      tempList:P_listLiteral;
   begin
-    if (params<>nil)
-       and (params^.size=2)
-       and (arg0^.literalType=lt_expression)
-       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
-       and (arg1^.literalType in [lt_smallint,lt_bigint])
-       and (int1^.intValue>=0) then begin
+    if IS_GENERATOR_CASE then begin
        if int1^.intValue=0 then exit(newListLiteral());
        iterator:=P_expressionLiteral(arg0);
        setLength(buffer,int1^.intValue);
@@ -89,11 +93,39 @@ FUNCTION trailing_imp intFuncSignature;
 FUNCTION tail_imp intFuncSignature;
 {$define CALL_MACRO:=tail}
 {$define SCALAR_FALLBACK:=result:=newListLiteral}
-SUB_LIST_IMPL;
+  VAR valueToAppend:P_literal;
+      tempList:P_listLiteral;
+  begin
+    if IS_GENERATOR_CASE then begin
+       tempList:=newListLiteral();
+       repeat
+         valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+         if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then tempList^.append(valueToAppend,false);
+       until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
+       result:=tempList^.tail(int1^.intValue);
+       disposeLiteral(tempList);
+       exit(result);
+    end;
+    SUB_LIST_IMPL;
+  end;
 
 FUNCTION leading_imp intFuncSignature;
 {$define CALL_MACRO:=leading}
-SUB_LIST_IMPL;
+  VAR valueToAppend:P_literal;
+      tempList:P_listLiteral;
+  begin
+    if IS_GENERATOR_CASE then begin
+       tempList:=newListLiteral();
+       repeat
+         valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+         if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then tempList^.append(valueToAppend,false);
+       until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
+       result:=tempList^.leading(int1^.intValue);
+       disposeLiteral(tempList);
+       exit(result);
+    end;
+    SUB_LIST_IMPL;
+  end;
 
 {$undef SUB_LIST_IMPL}
 {$undef CALL_MACRO}

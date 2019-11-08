@@ -364,7 +364,7 @@ FUNCTION filter_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       case arg0^.literalType of
-        lt_list..lt_map: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
+        lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
@@ -378,7 +378,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
     if not(tco_spawnWorker in context.threadOptions) or (context.callDepth>STACK_DEPTH_LIMIT-16) or not(isMemoryInComfortZone) then exit(filter_imp(params,tokenLocation,context,recycler));
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       case arg0^.literalType of
-        lt_list..lt_map: result:=processFilterParallel(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
+        lt_list..lt_emptyMap: result:=processFilterParallel(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
