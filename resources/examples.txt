@@ -310,17 +310,32 @@ head(['A'..'Z']);
 
 head(['A'..'Z'],3);
 
+//#head
+['A'..'Z'].toSet.head(3);
+
 tail(['A'..'Z']);
 
 tail(['A'..'Z'],3);
+
+//#tail
+rangeGenerator(1,10).tail(3);
 
 leading(['A'..'Z']);
 
 leading(['A'..'Z'],3);
 
+//#leading
+rangeGenerator(1,10).leading(3);
+
 trailing(['A'..'Z']);
 
 trailing(['A'..'Z'],3);
+
+//#trailing
+['A'..'Z'].toSet.trailing(3);
+
+//#trailing
+rangeGenerator(1,10).trailing(3);
 
 //Odd squares
 minus([1..10]^2,2*[0..50])
