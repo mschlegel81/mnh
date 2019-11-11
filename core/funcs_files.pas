@@ -276,15 +276,11 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
             n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
             doTee;
           end;
-          if tempProcess.output.NumBytesAvailable>0 then repeat
-            if (tempProcess.output.NumBytesAvailable>0)
-            then n:=tempProcess.output.read(ReadBuffer,READ_BYTES)
-            else n:=0;
-            if n>0 then begin
-              memStream.write(ReadBuffer, n);
-              doTee;
-            end;
-          until (n<=0) or not(context.messages^.continueEvaluation)
+          if tempProcess.output.NumBytesAvailable>0 then
+          while (tempProcess.output.NumBytesAvailable>0) and (context.continueEvaluation) do begin
+            n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+            if n>0 then begin memStream.write(ReadBuffer, n); doTee; end;
+          end
           else begin
             n:=0;
             inc(sleepTime);
@@ -297,15 +293,14 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
           {$endif}
           tempProcess.Terminate(999);
         end;
-        repeat
-          if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
-            n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
-            doTee;
-          end;
-          n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+        if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+          n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
           doTee;
-          memStream.write(ReadBuffer, n);
-        until n<=0;
+        end;
+        while (tempProcess.output.NumBytesAvailable>0) and (context.continueEvaluation) do begin
+          n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+          if n>0 then begin memStream.write(ReadBuffer, n); doTee; end;
+        end;
         result := tempProcess.ExitCode;
         if tempProcess.running then begin
           {$ifdef debugMode}

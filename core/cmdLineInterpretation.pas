@@ -46,9 +46,6 @@ PROCEDURE pauseOnce;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_messagesDistributor;
       memCheckerStarted:boolean=false;
-      {$ifdef UNIX}
-      hasAnyMnhParameter:boolean=false;
-      {$endif}
 
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
