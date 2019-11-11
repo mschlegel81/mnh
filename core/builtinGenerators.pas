@@ -490,7 +490,8 @@ PROCEDURE T_futureMapGenerator.enqueueNext(CONST location: T_tokenLocation; CONS
     end;
     if (P_context(context)^.messages^.continueEvaluation) then begin
       taskParameters:=newListLiteral(1);
-      taskParameters^.append(nextUnmapped,false);
+      if not(isNullary) then taskParameters^.append(nextUnmapped,false)
+                        else disposeLiteral(nextUnmapped);
       new(task,create(mapExpression,taskParameters,location));
       task^.rereference;
       enqueueFutureTask(task,P_context(context)^,P_recycler(recycler)^);
