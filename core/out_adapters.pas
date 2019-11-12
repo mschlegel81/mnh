@@ -254,23 +254,22 @@ TYPE
   end;
 
 CONST
-  C_defaultOutputBehavior_interactive:T_messageTypeSet=[mt_clearConsole,
-    mt_printline,
-    mt_printdirect,
-    mt_echo_input,
-    mt_echo_declaration,
-    mt_echo_output,
-    mt_echo_continued,
-    mt_el3_evalError..high(T_messageTypeSet)];
-
-  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation];
+  C_defaultOutputBehavior:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation];
   C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
+  messageSubset_user    :T_messageTypeSet=[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
+  messageSubset_print   :T_messageTypeSet=[mt_printline,mt_printdirect,mt_clearConsole];
+  messageSubset_echo    :T_messageTypeSet=[mt_echo_input,mt_echo_declaration,mt_echo_output];
+  messageSubset_timing  :T_messageTypeSet=[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
+  messageSubset_notes   :T_messageTypeSet=[mt_el1_note,mt_el1_userNote];
+  messageSubset_warnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning];
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
 VAR
   defaultOutputBehavior:T_messageTypeSet;
 {$ifndef fullVersion}CONST{$endif}
   gui_started:(NO,ide,REEVALUATION)=NO;
 OPERATOR :=(s:string):T_messageTypeSet;
+FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
 USES  myStringUtil;
 VAR globalAdaptersCs:TRTLCriticalSection;
@@ -306,39 +305,80 @@ PROCEDURE ensureFileFlushThread;
   end;
 
 OPERATOR :=(s:string):T_messageTypeSet;
+  begin
+    result:=stringToMessageTypeSet(s,defaultOutputBehavior);
+  end;
+
+FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
   VAR i,level:longint;
       mt:T_messageType;
   begin
-    result:=defaultOutputBehavior;
+    result:=toOverride;
     for i:=1 to length(s) do case s[i] of
       'v': result:=C_collectAllOutputBehavior;
       'V': result:=[];
-      'u': result:=result+[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
-      'U': result:=result-[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
-      'p': result:=result+[mt_printline,mt_printdirect,mt_clearConsole];
-      'P': result:=result-[mt_printline,mt_printdirect,mt_clearConsole];
+      'u': result:=result+messageSubset_user;
+      'U': result:=result-messageSubset_user;
+      'p': result:=result+messageSubset_print;
+      'P': result:=result-messageSubset_print;
+      'e': result:=result+messageSubset_echo;
+      'E': result:=result-messageSubset_echo;
+      't': result:=result+messageSubset_timing;
+      'T': result:=result-messageSubset_timing;
+      'n': result:=result+messageSubset_notes;
+      'N': result:=result-messageSubset_notes;
+      'w': result:=result+messageSubset_warnings;
+      'W': result:=result-messageSubset_warnings;
       'i': result:=result+[mt_echo_input];
       'I': result:=result-[mt_echo_input];
       'd': result:=result+[mt_echo_declaration];
       'D': result:=result-[mt_echo_declaration];
       'o': result:=result+[mt_echo_output];
       'O': result:=result-[mt_echo_output];
-      't': result:=result+[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
-      'T': result:=result-[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
-      'e': result:=result+[mt_echo_input,mt_echo_declaration,mt_echo_output];
-      'E': result:=result-[mt_echo_input,mt_echo_declaration,mt_echo_output];
-      'n': result:=result+[mt_el1_note,mt_el1_userNote];
-      'N': result:=result-[mt_el1_note,mt_el1_userNote];
-      'w': result:=result+[mt_el2_warning,mt_el2_userWarning];
-      'W': result:=result-[mt_el2_warning,mt_el2_userWarning];
       '1'..'4': begin
         level:=strToInt(s[i]);
         for mt:=low(T_messageType) to high(T_messageType) do if C_messageTypeMeta[mt].level>0 then begin
-          if C_messageTypeMeta[mt].level>=level then result:=result+[mt]
-                                                else result:=result-[mt];
+          if C_messageTypeMeta[mt].level>=level then result+=[mt]
+                                                else result-=[mt];
         end;
       end;
     end;
+  end;
+
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet):string;
+  VAR toSwitchOn :T_messageTypeSet=[];
+      toSwitchOff:T_messageTypeSet=[];
+      mt:T_messageType;
+      minLevel:longint=5;
+  begin
+    if s=C_collectAllOutputBehavior then exit('v');
+    if s=[] then exit('V');
+    if s=toOverride then exit('');
+    for mt in T_messageType do begin
+      if (mt in s) and not(mt in toOverride) then include(toSwitchOn ,mt);
+      if not(mt in s) and (mt in toOverride) then include(toSwitchOff,mt);
+    end;
+    result:='';
+    if toSwitchOn *messageSubset_user    =messageSubset_user     then begin toSwitchOn -=messageSubset_user;          result+='u'; end;
+    if toSwitchOff*messageSubset_user    =messageSubset_user     then begin toSwitchOff-=messageSubset_user;          result+='U'; end;
+    if toSwitchOn *messageSubset_print   =messageSubset_print    then begin toSwitchOn -=messageSubset_print;         result+='p'; end;
+    if toSwitchOff*messageSubset_print   =messageSubset_print    then begin toSwitchOff-=messageSubset_print;         result+='P'; end;
+    if toSwitchOn *messageSubset_echo    =messageSubset_echo     then begin toSwitchOn -=messageSubset_echo;          result+='e'; end;
+    if toSwitchOff*messageSubset_echo    =messageSubset_echo     then begin toSwitchOff-=messageSubset_echo;          result+='E'; end;
+    if toSwitchOn *messageSubset_timing  =messageSubset_timing   then begin toSwitchOn -=messageSubset_timing;        result+='t'; end;
+    if toSwitchOff*messageSubset_timing  =messageSubset_timing   then begin toSwitchOff-=messageSubset_timing;        result+='T'; end;
+    if toSwitchOn *messageSubset_notes   =messageSubset_notes    then begin toSwitchOn -=messageSubset_notes;         result+='n'; end;
+    if toSwitchOff*messageSubset_notes   =messageSubset_notes    then begin toSwitchOff-=messageSubset_notes;         result+='N'; end;
+    if toSwitchOn *messageSubset_warnings=messageSubset_warnings then begin toSwitchOn -=messageSubset_warnings;      result+='w'; end;
+    if toSwitchOff*messageSubset_warnings=messageSubset_warnings then begin toSwitchOff-=messageSubset_warnings;      result+='W'; end;
+    if mt_echo_input       in toSwitchOn                         then begin Exclude(toSwitchOn ,mt_echo_input);       result+='i'; end;
+    if mt_echo_input       in toSwitchOff                        then begin Exclude(toSwitchOff,mt_echo_input);       result+='I'; end;
+    if mt_echo_declaration in toSwitchOn                         then begin Exclude(toSwitchOn ,mt_echo_declaration); result+='d'; end;
+    if mt_echo_declaration in toSwitchOff                        then begin Exclude(toSwitchOff,mt_echo_declaration); result+='D'; end;
+    if mt_echo_output      in toSwitchOn                         then begin Exclude(toSwitchOn ,mt_echo_output);      result+='o'; end;
+    if mt_echo_output      in toSwitchOff                        then begin Exclude(toSwitchOff,mt_echo_output);      result+='O'; end;
+    for mt in toSwitchOn do if (C_messageTypeMeta[mt].level>0) and (C_messageTypeMeta[mt].level<minLevel) then minLevel:=C_messageTypeMeta[mt].level;
+    if minLevel<5 then result+=intToStr(minLevel);
   end;
 
 {$ifdef fullVersion}
@@ -1116,7 +1156,7 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //=========================================================:T_textFileOutAdapter
 
 INITIALIZATION
-  defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  defaultOutputBehavior:=C_defaultOutputBehavior;
   initialize(globalAdaptersCs);
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);

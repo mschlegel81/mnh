@@ -33,7 +33,7 @@ VAR
   reevaluationForm: TreevaluationForm;
 
 IMPLEMENTATION
-USES cmdLineInterpretation;
+USES cmdLineInterpretation,mnh_settings;
 {$R *.lfm}
 PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
@@ -111,8 +111,7 @@ PROCEDURE TreevaluationForm.miStopClick(Sender: TObject);
   VAR timeout:double;
   begin
     timer.enabled:=false;
-    commandLine.pauseAtEnd  :=false;
-    commandLine.pauseOnError:=false;
+    commandLine.mnhExecutionOptions.flags:=commandLine.mnhExecutionOptions.flags-[clf_PAUSE_ALWAYS,clf_PAUSE_ON_ERR];
     runner.postHalt;
     timeout:=now+oneSecond;
     while runner.isRunning and (now<timeout) do sleep(1);

@@ -4,10 +4,6 @@ T_runnerModel=object(T_serializable)
     evaluation:T_standardEvaluation;
     scriptEval:T_ideScriptEvaluation;
 
-    lastStart:record
-      mainCall:boolean;
-      parameters:string;
-    end;
     debugLine:record
       editor:TSynEdit;
       line:longint;
@@ -17,11 +13,12 @@ T_runnerModel=object(T_serializable)
     PROCEDURE setDebugMode(CONST value:boolean);
     FUNCTION executionDir(CONST provider:P_editorMeta):string;
   public
-    externalRunOptions:record
-      flags:set of T_cmdLineFlag;
-      callLightFlavour:boolean;
-      verbosity,customFolder:ansistring;
+    persistentRunOptions:record
+      preferShebang:boolean;
+      mnhExecutionOptions: T_mnhExecutionOptions;
+      customFolder:ansistring;
     end;
+    externalRun:T_commandLineParameters;
     stackTracing:boolean;
     profiling:boolean;
     CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
@@ -31,9 +28,8 @@ T_runnerModel=object(T_serializable)
     FUNCTION isMainEvaluationPaused:boolean;
     FUNCTION canRunMain:boolean;
     FUNCTION canRunScript:boolean;
-    PROCEDURE customRun(CONST mainCall:boolean; CONST mainParameters:string='');
-    PROCEDURE runExternally(CONST mainParameters:string='');
-    PROCEDURE rerun();
+    PROCEDURE customRun(CONST mainCall:boolean);
+    PROCEDURE runExternally();
     PROCEDURE ensureEditScripts;
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
@@ -60,17 +56,17 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
 
 FUNCTION T_runnerModel.executionDir(CONST provider:P_editorMeta):string;
   begin
-    if externalRunOptions.customFolder=''
+    if persistentRunOptions.customFolder=''
     then result:=provider^.getFolder
-    else result:=externalRunOptions.customFolder;
+    else result:=persistentRunOptions.customFolder;
   end;
 
 CONSTRUCTOR T_runnerModel.create(CONST mainForm:T_mnhIdeForm);
   begin
     debugMode_:=false;
     stackTracing:=false;
-    with lastStart do begin mainCall:=false; parameters:=''; end;
-
+    persistentRunOptions.mnhExecutionOptions.create;
+    externalRun.clear;
     evaluation.create(mainForm);
     scriptEval.create(mainForm);
   end;
@@ -104,7 +100,7 @@ FUNCTION T_runnerModel.canRunScript:boolean;
     result:=not(scriptEval.isRunning);
   end;
 
-PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters: string);
+PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean);
   VAR contextType:T_evaluationContextType;
   begin
     if not(canRunMain) then exit;
@@ -123,35 +119,17 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean; CONST mainParameters:
     end;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     evaluation.getStdOut^.outputBehavior:=guiOutAdapters.outputBehavior;
-    if mainCall then evaluation.callMain(newFixatedFileProxy(workspace.currentEditor^.getPath),mainParameters,contextType,executionDir(workspace.currentEditor))
-                else evaluation.evaluate(newFixatedFileProxy(workspace.currentEditor^.getPath),               contextType,executionDir(workspace.currentEditor));
-    lastStart.mainCall:=mainCall;
-    lastStart.parameters:=mainParameters;
+    if mainCall then evaluation.callMain(newFixatedFileProxy(workspace.currentEditor^.getPath),externalRun.mainParameters,contextType,executionDir(workspace.currentEditor))
+                else evaluation.evaluate(newFixatedFileProxy(workspace.currentEditor^.getPath),                           contextType,executionDir(workspace.currentEditor));
   end;
 
-PROCEDURE T_runnerModel.runExternally(CONST mainParameters: string);
+PROCEDURE T_runnerModel.runExternally();
   VAR callParameters:T_arrayOfString;
-      flag:T_cmdLineFlag;
-      executor:string='';
       pid:longint;
   begin
-    callParameters:=FLAG_PAUSE_ALWAYS;
-    with externalRunOptions do begin
-      for flag in flags do
-        append(callParameters,FLAG_TEXT[flag]);
-      if verbosity<>'' then append(callParameters,'-v'+verbosity);
-      if callLightFlavour then executor:=settings.lightFlavourLocation
-                          else executor:=paramStr(0);
-    end;
+    callParameters:=externalRun.getCommandLineArgumentsArray;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
-    append(callParameters,workspace.currentEditor^.getPath);
-    append(callParameters,splitCommandLine(trim(mainParameters)));
-    runCommandAsyncOrPipeless(executor,callParameters,true,pid,executionDir(workspace.currentEditor));
-  end;
-
-PROCEDURE T_runnerModel.rerun();
-  begin
-    customRun(lastStart.mainCall,lastStart.parameters);
+    runCommandAsyncOrPipeless(externalRun.mnhExecutionOptions.executor,callParameters,true,pid,executionDir(workspace.currentEditor));
   end;
 
 PROCEDURE T_runnerModel.ensureEditScripts;
@@ -207,7 +185,7 @@ FUNCTION T_runnerModel.getStateLabel:string;
 
 FUNCTION T_runnerModel.getSerialVersion:dword;
   begin
-    result:=123235;
+    result:=123237;
   end;
 
 FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -219,10 +197,9 @@ FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     debugMode_  :=stream.readBoolean();
     stackTracing:=stream.readBoolean();
     profiling   :=stream.readBoolean();
-    with externalRunOptions do begin
-      stream.read(flags,sizeOf(flags));
-      callLightFlavour:=stream.readBoolean;
-      verbosity   :=stream.readAnsiString;
+    with persistentRunOptions do begin
+      preferShebang:=stream.readBoolean;
+      mnhExecutionOptions.loadFromStream(stream);
       customFolder:=stream.readAnsiString;
     end;
     result:=stream.allOkay;
@@ -230,10 +207,8 @@ FUNCTION T_runnerModel.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       debugMode_:=false;
       stackTracing:=false;
       profiling:=false;
-      with externalRunOptions do begin
-        flags:=[];
-        callLightFlavour:=false;
-        verbosity:='';
+      with persistentRunOptions do begin
+        mnhExecutionOptions.clear;
         customFolder:='';
       end;
     end;
@@ -247,10 +222,9 @@ PROCEDURE T_runnerModel.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeBoolean(debugMode_  );
     stream.writeBoolean(stackTracing);
     stream.writeBoolean(profiling   );
-    with externalRunOptions do begin
-      stream.write(flags,sizeOf(flags));
-      stream.writeBoolean   (callLightFlavour);
-      stream.writeAnsiString(verbosity   );
+    with persistentRunOptions do begin
+      stream.writeBoolean(preferShebang);
+      mnhExecutionOptions.saveToStream(stream);
       stream.writeAnsiString(customFolder);
     end;
   end;

@@ -175,12 +175,8 @@ PROCEDURE TDebuggerForm.addCategoryNode(
 
 PROCEDURE TDebuggerForm.tbRunContinueClick(Sender: TObject);
   begin
-    if runnerModel.canRunMain then begin
-      runnerModel.debugMode:=true;
-      mainForm.onDebuggerEvent;
-      runnerModel.rerun();
-    end
-    else if runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil)
+    if runnerModel.canRunMain then exit;
+    if runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil)
     then delegateDebuggerAction(runUntilBreakpoint)
     else delegateDebuggerAction(breakSoonest);
   end;

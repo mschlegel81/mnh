@@ -17,7 +17,6 @@ CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
     imigAdapters:P_abstractOutAdapter=nil;
 
 VAR commandLine:T_commandLineParameters;
-PROCEDURE pauseOnce;
 IMPLEMENTATION
 //GLUE USES: Do not remove!
 USES evaluation,
@@ -35,21 +34,9 @@ USES evaluation,
      consoleAsk,
      basicTypes;
 
-PROCEDURE pauseOnce;
-  begin
-    commandLine.pauseAtEnd:=false;
-    commandLine.pauseOnError:=false;
-    if ExitCode=0 then write('Evaluation finished. Press enter to exit ')
-                  else write('Evaluation finished with exit code ',ExitCode,'. Press enter to exit ');
-    readln;
-  end;
-
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_messagesDistributor;
       memCheckerStarted:boolean=false;
-      {$ifdef UNIX}
-      hasAnyMnhParameter:boolean=false;
-      {$endif}
 
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
@@ -65,23 +52,23 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true);
       consoleAdapters.addOutAdapter(newImigSystemWithoutDisplay,true);
       {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[commandLine.profilingRun]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
-      if commandLine.wantHelpDisplay then begin
+      globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
+      if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
         consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
-        commandLine.wantHelpDisplay:=false;
+        Exclude(commandLine.mnhExecutionOptions.flags,clf_SHOW_HELP);
         globals.destroy;
         recycler.cleanup;
-        if commandLine.pauseAtEnd then pauseOnce;
+        commandLine.pauseIfConfigured(false);
         exit;
       end;
-      if commandLine.headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package^.load(loadMode,globals,recycler,commandLine.mainParameters{$ifdef fullVersion},nil,nil{$endif});
       if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
-        commandLine.reEvaluationWithGUIrequired:=true;
+        include(commandLine.mnhExecutionOptions.flags,clf_GUI);
         globals.destroy;
         recycler.cleanup;
         exit;
@@ -89,7 +76,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       globals.destroy;
       recycler.cleanup;
       consoleAdapters.setExitCode;
-      if commandLine.pauseAtEnd or commandLine.pauseOnError and ((ExitCode<>0) or (consoleAdapters.triggersBeep)) then pauseOnce;
+      commandLine.pauseIfConfigured((ExitCode<>0) or (consoleAdapters.triggersBeep));
     end;
 
   PROCEDURE executeCommand;
@@ -110,32 +97,31 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     consoleAdapters.createDistributor();
     commandLine.initFromCommandLine;
 
-    if commandLine.fileOrCommandToInterpret=''
-    then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
-    else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-    if commandLine.verbosityString<>DEF_VERBOSITY_STRING then begin
-      if commandLine.verbosityString='' then commandLine.verbosityString:='v';
-      defaultOutputBehavior:=commandLine.verbosityString;
+    defaultOutputBehavior:=C_defaultOutputBehavior;
+    if commandLine.mnhExecutionOptions.verbosityString<>DEF_VERBOSITY_STRING then begin
+      if commandLine.mnhExecutionOptions.verbosityString='' then commandLine.mnhExecutionOptions.verbosityString:='v';
+      defaultOutputBehavior:=commandLine.mnhExecutionOptions.verbosityString;
     end;
     {$ifdef fullVersion}
-    if commandLine.profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_profile_call_info];
+    if (clf_PROFILE in commandLine.mnhExecutionOptions.flags) then defaultOutputBehavior:=defaultOutputBehavior+[mt_profile_call_info];
     {$endif}
     //-----------------------------------------------------
     if commandLine.applyAndReturnOk(@consoleAdapters) then begin
-      if (commandLine.fileOrCommandToInterpret<>'') and not(commandLine.reEvaluationWithGUIrequired) then begin
+      if (commandLine.fileOrCommandToInterpret<>'') and not(clf_GUI in commandLine.mnhExecutionOptions.flags) then begin
          startMemChecker(settings.memoryLimit);
          memCheckerStarted:=true;
-         if commandLine.directExecutionMode then executeCommand
-                                            else executeScript;
+         if commandLine.mnhExecutionOptions.executeCommand
+         then executeCommand
+         else executeScript;
          quitImmediate:=true;
       end;
-      if commandLine.wantHelpDisplay then begin
+      if (clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags) then begin
         displayHelp(@consoleAdapters);
         quitImmediate:=true;
       end;
       quitImmediate:=quitImmediate
         {$ifdef fullVersion}and (length(commandLine.filesToOpenInEditor)=0) {$endif}
-        and not(commandLine.reEvaluationWithGUIrequired);
+        and not(clf_GUI in commandLine.mnhExecutionOptions.flags);
       result:=not(quitImmediate);
       if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
     end else result:=false;

@@ -240,6 +240,7 @@ OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 PROCEDURE disposeMessage(VAR message:P_storedMessage);
 PROCEDURE disposeMessage_(message:P_storedMessage);
 FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
+FUNCTION messageTypeName(CONST m:T_messageType):string;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
@@ -420,6 +421,17 @@ FUNCTION T_storedMessage.messageText: T_arrayOfString;
     result:=C_EMPTY_STRING_ARRAY;
   end;
 
+VAR messageTypeNames:array[T_messageType] of string;
+
+FUNCTION messageTypeName(CONST m:T_messageType):string;
+  VAR mt:T_messageType;
+  begin
+    if messageTypeNames[mt_printline]='' then begin
+      for mt in T_messageType do messageTypeNames[mt]:=copy(getEnumName(TypeInfo(mt),ord(mt)),4,1000);
+    end;
+    result:=messageTypeNames[m];
+  end;
+
 FUNCTION T_storedMessage.getMessageTypeName:string;
   begin
     result:= copy(getEnumName(TypeInfo(kind),ord(kind)),4,1000);
@@ -434,5 +446,8 @@ FUNCTION T_errorMessage.messageText: T_arrayOfString;
   begin
     result:=txt;
   end;
+
+INITIALIZATION
+  messageTypeNames[mt_printline]:='';
 
 end.

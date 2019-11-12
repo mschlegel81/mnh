@@ -361,8 +361,9 @@ PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBa
   VAR fileName:string;
       fileContent:string;
       functionCallInfos:P_functionCallInfos;
-      clp:T_commandLineParameters;
+      clp:T_mnhExecutionOptions;
   begin
+    clp.create;
     fileName:=baseDir+DEFAULT_FILES[index,0];
     if not(fileExists(fileName)) or overwriteExisting then begin
       fileContent:=decompressString(base92Decode(DEFAULT_FILES[index,1]));
@@ -373,6 +374,7 @@ PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBa
         new(functionCallInfos,create);
         package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
         if package.isExecutable then begin
+          clp.clear;
           clp.initFromShebang('',functionCallInfos^.getBuiltinRestrictions);
           fileContent:=clp.getShebang+C_lineBreakChar+fileContent;
           writeFile(fileName,fileContent);
