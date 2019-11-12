@@ -69,7 +69,7 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   begin
     meta:=workspace.currentEditor;
     scriptName:=meta^.pseudoName();
-    if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
+    if (meta=nil) or (meta^.language<>LANG_MNH) then exit(false);
     if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
     myCustomRunForm.caption:=formCaption[externalRun];
     if externalRun then begin

@@ -36,6 +36,7 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clear;
+    FUNCTION getSerialVersion:dword; virtual;
     FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
     PROCEDURE copyFrom(CONST other:T_mnhExecutionOptions);
@@ -166,6 +167,9 @@ PROCEDURE T_mnhExecutionOptions.clear;
     if (executor='') or not(fileExists(executor))
     then executor:=settings.lightFlavourLocation;
   end;
+
+FUNCTION T_mnhExecutionOptions.getSerialVersion:dword;
+  begin result:=23413; end;
 
 FUNCTION T_mnhExecutionOptions.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   begin

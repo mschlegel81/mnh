@@ -49,7 +49,7 @@ TYPE
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 IMPLEMENTATION
-USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase,myStringUtil;
+USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase;
 {$R *.lfm}
 VAR ShebangWizard:TShebangWizard=nil;
 
