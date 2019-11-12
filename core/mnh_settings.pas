@@ -10,8 +10,17 @@ CONST
 
 TYPE
 T_controlType=(ctEditor,ctTable,ctGeneral,ctPlot,ctNoneOrUnknown);
-T_cmdLineFlag=(clf_GUI,clf_QUIET,clf_SILENT,clf_HEADLESS,clf_PROFILE,clf_PAUSEALWAYS);
-
+T_cmdLineFlag=(clf_GUI         ,
+               clf_QUIET       ,
+               clf_SILENT      ,
+               clf_HEADLESS    ,
+               clf_PAUSE_ON_ERR,
+               clf_PAUSE_ALWAYS,
+               clf_PROFILE     ,
+               clf_SHOW_HELP   ,
+               clf_EXEC_CMD    ,
+               clf_SHOW_INFO);
+T_cmdLineFlags=set of T_cmdLineFlag;
 P_Settings=^T_settings;
 T_settings=object(T_serializable)
   //Global:

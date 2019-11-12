@@ -15,6 +15,7 @@ USES
   ipcModel, mnh_doc,
   askDialog,funcs,mnh_constants, evaluation,
   mySys,
+  mnh_settings,
   saveFile; //needed for proper initialization
 
 {$R *.res}
@@ -29,7 +30,7 @@ begin
     hideConsole;
     {$endif}
     initAskForm;
-    if commandLine.reEvaluationWithGUIrequired
+    if clf_GUI in commandLine.mnhExecutionOptions.flags
     then Application.CreateForm(TreevaluationForm,reevaluationForm)
     else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
     then halt
@@ -37,7 +38,7 @@ begin
     Application.run;
     memoryCleaner.stop;
     showConsole;
-    if commandLine.pauseAtEnd or commandLine.pauseOnError then pauseOnce;
+    commandLine.pauseIfConfigured(ExitCode<>0);
   end;
 end.
 

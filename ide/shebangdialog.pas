@@ -54,25 +54,12 @@ USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editor
 VAR ShebangWizard:TShebangWizard=nil;
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
-  VAR clp:T_commandLineParameters;
-      requires:T_specialFunctionRequirements;
-      hadShebang:boolean=false;
-      isExecutable:boolean;
-      assistanceData:P_codeAssistanceResponse;
+  VAR clp:T_mnhExecutionOptions;
+      hadShebang,isExecutable:boolean;
       fileName,options:string;
   begin
     if meta^.language<>LANG_MNH then exit;
-
-    assistanceData:=meta^.getCodeAssistanceDataRereferenced;
-    if assistanceData=nil then exit;
-    requires:=assistanceData^.getBuiltinRestrictions;
-    isExecutable:=assistanceData^.isExecutablePackage;
-    disposeCodeAssistanceResponse(assistanceData);
-
-    if (meta^.editor.lines.count>0) and (startsWith(meta^.editor.lines[0],'#!')) then begin
-      clp.initFromShebang(meta^.editor.lines[0],requires);
-      hadShebang:=true;
-    end else clp.clear;
+    clp:=meta^.getParametersFromShebang(hadShebang,isExecutable);
 
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
@@ -81,12 +68,12 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
       lightVersionRb.checked:=(clp.executor=settings.lightFlavourLocation);
       fullVersionRb .checked:=not(lightVersionRb.checked);
 
-      guiFlagCb.checked:=clp.reEvaluationWithGUIrequired;
-      silentFlagCb.checked:=clp.suppressBeep;
-      quietFlagCb.checked:=not(clp.wantConsoleAdapter);
-      headlessFlagCb.checked:=clp.headless;
-      pauseFlagCb.checked:=clp.pauseAtEnd;
-      pauseOnErrorCb.checked:=clp.pauseOnError;
+      guiFlagCb     .checked:=clf_GUI in clp.flags;
+      silentFlagCb  .checked:=clf_SILENT in clp.flags;
+      quietFlagCb   .checked:=clf_QUIET in clp.flags;
+      headlessFlagCb.checked:=clf_HEADLESS in clp.flags;
+      pauseFlagCb   .checked:=clf_PAUSE_ALWAYS in clp.flags;
+      pauseOnErrorCb.checked:=clf_PAUSE_ON_ERR in clp.flags;
 
       verbosityCombo.text:=clp.verbosityString;
 
@@ -113,12 +100,12 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
         if lightVersionRb.checked
         then clp.executor:=settings.lightFlavourLocation
         else clp.executor:=settings.fullFlavourLocation;
-        clp.reEvaluationWithGUIrequired:=guiFlagCb.checked;
-        clp.suppressBeep:=silentFlagCb.checked;
-        clp.wantConsoleAdapter:=not(quietFlagCb.checked);
-        clp.headless:=headlessFlagCb.checked;
-        clp.pauseAtEnd:=pauseFlagCb.checked;
-        clp.pauseOnError:=pauseOnErrorCb.checked;
+        if guiFlagCb     .checked then include(clp.flags,clf_GUI) else Exclude(clp.flags,clf_GUI);
+        if silentFlagCb  .checked then include(clp.flags,clf_SILENT) else Exclude(clp.flags,clf_SILENT);
+        if quietFlagCb   .checked then include(clp.flags,clf_QUIET) else Exclude(clp.flags,clf_QUIET);
+        if headlessFlagCb.checked then include(clp.flags,clf_HEADLESS) else Exclude(clp.flags,clf_HEADLESS);
+        if pauseFlagCb   .checked then include(clp.flags,clf_PAUSE_ALWAYS) else Exclude(clp.flags,clf_PAUSE_ALWAYS);
+        if pauseOnErrorCb.checked then include(clp.flags,clf_PAUSE_ON_ERR) else Exclude(clp.flags,clf_PAUSE_ON_ERR);
         clp.verbosityString:=verbosityCombo.text;
         if doLogCheckbox.checked then begin
           setLength(clp.deferredAdapterCreations,1);

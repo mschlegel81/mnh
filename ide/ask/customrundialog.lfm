@@ -1,7 +1,7 @@
 object CustomRunForm: TCustomRunForm
-  Left = 637
+  Left = 913
   Height = 380
-  Top = 191
+  Top = 150
   Width = 402
   AutoSize = True
   Caption = 'Run externally'
@@ -42,13 +42,13 @@ object CustomRunForm: TCustomRunForm
   end
   object GroupBox2: TGroupBox
     AnchorSideLeft.Control = GroupBox1
-    AnchorSideTop.Control = GroupBox1
+    AnchorSideTop.Control = flagsByShebangCb
     AnchorSideTop.Side = asrBottom
     AnchorSideBottom.Control = GroupBox4
     AnchorSideBottom.Side = asrBottom
     Left = 0
     Height = 173
-    Top = 53
+    Top = 77
     Width = 131
     Align = alCustom
     Anchors = [akTop, akLeft, akBottom]
@@ -92,7 +92,7 @@ object CustomRunForm: TCustomRunForm
     AnchorSideBottom.Side = asrBottom
     Left = 0
     Height = 101
-    Top = 226
+    Top = 250
     Width = 402
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
@@ -145,13 +145,13 @@ object CustomRunForm: TCustomRunForm
   object GroupBox4: TGroupBox
     AnchorSideLeft.Control = GroupBox2
     AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = GroupBox1
+    AnchorSideTop.Control = flagsByShebangCb
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 131
     Height = 173
-    Top = 53
+    Top = 77
     Width = 271
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
@@ -253,7 +253,8 @@ object CustomRunForm: TCustomRunForm
     AnchorSideTop.Control = Owner
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = GroupBox4
+    AnchorSideBottom.Control = GroupBox1
+    AnchorSideBottom.Side = asrBottom
     Left = 346
     Height = 53
     Top = 0
@@ -273,7 +274,7 @@ object CustomRunForm: TCustomRunForm
     AnchorSideRight.Side = asrBottom
     Left = 334
     Height = 30
-    Top = 327
+    Top = 351
     Width = 68
     Align = alCustom
     Anchors = [akTop, akRight]
@@ -283,5 +284,19 @@ object CustomRunForm: TCustomRunForm
     ModalResult = 2
     ParentFont = False
     TabOrder = 5
+  end
+  object flagsByShebangCb: TCheckBox
+    AnchorSideLeft.Control = GroupBox1
+    AnchorSideTop.Control = GroupBox1
+    AnchorSideTop.Side = asrBottom
+    Left = 4
+    Height = 24
+    Top = 53
+    Width = 184
+    Align = alCustom
+    BorderSpacing.Left = 4
+    Caption = 'take flags from shebang'
+    OnChange = flagsByShebangCbChange
+    TabOrder = 6
   end
 end

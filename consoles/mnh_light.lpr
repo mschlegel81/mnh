@@ -9,10 +9,9 @@ USES {$ifdef UNIX}cthreads,{$endif}
 
 begin
   if wantMainLoopAfterParseCmdLine then begin
-    if commandLine.reEvaluationWithGUIrequired
+    if clf_GUI in commandLine.flags
     then begin
-      commandLine.pauseAtEnd  :=false;
-      commandLine.pauseOnError:=false;
+      commandLine.flags-=[clf_PAUSE_ALWAYS,clf_PAUSE_ON_ERR];
       if fileExists(settings.fullFlavourLocation)
       then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
       else begin
@@ -23,6 +22,6 @@ begin
     end else displayHelp(nil);
   end;
   memoryCleaner.stop;
-  if commandLine.pauseAtEnd then pauseOnce;
+  if clf_PAUSE_ALWAYS in commandLine.flags then pauseOnce;
 end.
 

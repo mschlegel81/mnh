@@ -29,7 +29,8 @@ USES  //basic classes
   editScripts,
   synOutAdapter,
   menuUtil,
-  mnh_messages;
+  mnh_messages,
+  commandLineParameters;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -79,6 +80,7 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE toggleBreakpoint;
 
     //Assistant related
+    FUNCTION getOptionalAdditionals:T_arrayOfString;
     PROCEDURE triggerCheck;
     PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
@@ -115,6 +117,7 @@ T_editorMeta=object(T_basicEditorMeta)
 
     FUNCTION getCodeAssistanceDataRereferenced:P_codeAssistanceResponse;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
+    FUNCTION getParametersFromShebang(OUT hasShebangLine,isExecutable:boolean):T_mnhExecutionOptions;
 end;
 T_bookmarkIndex=0..9;
 
@@ -132,8 +135,7 @@ VAR safeCallback:F_safeCallback=nil;
 IMPLEMENTATION
 USES renameDialog,
      recyclers,
-     packages,
-     commandLineParameters;
+     packages;
 VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin
@@ -400,16 +402,16 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
     runnerModel.evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
   end;
 
-PROCEDURE T_editorMeta.triggerCheck;
-  FUNCTION optionalAdditionals:T_arrayOfString;
-    begin
-      if (language_=LANG_MNH) and workspace.checkUsingScripts and not(isPseudoFile)
-      then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
-      else result:=C_EMPTY_STRING_ARRAY;
-    end;
-
+FUNCTION T_editorMeta.getOptionalAdditionals:T_arrayOfString;
   begin
-    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()),optionalAdditionals);
+    if (language_=LANG_MNH) and workspace.checkUsingScripts and not(isPseudoFile)
+    then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
+    else result:=C_EMPTY_STRING_ARRAY;
+  end;
+
+PROCEDURE T_editorMeta.triggerCheck;
+  begin
+    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()),getOptionalAdditionals);
   end;
 
 PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
@@ -732,6 +734,31 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.SelectAll;
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
+  end;
+
+FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable:boolean):T_mnhExecutionOptions;
+  VAR assistanceData:P_codeAssistanceResponse;
+      recycler:T_recycler;
+      requires:T_specialFunctionRequirements;
+  begin
+    assistanceData:=getCodeAssistanceDataRereferenced;
+    if assistanceData=nil then begin
+      recycler.initRecycler;
+      assistanceData:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),getOptionalAdditionals,recycler);
+      recycler.cleanup;
+    end;
+    requires:=assistanceData^.getBuiltinRestrictions;
+    isExecutable:=assistanceData^.isExecutablePackage;
+    disposeCodeAssistanceResponse(assistanceData);
+
+    result.create;
+    if (editor.lines.count>0) and (startsWith(editor.lines[0],'#!')) then begin
+      hasShebangLine:=true;
+      result.initFromShebang(editor.lines[0],requires);
+    end else begin
+      hasShebangLine:=false;
+      result.initFromShebang('',requires);
+    end;
   end;
 
 INITIALIZATION

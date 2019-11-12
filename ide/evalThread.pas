@@ -80,7 +80,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
       PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
-      PROCEDURE callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
+      PROCEDURE callMain(CONST provider:P_codeProvider; CONST params: T_arrayOfString; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
       //Debugger support:
       FUNCTION isPaused:boolean;
       FUNCTION stepper:P_debuggingStepper;
@@ -126,7 +126,8 @@ IMPLEMENTATION
 USES mnh_constants,
      tokenArray,
      mySys,
-     profilingView;
+     profilingView,
+     mnh_settings;
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem;      begin new(result,create(caption)); end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
@@ -222,8 +223,8 @@ CONSTRUCTOR T_reevaluationWithGui.create();
   begin
     inherited init(ek_normal);
     commandLine.applyAndReturnOk(@messages,true);
-    if commandLine.wantConsoleAdapter then begin
-      new(console,create(commandLine.verbosityString));
+    if not(clf_QUIET in commandLine.mnhExecutionOptions.flags) then begin
+      new(console,create(commandLine.mnhExecutionOptions.verbosityString));
       messages.addOutAdapter(console,true);
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);
@@ -235,10 +236,10 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
-    if commandLine.profilingRun
+    if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
     then evalRequest.contextType:=ect_profiling
     else evalRequest.contextType:=ect_normal;
-    if commandLine.headless
+    if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags)
     then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
     evalRequest.callMain:=true;
     evalRequest.parameters:=commandLine.mainParameters;
@@ -459,7 +460,7 @@ PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST co
     end;
   end;
 
-PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
+PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; CONST params: T_arrayOfString; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
   begin
     system.enterCriticalSection(evaluationCs);
     if (state in C_runningStates) then begin
@@ -468,7 +469,7 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; params: 
     end;
     try
       evalRequest.contextType:=contextType;
-      evalRequest.parameters:=splitCommandLine(trim(params));
+      evalRequest.parameters:=params;
       evalRequest.callMain:=true;
       evalRequest.folder:=executeInFolder;
       state:=es_pending;

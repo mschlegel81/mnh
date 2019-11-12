@@ -99,6 +99,8 @@ object ShebangWizard: TShebangWizard
       BorderSpacing.Right = 8
       Caption = 'silentFlagCb'
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 3
     end
     object headlessFlagCb: TCheckBox

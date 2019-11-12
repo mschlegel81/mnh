@@ -513,18 +513,16 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
-  VAR mainParam:string;
   begin
     ensureTimerSuspend;
-    if showCustomRunForm(false,mainParam) then runnerModel.customRun(true,mainParam);
+    if showCustomRunForm(false) then runnerModel.customRun(true);
     timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptExternallyClick(Sender: TObject);
-  VAR mainParam:string;
   begin
     ensureTimerSuspend;
-    if showCustomRunForm(true,mainParam) then runnerModel.runExternally(mainParam);
+    if showCustomRunForm(true) then runnerModel.runExternally();
     timer.enabled:=true;
   end;
 
