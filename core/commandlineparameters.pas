@@ -15,9 +15,6 @@ TYPE
                   pst_parsingOutFileAppend,
                   pst_parsingFileToEdit,
                   pst_parsingScriptParameters);
-    {$ifdef UNIX}
-    hasAnyMnhParameter:boolean;
-    {$endif}
     PROCEDURE clear;
     PROCEDURE logCmdLineParsingError(CONST s: string);
   end;
@@ -28,10 +25,7 @@ TYPE
     verbosityString:string;
     flags:set of T_cmdLineFlag;
     executor:string;
-    deferredAdapterCreations:array of record
-      nameAndOption:string;
-      appending:boolean;
-    end;
+    deferredAdapterCreations:array of T_textFileAdapterSpecification;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -142,9 +136,6 @@ PROCEDURE T_parsingState.clear;
   begin
     setLength(cmdLineParsingErrors,0);
     parsingState:=pst_initial;
-    {$ifdef UNIX}
-    hasAnyMnhParameter:=false;
-    {$endif}
   end;
 
 PROCEDURE T_parsingState.logCmdLineParsingError(CONST s: string);
@@ -195,13 +186,26 @@ PROCEDURE T_mnhExecutionOptions.copyFrom(CONST other: T_mnhExecutionOptions);
     executor:=other.executor;
     verbosityString:=other.verbosityString;
     setLength(deferredAdapterCreations,length(other.deferredAdapterCreations));
-    for k:=0 to length(deferredAdapterCreations)-1 do begin
-      deferredAdapterCreations[k].appending    :=other.deferredAdapterCreations[k].appending;
-      deferredAdapterCreations[k].nameAndOption:=other.deferredAdapterCreations[k].nameAndOption;
-    end;
+    for k:=0 to length(deferredAdapterCreations)-1 do
+      deferredAdapterCreations[k].copy(other.deferredAdapterCreations[k]);
   end;
 
 FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR parsingState: T_parsingState): boolean;
+  PROCEDURE addAdapter();
+    VAR specification:T_textFileAdapterSpecification;
+        i:longint;
+        global:T_messageTypeSet;
+    begin
+      global:=stringToMessageTypeSet(verbosityString);
+      specification.forceNewFile:=parsingState.parsingState=pst_parsingOutFileRewrite;
+      specification.setFilenameAndOptions(param,global);
+      for i:=0 to length(deferredAdapterCreations)-1 do
+        if specification.canMergeInto(deferredAdapterCreations[i],global) then exit;
+      i:=length(deferredAdapterCreations);
+      setLength(deferredAdapterCreations,i+1);
+      deferredAdapterCreations[i]:=specification;
+    end;
+
   VAR app:string;
   begin
     result:=false;
@@ -230,11 +234,7 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;  exit(true); end;
       end;
       pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
-        setLength(deferredAdapterCreations,length(deferredAdapterCreations)+1);
-        with deferredAdapterCreations[length(deferredAdapterCreations)-1] do begin
-          appending:=(parsingState.parsingState=pst_parsingOutFileAppend);
-          nameAndOption:=param;
-        end;
+        addAdapter();
         parsingState.parsingState:=pst_initial;
         exit(true);
       end;
@@ -323,10 +323,6 @@ FUNCTION T_mnhExecutionOptions.parseShebangParameters(CONST fileName: string;
   VAR parameters:T_arrayOfString;
       k:longint;
   begin
-    {$ifdef UNIX}
-    //To prevent repeated parsing of the same shebang under Linux/UNIX systems
-    if hasAnyMnhParameter then exit(true);
-    {$endif}
     parameters:=parseShebang(fileName);
     for k:=1 to length(parameters)-1 do
     if not(parseSingleMnhParameter(parameters[k],parsingState)) then begin
@@ -420,9 +416,9 @@ FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
     if verbosityString<>DEF_VERBOSITY_STRING then result+=' -v'+verbosityString;
     for f in flags do result+=' '+FLAG_TEXT[f];
     for k:=0 to length(deferredAdapterCreations)-1 do begin
-      if deferredAdapterCreations[k].appending
-      then result+=' +out '+deferredAdapterCreations[k].nameAndOption
-      else result+=' -out '+deferredAdapterCreations[k].nameAndOption;
+      if deferredAdapterCreations[k].forceNewFile
+      then result+=' -out '+deferredAdapterCreations[k].getFilenameAndOptions
+      else result+=' +out '+deferredAdapterCreations[k].getFilenameAndOptions;
     end;
   end;
 
@@ -434,10 +430,10 @@ FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
     if verbosityString<>DEF_VERBOSITY_STRING then append(result,' -v'+verbosityString);
     for f in flags do append(result, FLAG_TEXT[f]);
     for k:=0 to length(deferredAdapterCreations)-1 do begin
-      if deferredAdapterCreations[k].appending
-      then append(result,'+out')
-      else append(result,'-out');
-      append(result,deferredAdapterCreations[k].nameAndOption);
+      if deferredAdapterCreations[k].forceNewFile
+      then append(result,'-out')
+      else append(result,'+out');
+      append(result,deferredAdapterCreations[k].getFilenameAndOptions);
     end;
   end;
 
@@ -498,6 +494,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
   VAR i:longint;
       scriptFileName:string;
       s:ansistring;
+      consoleMessageTypes:T_messageTypeSet;
   begin
     result:=true;
     if not(initAdaptersForGui) and (clf_SHOW_INFO in mnhExecutionOptions.flags) then begin
@@ -505,12 +502,22 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       exit(false);
     end;
     if (clf_SHOW_HELP in mnhExecutionOptions.flags) or (length(parsingState.cmdLineParsingErrors)>0) then Exclude(mnhExecutionOptions.flags,clf_QUIET);
-    if not(clf_QUIET in mnhExecutionOptions.flags) and not(initAdaptersForGui) then adapters^.addConsoleOutAdapter;
+
+    consoleMessageTypes:=stringToMessageTypeSet(mnhExecutionOptions.verbosityString);
+    if not(clf_QUIET in mnhExecutionOptions.flags) and not(initAdaptersForGui) then begin
+      {$ifdef fullVersion}
+      if (clf_PROFILE in mnhExecutionOptions.flags) then include(consoleMessageTypes,mt_profile_call_info);
+      {$endif}
+      adapters^.addConsoleOutAdapter(consoleMessageTypes);
+    end;
     contexts.suppressBeep:=suppressBeep;
 
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
-    for i:=0 to length(mnhExecutionOptions.deferredAdapterCreations)-1 do with mnhExecutionOptions.deferredAdapterCreations[i] do adapters^.addOutfile(replaceAll(nameAndOption,'?',scriptFileName),appending);
+    for i:=0 to length(mnhExecutionOptions.deferredAdapterCreations)-1 do begin
+      mnhExecutionOptions.deferredAdapterCreations[i].applyScriptName(scriptFileName);
+      adapters^.addOutfile(mnhExecutionOptions.deferredAdapterCreations[i]);
+    end;
 
     if not(initAdaptersForGui) and (length(parsingState.cmdLineParsingErrors)>0) then begin
       if (clf_SHOW_HELP in mnhExecutionOptions.flags) then displayHelp(adapters);
