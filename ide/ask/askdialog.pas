@@ -220,7 +220,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
 
 PROCEDURE initAskForm;
   begin
-    consoleAskWasReplaced;
+    doneConsoleAsk;
     askForm:=TaskForm.create(nil);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@askDialog.ask_impl);
     initialize(cs);
