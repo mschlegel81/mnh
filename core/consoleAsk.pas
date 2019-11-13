@@ -9,15 +9,28 @@ USES sysutils,
      funcs,
      Keyboard;
 
-PROCEDURE consoleAskWasReplaced;
+PROCEDURE doneConsoleAsk;
+PROCEDURE initConsoleAsk;
 IMPLEMENTATION
-PROCEDURE consoleAskWasReplaced;
+VAR keyboardIsUp:boolean=false;
+    cs:TRTLCriticalSection;
+PROCEDURE initConsoleAsk;
   begin
-    DoneKeyboard;;
+    enterCriticalSection(cs);
+    if not(keyboardIsUp) then InitKeyboard;
+    keyboardIsUp:=true;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE doneConsoleAsk;
+  begin
+    enterCriticalSection(cs);
+    if keyboardIsUp then DoneKeyboard;
+    keyboardIsUp:=false;
+    leaveCriticalSection(cs);
   end;
 
 {$i func_defines.inc}
-VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
   begin
     writeln(' ?> ', question);
@@ -85,6 +98,7 @@ FUNCTION ask_impl intFuncSignature;
             (arg0^.literalType = lt_string) and
             (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
+      initConsoleAsk;
       try
         setLength(opt, list1^.size);
         iter:=list1^.iteratableList;
@@ -93,6 +107,7 @@ FUNCTION ask_impl intFuncSignature;
         disposeLiteral(iter);
         result:=newStringLiteral(ask(str0^.value, opt,context.messages));
       finally
+        doneConsoleAsk;
         system.leaveCriticalSection(cs);
       end;
     end;
@@ -101,7 +116,6 @@ FUNCTION ask_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(cs);
-  InitKeyboard;
   registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,ak_variadic_1{$ifdef fullVersion},
                'ask(q:string);//Asks the user question q and returns the user input#'+
                'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option',sfr_asks{$endif});

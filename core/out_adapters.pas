@@ -105,6 +105,20 @@ TYPE
   F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
   {$endif}
 
+  T_textFileAdapterSpecification=object
+    fileName:string;
+    verbosityPart:string;
+    forceNewFile:boolean;
+    private
+      messagesToInclude:T_messageTypeSet;
+    public
+      PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
+      FUNCTION  getFilenameAndOptions:string;
+      FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
+      PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
+      PROCEDURE applyScriptName(CONST scriptName:string);
+  end;
+
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
@@ -185,8 +199,8 @@ TYPE
       FUNCTION triggersBeep:boolean;                                                                                                  virtual;
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
+      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -263,11 +277,8 @@ CONST
   messageSubset_notes   :T_messageTypeSet=[mt_el1_note,mt_el1_userNote];
   messageSubset_warnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning];
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
-VAR
-  defaultOutputBehavior:T_messageTypeSet;
-{$ifndef fullVersion}CONST{$endif}
+{$ifdef fullVersion}VAR{$else}CONST{$endif}
   gui_started:(NO,ide,REEVALUATION)=NO;
-OPERATOR :=(s:string):T_messageTypeSet;
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
@@ -302,11 +313,6 @@ PROCEDURE ensureFileFlushThread;
       beginThread(@fileFlushThread);
     end;
     leaveCriticalSection(globalAdaptersCs);
-  end;
-
-OPERATOR :=(s:string):T_messageTypeSet;
-  begin
-    result:=stringToMessageTypeSet(s,defaultOutputBehavior);
   end;
 
 FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
@@ -353,10 +359,10 @@ FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_mes
   begin
     if s=C_collectAllOutputBehavior then exit('v');
     if s=[] then exit('V');
-    if s=toOverride then exit('');
+    if s=C_defaultOutputBehavior then exit('');
     for mt in T_messageType do begin
-      if (mt in s) and not(mt in toOverride) then include(toSwitchOn ,mt);
-      if not(mt in s) and (mt in toOverride) then include(toSwitchOff,mt);
+      if (mt in s) and not(mt in C_defaultOutputBehavior) then include(toSwitchOn ,mt);
+      if not(mt in s) and (mt in C_defaultOutputBehavior) then include(toSwitchOff,mt);
     end;
     result:='';
     if toSwitchOn *messageSubset_user    =messageSubset_user     then begin toSwitchOn -=messageSubset_user;          result+='u'; end;
@@ -379,6 +385,43 @@ FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_mes
     if mt_echo_output      in toSwitchOff                        then begin Exclude(toSwitchOff,mt_echo_output);      result+='O'; end;
     for mt in toSwitchOn do if (C_messageTypeMeta[mt].level>0) and (C_messageTypeMeta[mt].level<minLevel) then minLevel:=C_messageTypeMeta[mt].level;
     if minLevel<5 then result+=intToStr(minLevel);
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
+  begin
+    splitIntoLogNameAndOption(s,fileName,verbosityPart);
+    messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
+  end;
+
+FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
+  begin
+    result:=fileName+'('+verbosityPart+')';
+  end;
+
+FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
+  begin
+    if SameFileName(fileName,other.fileName) then begin
+      //In conflict, revert to appending mode
+      other.forceNewFile:=other.forceNewFile and forceNewFile;
+      //Unite message types
+      other.messagesToInclude+=messagesToInclude;
+      //Update verbosity
+      other.verbosityPart:=messageTypeSetToString(other.messagesToInclude,globalMessageTypes);
+      result:=true;
+    end else result:=false;
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterSpecification);
+  begin
+    fileName         :=original.fileName         ;
+    verbosityPart    :=original.verbosityPart    ;
+    forceNewFile     :=original.forceNewFile     ;
+    messagesToInclude:=original.messagesToInclude;
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.applyScriptName(CONST scriptName: string);
+  begin
+    fileName:=replaceAll(fileName,'?',scriptName);
   end;
 
 {$ifdef fullVersion}
@@ -737,20 +780,16 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
     end;
   end;
 
-FUNCTION T_messagesDistributor.addOutfile(CONST fileNameAndOptions: ansistring;
-  CONST appendMode: boolean): P_textFileOutAdapter;
-  VAR fileName:string;
-      options:string='';
+FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
   begin
-    splitIntoLogNameAndOption(fileNameAndOptions,fileName,options);
-    new(result,create(fileName,options,not(appendMode)));
+    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile));
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST verbosity: string): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet): P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
-    new(consoleOutAdapter,create(verbosity));
+    new(consoleOutAdapter,create(messageTypesToInclude));
     addOutAdapter(consoleOutAdapter,true);
     result:=consoleOutAdapter;
   end;
@@ -1156,7 +1195,6 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //=========================================================:T_textFileOutAdapter
 
 INITIALIZATION
-  defaultOutputBehavior:=C_defaultOutputBehavior;
   initialize(globalAdaptersCs);
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);

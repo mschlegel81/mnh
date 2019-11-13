@@ -56,7 +56,6 @@ VAR ShebangWizard:TShebangWizard=nil;
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
   VAR clp:T_mnhExecutionOptions;
       hadShebang,isExecutable:boolean;
-      fileName,options:string;
   begin
     if meta^.language<>LANG_MNH then exit;
     clp:=meta^.getParametersFromShebang(hadShebang,isExecutable);
@@ -80,12 +79,11 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
       if length(clp.deferredAdapterCreations)>0 then begin
         doLogCheckbox.checked:=true;
         logAppendCb.enabled:=true;
-        logAppendCb.checked:=clp.deferredAdapterCreations[0].appending;
+        logAppendCb.checked:=not(clp.deferredAdapterCreations[0].forceNewFile);
         logNameEdit.enabled:=true;
-        splitIntoLogNameAndOption(clp.deferredAdapterCreations[0].nameAndOption,fileName,options);
-        logNameEdit.text:=fileName;
+        logNameEdit.text:=clp.deferredAdapterCreations[0].fileName;
         verbosityCombo1.enabled:=true;
-        verbosityCombo1.text:=options;
+        verbosityCombo1.text:=clp.deferredAdapterCreations[0].verbosityPart;
       end else begin
         doLogCheckbox.checked:=false;
         logAppendCb.enabled:=false;
@@ -109,10 +107,9 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
         clp.verbosityString:=verbosityCombo.text;
         if doLogCheckbox.checked then begin
           setLength(clp.deferredAdapterCreations,1);
-          clp.deferredAdapterCreations[0].appending:=logAppendCb.checked;
-          clp.deferredAdapterCreations[0].nameAndOption:=logNameEdit.text;
-          if verbosityCombo1.text<>''
-          then clp.deferredAdapterCreations[0].nameAndOption+='('+verbosityCombo1.text+')';
+          clp.deferredAdapterCreations[0].forceNewFile :=not(logAppendCb.checked);
+          clp.deferredAdapterCreations[0].fileName     :=logNameEdit.text;
+          clp.deferredAdapterCreations[0].verbosityPart:=verbosityCombo1.text;
         end else setLength(clp.deferredAdapterCreations,0);
         if hadShebang
         then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),clp.getShebang+LineEnding)

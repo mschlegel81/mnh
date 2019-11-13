@@ -96,15 +96,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   begin
     consoleAdapters.createDistributor();
     commandLine.initFromCommandLine;
-
-    defaultOutputBehavior:=C_defaultOutputBehavior;
-    if commandLine.mnhExecutionOptions.verbosityString<>DEF_VERBOSITY_STRING then begin
-      if commandLine.mnhExecutionOptions.verbosityString='' then commandLine.mnhExecutionOptions.verbosityString:='v';
-      defaultOutputBehavior:=commandLine.mnhExecutionOptions.verbosityString;
-    end;
-    {$ifdef fullVersion}
-    if (clf_PROFILE in commandLine.mnhExecutionOptions.flags) then defaultOutputBehavior:=defaultOutputBehavior+[mt_profile_call_info];
-    {$endif}
     //-----------------------------------------------------
     if commandLine.applyAndReturnOk(@consoleAdapters) then begin
       if (commandLine.fileOrCommandToInterpret<>'') and not(clf_GUI in commandLine.mnhExecutionOptions.flags) then begin

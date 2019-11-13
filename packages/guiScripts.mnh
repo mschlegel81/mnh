@@ -91,7 +91,6 @@ allFiles(mnhInfo['configDir'],'*.mnh')
 @SuppressUnusedParameterWarning
 demosByFunc(dummyParameter)->
 allFiles(mnhInfo['configDir'],'*.mnh')
-allFiles(mnhInfo['configDir'],'*.mnh')
   .map({$f.inspect.getAll(['path','called builtin','uses'])})
   .map({'@'&$f[0]&':1,1'&(
         $f[2].isList AND $f[2].size>0

@@ -2,7 +2,7 @@
 private memoized memExeInfo(exe,exeFileInfo)->
   exe=executor
   ? mnh.mnhInfo
-  : try({(exe.exec(['-info'],false)[0] orElse '[].toMap').interpret([])},[]);
+  : try({(exe.exec(['-info'],false)[0] orElse '[].toMap').interpret([])},[],[]);
 
 private exeInfo(executable:String)->memExeInfo(executable,fileInfo(executable));
 
