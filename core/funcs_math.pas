@@ -134,7 +134,7 @@ FUNCTION ln_imp intFuncSignature;
           end;
         end;
       end;
-      lt_list..lt_emptySet: result:=genericVectorization('ln',params,tokenLocation,context,recycler);
+      lt_list..lt_emptySet,lt_expression: result:=genericVectorization('ln',params,tokenLocation,context,recycler);
     end;
   end;
 
