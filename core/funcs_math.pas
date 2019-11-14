@@ -112,10 +112,30 @@ FUNCTION exp_imp intFuncSignature;
   end;
 
 FUNCTION ln_imp intFuncSignature;
+  VAR X:T_bigInt;
+      r:longint;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(ln(P_numericLiteral(arg0)^.floatValue))
-    else result:=genericVectorization('ln',params,tokenLocation,context,recycler);
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_smallint: result:=newRealLiteral(ln(P_smallIntLiteral(arg0)^.value));
+      lt_real    : result:=newRealLiteral(ln(real0^.value));
+      lt_bigint  : begin
+        if P_bigIntLiteral(arg0)^.value.isNegative
+        then result:=nanLit.rereferenced
+        else begin
+          r:=P_bigIntLiteral(arg0)^.value.relevantBits-512;
+          if r<0
+          then result:=newRealLiteral(ln(P_bigIntLiteral(arg0)^.value.toFloat))
+          else begin
+            x.create(P_bigIntLiteral(arg0)^.value);
+            x.shiftRight(r);
+            result:=newRealLiteral(ln(x.toFloat)+ln(2)*r);
+            x.clear;
+          end;
+        end;
+      end;
+      lt_list..lt_emptySet: result:=genericVectorization('ln',params,tokenLocation,context,recycler);
+    end;
   end;
 
 FUNCTION abs_imp intFuncSignature;
