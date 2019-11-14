@@ -288,22 +288,32 @@ end}
       i,i0:longint;
   begin
     if (ps_filled in style.style) and (ps_fillSolid in style.style) then begin
+      //inconsistent fillings
       s1:=style; s1.style:=s1.style-[ps_filled];
       s2:=style; s2.style:=s2.style-[ps_fillSolid];
       recursion;
+    end else if (ps_filled  in style.style) and (ps_dot in style.style) then begin
+      //inconsistent fillings
+      s1:=style; s1.style:=s1.style-[ps_filled];
+      s2:=style; s2.style:=s2.style-[ps_dot];
+      recursion;
     end else if (ps_tube in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      //inconsistent step requirements
       s1:=style; s1.style:=s1.style-[ps_tube];
       s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
       recursion;
     end else if (ps_bspline in style.style) and (ps_cosspline in style.style) then begin
+      //inconsistent interpolation/approximation requirements
       s1:=style; s1.style:=s1.style-[ps_bspline];
       s2:=style; s2.style:=s2.style-[ps_cosspline];
       recursion;
     end else if (ps_bspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      //inconsistent step requirements
       s1:=style; s1.style:=s1.style-[ps_bspline];
       s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
       recursion;
     end else if (ps_cosspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
+      //inconsistent step requirements
       s1:=style; s1.style:=s1.style-[ps_cosspline];
       s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
       recursion;
