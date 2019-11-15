@@ -502,7 +502,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       exit(false);
     end;
     if (clf_SHOW_HELP in mnhExecutionOptions.flags) or (length(parsingState.cmdLineParsingErrors)>0) then Exclude(mnhExecutionOptions.flags,clf_QUIET);
-
+    if (clf_HEADLESS  in mnhExecutionOptions.flags) then mnhExecutionOptions.flags-=[clf_PAUSE_ALWAYS,clf_PAUSE_ON_ERR];
     consoleMessageTypes:=stringToMessageTypeSet(mnhExecutionOptions.verbosityString);
     if not(clf_QUIET in mnhExecutionOptions.flags) and not(initAdaptersForGui) then begin
       {$ifdef fullVersion}
