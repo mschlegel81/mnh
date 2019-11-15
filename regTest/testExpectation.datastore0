@@ -6221,8 +6221,8 @@ expectations:=
  'travellingSalesmanProblem'=>
  ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021'],
  'treePrint'=>
- ['\','+--1','+--2','+--\','|  +--3','|  |  +--X','|  |  +--Y','|  |  \--Z','|  \--4','|     \--5','\--\','   +--a','   +--b',
-  '   \--c'],
+ ["┐","├──1","├──2","├──┐","│  ├──3","│  │  ├──X","│  │  ├──Y",
+  "│  │  └──Z","│  └──4","│     └──5","└──┐","   ├──a","   ├──b","   └──c"],
  'truncatablePrimes'=>
  ['There are 671 left truncatable primes, the largest of which is 998443',
   'There are 70 right truncatable primes, the largest of which is 739399',
