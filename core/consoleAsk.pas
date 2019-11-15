@@ -33,11 +33,12 @@ PROCEDURE doneConsoleAsk;
 {$i func_defines.inc}
 FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
   begin
+    initConsoleAsk;
     writeln(' ?> ', question);
     write(' !> ');
     while (messages^.continueEvaluation) and (PollKeyEvent=0) do sleep(1);
     if messages^.continueEvaluation
-    then readln(result)
+    then begin doneConsoleAsk; readln(result); end
     else result:='';
   end;
 
@@ -65,6 +66,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST m
   VAR questionLines:T_arrayOfString;
       keyEvent:TKeyEvent;
   begin
+    initConsoleAsk;
     if length(options) = 0 then exit('');
     questionLines:=formatTabs(split(question));
     for i:=0 to length(questionLines)-1 do writeln(' ?> ',questionLines[i]);
@@ -80,6 +82,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST m
       then i:=stringIdx(KeyEventToString(keyEvent));
       if i<0 then writeln('Invalid anwer. Please give one of the options above.');
     until (i>=0) or not(messages^.continueEvaluation);
+    doneConsoleAsk;
     result:=options[i];
   end;
 
@@ -98,7 +101,6 @@ FUNCTION ask_impl intFuncSignature;
             (arg0^.literalType = lt_string) and
             (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
-      initConsoleAsk;
       try
         setLength(opt, list1^.size);
         iter:=list1^.iteratableList;
@@ -107,7 +109,6 @@ FUNCTION ask_impl intFuncSignature;
         disposeLiteral(iter);
         result:=newStringLiteral(ask(str0^.value, opt,context.messages));
       finally
-        doneConsoleAsk;
         system.leaveCriticalSection(cs);
       end;
     end;
