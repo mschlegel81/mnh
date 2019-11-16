@@ -659,16 +659,17 @@ PROCEDURE TplotForm.updateInteractiveSection;
       then hasVolatileAnimation   :=true
       else hasInteractiveAnimation:=true;
     end;
-    AnimationGroupBox.visible:=hasInteractiveAnimation;
-    AnimationGroupBox.enabled:=hasInteractiveAnimation;
+    AnimationGroupBox.visible:=hasInteractiveAnimation or hasVolatileAnimation;
+    AnimationGroupBox.enabled:=hasInteractiveAnimation or hasVolatileAnimation;
     if hasInteractiveAnimation then begin
       AnimationGroupBox.AutoSize:=true;
+      cycleCheckbox.enabled:=true;
+      frameTrackBar.enabled:=true;
     end else if hasVolatileAnimation then begin
-      AnimationGroupBox.AutoSize:=false;
-      AnimationGroupBox.height:=0;
-      animateCheckBox.checked:=true;
+      AnimationGroupBox.AutoSize:=true;
       cycleCheckbox.checked:=false;
-      animationSpeedTrackbar.position:=animationSpeedTrackbar.max;
+      cycleCheckbox.enabled:=false;
+      frameTrackBar.enabled:=false;
     end else begin
       AnimationGroupBox.AutoSize:=false;
       AnimationGroupBox.height:=0;
