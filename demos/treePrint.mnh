@@ -1,6 +1,6 @@
 //*Overloaded getName to work with any type:
 private getName(s:Scalar,isMapEntry      )->s.toString;
-private getName(l       ,isMapEntry=false)->'\';
+private getName(l       ,isMapEntry=false)->'┐';
 private getName(l       ,isMapEntry=true )->l.head;
 //*Overloaded getChildren to work with any type:
 private getChildren(s:Scalar,isMapEntry      )->[];
@@ -8,10 +8,10 @@ private getChildren(l       ,isMapEntry=false)->l;
 private getChildren(l       ,isMapEntry=true )->l.trailing;
 
 private treePrint(Tree,indent,isMapEntry:Boolean,last:Boolean)->begin
-  print(indent,last ? '\--' : '+--',Tree.getName(isMapEntry));
+  print(indent,last ? '└──' : '├──',Tree.getName(isMapEntry));
   local newIndent:=last
                    ? indent+'   '
-                   : indent+'|  ';
+                   : indent+'│  ';
   local children:=Tree.getChildren(isMapEntry);
   children.each(child,child.treePrint(newIndent,Tree.isMap,index=children.size-1));
 end;

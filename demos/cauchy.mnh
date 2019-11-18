@@ -29,11 +29,11 @@ private guessEpsilons(samples:NumericList)->begin
   EPSILONS.pEach(epsilon,begin
     local N:=indexOf(spreads>epsilon).trailing;
     isNumeric(N) ? void : N:=0;
-    N<spreads.size*0.9 ? format("N=\v%s\t"#206#181"=\v%s",N,epsilon) : void;
+    N<spreads.size*0.9 ? format("N=\v%s\tε=\v%s",N,epsilon) : void;
   end);
   epsilonList.size>3 ? print('...seems to converge against ',samples.guessLimit)
                      : print('...seems to diverge');
-  print('Cauchy: '#226#136#128#32#206#181'>0 : '#198#142' N : '#226#136#128' n,m>N : |x[n]-x[m]|<'#206#181' ');
+  print('Cauchy: ∀ ε>0 : ∃ N : ∀ n,m>N : |x[n]-x[m]|<ε');
   epsilonList.join("\n").print;
 end;
 

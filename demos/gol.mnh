@@ -2,63 +2,34 @@ type WorldSize(i:IntList(2))->i[0]>0<i[1];
 //*Returns a random initial world
 private initWorld(s:WorldSize)->intRandom(2,s.agg(*));
 
-//*Prints out the given world (including a clearprint)
-curry printWorld(s:WorldSize,w:IntList)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
+private DEFAULT_SIZE:=200;
 
-private plotWorld(worldWidth:Int,world:IntList)->
+printWorld(delay:Numeric,S:WorldSize,world:IntList)->begin
+  local M:=[' ','▀','▄','█'];
+  local F12:=
+  begin
+    local F1:=[];
+    local F2:=[];
+    [0..S[1]-1].each(i,[0..S.agg(*)-1][[S[0]*i..S[0]*(i+1)-1]])
+               .transpose
+               .reverseList
+               .each(l,begin
+                  (index and 1)=0
+                  ? F1||=l
+                  : F2||=l;
+                end);
+    F1.each(f,[f,F2[index] orElse F2[0]]);
+  end;
+  local nextPrint:=time;
+save;
+  sleepUntil(nextPrint+=delay);
+  printf("%s","\f"|F12.each(f,M[world[f[0]]+world[f[1]]*2].join));
+end;
+
+private plotWorld(S:WorldSize,world:IntList)->
 begin
-  indexOf(world=1).pEach(i,begin
-    local o:=i.divMod(worldWidth);
-    [o,o+1];
-  end,|).plot('box');
-  display;
-end;
-
-//*Shifts - this returns a list of intLists, indicating adjacent cells
-private memoized shifts(s:WorldSize)->
-  [-1..1].cross([-1..1]).each(sh,0=sh[0]=sh[1] ? void :
-  (([0..s[1]-1]+sh[0]+s[1]) mod s[1]*s[0]).cross
-  (([0..s[0]-1]+sh[1]+s[0]) mod s[0]     ).map({$x[0]+$x[1]}));
-
-
-//*Returns a list of integers with the number of living neighbors per cell
-private neighbors(w:IntList,s:WorldSize)->shifts(s).pEach(sh,w[sh],+);
-
-//*The Transision table
-private TRANSITION:=[0,0,0,1,0,0,0,0,0,
-                     0,0,1,1,0,0,0,0,0];
-
-//*Computes the following generation based on current generation w
-private step(w:IntList,s:WorldSize)->TRANSITION[w.neighbors(s)+9*w];
-
-private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=false,outputMethod:Expression(1))->
-  begin
-    local W:=initWorld(S);
-    local stepCounter:=0;
-    while(stepCounter<=stepLimit,begin
-      stepCounter+=1;
-      outputMethod(W);
-      W:=W.step(S);
-      sleep(delaySeconds);
-    end);
-  end;
-
-private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=true,outputMethod:Expression(1))->
-  begin
-    async({playTheGame(S,delaySeconds,stepLimit,false,outputMethod)});
-    ask('Press enter to quit');
-  end;
-
-//*Conway's Game Of Life
-//*Play the game in the given resolution until a key is pressed
-@demo_for=animation
-main(width,height)->begin
-  local worldSize:=[width.toInt,height.toInt].toWorldSize;
-  playTheGame(worldSize,0.05,2^62,true,printWorld(worldSize));
-end;
-
-main(width,height,'graphic')->begin
-  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  clearAnimation(true);
+  postDisplay;
   [['autoscaleX',false],
    ['autoscaleY',false],
    ['axisStyleX',0],
@@ -67,20 +38,55 @@ main(width,height,'graphic')->begin
    ['logscaleY',false],
    ['preserveAspect',true],
    ['x0',0],
-   ['x1',worldSize[0]+1],
+   ['x1',S[1]+1],
    ['y0',0],
-   ['y1',worldSize[1]+1]].toMap.setOptions;
-  playTheGame(worldSize,0.05,2^62,true,plotWorld(worldSize[0]));
+   ['y1',S[0]+1]].toMap.setOptions;
+save;
+  indexOf(world=1)
+    .divMod(S[0])
+    .each(o,o,o+1)
+    .plot('fs 0 box');
+  addAnimationFrame;
+end;
+
+//*Shifts - this returns a list of intLists, indicating adjacent cells
+shifts:=begin
+  local s:=[($1 orElse DEFAULT_SIZE).toInt,($2 orElse DEFAULT_SIZE).toInt].toWorldSize;
+  [-1..1].cross([-1..1]).each(sh,0=sh[0]=sh[1] ? void :
+  (([0..s[1]-1]+sh[0]+s[1]) mod s[1]*s[0]).cross
+  (([0..s[0]-1]+sh[1]+s[0]) mod s[0]     ).map({$x[0]+$x[1]}));
+end;
+
+//*The Transision table
+private TRANSITION:=[0,0,0,1,0,0,0,0,0,
+                     0,0,1,1,0,0,0,0,0];
+
+//*Computes the following generation based on current generation w
+private step(w:IntList)->TRANSITION[shifts.each(sh,w[sh],+)+9*w];
+
+private playTheGame(S:WorldSize,stepLimit:Int,quitMethod:Expression(0),outputMethod:Expression(1))->
+  begin
+    local W:=initWorld(S);
+    local stepCounter:=0;
+    while(stepCounter<=stepLimit AND quitMethod().isVoid,begin
+      stepCounter+=1;
+      outputMethod(W);
+      W:=W.step;
+    end);
+  end;
+
+//*Conway's Game Of Life
+//*Play the game in the given resolution until a key is pressed
+@demo_for=animation
+main(width,height)->begin
+  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  isGuiStarted
+  ? playTheGame(worldSize,2^62,{plotClosed ? true : void},{plotWorld(worldSize,$w)})
+  : playTheGame(worldSize,2^62,async(::ask,['Press Enter to quit']),{printWorld(0.1,worldSize,$w)});
 end;
 
 //*Play the game for the given number of steps
 main(width,height,stepCount)->begin
   local worldSize:=[width.toInt,height.toInt].toWorldSize;
-  playTheGame(worldSize,0.05,stepCount.toInt,false,printWorld(worldSize));
-end;
-
-//*Play the game for the given number of steps without delay between generations
-main(width,height,stepCount,"fast")->begin
-  local worldSize:=[width.toInt,height.toInt].toWorldSize;
-  playTheGame(worldSize,0,stepCount.toInt,false,printWorld(worldSize));
+  playTheGame(worldSize,stepCount.toInt,{void},{printWorld(0,worldSize,$w)});
 end;

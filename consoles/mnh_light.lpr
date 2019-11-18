@@ -3,7 +3,8 @@ PROGRAM mnh_light;
 USES {$ifdef UNIX}cthreads,{$endif}
      sysutils, mySys, mnh_settings,
      cmdLineInterpretation,
-     commandLineParameters;
+     commandLineParameters,
+     substitute_funcs;
 
 {$R *.res}
 
