@@ -189,6 +189,7 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
       end;
       mt_plot_queryClosedByUser: begin
         P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser);
+        plotChangedSinceLastDisplay:=not(formWasClosedByUser);
         formWasClosedByUser:=false;
       end;
       else inherited processMessage(message);
