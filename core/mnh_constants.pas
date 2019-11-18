@@ -89,9 +89,9 @@ TYPE
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE       ,
                HTTP_NAMESPACE           ,
-               IPC_NAMESPACE
-               {$ifdef fullVersion},PLOT_NAMESPACE,GUI_NAMESPACE{$endif}
-               );
+               IPC_NAMESPACE            ,
+               PLOT_NAMESPACE           ,
+               GUI_NAMESPACE);
 CONST
   C_namespaceString:array[T_namespace] of string=(
     'mnh',
@@ -103,9 +103,9 @@ CONST
     'files',
     'typecast',
     'http',
-    'ipc'
-    {$ifdef fullVersion},'plot','gui'{$endif}
-    );
+    'ipc',
+    'plot',
+    'gui');
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
     //identifier and resolved identifiers

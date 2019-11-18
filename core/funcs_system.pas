@@ -80,8 +80,8 @@ FUNCTION beep_imp intFuncSignature;
       sysutils.beep;
     end;
   end;
-{$ifdef Windows}
 FUNCTION driveInfo_imp intFuncSignature;
+  {$ifdef Windows}
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: ansistring;
         driveType:longint;
@@ -131,7 +131,12 @@ FUNCTION driveInfo_imp intFuncSignature;
       end;
     end;
   end;
-{$endif}
+  {$else}
+  begin
+    result:=nil;
+    context.raiseError('Function driveInfo is not avaliable under Linux',tokenLocation);
+  end;
+  {$endif}
 
 FUNCTION getEnv_impl intFuncSignature;
   VAR envString:ansistring;
@@ -238,9 +243,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep',sfr_beeps{$endif});
-  {$ifdef Windows}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif});
-  {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   {$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif});

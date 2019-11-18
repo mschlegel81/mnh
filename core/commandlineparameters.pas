@@ -417,8 +417,9 @@ FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
     for f in flags do result+=' '+FLAG_TEXT[f];
     for k:=0 to length(deferredAdapterCreations)-1 do begin
       if deferredAdapterCreations[k].forceNewFile
-      then result+=' -out '+deferredAdapterCreations[k].getFilenameAndOptions
-      else result+=' +out '+deferredAdapterCreations[k].getFilenameAndOptions;
+      then result+=' -out '
+      else result+=' +out ';
+      result+=deferredAdapterCreations[k].getFilenameAndOptions;
     end;
   end;
 
@@ -427,8 +428,8 @@ FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
       f:T_cmdLineFlag;
   begin
     setLength(result,0);
-    if verbosityString<>DEF_VERBOSITY_STRING then append(result,' -v'+verbosityString);
-    for f in flags do append(result, FLAG_TEXT[f]);
+    if verbosityString<>DEF_VERBOSITY_STRING then append(result,'-v'+verbosityString);
+    for f in flags do append(result,FLAG_TEXT[f]);
     for k:=0 to length(deferredAdapterCreations)-1 do begin
       if deferredAdapterCreations[k].forceNewFile
       then append(result,'-out')
