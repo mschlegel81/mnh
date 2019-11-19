@@ -142,7 +142,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
 VAR doShowSplashScreen:boolean;
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
-     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics;
+     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics,strutils;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -210,7 +210,7 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
               '</title></head><body text="black" bgcolor="#EEEEEE"><pre><code><font  size=3 face="Courier New">';
       for i:=0 to content.count-1 do begin
         if i>0 then result+=C_carriageReturnChar+C_lineBreakChar;
-        result+=replaceAll(replaceAll(replaceAll(content[i],'&','&amp;'),'<','&lt;'),'>','&gt;');
+        result+=ansiReplaceStr(ansiReplaceStr(ansiReplaceStr(content[i],'&','&amp;'),'<','&lt;'),'>','&gt;');
       end;
       result+='</font></code></pre></body></html>';
       exit(result);

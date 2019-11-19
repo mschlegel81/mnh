@@ -89,7 +89,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES myStringUtil;
+USES myStringUtil,strutils;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
@@ -382,8 +382,8 @@ PROCEDURE TtableForm.fillTable;
             cellLit:=iter[j];
             case cellLit^.literalType of
               lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-              lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
-                                                                 else cellContents[i,j]:=           cellLit^.toString;
+              lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=ansiReplaceStr(cellLit^.toString,'.',',')
+                                                                 else cellContents[i,j]:=               cellLit^.toString;
               lt_void: cellContents[i,j]:='';
               else cellContents[i,j]:=cellLit^.toString;
             end;
@@ -394,8 +394,8 @@ PROCEDURE TtableForm.fillTable;
           cellLit:=rowLit; j:=0;
           case cellLit^.literalType of
             lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-            lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
-                                                               else cellContents[i,j]:=           cellLit^.toString;
+            lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=ansiReplaceStr(cellLit^.toString,'.',',')
+                                                               else cellContents[i,j]:=               cellLit^.toString;
             lt_void: cellContents[i,j]:='';
             else cellContents[i,j]:=cellLit^.toString;
           end;

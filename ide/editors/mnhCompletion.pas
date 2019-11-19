@@ -32,6 +32,7 @@ T_completionLogic=object
 end;
 
 IMPLEMENTATION
+USES strutils;
 VAR intrinsicRulesForCompletion:T_setOfString;
     intrinsicRulesForCompletion_ready:boolean=false;
 PROCEDURE initIntrinsicRuleList;
@@ -56,7 +57,7 @@ PROCEDURE initIntrinsicRuleList;
       end;
     end;
     for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
-      intrinsicRulesForCompletion.put(replaceAll(C_tokenDefaultId[tt],'.',''))
+      intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],'.',''))
     else if (copy(C_tokenDefaultId[tt],1,1)='.') and isIdentifier(copy(C_tokenDefaultId[tt],2,1000),false) then
       intrinsicRulesForCompletion.put(C_tokenDefaultId[tt]);
     for tc in T_typeCheck do

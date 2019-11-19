@@ -175,7 +175,7 @@ VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST to
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
-USES sysutils
+USES sysutils,strutils
      {$ifdef fullVersion},plotstyles{$endif}
      ;
 
@@ -1067,7 +1067,7 @@ FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then r
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
   begin
     result:='  '+pattern.toCmdLineHelpStringString;
-    if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
+    if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+ansiReplaceStr(meta.comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subruleExpression.getDocTxt: ansistring;

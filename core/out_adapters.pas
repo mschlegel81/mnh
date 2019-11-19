@@ -280,7 +280,7 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
-USES  myStringUtil;
+USES myStringUtil,strutils;
 VAR globalAdaptersCs:TRTLCriticalSection;
     allConnectors:array of P_messagesDistributor;
     finalizing:longint=0;
@@ -419,7 +419,7 @@ PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterS
 
 PROCEDURE T_textFileAdapterSpecification.applyScriptName(CONST scriptName: string);
   begin
-    fileName:=replaceAll(fileName,'?',scriptName);
+    fileName:=ansiReplaceStr(fileName,'?',scriptName);
   end;
 
 {$ifdef fullVersion}

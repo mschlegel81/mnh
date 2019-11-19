@@ -14,6 +14,7 @@ USES sysutils,math,fphttpclient,lclintf,
      funcs;
 
 IMPLEMENTATION
+USES strutils;
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object(T_detachedEvaluationPart)
@@ -260,7 +261,7 @@ FUNCTION extractParameters_impl intFuncSignature;
       keyAndValue:=split(pair,'=');
       while length(keyAndValue)<2 do append(keyAndValue,'');
       for i:=0 to length(keyAndValue)-1 do begin
-        keyAndValue[i]:=percentDecode(replaceAll(keyAndValue[i],'+',' '));
+        keyAndValue[i]:=percentDecode(ansiReplaceStr(keyAndValue[i],'+',' '));
       end;
       value:=newStringLiteral(keyAndValue[1]);
       castValue:=value^.softCast;
