@@ -205,7 +205,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,math;
+USES sysutils,strutils,math;
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
@@ -588,10 +588,10 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       end;
     end;
     result.infoText+=C_lineBreakChar
-                    +replaceAll(C_tokenDoc[token^.tokType].helpText,'#',C_lineBreakChar);
+                    +ansiReplaceStr(C_tokenDoc[token^.tokType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
       if C_specialWordInfo[i].txt=tokenText then
-      result.infoText+=C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+      result.infoText+=C_lineBreakChar+ansiReplaceStr(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
     case token^.tokType of
       tt_intrinsicRule:
@@ -609,7 +609,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       end;
       tt_userRule, tt_globalVariable: begin
         result.infoText+=C_lineBreakChar
-                        +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
+                        +ansiReplaceStr(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
@@ -621,9 +621,9 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       end;
 
       tt_type,tt_typeCheck:
-        result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
+        result.infoText+=C_lineBreakChar+ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:
-        result.infoText+=C_lineBreakChar+replaceAll(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
+        result.infoText+=C_lineBreakChar+ansiReplaceStr(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
     end;
   end;
 {$endif}

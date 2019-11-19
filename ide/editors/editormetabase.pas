@@ -106,7 +106,7 @@ VAR fileTypeMeta:array[T_language] of record
     end;
 FUNCTION languageFromExtension(CONST extension:string; CONST fallback:T_language=LANG_TXT):T_language;
 IMPLEMENTATION
-
+USES strutils;
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
   VAR SynBatSyn            : TSynBatSyn            ;
       SynCppSyn            : TSynCppSyn            ;
@@ -503,7 +503,7 @@ FUNCTION languageFromExtension(CONST extension:string; CONST fallback:T_language
       l:T_language;
       s:string;
   begin
-    extensionWithoutDot:=uppercase(replaceAll(extension,'.',''));
+    extensionWithoutDot:=uppercase(ansiReplaceStr(extension,'.',''));
     for l in T_language do
     for s in fileTypeMeta[l].extensions do if extensionWithoutDot=s then exit(l);
     result:=fallback;

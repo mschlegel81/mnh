@@ -135,7 +135,8 @@ VAR safeCallback:F_safeCallback=nil;
 IMPLEMENTATION
 USES renameDialog,
      recyclers,
-     packages;
+     packages,
+     strutils;
 VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin

@@ -34,6 +34,7 @@ FUNCTION getPackagesRoot:ansistring;
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
     htmlDocGeneratedForCodeHash:string;
 IMPLEMENTATION
+USES strutils;
 VAR functionDocExamplesReady:boolean=false;
 FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
@@ -42,8 +43,8 @@ FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
   begin
     if suffix=''
-    then result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'),'\','/')
-    else result:='file:///'+replaceAll(expandFileName(getHtmlRoot              ),'\','/')+suffix;
+    then result:='file:///'+ansiReplaceStr(expandFileName(getHtmlRoot+'/index.html'),'\','/')
+    else result:='file:///'+ansiReplaceStr(expandFileName(getHtmlRoot              ),'\','/')+suffix;
   end;
 
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
@@ -272,13 +273,13 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtmlLink:string;
   begin
-    result:='file:///'+replaceAll(expandFileName(getHtmlRoot+'/builtin.html#'),'\','/')+id;
+    result:='file:///'+ansiReplaceStr(expandFileName(getHtmlRoot+'/builtin.html#'),'\','/')+id;
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
   VAR i:longint;
   begin
-    result:=ECHO_MARKER+id+lineSplitter+join(formatTabs(split(ECHO_MARKER+replaceAll(replaceAll(description,'//',C_tabChar+'//'),'#',C_lineBreakChar+ECHO_MARKER),C_lineBreakChar)),lineSplitter);
+    result:=ECHO_MARKER+id+lineSplitter+join(formatTabs(split(ECHO_MARKER+ansiReplaceStr(ansiReplaceStr(description,'//',C_tabChar+'//'),'#',C_lineBreakChar+ECHO_MARKER),C_lineBreakChar)),lineSplitter);
     if length(txtExample)>0 then result:=result+lineSplitter+'Examples:';
     for i:=0 to length(txtExample)-1 do result:=result+lineSplitter+txtExample[i];
   end;

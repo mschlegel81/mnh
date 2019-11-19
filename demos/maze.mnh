@@ -1,7 +1,7 @@
 private randomListElement(L:Collection)->L.toList[intRandom(L.size)] orElse [];
 
 //private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
-private memoized neighbors(width,height,x,y)->
+private neighbors(width,height,x,y)->
   [x>0        ? [x-1,y] : void,
    y>0        ? [x,y-1] : void,
    x<width-1  ? [x+1,y] : void,
@@ -10,13 +10,25 @@ private memoized neighbors(width,height,x,y)->
 private unvisitedNeighbor(width,height,p:IntList(2),visited)->
   neighbors(width,height,p[0],p[1]).minus(visited).randomListElement;
 
-private randomUnvisitedCell(width,height,visited)->
-  cross([0..width],[0..height]).minus(visited).randomListElement;
+private randomUnvisitedCell(width,height,visited)->begin
+  local L:=[0..width-1].cross([0..height-1]).minus(visited).toList;
+  L.size=0 ? return [] :
+  L[sortPerm(random(L.size))].each(p,
+    [4-ord(p+[1,0] in visited)
+      -ord(p-[1,0] in visited)
+      -ord(p+[0,1] in visited)
+      -ord(p-[0,1] in visited),p]).sort(0)[0,1];
+end;
 
 private makeMaze(width,height)->
 begin
   local visited:=[];
-  local position:=[intRandom(width),intRandom(height)];
+  visited:=(map([-1..  width],{[$i   ,-1]})|
+            map([-1.. height],{[width,$j]})|
+            map([width..  -1],{[$i   ,height]})|
+            map([height.. -1],{[-1   ,$j]}));
+
+  local position:=randomUnvisitedCell(width,height,visited);
 
   while(!(position==[]),begin
     visited||=position;
@@ -32,10 +44,20 @@ begin
   end);
 
   local visitPairs:=[0..size(visited)-2].each(i,sort(visited.get([i,i+1]))).toSet;
-  [0..height-1].each(j,
-       [0..width-1].each(i,[[i  ,j-1],[i,j]] in visitPairs ? "+   " : "+---",&)&"+",   //wall [i,j]->[i,j-1];
-       [0..width-1].each(i,[[i-1,j  ],[i,j]] in visitPairs ? "    " : "|   ",&)&"|")  //wall [i,j]->[i-1,j]
-     |([0..width-1].each(i,"+---",&)&"+");
+  local connectionsAroundDot:={
+    ['┼───','┬───','┴───','────',
+     '┤   ','┐   ','┘   ','─   ',
+     '├───','┌───','└───','────',
+     '│   ','│   ','│   ','O   '][
+    ([[$i-1,$j-1],[$i  ,$j-1]] in visitPairs ? 1 : 0) +
+    ([[$i-1,$j  ],[$i  ,$j  ]] in visitPairs ? 2 : 0) +
+    ([[$i  ,$j-1],[$i  ,$j  ]] in visitPairs ? 4 : 0) +
+    ([[$i-1,$j-1],[$i-1,$j  ]] in visitPairs ? 8 : 0)]};
+  local horizontallyConnected:={[[$i-1,$j],[$i,$j]] in visitPairs};
+
+  [0..height].each(j,
+    [0..width].each(i,connectionsAroundDot (i,j),&).copy(0,width*4+1),   //wall [i,j]->[i,j-1];
+    [0..width].each(i,horizontallyConnected(i,j) ? '    ' : '│   ',&)).leading;
 end;
 
 @demo_for=math/graphs

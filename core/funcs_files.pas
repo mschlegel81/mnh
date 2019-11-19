@@ -2,7 +2,7 @@ UNIT funcs_files;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}LazFileUtils,LazUTF8,
-     myGenerics,mySys,myStringUtil,
+     myGenerics,mySys,
      mnh_constants,basicTypes,
      fileWrappers,
      out_adapters,
@@ -12,6 +12,7 @@ USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$end
      recyclers,
      contexts,datastores;
 IMPLEMENTATION
+USES strutils;
 {$i func_defines.inc}
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders,recurseSubDirs:boolean):P_listLiteral;
@@ -31,13 +32,13 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
       found:=find(searchString(0),filesAndNotFolders,recurseSubDirs);
       if recurseSubDirs and DirectoryExists(P_stringLiteral(pathOrPathList)^.value)
                                         then result^.append(pathOrPathList,true);
-      for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
+      for i:=0 to length(found)-1 do result^.appendString(ansiReplaceStr(found[i],'\','/'));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
         if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value[j])^.value)
                                           then result^.append(P_listLiteral(pathOrPathList)^.value[j],true);
-        for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
+        for i:=0 to length(found)-1 do result^.appendString(ansiReplaceStr(found[i],'\','/'));
       end;
     end;
   end;
@@ -59,7 +60,7 @@ FUNCTION allFiles_impl intFuncSignature;
         k:longint;
     begin
       list:=FindAllFiles(root,pattern,recurse);
-      for k:=0 to list.count-1 do listResult^.appendString(replaceAll(list[k],'\','/'));
+      for k:=0 to list.count-1 do listResult^.appendString(ansiReplaceStr(list[k],'\','/'));
       list.destroy;
     end;
 
@@ -512,7 +513,7 @@ FUNCTION fileStats_imp intFuncSignature;
 
 FUNCTION expandedFileName_imp intFuncSignature;
   FUNCTION internal(CONST s:string):string;
-    begin result:=replaceAll(replaceAll(expandFileName(s),'\','/'),'//','/'); end;
+    begin result:=ansiReplaceStr(ansiReplaceStr(expandFileName(s),'\','/'),'//','/'); end;
   fileNameBody;
 
 FUNCTION extractFileDirectory_imp intFuncSignature;
@@ -520,23 +521,23 @@ FUNCTION extractFileDirectory_imp intFuncSignature;
     begin
       if ExtractFileDir(s)=''
       then result:='.'
-      else result:=replaceAll(ExtractFileDir(s),'\','/');
+      else result:=ansiReplaceStr(ExtractFileDir(s),'\','/');
     end;
   fileNameBody;
 
 FUNCTION extractFileName_imp intFuncSignature;
   FUNCTION internal(CONST s:string):string;
-    begin result:=replaceAll(extractFileName(s),'\','/'); end;
+    begin result:=ansiReplaceStr(extractFileName(s),'\','/'); end;
   fileNameBody;
 
 FUNCTION extractFileNameOnly_imp intFuncSignature;
   FUNCTION internal(CONST s:string):string;
-    begin result:=replaceAll(ExtractFileNameOnly(s),'\','/'); end;
+    begin result:=ansiReplaceStr(ExtractFileNameOnly(s),'\','/'); end;
   fileNameBody;
 
 FUNCTION extractFileExt_imp intFuncSignature;
   FUNCTION internal(CONST s:string):string;
-    begin result:=replaceAll(extractFileExt(s),'\','/'); end;
+    begin result:=ansiReplaceStr(extractFileExt(s),'\','/'); end;
   fileNameBody;
 
 FUNCTION changeFileExtension_imp intFuncSignature;
@@ -553,7 +554,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) then case arg0^.literalType of
       lt_string: case arg1^.literalType of
         lt_string: exit(newStringLiteral(
-            replaceAll(
+            ansiReplaceStr(
             extractRelativePath(str0^.value+'/',
                                 str1^.value),
             '\','/')));
@@ -561,7 +562,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
             listResult^.appendString(
-            replaceAll(
+            ansiReplaceStr(
             extractRelativePath(str0^.value+'/',
                                 P_stringLiteral(list1^.value[i])^.value),
             '\','/'));
@@ -572,7 +573,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
             listResult^.appendString(
-            replaceAll(
+            ansiReplaceStr(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
                                 str1^.value),
             '\','/'));
@@ -581,7 +582,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
             listResult^.appendString(
-            replaceAll(
+            ansiReplaceStr(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
                                 P_stringLiteral(list1^.value[i])^.value),
             '\','/'));
@@ -595,7 +596,7 @@ FUNCTION systemSpecificFilename_impl intFuncSignature;
     begin
       if DirectorySeparator='/'
       then exit(s^.rereferenced)
-      else exit(newStringLiteral(replaceAll(P_stringLiteral(s)^.value,'/',DirectorySeparator)));
+      else exit(newStringLiteral(ansiReplaceStr(P_stringLiteral(s)^.value,'/',DirectorySeparator)));
     end;
 
   VAR iter:T_arrayOfLiteral;
