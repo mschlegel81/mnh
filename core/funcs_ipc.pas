@@ -4,7 +4,7 @@ USES basicTypes;
 IMPLEMENTATION
 USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil,
-     {$ifdef UNIX}myStringUtil,{$endif}  //my tools
+     {$ifdef UNIX}strutils,myStringUtil,{$endif}
      mnh_constants,
      mnh_messages,
      out_adapters,
@@ -45,7 +45,7 @@ FUNCTION serverIsAssociatedWithPackage(s:P_myIpcServer; package:pointer):boolean
 FUNCTION cleanPath(CONST s:string):string;
   begin
     {$ifdef UNIX}
-    result:=cleanString(replaceOne(replaceAll('$'+s,'/','_'),'$_',''),['a'..'z','A'..'Z','0'..'9','_'],'_');
+    result:=cleanString(replaceOne(ansiReplaceStr('$'+s,'/','_'),'$_',''),['a'..'z','A'..'Z','0'..'9','_'],'_');
     {$else}
     result:=s;
     {$endif}
