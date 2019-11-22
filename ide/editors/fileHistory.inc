@@ -67,17 +67,13 @@ DESTRUCTOR T_fileHistory.destroy;
     fileWrappers.logFolderCallback:=nil;
     with scriptUsage do begin
       destructionPending:=true;
-      enterCriticalSection(cs);
       while scanning and (waitCount<200) do begin
-        leaveCriticalSection(cs);
         sleep(10);
         inc(waitCount);
-        enterCriticalSection(cs);
       end;
       setLength(dat,0);
       setLength(foldersScanned,0);
-      leaveCriticalSection(cs);
-      doneCriticalSection(cs);
+      if not(scanning) then doneCriticalSection(cs);
     end;
   end;
 
@@ -248,6 +244,8 @@ FUNCTION scanScripts(p:pointer):ptrint;
         setLength(foldersToScan,0);
         append(foldersToScan,folderItems);
         for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
+        //Only scan one folder at a time
+        setLength(foldersToScan,1);
         //Update scriptUsage.foldersScanned
         append(scriptUsage.foldersScanned,foldersToScan);
 
