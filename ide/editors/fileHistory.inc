@@ -244,8 +244,6 @@ FUNCTION scanScripts(p:pointer):ptrint;
         setLength(foldersToScan,0);
         append(foldersToScan,folderItems);
         for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
-        //Only scan one folder at a time
-        setLength(foldersToScan,1);
         //Update scriptUsage.foldersScanned
         append(scriptUsage.foldersScanned,foldersToScan);
 
@@ -265,16 +263,23 @@ FUNCTION scanScripts(p:pointer):ptrint;
         {$endif}
 
         //Load scripts
-        for script in scriptsToScan do if not(scriptUsage.destructionPending) then
-        for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
-          setLength(scriptUsage.dat,length(scriptUsage.dat)+1);
-          scriptUsage.dat[length(scriptUsage.dat)-1].usingScript:=script;
-          scriptUsage.dat[length(scriptUsage.dat)-1].usedScript :=usedScript;
+        for script in scriptsToScan do if not(scriptUsage.destructionPending) then begin
           {$ifdef debugMode}
-          writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
+          writeln(stdErr,'fileHistory/scanScripts: loading ',script);
           {$endif}
+          for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
+            setLength(scriptUsage.dat,length(scriptUsage.dat)+1);
+            scriptUsage.dat[length(scriptUsage.dat)-1].usingScript:=script;
+            scriptUsage.dat[length(scriptUsage.dat)-1].usedScript :=usedScript;
+            {$ifdef debugMode}
+            writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
+            {$endif}
+          end;
         end;
       finally
+        {$ifdef debugMode}
+        writeln(stdErr,'fileHistory/scanScripts: done scanning');
+        {$endif}
         scriptUsage.scanning:=false;
         leaveCriticalSection(scriptUsage.cs);
         setLength(foldersToScan,0);
