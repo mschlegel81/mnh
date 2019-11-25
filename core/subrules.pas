@@ -91,6 +91,7 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+      FUNCTION usedGlobalVariables:T_arrayOfPointer;
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString='');
@@ -1335,6 +1336,18 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
         ON_EVALUATION: functionIdsReady:=IDS_RESOLVED_AND_INLINED
         else           functionIdsReady:=IDS_RESOLVED;
       end else functionIdsReady:=NOT_READY;
+    finally
+      leaveCriticalSection(subruleCallCs);
+    end;
+  end;
+
+FUNCTION T_inlineExpression.usedGlobalVariables:T_arrayOfPointer;
+  VAR prep:T_preparedToken;
+  begin
+    enterCriticalSection(subruleCallCs);
+    try
+      setLength(result,0);
+      for prep in preparedBody do if prep.token.tokType=tt_globalVariable then appendIfNew(result,prep.token.data);
     finally
       leaveCriticalSection(subruleCallCs);
     end;
