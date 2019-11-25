@@ -1,20 +1,16 @@
-private cfString(A:Expression(1),B:Expression(1),depth>0)->begin
-  local e:='...';
-  [depth..1].each(n,begin e:=B(n)&'/('&A(n)&'+'&e&')'; void; end);
-  A(0)&'+'&e;
+cfStringAndValue(continuedFraction:Expression(1))->begin
+  local e:='...'; local x:=1;
+  e:=continuedFraction(0)[0]&'+'&[5..1].map(continuedFraction).each(p,e:=p[1]&"/("&p[0]&"+"&e ,trailing)&")))))\t=\t";
+  x:=continuedFraction(0)[0] +[2000..1].map(continuedFraction).each(p,x:=p[1]  /(  p[0]  +  x),trailing);
+  e&x;
 end;
-private zero:={$0*0};
-private cfString(A:Numeric,B,depth>0)->cfString(zero+A,B,depth);
-private cfString(A,B:Numeric,depth>0)->cfString(A,zero+B,depth);
-private cfValue(A,B,depth>0)->cfString(A,B,depth).replace('...','0').interpret;
 
 @demo_for=math
 //*See http://rosettacode.org/wiki/Continued_fraction
-main->[[          1,            1],
-       [{$n=0?1:2 },            1],
-       [{$n=0?2:$n},{$n=1?1:$n-1}],
-       [{$n=0?3:6 },{(2*$n-1)^2} ]]
-      .pMap({cfString($p[0],$p[1],5)&"\t=\t"&
-              cfValue($p[0],$p[1],1000)})
+main->[{[        1,     0*$n+1]},
+       {[$n=0?1:2 ,          1]},
+       {[$n=0?2:$n,$n=1?1:$n-1]},
+       {[$n=0?3:6 ,(2*$n-1)^2 ]}]
+      .pMap(::cfStringAndValue)
       .join("\n")
       .print;
