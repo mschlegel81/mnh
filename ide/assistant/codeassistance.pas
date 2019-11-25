@@ -113,7 +113,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
     {$Q-}{$R-}
     initialStateHash:=source^.stateHash xor hashOfAnsiString(source^.getPath);
     {$Q+}{$R+}
-    globals^.resetForEvaluation(nil,nil,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(localIdInfos,create);

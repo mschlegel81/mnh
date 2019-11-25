@@ -1,11 +1,11 @@
 object CustomRunForm: TCustomRunForm
   Left = 913
-  Height = 380
+  Height = 448
   Top = 150
   Width = 402
   AutoSize = True
   Caption = 'Run externally'
-  ClientHeight = 380
+  ClientHeight = 448
   ClientWidth = 402
   DesignTimePPI = 120
   OnCreate = FormCreate
@@ -84,7 +84,7 @@ object CustomRunForm: TCustomRunForm
   end
   object GroupBox3: TGroupBox
     AnchorSideLeft.Control = GroupBox2
-    AnchorSideTop.Control = GroupBox2
+    AnchorSideTop.Control = restrictionsGroupBox
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
@@ -92,7 +92,7 @@ object CustomRunForm: TCustomRunForm
     AnchorSideBottom.Side = asrBottom
     Left = 0
     Height = 101
-    Top = 250
+    Top = 303
     Width = 402
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
@@ -101,7 +101,7 @@ object CustomRunForm: TCustomRunForm
     ClientHeight = 76
     ClientWidth = 398
     ParentFont = False
-    TabOrder = 4
+    TabOrder = 5
     object scriptLocRb: TRadioButton
       Left = 0
       Height = 24
@@ -274,7 +274,7 @@ object CustomRunForm: TCustomRunForm
     AnchorSideRight.Side = asrBottom
     Left = 334
     Height = 30
-    Top = 351
+    Top = 404
     Width = 68
     Align = alCustom
     Anchors = [akTop, akRight]
@@ -283,7 +283,7 @@ object CustomRunForm: TCustomRunForm
     Caption = 'cancel'
     ModalResult = 2
     ParentFont = False
-    TabOrder = 5
+    TabOrder = 6
   end
   object flagsByShebangCb: TCheckBox
     AnchorSideLeft.Control = GroupBox1
@@ -297,6 +297,35 @@ object CustomRunForm: TCustomRunForm
     BorderSpacing.Left = 4
     Caption = 'take flags from shebang'
     OnChange = flagsByShebangCbChange
-    TabOrder = 6
+    TabOrder = 7
+  end
+  object restrictionsGroupBox: TGroupBox
+    AnchorSideLeft.Control = GroupBox2
+    AnchorSideTop.Control = GroupBox2
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 0
+    Height = 53
+    Top = 250
+    Width = 402
+    Anchors = [akTop, akLeft, akRight]
+    AutoSize = True
+    Caption = 'side effect restriction'
+    ClientHeight = 28
+    ClientWidth = 398
+    TabOrder = 4
+    object sideEffectComboBox: TComboBox
+      Left = 0
+      Height = 28
+      Top = 0
+      Width = 398
+      Align = alClient
+      AutoComplete = True
+      AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
+      ItemHeight = 20
+      Style = csDropDownList
+      TabOrder = 0
+    end
   end
 end

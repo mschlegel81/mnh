@@ -48,7 +48,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       recycler.initRecycler;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}package,nil,contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
       if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
         consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);

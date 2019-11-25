@@ -735,6 +735,15 @@ CONST
                 'ipc',
                 'executing external');
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
+  C_sideEffectsForCodeAssistance=[se_readPackageState,se_alterPackageState];
+  C_sideEffectProfile:array [0..3] of record
+    name:string;
+    allowed:T_sideEffects;
+  end=((name:''; allowed:[low(T_sideEffect)..high(T_sideEffect)]),
+       (name:'readonly'; allowed:[se_inputViaAsk,se_output,se_sound,se_sleep,se_detaching,se_server,se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState,se_readFile,se_accessHttp,se_accessIpc]),
+       (name:'isolated'; allowed:[se_inputViaAsk,se_output,se_sound,se_sleep,se_detaching,          se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState                                       ]),
+       (name:'noexe';    allowed:[se_inputViaAsk..se_accessIpc]));
+
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;

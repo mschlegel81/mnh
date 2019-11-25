@@ -258,7 +258,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler
     messages.clear;
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
     globals.afterEvaluation(recycler);
@@ -272,7 +272,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
   begin
     errorHolder.createErrorHolder(nil,C_errorsAndWarnings);
     globals.primaryContext.messages:=@errorHolder;
-    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     {$ifdef fullVersion}
     new(functionCallInfos,create);
     {$endif}
@@ -314,7 +314,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     then package.replaceCodeProvider(newCodeProvider(fileName))
     else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}callContextType,mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters{$ifdef fullVersion},nil,nil{$endif});
     finally
       globals.afterEvaluation(recycler);
@@ -341,7 +341,7 @@ FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfStrin
     try
       recycler.initRecycler;
       package.replaceCodeProvider(newCodeProvider(fileName));
-      globals.resetForEvaluation(@package,@package.reportVariables,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_usageScan,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
       result:=package.usedAndExtendedPackages;
     finally
@@ -370,7 +370,7 @@ PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBa
       writeFile(fileName,fileContent);
       try
         package.replaceCodeProvider(newCodeProvider(fileName));
-        globals.resetForEvaluation(@package,@package.reportVariables,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+        globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
         new(functionCallInfos,create);
         package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
         if package.isExecutable then begin

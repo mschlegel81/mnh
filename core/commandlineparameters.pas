@@ -1,32 +1,28 @@
 UNIT commandLineParameters;
 INTERFACE
-USES myGenerics,mnh_settings,out_adapters,serializationUtil
+USES myGenerics,mnh_settings,out_adapters,serializationUtil,mnh_constants
      {$ifdef fullVersion}
      ,funcs
      {$endif};
 TYPE
-
-  { T_parsingState }
-
   T_parsingState=object
     cmdLineParsingErrors:T_arrayOfString;
     parsingState:(pst_initial,
                   pst_parsingOutFileRewrite,
                   pst_parsingOutFileAppend,
+                  pst_parsingSideEffectProfile,
                   pst_parsingFileToEdit,
                   pst_parsingScriptParameters);
     PROCEDURE clear;
     PROCEDURE logCmdLineParsingError(CONST s: string);
   end;
 
-  { T_mnhExecutionOptions }
-
   T_mnhExecutionOptions=object(T_serializable)
     verbosityString:string;
     flags:set of T_cmdLineFlag;
     executor:string;
     deferredAdapterCreations:array of T_textFileAdapterSpecification;
-
+    sideEffectProfile:longint;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clear;
@@ -46,6 +42,7 @@ TYPE
     FUNCTION isCallLightFlavour:boolean;
     PROCEDURE setCallLightFlavour(CONST b:boolean);
     PROPERTY callLightFlavour:boolean read isCallLightFlavour write setCallLightFlavour;
+    FUNCTION allowedSideEffects:T_sideEffects;
   end;
 
   { T_commandLineParameters }
@@ -105,8 +102,7 @@ USES sysutils,
      fileWrappers,
      mySys,
      mnh_messages,
-     basicTypes,
-     mnh_constants;
+     basicTypes;
 
 FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
   VAR firstFileLine:ansistring;
@@ -151,6 +147,7 @@ DESTRUCTOR T_mnhExecutionOptions.destroy;
 
 PROCEDURE T_mnhExecutionOptions.clear;
   begin
+    sideEffectProfile:=0;
     verbosityString:=DEF_VERBOSITY_STRING;
     setLength(deferredAdapterCreations,0);
     flags:=[];
@@ -185,6 +182,7 @@ PROCEDURE T_mnhExecutionOptions.copyFrom(CONST other: T_mnhExecutionOptions);
     flags:=other.flags;
     executor:=other.executor;
     verbosityString:=other.verbosityString;
+    sideEffectProfile:=other.sideEffectProfile;
     setLength(deferredAdapterCreations,length(other.deferredAdapterCreations));
     for k:=0 to length(deferredAdapterCreations)-1 do
       deferredAdapterCreations[k].copy(other.deferredAdapterCreations[k]);
@@ -207,6 +205,8 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
     end;
 
   VAR app:string;
+      i:longint;
+      sideEffectProfileIndex:longint=-1;
   begin
     result:=false;
     case parsingState.parsingState of
@@ -232,9 +232,22 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         //state changes:
         if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite; exit(true); end;
         if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;  exit(true); end;
+        if param='-restrict'       then begin parsingState.parsingState:=pst_parsingSideEffectProfile;  exit(true); end;
       end;
       pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
         addAdapter();
+        parsingState.parsingState:=pst_initial;
+        exit(true);
+      end;
+      pst_parsingSideEffectProfile: begin
+        for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name=param then sideEffectProfileIndex:=i;
+        if sideEffectProfileIndex=-1 then begin
+          app:='';
+          for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then app+=', '+C_sideEffectProfile[i].name;
+          parsingState.logCmdLineParsingError('Invalid profile "'+param+'". Must be one of '+copy(app,3,length(app)-2));
+        end else begin
+          sideEffectProfile:=sideEffectProfileIndex;
+        end;
         parsingState.parsingState:=pst_initial;
         exit(true);
       end;
@@ -264,21 +277,6 @@ PROCEDURE T_commandLineParameters.initFromCommandLine;
   {$endif}
   VAR i:longint;
   begin
-    //    result:=false;
-    //    if directExecutionMode then begin
-    //      fileOrCommandToInterpret+=' '+param;
-    //      exit(true);
-    //    end;
-    //    if fileOrCommandToInterpret<>'' then exit(false);
-    //    case parsingState of
-    //      pst_initial: begin
-    //        if (param='-edit') then begin
-    //          parsingState:=pst_parsingFileToEdit;
-    //          exit(true);
-    //        end;
-    //      end;
-    //    end;
-    //
     clear;
     i:=1;
     while (i<=paramCount) do begin
@@ -349,6 +347,11 @@ PROCEDURE T_mnhExecutionOptions.setCallLightFlavour(CONST b: boolean);
     else executor:=settings.fullFlavourLocation;
   end;
 
+FUNCTION T_mnhExecutionOptions.allowedSideEffects:T_sideEffects;
+  begin
+    result:=C_sideEffectProfile[sideEffectProfile].allowed;
+  end;
+
 FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
   begin if mnhExecutionOptions.executeCommand then result:='' else result:=fileOrCommandToInterpret; end;
 
@@ -415,6 +418,7 @@ FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
     result:='#!'+executor;
     if verbosityString<>DEF_VERBOSITY_STRING then result+=' -v'+verbosityString;
     for f in flags do result+=' '+FLAG_TEXT[f];
+    if sideEffectProfile<>0 then result+=' -restrict '+C_sideEffectProfile[sideEffectProfile].name;
     for k:=0 to length(deferredAdapterCreations)-1 do begin
       if deferredAdapterCreations[k].forceNewFile
       then result+=' -out '
@@ -430,6 +434,10 @@ FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
     setLength(result,0);
     if verbosityString<>DEF_VERBOSITY_STRING then append(result,'-v'+verbosityString);
     for f in flags do append(result,FLAG_TEXT[f]);
+    if sideEffectProfile<>0 then begin
+      append(result,'-restrict ');
+      append(result,C_sideEffectProfile[sideEffectProfile].name);
+    end;
     for k:=0 to length(deferredAdapterCreations)-1 do begin
       if deferredAdapterCreations[k].forceNewFile
       then append(result,'-out')
@@ -449,6 +457,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     end;
 
   VAR s:string;
+      i:longint;
   begin
     wl('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
                     {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
@@ -485,6 +494,9 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     wl('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     wl('                    if no options are given, the global output settings will be used');
     wl('  +out <filename>[(options)]  As -out but appending to the file if existing.');
+    wl('  -restrict <profileName>     Restricts the allowed side effects. Available restriction profiles:');
+    for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then
+    wl('                                '+C_sideEffectProfile[i].name);
     wl('  '+FLAG_QUIET+'            disable console output');
     wl('  '+FLAG_SILENT+'           suppress beeps');
     wl('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
@@ -503,7 +515,6 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       exit(false);
     end;
     if (clf_SHOW_HELP in mnhExecutionOptions.flags) or (length(parsingState.cmdLineParsingErrors)>0) then Exclude(mnhExecutionOptions.flags,clf_QUIET);
-    if (clf_HEADLESS  in mnhExecutionOptions.flags) then mnhExecutionOptions.flags-=[clf_PAUSE_ALWAYS,clf_PAUSE_ON_ERR];
     consoleMessageTypes:=stringToMessageTypeSet(mnhExecutionOptions.verbosityString);
     if not(clf_QUIET in mnhExecutionOptions.flags) and not(initAdaptersForGui) then begin
       {$ifdef fullVersion}

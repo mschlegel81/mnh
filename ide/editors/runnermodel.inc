@@ -127,6 +127,7 @@ PROCEDURE T_runnerModel.runExternally();
   VAR callParameters:T_arrayOfString;
       pid:longint;
   begin
+    externalRun.mnhExecutionOptions.flags+=[clf_PAUSE_ALWAYS];
     callParameters:=externalRun.getCommandLineArgumentsArray;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     runCommandAsyncOrPipeless(externalRun.mnhExecutionOptions.executor,callParameters,true,pid,executionDir(workspace.currentEditor));
