@@ -194,6 +194,7 @@ TYPE
       CONSTRUCTOR create(CONST outAdapters:P_messages);
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
+                                  CONST sideEffectProfile:T_sideEffects;
                                   CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
       PROCEDURE startFinalization;
       PROCEDURE stopWorkers(VAR recycler:T_recycler);
@@ -370,6 +371,7 @@ DESTRUCTOR T_evaluationGlobals.destroy;
   end;
 
 PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
+                                                 CONST sideEffectProfile:T_sideEffects;
                                                  CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
   VAR pc:T_profileCategory;
       i:longint;
@@ -415,8 +417,8 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     //evaluation state
     if evaluationContextType=ect_silent
-    then primaryContext.allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
-    else primaryContext.allowedSideEffects:=C_allSideEffects;
+    then primaryContext.allowedSideEffects:=sideEffectProfile-[se_inputViaAsk]
+    else primaryContext.allowedSideEffects:=sideEffectProfile;
     primaryContext.setThreadOptions(globalOptions);
     recycler.disposeScope(primaryContext.valueScope);
     primaryContext.valueScope:=nil;
@@ -634,8 +636,7 @@ FUNCTION T_context.reduceToLiteral(VAR first: P_token; VAR recycler:T_recycler):
     end;
   end;
 
-FUNCTION T_context.setAllowedSideEffectsReturningPrevious(
-  CONST se: T_sideEffects): T_sideEffects;
+FUNCTION T_context.setAllowedSideEffectsReturningPrevious(CONST se: T_sideEffects): T_sideEffects;
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;

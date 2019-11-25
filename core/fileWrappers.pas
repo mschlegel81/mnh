@@ -381,6 +381,10 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
   begin
     result := $ffffffff;
     try
+      {$ifdef debugMode}
+      writeln('Executing: ',executable,' "',join(parameters,'" "'),'"');
+      writeln('async: ',asynch,'; in folder: "',customFolder,'"');
+      {$endif}
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
       if customFolder<>'' then tempProcess.CurrentDirectory:=customFolder;

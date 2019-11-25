@@ -1,11 +1,11 @@
 object ShebangWizard: TShebangWizard
   Left = 528
-  Height = 486
+  Height = 636
   Top = 163
   Width = 400
   AutoSize = True
   Caption = 'Shebang wizard'
-  ClientHeight = 486
+  ClientHeight = 636
   ClientWidth = 400
   DesignTimePPI = 120
   OnCreate = FormCreate
@@ -182,7 +182,7 @@ object ShebangWizard: TShebangWizard
   object GroupBox4: TGroupBox
     Left = 0
     Height = 105
-    Top = 361
+    Top = 414
     Width = 400
     Align = alTop
     AutoSize = True
@@ -190,7 +190,7 @@ object ShebangWizard: TShebangWizard
     ClientHeight = 80
     ClientWidth = 396
     ParentFont = False
-    TabOrder = 3
+    TabOrder = 4
     object logAppendCb: TCheckBox
       AnchorSideLeft.Control = doLogCheckbox
       AnchorSideLeft.Side = asrBottom
@@ -291,14 +291,14 @@ object ShebangWizard: TShebangWizard
     AnchorSideRight.Control = Button2
     Left = 0
     Height = 31
-    Top = 466
+    Top = 519
     Width = 176
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     Caption = 'OK'
     ModalResult = 1
     ParentFont = False
-    TabOrder = 4
+    TabOrder = 5
   end
   object Button2: TButton
     AnchorSideLeft.Control = Button1
@@ -309,14 +309,14 @@ object ShebangWizard: TShebangWizard
     AnchorSideRight.Side = asrBottom
     Left = 176
     Height = 31
-    Top = 466
+    Top = 519
     Width = 224
     Anchors = [akTop, akRight]
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
     ParentFont = False
-    TabOrder = 5
+    TabOrder = 6
   end
   object notExecutableHint: TPanel
     Left = 0
@@ -333,7 +333,7 @@ object ShebangWizard: TShebangWizard
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
-    TabOrder = 6
+    TabOrder = 7
     object Label3: TLabel
       Left = 3
       Height = 40
@@ -354,6 +354,30 @@ object ShebangWizard: TShebangWizard
       Caption = 'This might be due to errors in the script.'
       ParentColor = False
       ParentFont = False
+    end
+  end
+  object restrictionsGroupBox: TGroupBox
+    Left = 0
+    Height = 53
+    Top = 361
+    Width = 400
+    Align = alTop
+    AutoSize = True
+    Caption = 'side effect restriction'
+    ClientHeight = 28
+    ClientWidth = 396
+    TabOrder = 3
+    object sideEffectComboBox: TComboBox
+      Left = 0
+      Height = 28
+      Top = 0
+      Width = 396
+      Align = alClient
+      AutoComplete = True
+      AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
+      ItemHeight = 20
+      Style = csDropDownList
+      TabOrder = 0
     end
   end
 end

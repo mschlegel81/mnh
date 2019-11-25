@@ -98,13 +98,16 @@ TYPE
       PROPERTY getLocalRule:P_ruleWithSubrules read localRule;
   end;
 
+  P_variable=^T_variable;
   P_protectedRuleWithSubrules=^T_protectedRuleWithSubrules;
   T_protectedRuleWithSubrules=object(T_ruleWithSubrules)
     private
       rule_cs:system.TRTLCriticalSection;
+      usedGlobalVariables:T_arrayOfPointer;
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType=rt_synchronized);
       DESTRUCTOR destroy; virtual;
+      PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
       FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
   end;
@@ -153,7 +156,6 @@ TYPE
       FUNCTION arity:T_arityInfo; virtual;
   end;
 
-  P_variable=^T_variable;
   T_variable=object(T_abstractRule)
     private
       varType:T_variableType;
@@ -994,6 +996,7 @@ CONSTRUCTOR T_delegatorRule.create(CONST id:T_idString; CONST declaredInPackage:
 CONSTRUCTOR T_protectedRuleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
     initCriticalSection(rule_cs);
+    setLength(usedGlobalVariables,0);
     inherited create(ruleId,startAt,ruleTyp);
   end;
 
@@ -1147,7 +1150,7 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
   begin
-    raise Exception.create('Really? I mean, this should not be called!');
+    raise Exception.create('Rhis should not be called!');
   end;
 
 PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -1159,6 +1162,16 @@ PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages; CONST resolv
   VAR s:P_subruleExpression;
   begin
     for s in subrules do s^.resolveIds(adapters,resolveIdContext);
+  end;
+
+PROCEDURE T_protectedRuleWithSubrules.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
+  VAR s:P_subruleExpression;
+      p:pointer;
+  begin
+    for s in subrules do begin
+      s^.resolveIds(adapters,resolveIdContext);
+      for p in s^.usedGlobalVariables do appendIfNew(usedGlobalVariables,p);
+    end;
   end;
 
 FUNCTION T_delegatorRule.hasPublicSubrule: boolean;
@@ -1226,11 +1239,13 @@ FUNCTION T_ruleWithSubrules.replaces(CONST callLocation:T_tokenLocation; CONST p
   end;
 
 FUNCTION T_protectedRuleWithSubrules.replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+  VAR p:pointer;
   begin
     result:=false;
     if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then P_context(context)^.raiseError('Stack depth limit exceeded calling '+getId+'.',getLocation,mt_el4_systemError)
     else if inherited replaces(callLocation,param,firstRep,lastRep,context,recycler,calledFromDelegator) then begin
       system.enterCriticalSection(rule_cs);
+      for p in usedGlobalVariables do enterCriticalSection(P_variable(p)^.namedValue.varCs);
       try
         result:=true;
         P_context(context)^.reduceExpression(firstRep,recycler);
@@ -1239,6 +1254,7 @@ FUNCTION T_protectedRuleWithSubrules.replaces(CONST callLocation:T_tokenLocation
           result:=false;
         end;
       finally
+        for p in usedGlobalVariables do leaveCriticalSection(P_variable(p)^.namedValue.varCs);
         system.leaveCriticalSection(rule_cs);
       end;
     end;
@@ -1252,6 +1268,7 @@ exit}
   VAR lit:P_literal;
       useParam:P_listLiteral;
       sub:P_subruleExpression;
+      p:pointer;
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
@@ -1275,7 +1292,11 @@ exit}
       CLEAN_EXIT(true);
     end else for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.replaces(useParam,callLocation,firstRep,lastRep,P_context(context)^,recycler) then begin
       if (P_context(context)^.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
-      if (P_context(context)^.messages^.continueEvaluation) then P_context(context)^.reduceExpression(firstRep,recycler);
+      if (P_context(context)^.messages^.continueEvaluation) then begin
+        for p in usedGlobalVariables do enterCriticalSection(P_variable(p)^.namedValue.varCs);
+        P_context(context)^.reduceExpression(firstRep,recycler);
+        for p in usedGlobalVariables do leaveCriticalSection(P_variable(p)^.namedValue.varCs);
+      end;
       if (P_context(context)^.messages^.continueEvaluation) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
         lit:=firstRep^.data;
         cache.put(useParam,lit);

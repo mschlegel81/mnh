@@ -15,10 +15,12 @@ TYPE
   TCustomRunForm = class(TForm)
     Button1: TButton;
     flagsByShebangCb: TCheckBox;
+    restrictionsGroupBox: TGroupBox;
     scriptParamEdit: TComboBox;
     RunButton: TButton;
     guiFlagCb: TCheckBox;
     quietFlagCb: TCheckBox;
+    sideEffectComboBox: TComboBox;
     silentFlagCb: TCheckBox;
     headlessFlagCb: TCheckBox;
     profileFlagCb: TCheckBox;
@@ -56,10 +58,11 @@ TYPE
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
 
 IMPLEMENTATION
-USES editorMetaBase;
+USES editorMetaBase,mnh_constants;
 VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
+  //TODO: Use restriction profile settings
   CONST formCaption:array[false..true] of string=('Run','Run externally');
   VAR k:longint;
       meta:P_editorMeta;
@@ -78,13 +81,17 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
     myCustomRunForm.flagsByShebangCb.visible:=externalRun;
     myCustomRunForm.flagsByShebangCb.enabled:=fileHadShebang;
     myCustomRunForm.flagsByShebangCb.checked:=runnerModel.persistentRunOptions.preferShebang;
+    myCustomRunForm.sideEffectComboBox.ItemIndex:=runnerModel.persistentRunOptions.mnhExecutionOptions.sideEffectProfile;
     myCustomRunForm.GroupBox2.enabled:=externalRun;
     myCustomRunForm.GroupBox4.enabled:=externalRun;
+    myCustomRunForm.restrictionsGroupBox.enabled:=externalRun;
     myCustomRunForm.GroupBox2.visible:=externalRun;
     myCustomRunForm.GroupBox4.visible:=externalRun;
+    myCustomRunForm.restrictionsGroupBox.visible:=externalRun;
     if externalRun then myCustomRunForm.reinitialize;
     if myCustomRunForm.ShowModal=mrOk then begin
       result:=true;
+      runnerModel.externalRun.mnhExecutionOptions.sideEffectProfile:=myCustomRunForm.sideEffectComboBox.ItemIndex;
       runnerModel.externalRun.initFromIde(scriptName,myCustomRunForm.scriptParamEdit.text);
       with myCustomRunForm.scriptParamEdit do if text<>'' then begin
         k:=items.IndexOf(text);
@@ -119,14 +126,15 @@ PROCEDURE TCustomRunForm.reinitialize;
       headlessFlagCb.checked:=clf_HEADLESS in flags;
       profileFlagCb .checked:=clf_PROFILE  in flags;
       verbosityEdit .text:=verbosityString;
+      sideEffectComboBox.ItemIndex:=sideEffectProfile;
     end;
-    guiFlagCb     .enabled:=not(useParametersFromShebang);
-    quietFlagCb   .enabled:=not(useParametersFromShebang);
-    silentFlagCb  .enabled:=not(useParametersFromShebang);
-    headlessFlagCb.enabled:=not(useParametersFromShebang);
-    profileFlagCb .enabled:=not(useParametersFromShebang);
-    verbosityEdit .enabled:=not(useParametersFromShebang);
-
+    guiFlagCb         .enabled:=not(useParametersFromShebang);
+    quietFlagCb       .enabled:=not(useParametersFromShebang);
+    silentFlagCb      .enabled:=not(useParametersFromShebang);
+    headlessFlagCb    .enabled:=not(useParametersFromShebang);
+    profileFlagCb     .enabled:=not(useParametersFromShebang);
+    verbosityEdit     .enabled:=not(useParametersFromShebang);
+    sideEffectComboBox.enabled:=not(useParametersFromShebang);
     if not(fileExists(settings.lightFlavourLocation)) then begin
       runnerModel.externalRun         .mnhExecutionOptions.callLightFlavour:=false;
       runnerModel.persistentRunOptions.mnhExecutionOptions.callLightFlavour:=false;
@@ -141,6 +149,7 @@ PROCEDURE TCustomRunForm.reinitialize;
   end;
 
 PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
+  VAR i:longint;
   begin
     with runnerModel.persistentRunOptions do begin
       if customFolder='' then begin
@@ -152,6 +161,8 @@ PROCEDURE TCustomRunForm.FormCreate(Sender: TObject);
         DirectoryEdit.caption:=customFolder;
       end;
     end;
+    sideEffectComboBox.items.clear;
+    for i:=0 to length(C_sideEffectProfile)-1 do sideEffectComboBox.items.add(C_sideEffectProfile[i].name);
   end;
 
 PROCEDURE TCustomRunForm.FormShow(Sender: TObject);

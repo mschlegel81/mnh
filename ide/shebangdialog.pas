@@ -9,13 +9,12 @@ USES
   editorMeta;
 
 TYPE
-
-  { TShebangWizard }
-
   TShebangWizard = class(TForm)
     Button1: TButton;
     Button2: TButton;
+    sideEffectComboBox: TComboBox;
     doLogCheckbox: TCheckBox;
+    restrictionsGroupBox: TGroupBox;
     Label3: TLabel;
     considerErrorsLabel: TLabel;
     logNameEdit: TEdit;
@@ -49,7 +48,7 @@ TYPE
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
 IMPLEMENTATION
-USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase;
+USES mnh_settings,commandLineParameters,funcs,codeAssistance,out_adapters,editorMetaBase,mnh_constants;
 {$R *.lfm}
 VAR ShebangWizard:TShebangWizard=nil;
 
@@ -75,6 +74,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
       pauseOnErrorCb.checked:=clf_PAUSE_ON_ERR in clp.flags;
 
       verbosityCombo.text:=clp.verbosityString;
+      sideEffectComboBox.ItemIndex:=clp.sideEffectProfile;
 
       if length(clp.deferredAdapterCreations)>0 then begin
         doLogCheckbox.checked:=true;
@@ -104,6 +104,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
         if headlessFlagCb.checked then include(clp.flags,clf_HEADLESS) else Exclude(clp.flags,clf_HEADLESS);
         if pauseFlagCb   .checked then include(clp.flags,clf_PAUSE_ALWAYS) else Exclude(clp.flags,clf_PAUSE_ALWAYS);
         if pauseOnErrorCb.checked then include(clp.flags,clf_PAUSE_ON_ERR) else Exclude(clp.flags,clf_PAUSE_ON_ERR);
+        clp.sideEffectProfile:=sideEffectComboBox.ItemIndex;
         clp.verbosityString:=verbosityCombo.text;
         if doLogCheckbox.checked then begin
           setLength(clp.deferredAdapterCreations,1);
@@ -140,6 +141,7 @@ PROCEDURE TShebangWizard.pauseFlagCbClick(Sender: TObject);
   end;
 
 PROCEDURE TShebangWizard.FormCreate(Sender: TObject);
+  VAR i:longint;
   begin
     guiFlagCb.caption:=FLAG_GUI;
     quietFlagCb.caption:=FLAG_QUIET;
@@ -147,6 +149,8 @@ PROCEDURE TShebangWizard.FormCreate(Sender: TObject);
     pauseFlagCb.caption:=FLAG_PAUSE_ALWAYS;
     headlessFlagCb.caption:=FLAG_HEADLESS;
     pauseOnErrorCb.caption:=FLAG_PAUSE_ON_ERR;
+    sideEffectComboBox.items.clear;
+    for i:=0 to length(C_sideEffectProfile)-1 do sideEffectComboBox.items.add(C_sideEffectProfile[i].name);
   end;
 
 PROCEDURE TShebangWizard.doLogCheckboxClick(Sender: TObject);
