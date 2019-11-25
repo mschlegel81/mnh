@@ -26,7 +26,7 @@ private guessEpsilons(samples:NumericList)->begin
     Max-Min;
   end).reverseList;
   local epsilonList:=
-  EPSILONS.pEach(epsilon,begin
+  EPSILONS.each(epsilon,begin
     local N:=indexOf(spreads>epsilon).trailing;
     isNumeric(N) ? void : N:=0;
     N<spreads.size*0.9 ? format("N=\v%s\tε=\v%s",N,epsilon) : void;
