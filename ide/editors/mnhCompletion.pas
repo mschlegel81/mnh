@@ -146,9 +146,9 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
     writeln(stdErr,'        DEBUG:                       sourceStart: ',SourceStart.x);
     {$endif}
-    if (editor<>nil) and (SourceStart.x>1) and (editor.Lines[SourceStart.y-1][SourceStart.x-1]='@') then begin
+    if (editor<>nil) and (SourceStart.x>1) and (editor.lines[SourceStart.y-1][SourceStart.x-1]='@') then begin
       SourceStart.x -= 1;
-      SourceValue := '@' + SourceValue;
+      sourceValue := '@' + sourceValue;
       exit;
     end;
 
