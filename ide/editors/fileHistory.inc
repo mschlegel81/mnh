@@ -278,7 +278,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         end;
       finally
         {$ifdef debugMode}
-        writeln(stdErr,'fileHistory/scanScripts: done scanning');
+        if length(scriptsToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: done scanning');
         {$endif}
         scriptUsage.scanning:=false;
         leaveCriticalSection(scriptUsage.cs);

@@ -57,7 +57,7 @@ PROCEDURE initIntrinsicRuleList;
       end;
     end;
     for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
-      intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],'.',''))
+      intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],ID_QUALIFY_CHARACTER,''))
     else if (copy(C_tokenDefaultId[tt],1,1)='.') and isIdentifier(copy(C_tokenDefaultId[tt],2,1000),false) then
       intrinsicRulesForCompletion.put(C_tokenDefaultId[tt]);
     for tc in T_typeCheck do
@@ -146,17 +146,18 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
     writeln(stdErr,'        DEBUG:                       sourceStart: ',SourceStart.x);
     {$endif}
-    if value='begin' then begin
-      value:=value+C_lineBreakChar+StringOfChar(' ',SourceStart.x-1)+'end';
+    if (editor<>nil) and (SourceStart.x>1) and (editor.Lines[SourceStart.y-1][SourceStart.x-1]='@') then begin
+      SourceStart.x -= 1;
+      SourceValue := '@' + SourceValue;
       exit;
     end;
+
     if (length(value)>=1) and (value[1] in delimiters) then begin
-      for i:=length(sourceValue) downto 1 do
-        if copy(sourceValue,i,length(sourceValue)-i+1)=
-           copy(value      ,1,length(sourceValue)-i+1) then begin
-          value:=copy(sourceValue,1,i-1)+value;
-          exit;
-        end;
+      for i:=length(sourceValue) downto 1 do if sourceValue[i]=value[1]
+      then begin
+        value:=copy(sourceValue,1,i-1)+value;
+        exit;
+      end;
     end;
   end;
 
