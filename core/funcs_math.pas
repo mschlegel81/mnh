@@ -1018,10 +1018,14 @@ FUNCTION euklideanNorm_impl intFuncSignature;
       total:double=0;
   begin
     if (params<>nil) and (params^.size=1) then begin
-      if (arg0^.literalType in [lt_numList,lt_intList,lt_realList]) then begin
-        for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
-        result:=newRealLiteral(sqrt(total));
-      end else result:=genericVectorization('euklideanNorm',params,tokenLocation,context,recycler);
+      case arg0^.literalType of
+        lt_numList,lt_intList,lt_realList:begin
+          for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
+          result:=newRealLiteral(sqrt(total));
+        end;
+        lt_smallint,lt_bigint,lt_real: result:=abs_imp(params,tokenLocation,context,recycler);
+        else result:=genericVectorization('euklideanNorm',params,tokenLocation,context,recycler);
+      end;
     end else result:=nil;
   end;
 

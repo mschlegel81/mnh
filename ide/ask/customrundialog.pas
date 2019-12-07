@@ -62,7 +62,6 @@ USES editorMetaBase,mnh_constants;
 VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
-  //TODO: Use restriction profile settings
   CONST formCaption:array[false..true] of string=('Run','Run externally');
   VAR k:longint;
       meta:P_editorMeta;

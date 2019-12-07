@@ -1,4 +1,4 @@
-{$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
+{$ifdef Windows}{$MAXSTACKSIZE 10000000}{$endif}
 PROGRAM ide;
 
 {$mode objfpc}{$H+}

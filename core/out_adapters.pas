@@ -282,7 +282,7 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
-USES myStringUtil,strutils;
+USES myStringUtil,strutils,fileWrappers;
 VAR globalAdaptersCs:TRTLCriticalSection;
     allConnectors:array of P_messagesDistributor;
     finalizing:longint=0;
@@ -1143,6 +1143,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
       if collectedFill>0 then begin
         result:=true;
         try
+          ForceDirectories(extractFilePath(outputFileName));
           assign(handle,outputFileName);
           if fileExists(outputFileName) and not(forceRewrite)
           then system.append(handle)
