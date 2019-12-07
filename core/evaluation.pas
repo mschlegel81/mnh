@@ -340,7 +340,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
+  PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token); inline;
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
