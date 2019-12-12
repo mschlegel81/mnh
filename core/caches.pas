@@ -28,8 +28,8 @@ TYPE
   public
     CONSTRUCTOR create(ruleCS:TRTLCriticalSection);
     DESTRUCTOR destroy;
-    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal);
-    FUNCTION get(CONST key: P_listLiteral): P_literal;
+    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal); inline;
+    FUNCTION get(CONST key: P_listLiteral): P_literal; inline;
     PROCEDURE clear;
   end;
 
