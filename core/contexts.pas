@@ -916,7 +916,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     VAR aimPoolThreads:longint;
     begin
       if isMemoryInComfortZone
-      then aimPoolThreads:=settings.cpuCount-1
+      then aimPoolThreads:=settings.cpuCount
       else aimPoolThreads:=1;
       if poolThreadsRunning<aimPoolThreads then begin
         interLockedIncrement(poolThreadsRunning);
