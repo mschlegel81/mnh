@@ -20,7 +20,8 @@ USES sysutils,   //system
      ig_ifs2,
      ig_bifurcation,
      ig_funcTrees,
-     ig_expoClouds;
+     ig_expoClouds,
+     ig_factorTables;
 CONST
   WORKFLOW_START_INTERVAL_MILLISECONDS=1100;
 
