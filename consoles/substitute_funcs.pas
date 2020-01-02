@@ -50,5 +50,6 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'resizeImage'             ,@requireGui,ak_variadic);
   registerRule(IMIG_NAMESPACE,'saveImage'               ,@requireGui,ak_variadic);
   registerRule(IMIG_NAMESPACE,'validateWorkflow'        ,@requireGui,ak_variadic);
+  registerRule(IMIG_NAMESPACE,'expandImageGeneration'   ,@requireGui,ak_variadic);
 
 end.
