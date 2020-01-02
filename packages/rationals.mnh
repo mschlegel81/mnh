@@ -46,7 +46,8 @@ toRational(i:Int)->[i,1];
 toRational(f:RegularContinuedFraction)->begin
   local r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
-  r;
+  r.isInt ? r.toRational
+          : r;
 end;
 
 @Override
