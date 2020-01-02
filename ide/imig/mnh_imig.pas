@@ -65,6 +65,7 @@ TYPE
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
 {$i func_defines.inc}
 IMPLEMENTATION
+USES myParams;
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
   begin new(result,create(nil)); end;
 
@@ -133,7 +134,6 @@ FUNCTION validateWorkflow_imp intFuncSignature;
 
 VAR workflowsActive:longint=0;
     workflowCs:TRTLCriticalSection;
-    lastWorkflowStart:double=0;
 FUNCTION executeWorkflow_imp intFuncSignature;
   CONST aditionalOutputInterval=1/(24*60); //one minute
   VAR isValid:boolean=true;
@@ -215,7 +215,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       end;
       if isValid then begin
         enterCriticalSection(workflowCs);
-        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+WORKFLOW_START_INTERVAL_MILLISECONDS*1E-3*ONE_SECOND>now)) do begin
+        while (workflowsActive>0) and not(isMemoryInComfortZone) do begin
           leaveCriticalSection(workflowCs);
           if not(hasDelayMessage) then begin
             hasDelayMessage:=true;
@@ -225,7 +225,6 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           ThreadSwitch;
           enterCriticalSection(workflowCs);
         end;
-        lastWorkflowStart:=now;
         inc(workflowsActive);
         leaveCriticalSection(workflowCs);
 
@@ -262,7 +261,6 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         thisWorkflow.progressQueue.ensureStop;
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
-        if isMemoryInComfortZone then lastWorkflowStart:=now-ONE_MINUTE;
         leaveCriticalSection(workflowCs);
       end;
       if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
@@ -416,6 +414,68 @@ FUNCTION listManipulations_imp intFuncSignature;
       listResult^.appendString(stepParamDescription[imt]^.getDefaultParameterString);
     for alg in algorithms do listResult^.appendString(alg^.prototype^.toString(false));
   end;
+
+FUNCTION expandImageGeneration_imp intFuncSignature;
+  VAR meta:P_algorithmMeta;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      meta:=getAlgorithmOrNil(str0^.value,true);
+      if meta=nil
+      then exit(str0^.rereferenced)
+      else exit(newStringLiteral(meta^.prototype^.toString(false)));
+    end;
+  end;
+//
+//FUNCTION imageGenerationToMap_imp intFuncSignature;
+//  VAR meta:P_algorithmMeta;
+//      parameters:P_mapLiteral;
+//      description:P_parameterDescription;
+//      value      :T_parameterValue;
+//      valueLit   :P_literal;
+//      i:longint;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+//      meta:=getAlgorithmOrNil(str0^.value,true);
+//      if meta=nil
+//      then exit(newVoidLiteral)
+//      else begin
+//        parameters:=newMapLiteral(meta^.prototype^.numberOfParameters);
+//        result:=newMapLiteral(2)^.put('Algorithm',meta^.getName)^.put('Parameter',parameters,false);
+//        for i:=0 to meta^.prototype^.numberOfParameters-1 do begin
+//          description:=meta^.prototype^.parameterDescription(i);
+//          value      :=meta^.prototype^.getParameter        (i);
+//          case description^.typ of
+//            pt_string   ,
+//            pt_fileName ,
+//            pt_enum     : valueLit:=newStringLiteral(value.fileName);
+//            pt_integer  : valueLit:=newIntLiteral(value.i0);
+//            pt_2integers: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendInt(value.i1);
+//            pt_3integers: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendInt(value.i1)^.appendInt(value.i2);
+//            pt_4integers: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendInt(value.i1)^.appendInt(value.i2)^.append(value.i3);
+//            pt_intOr2Ints: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendInt(value.i1);
+//            pt_float     : valueLit:=newRealLiteral(value.f0);
+//            pt_floatOr2Floats,
+//            pt_2floats   : valueLit:=newListLiteral(2)^.appendReal(value.f0)^.appendReal(value.f1);
+//            pt_3floats,
+//            pt_color     : valueLit:=newListLiteral(3)^.appendReal(value.f0)^.appendReal(value.f1)^.appendReal(value.f2);
+//            pt_4floats   : valueLit:=newListLiteral(4)^.appendReal(value.f0)^.appendReal(value.f1)^.appendReal(value.f2)^.appendReal(value.f3);
+//            pt_jpgNameWithSize: valueLit:=newListLiteral(2)^.appendString(value.fileName)^.appendInt(value.i0)
+//            pt_1I1F: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendReal(value.f1);
+//            pt_1I2F: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendReal(value.f1)^.appendReal(value.f2);
+//            pt_1I3F: valueLit:=newListLiteral(4)^.appendInt(value.i0)^.appendReal(value.f1)^.appendReal(value.f2)^.appendReal(value.f3);
+//            else begin
+//              context.raiseError('Unimplemented parameter value type');
+//              writeln(stderr,'Unimplemented parameter value type is: ',description^.typ);
+//              valueLit:=newVoidLiteral;
+//            end;
+//          end;
+//          parameters^.put(description^.name,valueLit,false);
+//        end;
+//      end;
+//    end;
+//  end;
 
 FUNCTION getThumbnail_imp intFuncSignature;
   VAR img:T_rawImage;
@@ -630,7 +690,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
   registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_binary,'renderPlotToCurrentImage(width,height);//Renders the current plot to the current image');
   registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
-  lastWorkflowStart:=now-ONE_MINUTE;
+  registerRule(IMIG_NAMESPACE,'expandImageGeneration',@expandImageGeneration_imp,ak_unary,'expandImageGeneration(s:String);//Returns the generation algorithm with all fields');
 FINALIZATION
   doneCriticalSection(workflowCs);
 end.
