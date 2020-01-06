@@ -136,11 +136,20 @@ TYPE
       DESTRUCTOR  destroy; virtual;
   end;
 
+  P_subQueue=^T_subQueue;
+  T_subQueue=object
+    first,last:P_queueTask;
+    queuedCount,depth:longint;
+    CONSTRUCTOR create(CONST level:longint);
+    DESTRUCTOR destroy;
+    PROCEDURE enqueue(CONST task:P_queueTask);
+    FUNCTION  dequeue(OUT isEmptyAfter:boolean):P_queueTask;
+  end;
+
   T_taskQueue=object
     private
-      first,last:P_queueTask;
+      subQueue:array of P_subQueue;
       queuedCount:longint;
-
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
@@ -299,7 +308,7 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
       end;
     end else new(result,create);
     with result^ do begin
-      options           :=parentThread^.options-[tco_spawnWorker];
+      options           :=parentThread^.options;
       allowedSideEffects:=parentThread^.allowedSideEffects;
       {$ifdef fullVersion}
       callStack.clear;
@@ -896,8 +905,7 @@ CONSTRUCTOR T_taskQueue.create;
   begin
     system.initCriticalSection(cs);
     destructionPending:=false;
-    first:=nil;
-    last:=nil;
+    setLength(subQueue,0);
     queuedCount:=0;
   end;
 
@@ -909,6 +917,38 @@ DESTRUCTOR T_taskQueue.destroy;
       ThreadSwitch;
     end;
     system.doneCriticalSection(cs);
+  end;
+
+CONSTRUCTOR T_subQueue.create(CONST level: longint);
+  begin
+    first:=nil;
+    last :=nil;
+    queuedCount:=0;
+    depth:=level;
+  end;
+
+DESTRUCTOR T_subQueue.destroy;
+  begin
+  end;
+
+PROCEDURE T_subQueue.enqueue(CONST task: P_queueTask);
+  begin
+    inc(queuedCount);
+    if first=nil then begin
+      first:=task;
+      last:=task;
+    end else begin
+      last^.nextToEvaluate:=task;
+      last:=task;
+    end;
+  end;
+
+FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
+  begin
+    result:=first;
+    first:=first^.nextToEvaluate;
+    dec(queuedCount);
+    isEmptyAfter:=(queuedCount=0) or (first=nil);
   end;
 
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
@@ -923,17 +963,31 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
     end;
+
+  FUNCTION ensureQueue:P_subQueue;
+    VAR i:longint;
+        s:P_subQueue;
+    begin
+      for i:=0 to length(subQueue)-1 do if subQueue[i]^.depth=context^.callDepth then exit(subQueue[i]);
+      //create new sub-queue
+      i:=length(subQueue);
+      setLength(subQueue,i+1);
+      new(result,create(context^.callDepth));
+      subQueue[i]:=result;
+      //bubble up
+      while (i>0) and (subQueue[i-1]^.depth>subQueue[i]^.depth) do begin
+        s            :=subQueue[i-1];
+        subQueue[i-1]:=subQueue[i  ];
+        subQueue[i  ]:=s;
+        dec(i);
+      end;
+    end;
+
   begin
     system.enterCriticalSection(cs);
     try
       inc(queuedCount);
-      if first=nil then begin
-        first:=task;
-        last:=task;
-      end else begin
-        last^.nextToEvaluate:=task;
-        last:=task;
-      end;
+      ensureQueue^.enqueue(task);
       ensurePoolThreads();
     finally
       system.leaveCriticalSection(cs);
@@ -941,15 +995,21 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
 FUNCTION T_taskQueue.dequeue: P_queueTask;
+  VAR emptyAfter:boolean;
+      k:longint;
   begin
     system.enterCriticalSection(cs);
     try
-      if queuedCount<=0
+      k:=length(subQueue)-1;
+      if (queuedCount<=0) or (k<0)
       then result:=nil
       else begin
+        result:=subQueue[k]^.dequeue(emptyAfter);
+        if emptyAfter then begin
+          dispose(subQueue[k],destroy);
+          setLength(subQueue,k);
+        end;
         dec(queuedCount);
-        result:=first;
-        first:=first^.nextToEvaluate;
       end;
     finally
       system.leaveCriticalSection(cs);
@@ -964,6 +1024,7 @@ FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;
     then result:=false
     else begin
       result:=true;
+      task^.context^.options-=[tco_spawnWorker];
       if task^.isVolatile then begin
         task^.evaluate(recycler);
         task^.clearContext;
