@@ -495,102 +495,102 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         lastRep:=nil;
         leaveCriticalSection(subruleCallCs);
         context.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
-        exit;
-      end;
-      try
-        currentlyEvaluating:=true;
+      end else begin
+        try
+          currentlyEvaluating:=true;
 
-        if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
-        blocking:=typ in C_subruleExpressionTypes;
-        firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
-        lastRep:=firstRep;
+          if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
+          blocking:=typ in C_subruleExpressionTypes;
+          firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
+          lastRep:=firstRep;
 
-        if (preparedBody[                     0].token.tokType=tt_beginBlock) and
-           (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
-           (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
-        then begin
-          firstRelevantToken:=1;
-          lastRelevantToken:=length(preparedBody)-3;
-          if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
-        end else begin
-          firstRelevantToken:=0;
-          lastRelevantToken:=length(preparedBody)-1;
-        end;
-
-        {$ifdef fullVersion}
-        if parametersNode<>nil then begin
-          for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
-        end;
-        {$endif}
-
-        for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
-          if parIdx>=0 then begin
-            if parIdx=ALL_PARAMETERS_PAR_IDX then begin
-              if allParams=nil then begin
-                allParams:=newListLiteral;
-                if param<>nil then allParams^.appendAll(param);
-                {$ifdef fullVersion}
-                if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
-                {$endif}
-                allParams^.unreference;
-              end;
-              L:=allParams;
-            end else if parIdx=REMAINING_PARAMETERS_IDX then begin
-              if remaining=nil then begin
-                if param=nil
-                then remaining:=newListLiteral
-                else remaining:=param^.tail(pattern.arity);
-                {$ifdef fullVersion}
-                if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
-                {$endif}
-                remaining^.unreference;
-              end;
-              L:=remaining;
-            end else begin
-              L:=param^.value[parIdx];
-            end;
-            lastRep^.next:=recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
-          end else lastRep^.next:=recycler.newToken(token);
-          lastRep:=lastRep^.next;
-        end;
-
-        {$ifdef fullVersion}
-        context.callStackPush(callLocation,@self,parametersNode);
-        {$endif}
-        if indexOfSave>=0 then begin
-          if saveValueStore=nil then begin
-            saveValueStore:=recycler.newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
-            firstCallOfResumable:=true;
+          if (preparedBody[                     0].token.tokType=tt_beginBlock) and
+             (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
+             (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
+          then begin
+            firstRelevantToken:=1;
+            lastRelevantToken:=length(preparedBody)-3;
+            if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
+          end else begin
+            firstRelevantToken:=0;
+            lastRelevantToken:=length(preparedBody)-1;
           end;
-          previousValueScope:=context.valueScope;
-          context.valueScope:=saveValueStore;
 
-          firstRep:=recycler.disposeToken(firstRep);
-
-          context.reduceExpression(firstRep,recycler);
-          if firstRep=nil
-          then lastRep:=nil
-          else lastRep:=firstRep^.last;
-          context.valueScope:=previousValueScope;
-          if firstCallOfResumable then begin
-            if context.messages^.continueEvaluation then begin
-              updateBody;
-            end else begin
-              recycler.disposeScope(saveValueStore);
-            end;
-          end;
           {$ifdef fullVersion}
-          context.callStackPop(firstRep);
+          if parametersNode<>nil then begin
+            for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
+          end;
           {$endif}
-        end else begin
-          lastRep^.next:=recycler.newToken(getLocation,'',tt_semicolon);
-          lastRep:=lastRep^.next;
-          lastRep^.next:=recycler.newToken(getLocation,'',endToken[blocking]);
-          lastRep:=lastRep^.next;
+
+          for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
+            if parIdx>=0 then begin
+              if parIdx=ALL_PARAMETERS_PAR_IDX then begin
+                if allParams=nil then begin
+                  allParams:=newListLiteral;
+                  if param<>nil then allParams^.appendAll(param);
+                  {$ifdef fullVersion}
+                  if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
+                  {$endif}
+                  allParams^.unreference;
+                end;
+                L:=allParams;
+              end else if parIdx=REMAINING_PARAMETERS_IDX then begin
+                if remaining=nil then begin
+                  if param=nil
+                  then remaining:=newListLiteral
+                  else remaining:=param^.tail(pattern.arity);
+                  {$ifdef fullVersion}
+                  if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
+                  {$endif}
+                  remaining^.unreference;
+                end;
+                L:=remaining;
+              end else begin
+                L:=param^.value[parIdx];
+              end;
+              lastRep^.next:=recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
+            end else lastRep^.next:=recycler.newToken(token);
+            lastRep:=lastRep^.next;
+          end;
+
+          {$ifdef fullVersion}
+          context.callStackPush(callLocation,@self,parametersNode);
+          {$endif}
+          if indexOfSave>=0 then begin
+            if saveValueStore=nil then begin
+              saveValueStore:=recycler.newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+              firstCallOfResumable:=true;
+            end;
+            previousValueScope:=context.valueScope;
+            context.valueScope:=saveValueStore;
+
+            firstRep:=recycler.disposeToken(firstRep);
+
+            context.reduceExpression(firstRep,recycler);
+            if firstRep=nil
+            then lastRep:=nil
+            else lastRep:=firstRep^.last;
+            context.valueScope:=previousValueScope;
+            if firstCallOfResumable then begin
+              if context.messages^.continueEvaluation then begin
+                updateBody;
+              end else begin
+                recycler.disposeScope(saveValueStore);
+              end;
+            end;
+            {$ifdef fullVersion}
+            context.callStackPop(firstRep);
+            {$endif}
+          end else begin
+            lastRep^.next:=recycler.newToken(getLocation,'',tt_semicolon);
+            lastRep:=lastRep^.next;
+            lastRep^.next:=recycler.newToken(getLocation,'',endToken[blocking]);
+            lastRep:=lastRep^.next;
+          end;
+          currentlyEvaluating:=false;
+        finally
+          leaveCriticalSection(subruleCallCs);
         end;
-        currentlyEvaluating:=false;
-      finally
-        leaveCriticalSection(subruleCallCs);
       end;
     end;
 
