@@ -23,17 +23,11 @@ end}.toIteratableExpression;
 //*Warning: (potentially) infinite generator!
 pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);
 
-//*Returns an iterator returning all elements of the input list
-listIterator(l:List)->{begin
-  local index:=rangeGenerator(0,l.size);
-  local value:=l;
-save; value[index() orElse -1]; end}.toIteratableExpression;
-
 //*Returns a chunk iterator
 chunkIterator(iter:Iteratable,chunkSize>=1)->{begin
   local g:=iter.isIteratableExpression
            ? iter
-           : listIterator(iter.toList);
+           : iter.toIteratableExpression;
   local next:={begin
     local r:=g.head(chunkSize);
     r==[] ? void : r;
