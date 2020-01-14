@@ -95,6 +95,7 @@ end;
 hashFiles:=['../art.source/igSrc/complex.pas',
             '../art.source/igSrc/darts.pas',
             '../art.source/igSrc/ig_bifurcation.pas',
+            '../art.source/igSrc/ig_circlespirals.pas',
             '../art.source/igSrc/ig_epicycles.pas',
             '../art.source/igSrc/ig_expoClouds.pas',
             '../art.source/igSrc/ig_factorTables.pas',
