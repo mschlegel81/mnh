@@ -57,7 +57,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
 PROCEDURE aggregate(CONST input:P_literal; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
 PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context; VAR recycler:T_recycler);
 
-VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
+VAR newIterator:FUNCTION (CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
 IMPLEMENTATION
 USES mySys,tokenArray;
 TYPE
@@ -287,8 +287,8 @@ end}
       processX;
     end;
     finalizePending(proceed);
-    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while  firstToAggregate<>nil                                                           do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
@@ -436,8 +436,8 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
     setLength(nextToEnqueue,enqueueFill);
     if enqueueFill>0 then createTask(nextToEnqueue);
 
-    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while  firstToAggregate<>nil                                                           do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
@@ -552,8 +552,8 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
     setLength(nextToEnqueue,enqueueFill);
     if enqueueFill>0 then createTask(nextToEnqueue);
 
-    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while  firstToAggregate<>nil                                                           do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dat[fill]^.clearContext;
@@ -695,15 +695,24 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
               inc(j);
             end;
           end;
+          {$ifdef debugMode}
+          writeln(stdErr,ThreadID,' finished subtask ',k,'/',length(mapParameter));
+          {$endif}
         end;
         setLength(mapResult,j);
       end;
     finally
       enterCriticalSection(taskCs);
+      {$ifdef debugMode}
+      writeln(stdErr,ThreadID,' finalizing a map task');
+      {$endif}
       tasksPerSecond:=min(1E6,length(mapPayload.mapParameter)/(context^.wallclockTime-wallClockAtStart));
       clearMapPayload;
       context^.finalizeTaskAndDetachFromParent(@recycler);
       leaveCriticalSection(taskCs);
+      {$ifdef debugMode}
+      writeln(stdErr,ThreadID,' map task finalized (done)');
+      {$endif}
     end;
   end;
 

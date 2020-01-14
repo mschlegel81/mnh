@@ -21,15 +21,15 @@ TYPE
     index:longint;
     underlying:P_literal;
     values:T_arrayOfLiteral;
-    CONSTRUCTOR create(CONST v:P_compoundLiteral);
+    CONSTRUCTOR create(CONST v:P_compoundLiteral; CONST location:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral({$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
+CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
   begin
-    init(lt_expression);
+    inherited create(location);
     index:=0;
     underlying:=v^.rereferenced;
     values:=v^.iteratableList;
@@ -44,7 +44,7 @@ FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
   begin
     result.triggeredByReturn:=false;
     if index>=length(values)
-    then result.literal:=nil
+    then result.literal:=newVoidLiteral
     else result.literal:=values[index]^.rereferenced;
     inc(index);
   end;
@@ -60,15 +60,15 @@ P_singleValueIterator=^T_singleValueIterator;
 T_singleValueIterator=object(T_builtinGeneratorExpression)
   didDeliver:boolean;
   value:P_literal;
-  CONSTRUCTOR create(CONST v:P_literal);
+  CONSTRUCTOR create(CONST v:P_literal; CONST location:T_tokenLocation);
   FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
   FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
   DESTRUCTOR destroy; virtual;
 end;
 
-CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
+CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal; CONST location:T_tokenLocation);
   begin
-    init(lt_expression);
+    inherited create(location);
     didDeliver:=false;
     value:=v^.rereferenced;
   end;
@@ -80,8 +80,9 @@ FUNCTION T_singleValueIterator.toString(CONST lengthLimit:longint=maxLongint):st
 
 FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    if didDeliver then exit(NIL_EVAL_RESULT);
-    result.literal:=value^.rereferenced;
+    if didDeliver
+    then result.literal:=newVoidLiteral
+    else result.literal:=value^.rereferenced;
     result.triggeredByReturn:=false;
     didDeliver:=true;
   end;
@@ -91,12 +92,12 @@ DESTRUCTOR T_singleValueIterator.destroy;
     disposeLiteral(value);
   end;
 
-FUNCTION newIterator(CONST input:P_literal):P_expressionLiteral;
+FUNCTION newIterator(CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
   begin
-    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
+    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input),location))
     else if (input^.literalType=lt_expression) and
             (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then result:=P_expressionLiteral(input^.rereferenced)
-    else new(P_singleValueIterator(result),create(input));
+    else new(P_singleValueIterator(result),create(input,location));
   end;
 
 TYPE
@@ -442,7 +443,7 @@ DESTRUCTOR T_mapGenerator.destroy;
 
 FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
   begin
-    new(P_mapGenerator(result),create(newIterator(generator),mapping,tokenLocation));
+    new(P_mapGenerator(result),create(newIterator(generator,tokenLocation),mapping,tokenLocation));
   end;
 
 FUNCTION lazyMap_imp intFuncSignature;
@@ -450,7 +451,7 @@ FUNCTION lazyMap_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
                                           and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      new(P_mapGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
+      new(P_mapGenerator(result),create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
     end;
   end;
 
@@ -556,7 +557,7 @@ FUNCTION futureMap_imp intFuncSignature;
     if not(tco_spawnWorker in context.threadOptions) then exit(lazyMap_imp(params,tokenLocation,context,recycler));
     if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
                                           and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      new(f,create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
+      new(f,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
       for i:=1 to TASKS_TO_QUEUE_PER_CPU*settings.cpuCount do f^.enqueueNext(tokenLocation,@context,@recycler);
       result:=f;
     end;

@@ -572,7 +572,7 @@ FUNCTION toGenerator_imp intFuncSignature;
       if (arg0^.literalType=lt_expression) then begin
         result:=arg0^.rereferenced;
         P_expressionLiteral(result)^.makeIteratable(@context,tokenLocation);
-      end else result:=newIterator(arg0);
+      end else result:=newIterator(arg0,tokenLocation);
     end;
   end;
 

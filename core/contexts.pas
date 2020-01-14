@@ -153,10 +153,10 @@ TYPE
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
+      FUNCTION  dequeue:P_queueTask;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      FUNCTION  dequeue:P_queueTask;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROPERTY getQueuedCount:longint read queuedCount;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
@@ -864,11 +864,11 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
 
 PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context; VAR recycler:T_recycler);
   begin
+    {$ifdef debugMode}
+    if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
+    {$endif}
     enterCriticalSection(taskCs);
     try
-      {$ifdef debugMode}
-      if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
-      {$endif}
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;

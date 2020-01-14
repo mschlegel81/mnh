@@ -1,4 +1,3 @@
-USE '..\packages\generators.mnh';
 memoized
 pascalTriangleRow(n<1)->1;
 pascalTriangleRow(n)->(pascalTriangleRow(n-1)|0)+(0|pascalTriangleRow(n-1));
@@ -13,64 +12,64 @@ main(lineCount)->printTri(softCast(lineCount));
 @SuppressUnusedWarning=all
 @class=Pascal triangle row
 @OEIS=A010926
-A010926->pascalTriangleRow(10).listIterator;
+A010926->pascalTriangleRow(10).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010927
-A010927->pascalTriangleRow(11).listIterator;
+A010927->pascalTriangleRow(11).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010928
-A010928->pascalTriangleRow(12).listIterator;
+A010928->pascalTriangleRow(12).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010929
-A010929->pascalTriangleRow(13).listIterator;
+A010929->pascalTriangleRow(13).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010930
-A010930->pascalTriangleRow(14).listIterator;
+A010930->pascalTriangleRow(14).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010931
-A010931->pascalTriangleRow(15).listIterator;
+A010931->pascalTriangleRow(15).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010932
-A010932->pascalTriangleRow(16).listIterator;
+A010932->pascalTriangleRow(16).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010933
-A010933->pascalTriangleRow(17).listIterator;
+A010933->pascalTriangleRow(17).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010934
-A010934->pascalTriangleRow(18).listIterator;
+A010934->pascalTriangleRow(18).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010935
-A010935->pascalTriangleRow(19).listIterator;
+A010935->pascalTriangleRow(19).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010936
-A010936->pascalTriangleRow(20).listIterator;
+A010936->pascalTriangleRow(20).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010937
-A010937->pascalTriangleRow(21).listIterator;
+A010937->pascalTriangleRow(21).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010938
-A010938->pascalTriangleRow(22).listIterator;
+A010938->pascalTriangleRow(22).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010939
-A010939->pascalTriangleRow(23).listIterator;
+A010939->pascalTriangleRow(23).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010940
-A010940->pascalTriangleRow(24).listIterator;
+A010940->pascalTriangleRow(24).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010941
-A010941->pascalTriangleRow(25).listIterator;
+A010941->pascalTriangleRow(25).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010942
-A010942->pascalTriangleRow(26).listIterator;
+A010942->pascalTriangleRow(26).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010943
-A010943->pascalTriangleRow(27).listIterator;
+A010943->pascalTriangleRow(27).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010944
-A010944->pascalTriangleRow(28).listIterator;
+A010944->pascalTriangleRow(28).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010945
-A010945->pascalTriangleRow(29).listIterator;
+A010945->pascalTriangleRow(29).toIteratableExpression;
 @class=Pascal triangle row
 @OEIS=A010946
-A010946->pascalTriangleRow(30).listIterator;
+A010946->pascalTriangleRow(30).toIteratableExpression;
