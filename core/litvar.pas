@@ -271,7 +271,7 @@ TYPE
       FUNCTION getDocTxt:string;
   end;
 
-  generic G_literalKeyMap<VALUE_TYPE>= object
+  GENERIC G_literalKeyMap<VALUE_TYPE>= object
     TYPE CACHE_ENTRY=record
            key:P_literal;
            keyHash:T_hashInt;
