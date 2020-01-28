@@ -91,7 +91,7 @@ TYPE
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual; abstract;
   end;
 
-  generic G_multiChildGuiOutAdapter<childType>= object(T_abstractGuiOutAdapter)
+  GENERIC G_multiChildGuiOutAdapter<childType>= object(T_abstractGuiOutAdapter)
     protected
       children:array of childType;
     public
