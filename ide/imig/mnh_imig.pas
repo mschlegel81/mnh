@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,   //system
      ExtCtrls,
      Classes,
-     myGenerics,myTools,mySys, //common
+     myGenerics,mySys, //common
      //mnh:
      mnh_constants, basicTypes,
      funcs,litVar,contexts,funcs_list,mnh_plotData,
@@ -66,7 +66,7 @@ TYPE
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
 {$i func_defines.inc}
 IMPLEMENTATION
-USES myParams;
+USES myParams,generationBasics,imageContexts;
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
   begin new(result,create(nil)); end;
 
@@ -95,7 +95,7 @@ FUNCTION obtainDimensionsViaAdapters(CONST messages:P_messages):T_imageDimension
     disposeMessage(m);
   end;
 
-FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_imageManipulationWorkflow;
+FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_standaloneWorkflow;
   PROCEDURE warn(CONST message:string);
     begin
       isValid:=false;
@@ -107,6 +107,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       cmd:string;
       tmpSteps:P_listLiteral;
   begin
+    //TODO: use one message queue per workflow
     result.create;
     if steps^.literalType=lt_stringList
     then tmpSteps:=steps
@@ -123,11 +124,23 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
   end;
 
 FUNCTION validateWorkflow_imp intFuncSignature;
-  VAR wf:T_imageManipulationWorkflow;
+  VAR wf:T_standaloneWorkflow;
       isValid:boolean;
+  PROCEDURE pollLog;
+    VAR msg:P_structuredMessage;
+    begin
+      msg:=wf.messageQueue^.get;
+      while msg<>nil do begin
+        if msg^.indicatesError then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,msg^.toString);
+        dispose(msg,destroy);
+        msg:=wf.messageQueue^.get;
+      end;
+    end;
+
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_list]) then begin
       wf:=createWorkflow(list0,true,isValid,tokenLocation,context,recycler);
+      pollLog;
       wf.destroy;
       result:=newBoolLiteral(isValid);
     end else result:=nil;
@@ -136,7 +149,6 @@ FUNCTION validateWorkflow_imp intFuncSignature;
 VAR workflowsActive:longint=0;
     workflowCs:TRTLCriticalSection;
 FUNCTION executeWorkflow_imp intFuncSignature;
-  CONST aditionalOutputInterval=1/(24*60); //one minute
   VAR isValid:boolean=true;
       source:string='';
       dest:string='';
@@ -145,21 +157,18 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       sizeLimit:longint=-1;
       i:longint;
       sleepTime:longint=1;
-      lastOutput:double;
-      progressLog:T_progressLog;
-      logLinesDisplayed:longint=0;
       outputMethod:P_expressionLiteral=nil;
-      thisWorkflow:T_imageManipulationWorkflow;
+      thisWorkflow:T_standaloneWorkflow;
       hasDelayMessage:boolean=false;
 
       obtainedImage:P_rawImage;
 
   FUNCTION newFromWorkflowImage:P_rawImage;
     begin
-      new(result,create(thisWorkflow.workflowImage));
+      new(result,create(thisWorkflow.image));
     end;
 
-  PROCEDURE doOutput(CONST s:string);
+  PROCEDURE doOutput(CONST s:string; CONST warning:boolean);
     VAR sLit:P_stringLiteral;
         outputLit:P_literal;
     begin
@@ -168,7 +177,22 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,@recycler,sLit,nil).literal;
         disposeLiteral(sLit);
         if outputLit<>nil then disposeLiteral(outputLit);
-      end else context.messages^.postTextMessage(mt_el1_note,tokenLocation,s);
+      end else begin
+        if warning
+        then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,s)
+        else context.messages^.postTextMessage(mt_el1_note   ,tokenLocation,s);
+      end;
+    end;
+
+  PROCEDURE pollLog;
+    VAR msg:P_structuredMessage;
+    begin
+      msg:=thisWorkflow.messageQueue^.get;
+      while msg<>nil do begin
+        doOutput(msg^.toString,msg^.indicatesError);
+        dispose(msg,destroy);
+        msg:=thisWorkflow.messageQueue^.get;
+      end;
     end;
 
   begin
@@ -203,16 +227,21 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         isValid:=false;
       end;
       thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context,recycler);
-      if isValid and (source=C_nullSourceOrTargetFileName) then begin
-        obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-        if obtainedImage=nil then begin
-          context.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
-          isValid:=false;
-        end else begin
-          thisWorkflow.workflowImage.copyFromPixMap(obtainedImage^);
-          doOutput('Input for workflow copied from current image');
-        end;
-        dispose(obtainedImage,destroy);
+      if isValid then begin
+        thisWorkflow.config.sizeLimit:=C_maxImageDimensions;
+        if (source=C_nullSourceOrTargetFileName) then begin
+          obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
+          if obtainedImage=nil then begin
+            context.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
+            isValid:=false;
+          end else begin
+            thisWorkflow.config.setInitialImage(obtainedImage^);
+            doOutput('Input for workflow copied from current image',false);
+          end;
+          dispose(obtainedImage,destroy);
+        end else if source<>''
+        then thisWorkflow.config.setInitialImage(source)
+        else thisWorkflow.config.initialResolution:=imageDimensions(xRes,yRes);
       end;
       if isValid then begin
         enterCriticalSection(workflowCs);
@@ -228,45 +257,27 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         inc(workflowsActive);
         leaveCriticalSection(workflowCs);
+        thisWorkflow.appendSaveStep(dest,sizeLimit);
 
-        if source<>'' then begin
-                             doOutput('Executing workflow with input="'+source+'", output="'+dest+'"');
-                             thisWorkflow.executeForTarget(source,sizeLimit,dest);
-                           end
-                      else begin
-                             doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"');
-                             thisWorkflow.executeForTarget(xRes,yRes,sizeLimit,dest);
-                           end;
-        lastOutput:=now;
-        while thisWorkflow.progressQueue.calculating and (context.messages^.continueEvaluation) do begin
-          progressLog:=thisWorkflow.progressQueue.log;
-          for i:=logLinesDisplayed to length(progressLog)-1 do if progressLog[i].message<>'' then begin
-            doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
-            logLinesDisplayed:=i+1;
-            lastOutput:=now;
-          end;
-          if (now-lastOutput>aditionalOutputInterval) then begin
-            doOutput(thisWorkflow.progressQueue.getProgressString(true));
-            lastOutput:=now;
-          end;
+        if source<>''
+        then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false)
+        else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false);
+        while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
+          pollLog;
           ThreadSwitch;
           sleep(sleepTime);
           if sleepTime<1000 then inc(sleepTime);
         end;
-        progressLog:=thisWorkflow.progressQueue.log;
-        for i:=logLinesDisplayed to length(progressLog)-1 do begin
-          doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
-          logLinesDisplayed:=i+1;
-        end;
         if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
-        thisWorkflow.progressQueue.ensureStop;
+        thisWorkflow.ensureStop;
+        pollLog;
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
         leaveCriticalSection(workflowCs);
       end;
       if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
         postNewImage(context.messages,newFromWorkflowImage);
-        doOutput('Output of workflow copied to current image');
+        doOutput('Output of workflow copied to current image',false);
       end;
       thisWorkflow.destroy;
       if isValid then exit(newVoidLiteral) else exit(nil);
@@ -351,8 +362,7 @@ FUNCTION imageSize_imp intFuncSignature;
 
 FUNCTION resizeImage_imp intFuncSignature;
   CONST styleString:array[res_exact..res_fitRotate] of string=('exact','fill','rotFill','fit','fitExpand','rotFit');
-  VAR xRes:longint=0;
-      yRes:longint=0;
+  VAR res:T_imageDimensions;
       style:string='exact';
       s,r:T_resizeStyle;
       obtainedImage:P_rawImage;
@@ -360,16 +370,15 @@ FUNCTION resizeImage_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint])
       and ((params^.size=2) or (params^.size=3) and (arg2^.literalType=lt_string)) then begin
-      xRes:=int0^.intValue;
-      yRes:=int1^.intValue;
+      res:=imageDimensions(int0^.intValue,int1^.intValue);
       if params^.size=3 then style:=str2^.value;
       r:=res_dataResize;
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
-      if (r=res_dataResize) or (xRes<=0) or (yRes<=0) then exit(nil);
+      if (r=res_dataResize) or (res.width<=0) or (res.height<=0) then exit(nil);
       obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
       if obtainedImage=nil then context.raiseError('Cannot resize image because no image is loaded',tokenLocation)
       else begin
-        obtainedImage^.resize(xRes,yRes,r);
+        obtainedImage^.resize(res,r);
         postNewImage(context.messages,obtainedImage);
         result:=newVoidLiteral;
       end;
@@ -407,13 +416,10 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
   end;
 
 FUNCTION listManipulations_imp intFuncSignature;
-  VAR imt:T_imageManipulationType;
-      alg:P_algorithmMeta;
+  VAR op:P_imageOperationMeta;
   begin
     result:=newListLiteral();
-    for imt:=imt_loadImage to high(T_imageManipulationType) do
-      listResult^.appendString(stepParamDescription[imt]^.getDefaultParameterString);
-    for alg in algorithms do listResult^.appendString(alg^.prototype^.toString(false));
+    for op in imageOperations do listResult^.appendString(op^.getDefaultParameterString);
   end;
 
 FUNCTION expandImageGeneration_imp intFuncSignature;
@@ -424,7 +430,7 @@ FUNCTION expandImageGeneration_imp intFuncSignature;
       meta:=getAlgorithmOrNil(str0^.value,true);
       if meta=nil
       then exit(str0^.rereferenced)
-      else exit(newStringLiteral(meta^.prototype^.toString(false)));
+      else exit(newStringLiteral(meta^.prototype^.toFullString()));
     end;
   end;
 //
@@ -491,7 +497,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
         exit(nil);
       end;
       img.create(str0^.value);
-      img.resize(int1^.intValue,int2^.intValue,res_fit);
+      img.resize(imageDimensions(int1^.intValue,int2^.intValue),res_fit);
       result:=newStringLiteral(img.getJpgFileData(80));
       img.destroy;
     end;
@@ -535,7 +541,7 @@ FUNCTION randomIfs_impl intFuncSignature;
   begin
     ifs.create;
     ifs.resetParameters(1);
-    result:=newStringLiteral(ifs.getAlgorithmName+ifs.toString());
+    result:=newStringLiteral(ifs.getAlgorithmName+ifs.toString(tsm_forSerialization));
     ifs.destroy;
   end;
 

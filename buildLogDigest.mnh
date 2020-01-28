@@ -21,7 +21,7 @@ IGNORED_PATTERNS:=['3rd_party',
                   '/core/profiling\.pas.*\(5092\).*"locationToIdMap"',
                   '/core/operators.*\(5059\)',
                   '/core/funcs_files.*\(6018\)',
-                  'dev/art\.source',
+                  'igSrc.*\(5024\).*"(ix|iy|c|style|nameMode)"',
                   '/core/listProcessing.*\(5089\).*"nextToEnqueue"',
                   'editors/mnhCompletion.*\(5092\).*"sourceValue"',
                   '/core/tokenArray.*\(5023\).*"strutils"'];

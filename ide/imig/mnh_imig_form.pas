@@ -45,7 +45,8 @@ USES   mnh_constants,basicTypes,
   litVar,contexts,
   funcs,
   mypics,
-  recyclers;
+  recyclers,
+  pixMaps;
 
 {$R *.lfm}
 PROCEDURE T_guiImageSystem.ensureForm;
@@ -95,7 +96,7 @@ PROCEDURE T_guiImageSystem.render(VAR target: TImage);
         then currentImage^.copyToImage(target)
         else begin
           resizedPic.create(currentImage^);
-          resizedPic.resize(target.width,target.height,res_fit);
+          resizedPic.resize(imageDimensions(target.width,target.height),res_fit);
           resizedPic.copyToImage(target);
           resizedPic.destroy;
         end;
