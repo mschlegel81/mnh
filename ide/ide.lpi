@@ -36,7 +36,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -74,7 +74,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -607,7 +607,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="../core"/>
-      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../../art.source/igSrc;profiling"/>
+      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
       <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>
