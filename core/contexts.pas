@@ -872,7 +872,7 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context;
       nextToEvaluate  :=nil;
       if context<>nil then contextPool.disposeContext(context);
       context:=newEnvironment;
-      if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>TASKS_TO_QUEUE_PER_CPU*settings.cpuCount) or not(isMemoryInComfortZone))
+      if not(isVolatile) or not(isMemoryInComfortZone))
       then evaluate(recycler)
       else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
     finally

@@ -9,8 +9,8 @@ USES sysutils,
      recyclers,
      aggregators,contexts;
 CONST FUTURE_RECYCLER_MAX_SIZE=16;
-      ENQUEUE_QUOTIENT=2;
 TYPE
+  //TODO: Simplify futures and implement A/B Testing - is it faster to evaluate task direktly or via task queue
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 
   P_futureLiteral=^T_futureLiteral;

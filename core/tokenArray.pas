@@ -697,6 +697,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       md:T_modifier;
       firstInLine:boolean;
   begin
+    //TODO: Parse ² to ^2 and ³ to ^3
     firstInLine:=inputLocation.column=1;
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
