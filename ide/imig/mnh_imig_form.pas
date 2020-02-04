@@ -4,7 +4,7 @@ INTERFACE
 USES
   sysutils,
   Forms, Controls, ExtCtrls, Menus,
-  mnh_imig,   ideLayoutUtil;
+  mnh_imig, ideLayoutUtil;
 
 TYPE
   TDisplayImageForm = class;

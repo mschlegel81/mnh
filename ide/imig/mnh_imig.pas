@@ -257,8 +257,8 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         inc(workflowsActive);
         leaveCriticalSection(workflowCs);
-        thisWorkflow.appendSaveStep(dest,sizeLimit);
-
+        if dest<>C_nullSourceOrTargetFileName then thisWorkflow.appendSaveStep(dest,sizeLimit);
+        thisWorkflow.executeWorkflowInBackground(false);
         if source<>''
         then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false)
         else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false);
