@@ -419,7 +419,7 @@ FUNCTION listManipulations_imp intFuncSignature;
   VAR op:P_imageOperationMeta;
   begin
     result:=newListLiteral();
-    for op in imageOperations do listResult^.appendString(op^.getDefaultParameterString);
+    for op in allImageOperations do listResult^.appendString(op^.getDefaultParameterString);
   end;
 
 FUNCTION expandImageGeneration_imp intFuncSignature;
