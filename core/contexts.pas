@@ -26,7 +26,7 @@ TYPE
   T_reduceResult            =(rr_fail,rr_ok,rr_okWithReturn);
 
 CONST
-  TASKS_TO_QUEUE_PER_CPU=2;
+  TASKS_TO_QUEUE_PER_CPU=16;
   C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
   {$ifdef fullVersion}
@@ -105,6 +105,7 @@ TYPE
       FUNCTION getFutureEnvironment(VAR recycler:T_recycler):P_context;
       FUNCTION getNewAsyncContext(VAR recycler:T_recycler; CONST local:boolean):P_context;
       PROCEDURE beginEvaluation;
+      PROCEDURE reattachToParent(VAR recycler:T_recycler);
       PROCEDURE finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
 
       //Misc.:
@@ -130,10 +131,11 @@ TYPE
       isVolatile    :boolean;
     public
       PROCEDURE   evaluate(VAR recycler:T_recycler); virtual; abstract;
-      CONSTRUCTOR create(CONST volatile:boolean);
-      PROCEDURE   defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context; VAR recycler:T_recycler);
-      PROCEDURE   clearContext;
+      CONSTRUCTOR create(CONST volatile:boolean; CONST newEnvironment:P_context);
+      PROCEDURE   defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
+      PROCEDURE   reattach(VAR recycler:T_recycler);
       DESTRUCTOR  destroy; virtual;
+      PROPERTY    getContext:P_context read context;
   end;
 
   P_subQueue=^T_subQueue;
@@ -653,25 +655,24 @@ FUNCTION T_context.setAllowedSideEffectsReturningPrevious(CONST se: T_sideEffect
 
 FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
-    enterCriticalSection(contextCS);
-    try
-      result:=contextPool.newContext(recycler,@self,ACCESS_READWRITE);
-    finally
-      leaveCriticalSection(contextCS);
-    end;
+    result:=contextPool.newContext(recycler,@self,ACCESS_READWRITE);
   end;
 
 PROCEDURE T_context.beginEvaluation;
   begin
-    {$ifdef debugMode}
-    if state<>fts_pending then raise Exception.create('Wrong state before calling T_threadContext.beginEvaluation');
-    {$endif}
+    assert(state=fts_pending,'Wrong state before calling T_threadContext.beginEvaluation');
+    state:=fts_evaluating;
+  end;
+
+PROCEDURE T_context.reattachToParent(VAR recycler:T_recycler);
+  begin
+    assert(state=fts_finished,'Wrong state before calling T_threadContext.reattachToParent');
+    assert(valueScope=nil,'valueScope must be nil on T_threadContext.reattachToParent');
     enterCriticalSection(contextCS);
-    try
-      state:=fts_evaluating;
-    finally
-      leaveCriticalSection(contextCS);
-    end;
+    valueScope:=recycler.newValueScopeAsChildOf(related.parent^.valueScope,ACCESS_READWRITE);
+    state:=fts_pending;
+    related.parent^.addChildContext;
+    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
@@ -685,18 +686,18 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
       end;
     end;
     try
-      state:=fts_finished;
       if related.parent<>nil then related.parent^.dropChildContext;
-      related.parent:=nil;
       {$ifdef fullVersion}
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
       if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
                            else recyclerOrNil^.disposeScope(valueScope);
+      state:=fts_finished;
     finally
       leaveCriticalSection(contextCS);
     end;
+    assert(valueScope=nil,'valueScope must be nil at this point');
   end;
 
 PROCEDURE T_context.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
@@ -794,9 +795,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         end else begin
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
-            currentTask^.clearContext;
             dispose(currentTask,destroy);
-          end else currentTask^.evaluate(recycler);
+          end else begin
+            currentTask^.evaluate(recycler);
+          end;
           sleepCount:=0;
         end;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
@@ -812,7 +814,6 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 CONSTRUCTOR T_context.create();
   begin
     initCriticalSection(contextCS);
-    enterCriticalSection(contextCS);
     state:=fts_pending;
     {$ifdef fullVersion}
     callStack.create;
@@ -822,7 +823,6 @@ CONSTRUCTOR T_context.create();
     related.parent:=nil;
     related.evaluation:=nil;
     messages:=nil;
-    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_context.dropChildContext;
@@ -848,6 +848,7 @@ DESTRUCTOR T_context.destroy;
     {$ifdef fullVersion}
     callStack.destroy;
     {$endif}
+    if valueScope<>nil then noRecycler_disposeScope(valueScope);
     related.childCount:=0;
     related.parent:=nil;
     related.evaluation:=nil;
@@ -855,49 +856,35 @@ DESTRUCTOR T_context.destroy;
     doneCriticalSection(contextCS);
   end;
 
-CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
+CONSTRUCTOR T_queueTask.create(CONST volatile:boolean; CONST newEnvironment:P_context);
   begin;
+    assert(newEnvironment<>nil,'T_queueTask.create - newEnvironemnt must not be nil');
     isVolatile:=volatile;
-    context:=nil;
+    context:=newEnvironment;
     initCriticalSection(taskCs);
   end;
 
-PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST newEnvironment:P_context; VAR recycler:T_recycler);
+PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
   begin
-    {$ifdef debugMode}
-    if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
-    {$endif}
-    enterCriticalSection(taskCs);
-    try
+    //enterCriticalSection(taskCs);
+    //try
       nextToEvaluate  :=nil;
-      if context<>nil then contextPool.disposeContext(context);
-      context:=newEnvironment;
-      if not(isVolatile) or not(isMemoryInComfortZone)
+      if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>settings.cpuCount*TASKS_TO_QUEUE_PER_CPU) or not(isMemoryInComfortZone))
       then evaluate(recycler)
-      else context^.related.evaluation^.taskQueue.enqueue(@self,newEnvironment);
-    finally
-      leaveCriticalSection(taskCs);
-    end;
+      else context^.related.evaluation^.taskQueue.enqueue(@self,context);
+    //finally
+    //  leaveCriticalSection(taskCs);
+    //end;
   end;
 
-PROCEDURE T_queueTask.clearContext;
+PROCEDURE T_queueTask.reattach(VAR recycler:T_recycler);
   begin
-    enterCriticalSection(taskCs);
-    try
-      if context<>nil then contextPool.disposeContext(context);
-    finally
-      leaveCriticalSection(taskCs);
-    end;
+    context^.reattachToParent(recycler);
   end;
 
 DESTRUCTOR T_queueTask.destroy;
-  VAR recycler:T_recycler;
   begin
-    if context<>nil then begin
-      recycler.initRecycler;
-      contextPool.disposeContext(context);
-      recycler.cleanup;
-    end;
+    if context<>nil then contextPool.disposeContext(context);
     doneCriticalSection(taskCs);
   end;
 
@@ -1027,7 +1014,6 @@ FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;
       task^.context^.options-=[tco_spawnWorker];
       if task^.isVolatile then begin
         task^.evaluate(recycler);
-        task^.clearContext;
         dispose(task,destroy);
       end else task^.evaluate(recycler);
     end;
