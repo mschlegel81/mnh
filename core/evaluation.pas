@@ -227,6 +227,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
          not(tco_spawnWorker in context.threadOptions) or
          (settings.cpuCount<=1) or
          not(isMemoryInComfortZone))
+         //TODO: Also work serially, when only few (?) elements are to be processed
       then eachType:=tt_each;
       eachLocation:=first^.next^.location;
       initialize(bodyRule);
