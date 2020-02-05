@@ -866,15 +866,10 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean; CONST newEnvironment:P_co
 
 PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
   begin
-    //enterCriticalSection(taskCs);
-    //try
-      nextToEvaluate  :=nil;
-      if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>settings.cpuCount*TASKS_TO_QUEUE_PER_CPU) or not(isMemoryInComfortZone))
-      then evaluate(recycler)
-      else context^.related.evaluation^.taskQueue.enqueue(@self,context);
-    //finally
-    //  leaveCriticalSection(taskCs);
-    //end;
+    nextToEvaluate  :=nil;
+    if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>settings.cpuCount*TASKS_TO_QUEUE_PER_CPU) or not(isMemoryInComfortZone))
+    then evaluate(recycler)
+    else context^.related.evaluation^.taskQueue.enqueue(@self,context);
   end;
 
 PROCEDURE T_queueTask.reattach(VAR recycler:T_recycler);
