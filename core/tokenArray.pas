@@ -690,6 +690,15 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el1_note,inputLocation,commentText);
     end;
 
+  {$MACRO ON}
+  {$define exitFailing:=
+      begin
+        fail('Cannot parse: '+copy(line,inputLocation.column,20)+' (first char is "'+line[inputLocation.column]+'"=#'+intToStr(ord(line[inputLocation.column]))+')');
+        inputLocation.column:=length(line)+1;
+        recycler.disposeToken(result);
+        exit(nil);
+      end}
+
   VAR id:ansistring='';
       stringValue:ansistring='';
       tt:T_tokenType;
@@ -697,7 +706,6 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
       md:T_modifier;
       firstInLine:boolean;
   begin
-    //TODO: Parse ² to ^2 and ³ to ^3
     firstInLine:=inputLocation.column=1;
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
@@ -754,6 +762,11 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
                                 end
                            else result^.tokType:=tt_literal;
       end;
+      #194: if (length(line)>inputLocation.column) and (line[inputLocation.column+1] in [#178,#179]) then begin
+        if line[inputLocation.column+1]=#178
+        then apply(tt_pow2)
+        else apply(tt_pow3);
+      end else exitFailing;
       '"','''','#': begin
         stringValue:=unescapeString(line,inputLocation.column,parsedLength);
         if parsedLength=0 then begin
@@ -858,12 +871,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
                                                  else apply(tt_comparatorLss);
       '!': if startsWith('!=')                   then apply(2,tt_comparatorNeq)
                                                  else apply(tt_unaryOpNegate);
-      else begin
-        fail('Cannot parse: '+copy(line,inputLocation.column,20)+' (first char is "'+line[inputLocation.column]+'"=#'+intToStr(ord(line[inputLocation.column]))+')');
-        inputLocation.column:=length(line)+1;
-        recycler.disposeToken(result);
-        exit(nil);
-      end;
+      else exitFailing;
     end;
     if parsedLength>0 then inc(inputLocation.column,parsedLength);
   end;
@@ -968,6 +976,14 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
           nextToken^.data:=nil;
         end else messages^.raiseSimpleError('Invalid agg construct.',nextToken^.location);
         recycler.disposeToken(n[1]);
+      end;
+      //TODO: ² and ³ are not "explained" correctly. See also T_lexer.getEnhancedTokens
+      tt_pow2,tt_pow3: begin
+        appendToken(recycler.newToken(nextToken^.location,'^',tt_operatorPot));
+        if nextToken^.tokType=tt_pow2
+        then nextToken^.data:=newIntLiteral(2)
+        else nextToken^.data:=newIntLiteral(3);
+        nextToken^.tokType:=tt_literal;
       end;
     end;
     result:=true;
