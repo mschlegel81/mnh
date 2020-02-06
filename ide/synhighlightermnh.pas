@@ -263,10 +263,15 @@ FUNCTION TAbstractSynMnhSyn.getAttributeForKind(CONST kind: T_tokenKind): TSynHi
 
 PROCEDURE TAbstractSynMnhSyn.handle194;
   begin
-    fTokenId   :=tkError;
-    fTokenSubId:=skError;
     inc(run);
-    if fLine[run]<>#0 then inc(run);
+    if fLine[run] in [#178,#179] then begin
+      fTokenId:=tkOperator;
+      inc(run);
+    end else begin
+      fTokenId   :=tkError;
+      fTokenSubId:=skError;
+      if fLine[run]<>#0 then inc(run);
+    end;
   end;
 
 PROCEDURE TMnhDebugSyn.handle194;
