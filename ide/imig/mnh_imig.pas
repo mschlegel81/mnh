@@ -107,7 +107,6 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       cmd:string;
       tmpSteps:P_listLiteral;
   begin
-    //TODO: use one message queue per workflow
     result.create;
     if steps^.literalType=lt_stringList
     then tmpSteps:=steps
