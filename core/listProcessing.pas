@@ -164,8 +164,8 @@ PROCEDURE processListParallel(CONST input:P_literal;
     begin
       result:=false;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-        Assert(firstToAggregate^.getContext<>nil);
-        Assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
+        assert(firstToAggregate^.getContext<>nil);
+        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
@@ -297,8 +297,8 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
     begin
       result:=false;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-        Assert(firstToAggregate^.getContext<>nil);
-        Assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
+        assert(firstToAggregate^.getContext<>nil);
+        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;

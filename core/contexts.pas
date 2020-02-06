@@ -693,11 +693,11 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
       {$endif}
       if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
                            else recyclerOrNil^.disposeScope(valueScope);
+      assert(valueScope=nil,'valueScope must be nil at this point');
       state:=fts_finished;
     finally
       leaveCriticalSection(contextCS);
     end;
-    assert(valueScope=nil,'valueScope must be nil at this point');
   end;
 
 PROCEDURE T_context.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
