@@ -1,7 +1,7 @@
 //*Returns the mean of all values in X
 mean    (X:NumericList)->X.agg(+)/size(X);
 //*Returns the (statistical) variance X
-variance(X:NumericList)->mean(X^2)-mean(X)^2;
+variance(X:NumericList)->mean(X²)-mean(X)²;
 //*Returns the standardVariation of X
 @SuppressUnusedWarning=all
 standardVariation(X:NumericList)->sqrt(X.variance);

@@ -550,6 +550,7 @@ DESTRUCTOR T_futureMapGenerator.destroy;
   end;
 
 FUNCTION futureMap_imp intFuncSignature;
+  CONST TASKS_TO_QUEUE_PER_CPU=4;
   VAR f:P_futureMapGenerator;
       i:longint;
   begin

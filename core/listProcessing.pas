@@ -71,7 +71,7 @@ TYPE
     nextToAggregate:P_eachTask;
     evaluationResult:T_evaluationResult;
     CONSTRUCTOR createEachTask(CONST taskEnv:P_context);
-    PROCEDURE defineAndEnqueueOrEvaluate(CONST payload_:T_eachPayload; VAR recycler:T_recycler);
+    FUNCTION define(CONST payload_:T_eachPayload):P_eachTask;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     FUNCTION canGetResult:boolean;
   end;
@@ -86,7 +86,7 @@ TYPE
     mapResult:P_literal;
     nextToAggregate:P_mapTask;
     CONSTRUCTOR createMapTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
-    PROCEDURE defineAndEnqueueOrEvaluate(CONST x:P_literal; VAR recycler:T_recycler; CONST mapLocation:T_tokenLocation);
+    FUNCTION define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION canGetResult:boolean;
@@ -147,11 +147,8 @@ end}
     end;
   end;
 
-PROCEDURE processListParallel(CONST input:P_literal;
-  CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
-  CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
-
-  VAR earlyAborting:boolean=false;
+PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
+  VAR taskChain:T_taskChain;
       firstToAggregate:P_eachTask=nil;
       lastToAggregate:P_eachTask=nil;
       recycling:record
@@ -159,14 +156,14 @@ PROCEDURE processListParallel(CONST input:P_literal;
         fill:longint;
       end;
 
-  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
+  FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_eachTask;
     begin
-      result:=false;
+      result:=0;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
         assert(firstToAggregate^.getContext<>nil);
-        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
-        result:=true;
+        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
+        inc(result);
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         aggregator^.addToAggregation(toAggregate^.evaluationResult,true,eachLocation,@context,recycler);
@@ -198,7 +195,7 @@ PROCEDURE processListParallel(CONST input:P_literal;
       then firstToAggregate:=newTask
       else lastToAggregate^.nextToAggregate:=newTask;
       lastToAggregate:=newTask;
-      newTask^.defineAndEnqueueOrEvaluate(nextToEnqueue,recycler);
+      if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then taskChain.handDownThreshold:=canAggregate*2;
     end;
 
   VAR rule:P_expressionLiteral;
@@ -210,7 +207,6 @@ PROCEDURE processListParallel(CONST input:P_literal;
   begin
   for rule in rulesList do if proceed then begin
     createTask(rule,eachIndex,x);
-    canAggregate;
     proceed:=proceed and not(aggregator^.earlyAbort)
                      and context.messages^.continueEvaluation;
   end;
@@ -219,8 +215,7 @@ end}
 
   begin
     recycling.fill:=0;
-    earlyAborting:=aggregator^.isEarlyAbortingAggregator;
-    for rule in rulesList do earlyAborting:=earlyAborting or P_inlineExpression(rule)^.containsReturnToken;
+    taskChain.create(4*settings.cpuCount,context);
     processed:=0;
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
@@ -238,6 +233,9 @@ end}
       x:=input;
       processX;
     end;
+    taskChain.flush;
+    taskChain.destroy;
+
     while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
     while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
@@ -287,19 +285,20 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
   VAR firstToAggregate:P_mapTask=nil;
       lastToAggregate:P_mapTask=nil;
       resultLiteral:P_listLiteral;
-  VAR recycling:record
+      recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
         fill:longint;
       end;
+      taskChain:T_taskChain;
 
-  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
+  FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_mapTask;
     begin
-      result:=false;
+      result:=0;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
         assert(firstToAggregate^.getContext<>nil);
-        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point '+intToStr(ptrint(pointer(firstToAggregate))));
-        result:=true;
+        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
+        inc(result);
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         assert(toAggregate^.mapResult<>nil);
@@ -331,13 +330,14 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
         lastToAggregate^.nextToAggregate:=task;
         lastToAggregate:=task;
       end;
-      task^.defineAndEnqueueOrEvaluate(x,recycler,mapLocation);
+      if taskChain.enqueueOrExecute(task^.define(x,mapLocation),recycler) then taskChain.handDownThreshold:=canAggregate*2;
     end;
 
   VAR x:P_literal;
       isExpressionNullary:boolean;
       iter:T_arrayOfLiteral;
   begin
+    taskChain.create(4*settings.cpuCount,context);
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
@@ -345,25 +345,27 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       if isExpressionNullary then while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        if enqueueValue(nil) then canAggregate;
+        enqueueValue(nil);
         disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end else while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        if enqueueValue(x  ) then canAggregate;
+        enqueueValue(x);
         disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end;
       if x<>nil then disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
-      if isExpressionNullary then begin for x in iter do if context.continueEvaluation then begin if enqueueValue(nil) then canAggregate; end end
-                             else       for x in iter do if context.continueEvaluation then begin if enqueueValue(x  ) then canAggregate; end;
+      if isExpressionNullary then begin for x in iter do if context.continueEvaluation then enqueueValue(nil) end
+                             else       for x in iter do if context.continueEvaluation then enqueueValue(x  );
       disposeLiteral(iter);
     end else begin
       if isExpressionNullary
-      then begin if enqueueValue(nil  ) then canAggregate; end
-      else begin if enqueueValue(input) then canAggregate; end;
+      then enqueueValue(nil  )
+      else enqueueValue(input);
     end;
+    taskChain.flush;
+    taskChain.destroy;
 
     while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
     while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
@@ -406,14 +408,15 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
         fill:longint;
       end;
       output:P_collectionLiteral;
+      taskChain:T_taskChain;
 
-  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
+  FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_filterTask;
         value:P_literal;
     begin
-      result:=false;
+      result:=0;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-        result:=true;
+        inc(result);
         toAggregate:=firstToAggregate;
         firstToAggregate:=P_filterTask(toAggregate^.nextToAggregate);
         value:=toAggregate^.mapResult;
@@ -445,7 +448,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
         lastToAggregate^.nextToAggregate:=task;
         lastToAggregate:=task;
       end;
-      task^.defineAndEnqueueOrEvaluate(x^.rereferenced,recycler,filterLocation);
+      if taskChain.enqueueOrExecute(task^.define(x^.rereferenced,filterLocation),recycler) then taskChain.handDownThreshold:=canAggregate*2;
     end;
 
   VAR iter:T_arrayOfLiteral;
@@ -457,10 +460,13 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
       lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : output:=newSetLiteral(input^.size);
       lt_map                                                                     : output:=newListLiteral;
     end;
+    taskChain.create(4*settings.cpuCount,context);
     recycling.fill:=0;
     iter:=input^.iteratableList;
-    for x in iter do if context.continueEvaluation and enqueueValue(x) then canAggregate;
+    for x in iter do if context.continueEvaluation then enqueueValue(x);
     disposeLiteral(iter);
+    taskChain.flush;
+    taskChain.destroy;
 
     while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
     while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
@@ -550,14 +556,6 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST taskEnv:P_context; CONST expr: P_expre
     mapPayload.mapParameter:=nil;
   end;
 
-PROCEDURE T_mapTask.defineAndEnqueueOrEvaluate(CONST x:P_literal; VAR recycler:T_recycler; CONST mapLocation:T_tokenLocation);
-  begin
-    mapPayload.mapParameter:=x;
-    mapPayload.location:=mapLocation;
-    nextToAggregate:=nil;
-    inherited defineAndEnqueueOrEvaluate(recycler);
-  end;
-
 PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
@@ -579,11 +577,21 @@ CONSTRUCTOR T_eachTask.createEachTask(CONST taskEnv:P_context);
     create(false,taskEnv);
   end;
 
-PROCEDURE T_eachTask.defineAndEnqueueOrEvaluate(CONST payload_:T_eachPayload; VAR recycler:T_recycler);
+FUNCTION T_mapTask.define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
+  begin
+    mapPayload.mapParameter:=x;
+    mapPayload.location:=mapLocation;
+    nextToAggregate:=nil;
+    nextToEvaluate:=nil;
+    result:=@self;
+  end;
+
+FUNCTION T_eachTask.define(CONST payload_:T_eachPayload):P_eachTask;
   begin
     payloads:=payload_;
     nextToAggregate:=nil;
-    inherited defineAndEnqueueOrEvaluate(recycler);
+    nextToEvaluate:=nil;
+    result:=@self;
   end;
 
 PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);

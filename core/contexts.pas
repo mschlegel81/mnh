@@ -26,7 +26,6 @@ TYPE
   T_reduceResult            =(rr_fail,rr_ok,rr_okWithReturn);
 
 CONST
-  TASKS_TO_QUEUE_PER_CPU=16;
   C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
   {$ifdef fullVersion}
@@ -126,8 +125,8 @@ TYPE
     protected
       context:P_context;
       taskCs:TRTLCriticalSection;
-    private
       nextToEvaluate:P_queueTask;
+    private
       isVolatile    :boolean;
     public
       PROCEDURE   evaluate(VAR recycler:T_recycler); virtual; abstract;
@@ -140,18 +139,30 @@ TYPE
 
   P_subQueue=^T_subQueue;
   T_subQueue=object
-    first,last:P_queueTask;
-    queuedCount,depth:longint;
-    CONSTRUCTOR create(CONST level:longint);
-    DESTRUCTOR destroy;
-    PROCEDURE enqueue(CONST task:P_queueTask);
-    FUNCTION  dequeue(OUT isEmptyAfter:boolean):P_queueTask;
+    private
+      first,last:P_queueTask;
+      queuedCount,depth:longint;
+      FUNCTION  enqueue(CONST task:P_queueTask):boolean;
+      FUNCTION  dequeue(OUT isEmptyAfter:boolean):P_queueTask;
+    public
+      CONSTRUCTOR create(CONST level:longint);
+      DESTRUCTOR destroy;
+  end;
+
+  P_taskQueue=^T_taskQueue;
+  T_taskChain=object(T_subQueue)
+    private
+      taskQueue:P_taskQueue;
+    public
+      handDownThreshold:longint;
+      CONSTRUCTOR create(CONST handDownThreshold_:longint; VAR myContext:T_context);
+      FUNCTION enqueueOrExecute(CONST task:P_queueTask; VAR recycler:T_recycler):boolean;
+      PROCEDURE flush;
   end;
 
   T_taskQueue=object
     private
       subQueue:array of P_subQueue;
-      queuedCount:longint;
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
@@ -160,7 +171,6 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
-      PROPERTY getQueuedCount:longint read queuedCount;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
@@ -215,8 +225,6 @@ TYPE
 
       PROCEDURE resolveMainParameter(VAR first:P_token);
 
-      FUNCTION queuedFuturesCount:longint;
-
       {$ifdef fullVersion}
       FUNCTION stepper:P_debuggingStepper;
       FUNCTION isPaused:boolean;
@@ -228,13 +236,42 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
 IMPLEMENTATION
+CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
+  VAR myContext: T_context);
+  begin
+    inherited create(0);
+    handDownThreshold:=handDownThreshold_;
+    taskQueue:=@(myContext.related.evaluation^.taskQueue);
+  end;
+
+FUNCTION T_taskChain.enqueueOrExecute(CONST task:P_queueTask; VAR recycler:T_recycler):boolean;
+  begin
+    if handDownThreshold<=0 then begin
+      task^.evaluate(recycler);
+      exit(true);
+    end;
+    inherited enqueue(task);
+    if queuedCount>=handDownThreshold then begin
+      flush;
+      result:=true;
+    end else result:=false;
+  end;
+
+PROCEDURE T_taskChain.flush;
+  begin
+    if first<>nil then taskQueue^.enqueue(first,first^.context);
+    first:=nil;
+    last :=nil;
+    queuedCount:=0;
+  end;
+
 CONSTRUCTOR T_detachedEvaluationPart.create(CONST evaluation: P_evaluationGlobals; CONST location:T_tokenLocation);
   begin
     globals:=evaluation;
     enterCriticalSection(globals^.detached.access);
     try
       if globals^.detached.finalizing
-      then globals^.primaryContext.raiseError('Forbiddin in @after rule.',location,mt_el3_evalError)
+      then globals^.primaryContext.raiseError('Forbidden in @after rule.',location,mt_el3_evalError)
       else globals^.detached.parts.put(@self);
     finally
       leaveCriticalSection(globals^.detached.access);
@@ -473,7 +510,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
   begin
     timeout:=now+TIME_OUT_AFTER;
     primaryContext.messages^.setStopFlag;
-    while (now<timeout) and ((primaryContext.related.childCount>0) or (taskQueue.queuedCount>0)) do begin
+    while (now<timeout) and ((primaryContext.related.childCount>0) or (length(taskQueue.subQueue)>0)) do begin
       while taskQueue.activeDeqeue(recycler) do begin end;
       ThreadSwitch;
       sleep(1);
@@ -746,9 +783,6 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
     end;
   end;
 
-FUNCTION T_evaluationGlobals.queuedFuturesCount:longint;
-  begin result:=taskQueue.queuedCount; end;
-
 PROCEDURE T_context.raiseCannotApplyError(CONST ruleWithType: string;
   CONST parameters: P_listLiteral; CONST location: T_tokenLocation;
   CONST suffix: string; CONST missingMain: boolean);
@@ -867,7 +901,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean; CONST newEnvironment:P_co
 PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
   begin
     nextToEvaluate  :=nil;
-    if not(isVolatile) and ((context^.related.evaluation^.taskQueue.queuedCount>settings.cpuCount*TASKS_TO_QUEUE_PER_CPU) or not(isMemoryInComfortZone))
+    if not(isVolatile) and not(isMemoryInComfortZone)
     then evaluate(recycler)
     else context^.related.evaluation^.taskQueue.enqueue(@self,context);
   end;
@@ -888,7 +922,6 @@ CONSTRUCTOR T_taskQueue.create;
     system.initCriticalSection(cs);
     destructionPending:=false;
     setLength(subQueue,0);
-    queuedCount:=0;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
@@ -913,16 +946,18 @@ DESTRUCTOR T_subQueue.destroy;
   begin
   end;
 
-PROCEDURE T_subQueue.enqueue(CONST task: P_queueTask);
+FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):boolean;
   begin
     inc(queuedCount);
-    if first=nil then begin
-      first:=task;
-      last:=task;
-    end else begin
-      last^.nextToEvaluate:=task;
-      last:=task;
+    if first=nil
+    then first:=task
+    else last^.nextToEvaluate:=task;
+    last:=task;
+    while last^.nextToEvaluate<>nil do begin
+      inc(queuedCount);
+      last:=last^.nextToEvaluate;
     end;
+    result:=true;
   end;
 
 FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
@@ -968,7 +1003,6 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   begin
     system.enterCriticalSection(cs);
     try
-      inc(queuedCount);
       ensureQueue^.enqueue(task);
       ensurePoolThreads();
     finally
@@ -983,7 +1017,7 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
     system.enterCriticalSection(cs);
     try
       k:=length(subQueue)-1;
-      if (queuedCount<=0) or (k<0)
+      if (k<0)
       then result:=nil
       else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
@@ -991,7 +1025,6 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
           dispose(subQueue[k],destroy);
           setLength(subQueue,k);
         end;
-        dec(queuedCount);
       end;
     finally
       system.leaveCriticalSection(cs);
