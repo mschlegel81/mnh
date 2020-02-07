@@ -766,11 +766,14 @@ primeGenerator.head(10);
 //min is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(min);
 
-[-1,1,-1,1,-2,2].agg(&);
+//#OPERATOR_STRCONCAT
+[-1,1,-1,1,-2,2].agg(&); //& is a valid aggregator marker
 
-[-1,1,-1,1,-2,2].agg(*);
+//#OPERATOR_MULT
+[-1,1,-1,1,-2,2].agg(*); //multiplication can be used within agg
 
-[-1,1,-1,1,-2,2].agg(+);
+//#OPERATOR_PLUS
+[-1,1,-1,1,-2,2].agg(+); //+ is a valid aggregator marker
 
 //#permutationIterator
 permutationIterator([3,1,2]).map(::print);
@@ -814,7 +817,8 @@ x.typeOf;
 x.toBuiltin;
 x.toBuiltin.typeOf;
 
-interpret({print("Hello world")},[]);
+//#interpret
+interpret({print("Hello world")},[]); //interpret with no side effects allowed
 
 //Compose binary digits
 composeDigits([1,0,1],2);
@@ -898,6 +902,7 @@ euklideanNorm([1,2]);
 
 assert(1=1.0);
 
+//#assert
 assert('bla'.isInt,'Invalid integer given');
 
 md5('Test input. Could be anything really.');
