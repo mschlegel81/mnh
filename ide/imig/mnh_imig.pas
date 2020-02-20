@@ -1,28 +1,16 @@
 UNIT mnh_imig;
 INTERFACE
-USES sysutils,   //system
+USES sysutils,
      ExtCtrls,
      Classes,
-     myGenerics,mySys, //common
+     myGenerics,mySys,
      //mnh:
      mnh_constants, basicTypes,
      funcs,litVar,contexts,funcs_list,mnh_plotData,
      out_adapters,mnh_messages,
      recyclers,
      //imig:
-     workflows, imageGeneration,mypics,pixMaps,
-     ig_gradient,
-     ig_perlin,
-     ig_simples,
-     ig_fractals,
-     ig_epicycles,
-     ig_ifs,
-     ig_ifs2,
-     ig_bifurcation,
-     ig_funcTrees,
-     ig_expoClouds,
-     ig_factorTables,
-     ig_circlespirals;
+     workflows, imageGeneration,mypics,pixMaps,ig_ifs;
 CONST
   WORKFLOW_START_INTERVAL_MILLISECONDS=1100;
 
