@@ -25,7 +25,7 @@ common/mySys.pas                              21.2kb 862DB460
 common/pixMaps.pas                            13.0kb F9807031
 common/serializationUtil.pas                  14.4kb D053787D
 consoles/mnh_light.lpr                         0.9kb 8A9D4FF8
-consoles/substitute_funcs.pas                  3.3kb C4EC00AE
+consoles/substitute_funcs.pas                  3.4kb 578AABF6
 core/aggregators.pas                          18.8kb C78F75FA
 core/basicTypes.pas                            6.2kb 084A4453
 core/builtinGenerators.pas                    44.0kb 2D3E8316
