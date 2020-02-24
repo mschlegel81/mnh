@@ -135,6 +135,34 @@ FUNCTION validateWorkflow_imp intFuncSignature;
 
 VAR workflowsActive:longint=0;
     workflowCs:TRTLCriticalSection;
+
+PROCEDURE doOutput(CONST s:string; CONST warning:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST outputMethod:P_expressionLiteral);
+  VAR sLit:P_stringLiteral;
+      outputLit:P_literal;
+  begin
+    if outputMethod<>nil then begin
+      sLit:=newStringLiteral(s);
+      outputLit:=outputMethod^.evaluateToLiteral(location,@context,@recycler,sLit,nil).literal;
+      disposeLiteral(sLit);
+      if outputLit<>nil then disposeLiteral(outputLit);
+    end else begin
+      if warning
+      then context.messages^.postTextMessage(mt_el2_warning,location,s)
+      else context.messages^.postTextMessage(mt_el1_note   ,location,s);
+    end;
+  end;
+
+PROCEDURE pollLog(VAR thisWorkflow:T_simpleWorkflow; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST outputMethod:P_expressionLiteral);
+  VAR msg:P_structuredMessage;
+  begin
+    msg:=thisWorkflow.messageQueue^.get;
+    while msg<>nil do begin
+      doOutput(msg^.toString,msg^.indicatesError,location,context,recycler,outputMethod);
+      dispose(msg,destroy);
+      msg:=thisWorkflow.messageQueue^.get;
+    end;
+  end;
+
 FUNCTION executeWorkflow_imp intFuncSignature;
   VAR isValid:boolean=true;
       source:string='';
@@ -153,33 +181,6 @@ FUNCTION executeWorkflow_imp intFuncSignature;
   FUNCTION newFromWorkflowImage:P_rawImage;
     begin
       new(result,create(thisWorkflow.image));
-    end;
-
-  PROCEDURE doOutput(CONST s:string; CONST warning:boolean);
-    VAR sLit:P_stringLiteral;
-        outputLit:P_literal;
-    begin
-      if outputMethod<>nil then begin
-        sLit:=newStringLiteral(s);
-        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,@recycler,sLit,nil).literal;
-        disposeLiteral(sLit);
-        if outputLit<>nil then disposeLiteral(outputLit);
-      end else begin
-        if warning
-        then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,s)
-        else context.messages^.postTextMessage(mt_el1_note   ,tokenLocation,s);
-      end;
-    end;
-
-  PROCEDURE pollLog;
-    VAR msg:P_structuredMessage;
-    begin
-      msg:=thisWorkflow.messageQueue^.get;
-      while msg<>nil do begin
-        doOutput(msg^.toString,msg^.indicatesError);
-        dispose(msg,destroy);
-        msg:=thisWorkflow.messageQueue^.get;
-      end;
     end;
 
   begin
@@ -223,7 +224,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
             isValid:=false;
           end else begin
             thisWorkflow.config.setInitialImage(obtainedImage^);
-            doOutput('Input for workflow copied from current image',false);
+            doOutput('Input for workflow copied from current image',false,tokenLocation,context,recycler,outputMethod);
           end;
           dispose(obtainedImage,destroy);
         end else if source<>''
@@ -247,27 +248,64 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         if dest<>C_nullSourceOrTargetFileName then thisWorkflow.appendSaveStep(dest,sizeLimit);
         thisWorkflow.executeWorkflowInBackground(false);
         if source<>''
-        then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false)
-        else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false);
+        then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod)
+        else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod);
         while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
-          pollLog;
+          pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
           ThreadSwitch;
           sleep(sleepTime);
           if sleepTime<1000 then inc(sleepTime);
         end;
         if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
         thisWorkflow.ensureStop;
-        pollLog;
+        pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
         leaveCriticalSection(workflowCs);
       end;
       if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
         postNewImage(context.messages,newFromWorkflowImage);
-        doOutput('Output of workflow copied to current image',false);
+        doOutput('Output of workflow copied to current image',false,tokenLocation,context,recycler,outputMethod);
       end;
       thisWorkflow.destroy;
       if isValid then exit(newVoidLiteral) else exit(nil);
+    end else result:=nil;
+  end;
+
+FUNCTION executeTodo_imp intFuncSignature;
+  VAR thisWorkflow:T_standaloneWorkflow;
+      outputMethod:P_expressionLiteral=nil;
+      sleepTime:longint=1;
+  begin
+    if (params^.size>=1) and (params^.size<=2) and
+       (arg0^.literalType=lt_string) and
+       ((params^.size=1) or (arg1^.literalType=lt_expression)) then begin
+      if not(fileExists(str0^.value)) then begin
+        context.raiseError('File "'+str0^.value+'" does not exist',tokenLocation);
+        exit(nil);
+      end;
+      if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
+      thisWorkflow.create;
+      if thisWorkflow.readFromFile(str0^.value) then begin
+        enterCriticalSection(workflowCs);
+        inc(workflowsActive);
+        thisWorkflow.executeAsTodo;
+        leaveCriticalSection(workflowCs);
+        while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
+          pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
+          ThreadSwitch;
+          sleep(sleepTime);
+          if sleepTime<1000 then inc(sleepTime);
+        end;
+        if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
+        thisWorkflow.ensureStop;
+        enterCriticalSection(workflowCs);
+        dec(workflowsActive);
+        leaveCriticalSection(workflowCs);
+      end;
+      pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
+      thisWorkflow.destroy;
+      result:=newVoidLiteral;
     end else result:=nil;
   end;
 
@@ -420,56 +458,6 @@ FUNCTION expandImageGeneration_imp intFuncSignature;
       else exit(newStringLiteral(meta^.prototype^.toFullString()));
     end;
   end;
-//
-//FUNCTION imageGenerationToMap_imp intFuncSignature;
-//  VAR meta:P_algorithmMeta;
-//      parameters:P_mapLiteral;
-//      description:P_parameterDescription;
-//      value      :T_parameterValue;
-//      valueLit   :P_literal;
-//      i:longint;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-//      meta:=getAlgorithmOrNil(str0^.value,true);
-//      if meta=nil
-//      then exit(newVoidLiteral)
-//      else begin
-//        parameters:=newMapLiteral(meta^.prototype^.numberOfParameters);
-//        result:=newMapLiteral(2)^.put('Algorithm',meta^.getName)^.put('Parameter',parameters,false);
-//        for i:=0 to meta^.prototype^.numberOfParameters-1 do begin
-//          description:=meta^.prototype^.parameterDescription(i);
-//          value      :=meta^.prototype^.getParameter        (i);
-//          case description^.typ of
-//            pt_string   ,
-//            pt_fileName ,
-//            pt_enum     : valueLit:=newStringLiteral(value.fileName);
-//            pt_integer  : valueLit:=newIntLiteral(value.i0);
-//            pt_2integers: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendInt(value.i1);
-//            pt_3integers: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendInt(value.i1)^.appendInt(value.i2);
-//            pt_4integers: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendInt(value.i1)^.appendInt(value.i2)^.append(value.i3);
-//            pt_intOr2Ints: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendInt(value.i1);
-//            pt_float     : valueLit:=newRealLiteral(value.f0);
-//            pt_floatOr2Floats,
-//            pt_2floats   : valueLit:=newListLiteral(2)^.appendReal(value.f0)^.appendReal(value.f1);
-//            pt_3floats,
-//            pt_color     : valueLit:=newListLiteral(3)^.appendReal(value.f0)^.appendReal(value.f1)^.appendReal(value.f2);
-//            pt_4floats   : valueLit:=newListLiteral(4)^.appendReal(value.f0)^.appendReal(value.f1)^.appendReal(value.f2)^.appendReal(value.f3);
-//            pt_jpgNameWithSize: valueLit:=newListLiteral(2)^.appendString(value.fileName)^.appendInt(value.i0)
-//            pt_1I1F: valueLit:=newListLiteral(2)^.appendInt(value.i0)^.appendReal(value.f1);
-//            pt_1I2F: valueLit:=newListLiteral(3)^.appendInt(value.i0)^.appendReal(value.f1)^.appendReal(value.f2);
-//            pt_1I3F: valueLit:=newListLiteral(4)^.appendInt(value.i0)^.appendReal(value.f1)^.appendReal(value.f2)^.appendReal(value.f3);
-//            else begin
-//              context.raiseError('Unimplemented parameter value type');
-//              writeln(stderr,'Unimplemented parameter value type is: ',description^.typ);
-//              valueLit:=newVoidLiteral;
-//            end;
-//          end;
-//          parameters^.put(description^.name,valueLit,false);
-//        end;
-//      end;
-//    end;
-//  end;
 
 FUNCTION getThumbnail_imp intFuncSignature;
   VAR img:T_rawImage;
@@ -673,6 +661,8 @@ INITIALIZATION
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
                                                                      '#//Give an additional expression(1) parameter for progress output');
+  registerRule(IMIG_NAMESPACE,'executeTodo',@executeTodo_imp,ak_variadic_1,'executeTodo(filename:String);//Executes the imig-todo defined in the given file and deletes the file after calculation#'+
+                                                                           'executeTodo(filename:String: outputMethod:Expression(1));');
   registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,ak_unary,'loadImage(filename:string);//Loads image from the given file');
   registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
   registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
