@@ -227,7 +227,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
          not(tco_spawnWorker in context.threadOptions) or
          (settings.cpuCount<=1) or
          not(isMemoryInComfortZone))
-         //TODO: Also work serially, when only few (?) elements are to be processed
       then eachType:=tt_each;
       eachLocation:=first^.next^.location;
       initialize(bodyRule);
@@ -246,6 +245,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
       if not(parseBodyOk) then exit;
       input:=P_literal(first^.data);
+      if (eachType = tt_parallelEach) and (input^.literalType in C_compoundTypes) and (P_compoundLiteral(input)^.size<=2) then eachType:=tt_each;
       first^.next:=recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
@@ -341,7 +341,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token); inline;
+  PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
@@ -442,7 +442,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveInlineIf(CONST conditionLit:boolean); {$ifndef profilingFlavour}inline;{$endif}
+  PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
     VAR p,prev,tokenBeforeElse,lastThen:P_token;
         bracketLevel:longint=0;
     begin
@@ -489,7 +489,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE startOrPushParameterList; {$ifndef profilingFlavour}{$ifndef debugMode}inline;{$endif}{$endif}
+  PROCEDURE startOrPushParameterList;
     begin
       stack.push(first);
       if first^.tokType=tt_braceOpen then begin
@@ -627,10 +627,28 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE process_op_lit; {$ifndef profilingFlavour}{$ifndef debugMode} inline;{$endif}{$endif}
+  PROCEDURE process_pow2_pow3;
+    VAR newLit:P_literal;
+        power:P_abstractIntLiteral;
+    begin
+      assert(cTokType[0]=tt_literal);
+      assert(cTokType[1] in [tt_pow2,tt_pow3]);
+      if cTokType[1]=tt_pow2
+      then power:=newIntLiteral(2)
+      else power:=newIntLiteral(3);
+      newLit:=resolveOperator(first^.data,tt_operatorPot,power,first^.next^.location,@context,@recycler);
+      disposeLiteral(power);
+      first:=recycler.disposeToken(first);
+      first^.data:=newLit;
+      first^.tokType:=tt_literal;
+      didSubstitution:=true;
+    end;
+
+  PROCEDURE process_op_lit;
     VAR trueLit:boolean;
     begin
       case cTokType[1] of
+        tt_pow2,tt_pow3: process_pow2_pow3;
         tt_comparatorEq..tt_operatorConcatAlt:
           if C_opPrecedence[cTokType[1],0]>=C_opPrecedence[cTokType[-1],1] then begin
             case cTokType[-1] of
@@ -904,6 +922,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
 {$MACRO ON}
 {$define COMMON_CASES:=
+tt_pow2,tt_pow3: process_pow2_pow3;
 tt_separatorMapItem: begin
   stack.push(first);
   stack.push(first);
@@ -984,6 +1003,7 @@ end}
       {$endif}
       case cTokType[0] of
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+          //TODO: Handle case tt_literal | {tt_pow2|tt_pow3}
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose:
               processEntryConstructor;
@@ -1011,7 +1031,7 @@ end}
           end;
  {cT[-1]=}tt_comparatorEq..tt_comparatorListEq:
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq])
-            then process_op_lit_cascading
+            then process_op_lit_cascading  //For cases like "1 < x < 6"
             else process_op_lit;
  {cT[-1]=}tt_operatorIn..tt_operatorConcatAlt,
           tt_unaryOpPlus,tt_unaryOpMinus,tt_unaryOpNegate: process_op_lit;

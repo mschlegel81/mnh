@@ -296,6 +296,7 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
           CanClose:=false;
         end;
         cda_cancelEvalAndQuit: begin
+          //TODO: Minor bug: There is a memory leak when you "cancel-and-quit" a debugging run
           runnerModel.postHalt;
           stopQuickEvaluation;
           CanClose:=true;

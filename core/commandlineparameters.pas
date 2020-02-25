@@ -45,8 +45,6 @@ TYPE
     FUNCTION allowedSideEffects:T_sideEffects;
   end;
 
-  { T_commandLineParameters }
-
   T_commandLineParameters=object
       mnhExecutionOptions:T_mnhExecutionOptions;
 
@@ -509,6 +507,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       s:ansistring;
       consoleMessageTypes:T_messageTypeSet;
   begin
+    //TODO: BUG With -v1, every output is shown twice (only IM/IG-version?)
     result:=true;
     if not(initAdaptersForGui) and (clf_SHOW_INFO in mnhExecutionOptions.flags) then begin
       for s in getMnhInfo do writeln(s);

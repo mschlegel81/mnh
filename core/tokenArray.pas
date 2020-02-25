@@ -977,14 +977,6 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
         end else messages^.raiseSimpleError('Invalid agg construct.',nextToken^.location);
         recycler.disposeToken(n[1]);
       end;
-      //TODO: ² and ³ are not "explained" correctly. See also T_lexer.getEnhancedTokens
-      tt_pow2,tt_pow3: begin
-        appendToken(recycler.newToken(nextToken^.location,'^',tt_operatorPot));
-        if nextToken^.tokType=tt_pow2
-        then nextToken^.data:=newIntLiteral(2)
-        else nextToken^.data:=newIntLiteral(3);
-        nextToken^.tokType:=tt_literal;
-      end;
     end;
     result:=true;
     appendToken(nextToken);
