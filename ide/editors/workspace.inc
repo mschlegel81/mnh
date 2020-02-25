@@ -425,7 +425,7 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
     enterCriticalSection(workspaceCs);
     try
       if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
-      meta:=addOrGetEditorMetaForFiles(location.fileName,false);
+      meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false);
       if meta=nil then exit(false);
       inputPageControl.activePage:=meta^.tabsheet;
       meta^.setCaret(location);
