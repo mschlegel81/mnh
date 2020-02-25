@@ -227,7 +227,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
          not(tco_spawnWorker in context.threadOptions) or
          (settings.cpuCount<=1) or
          not(isMemoryInComfortZone))
-         //TODO: Also work serially, when only few (?) elements are to be processed
       then eachType:=tt_each;
       eachLocation:=first^.next^.location;
       initialize(bodyRule);
@@ -246,6 +245,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
       if not(parseBodyOk) then exit;
       input:=P_literal(first^.data);
+      if (eachType = tt_parallelEach) and (input^.literalType in C_compoundTypes) and (P_compoundLiteral(input)^.size<=2) then eachType:=tt_each;
       first^.next:=recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
@@ -984,6 +984,7 @@ end}
       {$endif}
       case cTokType[0] of
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+          //TODO: Handle case tt_literal | {tt_pow2|tt_pow3}
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose:
               processEntryConstructor;
