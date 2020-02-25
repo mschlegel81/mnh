@@ -283,6 +283,7 @@ FUNCTION anyEvaluationRunning:boolean;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
+  VAR timeout:double;
   begin
     if anyEvaluationRunning then begin
       ensureTimerSuspend;
@@ -296,10 +297,12 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
           CanClose:=false;
         end;
         cda_cancelEvalAndQuit: begin
-          //TODO: Minor bug: There is a memory leak when you "cancel-and-quit" a debugging run
           runnerModel.postHalt;
           stopQuickEvaluation;
           CanClose:=true;
+          timeout:=now+1/(24*60*60);
+          while anyEvaluationRunning and (now<timeout) do sleep(1);
+          runnerModel.flushMessages;
         end;
       end;
       timer.enabled:=true;
