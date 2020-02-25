@@ -84,16 +84,19 @@ FUNCTION obtainDimensionsViaAdapters(CONST messages:P_messages):T_imageDimension
   end;
 
 FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_standaloneWorkflow;
+  VAR errorRaised:boolean=false;
   PROCEDURE warn(CONST message:string);
     begin
+      errorRaised:=true;
       isValid:=false;
       if validating then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,message)
                     else context.raiseError(message,tokenLocation);
     end;
 
   VAR i:longint;
-      cmd:string;
       tmpSteps:P_listLiteral;
+      stepText:T_arrayOfString;
+      msg:P_structuredMessage;
   begin
     result.create;
     if steps^.literalType=lt_stringList
@@ -101,33 +104,26 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     else tmpSteps:=P_listLiteral(flatten_imp(steps,tokenLocation,context,recycler));
     isValid:=(tmpSteps^.literalType=lt_stringList) and (tmpSteps^.size>=1);
     if isValid then begin
-      for i:=0 to tmpSteps^.size-1 do begin
-        cmd:=P_stringLiteral(tmpSteps^.value[i])^.value;
-        if not(result.addStep(cmd))
-        then warn('Invalid workflow step: '+tmpSteps^.value[i]^.toString);
+      setLength(stepText,tmpSteps^.size);
+      for i:=0 to tmpSteps^.size-1 do stepText[i]:=P_stringLiteral(tmpSteps^.value[i])^.value;
+      isValid:=result.parseWorkflow(stepText);
+      msg:=result.messageQueue^.get;
+      while msg<>nil do begin
+        if msg^.indicatesError then warn(msg^.toString);
+        dispose(msg,destroy);
+        msg:=result.messageQueue^.get;
       end;
     end;
     if steps<>tmpSteps then disposeLiteral(tmpSteps);
+    if not(isValid) and not(validating) and not(errorRaised) then context.raiseError('Invalid workflow',tokenLocation);
   end;
 
 FUNCTION validateWorkflow_imp intFuncSignature;
   VAR wf:T_standaloneWorkflow;
       isValid:boolean;
-  PROCEDURE pollLog;
-    VAR msg:P_structuredMessage;
-    begin
-      msg:=wf.messageQueue^.get;
-      while msg<>nil do begin
-        if msg^.indicatesError then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,msg^.toString);
-        dispose(msg,destroy);
-        msg:=wf.messageQueue^.get;
-      end;
-    end;
-
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_list]) then begin
       wf:=createWorkflow(list0,true,isValid,tokenLocation,context,recycler);
-      pollLog;
       wf.destroy;
       result:=newBoolLiteral(isValid);
     end else result:=nil;
