@@ -4016,40 +4016,40 @@ expectations:=
   ]].toMap,
  'numInt'=>
  ['FDLinux'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.6051783860084619746',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.6051783860084619746',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'FDWin32'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008461974',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008461974',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'FDWin64'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008462',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008462',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'FOLinux'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.6051783860084619746',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.6051783860084619746',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'FOWin32'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008461974',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008461974',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'FOWin64'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008462',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008462',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LDLinux'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.6051783860084619746',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.6051783860084619746',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LDWin32'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008461974',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008461974',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LDWin64'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008462',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008462',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LOLinux'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.6051783860084619746',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.6051783860084619746',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LOWin32'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008461974',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008461974',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0'],
   'LOWin64'=>
-  ['integral of $x^3 in [0,   1]=        0.25','integral of 1/$x in [1, 100]=        4.605178386008462',
+  ["integral of $x³  in [0,   1]=        0.25",'integral of 1/$x in [1, 100]=        4.605178386008462',
    'integral of $x   in [0,5000]= 12500000.0','integral of $x   in [0,6000]= 18000000.0']].toMap,
  'opTest'=>
  ['FDLinux'=>

@@ -334,6 +334,7 @@
         <Filename Value="editors/openfile.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="openFileDialog"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="openFile"/>
       </Unit37>
