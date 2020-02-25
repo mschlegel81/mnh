@@ -152,10 +152,14 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
         breakSoonest      : state:=waitingForGUI;
         breakOnLineChange : if (callStack^.size<lastBreakLevel) or
                                (callStack^.size=lastBreakLevel) and not(isEqualLine(lastBreakLine,first^.location)) then state:=waitingForGUI;
-        breakOnStepOut    : if (callStack^.size<lastBreakLevel) then state:=waitingForGUI;
-        breakOnStepIn     : if (callStack^.size>lastBreakLevel) then state:=waitingForGUI;
+        breakOnStepOut    : if (callStack^.size<lastBreakLevel) or breakpointEncountered then state:=waitingForGUI;
+        breakOnStepIn     : if (callStack^.size>lastBreakLevel) or breakpointEncountered then state:=waitingForGUI;
+        runUntilBreakpoint: begin
+                              if not(isEqualLine(lastBreakLine,first^.location)) and breakpointEncountered
+                              then state:=waitingForGUI
+                              else lastBreakLine:=first^.location;
+                            end;
       end;
-      if (state<>waitingForGUI) and breakpointEncountered then state:=waitingForGUI;
       if state=waitingForGUI then begin
         {$ifdef debugMode}
         writeln('+----------------- - - -');
