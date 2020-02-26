@@ -277,8 +277,8 @@ FUNCTION executeTodo_imp intFuncSignature;
        (arg0^.literalType=lt_string) and
        ((params^.size=1) or (arg1^.literalType=lt_expression)) then begin
       if not(fileExists(str0^.value)) then begin
-        context.raiseError('File "'+str0^.value+'" does not exist',tokenLocation);
-        exit(nil);
+        context.messages^.postTextMessage(mt_el2_warning,tokenLocation, 'File "'+str0^.value+'" does not exist');
+        exit(newBoolLiteral(false));
       end;
       if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
       thisWorkflow.create;
@@ -300,8 +300,8 @@ FUNCTION executeTodo_imp intFuncSignature;
         leaveCriticalSection(workflowCs);
       end;
       pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
+      result:=newBoolLiteral(thisWorkflow.isDone);
       thisWorkflow.destroy;
-      result:=newVoidLiteral;
     end else result:=nil;
   end;
 
@@ -657,7 +657,7 @@ INITIALIZATION
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
                                                                      '#//Give an additional expression(1) parameter for progress output');
-  registerRule(IMIG_NAMESPACE,'executeTodo',@executeTodo_imp,ak_variadic_1,'executeTodo(filename:String);//Executes the imig-todo defined in the given file and deletes the file after calculation#'+
+  registerRule(IMIG_NAMESPACE,'executeTodo',@executeTodo_imp,ak_variadic_1,'executeTodo(filename:String);//Executes the imig-todo defined in the given file and deletes the file after calculation. Returns true if successful.#'+
                                                                            'executeTodo(filename:String: outputMethod:Expression(1));');
   registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,ak_unary,'loadImage(filename:string);//Loads image from the given file');
   registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
