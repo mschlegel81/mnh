@@ -99,6 +99,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       msg:P_structuredMessage;
   begin
     result.create;
+    result.messageQueue^.messageStringLengthLimit:=maxLongint;
     if steps^.literalType=lt_stringList
     then tmpSteps:=steps
     else tmpSteps:=P_listLiteral(flatten_imp(steps,tokenLocation,context,recycler));
@@ -109,7 +110,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       isValid:=result.parseWorkflow(stepText);
       msg:=result.messageQueue^.get;
       while msg<>nil do begin
-        if msg^.indicatesError then warn(msg^.toString);
+        if msg^.indicatesError then warn(msg^.toString(maxLongint));
         dispose(msg,destroy);
         msg:=result.messageQueue^.get;
       end;
@@ -153,7 +154,7 @@ PROCEDURE pollLog(VAR thisWorkflow:T_simpleWorkflow; CONST location:T_tokenLocat
   begin
     msg:=thisWorkflow.messageQueue^.get;
     while msg<>nil do begin
-      doOutput(msg^.toString,msg^.indicatesError,location,context,recycler,outputMethod);
+      doOutput(msg^.toString(maxLongint),msg^.indicatesError,location,context,recycler,outputMethod);
       dispose(msg,destroy);
       msg:=thisWorkflow.messageQueue^.get;
     end;
@@ -282,6 +283,7 @@ FUNCTION executeTodo_imp intFuncSignature;
       end;
       if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
       thisWorkflow.create;
+      thisWorkflow.messageQueue^.messageStringLengthLimit:=maxLongint;
       if thisWorkflow.readFromFile(str0^.value) then begin
         enterCriticalSection(workflowCs);
         inc(workflowsActive);
