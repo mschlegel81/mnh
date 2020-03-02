@@ -342,14 +342,15 @@ FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
     end;
   end;
 
+FUNCTION isPseudoName(CONST fileName:ansistring):boolean;
+  begin
+    result:=(length(fileName)>1)
+        and (fileName[1]='<')
+        and (fileName[length(fileName)]='>');
+  end;
+
 FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
-    FUNCTION isPseudoName:boolean;
-      begin
-        result:=(length(fileName)>1)
-            and (fileName[1]='<')
-            and (fileName[length(fileName)]='>');
-      end;
 
     PROCEDURE updateMarkers(CONST meta:P_editorMeta);
       VAR k:longint=0;
@@ -364,7 +365,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
 
     VAR meta:P_editorMeta;
     begin
-      if isPseudoName then begin
+      if isPseudoName(fileName) then begin
         for meta in metas do if meta^.pseudoName=fileName then begin result:=meta; exit; end;
       end else begin
         for meta in metas do if SameFileName(meta^.fileInfo.filePath,fileName) then begin result:=meta; exit; end;
@@ -425,7 +426,9 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolea
     enterCriticalSection(workspaceCs);
     try
       if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
-      meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false);
+      if isPseudoName(location.fileName)
+      then meta:=addOrGetEditorMetaForFiles(                   location.fileName ,false)
+      else meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false);
       if meta=nil then exit(false);
       inputPageControl.activePage:=meta^.tabsheet;
       meta^.setCaret(location);
