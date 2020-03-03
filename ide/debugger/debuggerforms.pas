@@ -156,7 +156,7 @@ PROCEDURE TDebuggerForm.performFastUpdate;
 PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
   begin
     runnerModel.postHalt;
-    disposeMessage(currentSnapshot);
+    if currentSnapshot<>nil then disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
     updateWithCurrentSnapshot;
     lastClickedButton:=dontBreakAtAll;
@@ -239,7 +239,7 @@ PROCEDURE TDebuggerForm.delegateDebuggerAction(CONST newState: T_debuggerState);
     runnerModel.doDebuggerAction(newState);
     inlineVariableReport^.clear;
     parameterInfo:=nil;
-    disposeMessage(currentSnapshot);
+    if currentSnapshot<>nil then disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
     lastClickedButton:=newState;
     updateWithCurrentSnapshot;
