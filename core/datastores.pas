@@ -193,6 +193,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
   end;
 
 INITIALIZATION
+  initialize(globalDatastoreCs);
   system.initCriticalSection(globalDatastoreCs);
 
 FINALIZATION

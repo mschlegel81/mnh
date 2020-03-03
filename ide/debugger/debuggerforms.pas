@@ -60,7 +60,6 @@ USES editorMeta,myGenerics,mnh_settings,mnh_messages;
 
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
-    VAR meta:P_editorMeta;
     begin
       if currentSnapshot^.getLocation.fileName='?' then exit;
       workspace.openDebugLocation(currentSnapshot^.getLocation);
