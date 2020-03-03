@@ -765,5 +765,7 @@ FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable:b
 INITIALIZATION
   underCursor.fullLine:='';
   underCursor.CaretX:=-1;
+  {$define includeInitialization}
+  {$i workspace.inc}
 
 end.

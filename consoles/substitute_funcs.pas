@@ -36,4 +36,7 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'renderToString',   @requireGui ,ak_variadic);
   registerRule(PLOT_NAMESPACE,'resetOptions',     @requireGui ,ak_variadic);
   registerRule(PLOT_NAMESPACE,'setOptions',       @requireGui ,ak_variadic);
+  registerRule(GUI_NAMESPACE,'editors'           ,failFunction,ak_nullary);
+  registerRule(GUI_NAMESPACE,'editorContent'     ,failFunction,ak_unary);
+
 end.
