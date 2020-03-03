@@ -107,9 +107,10 @@ PROCEDURE TDebuggerVarForm.StackGridDblClick(Sender: TObject);
   VAR stackIdx:longint;
   begin
     if currentSnapshot=nil then exit;
-    stackIdx:=currentSnapshot^.callStack^.size-StackGrid.selection.top;
-    if (stackIdx<0) or (stackIdx>=currentSnapshot^.callStack^.size) then exit;
-    workspace.openLocation(currentSnapshot^.callStack^[stackIdx].callerFuncLocation);
+    stackIdx:=currentSnapshot^.callStack^.size-StackGrid.selection.top+1;
+    if (stackIdx<0) or (stackIdx>=currentSnapshot^.callStack^.size)
+    then workspace.openDebugLocation(currentSnapshot^                     .getLocation)
+    else workspace.openDebugLocation(currentSnapshot^.callStack^[stackIdx].callerLocation);
   end;
 
 PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol, aRow: integer);

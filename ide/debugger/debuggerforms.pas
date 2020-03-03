@@ -62,13 +62,8 @@ PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
     VAR meta:P_editorMeta;
     begin
-      runnerModel.markDebugLine(nil,-1);
       if currentSnapshot^.getLocation.fileName='?' then exit;
-      meta:=workspace.addOrGetEditorMetaForFiles(currentSnapshot^.getLocation.fileName,false);
-      if meta<>nil then begin
-        runnerModel.markDebugLine(meta^.editor,currentSnapshot^.getLocation.line);
-        meta^.editor.Repaint;
-      end;
+      workspace.openDebugLocation(currentSnapshot^.getLocation);
     end;
 
   VAR form:T_mnhComponentForm;

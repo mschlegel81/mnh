@@ -3,12 +3,6 @@ T_runnerModel=object(T_serializable)
   private
     evaluation:T_standardEvaluation;
     scriptEval:T_ideScriptEvaluation;
-
-    debugLine:record
-      editor:TSynEdit;
-      line:longint;
-    end;
-
     debugMode_:boolean;
     PROCEDURE setDebugMode(CONST value:boolean);
     FUNCTION executionDir(CONST provider:P_editorMeta):string;
@@ -31,9 +25,7 @@ T_runnerModel=object(T_serializable)
     PROCEDURE customRun(CONST mainCall:boolean);
     PROCEDURE runExternally();
     PROCEDURE ensureEditScripts;
-    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
-    PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
     PROCEDURE postHalt;
     FUNCTION anyRunning(CONST considerScriptEval:boolean=true):boolean;
@@ -138,22 +130,10 @@ PROCEDURE T_runnerModel.ensureEditScripts;
     if canRunScript then scriptEval.ensureEditScripts();
   end;
 
-PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
-  begin
-    Special:=evaluation.isPaused and evaluation.isRunning and (Sender=debugLine.editor) and (line=debugLine.line);
-  end;
-
 PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
   begin
     evaluation.stepper^.setState(newState);
     mainForm.onDebuggerEvent; //sets editors to readonly...
-  end;
-
-PROCEDURE T_runnerModel.markDebugLine(CONST editor: TSynEdit;
-  CONST line: longint);
-  begin
-    debugLine.editor:=editor;
-    debugLine.line  :=line;
   end;
 
 PROCEDURE T_runnerModel.haltEvaluation;

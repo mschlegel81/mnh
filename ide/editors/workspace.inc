@@ -17,7 +17,12 @@ T_workspace=object(T_serializable)
       markIndex:byte;
     end;
 
-    metas:array of P_editorMeta;
+   debugLine:record
+     editor:TSynEdit;
+     line:longint;
+   end;
+
+   metas:array of P_editorMeta;
 
   public
     saveIntervalIdx:byte;
@@ -45,8 +50,12 @@ T_workspace=object(T_serializable)
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
     FUNCTION hasEditorForFile(CONST fileName:string):boolean;
 
+    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+
+    PROCEDURE clearDebugLine;
+    FUNCTION openDebugLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
-    FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
+    FUNCTION openLocation(CONST location:T_searchTokenLocation):P_editorMeta;
     PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 
@@ -150,6 +159,7 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     reregisterRule(GUI_NAMESPACE,'editors'       ,@editors_impl);
     reregisterRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl);
     packages.newCodeProvider:=@newFileProxy;
+    clearDebugLine;
   end;
 
 DESTRUCTOR T_workspace.destroy;
@@ -311,7 +321,7 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
     end;
   end;
 
-FUNCTION T_workspace.createNewFile:P_editorMeta;
+FUNCTION T_workspace.createNewFile: P_editorMeta;
   begin
     result:=addEditorMetaForNewFile;
     inputPageControl.activePage:=result^.tabsheet;
@@ -330,7 +340,7 @@ FUNCTION T_workspace.getExistingEditorForPath(CONST pathOrPseudoName:string):P_e
     end;
   end;
 
-FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
+FUNCTION T_workspace.hasEditorForFile(CONST fileName: string): boolean;
   VAR meta:P_editorMeta;
   begin
     enterCriticalSection(workspaceCs);
@@ -339,6 +349,31 @@ FUNCTION T_workspace.hasEditorForFile(CONST fileName:string):boolean;
       for meta in metas do if not(result) and (meta^.pseudoName=fileName) then result:=true;
     finally
       leaveCriticalSection(workspaceCs);
+    end;
+  end;
+
+PROCEDURE T_workspace.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+  begin
+    Special:=runnerModel.evaluation.isPaused and runnerModel.evaluation.isRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+  end;
+
+PROCEDURE T_workspace.clearDebugLine;
+  begin
+    debugLine.editor:=nil;
+  end;
+
+FUNCTION T_workspace.openDebugLocation(CONST location: T_searchTokenLocation): boolean;
+  VAR meta:P_editorMeta;
+  begin
+    meta:=openLocation(location);
+    if meta=nil then begin
+      debugLine.editor:=nil;
+      result:=false;
+    end else begin
+      debugLine.editor:=meta^.editor;
+      debugLine.line:=location.line;
+      meta^.editor.Repaint;
+      result:=true;
     end;
   end;
 
@@ -420,21 +455,23 @@ PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);
     end;
   end;
 
-FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): boolean;
+FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): P_editorMeta;
   VAR meta:P_editorMeta;
   begin
+    result:=nil;
+    if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(nil);
     enterCriticalSection(workspaceCs);
     try
-      if (location.fileName='') or (location.fileName='?') or (location.fileName=MNH_PSEUDO_PACKAGE.getPath) then exit(false);
       if isPseudoName(location.fileName)
       then meta:=addOrGetEditorMetaForFiles(                   location.fileName ,false)
       else meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false);
-      if meta=nil then exit(false);
-      inputPageControl.activePage:=meta^.tabsheet;
-      meta^.setCaret(location);
-      inputPageControl.activePage:=meta^.tabsheet;
-      mainForm.ActiveControl:=meta^.editor;
-      result:=true;
+      if meta<>nil then begin
+        inputPageControl.activePage:=meta^.tabsheet;
+        meta^.setCaret(location);
+        inputPageControl.activePage:=meta^.tabsheet;
+        mainForm.ActiveControl:=meta^.editor;
+        result:=meta;
+      end;
     finally
       leaveCriticalSection(workspaceCs);
     end;
@@ -486,7 +523,7 @@ FUNCTION T_workspace.getAllBreakpoints: T_searchTokenLocations;
     end;
   end;
 
-PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
+PROCEDURE T_workspace.removeBreakpoint(CONST loc: T_searchTokenLocation);
   VAR m:P_editorMeta;
       k:longint=0;
       j:longint;
@@ -500,7 +537,7 @@ PROCEDURE T_workspace.removeBreakpoint(CONST loc:T_searchTokenLocation);
     runnerModel.evaluation.stepper^.setBreakpoints(getAllBreakpoints);
   end;
 
-PROCEDURE T_workspace.closeQuietly(CONST toClose:P_editorMeta);
+PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
   VAR k:longint;
       sheetToDestroy:TTabSheet;
       newCurrent:P_editorMeta;
@@ -665,7 +702,7 @@ PROCEDURE T_workspace.checkForFileChanges;
     end;
   end;
 
-FUNCTION T_workspace.getMainFormCaption:string;
+FUNCTION T_workspace.getMainFormCaption: string;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
@@ -679,12 +716,12 @@ PROCEDURE T_workspace.postSaveRequest;
     savedAt:=0;
   end;
 
-FUNCTION T_workspace.savingRequested:boolean;
+FUNCTION T_workspace.savingRequested: boolean;
   begin
     result:=(savedAt<=0) or ((now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval);
   end;
 
-FUNCTION T_workspace.getCurrentAssistanceResponse:P_codeAssistanceResponse;
+FUNCTION T_workspace.getCurrentAssistanceResponse: P_codeAssistanceResponse;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
@@ -707,7 +744,7 @@ PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
     updateEditorsByGuiStatus;
   end;
 
-PROCEDURE T_workspace.processEditScriptMessage(CONST message:P_storedMessage);
+PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
   PROCEDURE processEditScriptResponse(CONST data:P_editScriptTask);
     VAR target:P_editorMeta;
     begin
