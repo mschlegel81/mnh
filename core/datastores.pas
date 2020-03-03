@@ -28,6 +28,7 @@ TYPE
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
 IMPLEMENTATION
+VAR globalDatastoreCs:TRTLCriticalSection;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
   VAR wrapper:T_bufferedInputStreamWrapper;
@@ -36,6 +37,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       dummyLocation:T_tokenLocation;
       dummyTypeMap:T_typeMap;
   begin
+
     wrapper.createToReadFromFile(fileName);
     id:=wrapper.readAnsiString;
     result:=wrapper.allOkay;
@@ -79,6 +81,7 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
 
   begin
     if fileName<>'' then exit;
+    enterCriticalSection(globalDatastoreCs);
     allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
     for i:=0 to length(allStores)-1 do if fileName='' then begin
       wrapper.createToReadFromFile(allStores[i]);
@@ -100,6 +103,7 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
         inc(i);
       until not(sysutils.fileExists(fileName));
     end;
+    leaveCriticalSection(globalDatastoreCs);
   end;
 
 CONSTRUCTOR T_datastoreMeta.create(CONST packagePath_, ruleId_: string);
@@ -140,6 +144,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
   begin
     tryObtainName(false);
     if fileName='' then exit(nil);
+    enterCriticalSection(globalDatastoreCs);
     if fileHasBinaryFormat then begin
       wrapper.createToReadFromFile(fileName);
       wrapper.readAnsiString;
@@ -153,17 +158,19 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       end;
       wrapper.destroy;
     end else begin
-      result:=newVoidLiteral;
       fileLines:=fileWrappers.fileLines(fileName,accessed);
-      if not(accessed) then exit(newVoidLiteral);
-      dropFirst(fileLines,1);
-      lexer.create(fileLines,location,P_abstractPackage(location.package));
-      stmt:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
-      stmt.firstToken^.setSingleLocationForExpression(location);
-      lexer.destroy;
-      result:=context.reduceToLiteral(stmt.firstToken,recycler).literal;
+      if not(accessed) then result:=nil
+      else begin
+        dropFirst(fileLines,1);
+        lexer.create(fileLines,location,P_abstractPackage(location.package));
+        stmt:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
+        stmt.firstToken^.setSingleLocationForExpression(location);
+        lexer.destroy;
+        result:=context.reduceToLiteral(stmt.firstToken,recycler).literal;
+      end;
     end;
     fileAge(fileName,fileReadAt);
+    leaveCriticalSection(globalDatastoreCs)
   end;
 
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
@@ -171,6 +178,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
       plainText:T_arrayOfString;
   begin
     tryObtainName(true);
+    enterCriticalSection(globalDatastoreCs);
     if writePlainText then begin
       plainText:=ruleId+':=';
       append(plainText,serializeToStringList(L,location,threadLocalMessages));
@@ -181,7 +189,15 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
       writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
       wrapper.destroy;
     end;
+    leaveCriticalSection(globalDatastoreCs);
   end;
+
+INITIALIZATION
+  initialize(globalDatastoreCs);
+  system.initCriticalSection(globalDatastoreCs);
+
+FINALIZATION
+  system.doneCriticalSection(globalDatastoreCs);
 
 end.
 

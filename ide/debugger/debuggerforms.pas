@@ -60,15 +60,9 @@ USES editorMeta,myGenerics,mnh_settings,mnh_messages;
 
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
-    VAR meta:P_editorMeta;
     begin
-      runnerModel.markDebugLine(nil,-1);
       if currentSnapshot^.getLocation.fileName='?' then exit;
-      meta:=workspace.addOrGetEditorMetaForFiles(currentSnapshot^.getLocation.fileName,false);
-      if meta<>nil then begin
-        runnerModel.markDebugLine(meta^.editor,currentSnapshot^.getLocation.line);
-        meta^.editor.Repaint;
-      end;
+      workspace.openDebugLocation(currentSnapshot^.getLocation);
     end;
 
   VAR form:T_mnhComponentForm;
@@ -156,7 +150,7 @@ PROCEDURE TDebuggerForm.performFastUpdate;
 PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
   begin
     runnerModel.postHalt;
-    disposeMessage(currentSnapshot);
+    if currentSnapshot<>nil then disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
     updateWithCurrentSnapshot;
     lastClickedButton:=dontBreakAtAll;
@@ -239,7 +233,7 @@ PROCEDURE TDebuggerForm.delegateDebuggerAction(CONST newState: T_debuggerState);
     runnerModel.doDebuggerAction(newState);
     inlineVariableReport^.clear;
     parameterInfo:=nil;
-    disposeMessage(currentSnapshot);
+    if currentSnapshot<>nil then disposeMessage(currentSnapshot);
     currentSnapshot:=nil;
     lastClickedButton:=newState;
     updateWithCurrentSnapshot;

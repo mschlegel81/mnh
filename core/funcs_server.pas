@@ -340,6 +340,8 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
+VAR httpRequestCs:TRTLCriticalSection;
+
 FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
@@ -404,6 +406,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       end;
     end else allOkay:=false;
     if allOkay then begin
+      enterCriticalSection(httpRequestCs);
       try
         client:=TFPHTTPClient.create(nil);
         client.AllowRedirect:=true;
@@ -421,6 +424,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
           context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
         end;
       end;
+      leaveCriticalSection(httpRequestCs);
       result:=responseLiteral;
       client.free;
     end;
@@ -458,5 +462,10 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     {$ifdef fullVersion},'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     {$ifdef fullVersion},'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     {$ifdef fullVersion},'openUrl(URL:String);//Opens the URL in the default browser'{$endif});
+
+  initialize(httpRequestCs);
+  initCriticalSection(httpRequestCs);
+FINALIZATION
+  doneCriticalSection(httpRequestCs);
 
 end.

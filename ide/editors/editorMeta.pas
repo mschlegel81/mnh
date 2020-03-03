@@ -228,7 +228,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     editor_.OnChange            :=@InputEditChange;
     editor_.OnMouseDown         :=@editorMouseDown;
     editor_.OnProcessCommand    :=@processUserCommand;
-    editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
+    editor_.OnSpecialLineMarkup :=@(workspace.InputEditSpecialLineMarkup);
     editor_.onPlaceBookmark     :=@onPlaceBookmark;
     editor_.onClearBookmark     :=@onClearBookmark;
 
@@ -765,5 +765,7 @@ FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable:b
 INITIALIZATION
   underCursor.fullLine:='';
   underCursor.CaretX:=-1;
+  {$define includeInitialization}
+  {$i workspace.inc}
 
 end.

@@ -20,6 +20,7 @@ TYPE
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE StackGridDblClick(Sender: TObject);
     PROCEDURE StackGridSelection(Sender: TObject; aCol, aRow: integer);
     PROCEDURE dockChanged; override;
   private
@@ -34,7 +35,7 @@ VAR
 
 PROCEDURE ensureDebuggerVarForm;
 IMPLEMENTATION
-USES mnh_settings,basicTypes;
+USES mnh_settings,basicTypes,editorMeta;
 
 PROCEDURE ensureDebuggerVarForm;
   begin
@@ -102,8 +103,17 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
       cleanup;
   end;
 
-PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol,
-  aRow: integer);
+PROCEDURE TDebuggerVarForm.StackGridDblClick(Sender: TObject);
+  VAR stackIdx:longint;
+  begin
+    if currentSnapshot=nil then exit;
+    stackIdx:=currentSnapshot^.callStack^.size-StackGrid.selection.top+1;
+    if (stackIdx<0) or (stackIdx>=currentSnapshot^.callStack^.size)
+    then workspace.openDebugLocation(currentSnapshot^                     .getLocation)
+    else workspace.openDebugLocation(currentSnapshot^.callStack^[stackIdx].callerLocation);
+  end;
+
+PROCEDURE TDebuggerVarForm.StackGridSelection(Sender: TObject; aCol, aRow: integer);
   VAR stackIdx:longint;
   PROCEDURE addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
     VAR newNode:TTreeNode;

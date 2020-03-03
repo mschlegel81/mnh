@@ -36,6 +36,9 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'renderToString',   @requireGui ,ak_variadic);
   registerRule(PLOT_NAMESPACE,'resetOptions',     @requireGui ,ak_variadic);
   registerRule(PLOT_NAMESPACE,'setOptions',       @requireGui ,ak_variadic);
+  registerRule(GUI_NAMESPACE,'editors'           ,failFunction,ak_nullary);
+  registerRule(GUI_NAMESPACE,'editorContent'     ,failFunction,ak_unary);
+
   registerRule(IMIG_NAMESPACE,'calculateThumbnail'      ,@requireGui,ak_variadic);
   registerRule(IMIG_NAMESPACE,'closeImage'              ,@requireGui,ak_variadic);
   registerRule(IMIG_NAMESPACE,'displayImage'            ,@requireGui,ak_variadic);
