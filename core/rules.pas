@@ -1293,9 +1293,11 @@ exit}
     end else for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.replaces(useParam,callLocation,firstRep,lastRep,P_context(context)^,recycler) then begin
       if (P_context(context)^.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
       if (P_context(context)^.messages^.continueEvaluation) then begin
+        enterCriticalSection(rule_cs);
         for p in usedGlobalVariables do enterCriticalSection(P_variable(p)^.namedValue.varCs);
         P_context(context)^.reduceExpression(firstRep,recycler);
         for p in usedGlobalVariables do leaveCriticalSection(P_variable(p)^.namedValue.varCs);
+        leaveCriticalSection(rule_cs);
       end;
       if (P_context(context)^.messages^.continueEvaluation) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
         lit:=firstRep^.data;
@@ -1377,40 +1379,28 @@ FUNCTION T_variable.getValue(VAR context: T_context; VAR recycler: T_recycler): 
     result:=namedValue.getValue;
   end;
 
-FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
-  CONST p1, p2: P_literal; VAR recycler: T_recycler;
-  CONST context: P_abstractContext): P_literal;
-begin
-  raise Exception.create('T_variable.evaluateToLiteral must not be called');
-  result:=nil;
-end;
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation; CONST p1, p2: P_literal; VAR recycler: T_recycler; CONST context: P_abstractContext): P_literal;
+  begin
+    raise Exception.create('T_variable.evaluateToLiteral must not be called');
+    result:=nil;
+  end;
 
-FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation;
-  CONST parList: P_listLiteral; VAR recycler: T_recycler;
-  CONST context: P_abstractContext): P_literal;
-begin
-  raise Exception.create('T_variable.evaluateToLiteral must not be called');
-  result:=nil;
-end;
+FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation; CONST parList: P_listLiteral; VAR recycler: T_recycler; CONST context: P_abstractContext): P_literal;
+  begin
+    raise Exception.create('T_variable.evaluateToLiteral must not be called');
+    result:=nil;
+  end;
 
-FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation;
-  CONST param: P_listLiteral; OUT firstRep, lastRep: P_token;
-  CONST context: P_abstractContext; VAR recycler: T_recycler;
-  CONST calledFromDelegator: boolean): boolean;
-begin
-  raise Exception.create('T_variable.replaces must not be called');
-  result:=false;
-end;
+FUNCTION T_variable.replaces(CONST callLocation: T_tokenLocation; CONST param: P_listLiteral; OUT firstRep, lastRep: P_token; CONST context: P_abstractContext; VAR recycler: T_recycler; CONST calledFromDelegator: boolean): boolean;
+  begin
+    raise Exception.create('T_variable.replaces must not be called');
+    result:=false;
+  end;
 
 FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal;
   begin
-    system.enterCriticalSection(namedValue.varCs);
-    try
-      readDataStore(context,recycler);
-      result:=namedValue.getValue;
-    finally
-      system.leaveCriticalSection(namedValue.varCs);
-    end;
+    readDataStore(context,recycler);
+    result:=namedValue.getValue;
   end;
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
@@ -1598,16 +1588,13 @@ FUNCTION T_variable.getDocTxt: ansistring;
 PROCEDURE T_variable.setMutableValue(CONST value: P_literal;
   CONST onDeclaration: boolean);
   begin
+    namedValue.setValue(value);
     system.enterCriticalSection(namedValue.varCs);
-    try
-      namedValue.setValue(value);
-      if not(onDeclaration) then begin
-        valueChangedAfterDeclaration:=true;
-        called:=true;
-      end;
-    finally
-      system.leaveCriticalSection(namedValue.varCs);
+    if not(onDeclaration) then begin
+      valueChangedAfterDeclaration:=true;
+      called:=true;
     end;
+    system.leaveCriticalSection(namedValue.varCs);
   end;
 
 FUNCTION T_variable.isReportable(OUT value: P_literal): boolean;
@@ -1622,36 +1609,28 @@ PROCEDURE T_datastore.readDataStore(VAR context:T_context; VAR recycler:T_recycl
   VAR lit:P_literal;
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta.fileChangedSinceRead) then begin
+      system.enterCriticalSection(namedValue.varCs);
       lit:=dataStoreMeta.readValue(getLocation,context,recycler);
       if lit<>nil then begin
         namedValue.setValue(lit);
         lit^.unreference;
         called:=true;
       end;
+      system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
 
 FUNCTION T_variable.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler: T_recycler): P_literal;
   begin
-    system.enterCriticalSection(namedValue.varCs);
-    try
-      result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
-      valueChangedAfterDeclaration:=true;
-      called:=true;
-    finally
-      system.leaveCriticalSection(namedValue.varCs);
-    end;
+    result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
+    valueChangedAfterDeclaration:=true;
+    called:=true;
   end;
 
 FUNCTION T_datastore.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): P_literal;
   begin
-    system.enterCriticalSection(namedValue.varCs);
-    try
-      if not(called) and not(valueChangedAfterDeclaration) then readDataStore(context,recycler);
-      result:=inherited mutateInline(mutation,RHS,location,context,recycler);
-    finally
-      system.leaveCriticalSection(namedValue.varCs);
-    end;
+    readDataStore(context,recycler);
+    result:=inherited mutateInline(mutation,RHS,location,context,recycler);
   end;
 
 PROCEDURE T_datastore.writeBack(CONST adapters:P_messages);
@@ -1687,11 +1666,8 @@ FUNCTION T_datastore.isInitialized:boolean;
 PROCEDURE T_memoizedRule.clearCache;
   begin
     enterCriticalSection(rule_cs);
-    try
-      cache.clear;
-    finally
-      leaveCriticalSection(rule_cs);
-    end;
+    cache.clear;
+    leaveCriticalSection(rule_cs);
   end;
 
 FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral): P_literal;
