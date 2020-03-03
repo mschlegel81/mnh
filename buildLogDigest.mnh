@@ -85,10 +85,8 @@ main('files')->begin
            allFiles('core','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
     .sort;
 
-  newList.escape
-  .join(",\n\v")
+  newList.escape.each(s,s,index mod 4=3 ? ",\n\v" : ",\t").leading.join
   .{print("hashFiles:=[\v",$s,'];')};
-
   newList==hashFiles
   ? print('List is up to date')
   : print('To be added  : ',newList.minus(hashFiles).toList,

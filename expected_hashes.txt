@@ -25,7 +25,7 @@ common/mySys.pas                              21.2kb D422DCBE
 common/pixMaps.pas                            13.0kb F9807031
 common/serializationUtil.pas                  14.4kb D053787D
 consoles/mnh_light.lpr                         0.9kb 8A9D4FF8
-consoles/substitute_funcs.pas                  3.4kb 578AABF6
+consoles/substitute_funcs.pas                  3.6kb EC626359
 core/aggregators.pas                          18.8kb C78F75FA
 core/basicTypes.pas                            6.2kb 084A4453
 core/builtinGenerators.pas                    44.0kb 2D3E8316
@@ -34,11 +34,11 @@ core/cmdLineInterpretation.pas                 4.7kb 19CAF436
 core/commandlineparameters.pas                21.6kb 64541EA2
 core/consoleAsk.pas                            4.5kb F007942F
 core/contexts.pas                             37.3kb 735913E3
-core/datastores.pas                            6.1kb D7FE08D7
+core/datastores.pas                            6.6kb 43E1EFAF
 core/evaluation.pas                           61.9kb B2A0C244
 core/fileWrappers.pas                         16.5kb EB0D5059
 core/func_defines.inc                          2.4kb 48DCD8A6
-core/funcs.pas                                16.5kb FCAC9F9A
+core/funcs.pas                                16.6kb 77908F54
 core/funcs_files.pas                          33.3kb 032C1F54
 core/funcs_format.pas                         22.8kb C15B0684
 core/funcs_ipc.pas                            18.7kb DE6DF183
@@ -47,7 +47,7 @@ core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             7.1kb E64B3FC4
 core/funcs_package.inc                        12.7kb E1B1B48E
 core/funcs_regex.pas                          11.9kb C49B3A25
-core/funcs_server.pas                         20.2kb CC8C8A36
+core/funcs_server.pas                         20.4kb A23788C8
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
@@ -62,7 +62,7 @@ core/packages.pas                             64.2kb 00D719E1
 core/patterns.pas                             31.9kb FB5AC32A
 core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb 29097114
-core/rules.pas                                72.8kb 746A4855
+core/rules.pas                                72.4kb 0E2147C4
 core/subrules.pas                             75.7kb 1447D22B
 core/tokenArray.pas                           55.2kb FE77D831
 core/tokenStack.pas                           17.3kb 95C49DB4
@@ -91,11 +91,11 @@ ide/customForms/component_splitPanel.inc       1.9kb CE01EBBE
 ide/customForms/component_worker.inc           1.7kb D58D4D33
 ide/customForms/mnhcustomform.pas             28.9kb A6F76A77
 ide/debugger/breakpointsforms.pas              2.6kb F57F19AF
-ide/debugger/debuggerforms.pas                 8.8kb 116EA8F7
-ide/debugger/debuggervarforms.pas              4.0kb D8DADC67
+ide/debugger/debuggerforms.pas                 8.6kb FF25745D
+ide/debugger/debuggervarforms.pas              4.6kb 5322373B
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
-ide/editors/editorMeta.pas                    26.4kb 0C23BA63
+ide/editors/editorMeta.pas                    26.4kb 1F8AF58D
 ide/editors/editormetabase.pas                35.6kb E31764C8
 ide/editors/editscripts.pas                    6.6kb 57759C02
 ide/editors/fileHistory.inc                   10.8kb 541F2962
@@ -103,10 +103,10 @@ ide/editors/gotolinedialogs.pas                1.3kb 04EA9342
 ide/editors/mnhCompletion.pas                  8.5kb 22C4E308
 ide/editors/openfile.pas                       3.4kb BF9B8DA6
 ide/editors/renamedialog.pas                   1.8kb E9325640
-ide/editors/runnermodel.inc                    7.4kb 2DF2738E
+ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.7kb B0AB937C
 ide/editors/searchModel.pas                    3.9kb 03392A67
-ide/editors/workspace.inc                     25.1kb 4373BE29
+ide/editors/workspace.inc                     26.5kb 284832CA
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb 103F8056
 ide/idelayoututil.pas                         28.5kb 2570B5B9
@@ -146,7 +146,7 @@ igSrc/complex.pas                             12.0kb E7B7AD24
 igSrc/darts.pas                               25.5kb 5EABF539
 igSrc/generationbasics.pas                    10.2kb 70411602
 igSrc/ig_bifurcation.pas                       6.6kb 970D8521
-igSrc/ig_circlespirals.pas                    23.5kb 2149B3A4
+igSrc/ig_circlespirals.pas                    23.2kb 95F2EE05
 igSrc/ig_epicycles.pas                         4.9kb 5258CD94
 igSrc/ig_expoClouds.pas                        4.2kb 5BEBCF4D
 igSrc/ig_factorTables.pas                      5.5kb 7101D6F8
@@ -157,21 +157,22 @@ igSrc/ig_ifs.pas                              14.1kb 65030803
 igSrc/ig_ifs2.pas                             17.8kb 8A080ADA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
+igSrc/ig_tesselation.pas                      24.2kb 84CE4EC8
 igSrc/im_colors.pas                           11.1kb 2002E83E
 igSrc/im_filter.pas                            9.3kb 8D3E6D25
 igSrc/im_geometry.pas                          6.5kb 3D0301AE
 igSrc/im_misc.pas                             12.7kb 0E51C829
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
 igSrc/im_statisticoperations.pas              43.2kb E5EB7DEE
-igSrc/im_trianglesplit.pas                    28.0kb F87610F1
-igSrc/imageContexts.pas                       16.0kb 40A30D2A
+igSrc/im_trianglesplit.pas                    32.3kb 5936AE68
+igSrc/imageContexts.pas                       16.1kb 17AE8320
 igSrc/imagegeneration.pas                     26.9kb 7165A924
-igSrc/imagemanipulation.pas                    9.1kb 4B6AADC0
+igSrc/imagemanipulation.pas                    9.2kb C8BD3116
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.2kb 3DE39006
 igSrc/mypics.pas                              52.9kb E8317BFA
-igSrc/workflows.pas                           22.2kb C4B589D2
+igSrc/workflows.pas                           22.4kb 23CEAD7C
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
-Code Size:  72 kLOC
-          3319 kB
+Code Size:  73 kLOC
+          3349 kB
