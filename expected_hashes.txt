@@ -142,7 +142,7 @@ ide/synhighlightermnh.pas                     19.9kb 842EB45F
 ide/tables/mnh_tables.pas                     14.5kb 9D3E7CE3
 ide/treeUtil.pas                               1.6kb 044A8430
 ide/vartree/variabletreeviews.pas              6.0kb 56C08D5E
-igSrc/complex.pas                             12.0kb E7B7AD24
+igSrc/complex.pas                             13.3kb DF849305
 igSrc/darts.pas                               25.5kb 5EABF539
 igSrc/generationbasics.pas                    10.2kb 70411602
 igSrc/ig_bifurcation.pas                       6.6kb 970D8521
@@ -157,14 +157,14 @@ igSrc/ig_ifs.pas                              14.1kb 65030803
 igSrc/ig_ifs2.pas                             17.8kb 8A080ADA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
-igSrc/ig_tesselation.pas                      24.2kb 84CE4EC8
+igSrc/ig_tesselation.pas                      24.9kb 1B4960B6
 igSrc/im_colors.pas                           11.1kb 2002E83E
 igSrc/im_filter.pas                            9.3kb 8D3E6D25
 igSrc/im_geometry.pas                          6.5kb 3D0301AE
 igSrc/im_misc.pas                             12.7kb 0E51C829
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
 igSrc/im_statisticoperations.pas              43.2kb E5EB7DEE
-igSrc/im_trianglesplit.pas                    32.3kb 5936AE68
+igSrc/im_trianglesplit.pas                    32.4kb 12D2BB72
 igSrc/imageContexts.pas                       16.1kb 17AE8320
 igSrc/imagegeneration.pas                     26.9kb 7165A924
 igSrc/imagemanipulation.pas                    9.2kb C8BD3116
@@ -175,4 +175,4 @@ igSrc/mypics.pas                              52.9kb E8317BFA
 igSrc/workflows.pas                           22.4kb 23CEAD7C
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3349 kB
+          3351 kB
