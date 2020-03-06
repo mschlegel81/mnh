@@ -45,7 +45,7 @@ core/funcs_ipc.pas                            18.7kb DE6DF183
 core/funcs_list.pas                           27.8kb 90D632CF
 core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             7.1kb E64B3FC4
-core/funcs_package.inc                        12.7kb E1B1B48E
+core/funcs_package.inc                        13.1kb 8D3389C2
 core/funcs_regex.pas                          11.9kb C49B3A25
 core/funcs_server.pas                         20.4kb A23788C8
 core/funcs_strings.pas                        39.6kb B75379CE
@@ -144,7 +144,7 @@ ide/treeUtil.pas                               1.6kb 044A8430
 ide/vartree/variabletreeviews.pas              6.0kb 56C08D5E
 igSrc/complex.pas                             13.3kb DF849305
 igSrc/darts.pas                               25.5kb 5EABF539
-igSrc/generationbasics.pas                    10.2kb 70411602
+igSrc/generationbasics.pas                    10.2kb 0F95AB06
 igSrc/ig_bifurcation.pas                       6.6kb 970D8521
 igSrc/ig_circlespirals.pas                    23.2kb 95F2EE05
 igSrc/ig_epicycles.pas                         4.9kb 5258CD94
@@ -160,19 +160,19 @@ igSrc/ig_simples.pas                           4.3kb 831A844F
 igSrc/ig_tesselation.pas                      25.0kb 50FC2145
 igSrc/im_colors.pas                           11.1kb 2002E83E
 igSrc/im_filter.pas                            9.3kb 8D3E6D25
-igSrc/im_geometry.pas                          6.5kb 3D0301AE
+igSrc/im_geometry.pas                          6.6kb AA4ACB34
 igSrc/im_misc.pas                             13.3kb 7509B727
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
 igSrc/im_statisticoperations.pas              43.2kb E5EB7DEE
 igSrc/im_trianglesplit.pas                    34.0kb 7D55848F
 igSrc/imageContexts.pas                       16.1kb 17AE8320
 igSrc/imagegeneration.pas                     26.9kb 7165A924
-igSrc/imagemanipulation.pas                    9.2kb C8BD3116
+igSrc/imagemanipulation.pas                    9.3kb E8CE7138
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
-igSrc/myParams.pas                            29.2kb 3DE39006
-igSrc/mypics.pas                              53.4kb 95273811
-igSrc/workflows.pas                           22.7kb 9689E68B
+igSrc/myParams.pas                            29.3kb 6035ED44
+igSrc/mypics.pas                              53.3kb E3C3E728
+igSrc/workflows.pas                           22.8kb 227163AB
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3354 kB
+          3355 kB
