@@ -103,6 +103,13 @@ FUNCTION runScript_imp intFuncSignature;
     end;
   end;
 
+FUNCTION helpOnMain_imp intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0)
+    then result:=newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
+    else result:=nil;
+  end;
+
 FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
@@ -222,6 +229,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'helpOnMain'       ,@helpOnMain_imp        ,ak_nullary{$ifdef fullVersion},'helpOnMain;//Returns help text for the current package''s main method.'{$endif});
 {$endif}
 {$ifdef include_finalization}
 {$endif}
