@@ -17,7 +17,7 @@ common/huffman_model_default.inc              57.8kb 713CEB33
 common/huffman_model_mnh.inc                  61.8kb F7A0C1A0
 common/huffman_model_numeric.inc              18.9kb 05FA0DC2
 common/huffman_model_wiki.inc                105.6kb 45BC62CF
-common/myColors.pas                           30.5kb 0F76CF34
+common/myColors.pas                           30.9kb 54E84632
 common/myCrypto.pas                           27.8kb AF9E77D9
 common/myGenerics.pas                         27.4kb AC01A3F3
 common/myStringUtil.pas                       40.1kb 5917929B
@@ -96,7 +96,7 @@ ide/debugger/debuggervarforms.pas              4.6kb 5322373B
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
 ide/editors/editorMeta.pas                    26.4kb 1F8AF58D
-ide/editors/editormetabase.pas                35.6kb E31764C8
+ide/editors/editormetabase.pas                35.1kb 6B11B0D6
 ide/editors/editscripts.pas                    6.6kb 57759C02
 ide/editors/fileHistory.inc                   10.8kb 541F2962
 ide/editors/gotolinedialogs.pas                1.3kb 04EA9342
@@ -106,7 +106,7 @@ ide/editors/renamedialog.pas                   1.8kb E9325640
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.7kb B0AB937C
 ide/editors/searchModel.pas                    3.9kb 03392A67
-ide/editors/workspace.inc                     26.5kb 284832CA
+ide/editors/workspace.inc                     26.5kb B4656260
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb 103F8056
 ide/idelayoututil.pas                         28.5kb 2570B5B9
@@ -157,22 +157,22 @@ igSrc/ig_ifs.pas                              14.1kb 65030803
 igSrc/ig_ifs2.pas                             17.8kb 8A080ADA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
-igSrc/ig_tesselation.pas                      25.0kb 50FC2145
+igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
 igSrc/im_colors.pas                           11.1kb 2002E83E
-igSrc/im_filter.pas                            9.3kb 8D3E6D25
-igSrc/im_geometry.pas                          6.6kb AA4ACB34
+igSrc/im_filter.pas                            9.3kb B0FEDDE2
+igSrc/im_geometry.pas                          6.8kb 95A5D597
 igSrc/im_misc.pas                             13.3kb 7509B727
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
-igSrc/im_statisticoperations.pas              43.2kb E5EB7DEE
+igSrc/im_statisticoperations.pas              30.6kb 7E46A461
 igSrc/im_trianglesplit.pas                    34.0kb 7D55848F
-igSrc/imageContexts.pas                       16.1kb 17AE8320
+igSrc/imageContexts.pas                       16.2kb 76C9A60B
 igSrc/imagegeneration.pas                     26.9kb 7165A924
-igSrc/imagemanipulation.pas                    9.3kb E8CE7138
+igSrc/imagemanipulation.pas                    9.3kb 46EAE7BA
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.3kb 6035ED44
 igSrc/mypics.pas                              53.3kb E3C3E728
-igSrc/workflows.pas                           22.8kb 227163AB
+igSrc/workflows.pas                           23.5kb C0704D69
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3355 kB
+          3343 kB
