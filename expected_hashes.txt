@@ -163,7 +163,7 @@ igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          6.8kb 95A5D597
 igSrc/im_misc.pas                             13.3kb 7509B727
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
-igSrc/im_statisticoperations.pas              30.6kb 7E46A461
+igSrc/im_statisticoperations.pas              33.9kb 61D2FFD2
 igSrc/im_trianglesplit.pas                    34.0kb 7D55848F
 igSrc/imageContexts.pas                       16.2kb 76C9A60B
 igSrc/imagegeneration.pas                     26.9kb 7165A924
@@ -175,4 +175,4 @@ igSrc/mypics.pas                              53.3kb E3C3E728
 igSrc/workflows.pas                           23.5kb C0704D69
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3343 kB
+          3347 kB
