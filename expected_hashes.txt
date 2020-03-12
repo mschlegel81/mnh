@@ -133,7 +133,7 @@ ide/reevaluationforms.pas                      3.2kb 2C6BC468
 ide/res_defaultFiles.inc                     131.3kb DFEA8964
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.2kb DB27C395
-ide/res_html_template.inc                     73.0kb 3121DABB
+ide/res_html_template.inc                     74.2kb A7CCAEB2
 ide/res_removeAssoc.inc                        0.6kb 8DABBDF6
 ide/settings/mnh_gui_settings.pas             13.4kb ADBC259B
 ide/shebangdialog.pas                          5.9kb 2BCDC384
@@ -161,9 +161,9 @@ igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
 igSrc/im_colors.pas                           11.2kb E779F194
 igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          6.8kb 95A5D597
-igSrc/im_misc.pas                             13.1kb 3062DF93
+igSrc/im_misc.pas                             14.1kb 6F5C5946
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
-igSrc/im_statisticoperations.pas              35.8kb 4AE139C7
+igSrc/im_statisticoperations.pas              36.8kb E12C3207
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.2kb 76C9A60B
 igSrc/imagegeneration.pas                     26.9kb 7165A924
@@ -172,7 +172,7 @@ igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.3kb 6035ED44
 igSrc/mypics.pas                              53.3kb E3C3E728
-igSrc/workflows.pas                           23.5kb C0704D69
+igSrc/workflows.pas                           23.6kb FC11252C
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3349 kB
+          3352 kB
