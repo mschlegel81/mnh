@@ -377,6 +377,7 @@ out> 4 //The result is an integer
 out> 0.25 //The result is a real number
 <!--end-->
 </code>
+In addition you can use <code><span class="operator">²</span></code> as a shorthand for <code><span class="operator">^</span><span class="literal">2</span></code> and <code><span class="operator">³</span></code> as a shorthand for <code><span class="operator">^</span><span class="literal">3</span></code>.<br>
 See also: <a href="builtin.html#mnh.OPERATOR_POT"><code><span class="builtin">mnh.OPERATOR_POT</span></code></a>
 </td></tr>
 <tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td>
@@ -1013,19 +1014,17 @@ Nullary expressions with <i>internal state</i> (i.e. a <code><span class="builti
 they can be iterated using <code><span class="builtin">each</span></code>, <code><span class="builtin">pEach</span></code>, <code><span class="builtin">agg</span></code>, <code><span class="builtin">map</span></code> and <code><span class="builtin">pMap</span></code>.<br>
 
 To show that the iterator/generator has no next element, return <code><span class="literal">void</span></code>. 
-As a simple example: this is a generator returing the Fibonacci-Sequence and aborting as soon as the result becomes negative (i.e. a silent integer overflow ocurred):
+As a simple example: this is a generator returing the Fibonacci-Sequence:
 <code>
 <!--mnh-->
-  fibGen->begin
+  newFibonacciGenerator->{begin
     local a:=1;
     local b:=1;
   save;
     local result:=a<0 ? void : a;
     b:=a+(a:=b);
     result;
-  end;
-  
-  main->(::fibGen).toGenerator.map(::print);
+  end}.toGenerator;
 <!--end-->
 </code>
 <br>
@@ -1091,17 +1090,24 @@ The <i>mutable modifier</i> allows for a rule to be mutable. The following restr
 Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
 
 <h4><br><a name="datastoreMod">datastore</a></h4>
-The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.<br>
-Datastore rules are defined differently from other rules: they have no bodies.<code>
+The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.
+<br>Example 1:
+<code>
 <!--mnh-->
   private datastore x;
 <!--end-->
 </code>
 If the corresponding file is not found, the variable will be initialized with <code><span class="literal">void</span></code>.<br>
+<br>Example 2:
+<code>
+<!--mnh-->
+  private datastore x:=[];
+<!--end-->
+</code>
+If the corresponding file is not found, the variable will be initialized as an empty list.<br>
 The following restrictions apply:<ul>
   <li> A datastore rule also is mutable per definition </li>
   <li> A datastore rule also is not memoized per definition </li>
-  <li> A datastore rule must have no body</li>
 </ul>
 Functions modifying the value of a datastore value should be <a href="#synchronizedMod">synchronized</a>.
 
@@ -1246,10 +1252,17 @@ Strings are internally represented as ANSI-Strings, without length limitation.<b
 You can use one of the following representations:<br>
 <ul>
   <li><b>Pascal Strings</b>: Delimited by <code>'</code>. To insert a quote in the string, use <code>''</code>, e.g.:<code>
-  <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">''''</span>;
-  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="literal">'"'</span>;
-  <span class="identifier">backslash</span><span class="operator">:=</span><span class="literal">'\'</span>;
+  <span class="identifier">quote</span><span class="operator">:=</span><span class="stringLiteral">''''</span>;
+  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="stringLiteral">'"'</span>;
+  <span class="identifier">backslash</span><span class="operator">:=</span><span class="stringLiteral">'\'</span>;
 </code></li>
+  <li><b>Pascal Characters</b>: A hash symbol followed by the a decimal number between 0 and 255, e.g.:<code>
+  <span class="identifier">quote</span><span class="operator">:=</span><span class="stringLiteral">#39</span>;
+  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="stringLiteral">#34</span>;
+  <span class="identifier">backslash</span><span class="operator">:=</span><span class="stringLiteral">#92</span>;
+</code>
+  Note that this string form takes precedence over hash-comments.
+</li>
   <li><b>Java Strings</b> (rather: Strings inspired by Java): Delimited by <code>"</code>.
   Within strings the following escape-sequences are defined:<br>
   <table><tr class="ruleHead"><td>Sequence</td><td>Hex-Code</td><td></td></tr>
@@ -1263,21 +1276,24 @@ You can use one of the following representations:<br>
   <tr><td><code>\f</code></td><td><code>#0C</code></td><td>Form feed</td></tr>
   </table><br>
   e.g.:<code>
-  <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">"'"</span>;
-  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="literal">"\""</span>;
-  <span class="identifier">backslash</span><span class="operator">:=</span><span class="literal">"\\"</span>;
+  <span class="identifier">quote</span><span class="operator">:=</span><span class="stringLiteral">"'"</span>;
+  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="stringLiteral">"\""</span>;
+  <span class="identifier">backslash</span><span class="operator">:=</span><span class="stringLiteral">"\\"</span>;
 <!--end-->
 </code></li>
-  <li><b>Blobs</b>:
-Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are started with a special comment
-<code>//!</code><b><i><code>symbol</code></i></b> (where <i><code>symbol</code></i></b> is one character) and ended with <b><i><code>symbol</code></i></b>. An example:<code>
-  <span class="builtin">print</span>(<span class="literal">//!$
+  <li><b>Here document</b>:
+Alternatively strings can be written as "Here document"s, i.e. as a text block preserving line breaks and indentations. Here documents are started with a special comment
+<code>//!</code><b><i><code>symbol</code></i></b> (where <i><code>symbol</code></i></b> is one ASCII-character) and ended with <b><i><code>symbol</code></i></b>. An example:<code>
+  <span class="builtin">print</span>(<span class="stringLiteral">//!$
   This is a simple text...
        with a " and a ' one of which would have to be escaped otherwise.
     And indentations of course.$</span>);
 </code>
 </li>
 </ul>
+Strings in the first three representations are joined directly within the lexer, e.g. <code>
+  <span class="stringLiteral">'test'#45"text"</span> <span class="operator">=</span> <span class="stringLiteral">'test-text'</span>
+</code>
 
 <h4><br><a name="expressions">Expressions</a></h4>
 Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
