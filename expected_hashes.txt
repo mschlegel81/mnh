@@ -70,7 +70,7 @@ core/tokens.pas                               17.6kb 71635F44
 core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb B469BF36
 ide/ask/customrundialog.pas                    9.8kb D23D07F8
-ide/assistant/assistanceformunit.pas           3.3kb FF4F890A
+ide/assistant/assistanceformunit.pas           3.3kb C3576297
 ide/assistant/codeassistance.pas              22.2kb EBC78181
 ide/assistant/helperforms.pas                  3.6kb CBEC5F0D
 ide/close/closedialog.pas                      4.1kb 9694CF5D
@@ -96,7 +96,7 @@ ide/debugger/debuggervarforms.pas              4.6kb 5322373B
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
 ide/editors/editorMeta.pas                    26.4kb 1F8AF58D
-ide/editors/editormetabase.pas                35.1kb 6B11B0D6
+ide/editors/editormetabase.pas                35.6kb E31764C8
 ide/editors/editscripts.pas                    6.6kb 57759C02
 ide/editors/fileHistory.inc                   10.8kb 541F2962
 ide/editors/gotolinedialogs.pas                1.3kb 04EA9342
@@ -106,10 +106,10 @@ ide/editors/renamedialog.pas                   1.8kb E9325640
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.7kb B0AB937C
 ide/editors/searchModel.pas                    3.9kb 03392A67
-ide/editors/workspace.inc                     26.5kb B4656260
+ide/editors/workspace.inc                     26.6kb DE8B5D36
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb 103F8056
-ide/idelayoututil.pas                         28.5kb 2570B5B9
+ide/idelayoututil.pas                         28.7kb 334C3F63
 ide/idemain.pas                               23.9kb 0ABA1524
 ide/imig/mnh_imig.pas                         28.5kb 2D79D869
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
@@ -135,7 +135,7 @@ ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.2kb DB27C395
 ide/res_html_template.inc                     74.2kb A7CCAEB2
 ide/res_removeAssoc.inc                        0.6kb 8DABBDF6
-ide/settings/mnh_gui_settings.pas             13.4kb ADBC259B
+ide/settings/mnh_gui_settings.pas             13.7kb CE0374B6
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.9kb E2A17B87
 ide/synhighlightermnh.pas                     19.9kb 842EB45F
@@ -166,13 +166,13 @@ igSrc/im_stashing.pas                          7.7kb D1CF5B82
 igSrc/im_statisticoperations.pas              36.3kb CDA9FB75
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.2kb 76C9A60B
-igSrc/imagegeneration.pas                     26.9kb 7165A924
+igSrc/imagegeneration.pas                     26.9kb C06228CA
 igSrc/imagemanipulation.pas                    9.3kb 46EAE7BA
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.3kb 6035ED44
 igSrc/mypics.pas                              53.3kb E3C3E728
-igSrc/workflows.pas                           23.6kb FC11252C
+igSrc/workflows.pas                           23.6kb 2E9CD769
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  73 kLOC
-          3352 kB
+          3353 kB
