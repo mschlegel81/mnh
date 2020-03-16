@@ -140,6 +140,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
     setFontSize_callback:F_setFontSize=nil;
     htmlExporter:T_htmlExporter;
 VAR doShowSplashScreen:boolean;
+    copyTextAsHtml:Boolean;
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
      editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics,strutils;
@@ -234,7 +235,8 @@ PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject;
   VAR AnAction: TSynCopyPasteAction);
   VAR content:TStringList;
 begin
-  if (Sender.ClassName<>'TSynEdit') or
+  if not(copyTextAsHtml) or
+     (Sender.ClassName<>'TSynEdit') or
      (AnAction<>scaPlainText) or
      (TSynEdit(Sender).highlighter=nil) or
      (AMode=smColumn) or
@@ -662,6 +664,7 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
 
     stream.writeBoolean(doShowSplashScreen);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
+    stream.writeBoolean(copyTextAsHtml);
   end;
 
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
@@ -684,6 +687,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT active
 
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
+    copyTextAsHtml:=stream.readBoolean;
     result:=stream.allOkay;
     if not(result) then begin
       mainForm.windowStateForUpdate:=wsfuNone;

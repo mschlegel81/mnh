@@ -30,7 +30,7 @@ T_workspace=object(T_serializable)
     newFileLineEnding,overwriteLineEnding:byte;
 
     fileHistory:T_fileHistory;
-    checkUsingScripts:boolean; //nonpersistent
+    checkUsingScripts:boolean;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList;
@@ -176,7 +176,7 @@ DESTRUCTOR T_workspace.destroy;
 
 FUNCTION T_workspace.getSerialVersion: dword;
   begin
-    result:=2624114;
+    result:=2624115;
   end;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -227,6 +227,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       autosaveBeforeEachExecution:=stream.readBoolean;
       newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);
       overwriteLineEnding:=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS,LINE_ENDING_UNCHANGED]);
+      checkUsingScripts  :=stream.readBoolean;
       result:=stream.allOkay and
       fileHistory  .loadFromStream(stream);
     end;
@@ -261,6 +262,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       autosaveBeforeEachExecution:=false;
       newFileLineEnding:=LINE_ENDING_DEFAULT;
       overwriteLineEnding:=LINE_ENDING_UNCHANGED;
+      checkUsingScripts:=false;
       {$ifdef debugMode}
       writeln('Loading T_workspace failed @',stream.streamPos);
       {$endif}
@@ -291,6 +293,7 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeBoolean(autosaveBeforeEachExecution);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
+    stream.writeBoolean(checkUsingScripts);
 
     fileHistory  .saveToStream(stream);
     savedAt:=now;

@@ -20,10 +20,8 @@ CONST MINIMUM_OUTPUT_LINES=16;
         ('Convert to normal (non-portable) version',
          'Convert to portable version');
 TYPE
-
-  { TSettingsForm }
-
   TSettingsForm = class(TForm)
+    cbCopyAsHtml: TCheckBox;
     CloseButton: TButton;
     FileNameEdit1: TFileNameEdit;
     Label8: TLabel;
@@ -65,6 +63,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    procedure cbCopyAsHtmlChange(Sender: TObject);
     PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
     PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -154,6 +153,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     FileNameEdit1.fileName:=settings.lightFlavourLocation;
 
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
+    cbCopyAsHtml.Checked:=copyTextAsHtml;
   end;
 
 PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
@@ -221,6 +221,11 @@ PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
     workspace.fileHistory.clear;
     workspace.fileHistory.logFolder(getPackagesRoot);
     workspace.fileHistory.logFolder(getDemosRoot);
+  end;
+
+procedure TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
+  begin
+    copyTextAsHtml:=cbCopyAsHtml.Checked;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
