@@ -63,7 +63,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
-    procedure cbCopyAsHtmlChange(Sender: TObject);
+    PROCEDURE cbCopyAsHtmlChange(Sender: TObject);
     PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
     PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -153,7 +153,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     FileNameEdit1.fileName:=settings.lightFlavourLocation;
 
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
-    cbCopyAsHtml.Checked:=copyTextAsHtml;
+    cbCopyAsHtml.checked:=copyTextAsHtml;
   end;
 
 PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
@@ -223,9 +223,9 @@ PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
     workspace.fileHistory.logFolder(getDemosRoot);
   end;
 
-procedure TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
+PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
   begin
-    copyTextAsHtml:=cbCopyAsHtml.Checked;
+    copyTextAsHtml:=cbCopyAsHtml.checked;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);

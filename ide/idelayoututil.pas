@@ -138,7 +138,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
     setFontSize_callback:F_setFontSize=nil;
     htmlExporter:T_htmlExporter;
 VAR doShowSplashScreen:boolean;
-    copyTextAsHtml:Boolean;
+    copyTextAsHtml:boolean;
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
      editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics,strutils;
