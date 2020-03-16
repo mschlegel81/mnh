@@ -50,6 +50,7 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     paintedWithWidth:=0;
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
+    checkImportingFilesCheckbox.checked:=workspace.checkUsingScripts;
   end;
 
 PROCEDURE TAssistanceForm.checkImportingFilesCheckboxChange(Sender: TObject);

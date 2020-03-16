@@ -15,16 +15,16 @@ object SettingsForm: TSettingsForm
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.4.0'
   object PageControl: TPageControl
     Left = 0
     Height = 244
     Top = 0
     Width = 304
-    ActivePage = TabSheet_install
+    ActivePage = TabSheet_display
     Align = alClient
     ParentFont = False
-    TabIndex = 3
+    TabIndex = 0
     TabOrder = 0
     OnChange = PageControlChange
     object TabSheet_display: TTabSheet
@@ -160,6 +160,19 @@ object SettingsForm: TSettingsForm
         OnClick = GeneralFontButtonClick
         ParentFont = False
         TabOrder = 2
+      end
+      object cbCopyAsHtml: TCheckBox
+        AnchorSideLeft.Control = Label7
+        AnchorSideTop.Control = outputSizeLimit
+        AnchorSideTop.Side = asrBottom
+        Left = 4
+        Height = 24
+        Top = 122
+        Width = 137
+        Align = alCustom
+        Caption = 'copy text as html'
+        OnChange = cbCopyAsHtmlChange
+        TabOrder = 4
       end
     end
     object TabSheet_lineEnding: TTabSheet

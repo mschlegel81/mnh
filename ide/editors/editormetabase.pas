@@ -36,20 +36,21 @@ TYPE T_language=(LANG_MNH   = 0,
                  LANG_CPP   = 1,
                  LANG_CSS   = 2,
                  LANG_DIFF  = 3,
-                 LANG_INI   = 4,
-                 LANG_JAVA  = 5,
-                 LANG_JS    = 6,
-                 LANG_PAS   = 7,
-                 LANG_PERL  = 8,
-                 LANG_PHP   = 9,
-                 LANG_PYTHON=10,
-                 LANG_SHELL =11,
-                 LANG_SQL   =12,
-                 LANG_VB    =13,
-                 LANG_BAT   =14,
-                 LANG_XML   =15,
-                 LANG_TXT   =16,
-                 LANG_OUTPUT=17);
+                 LANG_HTML  = 4,
+                 LANG_INI   = 5,
+                 LANG_JAVA  = 6,
+                 LANG_JS    = 7,
+                 LANG_PAS   = 8,
+                 LANG_PERL  = 9,
+                 LANG_PHP   =10,
+                 LANG_PYTHON=11,
+                 LANG_SHELL =12,
+                 LANG_SQL   =13,
+                 LANG_VB    =14,
+                 LANG_BAT   =15,
+                 LANG_XML   =16,
+                 LANG_TXT   =17,
+                 LANG_OUTPUT=18);
 
   T_lineRange=array[0..1] of longint;
 
@@ -112,6 +113,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynCssSyn            : TSynCssSyn            ;
       SynDiffSyn           : TSynDiffSyn           ;
       SynFreePascalSyn     : TSynFreePascalSyn     ;
+      SynHTMLSyn           : TSynHTMLSyn           ;
       SynIniSyn            : TSynIniSyn            ;
       SynJScriptSyn        : TSynJScriptSyn        ;
       SynJavaSyn           : TSynJavaSyn           ;
@@ -131,6 +133,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynCssSyn            :=TSynCssSyn            .create(Application);
       SynDiffSyn           :=TSynDiffSyn           .create(Application);
       SynFreePascalSyn     :=TSynFreePascalSyn     .create(Application);
+      SynHTMLSyn           :=TSynHTMLSyn           .create(Application);
       SynIniSyn            :=TSynIniSyn            .create(Application);
       SynJScriptSyn        :=TSynJScriptSyn        .create(Application);
       SynJavaSyn           :=TSynJavaSyn           .create(Application);
@@ -158,6 +161,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynCppSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
       SynCssSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
       SynFreePascalSyn     .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
+      SynHTMLSyn           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
       SynIniSyn            .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
       SynJavaSyn           .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
       SynJScriptSyn        .SymbolAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkOperator);
@@ -172,6 +176,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynCppSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
       SynCssSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
       SynFreePascalSyn     .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
+      SynHTMLSyn           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
       SynIniSyn            .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
       SynJavaSyn           .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
       SynJScriptSyn        .KeyAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkBultinRule);
@@ -185,6 +190,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynCppSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
       SynCssSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
       SynFreePascalSyn     .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
+      SynHTMLSyn           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
       SynIniSyn            .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
       SynJavaSyn           .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
       SynJScriptSyn        .CommentAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkComment);
@@ -236,6 +242,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       addFileType(LANG_CPP   ,'hh'  );
       addFileType(LANG_CSS   ,'css' ,SynCssSyn            ,'CSS'        );
       addFileType(LANG_DIFF  ,'diff',SynDiffSyn           ,'&diff'      );
+      addFileType(LANG_HTML  ,'html',SynHTMLSyn           ,'&HTML'      );
       addFileType(LANG_INI   ,'ini' ,SynIniSyn            ,'&ini'       );
       addFileType(LANG_JAVA  ,'java',SynJavaSyn           ,'&Java'      );
       addFileType(LANG_JS    ,'js'  ,SynJScriptSyn        ,'JavaScript' );
