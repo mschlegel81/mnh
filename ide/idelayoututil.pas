@@ -102,9 +102,7 @@ TYPE
 
   T_htmlExporter=object
     FUNCTION textToHtml(CONST title:string; CONST content:TStrings; CONST highlighter:TSynCustomHighlighter):string;
-    PROCEDURE OutputSynEditCutCopy(Sender: TObject; VAR AText: string;
-      VAR AMode: TSynSelectionMode; ALogStartPos: TPoint;
-      VAR AnAction: TSynCopyPasteAction);
+    PROCEDURE OutputSynEditCutCopy(Sender: TObject; VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint; VAR AnAction: TSynCopyPasteAction);
   end;
 VAR
   mainForm:T_mnhIdeForm=nil;
@@ -206,7 +204,7 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
       i:longint;
   begin
     if highlighter=nil then begin
-      result:='<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><title>'
+      result:='<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><title>'
               +title+
               '</title></head><body text="black" bgcolor="#EEEEEE"><pre><code><font  size=3 face="Courier New">';
       for i:=0 to content.count-1 do begin
@@ -230,24 +228,22 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
     outputStream.free;
   end;
 
-PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject;
-  VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint;
-  VAR AnAction: TSynCopyPasteAction);
+PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject; VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint; VAR AnAction: TSynCopyPasteAction);
   VAR content:TStringList;
-begin
-  if not(copyTextAsHtml) or
-     (Sender.ClassName<>'TSynEdit') or
-     (AnAction<>scaPlainText) or
-     (TSynEdit(Sender).highlighter=nil) or
-     (AMode=smColumn) or
-     (Clipboard=nil)
-  then exit;
-  content:=TStringList.create;
-  content.text:=AText;
-  Clipboard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
-  AnAction:=scaAbort;
-  content.free;
-end;
+  begin
+    if not(copyTextAsHtml) or
+       (Sender.ClassName<>'TSynEdit') or
+       (AnAction<>scaPlainText) or
+       (TSynEdit(Sender).highlighter=nil) or
+       (AMode=smColumn) or
+       (Clipboard=nil)
+    then exit;
+    content:=TStringList.create;
+    content.text:=AText;
+    Clipboard.SetAsHtml(textToHtml('',content,TSynEdit(Sender).highlighter), AText);
+    AnAction:=scaAbort;
+    content.free;
+  end;
 
 FUNCTION T_mnhDockSiteModel.getAbsSize: longint;
   begin

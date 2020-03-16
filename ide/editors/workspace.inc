@@ -641,7 +641,7 @@ PROCEDURE T_workspace.exportCurrentFileToHtml;
     if meta=nil then exit;
     htmlText:=htmlExporter.textToHtml(meta^.pseudoName,meta^.editor.lines,meta^.editor.highlighter);
     htmlMeta:=addEditorMetaForNewFile;
-    htmlMeta^.language:=LANG_TXT;
+    htmlMeta^.language:=LANG_HTML;
     htmlMeta^.editor.text:=htmlText;
     inputPageControl.activePage:=htmlMeta^.tabsheet;
   end;
