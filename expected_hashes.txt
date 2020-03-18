@@ -64,7 +64,7 @@ core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb 29097114
 core/rules.pas                                72.4kb 0E2147C4
 core/subrules.pas                             75.7kb 1447D22B
-core/tokenArray.pas                           55.2kb FE77D831
+core/tokenArray.pas                           55.3kb 3CF9A6A1
 core/tokenStack.pas                           17.3kb 95C49DB4
 core/tokens.pas                               17.6kb 71635F44
 core/valueStore.pas                            7.7kb 2D735A2D

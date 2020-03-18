@@ -333,6 +333,8 @@ FUNCTION T_functionCallInfos.getBuiltinRestrictions:T_specialFunctionRequirement
 FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
   VAR info:T_usageInfo;
   begin
+    //TODO: Can import-overloads be taken into account?
+    //This would require modification of the rule map
     if fill<>length(dat) then cleanup;
     setLength(result,0);
     for info in dat do if info.targetLocation=loc then begin
@@ -353,7 +355,7 @@ FUNCTION T_functionCallInfos.isPackageReferenced(CONST packagePath:string):boole
   VAR info:T_usageInfo;
   begin
     if fill<>length(dat) then cleanup;
-    for info in dat do if info.targetLocation.fileName=packagePath then exit(true);
+    for info in dat do if (info.referencedAt.fileName<>packagePath) and (info.targetLocation.fileName=packagePath) then exit(true);
     result:=false;
   end;
 
