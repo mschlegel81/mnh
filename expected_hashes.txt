@@ -150,12 +150,12 @@ igSrc/ig_circlespirals.pas                    23.2kb 95F2EE05
 igSrc/ig_epicycles.pas                         4.9kb 5258CD94
 igSrc/ig_expoClouds.pas                        4.2kb 5BEBCF4D
 igSrc/ig_factorTables.pas                      5.5kb 7101D6F8
-igSrc/ig_fractals.pas                         85.0kb 753C6FFF
+igSrc/ig_fractals.pas                         85.1kb FC13F30E
 igSrc/ig_funcTrees.pas                        12.1kb D969183E
 igSrc/ig_gradient.pas                          2.4kb 60464DC7
-igSrc/ig_ifs.pas                              14.1kb 65030803
-igSrc/ig_ifs2.pas                             17.8kb 8A080ADA
-igSrc/ig_ifsMoebius.pas                       15.5kb 0A65ED27
+igSrc/ig_ifs.pas                              14.3kb B2938E87
+igSrc/ig_ifs2.pas                             18.1kb E37814B8
+igSrc/ig_ifsMoebius.pas                       15.7kb C9456F50
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
 igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
@@ -167,8 +167,8 @@ igSrc/im_stashing.pas                          7.7kb D1CF5B82
 igSrc/im_statisticoperations.pas              36.3kb CDA9FB75
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.2kb 76C9A60B
-igSrc/imagegeneration.pas                     26.9kb C06228CA
-igSrc/imagemanipulation.pas                    9.3kb 46EAE7BA
+igSrc/imagegeneration.pas                     26.8kb D9B2120B
+igSrc/imagemanipulation.pas                    9.4kb D5DCA679
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.3kb 6035ED44
@@ -176,4 +176,4 @@ igSrc/mypics.pas                              53.3kb E3C3E728
 igSrc/workflows.pas                           23.6kb 2E9CD769
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  74 kLOC
-          3369 kB
+          3370 kB
