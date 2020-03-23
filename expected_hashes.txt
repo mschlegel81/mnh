@@ -155,7 +155,7 @@ igSrc/ig_funcTrees.pas                        12.1kb D969183E
 igSrc/ig_gradient.pas                          2.4kb 60464DC7
 igSrc/ig_ifs.pas                              14.3kb B2938E87
 igSrc/ig_ifs2.pas                             18.1kb E37814B8
-igSrc/ig_ifsMoebius.pas                       15.7kb C9456F50
+igSrc/ig_ifsMoebius.pas                       16.0kb 37542CE2
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
 igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
