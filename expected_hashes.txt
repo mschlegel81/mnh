@@ -155,7 +155,7 @@ igSrc/ig_funcTrees.pas                        12.1kb D969183E
 igSrc/ig_gradient.pas                          2.4kb 60464DC7
 igSrc/ig_ifs.pas                              14.3kb B2938E87
 igSrc/ig_ifs2.pas                             18.1kb E37814B8
-igSrc/ig_ifsMoebius.pas                       16.0kb 37542CE2
+igSrc/ig_ifsMoebius.pas                       17.7kb 735278AA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
 igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
@@ -176,4 +176,4 @@ igSrc/mypics.pas                              53.3kb E3C3E728
 igSrc/workflows.pas                           23.6kb 2E9CD769
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  74 kLOC
-          3370 kB
+          3372 kB
