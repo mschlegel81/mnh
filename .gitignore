@@ -4,7 +4,6 @@
 *.ppu
 *.compiled
 *.a
-*.lps
 gui/res_*.inc
 code_hash.inc
 demos/inputs/*.txt
@@ -31,3 +30,4 @@ core/build_number.inc
 /ide/res_*.inc
 /ide/*/backup/*
 /ide/mnh_debug
+/*/wpoData*

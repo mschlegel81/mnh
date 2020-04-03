@@ -15,28 +15,30 @@ projectSLOC->hashFiles
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
 private
-TARGET_PLATFORM:=[['Linux',[['compiler','lazbuild'                   ]                  ].toMap],
-                  ['Win32',[['compiler',Lazarus32Path&'\lazbuild.exe'],['outExt','.exe']].toMap],
-                  ['Win64',[['compiler',Lazarus64Path&'\lazbuild.exe'],['outExt','.exe']].toMap]].toMap;
+TARGET_PLATFORM:=['Linux'=>['compiler'=> 'lazbuild'                                    ].toMap,
+                  'Win32'=>['compiler'=> Lazarus32Path&'\lazbuild.exe','outExt'=>'.exe'].toMap,
+                  'Win64'=>['compiler'=> Lazarus64Path&'\lazbuild.exe','outExt'=>'.exe'].toMap].toMap;
 private
-TARGET_PROJECT :=[['light',[['lpi','consoles/mnh_light.lpi'],
-                            ['out','consoles/mnh_light'],
-                            ['part','L']].toMap],
-                  ['full' ,[['lpi','ide/ide.lpi'],
-                            ['out','ide/mnh'],
-                            ['part','F']].toMap]].toMap;
+TARGET_PROJECT :=[['light',['lpi' =>'consoles/mnh_light.lpi',
+                            'out' =>'consoles/mnh_light',
+                            'part'=>'L'].toMap],
+                  ['full' ,['lpi' =>'ide/ide.lpi',
+                            'out' =>'ide/mnh',
+                            'part'=>'F'].toMap]].toMap;
 private
-TARGET_FLAVOUR :=[['debug'   ,[['flags',['-B','--bm=Default']],
-                               ['doTest',true],
-                               ['part','D'],
-                               ['outSuffix','_debug']].toMap],
-                  ['normal'  ,[['flags',['-B','--bm=deployment']],
-                               ['part','O'],
-                               ['doTest',true]].toMap],
-                  ['profile' ,[['flags',['-B','--bm=profiling']],
-                               ['doTest',false],
-                               ['part','P'],
-                               ['outSuffix','_prof']].toMap]].toMap;
+TARGET_FLAVOUR :=[['debug'   ,['flags'    =>[['-B','--bm=Default']],
+                               'doTest'   =>true,
+                               'part'     =>'D',
+                               'outSuffix'=>'_debug'].toMap],
+                  ['normal'  ,['flags'    =>[['-B','--bm=wpo_pass0'],
+                                             ['--bm=wpo_pass1'],
+                                             ['--bm=wpo_pass2']],
+                               'part'     =>'O',
+                               'doTest'   =>true].toMap],
+                  ['profile' ,['flags'    =>[['-B','--bm=profiling']],
+                               'doTest'   =>false,
+                               'part'     =>'P',
+                               'outSuffix'=>'_prof'].toMap]].toMap;
 private
 buildConfig(platformKey in (TARGET_PLATFORM.getInner(0)),
             projectKey  in (TARGET_PROJECT.getInner(0)),
@@ -48,7 +50,7 @@ begin
   local flavor  :=TARGET_FLAVOUR [flavourKey ];
   result['platform'    ]:=platformKey;
   result['flavour'     ]:=project['part']&flavor['part']&platformKey;
-  result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
+  result['compilerCall']:=flavor['flags'].each(flagSet,[platform['compiler'],flagSet | project['lpi']]);
   result['compilate'   ]:=project['out']&flavor['outSuffix']&platform['outExt'];
   result['targetDest'  ]:='target/'&platformKey&(flavourKey=='portable' ? '_portable' : '') &'/'&result['compilate'].extractFileName;
   result['distro'      ]:=flavourKey in ['normal','portable'];
