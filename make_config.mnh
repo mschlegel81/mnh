@@ -75,10 +75,6 @@ hashFiles
 .agg(+)
 .get([0,2])/1024));
 
-@SuppressUnusedWarning
-packSets(builtNo:Int)->
-  [];
-
 memoized sevenZipExe->
   ["c:/Program Files/7-Zip/7z.exe",
    "c:/Program Files (x86)/7-Zip/7z.exe"]

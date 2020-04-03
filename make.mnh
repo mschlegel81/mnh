@@ -207,7 +207,6 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   ? void
   : fail('Cannot make distro because there are failed tests');
 
-  packSets(getBuildNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
   {fileExists($0)
    ? runScript($0,[],3)
