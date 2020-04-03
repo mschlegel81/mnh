@@ -92,7 +92,7 @@ private buildExe(B:Map)->
       ensureCodeHash;
       ensureBuildNumber;
       tprint('Building ',B['targetDest'].systemSpecificFilename);
-      local compilerOutput:=head(exec@(B['compilerCall']));
+      local compilerOutput:=B['compilerCall'].each(subCall,head(exec@(subCall)),|);
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max) orElse 0);
       compilerOutput:=sepLine|
                       B['compilerCall'].flatten.join(' ')|
@@ -155,6 +155,7 @@ private cleanup->begin
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
    allFiles('consoles/lib')|
+   files(['consoles','ide']&'/wpoData*')|
    allFiles('ide/compilates')|
    files('ide/res_*.inc')|
    files('regTest/testFailures.log')|
