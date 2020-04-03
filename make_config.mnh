@@ -27,9 +27,13 @@ TARGET_FLAVOUR :=[['debug'   ,['flags'    =>[['-B','--bm=Default']],
                                'doTest'   =>true,
                                'part'     =>'D',
                                'outSuffix'=>'_debug'].toMap],
-                  ['normal'  ,['flags'    =>[['-B','--bm=wpo_pass0'],
-                                             ['--bm=wpo_pass1'],
-                                             ['--bm=wpo_pass2']],
+
+                  ['normal'  ,['flags'    =>[['-B','--bm=deployment']],
+                             //Alternative flags can be used to enable WPO (whole program optimization)
+                             //Generally, the effect of WPO is far too small to justify the increased compilation time
+                             //'flags'    =>[['-B','--bm=wpo_pass0'],
+                             //              ['--bm=wpo_pass1'],
+                             //              ['--bm=wpo_pass2']],
                                'part'     =>'O',
                                'doTest'   =>true].toMap],
                   ['profile' ,['flags'    =>[['-B','--bm=profiling']],
