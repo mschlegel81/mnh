@@ -11,11 +11,13 @@ USES sysutils,math,fphttpclient,lclintf,
      litVar,
      contexts,
      recyclers,
-     funcs;
+     funcs,
+     synsock;
 
 IMPLEMENTATION
 USES strutils;
 TYPE
+  P_microserverRequest=^T_microserverRequest;
   P_microserver=^T_microserver;
   T_microserver=object(T_detachedEvaluationPart)
     ip:ansistring;
@@ -25,13 +27,28 @@ TYPE
     hasKillRequest:boolean;
     up:boolean;
     context:P_context;
-    socket:T_socketPair;
+    httpListener:T_httpListener;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST maxConnections:longint; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
     DESTRUCTOR destroy; virtual;
     PROCEDURE stopOnFinalization; virtual;
     PROCEDURE serve;
     PROCEDURE killQuickly;
+  end;
+
+  T_microserverRequest=object
+    requestCs:TRTLCriticalSection;
+    connection:T_httpConnectionForRequest;
+    context:P_context;
+    servingExpression:P_expressionLiteral;
+    feedbackLocation:T_tokenLocation;
+    recycler:T_recycler;
+    busy:boolean;
+    CONSTRUCTOR createMicroserverRequest(CONST conn:TSocket; CONST parent:P_microserver);
+    PROCEDURE setupMicroserverRequest(CONST conn:TSocket; CONST parent:P_microserver);
+    PROCEDURE execute;
+    FUNCTION isBusy:boolean;
+    DESTRUCTOR destroy; virtual;
   end;
 
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
@@ -85,7 +102,7 @@ FUNCTION httpError_impl intFuncSignature;
     else result:=nil;
   end;
 
-FUNCTION microserverThread(p:pointer):ptrint;
+FUNCTION microserverListenerThread(p:pointer):ptrint;
   begin
     P_microserver(p)^.serve;
     dispose(P_microserver(p),destroy);
@@ -93,6 +110,8 @@ FUNCTION microserverThread(p:pointer):ptrint;
   end;
 
 FUNCTION startServer_impl intFuncSignature;
+  //TODO: Can/should we make max_connections configurable?
+  CONST MAX_CONNECTIONS=64;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
@@ -111,9 +130,9 @@ FUNCTION startServer_impl intFuncSignature;
       servingExpression^.rereference;
       childContext:=context.getNewAsyncContext(recycler,false);
       if childContext<>nil then begin
-        new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,childContext));
-        if microserver^.socket.getLastListenerSocketError=0 then begin
-          beginThread(@microserverThread,microserver);
+        new(microserver,create(str0^.value,servingExpression,MAX_CONNECTIONS,timeout,tokenLocation,childContext));
+        if microserver^.httpListener.getLastListenerSocketError=0 then begin
+          beginThread(@microserverListenerThread,microserver);
           repeat ThreadSwitch; sleep(1); until microserver^.up;
         end else begin
           context.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
@@ -124,7 +143,80 @@ FUNCTION startServer_impl intFuncSignature;
     end;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
+CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; CONST parent: P_microserver);
+  begin
+    initCriticalSection(requestCs);
+    servingExpression:=P_expressionLiteral(parent^.servingExpression^.rereferenced);
+    feedbackLocation:=parent^.feedbackLocation;
+    setupMicroserverRequest(conn,parent);
+  end;
+
+PROCEDURE T_microserverRequest.setupMicroserverRequest(CONST conn: TSocket; CONST parent: P_microserver);
+  begin
+    enterCriticalSection(requestCs);
+    busy:=true;
+    leaveCriticalSection(requestCs);
+    connection.create(conn,@(parent^.httpListener));
+    context:=parent^.context^.getNewAsyncContext(recycler,true);
+  end;
+
+PROCEDURE T_microserverRequest.execute;
+  VAR requestMap:P_mapLiteral;
+
+  PROCEDURE fillRequestLiteral;
+    VAR headerMap:P_mapLiteral;
+        i:longint;
+    begin
+      headerMap:=newMapLiteral(8);
+      requestMap:=newMapLiteral(8)
+        ^.put('request',
+          newMapLiteral(3)^.put('method',C_httpRequestMethodName[connection.getMethod])
+                          ^.put('path',connection.getRequest)
+                          ^.put('protocol',connection.getProtocol),false)
+        ^.put('header',headerMap,false)
+        ^.put('body',connection.getBody);
+      for i:=0 to length(connection.getHeader)-1 do headerMap^.put(connection.getHeader[i].key,connection.getHeader[i].value);
+    end;
+
+  VAR response:P_literal;
+
+  begin
+    fillRequestLiteral;
+    response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,@recycler,requestMap,nil).literal;
+    disposeLiteral(requestMap);
+    if (response<>nil) then begin
+      if response^.literalType=lt_string
+      then connection.sendStringAndClose(P_stringLiteral(response)^.value)
+      else connection.sendStringAndClose(response^.toString);
+      disposeLiteral(response);
+    end else begin
+      context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
+      connection.sendStringAndClose(HTTP_404_RESPONSE);
+    end;
+    context^.finalizeTaskAndDetachFromParent(@recycler);
+    contextPool.disposeContext(context);
+    connection.destroy;
+    enterCriticalSection(requestCs);
+    busy:=false;
+    leaveCriticalSection(requestCs);
+  end;
+
+FUNCTION T_microserverRequest.isBusy: boolean;
+  begin
+    enterCriticalSection(requestCs);
+    result:=busy;
+    leaveCriticalSection(requestCs);
+  end;
+
+DESTRUCTOR T_microserverRequest.destroy;
+  begin
+    doneCriticalSection(requestCs);
+    disposeLiteral(servingExpression);
+    recycler.cleanup;
+  end;
+
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST maxConnections:longint; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
+  VAR i:longint;
   begin
     inherited create(context_^.getGlobals,feedbackLocation_);
     ip:=cleanIp(ip_);
@@ -135,17 +227,18 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     feedbackLocation:=feedbackLocation_;
     context:=context_;
     hasKillRequest:=false;
-    socket.create(ip);
+    httpListener.create(ip,maxConnections);
   end;
 
 DESTRUCTOR T_microserver.destroy;
   VAR recycler:T_recycler;
+      i:longint;
   begin
     recycler.initRecycler;
     disposeLiteral(servingExpression);
     context^.finalizeTaskAndDetachFromParent(nil);
     contextPool.disposeContext(context);
-    socket.destroy;
+    httpListener.destroy;
     recycler.cleanup;
     inherited destroy;
   end;
@@ -153,6 +246,13 @@ DESTRUCTOR T_microserver.destroy;
 PROCEDURE T_microserver.stopOnFinalization;
   begin
     hasKillRequest:=true;
+  end;
+
+FUNCTION executeMicroserverRequest(p:pointer):ptrint;
+  begin
+    P_microserverRequest(p)^.execute;
+    dispose(P_microserverRequest(p),destroy);
+    result:=0;
   end;
 
 PROCEDURE T_microserver.serve;
@@ -165,79 +265,29 @@ PROCEDURE T_microserver.serve;
 
   CONST minSleepTime=0;
         maxSleepTime=100;
-
-  VAR request:T_httpRequest;
-      response:P_literal;
-      requestMap:P_mapLiteral;
-      sleepTime:longint=minSleepTime;
-      start:double;
-      statistics:record
-        serveCount:longint;
-        serveTime:double;
-        socketTime:double;
-      end;
-      finalMessage:T_arrayOfString;
+  VAR sleepTime:longint=minSleepTime;
       recycler:T_recycler;
-  PROCEDURE fillRequestLiteral;
-    VAR headerMap:P_mapLiteral;
-        i:longint;
-    begin
-      headerMap:=newMapLiteral(8);
-      requestMap:=newMapLiteral(8)
-        ^.put('request',
-          newMapLiteral(3)^.put('method',C_httpRequestMethodName[request.method])
-                          ^.put('path',request.request)
-                          ^.put('protocol',request.protocol),false)
-        ^.put('header',headerMap,false)
-        ^.put('body',request.body);
-      for i:=0 to length(request.header)-1 do with request.header[i] do headerMap^.put(key,value);
-    end;
-
+      requestSocket:TSocket;
+      request:P_microserverRequest=nil;
+      k:longint;
   begin
     recycler.initRecycler;
-    with statistics do begin
-      serveCount:=0;
-      serveTime:=0;
-      socketTime:=0;
-    end;
-    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+socket.toString);
+    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
     up:=true;
     lastActivity:=now;
     repeat
-      start:=context^.wallclockTime;
-      request:=socket.getRequest(sleepTime);
-      if request.method<>htrm_no_request then begin
-        statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
-        inc(statistics.serveCount);
-
-        start:=context^.wallclockTime;
+      requestSocket:=httpListener.getRawRequestSocket(sleepTime);
+      if requestSocket<>0 then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        fillRequestLiteral;
-        response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,@recycler,requestMap,nil).literal;
-        disposeLiteral(requestMap);
-        statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
-        start:=context^.wallclockTime;
-        if (response<>nil) then begin
-          if response^.literalType=lt_string
-          then socket.sendString(P_stringLiteral(response)^.value)
-          else socket.sendString(response^.toString);
-          disposeLiteral(response);
-        end else begin
-          context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
-          socket.sendString(HTTP_404_RESPONSE);
-        end;
-        statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
+        new(request,createMicroserverRequest(requestSocket,@self));
+        beginThread(@executeMicroserverRequest,request);
       end else begin
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
     until timedOut or hasKillRequest or not(context^.messages^.continueEvaluation);
-    finalMessage:='http Microserver stopped. '+socket.toString;
-    append(finalMessage,'  served '+intToStr(statistics.serveCount)+' requests');
-    append(finalMessage,'  evaluation time '+floatToStr(statistics.serveTime)+' seconds');
-    append(finalMessage,'  socket time '+floatToStr(statistics.socketTime)+' seconds');
-    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,finalMessage);
+    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver stopped. '+httpListener.toString);
     up:=false;
     recycler.cleanup;
   end;
@@ -386,11 +436,13 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       end;
     end;
 
+  VAR isHttpsRequest:boolean;
   begin
     setLength(requestHeader,0);
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
       requestText:=str0^.value;
+      isHttpsRequest:=startsWith(lowercase(requestText),'https');
       for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
         lt_string: begin
           if requestStream=nil
@@ -406,7 +458,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       end;
     end else allOkay:=false;
     if allOkay then begin
-      enterCriticalSection(httpRequestCs);
+      if isHttpsRequest then enterCriticalSection(httpRequestCs);
       try
         client:=TFPHTTPClient.create(nil);
         client.AllowRedirect:=true;
@@ -424,7 +476,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
           context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
         end;
       end;
-      leaveCriticalSection(httpRequestCs);
+      if isHttpsRequest then leaveCriticalSection(httpRequestCs);
       result:=responseLiteral;
       client.free;
     end;
