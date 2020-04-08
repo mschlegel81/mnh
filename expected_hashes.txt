@@ -164,7 +164,7 @@ igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          9.1kb ECDA93A0
 igSrc/im_misc.pas                             14.1kb 6F5C5946
 igSrc/im_stashing.pas                          7.7kb D1CF5B82
-igSrc/im_statisticoperations.pas              36.3kb CDA9FB75
+igSrc/im_statisticoperations.pas              36.3kb 80235CCB
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.2kb 76C9A60B
 igSrc/imagegeneration.pas                     26.8kb D9B2120B
