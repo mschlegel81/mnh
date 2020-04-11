@@ -46,8 +46,8 @@ core/funcs_list.pas                           27.8kb 90D632CF
 core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             7.1kb E64B3FC4
 core/funcs_package.inc                        13.1kb 8D3389C2
-core/funcs_regex.pas                          11.9kb C49B3A25
-core/funcs_server.pas                         22.1kb 51D59EBB
+core/funcs_regex.pas                          12.0kb CC9974B6
+core/funcs_server.pas                         22.0kb D92F0318
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
@@ -126,7 +126,7 @@ ide/plot/mnh_plotData.pas                     67.4kb DE315EB7
 ide/plot/mnh_plotform.pas                     27.2kb D3298759
 ide/plot/plotexport.pas                        7.5kb 6D410924
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
-ide/plot/plotstyles.pas                       13.5kb 88EE0CDC
+ide/plot/plotstyles.pas                       13.5kb E7ECB02B
 ide/profiling/profilingview.pas               10.8kb 314532AB
 ide/quick/quickevalforms.pas                   7.1kb 26BDE03C
 ide/reevaluationforms.pas                      3.2kb 2C6BC468

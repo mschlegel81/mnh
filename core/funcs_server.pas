@@ -216,7 +216,6 @@ DESTRUCTOR T_microserverRequest.destroy;
   end;
 
 CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST maxConnections:longint; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
-  VAR i:longint;
   begin
     inherited create(context_^.getGlobals,feedbackLocation_);
     ip:=cleanIp(ip_);
@@ -232,7 +231,6 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
 
 DESTRUCTOR T_microserver.destroy;
   VAR recycler:T_recycler;
-      i:longint;
   begin
     recycler.initRecycler;
     disposeLiteral(servingExpression);
@@ -269,7 +267,6 @@ PROCEDURE T_microserver.serve;
       recycler:T_recycler;
       requestSocket:TSocket;
       request:P_microserverRequest=nil;
-      k:longint;
   begin
     recycler.initRecycler;
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
