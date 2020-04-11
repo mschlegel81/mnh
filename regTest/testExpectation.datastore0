@@ -6255,7 +6255,7 @@ expectations:=
  'thueMorseSequence'=>
  ['0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110'],
  'travellingSalesmanProblem'=>
- ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 5C55C021'],
+ ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: BF21B5C2'],
  'treePrint'=>
  ["┐","├──1","├──2","├──┐","│  ├──3","│  │  ├──X","│  │  ├──Y",
   "│  │  └──Z","│  └──4","│     └──5","└──┐","   ├──a","   ├──b","   └──c"],
