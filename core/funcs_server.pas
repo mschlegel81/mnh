@@ -15,7 +15,7 @@ USES sysutils,math,fphttpclient,lclintf,
      synsock;
 
 IMPLEMENTATION
-USES strutils;
+USES strutils,mySys;
 TYPE
   P_microserverRequest=^T_microserverRequest;
   P_microserver=^T_microserver;
@@ -275,6 +275,8 @@ PROCEDURE T_microserver.serve;
     repeat
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
       if requestSocket<>0 then begin
+        //Protect against memory over-use by request bombing
+        while not(isMemoryInComfortZone) do sleep(1000);
         sleepTime:=minSleepTime;
         lastActivity:=now;
         new(request,createMicroserverRequest(requestSocket,@self));
