@@ -446,13 +446,14 @@
         <Filename Value="..\core\litvar.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="litVar"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="747"/>
-        <CursorPos X="27" Y="770"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="172"/>
+        <CursorPos X="3" Y="217"/>
         <UsageCount Value="200"/>
         <Bookmarks Count="1">
           <Item0 X="23" Y="794" ID="2"/>
         </Bookmarks>
+        <Loaded Value="True"/>
       </Unit36>
       <Unit37>
         <Filename Value="editors\openfile.pas"/>
@@ -555,10 +556,11 @@
       <Unit48>
         <Filename Value="mnh_doc.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
+        <EditorIndex Value="1"/>
         <TopLine Value="50"/>
         <CursorPos X="4" Y="73"/>
         <UsageCount Value="200"/>
+        <Loaded Value="True"/>
       </Unit48>
       <Unit49>
         <Filename Value="ask\askdialog.pas"/>
@@ -592,13 +594,13 @@
         <Filename Value="..\core\funcs_server.pas"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="100"/>
-        <CursorPos X="29" Y="103"/>
+        <TopLine Value="255"/>
+        <CursorPos X="60" Y="277"/>
         <UsageCount Value="200"/>
         <Bookmarks Count="1">
-          <Item0 Y="461" ID="1"/>
+          <Item0 Y="463" ID="1"/>
         </Bookmarks>
+        <Loaded Value="True"/>
       </Unit52>
       <Unit53>
         <Filename Value="reevaluationforms.pas"/>
@@ -1288,10 +1290,28 @@
         <UsageCount Value="17"/>
       </Unit138>
     </Units>
-    <General>
-      <ActiveWindowIndexAtStart Value="-1"/>
-    </General>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory Count="5" HistoryIndex="4">
+      <Position1>
+        <Filename Value="..\core\funcs_server.pas"/>
+        <Caret Line="120" Column="52" TopLine="72"/>
+      </Position1>
+      <Position2>
+        <Filename Value="..\core\funcs_server.pas"/>
+        <Caret Line="32" Column="23" TopLine="13"/>
+      </Position2>
+      <Position3>
+        <Filename Value="..\core\funcs_server.pas"/>
+        <Caret Line="18" Column="20"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\core\funcs_server.pas"/>
+        <Caret Line="462" TopLine="355"/>
+      </Position4>
+      <Position5>
+        <Filename Value="mnh_doc.pas"/>
+        <Caret Line="73" Column="4" TopLine="50"/>
+      </Position5>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes Count="0" ActiveMode="default"/>
