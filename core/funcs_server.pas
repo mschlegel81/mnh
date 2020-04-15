@@ -20,6 +20,7 @@ TYPE
   P_microserverRequest=^T_microserverRequest;
   P_microserver=^T_microserver;
   T_microserver=object(T_detachedEvaluationPart)
+    serverCs:TRTLCriticalSection;
     ip:ansistring;
     timeout:double;
     servingExpression:P_expressionLiteral;
@@ -29,25 +30,29 @@ TYPE
     context:P_context;
     httpListener:T_httpListener;
 
+    log:record
+      creationTime,serveTime,execTime:double;
+      requestCount:longint;
+    end;
+
     CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST maxConnections:longint; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
     DESTRUCTOR destroy; virtual;
     PROCEDURE stopOnFinalization; virtual;
     PROCEDURE serve;
     PROCEDURE killQuickly;
+    PROCEDURE logExecution(CONST totalTime,execTime:double);
   end;
 
   T_microserverRequest=object
-    requestCs:TRTLCriticalSection;
     connection:T_httpConnectionForRequest;
     context:P_context;
     servingExpression:P_expressionLiteral;
     feedbackLocation:T_tokenLocation;
     recycler:T_recycler;
-    busy:boolean;
+    myParent:P_microserver;
+    creationTime:double;
     CONSTRUCTOR createMicroserverRequest(CONST conn:TSocket; CONST parent:P_microserver);
-    PROCEDURE setupMicroserverRequest(CONST conn:TSocket; CONST parent:P_microserver);
     PROCEDURE execute;
-    FUNCTION isBusy:boolean;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -145,19 +150,12 @@ FUNCTION startServer_impl intFuncSignature;
 
 CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; CONST parent: P_microserver);
   begin
-    initCriticalSection(requestCs);
+    creationTime:=parent^.context^.wallclockTime;
     servingExpression:=P_expressionLiteral(parent^.servingExpression^.rereferenced);
     feedbackLocation:=parent^.feedbackLocation;
-    setupMicroserverRequest(conn,parent);
-  end;
-
-PROCEDURE T_microserverRequest.setupMicroserverRequest(CONST conn: TSocket; CONST parent: P_microserver);
-  begin
-    enterCriticalSection(requestCs);
-    busy:=true;
-    leaveCriticalSection(requestCs);
     connection.create(conn,@(parent^.httpListener));
     context:=parent^.context^.getNewAsyncContext(recycler,true);
+    myParent:=parent;
   end;
 
 PROCEDURE T_microserverRequest.execute;
@@ -179,10 +177,12 @@ PROCEDURE T_microserverRequest.execute;
     end;
 
   VAR response:P_literal;
-
+      executionTime:double;
   begin
     fillRequestLiteral;
+    executionTime:=context^.wallclockTime;
     response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,@recycler,requestMap,nil).literal;
+    executionTime:=context^.wallclockTime-executionTime;
     disposeLiteral(requestMap);
     if (response<>nil) then begin
       if response^.literalType=lt_string
@@ -195,28 +195,25 @@ PROCEDURE T_microserverRequest.execute;
     end;
     context^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(context);
+    myParent^.logExecution(myParent^.context^.wallclockTime-creationTime,executionTime);
     connection.destroy;
-    enterCriticalSection(requestCs);
-    busy:=false;
-    leaveCriticalSection(requestCs);
-  end;
-
-FUNCTION T_microserverRequest.isBusy: boolean;
-  begin
-    enterCriticalSection(requestCs);
-    result:=busy;
-    leaveCriticalSection(requestCs);
   end;
 
 DESTRUCTOR T_microserverRequest.destroy;
   begin
-    doneCriticalSection(requestCs);
     disposeLiteral(servingExpression);
     recycler.cleanup;
   end;
 
 CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST maxConnections:longint; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
+    with log do begin
+      creationTime:=context_^.wallclockTime;
+      execTime:=0;
+      serveTime:=0;
+      requestCount:=0;
+    end;
+    initCriticalSection(serverCs);
     inherited create(context_^.getGlobals,feedbackLocation_);
     ip:=cleanIp(ip_);
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
@@ -238,6 +235,7 @@ DESTRUCTOR T_microserver.destroy;
     contextPool.disposeContext(context);
     httpListener.destroy;
     recycler.cleanup;
+    doneCriticalSection(serverCs);
     inherited destroy;
   end;
 
@@ -259,6 +257,22 @@ PROCEDURE T_microserver.serve;
     begin
       result:=(timeout> 0) and (now-lastActivity>timeout) or
               (timeout<=0) and hasKillRequest;
+    end;
+
+  PROCEDURE postShutdownMessage;
+    VAR msg:T_arrayOfString;
+    begin
+      msg:='http Microserver stopped. '+httpListener.toString;
+      enterCriticalSection(serverCs);
+      with log do begin
+        append(msg,'Uptime           : '+myTimeToStr((context^.wallclockTime-creationTime)/(24*60*60)));
+        append(msg,'                   '+myFloatToStr((context^.wallclockTime-creationTime)*1000)+'ms');
+        append(msg,'Request count    : '+intToStr(requestCount));
+        append(msg,'Avg. request time: '+myFloatToStr(1000*serveTime/requestCount)+'ms');
+        append(msg,'Avg. exec time   : '+myFloatToStr(1000*execTime/requestCount)+'ms');
+      end;
+      leaveCriticalSection(serverCs);
+      context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,msg);
     end;
 
   CONST minSleepTime=0;
@@ -286,7 +300,7 @@ PROCEDURE T_microserver.serve;
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
     until timedOut or hasKillRequest or not(context^.messages^.continueEvaluation);
-    context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver stopped. '+httpListener.toString);
+    postShutdownMessage;
     up:=false;
     recycler.cleanup;
   end;
@@ -296,6 +310,15 @@ PROCEDURE T_microserver.killQuickly;
     timeout:=0;
     hasKillRequest:=true;
     while up do sleep(1);
+  end;
+
+PROCEDURE T_microserver.logExecution(CONST totalTime,execTime:double);
+  begin
+    enterCriticalSection(serverCs);
+    inc(log.requestCount);
+    log.serveTime+=totalTime;
+    log.execTime +=execTime;
+    leaveCriticalSection(serverCs);
   end;
 
 FUNCTION extractParameters_impl intFuncSignature;
