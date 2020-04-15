@@ -47,7 +47,7 @@ core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             7.1kb E64B3FC4
 core/funcs_package.inc                        13.1kb 8D3389C2
 core/funcs_regex.pas                          12.0kb CC9974B6
-core/funcs_server.pas                         22.0kb D92F0318
+core/funcs_server.pas                         23.1kb 0B851D67
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
@@ -173,7 +173,7 @@ igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.4kb 669EAD7E
 igSrc/mypics.pas                              53.0kb AF3E9DBA
-igSrc/workflows.pas                           23.6kb 2E9CD769
+igSrc/workflows.pas                           23.8kb 7FE48D2B
 igSrc/workflowsteps.pas                        3.3kb B5470B1E
 Code Size:  74 kLOC
-          3375 kB
+          3377 kB
