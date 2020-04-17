@@ -121,6 +121,7 @@ TYPE
   end;
 
   P_queueTask=^T_queueTask;
+  {T_queueTask is a task contained in a task queue. It has everything it requires for evaluation except a recycler}
   T_queueTask=object
     protected
       context:P_context;
@@ -138,6 +139,7 @@ TYPE
   end;
 
   P_subQueue=^T_subQueue;
+  {T_subqueue is a simple queue; contains a linked list of T_queueTask}
   T_subQueue=object
     private
       first,last:P_queueTask;

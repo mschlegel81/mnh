@@ -1043,8 +1043,6 @@ PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$if
       lastLocation:T_tokenLocation;
       idLoc:T_tokenLocation;
   begin
-    //TODO: Raise error if the statement starts with a tt_ponFlipper;
-    //TODO: Can this be merged with token.areBracketsPlausible ?
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
     while (t<>nil) do begin

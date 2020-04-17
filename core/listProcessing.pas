@@ -195,7 +195,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       then firstToAggregate:=newTask
       else lastToAggregate^.nextToAggregate:=newTask;
       lastToAggregate:=newTask;
-      if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then taskChain.handDownThreshold:=canAggregate*2;
+      if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
     end;
 
   VAR rule:P_expressionLiteral;
@@ -330,7 +330,7 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
         lastToAggregate^.nextToAggregate:=task;
         lastToAggregate:=task;
       end;
-      if taskChain.enqueueOrExecute(task^.define(x,mapLocation),recycler) then taskChain.handDownThreshold:=canAggregate*2;
+      if taskChain.enqueueOrExecute(task^.define(x,mapLocation),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
     end;
 
   VAR x:P_literal;
@@ -448,7 +448,7 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
         lastToAggregate^.nextToAggregate:=task;
         lastToAggregate:=task;
       end;
-      if taskChain.enqueueOrExecute(task^.define(x^.rereferenced,filterLocation),recycler) then taskChain.handDownThreshold:=canAggregate*2;
+      if taskChain.enqueueOrExecute(task^.define(x^.rereferenced,filterLocation),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
     end;
 
   VAR iter:T_arrayOfLiteral;

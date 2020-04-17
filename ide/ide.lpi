@@ -160,7 +160,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="92">
+    <Units Count="93">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -633,6 +633,10 @@
         <Filename Value="../core/valueStore.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit91>
+      <Unit92>
+        <Filename Value="../core/datastores.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit92>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

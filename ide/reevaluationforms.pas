@@ -100,6 +100,7 @@ PROCEDURE TreevaluationForm.FormDestroy(Sender: TObject);
 PROCEDURE TreevaluationForm.FormShow(Sender: TObject);
   begin
     visible:=false;
+    //TODO: make tray menu extensible by script
     TrayIcon.visible:=true;
     TrayIcon.Hint:=commandLine.fileOrCommandToInterpret;
     TrayIcon.BalloonTitle:='mnh5';
