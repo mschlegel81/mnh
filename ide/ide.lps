@@ -96,7 +96,6 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="47" Y="10"/>
-        <CursorPos X="35" Y="24"/>
         <UsageCount Value="200"/>
       </Unit0>
       <Unit1>
@@ -446,7 +445,7 @@
         <Filename Value="..\core\litvar.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="litVar"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="172"/>
         <CursorPos X="3" Y="217"/>
         <UsageCount Value="200"/>
@@ -556,7 +555,7 @@
       <Unit48>
         <Filename Value="mnh_doc.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="50"/>
         <CursorPos X="4" Y="73"/>
         <UsageCount Value="200"/>
@@ -593,13 +592,9 @@
       <Unit52>
         <Filename Value="..\core\funcs_server.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <TopLine Value="255"/>
         <CursorPos X="60" Y="277"/>
         <UsageCount Value="200"/>
-        <Bookmarks Count="1">
-          <Item0 Y="463" ID="1"/>
-        </Bookmarks>
         <Loaded Value="True"/>
       </Unit52>
       <Unit53>
@@ -953,10 +948,15 @@
       <Unit93>
         <Filename Value="imig\mnh_imig.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="131"/>
-        <CursorPos X="38" Y="143"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="244"/>
+        <CursorPos X="35" Y="268"/>
         <UsageCount Value="30"/>
+        <Bookmarks Count="1">
+          <Item0 X="65" Y="267" ID="1"/>
+        </Bookmarks>
+        <Loaded Value="True"/>
       </Unit93>
       <Unit94>
         <Filename Value="verbositydialog.pas"/>
@@ -1166,10 +1166,11 @@
       </Unit121>
       <Unit122>
         <Filename Value="..\igSrc\imageContexts.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="451"/>
-        <CursorPos X="52" Y="477"/>
-        <UsageCount Value="7"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="457"/>
+        <CursorPos X="5" Y="460"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit122>
       <Unit123>
         <Filename Value="..\..\lazarus64\fpc\3.0.4\source\rtl\win64\system.pp"/>
@@ -1290,7 +1291,7 @@
         <UsageCount Value="17"/>
       </Unit138>
     </Units>
-    <JumpHistory Count="5" HistoryIndex="4">
+    <JumpHistory Count="10" HistoryIndex="9">
       <Position1>
         <Filename Value="..\core\funcs_server.pas"/>
         <Caret Line="120" Column="52" TopLine="72"/>
@@ -1311,6 +1312,26 @@
         <Filename Value="mnh_doc.pas"/>
         <Caret Line="73" Column="4" TopLine="50"/>
       </Position5>
+      <Position6>
+        <Filename Value="imig\mnh_imig.pas"/>
+        <Caret Line="131" TopLine="131"/>
+      </Position6>
+      <Position7>
+        <Filename Value="imig\mnh_imig.pas"/>
+        <Caret Line="678" Column="5" TopLine="632"/>
+      </Position7>
+      <Position8>
+        <Filename Value="imig\mnh_imig.pas"/>
+        <Caret Line="267" Column="65" TopLine="244"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\igSrc\imageContexts.pas"/>
+        <Caret Line="113" Column="17" TopLine="91"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\igSrc\imageContexts.pas"/>
+        <Caret Line="460" Column="5" TopLine="457"/>
+      </Position10>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>

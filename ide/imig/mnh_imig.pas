@@ -264,8 +264,9 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         postNewImage(context.messages,newFromWorkflowImage);
         doOutput('Output of workflow copied to current image',false,tokenLocation,context,recycler,outputMethod);
       end;
+      if isValid then result:=newBoolLiteral(thisWorkflow.isDone)
+                 else result:=nil;
       thisWorkflow.destroy;
-      if isValid then exit(newVoidLiteral) else exit(nil);
     end else result:=nil;
   end;
 
