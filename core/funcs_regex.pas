@@ -30,7 +30,6 @@ TYPE T_triplet=record
 
      T_regexMap=specialize G_stringKeyMap<P_regexMapEntry>;
 
-//TODO: Regular expressions could use some performance tuning
 VAR regexCache:T_regexMap;
     regexCacheCs:TRTLCriticalSection;
 PROCEDURE disposeRegex(VAR r:P_regexMapEntry);

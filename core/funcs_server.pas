@@ -115,7 +115,6 @@ FUNCTION microserverListenerThread(p:pointer):ptrint;
   end;
 
 FUNCTION startServer_impl intFuncSignature;
-  //TODO: Can/should we make max_connections configurable?
   CONST MAX_CONNECTIONS=64;
   VAR microserver:P_microserver;
       timeout:double;
