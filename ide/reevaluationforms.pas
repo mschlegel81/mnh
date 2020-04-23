@@ -10,14 +10,14 @@ USES
 
 TYPE
   TreevaluationForm = class(TForm)
-    miStop: TMenuItem;
+    miKill: TMenuItem;
     TrayPopup: TPopupMenu;
     timer: TTimer;
     TrayIcon: TTrayIcon;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE miStopClick(Sender: TObject);
+    PROCEDURE miKillClick(Sender: TObject);
     PROCEDURE TimerTimer(Sender: TObject);
     PROCEDURE TrayIconClick(Sender: TObject);
   private
@@ -107,7 +107,7 @@ PROCEDURE TreevaluationForm.FormShow(Sender: TObject);
     TrayIcon.BalloonHint:='Running: '+commandLine.fileOrCommandToInterpret;
   end;
 
-PROCEDURE TreevaluationForm.miStopClick(Sender: TObject);
+PROCEDURE TreevaluationForm.miKillClick(Sender: TObject);
   CONST oneSecond=1/(24*60*60);
   VAR timeout:double;
   begin
