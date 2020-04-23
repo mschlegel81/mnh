@@ -2427,8 +2427,11 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P
     end else begin
       context^.raiseError('Literal of type '+pair^.typeString+' cannot be interpreted as key-value-pair',location);
       disposeLiteral(result);
+      result:=nil;
+      break;
     end;
     disposeLiteral(iter);
+    if result=nil then result:=newMapLiteral(0);
   end;
 
 FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;

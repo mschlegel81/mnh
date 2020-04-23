@@ -224,8 +224,9 @@ CONST
     {tt_expBraceClose}      tt_EOL,
     {tt_iifCheck}           tt_iifElse);
 
-  C_opPrecedence: array[tt_comparatorEq..tt_unaryOpMinus,0..1] of byte =
-   ((6,6),(6,6),(6,6),(6,6),(6,6),(6,6),(6,6), //comparators
+  C_opPrecedence: array[tt_separatorMapItem..tt_unaryOpMinus,0..1] of byte =
+   ((2,2),
+    (6,6),(6,6),(6,6),(6,6),(6,6),(6,6),(6,6), //comparators
     (7,7),                      //in
     (8,8),(9,9),(9,9),          //logical operators
     (8,8),(9,9),                //lazy logical operators
