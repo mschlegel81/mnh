@@ -35,7 +35,7 @@ core/commandlineparameters.pas                21.6kb 64541EA2
 core/consoleAsk.pas                            4.5kb F007942F
 core/contexts.pas                             37.5kb 8A235820
 core/datastores.pas                            6.6kb 43E1EFAF
-core/evaluation.pas                           61.9kb B2A0C244
+core/evaluation.pas                           61.7kb B574765A
 core/fileWrappers.pas                         16.5kb EB0D5059
 core/func_defines.inc                          2.4kb 48DCD8A6
 core/funcs.pas                                16.6kb 77908F54
@@ -52,8 +52,8 @@ core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
 core/listProcessing.pas                       28.4kb F33AD19D
-core/litvar.pas                              164.5kb 9D5EDF14
-core/mnh_constants.pas                        63.8kb AFBC293A
+core/litvar.pas                              164.6kb E45F23D3
+core/mnh_constants.pas                        63.8kb BD5A1702
 core/mnh_messages.pas                         18.3kb ABF8D58E
 core/mnh_settings.pas                          4.8kb 89E00A79
 core/operators.pas                            47.5kb D3763027
@@ -167,13 +167,13 @@ igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.3kb A6BF98A2
-igSrc/imagegeneration.pas                     26.8kb D9B2120B
+igSrc/imagegeneration.pas                     26.8kb FA54CC37
 igSrc/imagemanipulation.pas                    9.4kb C5F006D4
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
-igSrc/myParams.pas                            29.4kb 669EAD7E
+igSrc/myParams.pas                            29.4kb A3D827DE
 igSrc/mypics.pas                              53.0kb AF3E9DBA
-igSrc/workflows.pas                           24.2kb 382CA973
+igSrc/workflows.pas                           24.3kb 965D528B
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
           3378 kB
