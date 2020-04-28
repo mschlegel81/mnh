@@ -60,7 +60,6 @@ begin
   result;
 end;
 
-@SuppressUnusedWarning
 BUILDS:=cross(TARGET_PLATFORM.getInner(0),
               TARGET_PROJECT .getInner(0),
               TARGET_FLAVOUR .getInner(0))
