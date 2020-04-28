@@ -107,10 +107,20 @@ private buildExe(B:Map)->
   : void;
 
 private testExe(B:Map,...)->begin
+  local forceTest:='retest' in ...;
+  //Skip entries that should not be tested
   !(B['canBuild']) OR !(B['doTest'])
-  ? return void : void;
-  B['distro'] AND needBuild(B) ? B.buildExe : void;
-  allTestsPassed(B['flavour'],ensureCodeHash) OR needBuild(B) ? return true : void;
+  ? return void
+  : void;
+  //Ensure build if B is part of distro
+  B['distro'] AND needBuild(B)
+  ? B.buildExe
+  : void;
+  //Skip entries which are already tested
+  (!forceTest AND allTestsPassed(B['flavour'],ensureCodeHash)) OR needBuild(B)
+  ? return true
+  : void;
+
   tprint('Testing ',B['targetDest']) orElse
   B['targetDest'].execPipeless(['regTest/regTest.mnh']|...)=0
   ? tprint('Test passed') orElse true
@@ -175,7 +185,6 @@ private isSameFileName(filename1:String,filename2:String)->begin
   (filename2.expandedFileName.case);
 end;
 
-private acceptedMainParameters->inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p);
 main->main('build');
 //*Build all targets
 main('build')->BUILDS.reverseList.each(B,B.buildExe);
@@ -235,7 +244,7 @@ main(target:String)->begin
   BUILDS.each(B,isSameFileName(B['targetDest'],tgt) OR tgt=B['flavour'] ? buildAndTest(B).assert orElse true : false,OR) OR
   BUILDS.each(B,matches       (B['targetDest'],tgt)                     ? buildAndTest(B).assert orElse true : false,or)
   ? void
-  : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | '<target name or pattern>').join("\n"));
+  : fail("Don't know what to do with: "+target+". Accepted parameters are" & helpOnMain);
 end;
 
 //*Several steps in succession
