@@ -41,7 +41,7 @@ currentCodeHash:=begin
   fileExists('../checkstyle.mnh')
   ? begin
       tprint('Checkstyle');
-      runScript('../checkstyle.mnh',['fix'],3);
+      runScript(['name'=>'../checkstyle.mnh','parameters'=> ['fix'],'connection level'=> 3,'side effects'=>['output','alter package state','read file','write file']].toMap);
     end
   : void;
   tprint('Updating generated files');
@@ -218,7 +218,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
 
   writeAllDataStores;
   {fileExists($0)
-   ? runScript($0,[],3)
+   ? runScript(['name'=>$0,"side effects"=>listSideEffects,"connection level"=>3].toMap)
    : void}('distro_hook.mnh');
 end;
 
