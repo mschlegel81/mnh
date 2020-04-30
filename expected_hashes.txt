@@ -172,8 +172,8 @@ igSrc/imagemanipulation.pas                    9.4kb C5F006D4
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.4kb A3D827DE
-igSrc/mypics.pas                              53.0kb AF3E9DBA
-igSrc/workflows.pas                           24.3kb 965D528B
+igSrc/mypics.pas                              54.4kb 874BEB97
+igSrc/workflows.pas                           24.4kb 47BC66D3
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3382 kB
+          3384 kB
