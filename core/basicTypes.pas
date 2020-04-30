@@ -12,6 +12,8 @@ TYPE
     FUNCTION getPath:ansistring; virtual; abstract;
   end;
 
+  //TODO: Token locations should be shorter if possible
+  //Deeper paths make ugly errors
   T_searchTokenLocation = record
     fileName: ansistring;
     line, column: longint;

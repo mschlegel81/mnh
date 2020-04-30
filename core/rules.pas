@@ -757,9 +757,13 @@ PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCom
 PROCEDURE T_ruleMap.fillCallInfos(CONST functionCallInfos:P_functionCallInfos);
   VAR entry:KEY_VALUE_PAIR;
   begin
-    resolveRuleIds(nil,ON_DELEGATION);
-    for entry in entrySet do if entry.value.entryType=tt_userRule then
-      P_rule(entry.value.value)^.fillCallInfos(functionCallInfos);
+    try
+      resolveRuleIds(nil,ON_DELEGATION);
+      for entry in entrySet do if entry.value.entryType=tt_userRule then
+        P_rule(entry.value.value)^.fillCallInfos(functionCallInfos);
+    except
+      functionCallInfos^.clear;
+    end;
   end;
 
 PROCEDURE T_ruleMap.complainAboutUnused(CONST messages: P_messages; CONST functionCallInfos:P_functionCallInfos);
