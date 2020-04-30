@@ -1,13 +1,12 @@
 USE '../demos/inputs/inputs.mnh';
 
 private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
-@SuppressUnusedWarning
+
 allDemos:=files(demosRoot&'*.mnh').sort;
 
-@SuppressUnusedWarning
 EXAMPLES_LOG_NAME:='examples_from_file';
 
-plotters:=demosRoot&[
+private plotters:=demosRoot&[
 'barnsleyFern.mnh',
 'fractalPlant.mnh',
 'kochCurve.mnh',
@@ -17,7 +16,6 @@ plotters:=demosRoot&[
 'turtleGfx.mnh',
 'heart.mnh'];
 
-@SuppressUnusedWarning
 testParameters((demosRoot&'24.mnh'             ))->['demo'];
 testParameters((demosRoot&'aliquotSequence.mnh'))->[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488].map(::toString);
 testParameters((demosRoot&'asciiCalendar.mnh'  ))->['1966'];
@@ -65,17 +63,14 @@ skipFile((demosRoot&'contourPlotExample.mnh' ),fullVersion)->true;
 skipFile(file in plotters                     ,false      )->true;
 skipFile(scriptFileName:String                ,fullVersion)->false;
 
-@SuppressUnusedWarning
 testsToExecuteForFlavour(flavourString)->begin
   local fullVersion:=copy(flavourString,0,1)='F';
   allDemos.filter({!(skipFile($script,fullVersion))});
 end;
 
-@SuppressUnusedWarning
 testsToExecuteForAnyFlavour->
   allDemos.filter({!(skipFile($script,true) and skipFile($script,false))});
 
-@SuppressUnusedWarning
 isSmokeTest((demosRoot&'task.mnh'          ))->true;
 isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
 isSmokeTest((demosRoot&'clock.mnh'         ))->true;
@@ -84,6 +79,25 @@ isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
 isSmokeTest((demosRoot&'teeExecTest.mnh'   ))->true;
 isSmokeTest(scriptFileName:String)->false;
 
-@SuppressUnusedWarning
 checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
 checkAfterTest(file)->void;
+
+private DEFAULT_WHITELIST:=['output','sound','sleep','read package state','alter package state','alter context state'].toSet;
+WHITELIST_FOR_EXAMPLES:=DEFAULT_WHITELIST | ['alter plot state','write file','detaching'];
+allowedSideEffects((demosRoot&'anagram.mnh'       ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'diff.mnh'          ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'huffmann.mnh'      ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'randomWords.mnh'   ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'semordnilap.mnh'   ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'wordCount.mnh'     ))->DEFAULT_WHITELIST | ['write file','read file'];
+allowedSideEffects((demosRoot&'ipcTest.mnh'       ))->DEFAULT_WHITELIST | ['executing external','ipc','detaching', 'server'];
+allowedSideEffects((demosRoot&'helloWorldHttp.mnh'))->DEFAULT_WHITELIST | ['detaching', 'server','http'];
+allowedSideEffects((demosRoot&'logTest.mnh'       ))->DEFAULT_WHITELIST | ['write file','read file', 'executing external'];
+allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['alter plot state','write file'];
+allowedSideEffects(file            )->DEFAULT_WHITELIST;
+
+testConfiguration(file)->["name"=>file,
+                          "parameters"=>testParameters(file),
+                          "side effects"=>allowedSideEffects(file),
+                          "connection level"=>0,
+                          "deterministic"=>true].toMap;

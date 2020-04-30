@@ -176,7 +176,7 @@ VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST to
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
-USES sysutils,strutils
+USES sysutils,strutils,funcs_mnh
      {$ifdef fullVersion},plotstyles{$endif}
      ;
 
@@ -1683,30 +1683,13 @@ FUNCTION toExpression_imp intFuncSignature;
 FUNCTION interpret_imp intFuncSignature;
   VAR first:P_token=nil;
       package:P_abstractPackage;
-      previousPrivileges,sideEffectWhitelist:T_sideEffects;
-
-      anyMatch:boolean;
-      se:T_sideEffect;
-      iter:T_arrayOfLiteral;
-      seId:P_literal;
+      previousPrivileges :T_sideEffects;
+      sideEffectWhitelist:T_sideEffects=[];
   begin
     result:=nil;
     if (params=nil) or (params^.size<1) or (params^.size>2) then exit(nil);
-    if (params^.size=2) then begin
-      if not(arg1^.literalType in [lt_stringList,lt_stringSet,lt_emptyList,lt_emptySet]) then exit(nil);
-      iter:=collection1^.iteratableList;
-      sideEffectWhitelist:=[];
-      for seId in iter do begin
-        anyMatch:=false;
-        for se in T_sideEffect do if C_sideEffectName[se]=P_stringLiteral(seId)^.value then begin
-          anyMatch:=true;
-          include(sideEffectWhitelist,se);
-        end;
-        if not(anyMatch) then context.raiseError('Invalid side effect name '+seId^.toString(),tokenLocation);
-      end;
-      disposeLiteral(iter);
-      if not(context.continueEvaluation) then exit(nil);
-    end else sideEffectWhitelist:=C_allSideEffects;
+    if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist)) then exit(nil);
+
     if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) then begin
       previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*sideEffectWhitelist);
       result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;

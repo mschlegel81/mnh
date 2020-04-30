@@ -10,9 +10,38 @@ USES sysutils,
      mnh_settings,
      funcs;
 FUNCTION getMnhInfo:T_arrayOfString;
+FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR sideEffects:T_sideEffects):boolean;
 {$i func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
+FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR sideEffects:T_sideEffects):boolean;
+  VAR iter:T_arrayOfLiteral;
+      seId:P_literal;
+      se:T_sideEffect;
+      anyMatch:boolean;
+      preliminary:T_sideEffects=[];
+  begin
+    if not(L^.literalType in [lt_stringList,lt_stringSet,lt_emptyList,lt_emptySet]) then begin
+      if raiseErrors then context.raiseError('Invalid specification of side effects. Type is '+L^.typeString+' should be collection of strings',location);
+      exit(false);
+    end;
+    iter:=P_collectionLiteral(L)^.iteratableList;
+    result:=true;
+    for seId in iter do begin
+      anyMatch:=false;
+      for se in T_sideEffect do if C_sideEffectName[se]=P_stringLiteral(seId)^.value then begin
+        anyMatch:=true;
+        include(preliminary,se);
+      end;
+      if not(anyMatch) then begin
+        if raiseErrors then context.raiseError('Invalid side effect name '+seId^.toString(),location);
+        result:=false;
+      end;
+    end;
+    if result then sideEffects:=preliminary;
+    disposeLiteral(iter);
+  end;
+
 PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;
   VAR sleepUntil:double=0;
       sleepInt:longint;

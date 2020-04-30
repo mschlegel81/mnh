@@ -41,7 +41,7 @@ currentCodeHash:=begin
   fileExists('../checkstyle.mnh')
   ? begin
       tprint('Checkstyle');
-      runScript('../checkstyle.mnh',['fix'],3);
+      runScript(['name'=>'../checkstyle.mnh','parameters'=> ['fix'],'connection level'=> 3,'side effects'=>['output','alter package state','read file','write file']].toMap);
     end
   : void;
   tprint('Updating generated files');
