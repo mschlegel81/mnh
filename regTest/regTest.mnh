@@ -13,7 +13,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
     printCase(scriptFileName);
     local logName:=extractFileNameOnly(scriptFileName);
     local startTime:=time;
-    local output:=runScript(scriptFileName,testParameters(scriptFileName),true)
+    local output:=runScript(testConfiguration(scriptFileName))
           .filter({$e.head=='printline' OR $e.head.matches('[E|e]rror')})
           .getInner(2)
           .split("\n")
@@ -38,7 +38,7 @@ private sbExecute([])->void;
 private sbExecute(code:StringList)->begin
   note("Examples test code:  \n"&code.join("  \n"));
   printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
-  local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
+  local out:=sandBoxExecute(code,WHITELIST_FOR_EXAMPLES).each(message,message.get(0)=="timing_info" ? void : message);
   out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
 end;
 

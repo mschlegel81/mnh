@@ -13,9 +13,10 @@ private REMAP:=
  ['printline'  ,'']].toMap;
 
 private prettyExecute(input:String)->
-  sandBoxExecute(input).map({(REMAP[$x.head] orElse $x.head) & "\t" & $x.trailing}).join("\n")
-                       .formatTabs
-                       .join("\n");
+  sandBoxExecute(input,['output','alter package state','alter context state'])
+    .map({(REMAP[$x.head] orElse $x.head) & "\t" & $x.trailing}).join("\n")
+    .formatTabs
+    .join("\n");
 
 plain datastore previousInput:='';
 

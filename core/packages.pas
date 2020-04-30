@@ -23,6 +23,7 @@ USES //my utilities:
        mySys,
      {$endif}
      funcs,
+     funcs_mnh,
      operators,
      funcs_format,
      funcs_ipc, funcs_server,
@@ -125,9 +126,9 @@ TYPE
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      FUNCTION execute(CONST input:T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed:dword=4294967295):T_storedMessages;
+      FUNCTION execute(CONST input:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; VAR recycler:T_recycler; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler{$ifdef fullVersion}; OUT functionCallInfos:P_functionCallInfos{$endif}):T_storedMessages;
-      FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -253,12 +254,12 @@ DESTRUCTOR T_sandbox.destroy;
     doneCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; VAR recycler:T_recycler; CONST randomSeed: dword): T_storedMessages;
+FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; VAR recycler:T_recycler; CONST randomSeed: dword): T_storedMessages;
   begin
     messages.clear;
     messages.setupMessageRedirection(nil,[]);
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
     globals.afterEvaluation(recycler);
@@ -285,7 +286,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   CONST TYPES_BY_LEVEL:array[0..3] of T_messageTypeSet=
         ([],
          [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif}],
@@ -314,7 +315,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     then package.replaceCodeProvider(newCodeProvider(fileName))
     else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
-      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,callContextType,mainParameters,recycler);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,callContextType,mainParameters,recycler);
       package.load(lu_forCallingMain,globals,recycler,mainParameters{$ifdef fullVersion},nil,nil{$endif});
     finally
       globals.afterEvaluation(recycler);
@@ -328,12 +329,12 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
 PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
   VAR recycler:T_recycler;
-  begin recycler.initRecycler; execute(split(decompressString(ensureAssoc_mnh),C_lineBreakChar),recycler); recycler.cleanup; end;
+  begin recycler.initRecycler; execute(split(decompressString(ensureAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler); recycler.cleanup; end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
   VAR recycler:T_recycler;
-  begin recycler.initRecycler; execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),recycler); recycler.cleanup; end;
+  begin recycler.initRecycler; execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler); recycler.cleanup; end;
 
 FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
   VAR recycler:T_recycler;
@@ -417,7 +418,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       tok:T_rawToken;
       m:P_storedMessage;
   begin
-    messages:=sandbox^.execute(input,recycler);
+    messages:=sandbox^.execute(input,C_allSideEffects,recycler);
     setLength(textOut,0);
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);

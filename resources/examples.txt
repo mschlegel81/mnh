@@ -4,7 +4,11 @@ arity({3});
 arity({sin($x)/$x});
 
 //#mnh.runScript
-runScript('hello.mnh',["main->print('Hello world');"],[]).filter({$message.head=='printline'}).map(::trailing);
+runScript(['name'=>'hello.mnh',
+           'source'=>["main->print('Hello world');"],
+           'side effects'=>['alter package state','output']].toMap)
+.filter({$message.head=='printline'})
+.map(::trailing);
 
 //#mnh.arity
 arity({sin($x)/$y});
@@ -829,7 +833,7 @@ composeDigits([1,0,2]);
 //Compose in decimal, shifted by 2
 composeDigits([1,0,2],10,2);
 
-sandBoxExecute("f(x)->3*x+1; f(f(f(1)))");
+sandBoxExecute("f(x)->3*x+1; f(f(f(1)))",['alter package state']);
 
 //#system.async
 begin

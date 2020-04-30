@@ -40,7 +40,7 @@ begin
 
   local edgesByPoint:=edges.each(edge,[edge[0],edge],[edge[1],edge])
                            .group(0)
-                           .each(g,[g[0,0],g.getInner(1)])
+                           .each(g,[g[0],g[1].getInner(1)])
                            .toMap;
   local triangles:= edges.each(edge,intersect(edgesByPoint[edge[0]].flatten,
                                               edgesByPoint[edge[1]].flatten)

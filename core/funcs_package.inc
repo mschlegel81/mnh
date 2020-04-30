@@ -2,17 +2,20 @@
 {$i func_defines.inc}
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
+      sideEffectWhitelist:T_sideEffects=[];
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string,lt_stringList]) then begin
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) and (arg0^.literalType in [lt_string,lt_stringList]) then begin
       if arg0^.literalType=lt_string
       then src:=P_stringLiteral(arg0)^.value
       else begin
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,recycler,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
+      if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist))
+      then exit(nil);
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,sideEffectWhitelist,recycler,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
     end;
   end;
 
@@ -68,38 +71,107 @@ FUNCTION try_imp intFuncSignature;
     end;
   end;
 
+CONST RUNSCRIPT_KEY_NAME         ='name';
+      RUNSCRIPT_KEY_SOURCE       ='source';
+      RUNSCRIPT_KEY_PARAMETERS   ='parameters';
+      RUNSCRIPT_KEY_SIDE_EFFECTS ='side effects';
+      RUNSCRIPT_KEY_ISOLATION    ='connection level';
+      RUNSCRIPT_KEY_DETERMINISTIC='deterministic';
+
 FUNCTION runScript_imp intFuncSignature;
-  VAR scriptParams,
-      scriptSource      :T_arrayOfString;
-      i,j               :longint;
-      connect           :longint=0;
-      enforceDeterminism:boolean=false;
+  VAR iter:T_arrayOfLiteral;
+      entry:P_literal;
+      key,value:P_literal;
+
+  VAR scriptName:string='';
+  PROCEDURE parseName;
+    begin
+      if value^.literalType=lt_string
+      then scriptName:=P_stringLiteral(value)^.value
+      else context.raiseError('Script name must be a string',tokenLocation);
+    end;
+
+  FUNCTION listToStrings(CONST L:P_literal):T_arrayOfString;
+    VAR j:longint;
+    begin
+      setLength(result,P_listLiteral(L)^.size);
+      for j:=0 to P_listLiteral(L)^.size-1 do result[j]:=P_stringLiteral(P_listLiteral(L)^.value[j])^.value;
+    end;
+
+  VAR scriptSource:T_arrayOfString;
+  PROCEDURE parseSource;
+    begin
+      if value^.literalType=lt_stringList
+      then scriptSource:=listToStrings(value)
+      else context.raiseError('Script source must be a (non empty) string list',tokenLocation);
+    end;
+
+  VAR scriptParams:T_arrayOfString;
+  PROCEDURE parseParameters;
+    begin
+      if value^.literalType in [lt_stringList,lt_emptyList]
+      then scriptParams:=listToStrings(value)
+      else if value^.literalType<>lt_emptySet then context.raiseError('Script parameters must be a string list',tokenLocation);
+    end;
+
+  VAR sideEffects:T_sideEffects;
+  PROCEDURE parseSideEffects;
+    begin
+      canInterpretAsSideEffectList(value,true,tokenLocation,context,sideEffects);
+    end;
+
+  VAR connect:longint=0;
+  PROCEDURE parseIsolation;
+    begin
+      if (value^.literalType=lt_smallint)
+      and (P_smallIntLiteral(value)^.value>=0) and (P_smallIntLiteral(value)^.value<=3)
+      then connect:=P_smallIntLiteral(value)^.value
+      else context.raiseError('Invalid connection level '+value^.toString(),tokenLocation);
+    end;
+
+  VAR enforceDeterminism:boolean=false;
+  PROCEDURE parseDeterministic;
+    begin
+      if boolLit[false].equals(value) then exit;
+      if boolLit[true].equals(value)
+      then enforceDeterminism:=true
+      else context.raiseError('Expected a boolean',tokenLocation);
+    end;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and (params^.size<=5) and
-       (arg0^.literalType=lt_string) and
-       (arg1^.literalType in [lt_emptyList,lt_stringList])
-    then begin
-      scriptParams:=C_EMPTY_STRING_ARRAY;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_map) then begin
       scriptSource:=C_EMPTY_STRING_ARRAY;
-
-      setLength(scriptParams,list1^.size);
-      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
-
-      for i:=2 to params^.size-1 do case params^.value[i]^.literalType of
-        lt_smallint: begin
-          connect:=P_smallIntLiteral(params^.value[i])^.value;
-          if (connect<0) or (connect>3) then exit(nil);
-        end;
-        lt_boolean:    enforceDeterminism:=P_boolLiteral(params^.value[i])^.value;
-        lt_stringList,lt_emptyList: begin
-          scriptSource:=scriptParams;
-          setLength(scriptParams,P_listLiteral(params^.value[i])^.size);
-          for j:=0 to P_listLiteral(params^.value[i])^.size-1 do scriptParams[j]:=P_stringLiteral(P_listLiteral(params^.value[i])^.value[j])^.value;
-        end
-        else exit(nil);
+      scriptParams:=C_EMPTY_STRING_ARRAY;
+      iter:=map0^.iteratableList;
+      for entry in iter do begin
+        assert(entry^.literalType in C_listTypes);
+        assert(P_listLiteral(entry)^.size=2);
+        key  :=P_listLiteral(entry)^.value[0];
+        value:=P_listLiteral(entry)^.value[1];
+        if key^.literalType=lt_string then begin
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_NAME          then parseName else
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_SOURCE        then parseSource else
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_PARAMETERS    then parseParameters else
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_SIDE_EFFECTS  then parseSideEffects else
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_DETERMINISTIC then parseDeterministic else
+          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_ISOLATION     then parseIsolation else
+          context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
+        end else context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
       end;
-      result:=sandbox^.runScript(str0^.value,scriptSource,scriptParams,tokenLocation,@context,recycler,byte(connect),enforceDeterminism);
+      disposeLiteral(iter);
+
+      if scriptName='' then context.raiseError('No script name given.',tokenLocation);
+
+      if context.continueEvaluation then result:=
+        sandbox^.runScript(scriptName,
+                           scriptSource,
+                           scriptParams,
+                           sideEffects,
+                           tokenLocation,
+                           @context,
+                           recycler,
+                           byte(connect),
+                           enforceDeterminism);
     end;
   end;
 
@@ -215,16 +287,20 @@ FUNCTION writeDataStores_imp intFuncSignature;
 
 {$endif}
 {$ifdef include_initialization}
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source,,sideEffectWhitelist:StringCollection);//Executes the source (String or StringList) and returns created messages#//Optionally you can specify allowed side effects'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,ak_variadic{$ifdef fullVersion},
              'try(E:Expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
              'try(E:Expression,parameters:List);//Evaluates E with the given parameters - the parameter list length must match the arity of E#'+
              'try(E:Expression(0),except(1):Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
              'try(E:Expression(0),except:Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
              'try(E:Expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary{$ifdef fullVersion},'runScript(filenameOrId:String,parameters:StringList);//executes the given script - in the current program instance but strictly isolated#'+
-                                                                                           'runScript(filename:String,scriptSource:StringList,parameters:StringList);//executes the given script source using filename as script file name#'+
-                                                                                           'runScript(filenameOrId:String,parameters:StringList,connectionLevel);//executes the given script with connectionLevel#0: isolated#1: print#2: print and warnings#3: print, warnings and errors#Add an additional boolean parameter true to enforce determinism'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary{$ifdef fullVersion},'runScript(config:Map);//executes the given script config#'+
+                                                     '//expected keys: "'+RUNSCRIPT_KEY_NAME         +'" (String, mandatory)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_SOURCE       +'" (StringList)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_PARAMETERS   +'" (StringList)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_SIDE_EFFECTS +'" (StringCollection)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_ISOLATION    +'" 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors#'+
+                                                     '//               "'+RUNSCRIPT_KEY_DETERMINISTIC+'" (Boolean, true to enforce determinism of PRGNs)'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).'{$endif});
