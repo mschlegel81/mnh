@@ -223,7 +223,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   packSets(getBuildNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
   {fileExists($0)
-   ? runScript($0,[],3)
+   ? runScript(['name'=>$0,"side effects"=>listSideEffects,"connection level"=>3].toMap)
    : void}('distro_hook.mnh');
 end;
 
