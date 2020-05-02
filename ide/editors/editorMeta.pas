@@ -593,6 +593,7 @@ PROCEDURE T_editorMeta.updateSheetCaption;
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     if language_=LANG_MNH then triggerCheck;
+    if workspace.debugLine.editor=editor_ then workspace.clearDebugLine;
     updateSheetCaption;
   end;
 

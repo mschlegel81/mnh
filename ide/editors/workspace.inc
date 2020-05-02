@@ -357,7 +357,7 @@ FUNCTION T_workspace.hasEditorForFile(CONST fileName: string): boolean;
 
 PROCEDURE T_workspace.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runnerModel.evaluation.isPaused and runnerModel.evaluation.isRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=(Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 PROCEDURE T_workspace.clearDebugLine;

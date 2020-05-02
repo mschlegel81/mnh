@@ -176,7 +176,7 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: cha
   begin
     if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
-      workspace.openLocation(profilingList[i].calleeLocation);
+      workspace.openDebugLocation(profilingList[i].calleeLocation);
     end else writeln('StringGridKeyPress ',ord(key));
   end;
 
@@ -186,7 +186,7 @@ PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: cha
     if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid2.selection.top-1;
-      workspace.openLocation(profilingList[i].callers[j].location);
+      workspace.openDebugLocation(profilingList[i].callers[j].location);
     end;
   end;
 
@@ -196,7 +196,7 @@ PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: cha
     if (key=#13) and canOpenLocation then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid3.selection.top-1;
-      workspace.openLocation(profilingList[i].callees[j].location);
+      workspace.openDebugLocation(profilingList[i].callees[j].location);
     end;
   end;
 
