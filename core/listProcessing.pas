@@ -236,8 +236,8 @@ end}
     taskChain.flush;
     taskChain.destroy;
 
-    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
@@ -367,8 +367,8 @@ FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLitera
     taskChain.flush;
     taskChain.destroy;
 
-    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
@@ -468,8 +468,8 @@ FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpres
     taskChain.flush;
     taskChain.destroy;
 
-    while context.continueEvaluation and (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while context.continueEvaluation and (firstToAggregate<>nil)                                                          do canAggregate;
+    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
+    while (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
@@ -559,10 +559,12 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST taskEnv:P_context; CONST expr: P_expre
 PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
-    if context^.messages^.continueEvaluation then with mapPayload do begin
-      mapResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
-    end;
-    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    if context^.continueEvaluation
+    then with mapPayload do mapResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
+    if mapPayload.mapParameter<>nil
+    then disposeLiteral(mapPayload.mapParameter);
+    if mapResult=nil
+    then mapResult:=newVoidLiteral;
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
