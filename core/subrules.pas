@@ -1037,6 +1037,7 @@ FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST c
       if a<>nil then parameterList.append(a,true);
       if b<>nil then parameterList.append(b,true);
       result:=evaluate(location,context,recycler,@parameterList);
+      if (result.literal=nil) and context^.continueEvaluation then context^.raiseError('An error ocurred when trying to evaluate function '+toString(50),location);
       parameterList.destroy;
     end else result:=evaluate(location,context,recycler,nil);
   end;

@@ -51,7 +51,7 @@ core/funcs_server.pas                         23.0kb CA4DFADE
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
-core/listProcessing.pas                       28.4kb F33AD19D
+core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              164.6kb E45F23D3
 core/mnh_constants.pas                        63.8kb BD5A1702
 core/mnh_messages.pas                         18.3kb ABF8D58E
@@ -63,7 +63,7 @@ core/patterns.pas                             31.9kb FB5AC32A
 core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb 29097114
 core/rules.pas                                72.5kb EC5FD3CB
-core/subrules.pas                             75.0kb 324E31E2
+core/subrules.pas                             75.2kb AC18F7BB
 core/tokenArray.pas                           55.3kb 3CF9A6A1
 core/tokenStack.pas                           17.3kb 95C49DB4
 core/tokens.pas                               17.6kb 71635F44
@@ -95,7 +95,7 @@ ide/debugger/debuggerforms.pas                 8.6kb FF25745D
 ide/debugger/debuggervarforms.pas              4.6kb 5322373B
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
-ide/editors/editorMeta.pas                    26.4kb 1F8AF58D
+ide/editors/editorMeta.pas                    26.5kb 79F09A14
 ide/editors/editormetabase.pas                35.6kb E31764C8
 ide/editors/editscripts.pas                    6.6kb 57759C02
 ide/editors/fileHistory.inc                   10.8kb 541F2962
@@ -106,11 +106,11 @@ ide/editors/renamedialog.pas                   1.8kb E9325640
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.7kb B0AB937C
 ide/editors/searchModel.pas                    3.9kb 03392A67
-ide/editors/workspace.inc                     26.6kb DE8B5D36
+ide/editors/workspace.inc                     26.5kb F8FBBE0E
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb 103F8056
 ide/idelayoututil.pas                         28.7kb 334C3F63
-ide/idemain.pas                               23.9kb 0ABA1524
+ide/idemain.pas                               23.9kb 1EF8941E
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
 ide/ipcModel.pas                               1.5kb 3A2A0B05
@@ -127,7 +127,7 @@ ide/plot/mnh_plotform.pas                     27.2kb D3298759
 ide/plot/plotexport.pas                        7.5kb 6D410924
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
 ide/plot/plotstyles.pas                       13.5kb E7ECB02B
-ide/profiling/profilingview.pas               10.8kb 314532AB
+ide/profiling/profilingview.pas               10.8kb 1315F227
 ide/quick/quickevalforms.pas                   7.1kb 26BDE03C
 ide/reevaluationforms.pas                      3.3kb A70D4AEA
 ide/res_defaultFiles.inc                     131.4kb CBD75D89
@@ -139,7 +139,7 @@ ide/settings/mnh_gui_settings.pas             13.7kb CE0374B6
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.9kb E2A17B87
 ide/synhighlightermnh.pas                     19.9kb 842EB45F
-ide/tables/mnh_tables.pas                     14.5kb 9D3E7CE3
+ide/tables/mnh_tables.pas                     14.9kb 55307D8C
 ide/treeUtil.pas                               1.6kb 044A8430
 ide/vartree/variabletreeviews.pas              6.0kb 56C08D5E
 igSrc/complex.pas                             13.3kb DF849305

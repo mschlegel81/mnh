@@ -55,8 +55,7 @@ TYPE
   private
     { private declarations }
     literal:P_listLiteral;
-    headerData:T_arrayOfString;
-    firstIsHeader:boolean;
+    FixedRows,fixedColumns:longint;
     adapter:P_tableAdapter;
     sorted:record
       ascending:boolean;
@@ -64,7 +63,7 @@ TYPE
     end;
   public
     { public declarations }
-    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean; CONST adapter_:P_tableAdapter);
+    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_:P_tableAdapter);
     PROCEDURE fillTable;
   end;
 
@@ -73,11 +72,11 @@ TYPE
     private
       tableContent:P_listLiteral;
       tableCaption:string;
-      firstIsHeader:boolean;
+      FixedRows,fixedColumns:longint;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      CONSTRUCTOR create(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
+      CONSTRUCTOR create(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint);
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -89,12 +88,14 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES myStringUtil,strutils;
+USES myStringUtil,strutils,math;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR caption:string='';
-      header:boolean=false;
+      fixedRowsRead:boolean=false;
+      FixedCols:longint=0;
+      FixedRows:longint=0;
       i:longint;
       tableDisplayRequest:P_tableDisplayRequest;
   begin
@@ -106,15 +107,29 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
     if (params<>nil) and
        (params^.size>0) and
        (params^.value[0]^.literalType in C_listTypes) then begin
-      for i:=1 to 2 do if params^.size>i then begin
+      for i:=1 to 3 do if params^.size>i then begin
         case params^.value[i]^.literalType of
+          //Additional string parameter indicates caption
           lt_string : caption:=P_stringLiteral(params^.value[i])^.value;
-          lt_boolean: header :=P_boolLiteral  (params^.value[i])^.value;
+          //Additional boolean parameter indicates boolean flag for header
+          lt_boolean: begin
+            if P_boolLiteral  (params^.value[i])^.value then FixedRows:=1 else FixedRows:=0;
+            fixedRowsRead:=true;
+          end;
+          //Additional int parameter indicates fixed rows or fixed columns
+          lt_smallint: begin
+            if fixedRowsRead
+            then FixedCols:=P_smallIntLiteral(params^.value[i])^.value
+            else begin
+              FixedRows:=P_smallIntLiteral(params^.value[i])^.value;
+              fixedRowsRead:=true;
+            end;
+          end;
           else exit(nil);
         end;
       end;
       if (gui_started<>NO) then begin
-        new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,header));
+        new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,FixedRows,FixedCols));
         context.messages^.postCustomMessage(tableDisplayRequest,true);
         result:=newVoidLiteral;
       end else result:=nil;
@@ -145,7 +160,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
               if tableCaption=''
               then caption:=defaultCaption+' ('+intToStr(length(children))+')'
               else caption:=tableCaption;
-              tab.initWithLiteral(tableContent,caption,firstIsHeader,@self);
+              tab.initWithLiteral(tableContent,caption,FixedRows,fixedColumns,@self);
             end;
             dockNewForm(tab);
             tab.fillTable;
@@ -168,14 +183,14 @@ FUNCTION T_tableDisplayRequest.internalType: shortstring;
     result:='T_tableDisplayRequest';
   end;
 
-CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral;
-  CONST newCaption: string; CONST firstIsHeader_: boolean);
-begin
-  inherited create(mt_displayTable);
-  tableContent:=P_listLiteral(L^.rereferenced);
-  tableCaption:=newCaption;
-  firstIsHeader:=firstIsHeader_;
-end;
+CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral; CONST newCaption: string; CONST fixedRows_,fixedColumns_:longint);
+  begin
+    inherited create(mt_displayTable);
+    tableContent:=P_listLiteral(L^.rereferenced);
+    tableCaption:=newCaption;
+    FixedRows   :=fixedRows_;
+    fixedColumns:=fixedColumns_;
+  end;
 
 DESTRUCTOR T_tableDisplayRequest.destroy;
   begin
@@ -260,11 +275,15 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
 
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
+      tmp:longint;
   begin
     mi_transpose.checked:=not(mi_transpose.checked);
     newLiteral:=literal^.transpose(@emptyStringSingleton);
     disposeLiteral(literal);
     literal:=newLiteral;
+    tmp         :=fixedColumns;
+    fixedColumns:=FixedRows;
+    FixedRows   :=tmp;
     fillTable;
   end;
 
@@ -272,26 +291,36 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean;
   index: integer);
   VAR dummyLocation:T_tokenLocation;
       newLiteral:P_listLiteral;
+      headerRows:P_listLiteral;
       i:longint;
   begin
     dummyLocation.package:=nil;
     dummyLocation.column:=0;
     dummyLocation.line:=0;
-    if not(IsColumn) or (firstIsHeader and mi_transpose.checked) then exit;
+    if not(IsColumn) then exit;
     with sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
-
+      //Initialize the literal with fixed rows
       newLiteral:=newListLiteral(literal^.size);
-      for i:=literal^.size-1 downto 0 do
+      for i:=0 to FixedRows-1 do newLiteral^.append(literal^.value[i],true);
+      //Append the remaining rows in reversed order
+      for i:=literal^.size-1 downto FixedRows do
       newLiteral^.append(literal^.value[i],true);
       disposeLiteral(literal);
       literal:=newLiteral;
     end else begin
       byColumn:=index;
       ascending:=true;
+      headerRows:=literal^.head(FixedRows);
+      newLiteral:=literal^.tail(FixedRows);
+      disposeLiteral(literal);
 
-      literal^.sortBySubIndex(index,dummyLocation,nil);
+      newLiteral^.sortBySubIndex(index,dummyLocation,nil);
+      headerRows^.appendAll(newLiteral);
+      disposeLiteral(newLiteral);
+
+      literal:=headerRows;
     end;
     fillTable;
   end;
@@ -316,33 +345,18 @@ PROCEDURE TtableForm.dockChanged;
     else moveAllItems(tableMenu.items,PopupMenu1.items);
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
-  CONST newCaption: string; CONST firstIsHeader_: boolean;
-  CONST adapter_: P_tableAdapter);
-  VAR i:longint;
-      headerLiteral:P_listLiteral;
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_: P_tableAdapter);
   begin
     adapter:=adapter_;
     with sorted do begin
       ascending:=false;
       byColumn:=-1;
     end;
-    firstIsHeader:=firstIsHeader_;
-    mi_exportIncHeader.enabled:=firstIsHeader_;
-    mi_exportIncHeader.checked:=mi_exportIncHeader.checked and firstIsHeader_;
-    if firstIsHeader and (L^.size>0) and (L^.value[0]^.literalType in C_listTypes) then begin
-      headerLiteral:=P_listLiteral(L^.value[0]);
-      setLength(headerData,headerLiteral^.size);
-      for i:=0 to headerLiteral^.size-1 do case headerLiteral^.value[i]^.literalType of
-        lt_string: headerData[i]:=P_stringLiteral(headerLiteral^.value[i])^.value
-        else       headerData[i]:=                headerLiteral^.value[i]^.toString;
-      end;
-      literal:=P_listLiteral(L)^.tail;
-    end else begin
-      setLength(headerData,0);
-      literal:=P_listLiteral(L^.rereferenced);
-    end;
-
+    FixedRows:=fixedRows_;
+    fixedColumns:=fixedColumns_;
+    mi_exportIncHeader.enabled:=FixedRows>0;
+    mi_exportIncHeader.checked:=mi_exportIncHeader.checked and (FixedRows>0);
+    literal:=P_listLiteral(L^.rereferenced);
     caption:=newCaption;
   end;
 
@@ -354,14 +368,13 @@ PROCEDURE TtableForm.fillTable;
       rowLit:P_literal;
       cellLit:P_literal;
       iter:T_arrayOfLiteral;
-
-  FUNCTION getHeaderCell(CONST i:longint):string;
+      additionalHeaderRow:longint=0;
+  FUNCTION excelStyleColumnIndex(i:longint):string;
     begin
-      if (firstIsHeader) and (i>=0) and (i<length(headerData)) then result:=headerData[i] else result:='';
-      if not(mi_transpose.checked) and (sorted.byColumn=i) then begin
-        if sorted.ascending then result:=result+' v'
-                            else result:=result+' ^';
-      end;
+      if i<0 then exit('');
+      if i<26 then exit(chr(ord('A')+i));
+      i-=26;
+      result:=chr(ord('A')+(i div 26))+chr(ord('A')+(i mod 26));
     end;
 
   begin
@@ -404,31 +417,23 @@ PROCEDURE TtableForm.fillTable;
       end;
     end;
     StringGrid.clear;
-
-    if firstIsHeader and mi_transpose.checked then begin
-      StringGrid.RowCount:=dataRows+1;
-      StringGrid.colCount:=dataColumns+1;
-      StringGrid.FixedCols:=1;
-      StringGrid.FixedRows:=1;
-      for i:=0 to length(cellContents)-1 do
-      for j:=0 to length(cellContents[i])-1 do
-      StringGrid.Cells[j+1,i+1]:=cellContents[i,j];
-      for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=getHeaderCell(i-1);
-    end else begin
-      StringGrid.RowCount:=dataRows+1;
-      StringGrid.colCount:=dataColumns;
-      StringGrid.FixedCols:=0;
-      StringGrid.FixedRows:=1;
-      for i:=0 to length(cellContents)-1 do
-      for j:=0 to length(cellContents[i])-1 do
-      StringGrid.Cells[j,i+1]:=cellContents[i,j];
-      for i:=0 to StringGrid.colCount-1 do StringGrid.Cells[i,0]:=getHeaderCell(i);
-    end;
+    if FixedRows=0 then additionalHeaderRow:=1;
+    StringGrid.RowCount:=dataRows   +additionalHeaderRow;
+    StringGrid.colCount:=dataColumns;
+    StringGrid.FixedRows:=min(dataRows   ,FixedRows)+additionalHeaderRow;
+    StringGrid.FixedCols:=min(dataColumns,fixedColumns);
+    for i:=0 to length(cellContents)-1 do
+    for j:=0 to length(cellContents[i])-1 do
+    StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
+    if additionalHeaderRow=1 then for j:=0 to dataColumns-1 do StringGrid.Cells[j,0]:=excelStyleColumnIndex(j-fixedColumns);
     StringGrid.AutoSizeColumns;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#showTable(L:list,caption:string);//Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.',sfr_needs_gui);
+  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#'+
+    'showTable(L:list,caption:string);//Shows L in a table with given caption.#'+
+    'showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.#'+
+    'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns',sfr_needs_gui);
 
 end.
 
