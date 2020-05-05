@@ -13,7 +13,7 @@
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <XPManifest>
-        <DpiAware Value="True"/>
+        <DpiAware Value="True/PM"/>
         <TextName Value="schlegel.mnh.ide"/>
         <TextDesc Value="MNH5 ide"/>
       </XPManifest>
