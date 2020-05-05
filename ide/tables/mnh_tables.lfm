@@ -16,7 +16,7 @@ object tableForm: TtableForm
   OnShow = FormShow
   PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.8.0'
   object stringGrid: TStringGrid
     Left = 0
     Height = 175
