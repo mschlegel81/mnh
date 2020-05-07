@@ -168,7 +168,7 @@ igSrc/im_statisticoperations.pas              36.3kb 80235CCB
 igSrc/im_trianglesplit.pas                    34.0kb 656D9900
 igSrc/imageContexts.pas                       16.3kb A6BF98A2
 igSrc/imagegeneration.pas                     26.8kb FA54CC37
-igSrc/imagemanipulation.pas                    9.4kb C5F006D4
+igSrc/imagemanipulation.pas                    9.4kb 3087EEDE
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.4kb A3D827DE
