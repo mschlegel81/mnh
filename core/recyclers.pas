@@ -64,7 +64,7 @@ TYPE
       {$endif}
       PROCEDURE clearCache; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual; abstract;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;

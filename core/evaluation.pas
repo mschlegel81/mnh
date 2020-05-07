@@ -300,14 +300,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     VAR whileLocation:T_tokenLocation;
         returnValue:T_evaluationResult;
     PROCEDURE evaluateBody;
-      VAR toReduce,dummy:P_token;
+      VAR toReduce:T_tokenRange;
       begin
-        if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,recycler) then begin
-          if reduceExpression(toReduce,context,recycler)=rr_okWithReturn then begin
-            returnValue.literal:=P_literal(toReduce^.data)^.rereferenced;
+        if (bodyRule<>nil) and bodyRule^.matchesPatternAndReplaces(nil,whileLocation,toReduce,context,recycler) then begin
+          if reduceExpression(toReduce.first,context,recycler)=rr_okWithReturn then begin
+            returnValue.literal:=P_literal(toReduce.first^.data)^.rereferenced;
             returnValue.triggeredByReturn:=true;
           end;
-          recycler.cascadeDisposeToken(toReduce);
+          recycler.cascadeDisposeToken(toReduce.first);
         end;
       end;
 
@@ -423,7 +423,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         end else begin
           inlineRule:=first^.data;
           //failing "replaces" for inline rules will raise evaluation error.
-          if not(inlineRule^.replaces(parameterListLiteral,first^.location,replace.first,replace.last,context,recycler)) then exit;
+          if not(inlineRule^.matchesPatternAndReplaces(parameterListLiteral,first^.location,replace,context,recycler)) then exit;
         end;
       end else begin
         context.raiseError('Trying to apply a rule which is no rule!',errorLocation);

@@ -51,7 +51,7 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
       PROPERTY getSubrules:T_subruleArray read subrules;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       {$ifdef fullVersion}
@@ -78,7 +78,7 @@ TYPE
       PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION innerRuleType:T_ruleType; virtual;
@@ -106,7 +106,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType=rt_synchronized);
       DESTRUCTOR destroy; virtual;
       PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
   end;
 
@@ -119,7 +119,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE clearCache; virtual;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
   end;
 
   P_typeCheckRule=^T_typeCheckRule;
@@ -131,7 +131,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST def:P_typedef; CONST relatedCheckRule:P_typeCheckRule);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION getRootId:T_idString; virtual;
@@ -145,7 +145,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context); virtual;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
       FUNCTION getRootId:T_idString; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
@@ -185,7 +185,7 @@ TYPE
       {Part of T_abstractRule, but should not be called an throws exception}
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
       {Part of T_abstractRule, but should not be called an throws exception}
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
   end;
 
   P_datastore=^T_datastore;
@@ -262,7 +262,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_conte
     else if tok^.tokType=tt_intrinsicRule then result:=getIntrinsicRuleAsExpression(                   tok^.data    )
     else begin
       result:=nil;
-      raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');
+      assert(false);
     end;
   end;
 
@@ -297,13 +297,9 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
     if containsKey(id,earlierEntry) then begin
       if (entry       .entryType = tt_userRule) and
          (earlierEntry.entryType = tt_userRule) then begin
-       {$ifdef debugMode}
-       if P_rule(entry.value)^.getRuleType=rt_delegate then raise Exception.create('This should not happen; entry must not be a delegate at this point');
-       {$endif}
+       assert(P_rule(entry.value)^.getRuleType<>rt_delegate,'This should not happen; entry must not be a delegate at this point');
        if P_rule(earlierEntry.value)^.getRuleType=rt_delegate then begin
-         {$ifdef debugMode}
-         if earlierEntry.isImported then raise Exception.create('This should not happen; earlierEntry must not be imported at this point');
-         {$endif}
+         assert(not(earlierEntry.isImported),'This should not happen; earlierEntry must not be imported at this point');
        end else begin
          earlierEntry.value:=wrapRuleInDelegator(P_ruleWithSubrules(earlierEntry.value));
          earlierEntry.isImported:=false;
@@ -539,9 +535,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
           rt_synchronized,rt_synchronized_curry: new(P_protectedRuleWithSubrules(rule),create(ruleId,ruleDeclarationStart,ruleType));
           rt_normal      ,rt_normal_curry,
           rt_customOperator                    : new(P_ruleWithSubrules         (rule),create(ruleId,ruleDeclarationStart,ruleType));
-          {$ifdef debugMode}
-          else raise Exception.create('Unexpected rule type '+C_ruleTypeText[ruleType]);
-          {$endif}
+          else assert(false,'Unexpected rule type '+C_ruleTypeText[ruleType]);
         end;
       end;
       assert(rule<>nil);
@@ -821,9 +815,8 @@ PROCEDURE T_delegatorRule.addRule(CONST ruleOrDelegateToAdd:P_abstractRule);
     if ruleToAdd=nil then exit;
 
     if ruleToAdd^.getLocation.package=declarationStart.package then begin
-      if localRule=nil
-      then localRule:=ruleToAdd
-      else raise Exception.create('T_delegatorRule.mergeImported : duplicate declaration of local rule; id='+getId);
+      assert(localRule=nil);
+      localRule:=ruleToAdd;
       declarationStart:=localRule^.declarationStart;
       exit;
     end;
@@ -893,7 +886,7 @@ FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p
     end;
     inc(P_context(context)^.callDepth);
     parList:=P_listLiteral(newListLiteral(2)^.append(p1,true)^.append(p2,true));
-    if canBeApplied(callLocation,parList,rep,context,recycler,false)
+    if canBeApplied(callLocation,parList,rep,context,recycler)
     then result:=P_context(context)^.reduceToLiteral(rep.first,recycler).literal
     else result:=nil;
     dec(P_context(context)^.callDepth);
@@ -908,7 +901,7 @@ FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parL
       exit(nil);
     end;
     inc(P_context(context)^.callDepth);
-    if canBeApplied(callLocation,parList,rep,context,recycler,false)
+    if canBeApplied(callLocation,parList,rep,context,recycler)
     then result:=P_context(context)^.reduceToLiteral(rep.first,recycler).literal
     else result:=nil;
     dec(P_context(context)^.callDepth);
@@ -1214,12 +1207,12 @@ FUNCTION T_ruleWithSubrules.getInlineValue: P_literal;
                           else result:=nil;
   end;
 
-FUNCTION T_delegatorRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_delegatorRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR r:P_ruleWithSubrules;
       tempLiteral:P_literal;
   begin
-    if (localRule<>nil) and localRule^.canBeApplied(callLocation,param,output,context,recycler,true) then exit(true);
-    for r in imported do if         r^.canBeApplied(callLocation,param,output,context,recycler,true) then exit(true);
+    if (localRule<>nil) and localRule^.canBeApplied(callLocation,param,output,context,recycler) then exit(true);
+    for r in imported do if         r^.canBeApplied(callLocation,param,output,context,recycler) then exit(true);
     if hiddenRule<>nil then begin
       inc(P_context(context)^.callDepth);
       tempLiteral:=hiddenRule(param,callLocation,P_context(context)^,recycler);
@@ -1228,24 +1221,24 @@ FUNCTION T_delegatorRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST 
         output.first:=recycler.newToken(callLocation,'',tt_literal,tempLiteral);
         output.last :=output.first;
         result:=true;
-      end;
+      end else result:=false;
     end else result:=false;
   end;
 
-FUNCTION T_ruleWithSubrules.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_ruleWithSubrules.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR sub:P_subruleExpression;
   begin
     result:=false;
-    for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.replaces(param,callLocation,output.first,output.last,P_context(context)^,recycler) then exit(true);
+    for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.matchesPatternAndReplaces(param,callLocation,output,P_context(context)^,recycler) then exit(true);
     if (getRuleType in [rt_normal_curry,rt_memoized_curry,rt_synchronized_curry]) and canCurry(callLocation,param,output,P_context(context)^,recycler) then exit(true);
   end;
 
-FUNCTION T_protectedRuleWithSubrules.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_protectedRuleWithSubrules.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR p:pointer;
   begin
     result:=false;
     if P_context(context)^.callDepth>=STACK_DEPTH_LIMIT then P_context(context)^.raiseError('Stack depth limit exceeded calling '+getId+'.',getLocation,mt_el4_systemError)
-    else if inherited canBeApplied(callLocation,param,output,context,recycler,calledFromDelegator) then begin
+    else if inherited canBeApplied(callLocation,param,output,context,recycler) then begin
       system.enterCriticalSection(rule_cs);
       for p in usedGlobalVariables do enterCriticalSection(P_variable(p)^.namedValue.varCs);
       try
@@ -1262,7 +1255,7 @@ FUNCTION T_protectedRuleWithSubrules.canBeApplied(CONST callLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION T_memoizedRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_memoizedRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
 {$MACRO ON}
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
@@ -1275,7 +1268,7 @@ exit}
     VAR sub:P_subruleExpression;
     begin
       result:=false;
-      for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.replaces(param,callLocation,output.first,output.last,P_context(context)^,recycler) then exit(true);
+      for sub in subrules do if ((sub^.isPublic) or (sub^.getLocation.package=callLocation.package)) and sub^.matchesPatternAndReplaces(param,callLocation,output,P_context(context)^,recycler) then exit(true);
       if (getRuleType in [rt_normal_curry,rt_memoized_curry,rt_synchronized_curry]) and canCurry(callLocation,param,output,P_context(context)^,recycler) then exit(true);
     end;
 
@@ -1323,7 +1316,7 @@ exit}
     CLEAN_EXIT(false);
   end;
 
-FUNCTION T_typeCastRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_typeCastRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR cast:P_typableLiteral;
       raw :P_literal;
   begin
@@ -1352,7 +1345,7 @@ FUNCTION T_typeCastRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST p
     end;
   end;
 
-FUNCTION T_typeCheckRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_typeCheckRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   VAR boolResult:boolean=false;
   begin
     boolResult:=(param<>nil)
@@ -1398,7 +1391,7 @@ FUNCTION T_variable.evaluateToLiteral(CONST callLocation: T_tokenLocation; CONST
     result:=nil;
   end;
 
-FUNCTION T_variable.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean;
+FUNCTION T_variable.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
   begin
     raise Exception.create('T_variable.replaces must not be called');
     result:=false;

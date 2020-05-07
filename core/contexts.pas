@@ -234,7 +234,7 @@ TYPE
   end;
 
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; VAR recycler:T_recycler):T_reduceResult;
-    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
 IMPLEMENTATION
