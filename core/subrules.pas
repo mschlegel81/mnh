@@ -110,7 +110,7 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
 
       //Evaluation calls:
-      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
+      FUNCTION matchesPatternAndReplaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
       FUNCTION evaluateFormat(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST parameters:P_listLiteral):P_literal;
 
@@ -458,7 +458,7 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST ot
          or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_context; VAR recycler:T_recycler): boolean;
+FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT output:T_tokenRange; VAR context: T_context; VAR recycler:T_recycler): boolean;
   PROCEDURE updateBody;
     VAR i:longint;
         level:longint=1;
@@ -491,8 +491,8 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       if tco_stackTrace in context.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
       if (indexOfSave>=0) and currentlyEvaluating then begin
-        firstRep:=nil;
-        lastRep:=nil;
+        output.first:=nil;
+        output.last:=nil;
         leaveCriticalSection(subruleCallCs);
         context.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
       end else begin
@@ -501,8 +501,8 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
 
           if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
           blocking:=typ in C_subruleExpressionTypes;
-          firstRep:=recycler.newToken(getLocation,'',beginToken[blocking]);
-          lastRep:=firstRep;
+          output.first:=recycler.newToken(getLocation,'',beginToken[blocking]);
+          output.last:=output.first;
 
           if (preparedBody[                     0].token.tokType=tt_beginBlock) and
              (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
@@ -548,9 +548,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               end else begin
                 L:=param^.value[parIdx];
               end;
-              lastRep^.next:=recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
-            end else lastRep^.next:=recycler.newToken(token);
-            lastRep:=lastRep^.next;
+              output.last^.next:=recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
+            end else output.last^.next:=recycler.newToken(token);
+            output.last:=output.last^.next;
           end;
 
           {$ifdef fullVersion}
@@ -564,12 +564,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
             previousValueScope:=context.valueScope;
             context.valueScope:=saveValueStore;
 
-            firstRep:=recycler.disposeToken(firstRep);
+            output.first:=recycler.disposeToken(output.first);
 
-            context.reduceExpression(firstRep,recycler);
-            if firstRep=nil
-            then lastRep:=nil
-            else lastRep:=firstRep^.last;
+            context.reduceExpression(output.first,recycler);
+            if output.first=nil
+            then output.last:=nil
+            else output.last:=output.first^.last;
             context.valueScope:=previousValueScope;
             if firstCallOfResumable then begin
               if context.messages^.continueEvaluation then begin
@@ -579,13 +579,13 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               end;
             end;
             {$ifdef fullVersion}
-            context.callStackPop(firstRep);
+            context.callStackPop(output.first);
             {$endif}
           end else begin
-            lastRep^.next:=recycler.newToken(getLocation,'',tt_semicolon);
-            lastRep:=lastRep^.next;
-            lastRep^.next:=recycler.newToken(getLocation,'',endToken[blocking]);
-            lastRep:=lastRep^.next;
+            output.last^.next:=recycler.newToken(getLocation,'',tt_semicolon);
+            output.last:=output.last^.next;
+            output.last^.next:=recycler.newToken(getLocation,'',endToken[blocking]);
+            output.last:=output.last^.next;
           end;
           currentlyEvaluating:=false;
         finally
@@ -595,11 +595,11 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
     end;
 
   begin
-    lastRep:=nil;
+    output.last:=nil;
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
       prepareResult;
-      result:=lastRep<>nil;
+      result:=output.last<>nil;
     end else begin
       result:=false;
       case typ of
@@ -614,9 +614,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
     end;
   end;
 
-FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_context; VAR recycler:T_recycler):boolean;
+FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
   begin
-    result:=P_subruleExpression(subrulePointer)^.replaces(param,callLocation,firstRep,lastRep,context,recycler);
+    result:=P_subruleExpression(subrulePointer)^.matchesPatternAndReplaces(param,callLocation,output,context,recycler);
   end;
 
 CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
@@ -829,7 +829,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
     pattern.create;
     if intrinsicRuleId<>'' then begin
       setLength(preparedBody,1);
-      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
@@ -975,11 +975,11 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
-  VAR toReduce,dummy:P_token;
+  VAR toReduce:T_tokenRange;
   begin
-    if replaces(parameters,location,toReduce,dummy,P_context(context)^,P_recycler(recycler)^)
+    if matchesPatternAndReplaces(parameters,location,toReduce,P_context(context)^,P_recycler(recycler)^)
     then begin
-      result:=P_context(context)^.reduceToLiteral(toReduce,P_recycler(recycler)^);
+      result:=P_context(context)^.reduceToLiteral(toReduce.first,P_recycler(recycler)^);
     end else begin
       result.literal:=nil;
       result.triggeredByReturn:=false;
@@ -987,8 +987,9 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
   end;
 
 FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST parameters:P_listLiteral):P_literal;
-  VAR toReduce,dummy,t:P_token;
-      k:longint;
+  VAR toReduce: T_tokenRange;
+      t: P_token;
+      k: longint;
   begin
     if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then begin
       enterCriticalSection(subruleCallCs);
@@ -1000,16 +1001,16 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR c
         leaveCriticalSection(subruleCallCs);
       end;
     end;
-    if replaces(parameters,location,toReduce,dummy,context,recycler)
+    if matchesPatternAndReplaces(parameters,location,toReduce,context,recycler)
     then begin
-      if (toReduce^.tokType=tt_beginExpression) and (dummy^.tokType=tt_endExpression) then begin
-        toReduce:=recycler.disposeToken(toReduce);
-        t:=toReduce;
-        while t^.next^.next<>dummy do t:=t^.next;
+      if (toReduce.first^.tokType=tt_beginExpression) and (toReduce.last^.tokType=tt_endExpression) then begin
+        toReduce.first:=recycler.disposeToken(toReduce.first);
+        t:=toReduce.first;
+        while t^.next^.next<>toReduce.last do t:=t^.next;
         t^.next:=recycler.disposeToken(t^.next);
         t^.next:=recycler.disposeToken(t^.next);
       end;
-      result:=context.reduceToLiteral(toReduce,recycler).literal;
+      result:=context.reduceToLiteral(toReduce.first,recycler).literal;
     end else result:=nil;
   end;
 

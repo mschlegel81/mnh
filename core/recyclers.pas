@@ -64,7 +64,7 @@ TYPE
       {$endif}
       PROCEDURE clearCache; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION replaces(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST context:P_abstractContext; VAR recycler:T_recycler; CONST calledFromDelegator:boolean=false):boolean; virtual; abstract;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
@@ -261,17 +261,17 @@ FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;
 PROCEDURE T_abstractRule.clearCache; begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
   VAR parList:P_listLiteral;
-      firstRep,lastRep:P_token;
+      rep:T_tokenRange;
   begin
     new(parList,create(1));
     parList^.append(singleParameter,true);
-    if replaces(callLocation,parList,firstRep,lastRep,context,recycler)
+    if canBeApplied(callLocation,parList,rep,context,recycler)
     then begin
-      result:=(firstRep<>     nil          ) and
-              (firstRep^.next=nil          ) and
-              (firstRep^.tokType=tt_literal) and
-              (firstRep^.data=@boolLit[true]);
-      recycler.cascadeDisposeToken(firstRep);
+      result:=(rep.first<>     nil          ) and
+              (rep.first^.next=nil          ) and
+              (rep.first^.tokType=tt_literal) and
+              (rep.first^.data=@boolLit[true]);
+      recycler.cascadeDisposeToken(rep.first);
     end else result:=false;
     disposeLiteral(parList);
   end;

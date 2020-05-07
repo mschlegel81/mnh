@@ -17,6 +17,9 @@ TYPE
   {$endif}
 
   P_token=^T_token;
+  T_tokenRange=record
+    first,last:P_token;
+  end;
   PP_token=^P_token;
 
   T_token=object
@@ -44,6 +47,7 @@ TYPE
     {$endif}
     PROCEDURE setSingleLocationForExpression(CONST loc:T_tokenLocation);
     PROCEDURE injectAfter(CONST newToken:P_token);
+    PROCEDURE injectAfter(CONST range:T_tokenRange);
 
     FUNCTION getTypeCheck:T_typeCheck;
     PROCEDURE setTypeCheck(CONST check:T_typeCheck);
@@ -395,6 +399,13 @@ PROCEDURE T_token.injectAfter(CONST newToken:P_token);
   begin
     newToken^.next:=next;
     next:=newToken;
+  end;
+
+PROCEDURE T_token.injectAfter(CONST range:T_tokenRange);
+  begin
+    assert(range.first^.last=range.last);
+    range.last^.next:=next;
+    next:=range.first;
   end;
 
 FUNCTION T_token.getTypeCheck: T_typeCheck;

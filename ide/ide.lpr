@@ -21,6 +21,7 @@ USES
 {$R *.res}
 
 begin
+  Application.Scaled:=true;
   Application.title:='MNH5 - GUI';
   RequireDerivedFormResource := true;
   Application.initialize;

@@ -986,8 +986,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
-        t:P_token=nil;
-        dummy:P_token=nil;
+        t:T_tokenRange;
         i:longint;
         {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin
@@ -1004,8 +1003,8 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
         {$endif}
         if profile then globals.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext,recycler)
-        then globals.primaryContext.reduceExpression(t,recycler)
+        if mainRule^.canBeApplied(packageTokenLocation(@self),parametersForMain,t,@globals.primaryContext,recycler)
+        then globals.primaryContext.reduceExpression(t.first,recycler)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
           {$ifdef fullVersion}displayedHelp:=true;{$endif}
@@ -1023,11 +1022,11 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
 
         {$ifdef fullVersion}
         //error handling if main returns more than one token:------------------
-        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and (FlagGUINeeded in globals.primaryContext.messages^.getFlags)
+        if not(displayedHelp) and ((t.first=nil) or (t.first^.next<>nil)) and (FlagGUINeeded in globals.primaryContext.messages^.getFlags)
           then globals.primaryContext.messages^.postTextMessage(mt_el1_note,packageTokenLocation(@self),'Evaluation requires GUI-startup. Re-evaluating.');
         //------------------:error handling if main returns more than one token
         {$endif}
-        recycler.cascadeDisposeToken(t);
+        recycler.cascadeDisposeToken(t.first);
         disposeLiteral(parametersForMain);
         parametersForMain:=nil;
       end;
@@ -1179,15 +1178,15 @@ PROCEDURE T_package.finalize(VAR context:T_context; VAR recycler:T_recycler);
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string;
   VAR toStringRule:T_ruleMapEntry;
-      toReduce,dummy:P_token;
+      toReduce:T_tokenRange;
       parameters:P_listLiteral;
       stringOut:P_literal=nil;
   begin
     if ruleMap.containsKey('toString',toStringRule) and (toStringRule.entryType=tt_userRule)
     then begin
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
-      if P_rule(toStringRule.value)^.replaces(location,parameters,toReduce,dummy,context,recycler)
-      then stringOut:=P_context(context)^.reduceToLiteral(toReduce,recycler).literal;
+      if P_rule(toStringRule.value)^.canBeApplied(location,parameters,toReduce,context,recycler)
+      then stringOut:=P_context(context)^.reduceToLiteral(toReduce.first,recycler).literal;
       disposeLiteral(parameters);
     end;
 
@@ -1372,7 +1371,7 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
       token.data   :=entry.value;
       exit;
     end;
-    if intrinsicRuleMap.containsKey(token.txt,intrinsicFuncPtr) then begin
+    if builtinRuleMap.containsKey(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;

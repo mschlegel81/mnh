@@ -44,7 +44,7 @@ PROCEDURE initIntrinsicRuleList;
   begin
     if intrinsicRulesForCompletion_ready then exit;
     intrinsicRulesForCompletion.create;
-    for id in funcs.intrinsicRuleMap.keySet do begin
+    for id in funcs.builtinRuleMap.keySet do begin
       if pos(ID_QUALIFY_CHARACTER,id)<=0 then begin
         intrinsicRulesForCompletion.put(id);
         intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+id);

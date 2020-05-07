@@ -31,7 +31,6 @@ shortenRational(r:IntList)->begin
      : x).toRational;
 end;
 
-@Override
 toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
 //*Converts continued fraction f to a real number
 private toReal(f:RegularContinuedFraction)->begin

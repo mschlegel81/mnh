@@ -202,10 +202,18 @@ TYPE
 
 PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 USES sysutils,strutils,math;
+FUNCTION isOperatorName(CONST id:T_idString):boolean;
+  VAR s:string;
+  begin
+    for s in operatorName do if id=s then exit(true);
+    result:=false;
+  end;
+
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
@@ -612,7 +620,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       tt_userRule, tt_globalVariable: begin
         result.infoText+=C_lineBreakChar
                         +ansiReplaceStr(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
-        if intrinsicRuleMap.containsKey(tokenText) then
+        if builtinRuleMap.containsKey(tokenText) then
         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_customType, tt_customTypeCheck: begin
@@ -1248,7 +1256,7 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
       ruleId:T_idString;
   begin
     ruleId   :=token.txt;
-    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+    if builtinRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
