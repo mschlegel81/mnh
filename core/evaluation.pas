@@ -342,7 +342,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     end;
 
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
-    VAR firstReplace,lastReplace:P_token;
+    VAR replace:T_tokenRange;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_inlineExpression;
@@ -354,7 +354,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         {$ifdef useTryCatchBlocks}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(first^.location,parameterListLiteral,firstReplace,lastReplace,@context,recycler)) then begin
+          if not(P_rule(first^.data)^.canBeApplied(first^.location,parameterListLiteral,replace,@context,recycler)) then begin
             context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
@@ -368,8 +368,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral);
-        firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
-        lastReplace:=firstReplace;
+        replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
+        replace.last:=replace.first;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
            (parameterListLiteral^.value[0]^.literalType=lt_expression) and
@@ -377,8 +377,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(1))
         then begin
           newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
-          firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
-          lastReplace:=firstReplace;
+          replace.first:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
+          replace.last:=replace.first;
         end else begin
           context.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
           exit;
@@ -404,8 +404,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         end;
         {$endif}
         if newLiteral<>nil then begin
-          firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
-          lastReplace:=firstReplace;
+          replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
+          replace.last:=replace.first;
         end else if not(context.messages^.continueEvaluation) then exit else begin
           context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
           exit;
@@ -414,8 +414,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
           newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,@recycler,parameterListLiteral).literal;
           if newLiteral<>nil then begin
-            firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
-            lastReplace:=firstReplace;
+            replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
+            replace.last:=replace.first;
           end else if not(context.messages^.continueEvaluation) then exit else begin
             context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
             exit;
@@ -423,7 +423,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         end else begin
           inlineRule:=first^.data;
           //failing "replaces" for inline rules will raise evaluation error.
-          if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,recycler)) then exit;
+          if not(inlineRule^.replaces(parameterListLiteral,first^.location,replace.first,replace.last,context,recycler)) then exit;
         end;
       end else begin
         context.raiseError('Trying to apply a rule which is no rule!',errorLocation);
@@ -437,8 +437,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
       recycler.disposeToken(first);
       if parameterListToken<>nil then recycler.disposeToken(parameterListToken);
-      first:=firstReplace;
-      lastReplace^.next:=firstTokenAfterCall;
+      first:=replace.first;
+      replace.last^.next:=firstTokenAfterCall;
       didSubstitution:=true;
     end;
 

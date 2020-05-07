@@ -829,7 +829,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
     pattern.create;
     if intrinsicRuleId<>'' then begin
       setLength(preparedBody,1);
-      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);

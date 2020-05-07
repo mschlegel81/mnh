@@ -47,11 +47,11 @@ TYPE
     FUNCTION qualifiedId:string;
   end;
   T_builtinFunctionMetaDatas=array of T_builtinFunctionMetaData;
-  T_intrinsicRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
+  T_builtinRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
 
 VAR
   intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
-  intrinsicRuleMap:T_intrinsicRuleMap;
+  builtinRuleMap  :T_builtinRuleMap;
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   failFunction    :P_intFuncCallback;
   print_cs        :system.TRTLCriticalSection;
@@ -83,8 +83,8 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
   begin
     result:=ptr;
     if not(fullNameOnly) then
-    intrinsicRuleMap.put(                                                  name,result);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
+    builtinRuleMap.put(                                                  name,result);
+    builtinRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     meta.arityKind:=aritiyKind;
     meta.namespace:=namespace;
     meta.unqualifiedId:=name;
@@ -100,15 +100,15 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
       previous:P_intFuncCallback;
   begin
     result:=ptr;
-    if intrinsicRuleMap.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,previous) then begin
+    if builtinRuleMap.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,previous) then begin
       if builtinMetaMap.containsKey(previous)
       then meta:=builtinMetaMap.get(previous)
       else raise Exception.create('Error during cloning meta.');
       builtinMetaMap.put(ptr,meta);
     end;
     if not(fullNameOnly) then
-    intrinsicRuleMap.put(                                                  name,result);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
+    builtinRuleMap.put(                                                  name,result);
+    builtinRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
   end;
 
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
@@ -183,7 +183,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       exit(P_expressionLiteral(arg0)^.applyBuiltinFunction(functionId,tokenLocation,@context,@recycler));
     for i:=0 to params^.size-1 do checkLength(params^.value[i],i);
     if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
-    if not(intrinsicRuleMap.containsKey(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
+    if not(builtinRuleMap.containsKey(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
     if anyList then begin
       result:=newListLiteral(consensusLength);
       for i:=0 to consensusLength-1 do if allOkay then begin
@@ -330,8 +330,8 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR id:string;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=newSetLiteral(intrinsicRuleMap.size);
-    for id in intrinsicRuleMap.keySet do if isQualified(id) then setResult^.appendString(id);
+    result:=newSetLiteral(builtinRuleMap.size);
+    for id in builtinRuleMap.keySet do if isQualified(id) then setResult^.appendString(id);
   end;
 
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
@@ -348,7 +348,7 @@ PROCEDURE disposeIdentifiedInternalFunction(VAR p:P_expressionLiteral);
   end;
 
 INITIALIZATION
-  intrinsicRuleMap.create;
+  builtinRuleMap.create;
   builtinMetaMap.create;
   builtinExpressionMap.create(@disposeIdentifiedInternalFunction);
 
@@ -365,7 +365,7 @@ INITIALIZATION
 FINALIZATION
   builtinExpressionMap.destroy;
   builtinMetaMap.destroy;
-  intrinsicRuleMap.destroy;
+  builtinRuleMap.destroy;
   system.doneCriticalSection(print_cs);
 
 end.
