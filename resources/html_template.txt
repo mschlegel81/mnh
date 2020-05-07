@@ -181,8 +181,10 @@ A comment is any string starting with <code>//</code> and ending with the follow
 A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment.
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
-<code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
-
+<code>  mnh -h </code><i>packageName</i><code>.mnh</code>
+<br>
+<a href="formatStrings.html#extrapolationFmt">String extrapolation</a> is applied automatically on doc-comments.
+<br>
 <h4><br><a name="attributes">Attributes</a></h4>
 An attribute is a comment starting with <code>@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
 Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
@@ -210,7 +212,8 @@ Some attributes currently used are:
 </li>
  <li><code>@SuppressUnusedWarning         </code>: suppresses warnings about unused rules</li>
  <li><code>@SuppressUnusedParameterWarning</code>: suppresses warnings about unused parameters</li>
- </ul>
+ </ul><br>
+<a href="formatStrings.html#extrapolationFmt">String extrapolation</a> is applied automatically on attributes.
 </div>
 <!--commonFoot-->
 <!--file operators.html-->
@@ -464,11 +467,11 @@ For scalars the behavior is mostly the same as the scalar equals', the exception
    in> Nan= Nan;
   out> false
    in> Nan==Nan;
-  out> false
+  out> true
    in> 3= 3.0;
   out> true
    in> 3==3.0;
-  out> true
+  out> false
 <!--end-->
 </code>
 Additionally <code>==</code> will not result in an error, even for incomparable types:<code>
@@ -794,8 +797,7 @@ used as a fallback.
     <li><h4><a href="#variadic">Variadic functions</a></h4></li>
     <li><h4><a href="#beginEnd">Begin-End-Blocks</a></h4></li>
     <li><h4><a href="#beginSaveEnd">Begin-Save-End-Blocks</a></h4></li>
-    <li><h4><a href="#funcOverride">Overloading builtin functions</a></h4></li>	
-	<li><h4><a href="#modifiers">Modifiers</a></h4><ul>
+    <li><h4><a href="#modifiers">Modifiers</a></h4><ul>
       <li><h5><a href="#privateMod">private</a></h5></li>
       <li><h5><a href="#memoizedMod">memoized</a></h5></li>
       <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
@@ -840,15 +842,18 @@ If <code>someFunction</code> returns an expression, consider the following:<code
 <!--end-->
 </code>
 </li><li><b>Visibility</b><br>
-Visibility is handled as in Pascal, i.e. a local function definition hides all imported functions with the same name. <br>
+Visibility is handled as in Pascal, i.e. a local function definition takes precedence over all imported functions with the same name, including builtin functions. <br>
 If a function of the same name is defined in more than one used package, the definition in the last imported package hides previous definitions.<br>
 To access a "hidden" function, you can access it by fully qualifying it via <code><i>packageName</i>.<i>functionName</i></code>.<br>
-Example: Define a function returning the "square of a string", using the builtin function as a fallback:<code>
-<!--mnh-->
-  sqr(s:String):=string(math.sqr(softCast(s)));
-  sqr(x)->math.sqr(x);
-<!--end-->
-</code>
+If an overloaded function is accessed by its unqualified name the rules are checked in the following order and the first function matching the parameter list is applied:
+<ul>
+  <li> Locally declared function (if any)</li>
+  <li> Function declared in the last imported package</li>
+  <li> ...
+  <li> Function declared in the second imported package</li>
+  <li> Function declared in the first imported package</li>
+  <li> Builtin function</li>
+</ul>
 </li>
 <li><b>Pseudo-Object-Notation</b><br>Even though MNH is not object oriented it supports <i>(Pseudo-)Object-Notation</i>. This means that for some function <code>f</code> the
 following statements are equivalent: <code>
@@ -885,6 +890,8 @@ Patterns may consist of any number of elements (actually, there probably is a li
 <!--end-->
 </code>
 Please have a look at <a href="#restrictions">Parameter restrictions</a> for more sophisticated patterns.
+<br>
+If a function is preceded by <a href="packages.html#attributes">attributes</a> or <a href="packages.html#comments">doc-comments</a> these will be associated with the function.
 
 <h3><br><a name="assignments">Assignments</a></h3>
 An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>ruleBody</i>.<br>
@@ -1056,15 +1063,6 @@ And the helper functions:<code>
 <!--end-->
 </code>
 
-<h3><br><a name="funcOverride">Overloading builtin functions</a></h3>
-You can override builtin functions by declaring a function of the same name. If a function is overridden, the evaluation order is as follows:
-<ul>
-<li>Try to apply the user defined function as is</li>
-<li>Try to apply the builtin function</li>
-<li>Try to curry/uncurry the user defined function (if enabled)</li>
-</ul>
-If the overridden function is a wrapper for an operator, the operator is overridden (see <a href="operators.html#opOverloading">Operator overloading</a>).
-
 <h3><br><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
 The <i>private modifier</i> can be used to hide a subrule from importing packages.
@@ -1173,7 +1171,7 @@ The previous example would also work if any (or both) types were defines as <cod
 <h4><br><a name="curryMod">curry</a></h4>
 The <i>curry</i> modifier can be used to enable currying on rule level. <br>
 Calling a user defined function with a parameter list of the wrong length leads to Currying or Uncurrying.
-This is only applies if the parameter list is not empty and for rules which <ul><li>are user defined</li><li>have no optional parameters</li><li>have only one subrule or subrules of the same arity</li></ul>
+This is only applies if the parameter list is not empty and for rules which <ul><li>are user defined</li><li>have no optional parameters</li><li>have only one subrule</li></ul>
 Examples:<code>
 <!--mnh-->
        //Unary function returning an unary expression: 
@@ -1687,6 +1685,7 @@ The <code>nameOf</code> construct can be used for returning the name of a variab
   <li><h3><a href="formatStrings.html">Format Strings</a></h3></li>
 <ul>
 <li><h4><a href="#generalFmt">General formatting</a></h4></li>
+<li><h4><a href="#extrapolationFmt">String extrapolation</a></h4></li>
 <li><h4><a href="#timeFmt">Time formatting</a></h4></li>
 </ul>
   <li><h3><a href="packages.html">User packages</a></h3></li>
@@ -1743,6 +1742,16 @@ Using list parameters as arguments to be formatted results in multi-line-printin
 </code>
 (Output abridged... obviously.)
 <br>
+<h3><br><a name="extrapolationFmt">String extrapolation</a></h3>
+In MNH string extrapolation is formatting without parameters.
+A simple example would be:<code>
+<!--mnh-->
+   in> printf('pi={pi}');
+<!--end-->
+   pi=3.141592653589793
+</code>
+The above rules for format strings still apply, so special care must be taken when percent-signs are used.<br>
+String extrapolation is also applied on doc-comments and it can be mixed with the general formatting rules.<br>
 <h3><br><a name="timeFmt">Time formatting</a></h3>
 There are additional routines for formatting and parsing dates and times. Some of the available placeholders can be used in
 <code><span class="builtin">formatTime</span></code> only, others can be used both in <code><span class="builtin">formatTime</span></code> and in <code><span class="builtin">parseTime</span></code>.
