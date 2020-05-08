@@ -642,7 +642,7 @@
         <IsPartOfProject Value="True"/>
       </Unit92>
       <Unit93>
-        <Filename Value="imig/mnh_imig.pas"/>
+        <Filename Value="../core/funcs_xml.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit93>
     </Units>

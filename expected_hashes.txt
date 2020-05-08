@@ -30,7 +30,7 @@ core/aggregators.pas                          18.8kb C78F75FA
 core/basicTypes.pas                            6.3kb 06913D0A
 core/builtinGenerators.pas                    44.0kb 2D3E8316
 core/caches.pas                                5.4kb 6032CB6A
-core/cmdLineInterpretation.pas                 4.7kb 19CAF436
+core/cmdLineInterpretation.pas                 4.7kb 4AA4908F
 core/commandlineparameters.pas                21.6kb 64541EA2
 core/consoleAsk.pas                            4.5kb F007942F
 core/contexts.pas                             37.5kb 04E2144D
@@ -51,6 +51,7 @@ core/funcs_server.pas                         23.0kb CA4DFADE
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
+core/funcs_xml.pas                             3.8kb 8DD60856
 core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              164.6kb E45F23D3
 core/mnh_constants.pas                        64.1kb 9010E2CA
@@ -176,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           24.4kb 47BC66D3
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3384 kB
+          3388 kB
