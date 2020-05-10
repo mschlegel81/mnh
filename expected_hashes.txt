@@ -159,22 +159,22 @@ igSrc/ig_ifs2.pas                             18.1kb E37814B8
 igSrc/ig_ifsMoebius.pas                       17.7kb 735278AA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
-igSrc/ig_tesselation.pas                      25.5kb 2F3E1E0A
+igSrc/ig_tesselation.pas                      25.5kb D17F5918
 igSrc/im_colors.pas                           11.2kb E779F194
 igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          9.3kb 3413364E
 igSrc/im_misc.pas                             14.1kb 6F5C5946
 igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
-igSrc/im_trianglesplit.pas                    34.0kb 656D9900
-igSrc/imageContexts.pas                       16.3kb A6BF98A2
+igSrc/im_trianglesplit.pas                    34.0kb 4A1E1AA6
+igSrc/imageContexts.pas                       16.4kb 49BF9766
 igSrc/imagegeneration.pas                     26.8kb FA54CC37
 igSrc/imagemanipulation.pas                    9.4kb 3087EEDE
 igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.4kb A3D827DE
 igSrc/mypics.pas                              54.4kb 874BEB97
-igSrc/workflows.pas                           24.4kb 47BC66D3
+igSrc/workflows.pas                           24.8kb 460FB4B4
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3388 kB
+          3389 kB
