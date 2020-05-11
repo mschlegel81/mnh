@@ -46,7 +46,7 @@ core/funcs_list.pas                           27.8kb 90D632CF
 core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             8.4kb 4FDCA6F2
 core/funcs_package.inc                        16.2kb 3131F08B
-core/funcs_regex.pas                          11.9kb 0A6AE240
+core/funcs_regex.pas                          11.9kb 05D19260
 core/funcs_server.pas                         23.0kb CA4DFADE
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
@@ -159,14 +159,14 @@ igSrc/ig_ifs2.pas                             18.1kb E37814B8
 igSrc/ig_ifsMoebius.pas                       17.7kb 735278AA
 igSrc/ig_perlin.pas                            5.5kb 400BFCAE
 igSrc/ig_simples.pas                           4.3kb 831A844F
-igSrc/ig_tesselation.pas                      25.5kb D17F5918
+igSrc/ig_tesselation.pas                      25.7kb 3AD48F26
 igSrc/im_colors.pas                           11.2kb E779F194
 igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          9.3kb 3413364E
 igSrc/im_misc.pas                             14.1kb 6F5C5946
 igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
-igSrc/im_trianglesplit.pas                    34.0kb 4A1E1AA6
+igSrc/im_trianglesplit.pas                    33.9kb 505EA328
 igSrc/imageContexts.pas                       16.4kb 49BF9766
 igSrc/imagegeneration.pas                     26.8kb FA54CC37
 igSrc/imagemanipulation.pas                    9.4kb 3087EEDE
