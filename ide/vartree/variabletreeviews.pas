@@ -23,6 +23,9 @@ TYPE
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
+    FUNCTION getDefaultControl:TWinControl; override;
+    PROCEDURE VarTreeViewKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
   private
     rootNode:P_variableTreeEntryAnonymousValue;
     model:T_treeModel;
@@ -153,6 +156,17 @@ PROCEDURE TVarTreeViewForm.performFastUpdate; begin end;
 
 PROCEDURE TVarTreeViewForm.dockChanged;
   begin
+  end;
+
+FUNCTION TVarTreeViewForm.getDefaultControl: TWinControl;
+  begin
+    result:=VarTreeView;
+  end;
+
+PROCEDURE TVarTreeViewForm.VarTreeViewKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
+  begin
+    tabNextKeyHandling(Sender,key,Shift);
   end;
 
 PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);

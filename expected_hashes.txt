@@ -47,7 +47,7 @@ core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             8.4kb 4FDCA6F2
 core/funcs_package.inc                        16.2kb 3131F08B
 core/funcs_regex.pas                          11.9kb 05D19260
-core/funcs_server.pas                         23.0kb CA4DFADE
+core/funcs_server.pas                         23.0kb 85E286D0
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
 core/funcs_types.pas                          19.2kb 37FCE4C6
@@ -71,9 +71,9 @@ core/tokens.pas                               17.9kb 1776C09D
 core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb B469BF36
 ide/ask/customrundialog.pas                    9.8kb D23D07F8
-ide/assistant/assistanceformunit.pas           3.3kb C3576297
+ide/assistant/assistanceformunit.pas           3.6kb 997652EE
 ide/assistant/codeassistance.pas              22.2kb EBC78181
-ide/assistant/helperforms.pas                  3.6kb CBEC5F0D
+ide/assistant/helperforms.pas                  3.8kb 98240E72
 ide/close/closedialog.pas                      4.1kb 9694CF5D
 ide/customForms/component_button.inc           1.4kb 49420208
 ide/customForms/component_changeListener.inc   3.0kb 4B3A6803
@@ -110,7 +110,7 @@ ide/editors/searchModel.pas                    3.9kb 03392A67
 ide/editors/workspace.inc                     26.5kb F8FBBE0E
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
-ide/idelayoututil.pas                         28.7kb 334C3F63
+ide/idelayoututil.pas                         29.7kb 792FFD51
 ide/idemain.pas                               23.9kb 1EF8941E
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
@@ -120,7 +120,7 @@ ide/mnh_doc.pas                               19.6kb 93E78D1A
 ide/mnh_html.pas                               2.4kb 63458263
 ide/outline/outlineformunit.pas               14.5kb CCEE3BE2
 ide/output/guiOutAdapters.pas                  2.9kb 79A1405F
-ide/output/outputformunit.pas                  7.9kb 4A533DE7
+ide/output/outputformunit.pas                  8.2kb 3370B4BD
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
 ide/plot/funcs_plot.pas                       21.0kb 82D095FB
 ide/plot/mnh_plotData.pas                     67.4kb DE315EB7
@@ -129,7 +129,7 @@ ide/plot/plotexport.pas                        7.5kb 6D410924
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
 ide/plot/plotstyles.pas                       13.5kb E7ECB02B
 ide/profiling/profilingview.pas               10.8kb 1315F227
-ide/quick/quickevalforms.pas                   7.1kb 26BDE03C
+ide/quick/quickevalforms.pas                   7.4kb 3362536B
 ide/reevaluationforms.pas                      3.3kb A70D4AEA
 ide/res_defaultFiles.inc                     131.4kb 73E84017
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
@@ -140,9 +140,9 @@ ide/settings/mnh_gui_settings.pas             13.7kb CE0374B6
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.9kb E2A17B87
 ide/synhighlightermnh.pas                     19.9kb 597969FF
-ide/tables/mnh_tables.pas                     14.9kb 55307D8C
+ide/tables/mnh_tables.pas                     15.8kb DB52C84C
 ide/treeUtil.pas                               1.6kb 044A8430
-ide/vartree/variabletreeviews.pas              6.0kb 56C08D5E
+ide/vartree/variabletreeviews.pas              6.4kb 3B39B67A
 igSrc/complex.pas                             13.3kb DF849305
 igSrc/darts.pas                               25.5kb 5EABF539
 igSrc/generationbasics.pas                    10.4kb 3AB043B4
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           24.8kb 460FB4B4
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3389 kB
+          3392 kB

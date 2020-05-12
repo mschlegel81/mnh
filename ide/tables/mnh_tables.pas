@@ -52,6 +52,8 @@ TYPE
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
+    FUNCTION getDefaultControl:TWinControl; override;
+    PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     { private declarations }
     literal:P_listLiteral;
@@ -330,7 +332,7 @@ FUNCTION TtableForm.getIdeComponentType: T_ideComponent;
     result:=icTable;
   end;
 
-PROCEDURE TtableForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
+PROCEDURE TtableForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
   begin
   end;
 
@@ -345,7 +347,20 @@ PROCEDURE TtableForm.dockChanged;
     else moveAllItems(tableMenu.items,PopupMenu1.items);
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_: P_tableAdapter);
+FUNCTION TtableForm.getDefaultControl: TWinControl;
+  begin
+    result:=StringGrid;
+  end;
+
+PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
+  begin
+    tabNextKeyHandling(Sender,key,Shift);
+  end;
+
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
+  CONST newCaption: string; CONST fixedRows_, fixedColumns_: longint;
+  CONST adapter_: P_tableAdapter);
   begin
     adapter:=adapter_;
     with sorted do begin
@@ -369,6 +384,15 @@ PROCEDURE TtableForm.fillTable;
       cellLit:P_literal;
       iter:T_arrayOfLiteral;
       additionalHeaderRow:longint=0;
+  FUNCTION sortMarker(CONST input:string; CONST i:longint):string;
+    CONST arrow:array[false..true] of string=(#226#150#188,#226#150#178);
+    begin
+      if sorted.byColumn=i then begin
+        if input='' then result:=arrow[sorted.ascending]
+                    else result:=arrow[sorted.ascending]+' '+input+' '+arrow[sorted.ascending];
+      end else result:=input;
+    end;
+
   FUNCTION excelStyleColumnIndex(i:longint):string;
     begin
       if i<0 then exit('');
@@ -426,6 +450,7 @@ PROCEDURE TtableForm.fillTable;
     for j:=0 to length(cellContents[i])-1 do
     StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
     if additionalHeaderRow=1 then for j:=0 to dataColumns-1 do StringGrid.Cells[j,0]:=excelStyleColumnIndex(j-fixedColumns);
+    for j:=0 to StringGrid.colCount-1 do StringGrid.Cells[j,0]:=sortMarker(StringGrid.Cells[j,0],j);
     StringGrid.AutoSizeColumns;
   end;
 

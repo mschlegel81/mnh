@@ -14,7 +14,7 @@ object QuickEvalForm: TQuickEvalForm
   OnDestroy = FormDestroy
   OnResize = FormResize
   PopupMenu = OutputPopupMenu
-  LCLVersion = '2.0.4.0'
+  LCLVersion = '2.0.8.0'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
     Height = 24
@@ -547,6 +547,7 @@ object QuickEvalForm: TQuickEvalForm
     ParentFont = False
     PopupMenu = OutputPopupMenu
     TabOrder = 1
+    OnKeyUp = quickOutputSynEditKeyUp
     Gutter.Width = 66
     Gutter.MouseActions = <>
     RightGutter.Width = 0

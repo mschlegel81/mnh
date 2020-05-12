@@ -16,6 +16,8 @@ TYPE
     checkImportingFilesCheckbox: TCheckBox;
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
+    PROCEDURE AssistanceEditKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
     PROCEDURE checkImportingFilesCheckboxChange(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -44,7 +46,6 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     registerFontControl(AssistanceEdit,ctEditor);
     assistanceHighlighter:=TMnhOutputSyn.create(self);
     AssistanceEdit.highlighter:=assistanceHighlighter;
-    AssistanceEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     AssistanceEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     paintedWithStateHash:=0;
     paintedWithWidth:=0;
@@ -56,6 +57,12 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
 PROCEDURE TAssistanceForm.checkImportingFilesCheckboxChange(Sender: TObject);
   begin
     workspace.checkUsingScripts:=checkImportingFilesCheckbox.checked;
+  end;
+
+PROCEDURE TAssistanceForm.AssistanceEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    workspace.keyUpForJumpToLocation(Sender,key,Shift);
+    tabNextKeyHandling(Sender,key,Shift);
   end;
 
 PROCEDURE TAssistanceForm.FormDestroy(Sender: TObject);
