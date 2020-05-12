@@ -66,6 +66,8 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
+    PROCEDURE OutputSynEditKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
@@ -135,7 +137,6 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     registerFontControl(OutputSynEdit,ctEditor);
     outputHighlighter:=TMnhOutputSyn.create(self);
     OutputSynEdit.highlighter:=outputHighlighter;
-    OutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     initDockMenuItems(MainMenu1,miDockMainRoot);
     initDockMenuItems(OutputPopupMenu,nil);
@@ -194,6 +195,12 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
     adapter^.outputBehavior:=guiOutAdapters.outputBehavior;
     adapter^.wrapEcho:=outputBehavior.echo_wrapping;
     updateWordWrap;
+  end;
+
+PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    tabNextKeyHandling(Sender,key,Shift);
+    workspace.keyUpForJumpToLocation(Sender,key,Shift);
   end;
 
 PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);

@@ -30,6 +30,7 @@ object tableForm: TtableForm
     PopupMenu = PopupMenu1
     TabOrder = 0
     OnHeaderClick = stringGridHeaderClick
+    OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu
     left = 56

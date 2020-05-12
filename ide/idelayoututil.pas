@@ -43,6 +43,7 @@ TYPE
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
       PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); virtual; abstract;
       PROCEDURE performFastUpdate; virtual; abstract;
+      FUNCTION getDefaultControl:TWinControl; virtual;
       PROCEDURE getParents(OUT page:TTabSheet; OUT PageControl:TPageControl);
       PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
       PROCEDURE showComponent(CONST retainOriginalFocus:boolean);
@@ -83,7 +84,7 @@ TYPE
       PROCEDURE updateAbsSizeByRelSize;
       PROCEDURE updateRelSizeByAbsSize;
       PROCEDURE fixSize;
-
+      PROCEDURE tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
       FUNCTION  undockCurrent:boolean;
       PROCEDURE undockAll;
   end;
@@ -294,6 +295,8 @@ CONSTRUCTOR T_mnhDockSiteModel.create(CONST dockId_: T_componentParent;
     dockId       :=dockId_;
     canScaleWidth:=dockId<>cpPageControl2;
     PageControl  :=pageControl_;
+    if PageControl<>nil then
+    PageControl.OnKeyDown:=@tabNextKeyHandling;
     if dockId=cpNone then exit;
   end;
 
@@ -319,6 +322,17 @@ PROCEDURE T_mnhDockSiteModel.fixSize;
     end else if absSize<0.05*getFormSize then begin
       absSize     :=round(0.2*getFormSize);
       relativeSize:=13107; //=0.2*65535
+    end;
+  end;
+
+PROCEDURE T_mnhDockSiteModel.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
+      if key=34
+      then PageControl.activePageIndex:=(PageControl.activePageIndex+1                      ) mod PageControl.PageCount
+      else PageControl.activePageIndex:=(PageControl.activePageIndex+PageControl.PageCount-1) mod PageControl.PageCount;
+      if mainForm<>nil then mainForm.ActiveControl:=T_mnhComponentForm(PageControl.activePage.Controls[0]).getDefaultControl;
+      key:=0;
     end;
   end;
 
@@ -371,10 +385,11 @@ PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word;
     if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
       getParents(page,PageControl);
       if PageControl<>nil then begin
-        if key=33
+        if key=34
         then PageControl.activePageIndex:=(PageControl.activePageIndex+1                      ) mod PageControl.PageCount
         else PageControl.activePageIndex:=(PageControl.activePageIndex+PageControl.PageCount-1) mod PageControl.PageCount;
-        if mainForm<>nil then mainForm.ActiveControl:=PageControl.activePage;
+        if mainForm<>nil then mainForm.ActiveControl:=T_mnhComponentForm(PageControl.activePage.Controls[0]).getDefaultControl;
+        key:=0;
       end;
     end;
   end;
@@ -397,14 +412,14 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
       if (mainForm<>nil) then try
         if retainOriginalFocus and (oldActive<>nil)
         then mainForm.ActiveControl:=oldActive
-        else mainForm.ActiveControl:=self;
+        else mainForm.ActiveControl:=getDefaultControl;
       except
       end;
     end;
     dockChanged;
   end;
 
-PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
+PROCEDURE T_mnhComponentForm.changeDock(CONST newSite: T_componentParent);
   VAR prevSite:T_componentParent;
   begin
     if myComponentParent=newSite then exit;
@@ -425,7 +440,7 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite:T_componentParent);
     showComponent(false);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultCloseClick    (Sender: TObject);
+PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);
   VAR page:TTabSheet;
       PageControl:TPageControl;
       CloseAction:TCloseAction=caFree;
@@ -440,12 +455,12 @@ PROCEDURE T_mnhComponentForm.defaultCloseClick    (Sender: TObject);
     if CloseAction=caFree then FreeAndNil(self);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
+PROCEDURE T_mnhComponentForm.defaultUndockClick(Sender: TObject); begin changeDock(cpNone);         end;
 PROCEDURE T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
-PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
+PROCEDURE T_mnhComponentForm.defaultReattachClick(Sender: TObject);
   begin
     if lastDock=cpNone
     then changeDock(C_defaultDock[getIdeComponentType])
@@ -560,6 +575,7 @@ CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
     setLength(activeForms,k+1);
     activeForms[k]:=self;
     lastDock:=lastDockLocationFor[getIdeComponentType];
+    OnKeyUp:=@tabNextKeyHandling;
   end;
 
 DESTRUCTOR T_mnhComponentForm.destroy;
@@ -593,6 +609,11 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: intege
       if height<200 then height:=200;
     end;
     dockChanged;
+  end;
+
+FUNCTION T_mnhComponentForm.getDefaultControl: TWinControl;
+  begin
+    result:=self;
   end;
 
 PROCEDURE performSlowUpdates(CONST isEvaluationRunning:boolean);

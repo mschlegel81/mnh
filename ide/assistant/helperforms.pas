@@ -22,6 +22,7 @@ TYPE
     PROCEDURE openHtmlButtonClick(Sender: TObject);
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
+    PROCEDURE SynEdit1KeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE UpdateToggleBoxChange(Sender: TObject);
     PROCEDURE dockChanged; override;
   private
@@ -66,7 +67,6 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
     registerFontControl(SynEdit1,ctEditor);
     helpHighlighter:=TMnhOutputSyn.create(self);
     SynEdit1.highlighter:=helpHighlighter;
-    SynEdit1.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     SynEdit1.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     currentLink:=getDocIndexLinkForBrowser;
     initDockMenuItems(MainMenu1,nil);
@@ -101,6 +101,12 @@ PROCEDURE THelpForm.performFastUpdate;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.setUnderCursor(false,true)
     then SynEdit1.text:=getHelpText(currentLink);
+  end;
+
+PROCEDURE THelpForm.SynEdit1KeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    workspace.keyUpForJumpToLocation(Sender,key,Shift);
+    tabNextKeyHandling(Sender,key,Shift);
   end;
 
 PROCEDURE THelpForm.UpdateToggleBoxChange(Sender: TObject);

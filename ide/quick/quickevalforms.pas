@@ -40,6 +40,7 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE quickInputEditChange(Sender: TObject);
     PROCEDURE dockChanged; override;
+    PROCEDURE quickOutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     evaluatedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
@@ -107,9 +108,9 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
 
     registerFontControl(quickOutputSynEdit,ctEditor);
     outputHighlighter:=TMnhOutputSyn.create(self);
+    inputMeta.editor.OnKeyUp:=@tabNextKeyHandling;
     quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(quickOutputSynEdit,self,quickOutputBehavior);
-    quickOutputSynEdit.OnKeyUp:=@workspace.keyUpForJumpToLocation;
     quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);
     with quickOutputBehavior do begin
@@ -182,6 +183,12 @@ PROCEDURE TQuickEvalForm.dockChanged;
     if myComponentParent=cpNone
     then moveAllItems(OutputPopupMenu.items,miOutputMenuInMain)
     else moveAllItems(miOutputMenuInMain,OutputPopupMenu.items);
+  end;
+
+PROCEDURE TQuickEvalForm.quickOutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    tabNextKeyHandling(Sender,key,Shift);
+    workspace.keyUpForJumpToLocation(Sender,key,Shift)
   end;
 
 FUNCTION TQuickEvalForm.stateHash: T_hashInt;
