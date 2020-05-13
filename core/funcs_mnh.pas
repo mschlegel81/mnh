@@ -14,6 +14,7 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
 {$i func_defines.inc}
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
+USES mySys;
 FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR sideEffects:T_sideEffects):boolean;
   VAR iter:T_arrayOfLiteral;
       seId:P_literal;
@@ -163,6 +164,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('lightVersionPath',settings.lightFlavourLocation)^
       .put('configured_cpus',settings.cpuCount)^
       .put('configured_mem' ,settings.memoryLimit)^
+      .put('used_mem'       ,mySys.getMemoryUsedInBytes)^
       .put('PID'            ,GetProcessID)
     else result:=nil;
   end;
