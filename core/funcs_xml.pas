@@ -40,7 +40,6 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
     end;
 
   VAR i:longint;
-      childEntry:P_mapLiteral;
   begin
     if Assigned(FDoc) then begin
       result:=newListLiteral();

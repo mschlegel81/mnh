@@ -626,6 +626,7 @@ PROCEDURE T_editorMeta.onPlaceBookmark(Sender: TObject; VAR mark: TSynEditMark);
   begin
     if not(Assigned(mark)) then exit;
     for other in workspace.metas do if (other<>@self) then other^.clearBookmark(mark.BookmarkNumber);
+    workspace.clearOldBookmark(mark.BookmarkNumber);
   end;
 
 PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);

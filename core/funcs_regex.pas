@@ -254,7 +254,7 @@ FUNCTION regexReplace_imp intFuncSignature;
     begin
       regex:=regexForExpression(trip.x);
       try
-        result:=regex^.RegExpr.Replace(trip.y,trip.z,false);
+        result:=regex^.RegExpr.replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
           context.raiseError(e.message,tokenLocation,mt_el4_systemError);
