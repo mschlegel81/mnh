@@ -54,6 +54,7 @@ T_workspace=object(T_serializable)
 
     PROCEDURE clearDebugLine;
     FUNCTION openDebugLocation(CONST location:T_searchTokenLocation):boolean;
+    PROCEDURE clearOldBookmark(CONST index:T_bookmarkIndex);
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):P_editorMeta;
     PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -431,6 +432,17 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
     finally
       leaveCriticalSection(workspaceCs);
     end;
+  end;
+
+PROCEDURE T_workspace.clearOldBookmark(CONST index:T_bookmarkIndex);
+  VAR k,j:longint;
+  begin
+    k:=0;
+    while k<length(oldMarkers) do
+      if oldMarkers[k].markIndex=index then begin
+        for j:=k to length(oldMarkers)-2 do oldMarkers[j]:=oldMarkers[j+1];
+        setLength(oldMarkers,length(oldMarkers)-1);
+      end else inc(k);
   end;
 
 PROCEDURE T_workspace.openBookmarkLocation(CONST index: T_bookmarkIndex);

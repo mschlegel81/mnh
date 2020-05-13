@@ -1284,6 +1284,7 @@ exit}
     end;
 
   begin
+    initialize(output);
     result:=false;
     if param=nil then useParam:=newListLiteral
                  else useParam:=param;
