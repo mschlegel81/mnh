@@ -48,7 +48,8 @@ TYPE
 
 FUNCTION exportPlotForm:TExportPlotForm;
 IMPLEMENTATION
-USES ideLayoutUtil,
+USES LCLType,
+     ideLayoutUtil,
      myGenerics,
      fileWrappers,
      editScripts,
@@ -116,6 +117,7 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
   PROCEDURE createScript;
     VAR scriptLines:T_arrayOfString;
         task:P_editScriptTask;
+        message:ansistring;
     begin
       if (rbExportAll.checked) and (psys^.animation.frameCount>0) then begin
         scriptLines:=psys^.getPlotStatement(-1,@exportHalted,Application,ProgressBar1);
@@ -125,8 +127,13 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
       if exportHalted then ProgressBar1.position:=0 else begin
         ProgressBar1.position:=ProgressBar1.max;
         if mainForm=nil
-        then writeFileLines(OutputFileNameEdit.caption,scriptLines,LineEnding,false)
-        else begin
+        then begin
+          if not(writeFileLines(OutputFileNameEdit.caption,scriptLines,LineEnding,false)) then begin
+            beep;
+            message:='Could not access file '+OutputFileNameEdit.caption;
+            Application.MessageBox('Export to mnh failed',PChar(message),MB_ICONERROR+MB_OK);
+          end;
+        end else begin
           new(task,createForNewEditor(scriptLines));
           mainForm.onEditFinished(task);
           Application.ProcessMessages;
