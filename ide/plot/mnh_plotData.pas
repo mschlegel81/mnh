@@ -2,7 +2,7 @@ UNIT mnh_plotData;
 INTERFACE
 USES sysutils,
      math,
-     Interfaces, Classes, ExtCtrls, Graphics, types,Forms, ComCtrls,
+     Interfaces, Classes, ExtCtrls, Graphics, types,Forms, ComCtrls, LCLType,
      mySys,myGenerics,
      basicTypes, mnh_constants,
      mnh_settings,
@@ -767,6 +767,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
   VAR storeImage:TImage;
+      message:ansistring;
   begin
     enterCriticalSection(seriesCs);
     if (index<0) or (index>=length(frame)) then begin
@@ -781,7 +782,13 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       storeImage:=TImage.create(nil);
       storeImage.SetInitialBounds(0,0,width,height);
       frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
-      storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      try
+        storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      except
+        beep;
+        message:='Could not access file '+fileName;
+        Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+      end;
       enterCriticalSection(globalTextRenderingCs);
       storeImage.destroy;
       leaveCriticalSection(globalTextRenderingCs);
@@ -1557,9 +1564,17 @@ FUNCTION T_plot.obtainPlot(CONST width, height: longint): TImage;
 
 PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longint);
   VAR storeImage:TImage;
+      message:ansistring;
   begin
     storeImage:=obtainPlot(width,height);
-    storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+    try
+      storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+    except
+      beep;
+      message:='Could not access file '+fileName;
+      Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+    end;
+
     enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
     leaveCriticalSection(globalTextRenderingCs);

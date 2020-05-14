@@ -123,9 +123,9 @@ ide/output/guiOutAdapters.pas                  2.9kb 79A1405F
 ide/output/outputformunit.pas                  8.2kb 3370B4BD
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
 ide/plot/funcs_plot.pas                       21.0kb 82D095FB
-ide/plot/mnh_plotData.pas                     67.4kb DE315EB7
+ide/plot/mnh_plotData.pas                     67.8kb 7935C388
 ide/plot/mnh_plotform.pas                     27.2kb D3298759
-ide/plot/plotexport.pas                        7.5kb 6D410924
+ide/plot/plotexport.pas                        7.8kb 9FE8B598
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
 ide/plot/plotstyles.pas                       13.5kb E7ECB02B
 ide/profiling/profilingview.pas               10.8kb 1315F227
@@ -140,7 +140,7 @@ ide/settings/mnh_gui_settings.pas             13.7kb CE0374B6
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.9kb E2A17B87
 ide/synhighlightermnh.pas                     19.9kb 597969FF
-ide/tables/mnh_tables.pas                     15.8kb DB52C84C
+ide/tables/mnh_tables.pas                     16.5kb BA442B54
 ide/treeUtil.pas                               1.6kb 044A8430
 ide/vartree/variabletreeviews.pas              6.4kb 3B39B67A
 igSrc/complex.pas                             13.3kb DF849305
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           24.8kb 460FB4B4
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3393 kB
+          3394 kB

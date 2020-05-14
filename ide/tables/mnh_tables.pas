@@ -54,6 +54,7 @@ TYPE
     PROCEDURE dockChanged; override;
     FUNCTION getDefaultControl:TWinControl; override;
     PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE exportToCsv(Separator:char);
   private
     { private declarations }
     literal:P_listLiteral;
@@ -90,7 +91,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES myStringUtil,strutils,math;
+USES myStringUtil,strutils,math,LCLType;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
@@ -246,14 +247,39 @@ PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
     fillTable;
   end;
 
+PROCEDURE TtableForm.exportToCsv(Separator: char);
+  VAR fixedColsBefore:longint;
+      fixedRowsBefore:longint;
+      message:ansistring;
+  begin
+    if SaveTableDialog.execute then begin
+      fixedColsBefore:=StringGrid.FixedCols;
+      fixedRowsBefore:=StringGrid.FixedRows;
+      if mi_exportIncHeader.checked
+      then begin
+        StringGrid.FixedRows:=0;
+        StringGrid.FixedCols:=0;
+      end;
+      try
+        StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',false,true);
+      except
+        beep;
+        message:='Could not access file '+SaveTableDialog.fileName;
+        Application.MessageBox('Export to csv failed',PChar(message),MB_ICONERROR+MB_OK);
+      end;
+      StringGrid.FixedCols:=fixedColsBefore;
+      StringGrid.FixedRows:=fixedRowsBefore;
+    end;
+  end;
+
 PROCEDURE TtableForm.mi_exportCsvSemicolonClick(Sender: TObject);
   begin
-    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',mi_exportIncHeader.checked,true);
+    exportToCsv(';');
   end;
 
 PROCEDURE TtableForm.mi_exportCsvTabClick(Sender: TObject);
   begin
-    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,C_tabChar,mi_exportIncHeader.checked,true);
+    exportToCsv(C_tabChar);
   end;
 
 PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
