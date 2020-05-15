@@ -183,8 +183,10 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
+        if myPlotForm<>nil then myPlotForm.close;
+        myPlotForm:=nil;
         formWasClosedByUser:=false;
-        plotChangedSinceLastDisplay:=(myPlotForm<>nil);
+        plotChangedSinceLastDisplay:=false;
         inherited processMessage(message);
       end;
       mt_plot_queryClosedByUser: begin

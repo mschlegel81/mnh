@@ -19,7 +19,7 @@ object plotForm: TplotForm
   OnShow = FormShow
   PopupMenu = PopupMenu1
   Position = poScreenCenter
-  LCLVersion = '2.0.4.0'
+  LCLVersion = '2.0.8.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
