@@ -469,11 +469,13 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
     if FixedRows=0 then additionalHeaderRow:=1;
     if firstFill then begin
       StringGrid.clear;
+      if (dataRows=0) or (dataColumns=0) then exit;
       StringGrid.RowCount:=dataRows   +additionalHeaderRow;
       StringGrid.colCount:=dataColumns;
       StringGrid.FixedRows:=min(dataRows   ,FixedRows)+additionalHeaderRow;
       StringGrid.FixedCols:=min(dataColumns,fixedColumns);
     end;
+    if (dataRows=0) or (dataColumns=0) then exit;
     for i:=0 to length(cellContents)-1 do begin
       for j:=0 to length(cellContents[i])-1                   do StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
       for j:=length(cellContents[i]) to StringGrid.colCount-1 do StringGrid.Cells[j,i+additionalHeaderRow]:='';
