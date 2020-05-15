@@ -36,6 +36,7 @@ TYPE
                                                                    mt_echo_continued,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
+      DESTRUCTOR destroy; virtual;
       FUNCTION ensureOutputForm:TOutputForm;
   end;
 
@@ -101,10 +102,16 @@ CONSTRUCTOR T_lazyInitializedOutAdapter.create(CONST isRunning:TIsRunningFunc; C
     running:=isRunning;
   end;
 
+DESTRUCTOR T_lazyInitializedOutAdapter.destroy;
+  begin
+    if outputForm<>nil then FreeAndNil(outputForm);
+    inherited;
+  end;
+
 FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
   begin
     if outputForm=nil then begin
-      outputForm:=TOutputForm.create(Application);
+      outputForm:=TOutputForm.create(nil);
       outputForm.caption:=formCaption;
       outputForm.adapter:=@self;
       dockNewForm(outputForm);
