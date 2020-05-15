@@ -580,13 +580,16 @@ CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
 
 DESTRUCTOR T_mnhComponentForm.destroy;
   VAR k:longint=0;
+      cp:T_componentParent;
   begin
-    inherited destroy;
+    cp:=myComponentParent;
     while (k<length(activeForms)) and (activeForms[k]<>self) do inc(k);
     if k<length(activeForms) then begin
       activeForms[k]:=activeForms[length(activeForms)-1];
       setLength(activeForms,length(activeForms)-1);
     end;
+    inherited destroy;
+    if mainForm<>nil then mainForm.dockSites[cp]^.fixSize;
   end;
 
 PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: integer);

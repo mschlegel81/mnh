@@ -67,7 +67,7 @@ TYPE
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_:P_tableAdapter);
-    PROCEDURE fillTable;
+    PROCEDURE fillTable(CONST firstFill:boolean);
   end;
 
   P_tableDisplayRequest=^T_tableDisplayRequest;
@@ -149,7 +149,6 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR i:longint;
       tab:TtableForm;
       caption:string;
-
   begin
     result:=[];
     enterCriticalSection(adapterCs);
@@ -166,7 +165,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
               tab.initWithLiteral(tableContent,caption,FixedRows,fixedColumns,@self);
             end;
             dockNewForm(tab);
-            tab.fillTable;
+            tab.fillTable(true);
             tab.showComponent(true);
           end;
         mt_startOfEvaluation:
@@ -244,7 +243,7 @@ PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
     mi_comma.checked:=not(mi_comma.checked);
-    fillTable;
+    fillTable(false);
   end;
 
 PROCEDURE TtableForm.exportToCsv(Separator: char);
@@ -312,7 +311,7 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
     tmp         :=fixedColumns;
     fixedColumns:=FixedRows;
     FixedRows   :=tmp;
-    fillTable;
+    fillTable(true);
   end;
 
 PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean;
@@ -350,7 +349,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean;
 
       literal:=headerRows;
     end;
-    fillTable;
+    fillTable(false);
   end;
 
 FUNCTION TtableForm.getIdeComponentType: T_ideComponent;
@@ -401,7 +400,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
     caption:=newCaption;
   end;
 
-PROCEDURE TtableForm.fillTable;
+PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
   VAR dataRows:longint;
       dataColumns:longint=0;
       cellContents:array of T_arrayOfString;
@@ -466,18 +465,22 @@ PROCEDURE TtableForm.fillTable;
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
     end;
-    StringGrid.clear;
+
     if FixedRows=0 then additionalHeaderRow:=1;
-    StringGrid.RowCount:=dataRows   +additionalHeaderRow;
-    StringGrid.colCount:=dataColumns;
-    StringGrid.FixedRows:=min(dataRows   ,FixedRows)+additionalHeaderRow;
-    StringGrid.FixedCols:=min(dataColumns,fixedColumns);
-    for i:=0 to length(cellContents)-1 do
-    for j:=0 to length(cellContents[i])-1 do
-    StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
+    if firstFill then begin
+      StringGrid.clear;
+      StringGrid.RowCount:=dataRows   +additionalHeaderRow;
+      StringGrid.colCount:=dataColumns;
+      StringGrid.FixedRows:=min(dataRows   ,FixedRows)+additionalHeaderRow;
+      StringGrid.FixedCols:=min(dataColumns,fixedColumns);
+    end;
+    for i:=0 to length(cellContents)-1 do begin
+      for j:=0 to length(cellContents[i])-1                   do StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
+      for j:=length(cellContents[i]) to StringGrid.colCount-1 do StringGrid.Cells[j,i+additionalHeaderRow]:='';
+    end;
     if additionalHeaderRow=1 then for j:=0 to dataColumns-1 do StringGrid.Cells[j,0]:=excelStyleColumnIndex(j-fixedColumns);
     for j:=0 to StringGrid.colCount-1 do StringGrid.Cells[j,0]:=sortMarker(StringGrid.Cells[j,0],j);
-    StringGrid.AutoSizeColumns;
+    if firstFill then StringGrid.AutoSizeColumns;
   end;
 
 INITIALIZATION
