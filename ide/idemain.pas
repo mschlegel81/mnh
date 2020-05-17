@@ -232,8 +232,10 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
+    {$ifdef debugMode}writeln(stdErr,'Done reading ',workspaceFilename);{$endif}
     splashOnStartup;
 
+    {$ifdef debugMode}writeln(stdErr,'Ensuring edit scripts');{$endif}
     runnerModel.ensureEditScripts;
 
     FormDropFiles(Sender,commandLine.filesToOpenInEditor);

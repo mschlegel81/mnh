@@ -435,7 +435,7 @@ object IdeMainForm: TIdeMainForm
     MultiLine = True
     ParentFont = False
     TabOrder = 0
-    Options = [nboShowCloseButtons, nboMultiLine, nboKeyboardTabSwitch]
+    Options = [nboMultiLine, nboKeyboardTabSwitch]
   end
   object Splitter1: TSplitter
     Left = 434
@@ -468,7 +468,7 @@ object IdeMainForm: TIdeMainForm
       MultiLine = True
       ParentFont = False
       TabOrder = 0
-      Options = [nboShowCloseButtons, nboMultiLine, nboKeyboardTabSwitch]
+      Options = [nboMultiLine, nboKeyboardTabSwitch]
     end
     object Splitter2: TSplitter
       Cursor = crVSplit
@@ -502,7 +502,7 @@ object IdeMainForm: TIdeMainForm
         MultiLine = True
         ParentFont = False
         TabOrder = 0
-        Options = [nboShowCloseButtons, nboMultiLine, nboKeyboardTabSwitch]
+        Options = [nboMultiLine, nboKeyboardTabSwitch]
       end
       object Splitter3: TSplitter
         Left = 144
@@ -521,7 +521,7 @@ object IdeMainForm: TIdeMainForm
         ParentFont = False
         TabOrder = 2
         OnChange = EditorsPageControlChange
-        Options = [nboShowCloseButtons, nboMultiLine, nboKeyboardTabSwitch]
+        Options = [nboMultiLine, nboKeyboardTabSwitch]
       end
     end
   end
@@ -543,7 +543,7 @@ object IdeMainForm: TIdeMainForm
     MultiLine = True
     ParentFont = False
     TabOrder = 4
-    Options = [nboShowCloseButtons, nboMultiLine, nboKeyboardTabSwitch]
+    Options = [nboMultiLine, nboKeyboardTabSwitch]
   end
   object StatusPanel: TPanel
     Left = 0

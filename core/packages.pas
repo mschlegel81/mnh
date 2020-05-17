@@ -359,39 +359,48 @@ PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBa
   VAR recycler:T_recycler;
   VAR baseDir:string;
   PROCEDURE ensureDefaultFile(CONST index:longint; CONST overwriteExisting:boolean=false);
-  VAR fileName:string;
-      fileContent:string;
-      functionCallInfos:P_functionCallInfos;
-      clp:T_mnhExecutionOptions;
-  begin
-    clp.create;
-    fileName:=baseDir+DEFAULT_FILES[index,0];
-    if not(fileExists(fileName)) or overwriteExisting then begin
-      fileContent:=decompressString(base92Decode(DEFAULT_FILES[index,1]));
-      writeFile(fileName,fileContent);
-      try
-        package.replaceCodeProvider(newCodeProvider(fileName));
-        globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-        new(functionCallInfos,create);
-        package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
-        if package.isExecutable then begin
-          clp.clear;
-          clp.initFromShebang('',functionCallInfos^.getBuiltinRestrictions);
-          fileContent:=clp.getShebang+C_lineBreakChar+fileContent;
-          writeFile(fileName,fileContent);
+    VAR fileName:string;
+        fileContent:string;
+        functionCallInfos:P_functionCallInfos;
+        clp:T_mnhExecutionOptions;
+    begin
+      clp.create;
+      fileName:=baseDir+DEFAULT_FILES[index,0];
+      if not(fileExists(fileName)) or overwriteExisting then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'Creating ',fileName);
+        {$endif}
+        fileContent:=decompressString(base92Decode(DEFAULT_FILES[index,1]));
+        writeFile(fileName,fileContent);
+        try
+          package.replaceCodeProvider(newCodeProvider(fileName));
+          globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+          new(functionCallInfos,create);
+          package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
+          if package.isExecutable then begin
+            clp.clear;
+            clp.initFromShebang('',functionCallInfos^.getBuiltinRestrictions);
+            fileContent:=clp.getShebang+C_lineBreakChar+fileContent;
+            writeFile(fileName,fileContent);
+          end;
+          dispose(functionCallInfos,destroy);
+        finally
+          globals.afterEvaluation(recycler);
+          package.clear(true);
+          globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
         end;
-        dispose(functionCallInfos,destroy);
-      finally
-        globals.afterEvaluation(recycler);
-        package.clear(true);
-        globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       end;
     end;
-  end;
   VAR i:longint;
   begin
     recycler.initRecycler;
+    {$ifdef debugMode}
+    writeln(stdErr,'Ensuring default files');
+    {$endif}
     baseDir:=configDir;
+    {$ifdef debugMode}
+    writeln(stdErr,'config directory=',baseDir);
+    {$endif}
     if bar<>nil then begin
       bar.caption:='Creating packages and demos';
       bar.position:=0;
