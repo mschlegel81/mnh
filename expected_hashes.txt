@@ -59,7 +59,7 @@ core/mnh_messages.pas                         18.3kb ABF8D58E
 core/mnh_settings.pas                          4.8kb 89E00A79
 core/operators.pas                            47.5kb D3763027
 core/out_adapters.pas                         46.0kb 8493873E
-core/packages.pas                             64.5kb 211659D7
+core/packages.pas                             64.8kb 87F98DDE
 core/patterns.pas                             31.9kb FB5AC32A
 core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb F8A7F389
@@ -111,7 +111,7 @@ ide/editors/workspace.inc                     26.9kb E473F8F1
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
 ide/idelayoututil.pas                         29.8kb 162E05D1
-ide/idemain.pas                               23.9kb 1EF8941E
+ide/idemain.pas                               24.0kb 0EE81DB1
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
 ide/ipcModel.pas                               1.5kb 3A2A0B05
@@ -140,7 +140,7 @@ ide/settings/mnh_gui_settings.pas             13.7kb CE0374B6
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.9kb E2A17B87
 ide/synhighlightermnh.pas                     19.9kb 597969FF
-ide/tables/mnh_tables.pas                     16.7kb CF359282
+ide/tables/mnh_tables.pas                     16.8kb 33FF6F32
 ide/treeUtil.pas                               1.6kb 044A8430
 ide/vartree/variabletreeviews.pas              6.4kb 3B39B67A
 igSrc/complex.pas                             13.3kb DF849305
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.1kb D0C18023
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3395 kB
+          3396 kB
