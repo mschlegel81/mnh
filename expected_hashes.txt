@@ -17,7 +17,7 @@ common/huffman_model_default.inc              57.8kb 713CEB33
 common/huffman_model_mnh.inc                  61.8kb F7A0C1A0
 common/huffman_model_numeric.inc              18.9kb 05FA0DC2
 common/huffman_model_wiki.inc                105.6kb 45BC62CF
-common/myColors.pas                           31.6kb CDDCE053
+common/myColors.pas                           32.5kb 0F49D3DD
 common/myCrypto.pas                           27.8kb AF9E77D9
 common/myGenerics.pas                         27.4kb AC01A3F3
 common/myStringUtil.pas                       40.1kb 5917929B
@@ -166,7 +166,7 @@ igSrc/im_geometry.pas                          9.3kb 3413364E
 igSrc/im_misc.pas                             14.1kb 6F5C5946
 igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
-igSrc/im_trianglesplit.pas                    33.9kb C51A051C
+igSrc/im_trianglesplit.pas                    34.3kb A29D9A33
 igSrc/imageContexts.pas                       16.4kb 49BF9766
 igSrc/imagegeneration.pas                     26.8kb FA54CC37
 igSrc/imagemanipulation.pas                    9.4kb 3087EEDE
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.1kb D0C18023
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3396 kB
+          3397 kB
