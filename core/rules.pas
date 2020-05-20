@@ -180,11 +180,11 @@ TYPE
       FUNCTION getValueOrElseVoid(VAR context:T_context; VAR recycler:T_recycler):P_literal;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
 
-      {Part of T_abstractRule, but should not be called an throws exception}
+      {Part of T_abstractRule, but should not be called and throws exception}
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
-      {Part of T_abstractRule, but should not be called an throws exception}
+      {Part of T_abstractRule, but should not be called and throws exception}
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
-      {Part of T_abstractRule, but should not be called an throws exception}
+      {Part of T_abstractRule, but should not be called and throws exception}
       FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
   end;
 
