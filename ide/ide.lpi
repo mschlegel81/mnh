@@ -20,6 +20,7 @@
       </XPManifest>
       <Icon Value="0"/>
     </General>
+    <LazDoc Paths="../doc"/>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <BuildNr Value="280"/>

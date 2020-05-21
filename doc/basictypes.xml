@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fpdoc-descriptions><package name="ide"><module name="basicTypes"><element name="T_objectWithIdAndLocation"><short>Abstract type for objects with an ID and a location</short>
+      </element><element name="T_tokenLocation"><short>Token location, linking to a package</short><descr>This is used virtually everywhere. All tokens have a location, which can be used
+for error feedbacks and inspection calls.
+</descr>
+      </element><element name="T_searchTokenLocation"><short>Token location, using a filename instead of a package</short>
+      </element>
+    </module>
+  </package>
+</fpdoc-descriptions>

@@ -298,6 +298,28 @@ FUNCTION reverseList_impl intFuncSignature;
 FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion    (params); end;
 FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
 FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus    (params); end;
+FUNCTION isSubsetOf_imp   intFuncSignature;
+  VAR iter:T_arrayOfLiteral;
+      a:P_literal;
+      allContained:boolean=true;
+  begin
+    if (params<>nil) and (params^.size=2) then begin
+      if (arg0^.literalType in C_compoundTypes) then case arg1^.literalType of
+        lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
+        lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,
+        lt_map:
+          begin
+            iter:=compound0^.iteratableList;
+            for a in iter do allContained:=allContained and list1^.contains(a);
+            disposeLiteral(iter);
+            result:=newBoolLiteral(allContained);
+          end;
+        lt_emptyList,lt_emptySet,lt_emptyMap:
+          result:=newBoolLiteral(compound0^.size=0);
+        else result:=newBoolLiteral(false);
+      end else result:=newBoolLiteral(false);
+    end else result:=nil;
+  end;
 FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (params,tokenLocation,@context,@recycler); end;
 
 FUNCTION get_imp intFuncSignature;
@@ -594,9 +616,10 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     {$ifdef fullVersion},'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup'{$endif});
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,ak_unary     {$ifdef fullVersion},'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies'{$endif});
   registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,ak_unary     {$ifdef fullVersion},'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.'{$endif});
-  registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1{$ifdef fullVersion},'union(A,...);//Returns a union of all given parameters. All parameters must be lists.'{$endif});
-  registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,ak_variadic_1{$ifdef fullVersion},'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.'{$endif});
-  registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,ak_binary    {$ifdef fullVersion},'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.'{$endif});
+  registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1{$ifdef fullVersion},'union(A,...);//Returns a union of all given parameters. All parameters must be collections.'{$endif});
+  registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,ak_variadic_1{$ifdef fullVersion},'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be collections.'{$endif});
+  registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,ak_binary    {$ifdef fullVersion},'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be collections.'{$endif});
+  registerRule(LIST_NAMESPACE,'isSubsetOf'      ,@isSubsetOf_imp    ,ak_binary    {$ifdef fullVersion},'isSubsetOf(A,B);//Returns true if A is a subset of (or equal to) B'{$endif});
   registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,ak_ternary   {$ifdef fullVersion},'mergeMaps(A:Map,B:Map,M:Expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.'{$endif});
   registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,ak_variadic  {$ifdef fullVersion},'flatten(L,...);//Returns all parameters as a flat list.'{$endif});
   registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,ak_unary     {$ifdef fullVersion},'size(L);//Returns the number of elements in list L'{$endif});
