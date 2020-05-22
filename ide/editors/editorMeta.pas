@@ -90,7 +90,8 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint):boolean;
     FUNCTION doRename(CONST ref:T_searchTokenLocation; CONST oldId,newId:string; CONST renameInOtherEditors:boolean=false):boolean;
 
-    PROCEDURE setFile(CONST fileName:string);
+    {Returns true on success, false on error, e.g. if file does not exist}
+    FUNCTION setFile(CONST fileName:string):boolean;
     PROCEDURE saveFile(CONST fileName:string='');
     PROCEDURE updateSheetCaption;
   public
@@ -521,7 +522,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     disposeCodeAssistanceResponse(tempAssistanceResponse);
   end;
 
-PROCEDURE T_editorMeta.setFile(CONST fileName: string);
+FUNCTION T_editorMeta.setFile(CONST fileName: string):boolean;
   FUNCTION isDatastore:boolean;
     begin
       result:=uppercase(copy(extractFileExt(fileName),2,9))='DATASTORE';
@@ -531,6 +532,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       tempLines:T_arrayOfString;
       l:string;
   begin
+    result:=true;
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
     editor.clearAll;
@@ -555,6 +557,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       editor.lines.clear;
       editor.modified:=true;
       fileInfo.fileAccessAge:=0;
+      result:=false;
     end;
     if not(datastore) then guessLanguage(LANG_TXT);
     updateSheetCaption;
