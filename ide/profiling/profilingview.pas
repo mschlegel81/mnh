@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Grids, Menus,profiling,ideLayoutUtil,mnh_messages,out_adapters;
+  Grids, Menus,profiling,ideLayoutUtil,mnh_messages,out_adapters,basicTypes;
 
 TYPE
   TprofilingOutputForm = class(T_mnhComponentForm)
@@ -47,6 +47,7 @@ TYPE
     PROCEDURE setProfilingList(CONST list:T_profilingList);
     PROCEDURE fillGrid1;
     PROCEDURE fillGrids2and3;
+    PROCEDURE selectLocation(CONST loc:T_searchTokenLocation);
   public
 
   end;
@@ -60,7 +61,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES editorMeta,basicTypes,mnh_settings;
+USES editorMeta,mnh_settings;
 {$R *.lfm}
 VAR myProfilingForm:TprofilingOutputForm=nil;
 FUNCTION ensureProfileView:TprofilingOutputForm;
@@ -75,7 +76,7 @@ FUNCTION ensureProfileView:TprofilingOutputForm;
 
 CONSTRUCTOR T_profileAdapter.create(CONST fullIdeMode:boolean);
   begin
-    inherited create(at_profilingView,[mt_profile_call_info]);
+    inherited create(at_profilingView,[mt_startOfEvaluation,mt_profile_call_info]);
     canOpenLocation:=fullIdeMode;
   end;
 
@@ -86,6 +87,11 @@ FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSe
     enterCriticalSection(adapterCs);
     try
       for i:=0 to collectedFill-1 do case collected[i]^.messageType of
+        mt_startOfEvaluation:
+          begin
+            include(result,collected[i]^.messageType);
+            if myProfilingForm<>nil then FreeAndNil(myProfilingForm);
+          end;
         mt_profile_call_info:
           begin
             include(result,collected[i]^.messageType);
@@ -174,29 +180,31 @@ PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,aRow: 
 PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: char);
   VAR i:longint;
   begin
-    if (key=#13) and canOpenLocation then begin
+    if (key=#13) then begin
       i:=StringGrid1.selection.top-1;
-      workspace.openDebugLocation(profilingList[i].calleeLocation);
+      if canOpenLocation then workspace.openDebugLocation(profilingList[i].calleeLocation);
     end else writeln('StringGridKeyPress ',ord(key));
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
   VAR i,j:longint;
   begin
-    if (key=#13) and canOpenLocation then begin
+    if (key=#13) then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid2.selection.top-1;
-      workspace.openDebugLocation(profilingList[i].callers[j].location);
+      if canOpenLocation then workspace.openDebugLocation(profilingList[i].callers[j].location);
+      selectLocation(profilingList[i].callers[j].location);
     end;
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: char);
   VAR i,j:longint;
   begin
-    if (key=#13) and canOpenLocation then begin
+    if (key=#13) then begin
       i:=StringGrid1.selection.top-1;
       j:=StringGrid3.selection.top-1;
-      workspace.openDebugLocation(profilingList[i].callees[j].location);
+      if canOpenLocation then workspace.openDebugLocation(profilingList[i].callees[j].location);
+      selectLocation(profilingList[i].callees[j].location);
     end;
   end;
 
@@ -304,6 +312,16 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
     end else begin
       StringGrid2.RowCount:=1;
       StringGrid3.RowCount:=1;
+    end;
+  end;
+
+PROCEDURE TprofilingOutputForm.selectLocation(CONST loc:T_searchTokenLocation);
+  VAR k:longint=0;
+  begin
+    while (k<length(profilingList)) and (profilingList[k].calleeLocation<>loc) do inc(k);
+    if k<length(profilingList) then begin
+      StringGrid1.SetFocus;
+      StringGrid1.row:=k+1;
     end;
   end;
 
