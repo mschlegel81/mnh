@@ -880,16 +880,18 @@ FUNCTION T_typedef.matchesLiteral(CONST L: P_literal;
     if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil));
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral;
-  CONST location: T_tokenLocation; CONST threadContext: P_abstractContext;
-  CONST recycler: pointer): P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
       lt_expression: begin
-        if L^.numberOfReferences<=1
-        then result:=P_typableLiteral(L^.rereferenced)
-        else result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
+        if P_expressionLiteral(l)^.typ in [et_builtin,et_builtinFuture,et_builtinIteratable] then begin
+          result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
+        end else begin
+          if L^.numberOfReferences<=1
+          then result:=P_typableLiteral(L^.rereferenced)
+          else result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
+        end;
       end;
       lt_list..lt_emptyMap: begin
         if L^.numberOfReferences<=1
@@ -899,16 +901,14 @@ FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral;
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation;
-  CONST threadContext: P_abstractContext; CONST recycler: pointer
-  ): P_typableLiteral;
+FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_typableLiteral;
   begin
     result:=nil;
-    if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
-    if not(L^.literalType in C_typables) then threadContext^.raiseError('Cannot cast primitive scalar',location);
-    if P_typableLiteral(L)^.customType=@self then begin
-      exit(P_typableLiteral(L^.rereferenced));
+    if not(L^.literalType in C_typables) then begin
+      threadContext^.raiseError('Cannot cast primitive scalar',location);
+      exit(nil);
     end;
+    if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
     if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil) then begin
       result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
       if result<>nil then result^.customType:=@self;
