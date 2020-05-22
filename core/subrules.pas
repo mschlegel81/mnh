@@ -188,6 +188,7 @@ T_builtinExpression=object(T_expression)
     func:P_intFuncCallback;
     FUNCTION getEquivalentInlineExpression(VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
     FUNCTION getParameterNames:P_listLiteral; virtual;
+    CONSTRUCTOR createSecondaryInstance(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData; CONST internalId:longint);
   public
     CONSTRUCTOR create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
     DESTRUCTOR destroy; virtual;
@@ -197,7 +198,8 @@ T_builtinExpression=object(T_expression)
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
     FUNCTION getId:T_idString; virtual;
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
-end;
+    FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
+  end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t,prev,inlineRuleTokens:P_token;
@@ -804,13 +806,13 @@ PROCEDURE T_expression.validateSerializability(CONST messages:P_messages);
 
 CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; VAR recycler:T_recycler);
   VAR i:longint;
-  PROCEDURE appendToExpression(VAR T:T_token);
+  PROCEDURE appendToExpression(VAR T:T_token; CONST parameterIndex:longint);
     begin
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
         token.define(T);
-        parIdx:=-1;
+        parIdx:=parameterIndex;
       end;
     end;
 
@@ -826,18 +828,17 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
 
   begin
     init(original^.typ,funcLocation);
-    pattern.create;
+    pattern.clone(original^.pattern);
     if intrinsicRuleId<>'' then begin
       setLength(preparedBody,1);
       with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
-    for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
+    for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token,original^.preparedBody[i].parIdx);
     indexOfSave:=original^.indexOfSave;
     if original^.saveValueStore<>nil then saveValueStore:=recycler.cloneSafeValueStore(original^.saveValueStore);
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
     meta:=original^.meta;
-    updatePatternForInline;
   end;
 
 FUNCTION T_inlineExpression.getParameterNames: P_listLiteral;
@@ -908,6 +909,17 @@ FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin re
 FUNCTION newBuiltinExpression(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
   begin
     new(P_builtinExpression(result),create(f,meta));
+  end;
+
+CONSTRUCTOR T_builtinExpression.createSecondaryInstance(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData; CONST internalId:longint);
+  VAR loc:T_tokenLocation;
+  begin
+    loc.package:=@MNH_PSEUDO_PACKAGE;
+    loc.column:=1;
+    loc.line:=internalId;
+    inherited create(et_builtin,loc);
+    id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
+    func:=f;
   end;
 
 CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
@@ -1063,6 +1075,11 @@ FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: P_ab
 FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
   begin
     new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location,P_recycler(recycler)^));
+  end;
+
+FUNCTION T_builtinExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
+  begin
+    new(P_builtinExpression(result),createSecondaryInstance(func,getMeta(func),getLocation.line));
   end;
 
 FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
