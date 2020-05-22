@@ -393,26 +393,30 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
 
     PROCEDURE updateMarkers(CONST meta:P_editorMeta);
       VAR k:longint=0;
-          i:longint;
       begin
         while k<length(oldMarkers) do if oldMarkers[k].location.fileName=fileName then begin
           meta^._add_breakpoint_or_bookmark_(oldMarkers[k].location.line,oldMarkers[k].location.column,oldMarkers[k].markIndex);
-          for i:=k to length(oldMarkers)-2 do oldMarkers[i]:=oldMarkers[i+1];
-          setLength(oldMarkers,length(oldMarkers)-1);
+          //old bookmark is removed by T_editorMeta.onPlaceBookmark
         end else inc(k);
       end;
 
     VAR meta:P_editorMeta;
+        couldOpenFile:boolean;
     begin
       if isPseudoName(fileName) then begin
         for meta in metas do if meta^.pseudoName=fileName then begin result:=meta; exit; end;
       end else begin
         for meta in metas do if SameFileName(meta^.fileInfo.filePath,fileName) then begin result:=meta; exit; end;
         result:=addEditorMetaForNewFile();
-        result^.setFile(fileName);
-        updateMarkers(result);
-        //Update history:
-        fileHistory.fileClosed(fileName);
+        couldOpenFile:=result^.setFile(fileName);
+        if couldOpenFile then begin
+          updateMarkers(result);
+          //Update history:
+          fileHistory.fileClosed(fileName);
+        end else begin
+          closeQuietly(result);
+          result:=nil;
+        end;
       end;
     end;
 

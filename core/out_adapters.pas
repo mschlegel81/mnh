@@ -33,7 +33,7 @@ CONST
     {at_table}    [mt_startOfEvaluation,mt_displayTable],
     {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
     {at_custom...}[                     mt_displayCustomForm,mt_endOfEvaluation],
-    {at_profil...}[mt_profile_call_info],
+    {at_profil...}[mt_startOfEvaluation,mt_profile_call_info],
     {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
