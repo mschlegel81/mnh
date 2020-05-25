@@ -317,11 +317,15 @@ PROCEDURE T_mnhDockSiteModel.fixSize;
   begin
     if PageControl=nil then exit;
     if PageControl.PageCount=0 then begin
-      absSize     :=0;
-      relativeSize:=0;
-    end else if absSize<0.05*getFormSize then begin
-      absSize     :=round(0.2*getFormSize);
-      relativeSize:=13107; //=0.2*65535
+      if canScaleWidth
+      then PageControl.width :=0
+      else PageControl.height:=0;
+    end else begin
+      if absSize=0 then absSize:=relativeSize*getFormSize div 65535;
+      if absSize<0.05*getFormSize then begin
+        absSize     :=round(0.2*getFormSize);
+        relativeSize:=13107; //=0.2*65535
+      end;
     end;
   end;
 
