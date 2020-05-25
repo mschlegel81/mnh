@@ -178,7 +178,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
               if (P_intFuncCallback(t^.data)=BUILTIN_TRAILING) then aggregator:=newTrailingAggregator else
               if (P_intFuncCallback(t^.data)=BUILTIN_TOSET)    then aggregator:=newSetAggregator      else
               if (P_intFuncCallback(t^.data)=BUILTIN_TOLIST)   then aggregator:=newListAggregator     else
-              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD)     then aggregator:=newHeadAggregator;
+              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD)     then aggregator:=newHeadAggregator     else
+              if (P_intFuncCallback(t^.data)=BUILTIN_ELEMENT_FREQUENCY) then aggregator:=newElementFrequencyAggregator;
           end;
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin

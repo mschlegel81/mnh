@@ -114,6 +114,17 @@ TYPE
     PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
 
+TYPE T_counterMap=specialize G_literalKeyMap<longint>;
+  T_elementFrequencyAggregator=object(T_aggregator)
+    private
+      VAR counterMap:T_counterMap;
+    public
+      CONSTRUCTOR create;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
+      FUNCTION getResult:P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
   P_aggregator            =^T_aggregator;
   P_listAggregator        =^T_listAggregator;
   P_concatAggregator      =^T_concatAggregator;
@@ -129,6 +140,7 @@ TYPE
   P_unaryExpressionAggregator =^T_unaryExpressionAggregator;
   P_trailingAggregator    =^T_trailingAggregator;
   P_setAggregator         =^T_setAggregator;
+  P_elementFrequencyAggregator=^T_elementFrequencyAggregator;
 
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
 FUNCTION newListAggregator                  :P_listAggregator;
@@ -137,6 +149,7 @@ FUNCTION newMaxAggregator                   :P_maxAggregator;
 FUNCTION newHeadAggregator                  :P_headAggregator;
 FUNCTION newTrailingAggregator              :P_trailingAggregator;
 FUNCTION newSetAggregator                   :P_setAggregator;
+FUNCTION newElementFrequencyAggregator      :P_elementFrequencyAggregator;
 FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
@@ -158,6 +171,7 @@ FUNCTION newMaxAggregator     :P_maxAggregator;      begin new(result,create); e
 FUNCTION newHeadAggregator    :P_headAggregator;     begin new(result,create); end;
 FUNCTION newTrailingAggregator:P_trailingAggregator; begin new(result,create); end;
 FUNCTION newSetAggregator     :P_setAggregator;      begin new(result,create); end;
+FUNCTION newElementFrequencyAggregator:P_elementFrequencyAggregator; begin new(result,create); end;
 
 FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
   VAR res1:P_unaryExpressionAggregator;
@@ -180,6 +194,11 @@ CONSTRUCTOR T_headAggregator     .create; begin inherited create(nil);          
 CONSTRUCTOR T_minAggregator      .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_maxAggregator      .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_setAggregator      .create; begin inherited create(newSetLiteral(0));  end;
+CONSTRUCTOR T_elementFrequencyAggregator.create;
+  begin
+    inherited create(nil);
+    counterMap.create();
+  end;
 CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_stringConcatAggregator.create; begin inherited create(newStringLiteral('',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin inherited create(nil); boolResult:=true;  end;
@@ -231,6 +250,41 @@ PROCEDURE T_setAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
   begin
     aggregationDefaultHandling;
     P_setLiteral(resultLiteral)^.append(er.literal,not(doDispose));
+  end;
+
+PROCEDURE T_elementFrequencyAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);
+  VAR prev:longint;
+  begin
+    aggregationDefaultHandling;
+    if counterMap.putNew(er.literal,counterMap.get(er.literal,0)+1,prev) then begin
+      if not(doDispose) then er.literal^.rereference;
+    end else begin
+      if doDispose then disposeLiteral(er.literal);
+    end;
+  end;
+
+FUNCTION T_elementFrequencyAggregator.getResult:P_literal;
+  VAR entry:T_counterMap.CACHE_ENTRY;
+  begin
+    if hasReturnLiteral
+    then begin
+      result:=resultLiteral^.rereferenced
+    end else begin
+      result:=newMapLiteral(counterMap.fill);
+      for entry in counterMap.keyValueList do
+        P_mapLiteral(result)^.put(
+          entry.key,
+          int64(entry.value),true);
+    end;
+  end;
+
+DESTRUCTOR T_elementFrequencyAggregator.destroy;
+  VAR keySet:T_arrayOfLiteral;
+  begin
+    keySet:=counterMap.keySet;
+    disposeLiteral(keySet);
+    counterMap.destroy;
+    inherited;
   end;
 
 PROCEDURE T_concatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler);

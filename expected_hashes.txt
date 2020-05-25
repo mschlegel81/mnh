@@ -26,7 +26,7 @@ common/pixMaps.pas                            13.0kb F9807031
 common/serializationUtil.pas                  14.4kb D053787D
 consoles/mnh_light.lpr                         0.9kb 8A9D4FF8
 consoles/substitute_funcs.pas                  3.6kb EC626359
-core/aggregators.pas                          18.8kb C78F75FA
+core/aggregators.pas                          20.6kb F44C7709
 core/basicTypes.pas                            6.3kb 06913D0A
 core/builtinGenerators.pas                    44.0kb 2D3E8316
 core/caches.pas                                5.4kb 6032CB6A
@@ -35,14 +35,14 @@ core/commandlineparameters.pas                21.6kb 64541EA2
 core/consoleAsk.pas                            4.5kb F007942F
 core/contexts.pas                             37.5kb 04E2144D
 core/datastores.pas                            6.6kb 43E1EFAF
-core/evaluation.pas                           61.7kb 1BF95B5C
+core/evaluation.pas                           61.8kb 4754735B
 core/fileWrappers.pas                         16.5kb EB0D5059
 core/func_defines.inc                          2.4kb 48DCD8A6
 core/funcs.pas                                16.5kb C76FADC2
 core/funcs_files.pas                          33.3kb 032C1F54
 core/funcs_format.pas                         22.8kb C15B0684
 core/funcs_ipc.pas                            18.7kb DE6DF183
-core/funcs_list.pas                           28.9kb 4273D45D
+core/funcs_list.pas                           29.7kb B737CCC5
 core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             8.5kb E78032E4
 core/funcs_package.inc                        16.2kb 3131F08B
@@ -50,7 +50,7 @@ core/funcs_regex.pas                          11.9kb 05D19260
 core/funcs_server.pas                         23.0kb 85E286D0
 core/funcs_strings.pas                        39.6kb B75379CE
 core/funcs_system.pas                         11.3kb 8B914A37
-core/funcs_types.pas                          19.2kb 37FCE4C6
+core/funcs_types.pas                          19.8kb 31F08E62
 core/funcs_xml.pas                             3.8kb 20CD0D90
 core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              164.8kb 25F7C4E8
@@ -110,7 +110,7 @@ ide/editors/searchModel.pas                    3.9kb 03392A67
 ide/editors/workspace.inc                     27.0kb C47B67CB
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
-ide/idelayoututil.pas                         29.8kb 162E05D1
+ide/idelayoututil.pas                         29.9kb E2F0D477
 ide/idemain.pas                               24.0kb 0EE81DB1
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.1kb D0C18023
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3400 kB
+          3404 kB

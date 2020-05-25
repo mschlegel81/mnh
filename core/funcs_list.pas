@@ -10,8 +10,9 @@ USES sysutils,
      listProcessing,
      recyclers,
      subrules,
-     funcs;
-VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
+     funcs,
+     aggregators;
+VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING,BUILTIN_ELEMENT_FREQUENCY:P_intFuncCallback;
 {$i func_defines.inc}
 
 FUNCTION flatten_imp intFuncSignature;
@@ -203,8 +204,24 @@ FUNCTION getElementFreqency intFuncSignature;
       list:P_listLiteral;
       iter:T_arrayOfLiteral;
       x:P_literal;
+
+      valueToAppend:P_literal;
+      aggregator:P_elementFrequencyAggregator;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
+    if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+      new(aggregator,create);
+
+      valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+      while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
+        listResult^.append(valueToAppend,false);
+        valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+      end;
+      result:=aggregator^.getResult;
+      dispose(aggregator,destroy);
+      exit(result);
+    end;
+
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
       result:=newMapLiteral(100);
       iter:=compound0^.iteratableList;
@@ -614,6 +631,7 @@ INITIALIZATION
                                                'sort(L,innerIndex:Int);//Returns L sorted by given inner index'{$endif});
   registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,ak_unary     {$ifdef fullVersion},'sortPerm(L);//Returns indexes I so that L%I==sort(L)'{$endif});
   registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     {$ifdef fullVersion},'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup'{$endif});
+  BUILTIN_ELEMENT_FREQUENCY:=
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,ak_unary     {$ifdef fullVersion},'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies'{$endif});
   registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,ak_unary     {$ifdef fullVersion},'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.'{$endif});
   registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1{$ifdef fullVersion},'union(A,...);//Returns a union of all given parameters. All parameters must be collections.'{$endif});
