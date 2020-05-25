@@ -135,7 +135,7 @@ FUNCTION toReal_imp intFuncSignature;
 
 FUNCTION toList_imp intFuncSignature;
   VAR valueToAppend:P_literal;
-     iterator:P_expressionLiteral;
+      iterator:P_expressionLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -154,9 +154,20 @@ FUNCTION toList_imp intFuncSignature;
   end;
 
 FUNCTION toSet_imp intFuncSignature;
+  VAR valueToAppend:P_literal;
+      iterator:P_expressionLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+        iterator:=P_expressionLiteral(arg0);
+        result:=newSetLiteral(1);
+        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+        while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
+          setResult^.append(valueToAppend,false);
+          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+        end;
+      end else
       if arg0^.literalType in C_scalarTypes
       then result:=newSetLiteral(1)^.append(arg0,true)
       else result:=compound0^.toSet;
