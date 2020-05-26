@@ -57,6 +57,7 @@ TYPE
       PROCEDURE defaultDockSite3Click(Sender:TObject);
       PROCEDURE defaultDockSite4Click(Sender:TObject);
       PROCEDURE initDockMenuItems(CONST menuToInit:TMenu; CONST dockRoot:TMenuItem);
+      PROCEDURE setComponentFormVisible(CONST visible_:boolean);
     public
       lastDock,
       myComponentParent:T_componentParent;
@@ -296,7 +297,7 @@ CONSTRUCTOR T_mnhDockSiteModel.create(CONST dockId_: T_componentParent;
     canScaleWidth:=dockId<>cpPageControl2;
     PageControl  :=pageControl_;
     if PageControl<>nil then
-    PageControl.OnKeyDown:=@tabNextKeyHandling;
+    PageControl.OnKeyUp:=@tabNextKeyHandling;
     if dockId=cpNone then exit;
   end;
 
@@ -314,9 +315,12 @@ PROCEDURE T_mnhDockSiteModel.updateRelSizeByAbsSize;
   end;
 
 PROCEDURE T_mnhDockSiteModel.fixSize;
+  VAR anyVisiblePage:boolean=false;
+      i:longint;
   begin
     if PageControl=nil then exit;
-    if PageControl.PageCount=0 then begin
+    for i:=0 to PageControl.PageCount-1 do anyVisiblePage:=anyVisiblePage or PageControl.PAGES[i].visible;
+    if not(anyVisiblePage) then begin
       if canScaleWidth
       then PageControl.width :=0
       else PageControl.height:=0;
@@ -330,11 +334,17 @@ PROCEDURE T_mnhDockSiteModel.fixSize;
   end;
 
 PROCEDURE T_mnhDockSiteModel.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR step:longint;
+      prevPageIndex:longint;
   begin
     if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
       if key=34
-      then PageControl.activePageIndex:=(PageControl.activePageIndex+1                      ) mod PageControl.PageCount
-      else PageControl.activePageIndex:=(PageControl.activePageIndex+PageControl.PageCount-1) mod PageControl.PageCount;
+      then step:=1
+      else step:=PageControl.PageCount-1;
+      prevPageIndex:=PageControl.activePageIndex;
+      repeat
+        PageControl.activePageIndex:=(PageControl.activePageIndex+step) mod PageControl.PageCount
+      until (prevPageIndex=PageControl.activePageIndex) or T_mnhComponentForm(PageControl.activePage.Controls[0]).visible;
       if mainForm<>nil then mainForm.ActiveControl:=T_mnhComponentForm(PageControl.activePage.Controls[0]).getDefaultControl;
       key:=0;
     end;
@@ -369,8 +379,7 @@ PROCEDURE T_mnhDockSiteModel.undockAll;
     if needSizeFix then fixSize;
   end;
 
-PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT
-  PageControl: TPageControl);
+PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT PageControl: TPageControl);
   begin
     page:=nil;
     PageControl:=nil;;
@@ -381,21 +390,9 @@ PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
-  VAR page:TTabSheet;
-      PageControl:TPageControl;
+PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
-      getParents(page,PageControl);
-      if PageControl<>nil then begin
-        if key=34
-        then PageControl.activePageIndex:=(PageControl.activePageIndex+1                      ) mod PageControl.PageCount
-        else PageControl.activePageIndex:=(PageControl.activePageIndex+PageControl.PageCount-1) mod PageControl.PageCount;
-        if mainForm<>nil then mainForm.ActiveControl:=T_mnhComponentForm(PageControl.activePage.Controls[0]).getDefaultControl;
-        key:=0;
-      end;
-    end;
+    if (mainForm<>nil) and (mainForm.dockSites[myComponentParent]<>nil) then mainForm.dockSites[myComponentParent]^.tabNextKeyHandling(Sender,key,Shift);
   end;
 
 PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
@@ -459,12 +456,12 @@ PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);
     if CloseAction=caFree then FreeAndNil(self);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultUndockClick(Sender: TObject); begin changeDock(cpNone);         end;
+PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
 PROCEDURE T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
-PROCEDURE T_mnhComponentForm.defaultReattachClick(Sender: TObject);
+PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
   begin
     if lastDock=cpNone
     then changeDock(C_defaultDock[getIdeComponentType])
@@ -489,6 +486,20 @@ PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST do
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite3Click; item.caption:='Dock &3'; item.ImageIndex:=2; useRoot.add(item);
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultDockSite4Click; item.caption:='Dock &4'; item.ImageIndex:=3; useRoot.add(item);
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
+  end;
+
+PROCEDURE T_mnhComponentForm.setComponentFormVisible(CONST visible_:boolean);
+  VAR page:TTabSheet;
+      PageControl:TPageControl;
+  begin
+    if visible=visible_ then exit;
+    visible:=visible_;
+    getParents(page,PageControl);
+    if page<>nil then begin
+      page.visible:=visible_;
+      page.TabVisible:=visible_;
+    end;
+    if (mainForm<>nil) and (mainForm.dockSites[myComponentParent]<>nil) then mainForm.dockSites[myComponentParent]^.fixSize;
   end;
 
 FUNCTION hasAnyForm:boolean;

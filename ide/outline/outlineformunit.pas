@@ -358,7 +358,7 @@ PROCEDURE TOutlineForm.updateOutlineTree;
     if (caResponse=nil) or (caResponse^.package=nil) then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
       setLength(packageNodes,0);
-      visible:=false;
+      setComponentFormVisible(false);
     end else begin
       imported:=caResponse^.package^.usedPackages;
       //ensure correct node count
@@ -376,7 +376,7 @@ PROCEDURE TOutlineForm.updateOutlineTree;
       //update nodes
       packageNodes[0]^.updateWithPackage(caResponse^.package,true);
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
-      visible:=true;
+      setComponentFormVisible(true);
     end;
     if not(showImportedCheckbox.checked) and (length(packageNodes)>0) then packageNodes[0]^.associatedNode.expand(false);
   end;

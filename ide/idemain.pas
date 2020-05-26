@@ -20,6 +20,7 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    miCopyCurrentFileName: TMenuItem;
     miShebang: TMenuItem;
     miFocusEditor: TMenuItem;
     miUndockAll: TMenuItem;
@@ -101,6 +102,7 @@ TYPE
     PROCEDURE miAssistantClick(Sender: TObject);
     PROCEDURE miBreakpointsClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
+    PROCEDURE miCopyCurrentFileNameClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDebuggerClick(Sender: TObject);
     PROCEDURE miDebuggerVarClick(Sender: TObject);
@@ -159,7 +161,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -342,6 +344,12 @@ PROCEDURE TIdeMainForm.miCloseClick(Sender: TObject);
     ensureTimerSuspend;
     workspace.closeCurrentFile;
     timer.enabled:=true;
+  end;
+
+PROCEDURE TIdeMainForm.miCopyCurrentFileNameClick(Sender: TObject);
+  begin
+    if Clipboard=nil then exit;
+    Clipboard.AsText:=workspace.currentEditor^.getPath;
   end;
 
 PROCEDURE TIdeMainForm.miDebugClick(Sender: TObject);

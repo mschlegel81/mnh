@@ -716,6 +716,10 @@ object IdeMainForm: TIdeMainForm
         Caption = '&Shebang...'
         OnClick = miShebangClick
       end
+      object miCopyCurrentFileName: TMenuItem
+        Caption = 'Copy current file name to clipboard'
+        OnClick = miCopyCurrentFileNameClick
+      end
     end
     object MenuItem3: TMenuItem
       Caption = 'E&valuation'
