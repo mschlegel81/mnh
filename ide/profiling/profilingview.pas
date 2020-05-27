@@ -264,10 +264,20 @@ FUNCTION shortLocation(CONST l:T_searchTokenLocation):string;
     result:='@'+extractFileName(l.fileName)+':'+intToStr(l.line)+','+intToStr(l.column);
   end;
 
+FUNCTION getHeaderText(CONST index:longint; CONST sorting:byte):string;
+  CONST headerText:array[0..4] of string=('id','location','count','inclusive time','exclusive time');
+        arrow:array[false..true] of string=(#226#150#188,#226#150#178);
+  begin
+    if index*2  =sorting then result:=arrow[true ]+' '+headerText[index]+' '+arrow[true] else
+    if index*2+1=sorting then result:=arrow[false]+' '+headerText[index]+' '+arrow[false] else
+                              result:=                 headerText[index];
+  end;
+
 PROCEDURE TprofilingOutputForm.fillGrid1;
   VAR i:longint;
   begin
     StringGrid1.RowCount:=1+length(profilingList);
+    for i:=0 to 4 do StringGrid1.Cells[i,0]:=getHeaderText(i,grid1Sorting);
     for i:=0 to length(profilingList)-1 do begin
       StringGrid1.Cells[0,i+1]:=profilingList[i].id;
       StringGrid1.Cells[1,i+1]:=shortLocation(profilingList[i].calleeLocation);
@@ -283,6 +293,7 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
     k:=StringGrid1.selection.top-1;
     if (k>=0) and (k<length(profilingList)) then begin
       StringGrid2.RowCount:=length(profilingList[k].callers)+1;
+      for i:=0 to 4 do StringGrid2.Cells[i,0]:=getHeaderText(i,grid2Sorting);
       for i:=0 to length(profilingList[k].callers)-1 do begin
         StringGrid2.Cells[0,i+1]:=profilingList[k].callers[i].id;
         StringGrid2.Cells[1,i+1]:=shortLocation(profilingList[k].callers[i].location);
@@ -292,6 +303,7 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
       end;
 
       StringGrid3.RowCount:=length(profilingList[k].callees)+1;
+      for i:=0 to 4 do StringGrid3.Cells[i,0]:=getHeaderText(i,grid2Sorting);
       for i:=0 to length(profilingList[k].callees)-1 do begin
         StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].id;
         StringGrid3.Cells[1,i+1]:=shortLocation(profilingList[k].callees[i].location);
