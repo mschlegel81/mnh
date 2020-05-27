@@ -110,15 +110,15 @@ ide/editors/searchModel.pas                    3.9kb 03392A67
 ide/editors/workspace.inc                     27.0kb C47B67CB
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
-ide/idelayoututil.pas                         29.9kb E2F0D477
-ide/idemain.pas                               24.0kb 0EE81DB1
+ide/idelayoututil.pas                         30.3kb 152B9638
+ide/idemain.pas                               24.3kb AE480ED2
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
 ide/ipcModel.pas                               1.5kb 3A2A0B05
 ide/menuutil.pas                               2.2kb 6D9B520B
 ide/mnh_doc.pas                               19.6kb 93E78D1A
 ide/mnh_html.pas                               2.4kb 63458263
-ide/outline/outlineformunit.pas               14.5kb CCEE3BE2
+ide/outline/outlineformunit.pas               14.6kb 374439D2
 ide/output/guiOutAdapters.pas                  2.9kb 79A1405F
 ide/output/outputformunit.pas                  8.3kb FA7A6CE7
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
@@ -128,7 +128,7 @@ ide/plot/mnh_plotform.pas                     27.2kb 30DD40B8
 ide/plot/plotexport.pas                        7.8kb 9FE8B598
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
 ide/plot/plotstyles.pas                       13.5kb E7ECB02B
-ide/profiling/profilingview.pas               11.5kb C78A6B17
+ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.4kb 3362536B
 ide/reevaluationforms.pas                      3.3kb A70D4AEA
 ide/res_defaultFiles.inc                     131.4kb 73E84017
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.1kb D0C18023
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  74 kLOC
-          3404 kB
+          3405 kB
