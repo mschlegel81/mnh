@@ -111,7 +111,7 @@ ide/editors/workspace.inc                     27.0kb C47B67CB
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
 ide/idelayoututil.pas                         30.3kb 152B9638
-ide/idemain.pas                               24.3kb AE480ED2
+ide/idemain.pas                               24.2kb 2016AFD5
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
 ide/ipcModel.pas                               1.5kb 3A2A0B05
@@ -123,15 +123,15 @@ ide/output/guiOutAdapters.pas                  2.9kb 79A1405F
 ide/output/outputformunit.pas                  8.3kb FA7A6CE7
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
 ide/plot/funcs_plot.pas                       21.0kb 82D095FB
-ide/plot/mnh_plotData.pas                     67.8kb 7935C388
-ide/plot/mnh_plotform.pas                     27.2kb 30DD40B8
+ide/plot/mnh_plotData.pas                     67.9kb 4C0A075C
+ide/plot/mnh_plotform.pas                     27.3kb 42EA7726
 ide/plot/plotexport.pas                        7.8kb 9FE8B598
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
 ide/plot/plotstyles.pas                       13.5kb E7ECB02B
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.4kb 3362536B
 ide/reevaluationforms.pas                      3.3kb A70D4AEA
-ide/res_defaultFiles.inc                     131.4kb 73E84017
+ide/res_defaultFiles.inc                     131.4kb 0896ACD2
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB

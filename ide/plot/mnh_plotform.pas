@@ -527,8 +527,8 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
-           //tick interval is 10ms; Try to plot if next frame is less than 50ms ahead
-           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.05) and
+           //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
+           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.02) and
            relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval-secondsPerFrameOverhead));
@@ -726,12 +726,14 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
   VAR request:P_plotAddAnimationFrameRequest;
+      sleepInSeconds:double;
   begin if (params=nil) or (params^.size=0) then begin
     if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(request,create());
     context.messages^.postCustomMessage(request);
-    sleep(round(1000*request^.getProposedSleepTime(context.messages)));
+    sleepInSeconds:=request^.getProposedSleepTime(context.messages);
     disposeMessage(request);
+    if sleepInSeconds>0 then sleep(round(1000*sleepInSeconds));
     result:=newVoidLiteral;
   end else result:=nil; end;
 

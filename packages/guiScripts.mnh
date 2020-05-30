@@ -116,7 +116,7 @@ editDiff2(editorFile:String)->
 @SuppressUnusedParameterWarning
 checkForUpdates(editorFile:String)->begin
   local availableDownloads:=
-  httpGet(local downloadPage:='http://schlegel.bplaced.net/mnh/downloads.html')
+  httpGet(local downloadPage:='http://schlegel.bplaced.net/mnh/downloads.html')['body']
   .split("\n")
   .matchComposite('a href="mnh5_.*\.zip"')
   .flatten
@@ -127,7 +127,7 @@ checkForUpdates(editorFile:String)->begin
   downloadableBuild==mnhInfo['build']
   ? print('Your version of MNH5 is up to date')
   : begin
-      ask(format("Your version is %s, download version %s?",mnhInfo['build'],downloadableBuild),
+      ask(format("Your version is %s, open page to download version %s?",mnhInfo['build'],downloadableBuild),
           ['Yes','No'])=="Yes"
       ? openUrl(downloadPage)
       : void;
