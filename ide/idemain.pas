@@ -303,10 +303,8 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
         cda_cancelEvalAndQuit: begin
           runnerModel.postHalt;
           stopQuickEvaluation;
-          CanClose:=true;
-          timeout:=now+1/(24*60*60);
-          while anyEvaluationRunning and (now<timeout) do sleep(1);
-          runnerModel.flushMessages;
+          quitPosted:=true;
+          CanClose:=not(anyEvaluationRunning);
         end;
       end;
       timer.enabled:=true;
