@@ -12,7 +12,7 @@ USES sysutils,
      litVar,
      EpikTimer,
      BGRABitmap,BGRACanvas,BGRABitmapTypes;
-CONST VOLATILE_FRAMES_MAX=50;
+CONST VOLATILE_FRAMES_MAX=100;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
   T_timedPlotExecution=object
@@ -1694,7 +1694,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_addAnimationFrame: begin
         displayImmediate:=true;
         animation.addFrame(currentPlot);
-        if animation.volatile
+        if animation.volatile and (animation.frameCount>VOLATILE_FRAMES_MAX)
         then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/20)
         else P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
       end;
