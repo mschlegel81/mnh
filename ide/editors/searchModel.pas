@@ -29,7 +29,7 @@ FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearc
     if frWholeWord       in FindOptions then include(result,ssoWholeWord);
     if frReplace         in FindOptions then include(result,ssoReplace);
     if frReplaceAll      in FindOptions then include(result,ssoReplaceAll);
-    if frHideEntireScope in FindOptions then include(result,ssoEntireScope);
+    if frEntireScope     in FindOptions then include(result,ssoEntireScope);
     if frPromptOnReplace in FindOptions then include(result,ssoPrompt);
     if frFindNext        in FindOptions then include(result,ssoFindContinue);
     if not(frDown in FindOptions) then include(result,ssoBackwards);
@@ -75,7 +75,10 @@ PROCEDURE T_searchReplaceModel.beginFindOrReplace(CONST focusedEditor: TSynEdit;
     hasEditor:=true;
     wordUnderCursor:=assignedEditor.TextBetweenPoints[assignedEditor.BlockBegin,assignedEditor.BlockEnd];
     if wordUnderCursor='' then wordUnderCursor:=assignedEditor.GetWordAtRowCol(assignedEditor.CaretXY);
-    if wordUnderCursor<>'' then FindDialog.FindText:=wordUnderCursor;
+    if wordUnderCursor<>'' then begin
+      FindDialog   .FindText:=wordUnderCursor;
+      ReplaceDialog.FindText:=wordUnderCursor;
+    end;
     if findRequested then begin
       FindDialog.execute;
       ReplaceDialog.FindText:=FindDialog.FindText;
