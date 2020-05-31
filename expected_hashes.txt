@@ -106,11 +106,11 @@ ide/editors/openfile.pas                       3.4kb BF9B8DA6
 ide/editors/renamedialog.pas                   1.8kb E9325640
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.7kb B0AB937C
-ide/editors/searchModel.pas                    3.9kb 03392A67
+ide/editors/searchModel.pas                    4.0kb 1FCF8333
 ide/editors/workspace.inc                     27.0kb C47B67CB
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
-ide/idelayoututil.pas                         30.3kb 152B9638
+ide/idelayoututil.pas                         30.4kb 1E5FBA4C
 ide/idemain.pas                               24.2kb 2016AFD5
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
