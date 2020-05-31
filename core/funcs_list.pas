@@ -208,6 +208,7 @@ FUNCTION getElementFreqency intFuncSignature;
       aggregator:P_elementFrequencyAggregator;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
+    result:=nil;
     if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
       new(aggregator,create);
 
