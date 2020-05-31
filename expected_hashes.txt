@@ -42,7 +42,7 @@ core/funcs.pas                                16.5kb C76FADC2
 core/funcs_files.pas                          33.3kb 032C1F54
 core/funcs_format.pas                         22.8kb C15B0684
 core/funcs_ipc.pas                            18.7kb DE6DF183
-core/funcs_list.pas                           29.7kb B737CCC5
+core/funcs_list.pas                           29.7kb DE7EF0F0
 core/funcs_math.pas                           46.3kb 2BEDFA64
 core/funcs_mnh.pas                             8.5kb E78032E4
 core/funcs_package.inc                        16.2kb 3131F08B
@@ -110,8 +110,8 @@ ide/editors/searchModel.pas                    4.0kb 1FCF8333
 ide/editors/workspace.inc                     27.0kb C47B67CB
 ide/evalThread.pas                            21.9kb 6C40301D
 ide/ide.lpr                                    1.1kb B0F60228
-ide/idelayoututil.pas                         30.4kb 1E5FBA4C
-ide/idemain.pas                               24.2kb 2016AFD5
+ide/idelayoututil.pas                         30.4kb 706421B6
+ide/idemain.pas                               24.2kb DA3DFF81
 ide/imig/mnh_imig.pas                         28.5kb 4A37908B
 ide/imig/mnh_imig_form.pas                     4.3kb 8A473737
 ide/ipcModel.pas                               1.5kb 3A2A0B05

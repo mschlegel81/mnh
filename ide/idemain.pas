@@ -287,7 +287,6 @@ FUNCTION anyEvaluationRunning:boolean;
   end;
 
 PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
-  VAR timeout:double;
   begin
     if anyEvaluationRunning then begin
       ensureTimerSuspend;
