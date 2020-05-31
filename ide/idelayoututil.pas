@@ -411,6 +411,7 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
       Show;
       PageControl.activePage:=page;
       if (mainForm<>nil) then try
+        if (mainForm.dockSites[myComponentParent]<>nil) then mainForm.dockSites[myComponentParent]^.fixSize;
         if retainOriginalFocus and (oldActive<>nil)
         then mainForm.ActiveControl:=oldActive
         else mainForm.ActiveControl:=getDefaultControl;
