@@ -71,6 +71,7 @@ PROCEDURE initIntrinsicRuleList;
     intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
     intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE);
     intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+OVERLOAD_ATTRIBUTE);
 
     intrinsicRulesForCompletion.put('?');
     intrinsicRulesForCompletion_ready:=true;

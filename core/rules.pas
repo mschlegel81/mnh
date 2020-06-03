@@ -1099,7 +1099,8 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
 PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
   begin
     inherited addOrReplaceSubRule(rule,context);
-    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
+    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) and
+       not(rule^.metaData.hasAttribute(OVERLOAD_ATTRIBUTE)) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
   end;
 
 PROCEDURE T_typeCheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_context);
