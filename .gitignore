@@ -31,3 +31,4 @@ core/build_number.inc
 /ide/*/backup/*
 /ide/mnh_debug
 /*/wpoData*
+*.lps
