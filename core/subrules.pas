@@ -1094,7 +1094,8 @@ FUNCTION T_subruleExpression.getDocTxt: ansistring;
   begin
     result:=meta.getDocTxt+ECHO_MARKER;
     if not(publicSubrule) then result:=result+'private ';
-    result:=result+getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
+    //TODO: Include body if body is only one token of type tt_literal
+    result+=getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
