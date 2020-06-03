@@ -1091,11 +1091,21 @@ FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
   end;
 
 FUNCTION T_subruleExpression.getDocTxt: ansistring;
+  FUNCTION bodyToString(CONST lengthLimit:longint):ansistring;
+    VAR t:T_preparedToken;
+        lastWasIdLike:boolean=false;
+    begin
+      result:='';
+      for t in preparedBody do
+        if length(result)<lengthLimit
+        then result+=t.token.toString(lastWasIdLike,lastWasIdLike,lengthLimit-length(result))
+        else exit(result+'...');
+    end;
+
   begin
     result:=meta.getDocTxt+ECHO_MARKER;
     if not(publicSubrule) then result:=result+'private ';
-    //TODO: Include body if body is only one token of type tt_literal
-    result+=getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
+    result+=getId+'->'+bodyToString(50)+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
