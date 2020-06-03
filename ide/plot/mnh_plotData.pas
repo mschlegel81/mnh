@@ -424,7 +424,12 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint);
 
 PROCEDURE T_plotSeriesFrame.performPostedPreparation;
   begin
-    enterCriticalSection(plotData.cs);
+    try
+      enterCriticalSection(plotData.cs);
+    except
+      backgroundPreparation:=false;
+      exit;
+    end;
     try
       prepareImage(postedWidth,postedHeight);
     finally

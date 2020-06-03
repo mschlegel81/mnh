@@ -69,6 +69,7 @@ CONST
   SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE='SuppressUnusedParameterWarning';
   {$endif}
   OVERRIDE_ATTRIBUTE='Override';
+  OVERLOAD_ATTRIBUTE='Overload';
   EXECUTE_AFTER_ATTRIBUTE='after';
   TO_STRING_RULE_ID='toString';
 

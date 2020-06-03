@@ -54,7 +54,7 @@ core/funcs_types.pas                          19.8kb 31F08E62
 core/funcs_xml.pas                             3.8kb 20CD0D90
 core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              164.8kb 25F7C4E8
-core/mnh_constants.pas                        64.1kb 9010E2CA
+core/mnh_constants.pas                        64.1kb 600111D8
 core/mnh_messages.pas                         18.3kb ABF8D58E
 core/mnh_settings.pas                          4.8kb 89E00A79
 core/operators.pas                            47.5kb D3763027
@@ -63,10 +63,10 @@ core/packages.pas                             64.8kb 87F98DDE
 core/patterns.pas                             31.9kb FB5AC32A
 core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb F8A7F389
-core/rules.pas                                71.9kb F08E1610
-core/subrules.pas                             76.4kb 1445304D
-core/tokenArray.pas                           55.5kb 4522A313
-core/tokenStack.pas                           17.3kb 95C49DB4
+core/rules.pas                                71.9kb D46D5880
+core/subrules.pas                             76.8kb E60268D0
+core/tokenArray.pas                           55.6kb D10633DB
+core/tokenStack.pas                           17.9kb 49FCA8C5
 core/tokens.pas                               17.9kb 5E07D9A3
 core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb B469BF36
@@ -101,7 +101,7 @@ ide/editors/editormetabase.pas                35.6kb E31764C8
 ide/editors/editscripts.pas                    6.6kb 57759C02
 ide/editors/fileHistory.inc                   10.8kb 541F2962
 ide/editors/gotolinedialogs.pas                1.3kb 04EA9342
-ide/editors/mnhCompletion.pas                  8.5kb 281C5164
+ide/editors/mnhCompletion.pas                  8.6kb 7517758F
 ide/editors/openfile.pas                       3.4kb BF9B8DA6
 ide/editors/renamedialog.pas                   1.8kb E9325640
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
@@ -123,7 +123,7 @@ ide/output/guiOutAdapters.pas                  2.9kb 79A1405F
 ide/output/outputformunit.pas                  8.3kb FA7A6CE7
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
 ide/plot/funcs_plot.pas                       21.0kb 82D095FB
-ide/plot/mnh_plotData.pas                     67.9kb 4C0A075C
+ide/plot/mnh_plotData.pas                     68.0kb 2BD26475
 ide/plot/mnh_plotform.pas                     27.3kb 42EA7726
 ide/plot/plotexport.pas                        7.8kb 9FE8B598
 ide/plot/plotmath.pas                         51.3kb 1D8A56A4
@@ -176,5 +176,5 @@ igSrc/myParams.pas                            29.4kb A3D827DE
 igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.1kb D0C18023
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
-Code Size:  74 kLOC
-          3405 kB
+Code Size:  75 kLOC
+          3407 kB

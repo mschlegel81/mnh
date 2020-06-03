@@ -115,6 +115,9 @@ TYPE
     PROCEDURE clear;
     PROCEDURE scopePush(CONST scopeType:T_scopeType; CONST location:T_tokenLocation);
     PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
+    {$ifdef fullVersion}
+    PROCEDURE popRemaining(CONST location:T_tokenLocation);
+    {$endif}
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
     FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
@@ -506,6 +509,23 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
     setLength(scope[topIdx].ids,0);
     setLength(scope,topIdx);
   end;
+
+{$ifdef fullVersion}
+PROCEDURE T_idStack.popRemaining(CONST location:T_tokenLocation);
+  VAR topIdx:longint;
+      i:longint;
+  begin
+    topIdx:=length(scope)-1;
+    while topIdx>=0 do begin
+      with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+        if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,location,ids[i].idType);
+      end;
+      setLength(scope[topIdx].ids,0);
+      topIdx-=1;
+    end;
+    setLength(scope,0);
+  end;
+{$endif}
 
 FUNCTION T_idStack.oneAboveBottom:boolean;
   begin
