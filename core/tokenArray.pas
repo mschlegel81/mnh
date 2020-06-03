@@ -1148,7 +1148,12 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
       lastWasLocalModifier:=(lastTokenized<>nil) and (lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
     end;
     result:=nextStatement;
-    if not(messages^.continueEvaluation) then recycler.cascadeDisposeToken(result.firstToken);
+    if not(messages^.continueEvaluation) then begin
+      {$ifdef fullVersion}
+      localIdStack.popRemaining(lastLocation);
+      {$endif}
+      recycler.cascadeDisposeToken(result.firstToken);
+    end;
     resetTemp;
     while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false,not(hasSuppressedUnusedAttribute));
     localIdStack.destroy;
