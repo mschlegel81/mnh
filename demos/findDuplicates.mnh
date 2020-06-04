@@ -18,18 +18,42 @@ main(rootFolder,...)->begin
   sizeGroups.size>0
   ? print('Max. group size: ',sizeGroups.each(g,size(g[1]),aggregator(max)),' files')
   : void;
+  local findings:=
   sizeGroups
   .pEach(sizeGroup,
+        100*index/sizeGroups.size,
         group(sizeGroup[1],fileStats(sizeGroup[1])) //group files by equal hashes within size group
         .each(hashGroup,
                size(hashGroup[1])<=1 // if group has only one element, it cannot contain duplicates
                ? void
-               : [sizeGroup[0],hashGroup[1]]),|)
+               : [sizeGroup[0],hashGroup[1]]),
+   aggregator({$x.isNumeric
+               ? $y
+               : $y.isNumeric
+                 ? printDirect(format("\r%5.1f%%   ",$y)) //numeric elements indicate progess
+                   orElse $x //return the previous output to ensure that nothing is lost
+                 : $x|$y})) //other elements are concatenated with the previous output
   .map({[$x[0]*$x[1].size,$x]})
   .sort
-  .getInner(1)
+  .getInner(1);
+  print;
+  findings
   .each(finding,
     print('Found group of ',finding[1].size,' files, ',finding[0],' bytes each (total ',finding[0]*finding[1].size,' bytes):'),
-    printf('  %s',finding[1]));
+    printf('  %s',finding[1].systemSpecificFilename));
   size(...)>0 ? main@... : void;
+
+  findings:=findings.getInner(1).flatten;
+  findings.group(findings.extractFileDirectory)
+          .each(entry,begin
+             local folder:=entry[0];
+             local allFilesInFolder:=files(folder&'/*').sort;
+             local duplicates:=entry[1].sort;
+             allFilesInFolder==duplicates
+             ? folder
+             : void;
+           end)
+          .{$L.size=0
+            ? void
+            : print("\nThe following folders contain only duplicates:") orElse printf('  %s',$L)};
 end;
