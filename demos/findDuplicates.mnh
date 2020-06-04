@@ -55,5 +55,5 @@ main(rootFolder,...)->begin
            end)
           .{$L.size=0
             ? void
-            : print("\nThe following folders contain only duplicates:") orElse printf('  %s',$L)};
+            : print("\nThe following folders contain only duplicates:") orElse printf('  %s',$L.sort)};
 end;
