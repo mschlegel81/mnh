@@ -1,0 +1,25 @@
+
+addElement(L:List,newElement)->begin
+  local newList:=L;
+  newList|=newElement;
+  print('after adding element ',newElement,' the list is: ',newList);
+  newList;
+end;
+
+removeElement(L:List,indexToDrop:Int)->begin
+  local newList:=L;
+  newList[indexToDrop]:=void;
+  print('after removing element #',indexToDrop,' the list is: ',newList);
+  newList;
+end;
+
+main->begin
+  local list:=[0..3];
+  print('initial list: ',list);
+  list.addElement('X');
+  list.removeElement(0);
+  print('list still is: ',list);
+  list:=list.addElement('X');
+  list:=list.removeElement(0);
+  print('Now my list is: ',list);
+end;
