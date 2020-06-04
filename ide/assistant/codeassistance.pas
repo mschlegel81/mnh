@@ -92,7 +92,6 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
-      globals^.primaryContext.messages^.postTextMessage(mt_el1_note,packageTokenLocation(@user),name+' uses '+package^.getId);
       secondaryCallInfos.create;
       user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,nil,@secondaryCallInfos);
       functionCallInfos^.includeUsages(@secondaryCallInfos);
@@ -124,6 +123,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
     writeln;
     {$endif}
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
+    globals^.primaryContext.messages^.clear();
     package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
