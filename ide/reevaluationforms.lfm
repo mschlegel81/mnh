@@ -412,7 +412,7 @@ object reevaluationForm: TreevaluationForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.4.0'
   object Timer: TTimer
     Enabled = False
     Interval = 20
@@ -836,9 +836,9 @@ object reevaluationForm: TreevaluationForm
   object TrayPopup: TPopupMenu
     left = 98
     top = 147
-    object miKill: TMenuItem
-      Caption = 'Send kill signal'
-      OnClick = miKillClick
+    object miStop: TMenuItem
+      Caption = 'Stop'
+      OnClick = miStopClick
     end
   end
 end
