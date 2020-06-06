@@ -242,19 +242,28 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         inc(workflowsActive);
         leaveCriticalSection(workflowCs);
-        if dest<>C_nullSourceOrTargetFileName then thisWorkflow.appendSaveStep(dest,sizeLimit);
-        thisWorkflow.executeWorkflowInBackground(false);
-        if source<>''
-        then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod)
-        else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod);
-        while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
-          pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
-          ThreadSwitch;
-          sleep(sleepTime);
-          if sleepTime<1000 then inc(sleepTime);
+        if dest<>C_nullSourceOrTargetFileName then try
+          thisWorkflow.appendSaveStep(dest,sizeLimit);
+        except
+          on e:Exception do begin
+            context.raiseError(e.message,tokenLocation);
+            isValid:=false;
+          end;
         end;
-        if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
-        thisWorkflow.ensureStop;
+        if isValid and thisWorkflow.isValid then begin
+          thisWorkflow.executeWorkflowInBackground(false);
+          if source<>''
+          then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod)
+          else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod);
+          while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
+            pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
+            ThreadSwitch;
+            sleep(sleepTime);
+            if sleepTime<1000 then inc(sleepTime);
+          end;
+          if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
+          thisWorkflow.ensureStop;
+        end;
         pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
