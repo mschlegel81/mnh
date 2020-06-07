@@ -56,13 +56,14 @@ TYPE T_language=(LANG_MNH   = 0,
 
   P_basicEditorMeta=^T_basicEditorMeta;
   T_basicEditorMeta=object(T_codeProvider)
+    private
+      language_   : T_language;
     protected
       completionLogic:T_completionLogic;
-      language_   : T_language;
       editor_     : TSynEdit;
       plugin      : TSynPluginMultiCaret;
       highlighter : TMnhInputSyn;
-      PROCEDURE setLanguage(CONST languageIndex:T_language);
+      PROCEDURE setLanguage(CONST languageIndex:T_language); virtual;
       FUNCTION currentBlockOrLine:T_lineRange;
     public
       PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer); virtual;
@@ -77,7 +78,7 @@ TYPE T_language=(LANG_MNH   = 0,
 
       PROPERTY language:T_language read language_ write setLanguage;
       PROPERTY editor:TSynEdit read editor_;
-      PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:T_language);
+      PROCEDURE setLanguageWithFallback(CONST extensionWithoutDot:string; CONST fallback:T_language);
 
       PROCEDURE setCaret(CONST location: T_searchTokenLocation);
       PROCEDURE toggleComment;
@@ -90,12 +91,11 @@ TYPE T_language=(LANG_MNH   = 0,
 
   T_quickEvalEditorMeta=object(T_basicEditorMeta)
     private
-      latestAssistanceResponse:P_codeAssistanceResponse;
       paintedWithStateHash:T_hashInt;
     public
       CONSTRUCTOR create(CONST existingEditor:TSynEdit);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
+      PROCEDURE updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceData);
   end;
 
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot :TMenuItem);
@@ -270,7 +270,6 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
 
 CONSTRUCTOR T_quickEvalEditorMeta.create(CONST existingEditor: TSynEdit);
   begin
-    latestAssistanceResponse:=nil;
     paintedWithStateHash:=0;
     inherited createWithExistingEditor(existingEditor,nil);
   end;
@@ -278,25 +277,20 @@ CONSTRUCTOR T_quickEvalEditorMeta.create(CONST existingEditor: TSynEdit);
 DESTRUCTOR T_quickEvalEditorMeta.destroy;
   begin
     inherited destroy;
-    disposeCodeAssistanceResponse(latestAssistanceResponse);
   end;
 
-PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
+PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceData);
   begin
-    disposeCodeAssistanceResponse(latestAssistanceResponse);
-    if response=nil
-    then latestAssistanceResponse:=nil
-    else latestAssistanceResponse:=response^.rereferenced;
-    completionLogic.assignEditor(editor_,latestAssistanceResponse,true);
-    if (latestAssistanceResponse= nil) and (paintedWithStateHash<>0) or
-       (latestAssistanceResponse<>nil) and (paintedWithStateHash<>latestAssistanceResponse^.stateHash) then begin
-      if latestAssistanceResponse=nil
+    completionLogic.assignEditor(editor_,assistanceDataFromEditorUsedAsInput,true);
+    if (assistanceDataFromEditorUsedAsInput= nil) and (paintedWithStateHash<>0) or
+       (assistanceDataFromEditorUsedAsInput<>nil) and (paintedWithStateHash<>assistanceDataFromEditorUsedAsInput^.assistanceStateHash) then begin
+      if assistanceDataFromEditorUsedAsInput=nil
       then paintedWithStateHash:=0
-      else paintedWithStateHash:=latestAssistanceResponse^.stateHash;
-      if latestAssistanceResponse=nil
+      else paintedWithStateHash:=assistanceDataFromEditorUsedAsInput^.assistanceStateHash;
+      if assistanceDataFromEditorUsedAsInput=nil
       then highlighter.highlightingData.clear
       else begin
-        latestAssistanceResponse^.updateHighlightingData(highlighter.highlightingData);
+        assistanceDataFromEditorUsedAsInput^.updateHighlightingData(highlighter.highlightingData);
         highlighter.highlightingData.clearLocalIdInfos; //local id infos are not applicable to quick evaluation editor
       end;
       editor.highlighter:=highlighter;
@@ -509,7 +503,7 @@ FUNCTION languageFromExtension(CONST extension:string; CONST fallback:T_language
     result:=fallback;
   end;
 
-PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
+PROCEDURE T_basicEditorMeta.setLanguageWithFallback(CONST extensionWithoutDot: string; CONST fallback: T_language);
   begin
     setLanguage(languageFromExtension(extensionWithoutDot,fallback));
   end;

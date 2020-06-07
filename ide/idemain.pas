@@ -262,10 +262,12 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
   begin
     {$ifdef debugMode} writeln('Suspending timer'); {$endif}
     ensureTimerSuspend;
-    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
-    finalizeCodeAssistance;
     {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
+
+    closeAllForms;
+    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
+    finalizeCodeAssistance;
     {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
     {$ifdef debugMode} writeln('Destroying runner'); {$endif}

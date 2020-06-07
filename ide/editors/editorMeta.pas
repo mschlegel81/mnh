@@ -54,7 +54,6 @@ T_editorMeta=object(T_basicEditorMeta)
   private
     metaIndex:longint;
 
-    paintedWithStateHash:T_hashInt;
     fileInfo:record
       filePath:ansistring;
       fileAccessAge:double;
@@ -62,9 +61,11 @@ T_editorMeta=object(T_basicEditorMeta)
       ignoreDeleted:boolean;
     end;
     strictlyReadOnly:boolean;
-
-    latestAssistanceReponse:P_codeAssistanceResponse;
     tabsheet    : TTabSheet;
+    assistanceData:P_codeAssistanceData;
+  protected
+    PROCEDURE setLanguage(CONST languageIndex:T_language); virtual;
+  private
     PROCEDURE guessLanguage(CONST fallback:T_language);
     PROCEDURE languageMenuItemClick(Sender: TObject);
 
@@ -81,8 +82,7 @@ T_editorMeta=object(T_basicEditorMeta)
 
     //Assistant related
     FUNCTION getOptionalAdditionals:T_arrayOfString;
-    PROCEDURE triggerCheck;
-    PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
+    //PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
   public
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
@@ -112,11 +112,11 @@ T_editorMeta=object(T_basicEditorMeta)
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
     PROCEDURE reloadFile();
+    PROPERTY getAssistanceData:P_codeAssistanceData read assistanceData;
 
     //Externally triggered actions
     PROCEDURE pollAssistanceResult;
 
-    FUNCTION getCodeAssistanceDataRereferenced:P_codeAssistanceResponse;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION getParametersFromShebang(OUT hasShebangLine,isExecutable:boolean):T_mnhExecutionOptions;
 end;
@@ -206,9 +206,22 @@ FUNCTION T_editorMetaProxy.fixate: P_editorMetaProxy;
 {$i workspace.inc}
 {$undef includeImplementation}
 
+PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
+  begin
+    inherited;
+    if languageIndex=LANG_MNH then begin
+      if assistanceData=nil then new(assistanceData,create(@self));
+    end else begin
+      if assistanceData<>nil then begin
+        dispose(assistanceData,destroy);
+        assistanceData:=nil;
+      end;
+    end;
+  end;
+
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
   begin
-    setLanguage(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
+    setLanguageWithFallback(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
   end;
 
 PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
@@ -223,8 +236,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     tabsheet:=TTabSheet.create(workspace.inputPageControl);
     tabsheet.PageControl:=workspace.inputPageControl;
     createWithParent(tabsheet,workspace.bookmarkImagesList);
-    latestAssistanceReponse:=nil;
-    paintedWithStateHash:=0;
+
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
     editor_.OnChange            :=@InputEditChange;
     editor_.OnMouseDown         :=@editorMouseDown;
@@ -292,7 +304,7 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
 
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
-    language_:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
+    language:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
     {$ifdef debugMode}
     writeln('Read language. ok=',stream.allOkay);
     {$endif}
@@ -377,7 +389,7 @@ PROCEDURE T_editorMeta.clearBookmark(markIndex: longint);
     if editor_.GetBookMark(markIndex,x,y) then editor_.clearBookmark(markIndex);
   end;
 
-PROCEDURE T_editorMeta.deleteBreakpointIfExistent(CONST lineIndex:longint);
+PROCEDURE T_editorMeta.deleteBreakpointIfExistent(CONST lineIndex: longint);
   VAR i:longint;
       mark:TSynEditMark;
   begin
@@ -404,31 +416,11 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
     runnerModel.evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
   end;
 
-FUNCTION T_editorMeta.getOptionalAdditionals:T_arrayOfString;
+FUNCTION T_editorMeta.getOptionalAdditionals: T_arrayOfString;
   begin
-    if (language_=LANG_MNH) and workspace.checkUsingScripts and not(isPseudoFile)
+    if (language=LANG_MNH) and workspace.checkUsingScripts and not(isPseudoFile)
     then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
     else result:=C_EMPTY_STRING_ARRAY;
-  end;
-
-PROCEDURE T_editorMeta.triggerCheck;
-  begin
-    postCodeAssistanceRequest(newFixatedFileProxy(pseudoName()),getOptionalAdditionals);
-  end;
-
-PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response: P_codeAssistanceResponse);
-  begin
-    if response=nil then exit;
-    disposeCodeAssistanceResponse(latestAssistanceReponse);
-    latestAssistanceReponse:=response;
-    completionLogic.assignEditor(editor_,latestAssistanceReponse);
-    if (paintedWithStateHash<>latestAssistanceReponse^.stateHash) then begin
-      paintedWithStateHash:=latestAssistanceReponse^.stateHash;
-      latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
-      editor.highlighter:=highlighter;
-      editor.Repaint;
-    end;
-    if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,latestAssistanceReponse^.package^.usedAndExtendedPackages);
   end;
 
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
@@ -455,14 +447,14 @@ FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean;
   VAR m:P_editorMeta;
       wordUnderCursor:string;
   begin
-    if (language_<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit(false);
+    if (language<>LANG_MNH) or not(updateMarker or forHelpOrJump) then exit(false);
     wordUnderCursor:=editor.GetWordAtRowCol(caret);
     if updateMarker then begin
       for m in workspace.metas do m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
-    if forHelpOrJump and (latestAssistanceReponse<>nil)
-    then with editor do result:=latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
+    if forHelpOrJump and (assistanceData<>nil)
+    then with editor do result:=assistanceData^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
     else result:=false;
   end;
 
@@ -470,7 +462,6 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
   VAR meta:P_editorMeta;
       lineIndex:longint;
       lineTxt:string;
-      recycler:T_recycler;
       fileName:string;
 
   PROCEDURE updateLine;
@@ -479,18 +470,6 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       lineStart.y:=lineIndex+1; lineStart.x:=0;
       lineEnd  .y:=lineIndex+1; lineEnd  .x:=length(editor.lines[lineIndex])+1;
       editor.SetTextBetweenPoints(lineStart,lineEnd,lineTxt);
-    end;
-
-  VAR tempAssistanceResponse:P_codeAssistanceResponse;
-  FUNCTION usedInLines:T_arrayOfLongint;
-    VAR location:T_searchTokenLocation;
-        localName:string;
-    begin
-      localName:=pseudoName();
-      if ref.fileName=localName
-      then result:=ref.line-1
-      else result:=C_EMPTY_LONGINT_ARRAY;
-      for location in tempAssistanceResponse^.findUsagesOf(ref) do if location.fileName=localName then appendIfNew(result,location.line-1);
     end;
 
   begin
@@ -508,18 +487,13 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       end;
     end;
 
-    recycler.initRecycler;
-    tempAssistanceResponse:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),C_EMPTY_STRING_ARRAY,recycler);
-    recycler.cleanup;
-
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
-      if tempAssistanceResponse^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
+      if assistanceData^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
       result:=true;
     end;
     editor.EndUpdate;
-    disposeCodeAssistanceResponse(tempAssistanceResponse);
   end;
 
 FUNCTION T_editorMeta.setFile(CONST fileName: string):boolean;
@@ -595,9 +569,9 @@ PROCEDURE T_editorMeta.updateSheetCaption;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
-    if language_=LANG_MNH then triggerCheck;
     if workspace.debugLine.editor=editor_ then workspace.clearDebugLine;
     updateSheetCaption;
+    ensureCodeAssistanceThread;
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
@@ -644,9 +618,9 @@ PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Sh
 
 DESTRUCTOR T_editorMeta.destroy;
   begin
+    if assistanceData<>nil then dispose(assistanceData,destroy);
     inherited destroy;
     fileInfo.filePath:='';
-    disposeCodeAssistanceResponse(latestAssistanceReponse);
   end;
 
 FUNCTION T_editorMeta.getPath: ansistring;
@@ -670,16 +644,19 @@ PROCEDURE T_editorMeta.activate;
   begin
     for l in T_language do if Assigned(fileTypeMeta[l].menuItem) then begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
-      fileTypeMeta[l].menuItem.checked:=(l=language_);
+      fileTypeMeta[l].menuItem.checked:=(l=language);
     end;
     try
-      if language_=LANG_MNH then begin
+      if language=LANG_MNH then begin
         editor.highlighter:=highlighter;
-        paintedWithStateHash:=0;
-        triggerCheck;
+        if (assistanceData=nil) then new(assistanceData,create(@self));
+        assistanceData^.setAddidionalScripts(getOptionalAdditionals);
       end else begin
-        editor.highlighter:=fileTypeMeta[language_].highlighter;
-        disposeCodeAssistanceResponse(latestAssistanceReponse);
+        editor.highlighter:=fileTypeMeta[language].highlighter;
+        if (assistanceData<>nil) then begin
+          dispose(assistanceData,destroy);
+          assistanceData:=nil;
+        end;
       end;
       completionLogic.assignEditor(editor_,nil);
       editor.readonly       :=runnerModel.areEditorsLocked;
@@ -696,18 +673,16 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
   end;
 
 PROCEDURE T_editorMeta.pollAssistanceResult;
-  VAR response:P_codeAssistanceResponse;
   begin
-    if language_<>LANG_MNH then exit;
-    response:=getLatestAssistanceResponse(@self);
-    if response<>nil then updateAssistanceResponse(response);
-  end;
-
-FUNCTION T_editorMeta.getCodeAssistanceDataRereferenced: P_codeAssistanceResponse;
-  begin
-    if latestAssistanceReponse=nil
-    then exit(nil)
-    else exit(latestAssistanceReponse^.rereferenced);
+    if language<>LANG_MNH then exit;
+    if assistanceData=nil then exit;
+    completionLogic.assignEditor(editor_,assistanceData);
+    if assistanceData^.needRepaint then begin
+      assistanceData^.updateHighlightingData(highlighter.highlightingData);
+      editor.highlighter:=highlighter;
+      editor.Repaint;
+      if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,assistanceData^.usedAndExtendedPackages);
+    end;
   end;
 
 FUNCTION getHelpText(OUT helpLink:string):string;
@@ -740,23 +715,15 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.SelectAll;
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
+    ensureCodeAssistanceThread;
   end;
 
-FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable:boolean):T_mnhExecutionOptions;
-  VAR assistanceData:P_codeAssistanceResponse;
-      recycler:T_recycler;
-      requires:T_specialFunctionRequirements;
+FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,
+  isExecutable: boolean): T_mnhExecutionOptions;
+  VAR requires:T_specialFunctionRequirements;
   begin
-    assistanceData:=getCodeAssistanceDataRereferenced;
-    if assistanceData=nil then begin
-      recycler.initRecycler;
-      assistanceData:=doCodeAssistanceSynchronously(newFixatedFileProxy(pseudoName()),getOptionalAdditionals,recycler);
-      recycler.cleanup;
-    end;
     requires:=assistanceData^.getBuiltinRestrictions;
     isExecutable:=assistanceData^.isExecutablePackage;
-    disposeCodeAssistanceResponse(assistanceData);
-
     result.create;
     if (editor.lines.count>0) and (startsWith(editor.lines[0],'#!')) then begin
       hasShebangLine:=true;

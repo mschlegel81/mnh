@@ -18,13 +18,13 @@ T_completionLogic=object
     editor:TSynEdit;
     SynCompletion:TSynCompletion;
     completionStart:longint;
-    assistanceResponse:P_codeAssistanceResponse;
+    assistanceData:P_codeAssistanceData;
     quickEdit:boolean;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
+    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData; CONST isQuickEdit:boolean=false);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
     FUNCTION fillFilteredItems(CONST part:string):longint;
     PROCEDURE SynCompletionExecute(Sender: TObject);
@@ -91,16 +91,16 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   begin
     caret:=editor.CaretXY;
     wordsInEditor.clear;
-    if assistanceResponse<>nil then begin
+    if assistanceData<>nil then begin
       //Completion for assistant...
       isUseClause:=(pos(C_tokenDefaultId[tt_use    ],editor.lines[caret.y-1])>0)
                 or (pos(C_tokenDefaultId[tt_include],editor.lines[caret.y-1])>0);
       if isUseClause
-      then wordsInEditor.put(assistanceResponse^.getImportablePackages)
+      then wordsInEditor.put(assistanceData^.getImportablePackages)
       else begin
         initIntrinsicRuleList;
         wordsInEditor.put(intrinsicRulesForCompletion);
-        if not(assistanceResponse^.updateCompletionList(wordsInEditor,caret.y,caret.x))
+        if not(assistanceData^.updateCompletionList(wordsInEditor,caret.y,caret.x))
         then collectAllIdentifiers;
       end;
     end else if quickEdit then begin
@@ -112,7 +112,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
 CONSTRUCTOR T_completionLogic.create;
   begin
     editor:=nil;
-    assistanceResponse:=nil;
+    assistanceData:=nil;
     quickEdit:=false;
     wordsInEditor.create;
     SynCompletion:=TSynCompletion.create(nil);
@@ -128,10 +128,11 @@ DESTRUCTOR T_completionLogic.destroy;
     SynCompletion.destroy;
   end;
 
-PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
+PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData;  CONST isQuickEdit:boolean=false);
   begin
+    if (edit=editor) and (ad=assistanceData) then exit;
     editor:=edit;
-    assistanceResponse:=ad;
+    assistanceData:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
     quickEdit:=isQuickEdit;

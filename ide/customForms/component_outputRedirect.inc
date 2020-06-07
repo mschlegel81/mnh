@@ -17,7 +17,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
   begin
     inherited create(parent,def,location,context,[dmk_type]);
     state_hlLang:=fileTypeMeta[LANG_OUTPUT].extensions[0];
-    synMeta.setLanguage(state_hlLang,synMeta.language);
+    synMeta.setLanguageWithFallback(state_hlLang,synMeta.language);
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);
     new(synOutAdapter,create(synMeta.editor,parent^.containedInForm));
     synOutAdapter^.parentMessages:=adaptersHoldingCollector;

@@ -236,6 +236,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       folder,script,usedScript:string;
       list:TStringList;
       scriptsToScan:T_arrayOfString;
+      anyAdded:boolean=false;
   begin
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
@@ -275,6 +276,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
             writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
             {$endif}
           end;
+          anyAdded:=true;
         end;
       finally
         {$ifdef debugMode}
@@ -286,6 +288,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         setLength(scriptsToScan,0);
       end;
     end;
+    if anyAdded then workspace.onFileScanFinished;
     result:=1;
   end;
 

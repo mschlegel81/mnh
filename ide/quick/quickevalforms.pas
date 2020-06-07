@@ -155,11 +155,7 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
     if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
-    then begin
-      ca:=meta^.getCodeAssistanceDataRereferenced;
-      inputMeta.updateAssistanceResponse(ca);
-      disposeCodeAssistanceResponse(ca);
-    end
+    then inputMeta.updateAssistanceResponse(meta^.getAssistanceData)
     else inputMeta.updateAssistanceResponse(nil);
 
     quickEvaluation.flushMessages;

@@ -85,7 +85,7 @@ IMPLEMENTATION
 USES tokenArray;
 PROCEDURE ensureOutlineForm;
   begin
-    if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(Application));
+    if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(nil));
   end;
 
 {$R *.lfm}
