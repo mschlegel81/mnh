@@ -6,11 +6,26 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  EditBtn,mnh_settings, editorMeta,commandLineParameters;
+  EditBtn,mnh_settings, editorMeta,commandLineParameters,
+  serializationUtil,myGenerics;
 
 TYPE
+  T_runParameterHistory=object(T_serializable)
+    historyPerScript:array of record
+      scriptName:string;
+      parameterHistory:T_arrayOfString;
+    end;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
 
-  { TCustomRunForm }
+    FUNCTION getParameterHistory(CONST scriptName:string):T_arrayOfString;
+    PROCEDURE storeUsedParameter(CONST scriptName,parameters:string);
+
+    //From T_serializable:
+    FUNCTION getSerialVersion:dword; virtual;
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+  end;
 
   TCustomRunForm = class(TForm)
     Button1: TButton;
@@ -56,23 +71,29 @@ TYPE
   end;
 
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
-
+VAR runParameterHistory:T_runParameterHistory;
 IMPLEMENTATION
 USES editorMetaBase,mnh_constants;
 VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   CONST formCaption:array[false..true] of string=('Run','Run externally');
-  VAR k:longint;
-      meta:P_editorMeta;
+  VAR meta:P_editorMeta;
       executable:boolean;
       fileHadShebang:boolean=false;
       scriptName:string;
+      previousParameters:string;
   begin
     meta:=workspace.currentEditor;
     scriptName:=meta^.pseudoName();
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit(false);
     if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
+    with myCustomRunForm.scriptParamEdit do begin
+      items.clear;
+      for previousParameters in runParameterHistory.getParameterHistory(scriptName) do items.add(previousParameters);
+      text:='';
+    end;
+
     myCustomRunForm.caption:=formCaption[externalRun];
     if externalRun then begin
       myCustomRunForm.parametersFromShebang:=meta^.getParametersFromShebang(fileHadShebang,executable);
@@ -92,12 +113,7 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
       result:=true;
       runnerModel.externalRun.mnhExecutionOptions.sideEffectProfile:=myCustomRunForm.sideEffectComboBox.ItemIndex;
       runnerModel.externalRun.initFromIde(scriptName,myCustomRunForm.scriptParamEdit.text);
-      with myCustomRunForm.scriptParamEdit do if text<>'' then begin
-        k:=items.IndexOf(text);
-        if k>=0 then items.delete(k);
-        items.Insert(0,text);
-        text:='';
-      end;
+      runParameterHistory.storeUsedParameter(scriptName,myCustomRunForm.scriptParamEdit.text);
       if not(myCustomRunForm.flagsByShebangCb.enabled and myCustomRunForm.flagsByShebangCb.checked) then
         runnerModel.persistentRunOptions.mnhExecutionOptions.copyFrom(runnerModel.externalRun.mnhExecutionOptions);
     end else begin
@@ -107,6 +123,96 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   end;
 
 {$R *.lfm}
+
+{ T_runParameterHistory }
+
+CONSTRUCTOR T_runParameterHistory.create;
+  begin
+    setLength(historyPerScript,0);
+  end;
+
+DESTRUCTOR T_runParameterHistory.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(historyPerScript)-1 do begin
+      setLength(historyPerScript[i].parameterHistory,0);
+      historyPerScript[i].scriptName:='';
+    end;
+    setLength(historyPerScript,0);
+  end;
+
+FUNCTION T_runParameterHistory.getParameterHistory(CONST scriptName: string): T_arrayOfString;
+  VAR i:longint;
+      p:string;
+  begin
+    setLength(result,0);
+    for i:=0 to length(historyPerScript)-1 do
+      if historyPerScript[i].scriptName=scriptName
+      then append(result,historyPerScript[i].parameterHistory);
+    //Also append all parameters from other scripts...
+    for i:=0 to length(historyPerScript)-1 do
+      if historyPerScript[i].scriptName<>scriptName
+      then for p in historyPerScript[i].parameterHistory do appendIfNew(result,p);
+  end;
+
+PROCEDURE T_runParameterHistory.storeUsedParameter(CONST scriptName, parameters: string);
+  VAR i:longint=0;
+  begin
+    while (i<length(historyPerScript)) and (historyPerScript[i].scriptName<>scriptName) do inc(i);
+    if i=length(historyPerScript) then begin
+      setLength(historyPerScript,i+1);
+      historyPerScript[i].scriptName:=scriptName;
+      historyPerScript[i].parameterHistory:=parameters;
+    end else with historyPerScript[i] do begin
+      dropValues(parameterHistory,parameters);
+      prepend   (parameterHistory,parameters);
+    end;
+  end;
+
+FUNCTION T_runParameterHistory.getSerialVersion: dword;
+  begin
+    result:=482;
+  end;
+
+FUNCTION T_runParameterHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  VAR i,j:longint;
+  begin
+    result:=inherited loadFromStream(stream);
+    if result then begin
+      setLength(historyPerScript,stream.readNaturalNumber);
+      for i:=0 to length(historyPerScript)-1 do with historyPerScript[i] do begin
+        scriptName:=stream.readAnsiString;
+        setLength(parameterHistory,stream.readNaturalNumber);
+        for j:=0 to length(parameterHistory)-1 do parameterHistory[j]:=stream.readAnsiString;
+      end;
+      result:=stream.allOkay;
+    end;
+    if not(result) then begin
+      for i:=0 to length(historyPerScript)-1 do begin
+        setLength(historyPerScript[i].parameterHistory,0);
+        historyPerScript[i].scriptName:='';
+      end;
+      setLength(historyPerScript,0);
+    end;
+  end;
+
+PROCEDURE T_runParameterHistory.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR i:longint;
+      s:string;
+      toPersist:T_arrayOfLongint;
+  begin
+    setLength(toPersist,0);
+    //Save only parameters associated with existent files
+    for i:=0 to length(historyPerScript)-1 do if fileExists(historyPerScript[i].scriptName) then append(toPersist,i);
+
+    inherited saveToStream(stream);
+    stream.writeNaturalNumber(length(toPersist));
+    for i in toPersist do with historyPerScript[i] do begin
+      stream.writeAnsiString(scriptName);
+      stream.writeNaturalNumber(length(parameterHistory));
+      for s in parameterHistory do stream.writeAnsiString(s);
+    end;
+  end;
 
 PROCEDURE TCustomRunForm.reinitialize;
   VAR useParametersFromShebang:boolean;

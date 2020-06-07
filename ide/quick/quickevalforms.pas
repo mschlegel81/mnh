@@ -150,7 +150,6 @@ PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 PROCEDURE TQuickEvalForm.performFastUpdate;
   VAR meta:P_editorMeta;
       proxy:P_editorMetaProxy;
-      ca:P_codeAssistanceResponse;
   begin
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);

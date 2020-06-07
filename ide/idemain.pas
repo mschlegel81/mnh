@@ -234,6 +234,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
+    runParameterHistory.create;
+    runParameterHistory.loadFromFile(runParameterHistoryFileName);
+
     {$ifdef debugMode}writeln(stdErr,'Done reading ',workspaceFilename);{$endif}
     splashOnStartup;
 
@@ -274,6 +277,7 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
     runnerModel.destroy;
     {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
+    runParameterHistory.destroy;
   end;
 
 PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
@@ -591,6 +595,7 @@ PROCEDURE TIdeMainForm.saveIdeSettings;
   begin
     mnh_settings.saveSettings;
 
+    runParameterHistory.saveToFile(runParameterHistoryFileName);
     stream.createToWriteToFile(workspaceFilename);
     saveMainFormLayout(stream);
     saveOutputSettings(stream);

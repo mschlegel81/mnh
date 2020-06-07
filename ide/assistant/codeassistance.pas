@@ -262,6 +262,7 @@ FUNCTION T_codeAssistanceData.needRepaint: boolean;
     enterCriticalSection(cs);
     if (latestResponse<>nil) and (latestResponse^.stateHash<>paintedWithStateHash) then begin
       paintedWithStateHash:=latestResponse^.stateHash;
+      result:=true;
     end else result:=false;
     leaveCriticalSection(cs);
   end;
@@ -512,14 +513,14 @@ PROCEDURE forceFullScan;
     enterCriticalSection(codeAssistanceCs);
     try
       for ad in codeAssistanceData do begin
-        EnterCriticalsection(ad^.cs);
+        enterCriticalSection(ad^.cs);
         try
           if (ad^.latestResponse<>nil) then begin
             disposeCodeAssistanceResponse(ad^.latestResponse);
             ad^.latestResponse:=nil;
           end;
         finally
-          LeaveCriticalsection(ad^.cs);
+          leaveCriticalSection(ad^.cs);
         end;
       end;
       ensureCodeAssistanceThread;
