@@ -462,24 +462,30 @@ PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
+  VAR fileName:string;
   begin
     ensureTimerSuspend;
-    if (openFileDialog.showClassicDialog=mrOk) and fileExists(openFileDialog.getSelectedFile)
-    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    if (openFileDialog.showClassicDialog=mrOk)
+    then for fileName in openFileDialog.getSelectedFile do
+      if fileExists(fileName)
+      then workspace.addOrGetEditorMetaForFiles(fileName,true);
     timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
   VAR currentEdit:P_editorMeta;
       currentPath:string;
+      fileName:string;
   begin
     ensureTimerSuspend;
     currentEdit:=workspace.currentEditor;
     if (currentEdit=nil) or (currentEdit^.isPseudoFile)
     then currentPath:=GetCurrentDir
     else currentPath:=ExtractFileDir(currentEdit^.getPath);
-    if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
-    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    if (openFileDialog.showForRoot(currentPath)=mrOk)
+    then for fileName in openFileDialog.getSelectedFile do
+      if fileExists(fileName)
+      then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     timer.enabled:=true;
   end;
 

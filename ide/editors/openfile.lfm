@@ -1,94 +1,102 @@
 object openFileDialog: TopenFileDialog
   Left = 1332
-  Height = 360
+  Height = 300
   Top = 441
-  Width = 480
+  Width = 400
   BorderStyle = bsDialog
   Caption = 'Open file'
-  ClientHeight = 360
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 300
+  ClientWidth = 400
+  DesignTimePPI = 120
   FormStyle = fsStayOnTop
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.8.0'
   object Panel1: TPanel
     Left = 0
-    Height = 33
+    Height = 28
     Top = 0
-    Width = 480
+    Width = 400
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 33
-    ClientWidth = 480
+    ClientHeight = 28
+    ClientWidth = 400
+    ParentFont = False
     TabOrder = 0
     object Label1: TLabel
       Left = 0
-      Height = 33
+      Height = 28
       Top = 0
-      Width = 56
+      Width = 47
       Align = alLeft
       Caption = 'Search:'
       ParentColor = False
+      ParentFont = False
     end
     object searchEdit: TEdit
-      Left = 56
-      Height = 33
+      Left = 47
+      Height = 28
       Top = 0
-      Width = 424
+      Width = 353
       Align = alClient
       OnChange = searchEditChange
       OnKeyDown = searchEditKeyDown
       OnKeyPress = searchEditKeyPress
+      ParentFont = False
       TabOrder = 0
     end
   end
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 251
-    Top = 33
-    Width = 480
+    Height = 208
+    Top = 28
+    Width = 400
     Align = alClient
     Caption = 'Found'
-    ClientHeight = 221
-    ClientWidth = 476
+    ClientHeight = 183
+    ClientWidth = 396
+    ParentFont = False
     TabOrder = 1
     object searchResultsListBox: TListBox
       Left = 0
-      Height = 221
+      Height = 183
       Top = 0
-      Width = 476
+      Width = 396
       Align = alClient
       ItemHeight = 0
       OnKeyPress = searchResultsListBoxKeyPress
+      ParentFont = False
       TabOrder = 0
     end
   end
   object openViaDialogButton: TButton
     Left = 0
-    Height = 38
-    Top = 284
-    Width = 480
+    Height = 32
+    Top = 236
+    Width = 400
     Align = alBottom
     Caption = 'Open from file system'
     OnClick = openViaDialogButtonClick
+    ParentFont = False
     TabOrder = 2
   end
   object cancelButton: TButton
     Left = 0
-    Height = 38
-    Top = 322
-    Width = 480
+    Height = 32
+    Top = 268
+    Width = 400
     Align = alBottom
     Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
+    ParentFont = False
     TabOrder = 3
   end
   object OpenDialog1: TOpenDialog
     Filter = 'MNH Package|*.mnh|All Files|*.*'
-    left = 91
-    top = 164
+    Options = [ofAllowMultiSelect, ofEnableSizing, ofViewDetail]
+    left = 76
+    top = 137
   end
 end

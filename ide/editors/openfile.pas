@@ -25,15 +25,14 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE openViaDialogButtonClick(Sender: TObject);
     PROCEDURE searchEditChange(Sender: TObject);
-    PROCEDURE searchEditKeyDown(Sender: TObject; VAR key: word;
-      Shift: TShiftState);
+    PROCEDURE searchEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE searchEditKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE searchResultsListBoxKeyPress(Sender: TObject; VAR key: char);
   private
-    selectedFile:string;
+    selectedFile:T_arrayOfString;
     fileList:T_arrayOfString;
   public
-    PROPERTY getSelectedFile:string read selectedFile;
+    PROPERTY getSelectedFile:T_arrayOfString read selectedFile;
     FUNCTION showForRoot(CONST rootPath:string):longint;
     FUNCTION showClassicDialog:longint;
   end;
@@ -51,9 +50,11 @@ FUNCTION openFileDialog:TopenFileDialog;
 {$R *.lfm}
 
 PROCEDURE TopenFileDialog.openViaDialogButtonClick(Sender: TObject);
+  VAR s:string;
   begin
     if OpenDialog1.execute then begin
-      selectedFile:=OpenDialog1.fileName;
+      setLength(selectedFile,0);
+      for s in OpenDialog1.Files do append(selectedFile,s);
       ModalResult:=mrOk;
     end else ModalResult:=mrCancel;
   end;
@@ -110,9 +111,11 @@ FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
   end;
 
 FUNCTION TopenFileDialog.showClassicDialog:longint;
+  VAR s:string;
   begin
     if OpenDialog1.execute then begin
-      selectedFile:=OpenDialog1.fileName;
+      setLength(selectedFile,0);
+      for s in OpenDialog1.Files do append(selectedFile,s);
       result:=mrOk;
     end else result:=mrCancel;
   end;

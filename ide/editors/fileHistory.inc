@@ -185,7 +185,7 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath: string): T_arrayOfString;
     allPathsToScan:=folderItems;
     result:=listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
-      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.mnh',false);
+      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.*',false);
       for fileName in list do append(result,fileName);
       list.free;
     end;
