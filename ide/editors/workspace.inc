@@ -684,7 +684,10 @@ PROCEDURE T_workspace.renameWordUnderCursor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
-    then meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+    then begin
+      meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      if scanOther then forceFullScan;
+    end;
   end;
 
 PROCEDURE T_workspace.checkForFileChanges;

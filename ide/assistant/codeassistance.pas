@@ -97,6 +97,7 @@ TYPE
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureCodeAssistanceThread;
+PROCEDURE forceFullScan;
 IMPLEMENTATION
 USES sysutils,myStringUtil,commandLineParameters;
 
@@ -495,11 +496,36 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 PROCEDURE ensureCodeAssistanceThread;
   begin
     enterCriticalSection(codeAssistanceCs);
-    if not(codeAssistantIsRunning) then begin
-      codeAssistantIsRunning:=true;
-      codeAssistantThreadId:=beginThread(@codeAssistanceThread);
+    try
+      if not(codeAssistantIsRunning) then begin
+        codeAssistantIsRunning:=true;
+        codeAssistantThreadId:=beginThread(@codeAssistanceThread);
+      end;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
     end;
-    leaveCriticalSection(codeAssistanceCs);
+  end;
+
+PROCEDURE forceFullScan;
+  VAR ad:P_codeAssistanceData;
+  begin
+    enterCriticalSection(codeAssistanceCs);
+    try
+      for ad in codeAssistanceData do begin
+        EnterCriticalsection(ad^.cs);
+        try
+          if (ad^.latestResponse<>nil) then begin
+            disposeCodeAssistanceResponse(ad^.latestResponse);
+            ad^.latestResponse:=nil;
+          end;
+        finally
+          LeaveCriticalsection(ad^.cs);
+        end;
+      end;
+      ensureCodeAssistanceThread;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
+    end;
   end;
 
 CONSTRUCTOR T_codeAssistanceData.create(CONST editorMeta: P_codeProvider);
