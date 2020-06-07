@@ -299,7 +299,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
   VAR sourceFolder:string;
       oldWasNormal:boolean=false;
       foldersToMove:array[0..2,0..1] of string;
-      filesToDelete:array[0..1] of string;
+      filesToDelete:array[0..2] of string;
       k:longint;
       allOkay:boolean=true;
   begin
@@ -309,6 +309,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[2,0]:=getPackagesRoot;
     filesToDelete[0]:=settingsFileName;
     filesToDelete[1]:=workspaceFilename;
+    filesToDelete[2]:=runParameterHistoryFileName;
     if APP_STYLE=APP_STYLE_NORMAL then begin
       oldWasNormal:=true;
       APP_STYLE:=APP_STYLE_PORTABLE;
@@ -320,7 +321,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[2,1]:=getPackagesRoot;
     try
       for k:=0 to 2 do allOkay:=allOkay and CopyDirTree(foldersToMove[k,0],foldersToMove[k,1]);
-      for k:=0 to 1 do allOkay:=allOkay and DeleteFile(filesToDelete[k]);
+      for k:=0 to 2 do allOkay:=allOkay and (DeleteFile(filesToDelete[k]) or not(fileExists(filesToDelete[k])));
       if oldWasNormal  then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
       else for k:=0 to 2 do allOkay:=allOkay and DeleteDirectory(foldersToMove[k,0],false);
     except

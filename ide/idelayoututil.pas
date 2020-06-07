@@ -129,6 +129,7 @@ FUNCTION  typeOfFocusedControl:T_controlType;
 PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper);
 FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
 PROCEDURE dockAllForms;
+PROCEDURE closeAllForms;
 
 PROCEDURE moveAllItems(CONST sourceMenu,destMenu:TMenuItem);
 
@@ -194,6 +195,11 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
       newForm.ShowInTaskBar:=stAlways;
       newForm.Show;
     end;
+  end;
+
+PROCEDURE closeAllForms;
+  begin
+    while length(activeForms)>0 do activeForms[0].destroy;
   end;
 
 PROCEDURE dockAllForms;
@@ -778,18 +784,19 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
   PROCEDURE initMnhHighlighting;
     VAR lineData:T_arrayOfString;
         k:longint;
-        response:P_codeAssistanceResponse;
+        provider:P_virtualFileCodeProvider;
+        codeAssistanceData:T_codeAssistanceData;
+
     begin
       setLength(lineData,list0^.size);
       for k:=0 to length(lineData)-1 do lineData[k]:=P_stringLiteral(list0^.value[k])^.value;
-      response:=
-      doCodeAssistanceSynchronously(newVirtualFileCodeProvider(name,lineData),
-                                    C_EMPTY_STRING_ARRAY,
-                                    recycler,
-                                    nil,nil);
+
+      provider:=newVirtualFileCodeProvider(name,lineData);
+      codeAssistanceData.create(provider);
+      codeAssistanceData.doCodeAssistanceSynchronously(recycler);
       highlighter:=TMnhInputSyn.create(nil);
-      response^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
-      disposeCodeAssistanceResponse(response);
+      codeAssistanceData.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
+      codeAssistanceData.destroy;
     end;
 
   begin

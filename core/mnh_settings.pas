@@ -49,6 +49,7 @@ end;
 
 FUNCTION settingsFileName: string;
 FUNCTION workspaceFilename:string;
+FUNCTION runParameterHistoryFileName:string;
 PROCEDURE saveSettings;
 VAR settings:T_settings;
 IMPLEMENTATION
@@ -61,6 +62,11 @@ FUNCTION settingsFileName: string;
 FUNCTION workspaceFilename:string;
   begin
     result:=configDir+'mnh.workspace';
+  end;
+
+FUNCTION runParameterHistoryFileName:string;
+  begin
+    result:=configDir+'mnh.parameterhistory';
   end;
 
 PROCEDURE saveSettings;

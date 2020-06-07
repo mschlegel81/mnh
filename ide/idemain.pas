@@ -234,6 +234,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
       workspace.fileHistory.updateHistoryMenu;
     end;
     stream.destroy;
+    runParameterHistory.create;
+    runParameterHistory.loadFromFile(runParameterHistoryFileName);
+
     {$ifdef debugMode}writeln(stdErr,'Done reading ',workspaceFilename);{$endif}
     splashOnStartup;
 
@@ -262,16 +265,19 @@ PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction)
   begin
     {$ifdef debugMode} writeln('Suspending timer'); {$endif}
     ensureTimerSuspend;
-    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
-    finalizeCodeAssistance;
     {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
+
+    closeAllForms;
+    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
+    finalizeCodeAssistance;
     {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
     {$ifdef debugMode} writeln('Destroying runner'); {$endif}
     runnerModel.destroy;
     {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
+    runParameterHistory.destroy;
   end;
 
 PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
@@ -456,24 +462,30 @@ PROCEDURE TIdeMainForm.miNewClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
+  VAR fileName:string;
   begin
     ensureTimerSuspend;
-    if (openFileDialog.showClassicDialog=mrOk) and fileExists(openFileDialog.getSelectedFile)
-    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    if (openFileDialog.showClassicDialog=mrOk)
+    then for fileName in openFileDialog.getSelectedFile do
+      if fileExists(fileName)
+      then workspace.addOrGetEditorMetaForFiles(fileName,true);
     timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
   VAR currentEdit:P_editorMeta;
       currentPath:string;
+      fileName:string;
   begin
     ensureTimerSuspend;
     currentEdit:=workspace.currentEditor;
     if (currentEdit=nil) or (currentEdit^.isPseudoFile)
     then currentPath:=GetCurrentDir
     else currentPath:=ExtractFileDir(currentEdit^.getPath);
-    if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
-    then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+    if (openFileDialog.showForRoot(currentPath)=mrOk)
+    then for fileName in openFileDialog.getSelectedFile do
+      if fileExists(fileName)
+      then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     timer.enabled:=true;
   end;
 
@@ -589,6 +601,7 @@ PROCEDURE TIdeMainForm.saveIdeSettings;
   begin
     mnh_settings.saveSettings;
 
+    runParameterHistory.saveToFile(runParameterHistoryFileName);
     stream.createToWriteToFile(workspaceFilename);
     saveMainFormLayout(stream);
     saveOutputSettings(stream);

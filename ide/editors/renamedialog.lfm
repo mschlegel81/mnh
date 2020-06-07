@@ -1,44 +1,46 @@
 object renameForm: TrenameForm
   Left = 885
-  Height = 156
+  Height = 130
   Top = 210
-  Width = 480
+  Width = 400
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'renameForm'
-  ClientHeight = 156
-  ClientWidth = 480
-  DesignTimePPI = 144
+  ClientHeight = 130
+  ClientWidth = 400
+  DesignTimePPI = 120
   Position = poOwnerFormCenter
-  LCLVersion = '1.8.4.0'
+  LCLVersion = '2.0.8.0'
   object Panel1: TPanel
     Left = 0
-    Height = 39
+    Height = 34
     Top = 0
-    Width = 480
+    Width = 400
     Align = alTop
     AutoSize = True
     BevelOuter = bvSpace
     BevelWidth = 3
-    ClientHeight = 39
-    ClientWidth = 480
+    ClientHeight = 34
+    ClientWidth = 400
+    ParentFont = False
     TabOrder = 0
     object Label1: TLabel
       Left = 3
-      Height = 33
+      Height = 28
       Top = 3
-      Width = 50
+      Width = 42
       Align = alLeft
       Caption = 'old id:'
       ParentColor = False
+      ParentFont = False
     end
     object OriginalNameEdit: TEdit
-      Left = 53
-      Height = 33
+      Left = 45
+      Height = 28
       Top = 3
-      Width = 424
+      Width = 352
       Align = alClient
-      Enabled = False
+      ParentFont = False
       ReadOnly = True
       TabOrder = 0
       Text = 'OriginalNameEdit'
@@ -46,64 +48,73 @@ object renameForm: TrenameForm
   end
   object Panel2: TPanel
     Left = 0
-    Height = 39
-    Top = 39
-    Width = 480
+    Height = 34
+    Top = 34
+    Width = 400
     Align = alTop
     AutoSize = True
     BevelOuter = bvSpace
     BevelWidth = 3
-    ClientHeight = 39
-    ClientWidth = 480
+    ClientHeight = 34
+    ClientWidth = 400
+    ParentFont = False
     TabOrder = 1
     object Label2: TLabel
       Left = 3
-      Height = 33
+      Height = 28
       Top = 3
-      Width = 56
+      Width = 47
       Align = alLeft
       Caption = 'new id:'
       ParentColor = False
+      ParentFont = False
     end
     object NewNameEdit: TEdit
-      Left = 59
-      Height = 33
+      Left = 50
+      Height = 28
       Top = 3
-      Width = 418
+      Width = 347
       Align = alClient
       OnChange = NewNameEditChange
       OnKeyPress = NewNameEditKeyPress
+      ParentFont = False
       TabOrder = 0
     end
   end
   object cancelButton: TButton
-    Left = 367
-    Height = 49
-    Top = 107
-    Width = 113
+    Left = 306
+    Height = 38
+    Top = 92
+    Width = 94
     Align = alRight
+    Cancel = True
     Caption = 'Cancel'
     ModalResult = 2
+    ParentFont = False
     TabOrder = 4
   end
   object okButton: TButton
     Left = 0
-    Height = 49
-    Top = 107
-    Width = 367
+    Height = 38
+    Top = 92
+    Width = 306
     Align = alClient
     Caption = 'Rename'
     Enabled = False
     ModalResult = 1
+    ParentFont = False
     TabOrder = 3
   end
   object checkAllEditorsCheckBox: TCheckBox
     Left = 0
-    Height = 29
-    Top = 78
-    Width = 480
+    Height = 24
+    Top = 68
+    Width = 400
     Align = alTop
-    Caption = 'check all open editors for references'#13#10'(requires saving of all files)'
+    Caption = 'check usages in other scripts'
+    Checked = True
+    ParentFont = False
+    State = cbChecked
     TabOrder = 2
   end
 end

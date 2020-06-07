@@ -30,7 +30,7 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
       case langLit^.literalType of
         lt_string: begin
           state_hlLang:=P_stringLiteral(langLit)^.value;
-          synMeta.setLanguage(state_hlLang,LANG_TXT);
+          synMeta.setLanguageWithFallback(state_hlLang,LANG_TXT);
         end;
         lt_expression: config_hlLang:=P_expressionLiteral(langLit^.rereferenced);
         else context.raiseError('highlighter is: '+langLit^.typeString+'; must be string or expression',location);
@@ -46,7 +46,7 @@ PROCEDURE T_outputMemoMeta.update;
     try
       synMeta.editor.text:=state.caption;
       synMeta.editor.enabled:=state.enabled;
-      synMeta.setLanguage(state_hlLang,synMeta.language);
+      synMeta.setLanguageWithFallback(state_hlLang,synMeta.language);
     finally
       leaveCriticalSection(elementCs);
     end;

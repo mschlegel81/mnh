@@ -66,6 +66,7 @@ T_workspace=object(T_serializable)
     PROCEDURE removeBreakpoint(CONST loc:T_searchTokenLocation);
   private
     PROCEDURE closeQuietly(CONST toClose:P_editorMeta);
+    PROCEDURE onFileScanFinished;
   public
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
@@ -594,6 +595,16 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
     end;
   end;
 
+PROCEDURE T_workspace.onFileScanFinished;
+  VAR m:P_editorMeta;
+  begin
+    enterCriticalSection(workspaceCs);
+    for m in metas do begin
+      if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+    end;
+    leaveCriticalSection(workspaceCs);
+  end;
+
 PROCEDURE T_workspace.closeCurrentFile;
   VAR toClose:P_editorMeta;
   begin
@@ -673,7 +684,10 @@ PROCEDURE T_workspace.renameWordUnderCursor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
-    then meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+    then begin
+      meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      if scanOther then forceFullScan;
+    end;
   end;
 
 PROCEDURE T_workspace.checkForFileChanges;
@@ -744,9 +758,9 @@ FUNCTION T_workspace.getCurrentAssistanceResponse: P_codeAssistanceResponse;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
-    if (meta=nil) or (meta^.language<>LANG_MNH)
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.assistanceData=nil)
     then result:=nil
-    else result:=meta^.getCodeAssistanceDataRereferenced;
+    else result:=meta^.assistanceData^.getAssistanceResponseRereferenced;
   end;
 
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
@@ -773,7 +787,7 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
           if data^.wantNewEditor then target:=createNewFile
                                  else target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
           if target<>nil then begin
-            target^.setLanguage(data^.getOutputLanguage,LANG_TXT);
+            target^.setLanguageWithFallback(data^.getOutputLanguage,LANG_TXT);
             target^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
           end;
         end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin

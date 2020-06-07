@@ -45,7 +45,7 @@ PROCEDURE T_inputEditorMeta.update;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
-      synMeta.setLanguage(state_hlLang,synMeta.language);
+      synMeta.setLanguageWithFallback(state_hlLang,synMeta.language);
       synMeta.editor.enabled:=state.enabled;
     finally
       leaveCriticalSection(elementCs);

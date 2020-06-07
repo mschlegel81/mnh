@@ -185,7 +185,7 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath: string): T_arrayOfString;
     allPathsToScan:=folderItems;
     result:=listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin
-      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.mnh',false);
+      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.*',false);
       for fileName in list do append(result,fileName);
       list.free;
     end;
@@ -236,6 +236,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       folder,script,usedScript:string;
       list:TStringList;
       scriptsToScan:T_arrayOfString;
+      anyAdded:boolean=false;
   begin
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
@@ -275,6 +276,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
             writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
             {$endif}
           end;
+          anyAdded:=true;
         end;
       finally
         {$ifdef debugMode}
@@ -286,6 +288,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         setLength(scriptsToScan,0);
       end;
     end;
+    if anyAdded then workspace.onFileScanFinished;
     result:=1;
   end;
 

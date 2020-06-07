@@ -45,33 +45,128 @@ TYPE
       localIdInfos:P_localIdInfos;
       functionCallInfos:P_functionCallInfos;
       responseStateHash:T_hashInt;
+
       CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos; CONST functionCallInfos_:P_functionCallInfos);
       DESTRUCTOR destroy;
+
+      FUNCTION  rereferenced:P_codeAssistanceResponse;
     public
       package:P_package;
-      PROPERTY stateHash:T_hashInt read responseStateHash;
-      FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
-      PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
-      FUNCTION  explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
-      FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST oldId,newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
-      FUNCTION  findUsagesOf(CONST location:T_searchTokenLocation):T_searchTokenLocations;
-      FUNCTION  getImportablePackages:T_arrayOfString;
-      FUNCTION  resolveImport(CONST id:string):string;
-      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
+      PROPERTY  stateHash:T_hashInt read responseStateHash;
       PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
-      FUNCTION  rereferenced:P_codeAssistanceResponse;
-      FUNCTION  isExecutablePackage:boolean;
   end;
 
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additionalScriptsToScan:T_arrayOfString; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
-FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
-PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider; CONST additionalScriptsToScan:T_arrayOfString);
+  P_codeAssistanceData=^T_codeAssistanceData;
+  T_codeAssistanceData=object
+    private
+      //Input:
+      provider               :P_codeProvider;
+      additionalScriptsToScan:T_arrayOfString;
+      //State:
+      cs:TRTLCriticalSection;
+      evaluating:boolean;
+      latestResponse:P_codeAssistanceResponse;
+      paintedWithStateHash:T_hashInt;
+      FUNCTION inputStateHash:T_hashInt;
+      FUNCTION isAssistanceDataOutdated:boolean;
+      PROCEDURE ensureResponse;
+    public
+      CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
+      DESTRUCTOR destroy;
+      PROCEDURE setAddidionalScripts(CONST toScan:T_arrayOfString);
+      FUNCTION  doCodeAssistanceSynchronously(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
+      //Highlighter related:
+      FUNCTION  needRepaint:boolean;
+      PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
+      //Rename/Help:
+      FUNCTION  explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
+      FUNCTION  renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST oldId,newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
+      FUNCTION  usedAndExtendedPackages:T_arrayOfString;
+      //Completion related
+      FUNCTION  getImportablePackages:T_arrayOfString;
+      FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
+      //Shebang related
+      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
+      FUNCTION  isExecutablePackage:boolean;
+      //Export
+      FUNCTION getAssistanceResponseRereferenced:P_codeAssistanceResponse;
+      //Quick-Evaluation
+      FUNCTION assistanceStateHash:T_hashInt;
+  end;
+
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
-
+PROCEDURE ensureCodeAssistanceThread;
+PROCEDURE forceFullScan;
 IMPLEMENTATION
 USES sysutils,myStringUtil,commandLineParameters;
-FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additionalScriptsToScan:T_arrayOfString; VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+
+VAR codeAssistantIsRunning:boolean=false;
+    codeAssistantThreadId :TThreadID;
+    shuttingDown          :boolean=false;
+    codeAssistanceData    :array of P_codeAssistanceData;
+    codeAssistanceCs      :TRTLCriticalSection;
+
+PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+  begin
+    if (r<>nil) and (interlockedDecrement(r^.referenceCount)<=0) then dispose(r,destroy);
+    r:=nil;
+  end;
+
+FUNCTION T_codeAssistanceData.inputStateHash: T_hashInt;
+  VAR script:ansistring;
+  begin
+    {$Q-}{$R-}
+    result:=provider^.stateHash*31+hashOfAnsiString(provider^.getPath)+127*length(additionalScriptsToScan);
+    for script in additionalScriptsToScan do result:=result*31+hashOfAnsiString(script);
+    {$Q+}{$R+}
+  end;
+
+FUNCTION T_codeAssistanceData.isAssistanceDataOutdated: boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=(latestResponse=nil) or (latestResponse^.stateHash<>inputStateHash);
+    leaveCriticalSection(cs);
+  end;
+
+VAR isFinalized:boolean=false;
+DESTRUCTOR T_codeAssistanceData.destroy;
+  VAR i,j:longint;
+
+  begin
+    enterCriticalSection(cs);
+    while evaluating do begin
+      leaveCriticalSection(cs);
+      sleep(5);
+      enterCriticalSection(cs);
+    end;
+    setLength(additionalScriptsToScan,0);
+    if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
+    if isFinalized then exit;
+    enterCriticalSection(codeAssistanceCs);
+    try
+      j:=0;
+      for i:=0 to length(codeAssistanceData)-1 do if codeAssistanceData[i]<>@self then begin
+        codeAssistanceData[j]:=codeAssistanceData[i];
+        inc(j);
+      end;
+      setLength(codeAssistanceData,j);
+    finally
+      leaveCriticalSection(codeAssistanceCs);
+    end;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString);
+  begin
+    enterCriticalSection(cs);
+    additionalScriptsToScan:=toScan;
+    ensureCodeAssistanceThread;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -81,13 +176,14 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       localIdInfos:P_localIdInfos;
       functionCallInfos:P_functionCallInfos;
       loadMessages:T_storedMessages;
+      additionals:T_arrayOfString;
 
   PROCEDURE loadSecondaryPackage(CONST name:string);
     VAR user:T_package;
         secondaryCallInfos:T_functionCallInfos;
     begin
       {$ifdef debugMode}
-      writeln('Loading ',name,' using ',source^.getPath);
+      writeln('Loading ',name,' using ',provider^.getPath);
       {$endif}
       globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
@@ -100,6 +196,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       user.destroy;
     end;
   VAR script:ansistring;
+      i:longint;
   begin
     if givenGlobals=nil then begin
       adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
@@ -108,55 +205,239 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST additi
       globals:=givenGlobals;
       givenAdapters^.clear;
     end;
-    new(package,create(source,nil));
-    {$Q-}{$R-}
-    initialStateHash:=source^.stateHash xor hashOfAnsiString(source^.getPath);
-    {$Q+}{$R+}
-    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-    globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
-    if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
-    new(localIdInfos,create);
-    new(functionCallInfos,create);
-    {$ifdef debugMode}
-    writeln('Additional scripts to scan :',length(additionalScriptsToScan),': ');
-    for script in additionalScriptsToScan do write(script,',');
-    writeln;
-    {$endif}
-    for script in additionalScriptsToScan do loadSecondaryPackage(script);
-    globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
-    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
-                         else loadMessages:=adapters      .storedMessages(true);
-    globals^.afterEvaluation(recycler);
-    new(result,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
-    if givenGlobals=nil then begin
-      dispose(globals,destroy);
-      {$WARN 5089 OFF}
-      adapters.destroy;
+    enterCriticalSection(cs);
+    initialStateHash:=inputStateHash;
+    if (latestResponse=nil) or (latestResponse^.stateHash<>initialStateHash) then begin
+      new(package,create(provider,nil));
+      setLength(additionals,length(additionalScriptsToScan));
+      for i:=0 to length(additionalScriptsToScan)-1 do additionals[i]:=additionalScriptsToScan[i];
+      evaluating:=true;
+      leaveCriticalSection(cs);
+      globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
+      if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
+      new(localIdInfos,create);
+      new(functionCallInfos,create);
+      {$ifdef debugMode}
+      writeln('Additional scripts to scan :',length(additionals),': ');
+      for script in additionals do write(script,',');
+      writeln;
+      {$endif}
+      for script in additionals do loadSecondaryPackage(script);
+      globals^.primaryContext.messages^.clear();
+      package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
+      if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
+                           else loadMessages:=adapters      .storedMessages(true);
+      globals^.afterEvaluation(recycler);
+      enterCriticalSection(cs);
+      try
+        if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
+        new(latestResponse,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
+        evaluating:=false;
+      finally
+        leaveCriticalSection(cs);
+      end;
+      if givenGlobals=nil then begin
+        dispose(globals,destroy);
+        {$WARN 5089 OFF}
+        adapters.destroy;
+      end;
+      result:=true;
+    end else begin
+      leaveCriticalSection(cs);
+      result:=false;
     end;
   end;
 
-VAR codeAssistanceResponse:P_codeAssistanceResponse=nil;
-    codeAssistanceRequest :P_codeProvider=nil;
-    codeAssisanceAdditionals:T_arrayOfString;
-    codeAssistanceCs      :TRTLCriticalSection;
-    codeAssistantIsRunning:boolean=false;
-    codeAssistantThreadId :TThreadID;
-    shuttingDown          :boolean=false;
-
-PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+PROCEDURE T_codeAssistanceData.ensureResponse;
+  VAR recycler:T_recycler;
   begin
-    if (r<>nil) and (interlockedDecrement(r^.referenceCount)<=0) then dispose(r,destroy);
-    r:=nil;
+    recycler.initRecycler;
+    doCodeAssistanceSynchronously(recycler);
+    recycler.cleanup;
+  end;
+
+FUNCTION T_codeAssistanceData.needRepaint: boolean;
+  begin
+    enterCriticalSection(cs);
+    if (latestResponse<>nil) and (latestResponse^.stateHash<>paintedWithStateHash) then begin
+      paintedWithStateHash:=latestResponse^.stateHash;
+      result:=true;
+    end else result:=false;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_highlightingData);
+  VAR k:longint;
+      e:P_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      enterCriticalSection(highlightingData.highlightingCs);
+      try
+        highlightingData.userRules.clear;
+        latestResponse^.package^.ruleMap.updateLists(highlightingData.userRules,false);
+        highlightingData.localIdInfos.copyFrom(latestResponse^.localIdInfos);
+        setLength(highlightingData.warnLocations,length(latestResponse^.localErrors));
+        k:=0;
+        for e in latestResponse^.localErrors do begin
+          if k>=length(highlightingData.warnLocations) then setLength(highlightingData.warnLocations,k+1);
+          highlightingData.warnLocations[k].line   :=e^.getLocation.line;
+          highlightingData.warnLocations[k].column :=e^.getLocation.column;
+          highlightingData.warnLocations[k].isError:=C_messageTypeMeta[e^.messageType].level>2;
+          inc(k);
+        end;
+        setLength(highlightingData.warnLocations,k);
+      finally
+        leaveCriticalSection(highlightingData.highlightingCs);
+      end;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo): boolean;
+  VAR lexer:T_lexer;
+      loc:T_tokenLocation;
+      enhanced:T_enhancedTokens;
+  PROCEDURE appendUsageInfo;
+    VAR ref:T_searchTokenLocations;
+        r  :T_searchTokenLocation;
+    begin
+      if (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
+        ref:=latestResponse^.functionCallInfos^.whoReferencesLocation(info.location);
+        if length(ref)=0 then begin
+          info.infoText+=C_lineBreakChar+C_lineBreakChar+'No reference found';
+        end else begin
+          info.infoText+=C_lineBreakChar+C_lineBreakChar+'Is referenced at';
+          for r in ref do info.infoText+=C_lineBreakChar+string(r);
+        end;
+      end;
+    end;
+
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      loc.line:=CaretY;
+      loc.column:=1;
+      loc.package:=latestResponse^.package;
+      result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
+      if result then begin
+        lexer.create(fullLine,loc,latestResponse^.package);
+        enhanced:=lexer.getEnhancedTokens(latestResponse^.localIdInfos);
+        info:=enhanced.getTokenAtIndex(CaretX).toInfo;
+        info.fullLine:=fullLine;
+        info.CaretX:=CaretX;
+        appendUsageInfo;
+        enhanced.destroy;
+        lexer.destroy;
+      end;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId, newId: string; VAR lineText: ansistring; CONST CaretY: longint): boolean;
+  VAR lexer:T_lexer;
+      loc:T_tokenLocation;
+      enhanced:T_enhancedTokens;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      loc.line:=CaretY;
+      loc.column:=1;
+      loc.package:=latestResponse^.package;
+      lexer.create(lineText,loc,latestResponse^.package);
+      enhanced:=lexer.getEnhancedTokens(latestResponse^.localIdInfos);
+      result:=enhanced.renameInLine(lineText,location,oldId,newId);
+      enhanced.destroy;
+      lexer.destroy;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.usedAndExtendedPackages: T_arrayOfString;
+  begin
+    enterCriticalSection(cs);
+    if latestResponse=nil then ensureResponse;
+    result:=latestResponse^.package^.usedAndExtendedPackages;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.getImportablePackages: T_arrayOfString;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      result:=listScriptIds(extractFilePath(latestResponse^.package^.getPath));
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
+  VAR s:string;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      latestResponse^.package^.ruleMap.updateLists(wordsInEditor,true);
+      for s in latestResponse^.localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
+      result:=(latestResponse^.package^.ruleMap.size>0) or not(latestResponse^.localIdInfos^.isEmpty);
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequirements;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      result:=latestResponse^.functionCallInfos^.getBuiltinRestrictions;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.isExecutablePackage: boolean;
+  begin
+    enterCriticalSection(cs);
+    try
+      if latestResponse=nil then ensureResponse;
+      result:=latestResponse^.package^.isExecutable;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_codeAssistanceData.getAssistanceResponseRereferenced: P_codeAssistanceResponse;
+  begin
+    enterCriticalSection(cs);
+    if latestResponse=nil then ensureResponse;
+    result:=latestResponse^.rereferenced;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.assistanceStateHash: T_hashInt;
+  begin
+    enterCriticalSection(cs);
+    if latestResponse=nil
+    then result:=0
+    else result:=latestResponse^.stateHash;
+    leaveCriticalSection(cs);
   end;
 
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
+  CONST STOP_AFTER_IDLE_LOOP_COUNT=100;
+        SLEEP_BETWEEN_RUNS_MILLIS =100;
   VAR globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
-      clonedAdditionals:T_arrayOfString;
-      provider:P_codeProvider;
-      response:P_codeAssistanceResponse;
-      lastEvaluationEnd:double;
+
   FUNCTION isShutdownRequested:boolean;
     begin
       enterCriticalSection(codeAssistanceCs);
@@ -164,19 +445,14 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       leaveCriticalSection(codeAssistanceCs);
     end;
 
-  FUNCTION timeForNextCheck:boolean;
-    CONST ONE_SECOND=1/(24*60*60);
-    begin
-      if (now<lastEvaluationEnd+0.5*ONE_SECOND) then exit(false);
-      enterCriticalSection(codeAssistanceCs);
-      result:=shuttingDown or
-              (codeAssistanceRequest<>nil) and
-              ((codeAssistanceResponse^.package^.getCodeProvider^.getPath<>codeAssistanceRequest^.getPath) or
-               (codeAssistanceResponse^.stateHash                        <>codeAssistanceRequest^.stateHash));
-      leaveCriticalSection(codeAssistanceCs);
-    end;
   VAR recycler:T_recycler;
+      scanIndex:longint=0;
+      runsWithoutUpdate:longint=0;
+      anyScanned:boolean;
   begin
+    {$ifdef debugMode}
+    writeln(stdErr,'  codeAssistanceThread started');
+    {$endif}
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
     new(globals,create(@adapters));
@@ -184,24 +460,26 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     //:setup
     repeat
       enterCriticalSection(codeAssistanceCs);
-      provider:=codeAssistanceRequest;
-      codeAssistanceRequest:=nil;
-      clonedAdditionals:=codeAssisanceAdditionals;
-      setLength(codeAssisanceAdditionals,0);
-      leaveCriticalSection(codeAssistanceCs);
-      if provider<>nil then begin
-        response:=doCodeAssistanceSynchronously(provider,clonedAdditionals,recycler,globals,@adapters);
-        lastEvaluationEnd:=now;
-        enterCriticalSection(codeAssistanceCs);
-        try
-          disposeCodeAssistanceResponse(codeAssistanceResponse);
-          codeAssistanceResponse:=response;
-        finally
+      scanIndex:=0;
+      anyScanned:=false;
+      while scanIndex<length(codeAssistanceData) do begin
+        if codeAssistanceData[scanIndex]^.isAssistanceDataOutdated then begin
+          codeAssistanceData[scanIndex]^.evaluating:=true;
           leaveCriticalSection(codeAssistanceCs);
+
+          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronously(recycler,globals,@adapters)
+          then anyScanned:=true;
+
+          enterCriticalSection(codeAssistanceCs);
         end;
+        inc(scanIndex);
       end;
-      repeat sleep(100) until timeForNextCheck;
-    until isShutdownRequested;
+      if anyScanned
+      then runsWithoutUpdate:=0
+      else inc(runsWithoutUpdate);
+      leaveCriticalSection(codeAssistanceCs);
+      sleep(SLEEP_BETWEEN_RUNS_MILLIS);
+    until isShutdownRequested or (runsWithoutUpdate>=STOP_AFTER_IDLE_LOOP_COUNT);
     //shutdown:
     dispose(globals,destroy);
     adapters.destroy;
@@ -211,28 +489,15 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     result:=0;
     recycler.cleanup;
     //:shutdown
+    {$ifdef debugMode}
+    writeln(stdErr,'  codeAssistanceThread stopped');
+    {$endif}
   end;
 
-FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider): P_codeAssistanceResponse;
+PROCEDURE ensureCodeAssistanceThread;
   begin
     enterCriticalSection(codeAssistanceCs);
     try
-      if (codeAssistanceResponse<>nil) and (codeAssistanceResponse^.package^.getCodeProvider^.getPath=source^.getPath)
-      then result:=codeAssistanceResponse^.rereferenced
-      else result:=nil;
-    finally
-      leaveCriticalSection(codeAssistanceCs);
-    end;
-  end;
-
-PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider; CONST additionalScriptsToScan:T_arrayOfString);
-  begin
-    enterCriticalSection(codeAssistanceCs);
-    try
-      if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
-      then dispose(codeAssistanceRequest,destroy);
-      codeAssistanceRequest   :=source;
-      codeAssisanceAdditionals:=additionalScriptsToScan;
       if not(codeAssistantIsRunning) then begin
         codeAssistantIsRunning:=true;
         codeAssistantThreadId:=beginThread(@codeAssistanceThread);
@@ -242,30 +507,43 @@ PROCEDURE postCodeAssistanceRequest(CONST source: P_codeProvider; CONST addition
     end;
   end;
 
-PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: T_highlightingData);
-  VAR k:longint;
-      e:P_storedMessage;
+PROCEDURE forceFullScan;
+  VAR ad:P_codeAssistanceData;
   begin
-    enterCriticalSection(responseCs);
-    enterCriticalSection(highlightingData.highlightingCs);
+    enterCriticalSection(codeAssistanceCs);
     try
-      highlightingData.userRules.clear;
-      package^.ruleMap.updateLists(highlightingData.userRules,false);
-      highlightingData.localIdInfos.copyFrom(localIdInfos);
-      setLength(highlightingData.warnLocations,length(localErrors));
-      k:=0;
-      for e in localErrors do begin
-        if k>=length(highlightingData.warnLocations) then setLength(highlightingData.warnLocations,k+1);
-        highlightingData.warnLocations[k].line   :=e^.getLocation.line;
-        highlightingData.warnLocations[k].column :=e^.getLocation.column;
-        highlightingData.warnLocations[k].isError:=C_messageTypeMeta[e^.messageType].level>2;
-        inc(k);
+      for ad in codeAssistanceData do begin
+        enterCriticalSection(ad^.cs);
+        try
+          if (ad^.latestResponse<>nil) then begin
+            disposeCodeAssistanceResponse(ad^.latestResponse);
+            ad^.latestResponse:=nil;
+          end;
+        finally
+          leaveCriticalSection(ad^.cs);
+        end;
       end;
-      setLength(highlightingData.warnLocations,k);
+      ensureCodeAssistanceThread;
     finally
-      leaveCriticalSection(highlightingData.highlightingCs);
-      leaveCriticalSection(responseCs);
+      leaveCriticalSection(codeAssistanceCs);
     end;
+  end;
+
+CONSTRUCTOR T_codeAssistanceData.create(CONST editorMeta: P_codeProvider);
+  begin
+    provider:=editorMeta;
+    setLength(additionalScriptsToScan,0);
+    //State:
+    initCriticalSection(cs);
+    evaluating:=false;
+    latestResponse:=nil;
+    paintedWithStateHash:=0;
+
+    enterCriticalSection(codeAssistanceCs);
+    setLength(codeAssistanceData,length(codeAssistanceData)+1);
+    codeAssistanceData[length(codeAssistanceData)-1]:=@self;
+    ensureCodeAssistanceThread;
+    leaveCriticalSection(codeAssistanceCs);
   end;
 
 CONSTRUCTOR T_highlightingData.create;
@@ -386,122 +664,6 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
     end;
   end;
 
-FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
-  VAR s:string;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      package^.ruleMap.updateLists(wordsInEditor,true);
-      for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-      result:=(package^.ruleMap.size>0) or not(localIdInfos^.isEmpty);
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo):boolean;
-  VAR lexer:T_lexer;
-      loc:T_tokenLocation;
-      enhanced:T_enhancedTokens;
-  PROCEDURE appendUsageInfo;
-    VAR ref:T_searchTokenLocations;
-        r  :T_searchTokenLocation;
-    begin
-      if (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
-        ref:=functionCallInfos^.whoReferencesLocation(info.location);
-        if length(ref)=0 then begin
-          info.infoText+=C_lineBreakChar+C_lineBreakChar+'No reference found';
-        end else begin
-          info.infoText+=C_lineBreakChar+C_lineBreakChar+'Is referenced at';
-          for r in ref do info.infoText+=C_lineBreakChar+string(r);
-        end;
-      end;
-    end;
-
-  begin
-    enterCriticalSection(responseCs);
-    try
-      loc.line:=CaretY;
-      loc.column:=1;
-      loc.package:=package;
-      result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
-      if result then begin
-        lexer.create(fullLine,loc,package);
-        enhanced:=lexer.getEnhancedTokens(localIdInfos);
-        info:=enhanced.getTokenAtIndex(CaretX).toInfo;
-        info.fullLine:=fullLine;
-        info.CaretX:=CaretX;
-        appendUsageInfo;
-        enhanced.destroy;
-        lexer.destroy;
-      end;
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId,newId: string; VAR lineText: ansistring; CONST CaretY: longint): boolean;
-  VAR lexer:T_lexer;
-      loc:T_tokenLocation;
-      enhanced:T_enhancedTokens;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      loc.line:=CaretY;
-      loc.column:=1;
-      loc.package:=package;
-      lexer.create(lineText,loc,package);
-      enhanced:=lexer.getEnhancedTokens(localIdInfos);
-      result:=enhanced.renameInLine(lineText,location,oldId,newId);
-      enhanced.destroy;
-      lexer.destroy;
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.findUsagesOf(CONST location:T_searchTokenLocation):T_searchTokenLocations;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      result:=functionCallInfos^.whoReferencesLocation(location);
-      if length(result)=0 then result:=localIdInfos^.whoReferencesLocation(location);
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.resolveImport(CONST id:string):string;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      if package=nil then result:=''
-                     else result:=package^.getSecondaryPackageById(id);
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.getBuiltinRestrictions:T_specialFunctionRequirements;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      result:=functionCallInfos^.getBuiltinRestrictions;
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-FUNCTION T_codeAssistanceResponse.getImportablePackages: T_arrayOfString;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      result:=listScriptIds(extractFilePath(package^.getPath));
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
 DESTRUCTOR T_codeAssistanceResponse.destroy;
   VAR m:P_storedMessage;
   begin
@@ -589,17 +751,6 @@ FUNCTION T_codeAssistanceResponse.rereferenced:P_codeAssistanceResponse;
     end;
   end;
 
-FUNCTION T_codeAssistanceResponse.isExecutablePackage:boolean;
-  begin
-    enterCriticalSection(responseCs);
-    try
-      result:=package^.isExecutable;
-    finally
-      leaveCriticalSection(responseCs);
-    end;
-  end;
-
-VAR isFinalized:boolean=false;
 PROCEDURE finalizeCodeAssistance;
   VAR i:longint;
   begin
@@ -612,17 +763,13 @@ PROCEDURE finalizeCodeAssistance;
     end;
     if codeAssistantIsRunning then KillThread(codeAssistantThreadId);
     doneCriticalSection(codeAssistanceCs);
-    disposeCodeAssistanceResponse(codeAssistanceResponse);
-    if (codeAssistanceRequest<>nil) and codeAssistanceRequest^.disposeOnPackageDestruction
-    then dispose(codeAssistanceRequest,destroy);
-    codeAssistanceRequest:=nil;
     isFinalized:=true;
   end;
 
 INITIALIZATION
   initialize(codeAssistanceCs);
   initCriticalSection(codeAssistanceCs);
-  setLength(codeAssisanceAdditionals,0);
+  setLength(codeAssistanceData,0);
 
 FINALIZATION
   if not(isFinalized) then finalizeCodeAssistance;
