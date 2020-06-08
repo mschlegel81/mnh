@@ -95,7 +95,7 @@ TYPE
 
 FUNCTION SettingsForm: TSettingsForm;
 IMPLEMENTATION
-USES mySys,mnh_doc;
+USES mySys,mnh_doc,closeDialog;
 VAR mySettingsForm: TSettingsForm=nil;
 FUNCTION SettingsForm: TSettingsForm;
   begin
@@ -242,7 +242,10 @@ PROCEDURE TSettingsForm.PageControlChange(Sender: TObject);
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
+  {$include res_toDeleteOnUninstall.inc}
+  VAR fileName:string;
   begin
+    if closeDialogForm.showOnUninstall<>cda_continueUninstall then exit;
     sandbox^.runUninstallScript;
     DeleteDirectory(getHtmlRoot    ,false);
     DeleteDirectory(getDemosRoot   ,false);
@@ -250,6 +253,7 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteFile(settingsFileName);
     DeleteFile(workspaceFilename);
     DeleteFile(settings.lightFlavourLocation);
+    for fileName in ADDITIONAL_FILES_TO_DELETE do DeleteFile(fileName);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_BLANK;
     deleteMyselfOnExit;

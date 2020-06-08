@@ -54,7 +54,7 @@ core/funcs_types.pas                          19.5kb 50BDF8C6
 core/funcs_xml.pas                             3.8kb 20CD0D90
 core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              161.0kb B4C80EBC
-core/mnh_constants.pas                        63.3kb B87474FA
+core/mnh_constants.pas                        63.3kb A44859BD
 core/mnh_messages.pas                         17.8kb F8D46BB8
 core/mnh_settings.pas                          4.7kb BDF91CF1
 core/operators.pas                            47.5kb D3763027
@@ -72,9 +72,9 @@ core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.4kb 2E7A6C48
 ide/ask/customrundialog.pas                   13.4kb B80D2D44
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.0kb 4E8CE9DF
+ide/assistant/codeassistance.pas              25.2kb F602D1C6
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
-ide/close/closedialog.pas                      3.9kb 1855E039
+ide/close/closedialog.pas                      4.8kb EDFB0EAA
 ide/customForms/component_button.inc           1.4kb 49420208
 ide/customForms/component_changeListener.inc   3.0kb 4B3A6803
 ide/customForms/component_checkbox.inc         2.1kb 96A25C58
@@ -96,9 +96,9 @@ ide/debugger/debuggerforms.pas                 8.4kb A2727E1F
 ide/debugger/debuggervarforms.pas              4.4kb B5797815
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
-ide/editors/editorMeta.pas                    24.5kb 953A6FCD
-ide/editors/editormetabase.pas                34.7kb 91D85E30
-ide/editors/editscripts.pas                    6.4kb 15ADBAB6
+ide/editors/editorMeta.pas                    24.5kb F8FAFF88
+ide/editors/editormetabase.pas                34.7kb 3E51FC0E
+ide/editors/editscripts.pas                    6.5kb CB238345
 ide/editors/fileHistory.inc                   10.9kb 7DBC3ECB
 ide/editors/gotolinedialogs.pas                1.2kb 4441504C
 ide/editors/mnhCompletion.pas                  8.6kb 6AE62B89
@@ -107,8 +107,8 @@ ide/editors/renamedialog.pas                   1.8kb 2E5DF406
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       3.5kb F355E2F4
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
-ide/editors/workspace.inc                     27.5kb C4A267D3
-ide/evalThread.pas                            21.4kb CD67CBBB
+ide/editors/workspace.inc                     27.6kb D6ABBCE8
+ide/evalThread.pas                            21.5kb 877DFF27
 ide/ide.lpr                                    1.1kb F6D9760E
 ide/idelayoututil.pas                         29.7kb 6A27A3CE
 ide/idemain.pas                               23.8kb 79111F13
@@ -116,7 +116,7 @@ ide/imig/mnh_imig.pas                         28.1kb 056BD80B
 ide/imig/mnh_imig_form.pas                     4.1kb FC840D5B
 ide/ipcModel.pas                               1.5kb 0F5ADD0F
 ide/menuutil.pas                               2.1kb 35434A45
-ide/mnh_doc.pas                               19.1kb DCACF26A
+ide/mnh_doc.pas                               19.1kb A1FFC258
 ide/mnh_html.pas                               2.3kb E63B0405
 ide/outline/outlineformunit.pas               14.1kb BEEC028D
 ide/output/guiOutAdapters.pas                  2.8kb 232B7E57
@@ -136,7 +136,7 @@ ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
 ide/res_removeAssoc.inc                        0.6kb 8DABBDF6
-ide/settings/mnh_gui_settings.pas             13.4kb 5E8AD669
+ide/settings/mnh_gui_settings.pas             13.6kb D9B8B492
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.7kb CBF99C39
 ide/synhighlightermnh.pas                     19.3kb 21E50C65
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.2kb 33F0B38A
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3379 kB
+          3381 kB
