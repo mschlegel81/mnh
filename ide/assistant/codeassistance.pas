@@ -502,6 +502,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 
 PROCEDURE ensureCodeAssistanceThread;
   begin
+    if isFinalized then exit;
     enterCriticalSection(codeAssistanceCs);
     try
       if not(codeAssistantIsRunning) then begin
