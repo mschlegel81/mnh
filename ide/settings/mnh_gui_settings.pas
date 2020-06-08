@@ -242,8 +242,10 @@ PROCEDURE TSettingsForm.PageControlChange(Sender: TObject);
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
+  {$ifdef Windows}
   {$include res_toDeleteOnUninstall.inc}
   VAR fileName:string;
+  {$endif}
   begin
     if closeDialogForm.showOnUninstall<>cda_continueUninstall then exit;
     sandbox^.runUninstallScript;
@@ -253,8 +255,8 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteFile(settingsFileName);
     DeleteFile(workspaceFilename);
     DeleteFile(settings.lightFlavourLocation);
-    for fileName in ADDITIONAL_FILES_TO_DELETE do DeleteFile(fileName);
     {$ifdef Windows}
+    for fileName in ADDITIONAL_FILES_TO_DELETE do DeleteFile(fileName);
     APP_STYLE:=APP_STYLE_BLANK;
     deleteMyselfOnExit;
     {$endif}
