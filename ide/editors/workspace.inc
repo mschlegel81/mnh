@@ -44,7 +44,7 @@ T_workspace=object(T_serializable)
 
     FUNCTION currentEditor:P_editorMeta;
     FUNCTION getExistingEditorForPath(CONST pathOrPseudoName:string):P_editorMeta;
-    FUNCTION addEditorMetaForNewFile:P_editorMeta;
+    FUNCTION addEditorMetaForNewFile(CONST languageForMeta:T_language):P_editorMeta;
   public
     FUNCTION createNewFile:P_editorMeta;
     FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
@@ -310,7 +310,7 @@ FUNCTION T_workspace.currentEditor: P_editorMeta;
       then exit(meta);
   end;
 
-FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
+FUNCTION T_workspace.addEditorMetaForNewFile(CONST languageForMeta:T_language): P_editorMeta;
   VAR i:longint;
   begin
     enterCriticalSection(workspaceCs);
@@ -320,6 +320,7 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
       new(result,create(nextMetaIndex));
       inc(nextMetaIndex);
       metas[i]:=result;
+      result^.language:=languageForMeta;
       result^.editor.readonly:=runnerModel.areEditorsLocked or result^.strictlyReadOnly;
     finally
       leaveCriticalSection(workspaceCs);
@@ -328,7 +329,7 @@ FUNCTION T_workspace.addEditorMetaForNewFile: P_editorMeta;
 
 FUNCTION T_workspace.createNewFile: P_editorMeta;
   begin
-    result:=addEditorMetaForNewFile;
+    result:=addEditorMetaForNewFile(LANG_MNH);
     inputPageControl.activePage:=result^.tabsheet;
     result^.activate;
   end;
@@ -408,7 +409,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
         for meta in metas do if meta^.pseudoName=fileName then begin result:=meta; exit; end;
       end else begin
         for meta in metas do if SameFileName(meta^.fileInfo.filePath,fileName) then begin result:=meta; exit; end;
-        result:=addEditorMetaForNewFile();
+        result:=addEditorMetaForNewFile(LANG_TXT);
         couldOpenFile:=result^.setFile(fileName);
         if couldOpenFile then begin
           updateMarkers(result);
@@ -667,8 +668,7 @@ PROCEDURE T_workspace.exportCurrentFileToHtml;
     meta:=currentEditor;
     if meta=nil then exit;
     htmlText:=htmlExporter.textToHtml(meta^.pseudoName,meta^.editor.lines,meta^.editor.highlighter);
-    htmlMeta:=addEditorMetaForNewFile;
-    htmlMeta^.language:=LANG_HTML;
+    htmlMeta:=addEditorMetaForNewFile(LANG_HTML);
     htmlMeta^.editor.text:=htmlText;
     inputPageControl.activePage:=htmlMeta^.tabsheet;
   end;

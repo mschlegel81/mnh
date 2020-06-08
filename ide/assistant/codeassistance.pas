@@ -208,6 +208,9 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
     enterCriticalSection(cs);
     initialStateHash:=inputStateHash;
     if (latestResponse=nil) or (latestResponse^.stateHash<>initialStateHash) then begin
+      {$ifdef debugMode}
+      writeln('Code assistance start: ',provider^.getPath);
+      {$endif}
       new(package,create(provider,nil));
       setLength(additionals,length(additionalScriptsToScan));
       for i:=0 to length(additionalScriptsToScan)-1 do additionals[i]:=additionalScriptsToScan[i];
@@ -229,6 +232,9 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
       if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                            else loadMessages:=adapters      .storedMessages(true);
       globals^.afterEvaluation(recycler);
+      {$ifdef debugMode}
+      writeln('Code assistance end  : ',provider^.getPath);
+      {$endif}
       enterCriticalSection(cs);
       try
         if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);

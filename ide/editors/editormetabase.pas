@@ -461,7 +461,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
-    setLanguage(LANG_MNH);
+    language_:=LANG_TXT;
   end;
 
 DESTRUCTOR T_basicEditorMeta.destroy;

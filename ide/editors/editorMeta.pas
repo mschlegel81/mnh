@@ -235,6 +235,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     metaIndex:=mIdx;
     tabsheet:=TTabSheet.create(workspace.inputPageControl);
     tabsheet.PageControl:=workspace.inputPageControl;
+    assistanceData:=nil;
     createWithParent(tabsheet,workspace.bookmarkImagesList);
 
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
@@ -253,7 +254,6 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     end;
     editor.clearAll;
     editor.modified:=false;
-    setLanguage(LANG_MNH);
     updateSheetCaption;
   end;
 
