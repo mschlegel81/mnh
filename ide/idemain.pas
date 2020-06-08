@@ -20,6 +20,10 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    openRelatedSubmenu: TMenuItem;
+    miOpenDependenciesUsed: TMenuItem;
+    miOpenDependenciesUsing: TMenuItem;
+    miOpenDependenciesBoth: TMenuItem;
     miCopyCurrentFileName: TMenuItem;
     miShebang: TMenuItem;
     miFocusEditor: TMenuItem;
@@ -122,6 +126,7 @@ TYPE
     PROCEDURE miNewClick(Sender: TObject);
     PROCEDURE miOpenClassicalClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
+    PROCEDURE miOpenDependenciesBothClick(Sender: TObject);
     PROCEDURE miOutlineClick(Sender: TObject);
     PROCEDURE miOutputClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
@@ -489,6 +494,12 @@ PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
     timer.enabled:=true;
   end;
 
+PROCEDURE TIdeMainForm.miOpenDependenciesBothClick(Sender: TObject);
+  begin
+    if Sender.ClassType=TMenuItem.ClassType
+    then workspace.openDependenciesForCurrentScript(TMenuItem(Sender).Tag);
+  end;
+
 PROCEDURE TIdeMainForm.miOutlineClick(Sender: TObject);
   begin
     ensureOutlineForm;
@@ -738,12 +749,16 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
         edit:=workspace.currentEditor;
         if (edit<>nil) then begin
+          openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
           edit^.pollAssistanceResult;
           miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
           if edit^.isPseudoFile
           then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
           else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
-        end else caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
+        end else begin
+          caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
+          openRelatedSubmenu.enabled:=false;
+        end;
 
         if Assigned(ActiveControl) and ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 

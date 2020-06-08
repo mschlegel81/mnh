@@ -70,6 +70,7 @@ T_workspace=object(T_serializable)
   public
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
+    PROCEDURE openDependenciesForCurrentScript(CONST openMask:byte);
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
     PROCEDURE checkForFileChanges;
@@ -658,6 +659,21 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
       leaveCriticalSection(workspaceCs);
     end;
     result:=true;
+  end;
+
+PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
+  VAR meta:P_editorMeta;
+      filesToOpen:T_arrayOfString;
+  begin
+    meta:=currentEditor;
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (openMask=0) then exit;
+    setLength(filesToOpen,0);
+    if (openMask and 1)>0
+    then append(filesToOpen,meta^.assistanceData^.usedAndExtendedPackages);
+    if (openMask and 2)>0
+    then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
+    sortUnique(filesToOpen);
+    addOrGetEditorMetaForFiles(filesToOpen,false);
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;
