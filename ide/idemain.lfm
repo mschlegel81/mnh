@@ -653,6 +653,24 @@ object IdeMainForm: TIdeMainForm
         ShortCut = 24655
         OnClick = miOpenClassicalClick
       end
+      object openRelatedSubmenu: TMenuItem
+        Caption = 'Open &related scripts...'
+        object miOpenDependenciesUsed: TMenuItem
+          Tag = 1
+          Caption = '&Used/extended scripts'
+          OnClick = miOpenDependenciesBothClick
+        end
+        object miOpenDependenciesUsing: TMenuItem
+          Tag = 2
+          Caption = '&Scripts using/extending this one'
+          OnClick = miOpenDependenciesBothClick
+        end
+        object miOpenDependenciesBoth: TMenuItem
+          Tag = 3
+          Caption = '&Both'
+          OnClick = miOpenDependenciesBothClick
+        end
+      end
       object miClose: TMenuItem
         Caption = 'Close'
         ShortCut = 16471

@@ -72,7 +72,7 @@ core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.4kb 2E7A6C48
 ide/ask/customrundialog.pas                   13.4kb B80D2D44
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.2kb F602D1C6
+ide/assistant/codeassistance.pas              25.2kb 2A01743F
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
 ide/close/closedialog.pas                      4.8kb EDFB0EAA
 ide/customForms/component_button.inc           1.4kb 49420208
@@ -105,13 +105,13 @@ ide/editors/mnhCompletion.pas                  8.6kb 6AE62B89
 ide/editors/openfile.pas                       3.4kb 606254C8
 ide/editors/renamedialog.pas                   1.8kb 2E5DF406
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
-ide/editors/savefile.pas                       3.5kb F355E2F4
+ide/editors/savefile.pas                       4.9kb F786D3D8
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
-ide/editors/workspace.inc                     27.6kb D6ABBCE8
+ide/editors/workspace.inc                     28.2kb 7AF86673
 ide/evalThread.pas                            21.5kb 877DFF27
 ide/ide.lpr                                    1.1kb F6D9760E
 ide/idelayoututil.pas                         29.7kb 6A27A3CE
-ide/idemain.pas                               23.8kb 79111F13
+ide/idemain.pas                               24.3kb E131FEA8
 ide/imig/mnh_imig.pas                         28.1kb 056BD80B
 ide/imig/mnh_imig_form.pas                     4.1kb FC840D5B
 ide/ipcModel.pas                               1.5kb 0F5ADD0F
@@ -131,7 +131,7 @@ ide/plot/plotstyles.pas                       13.1kb 2D34B4F9
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.1kb 63B77E23
 ide/reevaluationforms.pas                      3.1kb B92B54FE
-ide/res_defaultFiles.inc                     132.6kb CD0BE80D
+ide/res_defaultFiles.inc                     132.9kb 47B50CF7
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.2kb 33F0B38A
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3381 kB
+          3384 kB

@@ -10,23 +10,30 @@ USES
   mnh_constants,
   editorMeta,editorMetaBase,closeDialog;
 
+CONST
+  CAPTION_IF_FILE_EXISTS:array[false..true] of string=('Save File','Overwrite File');
+
 TYPE
   TSaveFileDialog = class(TForm)
     Button1: TButton;
     CancelButton: TButton;
+    saveToPackagesCb: TCheckBox;
     extEdit: TComboBox;
     dirComboBox: TComboBox;
     nameEdit: TEdit;
     Label1: TLabel;
     Label2: TLabel;
-    Panel1: TPanel;
-    Panel2: TPanel;
     SaveDialog1: TSaveDialog;
     PROCEDURE Button1Click(Sender: TObject);
+    PROCEDURE dirComboBoxChange(Sender: TObject);
     PROCEDURE dirComboBoxKeyPress(Sender: TObject; VAR key: char);
+    PROCEDURE extEditChange(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE nameEditChange(Sender: TObject);
+    PROCEDURE saveToPackagesCbChange(Sender: TObject);
   private
     selectedFile:string;
+    PROCEDURE setSelectedFile(CONST f:string);
   public
     PROPERTY getSelectedFile:string read selectedFile;
     FUNCTION showForRoot(CONST rootPath,fname,ext: string):string;
@@ -46,15 +53,20 @@ FUNCTION saveFileDialog:TSaveFileDialog;
 PROCEDURE TSaveFileDialog.Button1Click(Sender: TObject);
   begin
     if SaveDialog1.execute then begin
-      ModalResult:=mrOk;
       selectedFile:=SaveDialog1.fileName;
+      ModalResult:=mrOk;
     end else ModalResult:=mrCancel;
+  end;
+
+PROCEDURE TSaveFileDialog.dirComboBoxChange(Sender: TObject);
+  begin
+    setSelectedFile(expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text);
   end;
 
 PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
   begin
     if key=#13 then begin
-      selectedFile:=expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text;
+      setSelectedFile(expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text);
       if fileExists(selectedFile)
       then case closeDialogForm.showOnOverwrite(selectedFile) of
         cda_overwrite  : ModalResult:=mrOk;
@@ -63,12 +75,40 @@ PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
     end;
   end;
 
+PROCEDURE TSaveFileDialog.extEditChange(Sender: TObject);
+  begin
+    setSelectedFile(expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text);
+  end;
+
 PROCEDURE TSaveFileDialog.FormShow(Sender: TObject);
   begin
     nameEdit.SetFocus;
   end;
 
-FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
+PROCEDURE TSaveFileDialog.nameEditChange(Sender: TObject);
+  begin
+    setSelectedFile(expandMnhDir(dirComboBox.text)+DirectorySeparator+nameEdit.text+extEdit.text);
+  end;
+
+PROCEDURE TSaveFileDialog.saveToPackagesCbChange(Sender: TObject);
+  begin
+    if saveToPackagesCb.checked then begin
+      dirComboBox.enabled:=false;
+      dirComboBox.text:=collapseMnhDir(configDir+'packages');
+      setSelectedFile(configDir+'packages'+DirectorySeparator+nameEdit.text+extEdit.text);
+    end else begin
+      dirComboBox.enabled:=true;
+    end;
+  end;
+
+PROCEDURE TSaveFileDialog.setSelectedFile(CONST f: string);
+  begin
+    selectedFile:=f;
+    caption:=CAPTION_IF_FILE_EXISTS[fileExists(selectedFile)];
+  end;
+
+FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string
+  ): string;
   PROCEDURE ensureExtensions;
     VAR lang:T_language;
         s:string;
@@ -112,7 +152,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
     dirComboBox.text:=rootPath;
     i:=dirComboBox.items.IndexOf(rootPath);
     if i>=0 then dirComboBox.ItemIndex:=i;
-    selectedFile:='';
+    setSelectedFile(rootPath+DirectorySeparator+fname+ext);
     if ShowModal=mrOk then result:=selectedFile else result:='';
   end;
 

@@ -177,3 +177,17 @@ showCheatSheet(editorFile:String)->print(
 "\nStrg + Shift + C\ttoggle comment\tStrg + Shift + U\tcovert selection to uppercase",
 "\nStrg + Space\tcomplete\tStrg + E\tescape selection",
 "\n\t\tStrg + Shift + E\tunescape selection");
+
+@utility=Index scripts on drive
+@SuppressUnusedParameterWarning
+scanDrive(editorFile:String)->begin
+  local roots:=mnhInfo['targetOs']=='Linux'
+               ? '/'
+               : interpret("sort(driveInfo.getInner(0)&':')");
+  local rootToScan:=ask('Which drive/root folder should be scanned?',roots);
+  rootToScan==''
+  ? return void
+  : print('Scanning: ',rootToScan);
+  allFiles(rootToScan,'*.mnh').map({print($fileName) orElse try(::inspect,[$fileName],::warn)});
+  void;
+end;
