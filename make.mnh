@@ -35,6 +35,15 @@ private ensureDefaultFilesSource->begin
   : writeFileLines(filename,code);
 end;
 
+private ensureFilesToDeleteSource->begin
+  local code:=[union(SSL32.extractFileName, SSL64.extractFileName).{'CONST ADDITIONAL_FILES_TO_DELETE:array[0..%s] of string=(%s);'.format($x.size-1, $x.escapePascal.join(','))}];
+
+  local filename:='ide/res_toDeleteOnUninstall.inc';
+  fileExists(filename) AND fileLines(filename)==code
+  ? void
+  : writeFileLines(filename,code);
+end;
+
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
@@ -51,6 +60,7 @@ currentCodeHash:=begin
   templateToInc('resources/ensureAssoc.mnh'                ,'ide/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'ide/res_removeAssoc.inc');
   ensureDefaultFilesSource;
+  ensureFilesToDeleteSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
   local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);

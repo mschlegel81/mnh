@@ -314,6 +314,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
         n: T_namespace;
         swapTmp: P_intrinsicFunctionDocumentation;
     begin
+      if not(DirectoryExists(getHtmlRoot)) then CreateDir(getHtmlRoot);
       ensureBuiltinDocExamples(Application,bar);
       //Prepare and sort data:-------------------------------------------------------------
       for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
@@ -495,7 +496,6 @@ PROCEDURE finalizeFunctionDocMap;
   end;
 
 INITIALIZATION
-  if not(DirectoryExists(getHtmlRoot)) then CreateDir(getHtmlRoot);
   functionDocMap.create();
 FINALIZATION
   finalizeFunctionDocMap;

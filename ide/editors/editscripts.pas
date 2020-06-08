@@ -69,6 +69,9 @@ USES
   sysutils,packages;
 FUNCTION utilityScriptFileName:string;
   begin
+    {$ifdef Windows}
+    if APP_STYLE=APP_STYLE_BLANK then exit('');
+    {$endif}
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
     if not(fileExists(result)) then sandbox^.ensureDefaultFiles(nil,nil);
   end;

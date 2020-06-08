@@ -301,6 +301,7 @@ PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
 PROCEDURE T_ideScriptEvaluation.ensureEditScripts();
   begin
     system.enterCriticalSection(evaluationCs);
+    package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));
     if (state in C_runningStates) then begin
       system.leaveCriticalSection(evaluationCs);
       exit;

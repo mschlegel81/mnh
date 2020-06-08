@@ -1,16 +1,10 @@
 //Windows only:
 Lazarus64Path:='..\lazarus64';
 Lazarus32Path:='..\lazarus32';
-@SuppressUnusedWarning
 DelpPath     :='..\lazarus64\fpc\3.0.4\bin\x86_64-win64\delp.exe';
 SSL32   :=files('..\3rd_party\openSsl32\*').expandedFileName;
 SSL64   :=files('..\3rd_party\openSsl64\*').expandedFileName;
 SSL(w)->copy(w,0,5)=='Win32' ? SSL32 : SSL64;
-@SuppressUnusedWarning
-projectSLOC->hashFiles
-             .filter({!($file.matches('3rd_party'))})
-             .pMap({$file.fileLines.trim.filter({$line!='' AND !($line.matches('^//'))})})
-             .flatten;
 
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 

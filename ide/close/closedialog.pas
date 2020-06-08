@@ -12,14 +12,16 @@ TYPE
                        cda_cancel,cda_pickAnother,
                        cda_saveAndChange,cda_cancelAndStay,cda_discardChanges,
                        cda_saveAndClose,
-                       cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit);
+                       cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit,
+                       cda_continueUninstall);
 CONST
   C_answerText:array[T_closeDialogAnswer] of string=('',
                                                      'Close','Reload','Ignore changes','Overwrite',
                                                      'Cancel','Pick another',
                                                      'Save and change file','Cancel (stay here)','Discard changes',
                                                      'Save and close file',
-                                                     'Quit after end of evaluation','Don''t quit','Cancel evaluation and quit');
+                                                     'Quit after end of evaluation','Don''t quit','Cancel evaluation and quit',
+                                                     'Yes, Uninstall');
 
 TYPE
   TcloseDialogForm = class(TForm)
@@ -36,6 +38,8 @@ TYPE
     {OK: reload, Cancel: ignore, Close: overwrite}
     FUNCTION showOnOutOfSync(CONST fileName:string): T_closeDialogAnswer;
     FUNCTION showOnQuitWhileEvaluating:T_closeDialogAnswer;
+    {OK: cda_continueUninstall, Canel:cda_cancel, Close:-}
+    FUNCTION showOnUninstall:T_closeDialogAnswer;
   end;
 
 FUNCTION closeDialogForm:TcloseDialogForm;
@@ -58,9 +62,16 @@ PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
 FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_closeDialogAnswer): T_closeDialogAnswer;
   VAR mr:integer;
   begin
-    ButtonPanel1.OKButton    .caption := C_answerText[okAnswer];
+    ButtonPanel1.OKButton    .caption := C_answerText[okAnswer    ];
+    ButtonPanel1.OKButton    .enabled:=(okAnswer    <>cda_noneOrInvalid);
+    ButtonPanel1.OKButton    .visible:=(okAnswer    <>cda_noneOrInvalid);
     ButtonPanel1.CancelButton.caption := C_answerText[cancelAnswer];
-    ButtonPanel1.CloseButton .caption := C_answerText[closeAnswer];
+    ButtonPanel1.CancelButton.enabled:=(cancelAnswer<>cda_noneOrInvalid);
+    ButtonPanel1.CancelButton.visible:=(cancelAnswer<>cda_noneOrInvalid);
+    ButtonPanel1.CloseButton .caption := C_answerText[closeAnswer ];
+    ButtonPanel1.CloseButton .enabled:=(closeAnswer <>cda_noneOrInvalid);
+    ButtonPanel1.CloseButton .visible:=(closeAnswer <>cda_noneOrInvalid);
+
     mr := ShowModal;
     if      mr=mrOk     then result:=okAnswer
     else if mr=mrCancel then result:=cancelAnswer
@@ -102,6 +113,12 @@ FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating: T_closeDialogAnswer;
   begin
     caption:='Still evaluating...';
     result:=showFor(cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit);
+  end;
+
+FUNCTION TcloseDialogForm.showOnUninstall:T_closeDialogAnswer;
+  begin
+    caption:='Do you really want to uninstall MNH?';
+    result:=showFor(cda_continueUninstall,cda_cancel,cda_noneOrInvalid);
   end;
 
 end.
