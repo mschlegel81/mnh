@@ -108,8 +108,7 @@ PROCEDURE TSaveFileDialog.setSelectedFile(CONST f: string);
     caption:=CAPTION_IF_FILE_EXISTS[fileExists(selectedFile)];
   end;
 
-FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string
-  ): string;
+FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string): string;
   PROCEDURE ensureExtensions;
     VAR lang:T_language;
         s:string;
@@ -150,7 +149,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string
       SaveDialog1.FilterIndex:=1;
       SaveDialog1.options:=SaveDialog1.options-[ofExtensionDifferent];
     end;
-    dirComboBox.text:=rootPath;
+    dirComboBox.text:=collapseMnhDir(rootPath);
     i:=dirComboBox.items.IndexOf(rootPath);
     if i>=0 then dirComboBox.ItemIndex:=i;
     setSelectedFile(rootPath+DirectorySeparator+fname+ext);

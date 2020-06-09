@@ -142,17 +142,18 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     end;
     setLength(additionalScriptsToScan,0);
     if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
-    if isFinalized then exit;
-    enterCriticalSection(codeAssistanceCs);
-    try
-      j:=0;
-      for i:=0 to length(codeAssistanceData)-1 do if codeAssistanceData[i]<>@self then begin
-        codeAssistanceData[j]:=codeAssistanceData[i];
-        inc(j);
+    if not(isFinalized) then begin
+      enterCriticalSection(codeAssistanceCs);
+      try
+        j:=0;
+        for i:=0 to length(codeAssistanceData)-1 do if codeAssistanceData[i]<>@self then begin
+          codeAssistanceData[j]:=codeAssistanceData[i];
+          inc(j);
+        end;
+        setLength(codeAssistanceData,j);
+      finally
+        leaveCriticalSection(codeAssistanceCs);
       end;
-      setLength(codeAssistanceData,j);
-    finally
-      leaveCriticalSection(codeAssistanceCs);
     end;
     leaveCriticalSection(cs);
     doneCriticalSection(cs);
@@ -216,32 +217,35 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
       for i:=0 to length(additionalScriptsToScan)-1 do additionals[i]:=additionalScriptsToScan[i];
       evaluating:=true;
       leaveCriticalSection(cs);
-      globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
-      if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
-      new(localIdInfos,create);
-      new(functionCallInfos,create);
-      {$ifdef debugMode}
-      writeln('Additional scripts to scan :',length(additionals),': ');
-      for script in additionals do write(script,',');
-      writeln;
-      {$endif}
-      for script in additionals do loadSecondaryPackage(script);
-      globals^.primaryContext.messages^.clear();
-      package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
-      if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
-                           else loadMessages:=adapters      .storedMessages(true);
-      globals^.afterEvaluation(recycler);
-      {$ifdef debugMode}
-      writeln('Code assistance end  : ',provider^.getPath);
-      {$endif}
-      enterCriticalSection(cs);
       try
-        if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
-        new(latestResponse,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
-        evaluating:=false;
+        globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+        globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
+        if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
+        new(localIdInfos,create);
+        new(functionCallInfos,create);
+        {$ifdef debugMode}
+        writeln('Additional scripts to scan :',length(additionals),': ');
+        for script in additionals do write(script,',');
+        writeln;
+        {$endif}
+        for script in additionals do loadSecondaryPackage(script);
+        globals^.primaryContext.messages^.clear();
+        package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
+        if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
+                             else loadMessages:=adapters      .storedMessages(true);
+        globals^.afterEvaluation(recycler);
+        {$ifdef debugMode}
+        writeln('Code assistance end  : ',provider^.getPath);
+        {$endif}
+        enterCriticalSection(cs);
+        try
+          if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
+          new(latestResponse,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
+        finally
+          leaveCriticalSection(cs);
+        end;
       finally
-        leaveCriticalSection(cs);
+        evaluating:=false;
       end;
       if givenGlobals=nil then begin
         dispose(globals,destroy);

@@ -72,7 +72,7 @@ core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb A37C18D3
 ide/ask/customrundialog.pas                   13.4kb B80D2D44
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.2kb 2A01743F
+ide/assistant/codeassistance.pas              25.4kb B951302E
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
 ide/close/closedialog.pas                      4.8kb 743AA4CC
 ide/customForms/component_button.inc           1.4kb 49420208
@@ -105,7 +105,7 @@ ide/editors/mnhCompletion.pas                  8.6kb 6AE62B89
 ide/editors/openfile.pas                       3.4kb 606254C8
 ide/editors/renamedialog.pas                   1.8kb 2E5DF406
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
-ide/editors/savefile.pas                       4.9kb B3628127
+ide/editors/savefile.pas                       5.0kb 32103390
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
 ide/editors/workspace.inc                     28.2kb 1142F087
 ide/evalThread.pas                            21.5kb 877DFF27
