@@ -36,6 +36,7 @@ TYPE
     SelectDirectoryDialog1: TSelectDirectoryDialog;
     PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ButtonClick(Sender: TObject);
     PROCEDURE miPickDirectoryClick(Sender: TObject);
@@ -71,7 +72,10 @@ VAR cs:TRTLCriticalSection;
 
 PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if key=27 then ModalResult:=mrCancel;
+    if key=27 then begin
+      ModalResult:=mrCancel;
+      Hide;
+    end;
     if (key = 13) and (not(rejectNonmatchingInput) or (ComboBox1.ItemIndex>=0)) then begin
       lastAnswer := ComboBox1.text;
       ModalResult := mrOk;
@@ -84,6 +88,14 @@ PROCEDURE TaskForm.FormCreate(Sender: TObject);
   begin
     ownerThread := 0;
     for i:=0 to length(previousAnswers)-1 do previousAnswers[i]:='';
+  end;
+
+PROCEDURE TaskForm.FormKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if key=27 then begin
+      ModalResult:=mrCancel;
+      Hide;
+    end;
   end;
 
 PROCEDURE TaskForm.FormShow(Sender: TObject);
@@ -202,6 +214,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
       for i:=0 to 15 do begin
         button(i).enabled:=length(options)>i;
         button(i).visible:=length(options)>i;
+        button(i).OnKeyDown:=@FormKeyDown;
         if length(options)>i then begin
           button(i).caption:=options[i];
         end;
