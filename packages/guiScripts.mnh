@@ -188,6 +188,9 @@ scanDrive(editorFile:String)->begin
   rootToScan==''
   ? return void
   : print('Scanning: ',rootToScan);
-  allFiles(rootToScan,'*.mnh').map({print($fileName) orElse try(::inspect,[$fileName],::warn)});
+  allFiles(rootToScan,'*.mnh')
+  //for indexing it is sufficient to take one file per folder
+  .{$L.group($L.extractFileDirectory,::orElse).getInner(1)}
+  .map({print($fileName) orElse try(::inspect,[$fileName],::warn)});
   void;
 end;

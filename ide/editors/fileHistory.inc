@@ -283,6 +283,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
         if length(scriptsToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: done scanning');
         {$endif}
         scriptUsage.scanning:=false;
+        if scriptUsage.destructionPending then anyAdded:=false;
         leaveCriticalSection(scriptUsage.cs);
         setLength(foldersToScan,0);
         setLength(scriptsToScan,0);

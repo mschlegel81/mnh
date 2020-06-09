@@ -83,6 +83,7 @@ PROCEDURE TSaveFileDialog.extEditChange(Sender: TObject);
 PROCEDURE TSaveFileDialog.FormShow(Sender: TObject);
   begin
     nameEdit.SetFocus;
+    AdjustSize;
   end;
 
 PROCEDURE TSaveFileDialog.nameEditChange(Sender: TObject);

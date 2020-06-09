@@ -65,16 +65,16 @@ core/profiling.pas                            13.5kb 3FFD8465
 core/recyclers.pas                             9.2kb F8A7F389
 core/rules.pas                                70.3kb BB6F065E
 core/subrules.pas                             75.1kb F0F2A8D4
-core/tokenArray.pas                           55.6kb D10633DB
+core/tokenArray.pas                           56.3kb 145FFE1A
 core/tokenStack.pas                           17.9kb 49FCA8C5
 core/tokens.pas                               17.4kb 11BC467D
 core/valueStore.pas                            7.7kb 2D735A2D
-ide/ask/askdialog.pas                          7.4kb 2E7A6C48
+ide/ask/askdialog.pas                          7.7kb A37C18D3
 ide/ask/customrundialog.pas                   13.4kb B80D2D44
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
 ide/assistant/codeassistance.pas              25.2kb 2A01743F
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
-ide/close/closedialog.pas                      4.8kb EDFB0EAA
+ide/close/closedialog.pas                      4.8kb 743AA4CC
 ide/customForms/component_button.inc           1.4kb 49420208
 ide/customForms/component_changeListener.inc   3.0kb 4B3A6803
 ide/customForms/component_checkbox.inc         2.1kb 96A25C58
@@ -99,15 +99,15 @@ ide/debugger/debuggingVar.pas                  7.8kb 644D387D
 ide/editors/editorMeta.pas                    24.5kb F8FAFF88
 ide/editors/editormetabase.pas                34.7kb 3E51FC0E
 ide/editors/editscripts.pas                    6.5kb CB238345
-ide/editors/fileHistory.inc                   10.9kb 7DBC3ECB
+ide/editors/fileHistory.inc                   11.0kb 7EBF6323
 ide/editors/gotolinedialogs.pas                1.2kb 4441504C
 ide/editors/mnhCompletion.pas                  8.6kb 6AE62B89
 ide/editors/openfile.pas                       3.4kb 606254C8
 ide/editors/renamedialog.pas                   1.8kb 2E5DF406
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
-ide/editors/savefile.pas                       4.9kb F786D3D8
+ide/editors/savefile.pas                       4.9kb B3628127
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
-ide/editors/workspace.inc                     28.2kb 7AF86673
+ide/editors/workspace.inc                     28.2kb 1142F087
 ide/evalThread.pas                            21.5kb 877DFF27
 ide/ide.lpr                                    1.1kb F6D9760E
 ide/idelayoututil.pas                         29.7kb 6A27A3CE
@@ -131,7 +131,7 @@ ide/plot/plotstyles.pas                       13.1kb 2D34B4F9
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.1kb 63B77E23
 ide/reevaluationforms.pas                      3.1kb B92B54FE
-ide/res_defaultFiles.inc                     132.9kb 47B50CF7
+ide/res_defaultFiles.inc                     132.9kb 9D4A371F
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.2kb 33F0B38A
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3384 kB
+          3385 kB

@@ -931,7 +931,7 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
   begin
     nextToken:=fetch;
     if nextToken=nil then exit(false);
-    case nextToken^.tokType of
+    while nextToken<>nil do case nextToken^.tokType of
       tt_literal: if (beforeLastTokenized<>nil) and (beforeLastTokenized^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])
                        and (lastTokenized<>nil) and (lastTokenized^.tokType in [tt_operatorMinus,tt_operatorPlus]) then begin
         if lastTokenized^.tokType=tt_operatorMinus
@@ -940,6 +940,11 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
           recycler.disposeToken(lastTokenized);
           lastTokenized:=beforeLastTokenized;
         end;
+        appendToken(nextToken);
+        nextToken:=nil;
+      end else begin
+        appendToken(nextToken);
+        nextToken:=nil;
       end;
       tt_identifier: if (associatedPackage<>nil) then begin
         if (associatedPackage^.isImportedOrBuiltinPackage(nextToken^.txt)) then begin
@@ -951,20 +956,34 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
               associatedPackage^.resolveId(nextToken^,nil);
               recycler.disposeToken(n[1]);
               recycler.disposeToken(n[2]);
+              appendToken(nextToken);
+              nextToken:=nil;
             end else begin
               associatedPackage^.resolveId(nextToken^,nil);
               appendToken(nextToken);
               appendToken(n[1]);
               nextToken:=n[2];
+              //=> repeat case distinction
             end;
           end else begin
             associatedPackage^.resolveId(nextToken^,nil);
             appendToken(nextToken);
             nextToken:=n[1];
+            //=> repeat case distinction
           end;
-        end else associatedPackage^.resolveId(nextToken^,nil);
+        end else begin
+          associatedPackage^.resolveId(nextToken^,nil);
+          appendToken(nextToken);
+          nextToken:=nil;
+        end;
         //This is a hack to ensure that "myPath" behaves nicely when including
-        if (nextToken<>nil) and (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
+        if (lastTokenized<>nil) and
+           (lastTokenized^.tokType=tt_intrinsicRule) and
+           (lastTokenized^.data=pointer(BUILTIN_MYPATH))
+        then lastTokenized^.location.package:=associatedPackage;
+      end else begin
+        appendToken(nextToken);
+        nextToken:=nil;
       end;
       tt_each,tt_parallelEach: begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
@@ -977,6 +996,8 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
         recycler.disposeToken(n[1]);
         recycler.disposeToken(n[2]);
         recycler.disposeToken(n[3]);
+        appendToken(nextToken);
+        nextToken:=nil;
       end;
       tt_agg: begin
         n[1]:=fetch;
@@ -986,10 +1007,16 @@ FUNCTION T_lexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler;
           nextToken^.data:=nil;
         end else messages^.raiseSimpleError('Invalid agg construct.',nextToken^.location);
         recycler.disposeToken(n[1]);
+        appendToken(nextToken);
+        nextToken:=nil;
+      end;
+      else begin
+        appendToken(nextToken);
+        nextToken:=nil;
       end;
     end;
     result:=true;
-    appendToken(nextToken);
+
   end;
 
 CONSTRUCTOR T_lexer.create(CONST input_: T_arrayOfString; CONST location: T_tokenLocation; CONST inPackage: P_abstractPackage);

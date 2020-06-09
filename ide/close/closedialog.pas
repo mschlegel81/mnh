@@ -57,6 +57,7 @@ FUNCTION closeDialogForm:TcloseDialogForm;
 {$R *.lfm}
 PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
+    AdjustSize;
   end;
 
 FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_closeDialogAnswer): T_closeDialogAnswer;
@@ -71,7 +72,6 @@ FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_c
     ButtonPanel1.CloseButton .caption := C_answerText[closeAnswer ];
     ButtonPanel1.CloseButton .enabled:=(closeAnswer <>cda_noneOrInvalid);
     ButtonPanel1.CloseButton .visible:=(closeAnswer <>cda_noneOrInvalid);
-
     mr := ShowModal;
     if      mr=mrOk     then result:=okAnswer
     else if mr=mrCancel then result:=cancelAnswer

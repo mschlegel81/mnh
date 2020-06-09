@@ -3,7 +3,8 @@ object openFileDialog: TopenFileDialog
   Height = 300
   Top = 441
   Width = 400
-  BorderStyle = bsDialog
+  BorderIcons = [biMinimize, biMaximize]
+  BorderStyle = bsSingle
   Caption = 'Open file'
   ClientHeight = 300
   ClientWidth = 400
