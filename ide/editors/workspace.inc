@@ -17,7 +17,7 @@ T_workspace=object(T_serializable)
       markIndex:byte;
     end;
 
-   debugLine:record
+   debugLine:record //nonpersistent
      editor:TSynEdit;
      line:longint;
    end;
