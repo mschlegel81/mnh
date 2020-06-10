@@ -107,7 +107,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     if isValid then begin
       setLength(stepText,tmpSteps^.size);
       for i:=0 to tmpSteps^.size-1 do stepText[i]:=P_stringLiteral(tmpSteps^.value[i])^.value;
-      isValid:=result.parseWorkflow(stepText);
+      isValid:=result.parseWorkflow(stepText,false);
       msg:=result.messageQueue^.get;
       while msg<>nil do begin
         if msg^.indicatesError then warn(msg^.toString(maxLongint));
@@ -294,7 +294,7 @@ FUNCTION executeTodo_imp intFuncSignature;
       if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
       thisWorkflow.create;
       thisWorkflow.messageQueue^.messageStringLengthLimit:=maxLongint;
-      if thisWorkflow.readFromFile(str0^.value) then begin
+      if thisWorkflow.readFromFile(str0^.value,false) then begin
         enterCriticalSection(workflowCs);
         inc(workflowsActive);
         thisWorkflow.executeAsTodo;
