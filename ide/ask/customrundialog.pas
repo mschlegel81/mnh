@@ -158,6 +158,7 @@ FUNCTION T_runParameterHistory.getParameterHistory(CONST scriptName: string): T_
 PROCEDURE T_runParameterHistory.storeUsedParameter(CONST scriptName, parameters: string);
   VAR i:longint=0;
   begin
+    if trim(parameters)='' then exit;
     while (i<length(historyPerScript)) and (historyPerScript[i].scriptName<>scriptName) do inc(i);
     if i=length(historyPerScript) then begin
       setLength(historyPerScript,i+1);
@@ -209,6 +210,7 @@ PROCEDURE T_runParameterHistory.saveToStream(VAR stream: T_bufferedOutputStreamW
     stream.writeNaturalNumber(length(toPersist));
     for i in toPersist do with historyPerScript[i] do begin
       stream.writeAnsiString(scriptName);
+      dropValues(parameterHistory,'');
       stream.writeNaturalNumber(length(parameterHistory));
       for s in parameterHistory do stream.writeAnsiString(s);
     end;
