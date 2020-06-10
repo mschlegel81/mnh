@@ -70,7 +70,7 @@ core/tokenStack.pas                           17.9kb 49FCA8C5
 core/tokens.pas                               17.4kb 11BC467D
 core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb A37C18D3
-ide/ask/customrundialog.pas                   13.4kb B80D2D44
+ide/ask/customrundialog.pas                   13.5kb E7341AA2
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
 ide/assistant/codeassistance.pas              25.4kb B951302E
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
@@ -112,13 +112,13 @@ ide/evalThread.pas                            21.5kb 877DFF27
 ide/ide.lpr                                    1.1kb F6D9760E
 ide/idelayoututil.pas                         29.7kb 6A27A3CE
 ide/idemain.pas                               24.3kb E131FEA8
-ide/imig/mnh_imig.pas                         28.1kb 056BD80B
+ide/imig/mnh_imig.pas                         28.1kb 7EE614ED
 ide/imig/mnh_imig_form.pas                     4.1kb FC840D5B
 ide/ipcModel.pas                               1.5kb 0F5ADD0F
 ide/menuutil.pas                               2.1kb 35434A45
 ide/mnh_doc.pas                               19.1kb A1FFC258
 ide/mnh_html.pas                               2.3kb E63B0405
-ide/outline/outlineformunit.pas               14.1kb BEEC028D
+ide/outline/outlineformunit.pas               14.1kb 1375A104
 ide/output/guiOutAdapters.pas                  2.8kb 232B7E57
 ide/output/outputformunit.pas                  8.1kb 873D5F03
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
@@ -163,7 +163,7 @@ igSrc/ig_tesselation.pas                      25.7kb 3AD48F26
 igSrc/im_colors.pas                           11.2kb E779F194
 igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          9.3kb 3413364E
-igSrc/im_misc.pas                             14.1kb 6F5C5946
+igSrc/im_misc.pas                             15.5kb F52E9C17
 igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
 igSrc/im_trianglesplit.pas                    34.3kb A29D9A33
@@ -174,7 +174,7 @@ igSrc/imagestashes.pas                         2.8kb 492826D1
 igSrc/linAlg3d.pas                            59.1kb E542B195
 igSrc/myParams.pas                            29.4kb A3D827DE
 igSrc/mypics.pas                              54.4kb 874BEB97
-igSrc/workflows.pas                           25.2kb 33F0B38A
+igSrc/workflows.pas                           25.6kb 67FE66BB
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3385 kB
+          3387 kB
