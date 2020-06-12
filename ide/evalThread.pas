@@ -233,12 +233,15 @@ CONSTRUCTOR T_reevaluationWithGui.create();
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);
     end;
+    if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then begin
       messages.addOutAdapter(newPlotAdapter('-',true),true);
+    end else begin
       plot:=P_guiPlotSystem (newPlotAdapter      ('MNH plot'));
       messages.addOutAdapter(newCustomFormAdapter(           plot),true);
       messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
       messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
       messages.addOutAdapter(                                plot ,true);
+    end;
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
     if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
