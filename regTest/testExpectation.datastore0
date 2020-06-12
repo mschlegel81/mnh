@@ -4334,6 +4334,10 @@ expectations:=
    '3>=[5,3,8] = [false,true,false]','3<=[5,3,8] = [true,true,true]','[7,Nan]>Nan = [false,false]','[7,Nan]<Nan = [false,false]',
    '[7,Nan]=Nan = [false,false]','[7,Nan]==Nan = false','[7,Nan]!=Nan = [false,false]','[7,Nan]>=Nan = [false,false]',
    '[7,Nan]<=Nan = [false,false]']].toMap,
+ 'overrideDemo'=>
+ ['1 - declaring const1','2 - declaring const2','    overridden method called','3 - Calling f1','    overridden method called',
+  '    0.1411200','4 - Calling f2','    overridden method called','    -0.7568025','5 - const1 = 0.8414710',
+  '6 - const2 = 0.9092974'],
  'pangrams'=>
  ["'The quick brown fox jumps over the lazy dog.' is a pangram"],
  'pascal'=>

@@ -1,0 +1,21 @@
+//This constant is declared before sin is overridden
+const1:=print('1 - declaring const1') orElse sin(1);
+//This function is declared before sin is overridden, but evaluated afterwards
+f1(x)->sin(x);
+
+@Override
+sin(x)->print('    overridden method called') orElse math.sin(x);
+
+//This constant is declared after sin is overridden
+const2:=print('2 - declaring const2') orElse sin(2);
+//This function is declared and evaluated after sin is overridden
+f2(x)->sin(x);
+
+main->begin
+  printf('3 - Calling f1');
+  printf('    %0.7f',f1(3));
+  printf('4 - Calling f2');
+  printf('    %0.7f',f2(4));
+  printf('5 - const1 = %0.7f',const1);
+  printf('6 - const2 = %0.7f',const2);
+end;
