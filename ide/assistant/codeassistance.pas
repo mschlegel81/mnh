@@ -506,7 +506,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
 
 PROCEDURE ensureCodeAssistanceThread;
   begin
-    if isFinalized then exit;
+    if (gui_started<>ide) or isFinalized then exit;
     enterCriticalSection(codeAssistanceCs);
     try
       if not(codeAssistantIsRunning) then begin
