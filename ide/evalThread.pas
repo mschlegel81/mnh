@@ -128,7 +128,11 @@ USES mnh_constants,
      mySys,
      profilingView,
      mnh_settings;
-FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem;      begin new(result,create(caption)); end;
+FUNCTION newPlotAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_plotSystem ;
+  begin
+    if headlessMode then new(P_plotSystem   (result),create(nil,false))
+                    else new(P_guiPlotSystem(result),create(caption));
+  end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
 FUNCTION newStdOutAdapter    (CONST caption:string; CONST running:TIsRunningFunc; CONST typesToInclude:T_messageTypeSet):P_lazyInitializedOutAdapter;        begin new(result,create(running,caption,typesToInclude)); end;
@@ -172,7 +176,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     stdOutAdapter:=newStdOutAdapter('Output',@isRunning,C_textMessages);
     stdOutAdapter^.parentMessages:=@messages;
     messages.addOutAdapter(stdOutAdapter,true);
-    plot:=                 newPlotAdapter      ('MNH plot');
+    plot:=P_guiPlotSystem(newPlotAdapter      ('MNH plot'));
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
@@ -190,7 +194,7 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_eagerInitializedOutAdap
     inherited init(ek_quick);
     messages.addOutAdapter(quickStdout,false);
     quickStdout^.parentMessages:=@messages;
-    plot:=                 newPlotAdapter      ('Quick plot') ;
+    plot:=P_guiPlotSystem(newPlotAdapter      ('Quick plot'));
     messages.addOutAdapter(newCustomFormAdapter(                  plot),true);
     messages.addOutAdapter(                                       plot ,true);
     messages.addOutAdapter(newTableAdapter     ('Quick table')         ,true);
@@ -229,18 +233,19 @@ CONSTRUCTOR T_reevaluationWithGui.create();
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);
     end;
-    plot:=                 newPlotAdapter      ('MNH plot');
-    messages.addOutAdapter(newCustomFormAdapter(           plot),true);
-    messages.addOutAdapter(                                plot ,true);
-    messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
-    messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+      messages.addOutAdapter(newPlotAdapter('-',true),true);
+      plot:=P_guiPlotSystem (newPlotAdapter      ('MNH plot'));
+      messages.addOutAdapter(newCustomFormAdapter(           plot),true);
+      messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
+      messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+      messages.addOutAdapter(                                plot ,true);
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
     if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
     then evalRequest.contextType:=ect_profiling
     else evalRequest.contextType:=ect_normal;
     if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags)
-    then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+    then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
     evalRequest.callMain:=true;
     evalRequest.parameters:=commandLine.mainParameters;
     if commandLine.getFileToInterpretFromCommandLine<>''

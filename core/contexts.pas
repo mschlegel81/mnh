@@ -467,7 +467,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     //evaluation state
     if evaluationContextType=ect_silent
-    then primaryContext.allowedSideEffects:=sideEffectProfile-[se_inputViaAsk]
+    then primaryContext.allowedSideEffects:=sideEffectProfile-[se_input]
     else primaryContext.allowedSideEffects:=sideEffectProfile;
     primaryContext.setThreadOptions(globalOptions);
     recycler.disposeScope(primaryContext.valueScope);

@@ -60,7 +60,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         commandLine.pauseIfConfigured(false);
         exit;
       end;
-      if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
       package^.load(loadMode,globals,recycler,commandLine.mainParameters{$ifdef fullVersion},nil,nil{$endif});
       if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
       dispose(package,destroy);

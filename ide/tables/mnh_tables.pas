@@ -102,7 +102,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
       tableDisplayRequest:P_tableDisplayRequest;
   begin
-    if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
+    if not(context.checkSideEffects('showTable',tokenLocation,[se_output,se_input])) then exit(nil);
     if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);

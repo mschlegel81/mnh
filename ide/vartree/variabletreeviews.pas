@@ -61,7 +61,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
   VAR caption:string='';
       Post:P_treeDisplayRequest;
   begin
-    if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
+    if not(context.checkSideEffects('showVariable',tokenLocation,[se_output,se_input])) then exit(nil);
     if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
