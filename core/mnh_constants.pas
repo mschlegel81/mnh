@@ -713,7 +713,7 @@ CONST C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_customTypeCheck,rt_duc
            (modifiers:[modifier_customDuckType];                                metaType: tt_customType;     ruleType:rt_duckTypeCheck        ; variableType:vt_mutable       ));
 
 TYPE
-  T_sideEffect=(se_inputViaAsk,
+  T_sideEffect=(se_input,
                 se_output,
                 se_sound,
                 se_sleep,
@@ -753,9 +753,9 @@ CONST
     name:string;
     allowed:T_sideEffects;
   end=((name:''; allowed:[low(T_sideEffect)..high(T_sideEffect)]),
-       (name:'readonly'; allowed:[se_inputViaAsk,se_output,se_sound,se_sleep,se_detaching,se_server,se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState,se_readFile,se_accessHttp,se_accessIpc]),
-       (name:'isolated'; allowed:[se_inputViaAsk,se_output,se_sound,se_sleep,se_detaching,          se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState                                       ]),
-       (name:'noexe';    allowed:[se_inputViaAsk..se_accessIpc]));
+       (name:'readonly'; allowed:[se_input,se_output,se_sound,se_sleep,se_detaching,se_server,se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState,se_readFile,se_accessHttp,se_accessIpc]),
+       (name:'isolated'; allowed:[se_input,se_output,se_sound,se_sleep,se_detaching,          se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState                                       ]),
+       (name:'noexe';    allowed:[se_input..se_accessIpc]));
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;

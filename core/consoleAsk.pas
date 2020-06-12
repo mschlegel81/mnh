@@ -91,7 +91,7 @@ FUNCTION ask_impl intFuncSignature;
       iter:T_arrayOfLiteral;
       i: longint;
   begin
-    if not(context.checkSideEffects('ask',tokenLocation,[se_inputViaAsk])) then exit(nil);
+    if not(context.checkSideEffects('ask',tokenLocation,[se_input])) then exit(nil);
     result:=nil;
     if (params<>nil) and
        (params^.size = 1) and

@@ -30,10 +30,10 @@ core/aggregators.pas                          20.6kb F44C7709
 core/basicTypes.pas                            6.2kb DAB24B36
 core/builtinGenerators.pas                    44.0kb 2D3E8316
 core/caches.pas                                5.2kb 3B1EEDF2
-core/cmdLineInterpretation.pas                 4.6kb 445D6C7F
+core/cmdLineInterpretation.pas                 4.6kb 16D3CA50
 core/commandlineparameters.pas                21.6kb 64541EA2
-core/consoleAsk.pas                            4.3kb 831F5CED
-core/contexts.pas                             36.5kb E80FA92B
+core/consoleAsk.pas                            4.3kb 403D5E32
+core/contexts.pas                             36.5kb 5432FF86
 core/datastores.pas                            6.4kb 2139706F
 core/evaluation.pas                           61.8kb 4754735B
 core/fileWrappers.pas                         16.1kb DF6D80BF
@@ -54,7 +54,7 @@ core/funcs_types.pas                          19.5kb 50BDF8C6
 core/funcs_xml.pas                             3.8kb 20CD0D90
 core/listProcessing.pas                       28.3kb 22AF62BB
 core/litvar.pas                              161.0kb B4C80EBC
-core/mnh_constants.pas                        63.3kb A44859BD
+core/mnh_constants.pas                        63.3kb 39FCA001
 core/mnh_messages.pas                         17.8kb F8D46BB8
 core/mnh_settings.pas                          4.7kb BDF91CF1
 core/operators.pas                            47.5kb D3763027
@@ -69,10 +69,10 @@ core/tokenArray.pas                           56.3kb 145FFE1A
 core/tokenStack.pas                           17.9kb 49FCA8C5
 core/tokens.pas                               17.4kb 11BC467D
 core/valueStore.pas                            7.7kb 2D735A2D
-ide/ask/askdialog.pas                          7.7kb A37C18D3
+ide/ask/askdialog.pas                          7.7kb 6BC1B22E
 ide/ask/customrundialog.pas                   13.5kb E7341AA2
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.4kb B951302E
+ide/assistant/codeassistance.pas              25.4kb 0DEC1FD7
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
 ide/close/closedialog.pas                      4.8kb 743AA4CC
 ide/customForms/component_button.inc           1.4kb 49420208
@@ -108,12 +108,12 @@ ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       5.0kb 32103390
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
 ide/editors/workspace.inc                     28.2kb 1142F087
-ide/evalThread.pas                            21.5kb 877DFF27
+ide/evalThread.pas                            22.0kb 1C738957
 ide/ide.lpr                                    1.1kb F6D9760E
 ide/idelayoututil.pas                         29.7kb 6A27A3CE
 ide/idemain.pas                               24.3kb E131FEA8
 ide/imig/mnh_imig.pas                         28.1kb 7EE614ED
-ide/imig/mnh_imig_form.pas                     4.1kb FC840D5B
+ide/imig/mnh_imig_form.pas                     4.2kb 94EF47E8
 ide/ipcModel.pas                               1.5kb 0F5ADD0F
 ide/menuutil.pas                               2.1kb 35434A45
 ide/mnh_doc.pas                               19.1kb A1FFC258
@@ -124,14 +124,14 @@ ide/output/outputformunit.pas                  8.1kb 873D5F03
 ide/output/synOutAdapter.pas                  13.4kb 3B4DCCA6
 ide/plot/funcs_plot.pas                       20.6kb D766D125
 ide/plot/mnh_plotData.pas                     66.1kb 6B322BAB
-ide/plot/mnh_plotform.pas                     26.6kb A5F71D14
+ide/plot/mnh_plotform.pas                     26.7kb EC88BD5C
 ide/plot/plotexport.pas                        7.6kb D8CA9E7C
 ide/plot/plotmath.pas                         49.9kb 721FC926
 ide/plot/plotstyles.pas                       13.1kb 2D34B4F9
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.1kb 63B77E23
 ide/reevaluationforms.pas                      3.1kb B92B54FE
-ide/res_defaultFiles.inc                     133.3kb 8ED10871
+ide/res_defaultFiles.inc                     133.3kb 1BFE5A18
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
@@ -140,9 +140,9 @@ ide/settings/mnh_gui_settings.pas             13.6kb 13E19B03
 ide/shebangdialog.pas                          5.9kb 2BCDC384
 ide/splash/mnh_splash.pas                      3.7kb CBF99C39
 ide/synhighlightermnh.pas                     19.3kb 21E50C65
-ide/tables/mnh_tables.pas                     16.4kb 3FF7A044
+ide/tables/mnh_tables.pas                     16.4kb 47653764
 ide/treeUtil.pas                               1.5kb 9C77EF26
-ide/vartree/variabletreeviews.pas              6.2kb 1F9B099A
+ide/vartree/variabletreeviews.pas              6.2kb 8093B3A4
 igSrc/complex.pas                             13.3kb DF849305
 igSrc/darts.pas                               25.5kb 5EABF539
 igSrc/generationbasics.pas                    10.4kb 3AB043B4
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.6kb 67FE66BB
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3389 kB
+          3390 kB

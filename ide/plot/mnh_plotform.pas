@@ -705,6 +705,7 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
   VAR closedRequest:P_queryPlotClosedMessage;
   begin if (params=nil) or (params^.size=0) then begin
     if (gui_started=NO) then context.messages^.logGuiNeeded;
+    if not(se_input in context.sideEffectWhitelist) then exit(newBoolLiteral(false));
     new(closedRequest,createRetrieveRequest);
     context.messages^.postCustomMessage(closedRequest);
     result:=newBoolLiteral(closedRequest^.getResponseWaiting(context.messages));
@@ -739,7 +740,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
-  begin if (params=nil) or (params^.size=0) then begin
+  begin if ((params=nil) or (params^.size=0)) and context.checkSideEffects('display',tokenLocation,[se_input]) then begin
     if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest);
