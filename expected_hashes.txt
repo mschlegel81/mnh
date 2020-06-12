@@ -131,7 +131,7 @@ ide/plot/plotstyles.pas                       13.1kb 2D34B4F9
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.1kb 63B77E23
 ide/reevaluationforms.pas                      3.1kb B92B54FE
-ide/res_defaultFiles.inc                     132.9kb 9D4A371F
+ide/res_defaultFiles.inc                     133.3kb 8ED10871
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
@@ -163,7 +163,7 @@ igSrc/ig_tesselation.pas                      25.7kb 3AD48F26
 igSrc/im_colors.pas                           11.2kb E779F194
 igSrc/im_filter.pas                            9.3kb B0FEDDE2
 igSrc/im_geometry.pas                          9.3kb 3413364E
-igSrc/im_misc.pas                             15.5kb F52E9C17
+igSrc/im_misc.pas                             17.2kb 82143AA9
 igSrc/im_stashing.pas                          7.7kb 4528C02A
 igSrc/im_statisticoperations.pas              36.3kb 80235CCB
 igSrc/im_trianglesplit.pas                    34.3kb A29D9A33
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.6kb 67FE66BB
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  75 kLOC
-          3387 kB
+          3389 kB
