@@ -12,6 +12,7 @@ TYPE
   T_guiImageSystem = object(T_imageSystem)
     private
       myImageForm:TDisplayImageForm;
+      headless:boolean;
       cap:string;
       PROCEDURE ensureForm;
     public
@@ -77,6 +78,7 @@ DESTRUCTOR T_guiImageSystem.destroy;
 
 PROCEDURE T_guiImageSystem.displayImage;
   begin
+    if headless then exit;
     ensureForm;
     myImageForm.displayCurrentImage;
   end;

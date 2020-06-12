@@ -128,9 +128,15 @@ USES mnh_constants,
      tokenArray,
      mySys,
      profilingView,
+     mnh_imig,
      mnh_settings;
 FUNCTION newPlotAdapter      (CONST caption:string      ):P_guiPlotSystem;      begin new(result,create(caption)); end;
-FUNCTION newImigAdapter      (CONST caption:string      ):P_guiImageSystem; begin new(result,create(caption)); end;
+FUNCTION newImigAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_imageSystem  ;
+  begin
+    if headlessMode then new(P_imageSystem   (result),create(nil))
+                    else new(P_guiImageSystem(result),create(caption));
+
+  end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
 FUNCTION newStdOutAdapter    (CONST caption:string; CONST running:TIsRunningFunc; CONST typesToInclude:T_messageTypeSet):P_lazyInitializedOutAdapter;        begin new(result,create(running,caption,typesToInclude)); end;
@@ -236,9 +242,13 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     plot:=                 newPlotAdapter      ('MNH plot');
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
-    messages.addOutAdapter(newImigAdapter      ('MNH image')    ,true);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+    if clf_HEADLESS in commandLine.mnhExecutionOptions.flags then begin
+      messages.addOutAdapter(newImigAdapter('-',true),true);
+    end else begin
+      messages.addOutAdapter(newImigAdapter      ('MNH image'),true);
+    end;
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
     if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
