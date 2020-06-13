@@ -484,7 +484,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     wl('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
     wl('  '+FLAG_GUI+'              force evaluation with GUI');
     wl('  '+FLAG_SHOW_HELP+'                display this help or help on the input file if present and quit');
-    wl('  '+FLAG_HEADLESS+'         forbid input via ask (scripts using ask will crash)');
+    wl('  '+FLAG_HEADLESS+'         forbid user input');
     wl('  '+FLAG_EXEC_CMD+'              directly execute the following command');
     wl('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
     wl('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');

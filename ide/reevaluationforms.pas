@@ -46,7 +46,7 @@ PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
         {$endif}
         slowUpdating:=false;
       end;
-      if not(runner.isRunning) and not(hasAnyForm) or (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then close;
+      if not(runner.isRunning) and (not(hasAnyForm) or (clf_HEADLESS in commandLine.mnhExecutionOptions.flags)) then close;
     end;
 
   PROCEDURE fastUpdates; inline;
