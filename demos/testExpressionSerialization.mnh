@@ -1,0 +1,42 @@
+testBinaryWithParameterRestriction->begin
+  print("\nTest deserialization of binary function");
+  local f:='+wwDAAIAAXgAHgF5MR4AAXgDAgF5ATr8/wIBeAAA'.base64decode.deserialize;
+  print('  f      = ',f);
+  try(f,[1,1],{print('  Fails for parameters (1,1)')}).isVoid.assert;
+  print('  f(1,2) = ',f(1,2));
+end;
+
+testUnary(fString:String)->begin
+  print("\nTest deserialization of unary function");
+  local f:=fString.base64decode.deserialize;
+  printf('  f    = %s'   ,f);
+  printf('  f(2) = %2.5f',f(2));
+end;
+
+testSerialize(x:Expression)->begin
+  print("\nTest serialization of ",x);
+  local ser:=try(::serialize,[x],{print($x[0,[0,2]].join(": "))});
+  ser.isVoid ? return void :
+  print(ser.escape);
+  print('     reconstructed to ',local y:=ser.deserialize);
+  print('     equals: ',x==y);
+end;
+
+main->begin
+  ['+wwEAAEAAiR4AB4GHfz/APsEAfz/Ovz/AwIkeAAe/P8b/P8A',
+   '+wwACG1hdGguY29z',
+   '+wwEAAEAAiR4AB4NBQNzaW78/x38/wMCJHgAHvz/PPz/Hfz/APsEAfz/Ofz/BQNjb3P8/x38/wMCJHgAHvz/Hvz/AA==']
+  .map(::testUnary);
+  testBinaryWithParameterRestriction;
+  [{$x+1},
+   {sleep(1) orElse print()},
+   ::cos,
+   rangeGenerator(1),
+   primeGenerator,
+   isaacRandomGenerator(123,5),
+   primeGenerator.sqrt,
+   primeGenerator.filter({isPrime($x+2)}).lazyMap({[$x,$x+2]}),
+   permutationIterator(['a'..'c']),
+   permutationIterator(5),
+   fileLineIterator(myPath)].map(::testSerialize);
+end;
