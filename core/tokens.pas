@@ -4,6 +4,7 @@ USES //basic classes
      sysutils,
      //my utilities
      myGenerics,
+     serializationUtil,
      //MNH:
      basicTypes,
      mnh_constants,
@@ -21,7 +22,6 @@ TYPE
     first,last:P_token;
   end;
   PP_token=^P_token;
-
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
@@ -53,6 +53,9 @@ TYPE
     PROCEDURE setTypeCheck(CONST check:T_typeCheck);
     FUNCTION getModifier:T_modifier;
     PROCEDURE setModifier(CONST modifier:T_modifier);
+
+    FUNCTION serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+    PROCEDURE deserializeSingleToken(CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
@@ -62,6 +65,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
 
 IMPLEMENTATION
+USES typinfo;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;
@@ -193,7 +197,7 @@ FUNCTION T_token.last: P_token;
     while result^.next<>nil do result:=result^.next;
   end;
 
-FUNCTION T_token.getCount:longint;
+FUNCTION T_token.getCount: longint;
   VAR p:P_token;
   begin
     p:=@self;
@@ -251,7 +255,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
 
-FUNCTION T_token.hash:T_hashInt;
+FUNCTION T_token.hash: T_hashInt;
   begin
     result:=T_hashInt(tokType);
     if tokType in [tt_intrinsicRule,tt_userRule,tt_rulePutCacheValue,tt_typeCheck] then result:=result*31+T_hashInt(data);
@@ -267,7 +271,7 @@ FUNCTION T_token.hash:T_hashInt;
     end;
   end;
 
-FUNCTION T_token.equals(CONST other:T_token):boolean;
+FUNCTION T_token.equals(CONST other: T_token): boolean;
   FUNCTION literalEquals(CONST x,y:P_literal):boolean; inline;
     begin
       result:=(x=nil) and (y=nil) or
@@ -385,7 +389,7 @@ FUNCTION T_token.getRawToken: T_rawToken;
   end;
 {$endif}
 
-PROCEDURE T_token.setSingleLocationForExpression(CONST loc:T_tokenLocation);
+PROCEDURE T_token.setSingleLocationForExpression(CONST loc: T_tokenLocation);
   VAR t:P_token;
   begin
     t:=@self;
@@ -395,13 +399,13 @@ PROCEDURE T_token.setSingleLocationForExpression(CONST loc:T_tokenLocation);
     end;
   end;
 
-PROCEDURE T_token.injectAfter(CONST newToken:P_token);
+PROCEDURE T_token.injectAfter(CONST newToken: P_token);
   begin
     newToken^.next:=next;
     next:=newToken;
   end;
 
-PROCEDURE T_token.injectAfter(CONST range:T_tokenRange);
+PROCEDURE T_token.injectAfter(CONST range: T_tokenRange);
   begin
     assert(range.first^.last=range.last);
     range.last^.next:=next;
@@ -416,7 +420,7 @@ FUNCTION T_token.getTypeCheck: T_typeCheck;
     result:=T_typeCheck(PtrUInt(data));
   end;
 
-PROCEDURE T_token.setTypeCheck(CONST check:T_typeCheck);
+PROCEDURE T_token.setTypeCheck(CONST check: T_typeCheck);
   begin
     {$ifdef debugMode}
     if not(tokType in [tt_type,tt_typeCheck]) then raise Exception.create('Call to setTypeCheck is invalid by tokenType');
@@ -424,7 +428,7 @@ PROCEDURE T_token.setTypeCheck(CONST check:T_typeCheck);
     data:=pointer(PtrUInt(check));
   end;
 
-FUNCTION T_token.getModifier:T_modifier;
+FUNCTION T_token.getModifier: T_modifier;
   begin
     {$ifdef debugMode}
     if (tokType<>tt_modifier) then raise Exception.create('Call to getModifier is invalid by tokenType');
@@ -432,10 +436,235 @@ FUNCTION T_token.getModifier:T_modifier;
     result:=T_modifier(PtrUInt(data));
   end;
 
-PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
+PROCEDURE T_token.setModifier(CONST modifier: T_modifier);
   begin
     data:=pointer(PtrUInt(modifier));
     tokType:=tt_modifier;
+  end;
+
+FUNCTION T_token.serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  PROCEDURE writeType; begin stream^.writeByte(byte(tokType)); end;
+  PROCEDURE writeTxt;  begin stream^.writeAnsiString(txt); end;
+
+  begin
+    case tokType of
+      tt_literal:
+        try
+          writeType;
+          writeLiteralToStream(P_literal(data),stream,locationOfSerializeCall,adapters);
+          result:=stream^.allOkay;
+        except
+          result:=false
+        end;
+      tt_identifier,
+      tt_parameterIdentifier,
+      tt_intrinsicRule,
+      tt_blockLocalVariable,
+      tt_eachParameter,
+      tt_each,
+      tt_parallelEach,
+      tt_assignNewBlockLocal,
+      tt_assignExistingBlockLocal,
+      tt_declare,
+      tt_assign,
+      tt_mutate,
+      tt_mut_assignPlus,
+      tt_mut_assignMinus,
+      tt_mut_assignMult,
+      tt_mut_assignDiv,
+      tt_mut_assignStrConcat,
+      tt_mut_assignAppend,
+      tt_mut_assignAppendAlt,
+      tt_mut_assignDrop:
+        begin
+          writeType;
+          writeTxt;
+          result:=stream^.allOkay;
+        end;
+      tt_eachIndex,
+      tt_ponFlipper,
+      tt_agg,
+      tt_while,
+      tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression,
+      tt_save, tt_return,
+      tt_pseudoFuncPointer,
+      tt_pow2,tt_pow3,
+      tt_braceOpen, tt_braceClose,
+      tt_listBraceOpen, tt_listBraceClose,
+      tt_expBraceOpen, tt_expBraceClose,
+      tt_iifCheck, tt_iifElse,
+      tt_separatorComma, tt_separatorCnt, tt_separatorMapItem,
+      tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
+      tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
+      tt_operatorIn,
+      tt_operatorAnd, tt_operatorOr, tt_operatorXor,
+      tt_operatorLazyAnd, tt_operatorLazyOr,
+      tt_operatorPlus, tt_operatorMinus, tt_operatorMult,
+      tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
+      tt_operatorStrConcat, tt_operatorOrElse,
+      tt_operatorConcat, tt_operatorConcatAlt,
+      tt_unaryOpNegate,
+      tt_unaryOpPlus, tt_unaryOpMinus,
+      tt_listToParameterList,
+      tt_semicolon,
+      tt_optionalParameters,
+      tt_nameOf:
+        begin
+          writeType;
+          result:=stream^.allOkay;
+        end;
+      tt_modifier:
+        begin
+          writeType;
+          stream^.writeByte(byte(getModifier));
+          result:=stream^.allOkay;
+        end;
+      //To ignore:
+      tt_EOL,
+      tt_docComment,
+      tt_attributeComment,
+      tt_blank:
+        begin
+        end;
+      //Not deserializable: tt_userRule
+      //                    tt_customType,
+      //                    tt_globalVariable,
+      //                    tt_customTypeCheck
+      //                    tt_typeCheck
+      //                    tt_type
+      //                    tt_use
+      //                    tt_include
+      //Only defined during evaluation: tt_aggregatorExpressionLiteral
+      //                                tt_rulePutCacheValue
+      //                                tt_aggregatorConstructor
+      //                                tt_parList_constructor,
+      //                                tt_parList,
+      //                                tt_list_constructor,
+      //                                tt_list_constructor_ranging
+      //                                tt_mut_nested_assign,
+      //                                tt_mut_nestedPlus,
+      //                                tt_mut_nestedMinus,
+      //                                tt_mut_nestedMult,
+      //                                tt_mut_nestedDiv,
+      //                                tt_mut_nestedStrConcat,
+      //                                tt_mut_nestedAppend,
+      //                                tt_mut_nestedAppendAlt,
+      //                                tt_mut_nestedDrop,
+      else begin
+        if adapters<>nil
+        then adapters^.raiseSimpleError('Cannot serialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)),locationOfSerializeCall)
+        else raise Exception.create    ('Cannot serialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
+        stream^.logWrongTypeError;
+        result:=false;
+      end;
+    end;
+  end;
+
+PROCEDURE T_token.deserializeSingleToken(CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
+  begin
+    location:=locationOfDeserializeCall;
+    tokType:=T_tokenType(stream^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
+    if stream^.allOkay then case tokType of
+      tt_literal:
+        data:=newLiteralFromStream(stream,locationOfDeserializeCall,adapters,typeMap);
+      tt_intrinsicRule:
+        begin
+          //TODO: This is a workaround; it would be nicer if the intrinsic rule map could be used
+          tokType:=tt_identifier;
+          txt:=stream^.readAnsiString;
+        end;
+      tt_identifier,
+      tt_parameterIdentifier,
+      tt_blockLocalVariable,
+      tt_eachParameter,
+      tt_each,
+      tt_parallelEach,
+      tt_assignNewBlockLocal,
+      tt_assignExistingBlockLocal,
+      tt_declare,
+      tt_assign,
+      tt_mutate,
+      tt_mut_assignPlus,
+      tt_mut_assignMinus,
+      tt_mut_assignMult,
+      tt_mut_assignDiv,
+      tt_mut_assignStrConcat,
+      tt_mut_assignAppend,
+      tt_mut_assignAppendAlt,
+      tt_mut_assignDrop:
+        txt:=stream^.readAnsiString;
+      tt_eachIndex,
+      tt_ponFlipper,
+      tt_agg,
+      tt_while,
+      tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression,
+      tt_save, tt_return,
+      tt_pseudoFuncPointer,
+      tt_pow2,tt_pow3,
+      tt_braceOpen, tt_braceClose,
+      tt_listBraceOpen, tt_listBraceClose,
+      tt_expBraceOpen, tt_expBraceClose,
+      tt_iifCheck, tt_iifElse,
+      tt_separatorComma, tt_separatorCnt, tt_separatorMapItem,
+      tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
+      tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
+      tt_operatorIn,
+      tt_operatorAnd, tt_operatorOr, tt_operatorXor,
+      tt_operatorLazyAnd, tt_operatorLazyOr,
+      tt_operatorPlus, tt_operatorMinus, tt_operatorMult,
+      tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
+      tt_operatorStrConcat, tt_operatorOrElse,
+      tt_operatorConcat, tt_operatorConcatAlt,
+      tt_unaryOpNegate,
+      tt_unaryOpPlus, tt_unaryOpMinus,
+      tt_listToParameterList,
+      tt_semicolon,
+      tt_optionalParameters,
+      tt_nameOf:
+          txt:=C_tokenDefaultId[tokType];
+      tt_modifier:
+        begin
+          setModifier(T_modifier(stream^.readByte([byte(low(T_modifier))..byte(high(T_modifier))])));
+          txt:=C_modifierInfo[getModifier].name;
+        end;
+      //To ignore:
+      tt_EOL,
+      tt_docComment,
+      tt_attributeComment,
+      tt_blank:
+        begin
+        end;
+      //Not deserializable: tt_userRule
+      //                    tt_customType,
+      //                    tt_globalVariable,
+      //                    tt_customTypeCheck
+      //                    tt_typeCheck
+      //                    tt_type
+      //                    tt_use
+      //                    tt_include
+      //Only defined during evaluation: tt_aggregatorExpressionLiteral
+      //                                tt_rulePutCacheValue
+      //                                tt_aggregatorConstructor
+      //                                tt_parList_constructor,
+      //                                tt_parList,
+      //                                tt_list_constructor,
+      //                                tt_list_constructor_ranging
+      //                                tt_mut_nested_assign,
+      //                                tt_mut_nestedPlus,
+      //                                tt_mut_nestedMinus,
+      //                                tt_mut_nestedMult,
+      //                                tt_mut_nestedDiv,
+      //                                tt_mut_nestedStrConcat,
+      //                                tt_mut_nestedAppend,
+      //                                tt_mut_nestedAppendAlt,
+      //                                tt_mut_nestedDrop,
+      else begin
+        if adapters<>nil
+        then adapters^.raiseSimpleError('Cannot deserialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)),locationOfDeserializeCall)
+        else raise Exception.create    ('Cannot deserialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
+        stream^.logWrongTypeError;
+      end;
+    end;
   end;
 
 end.

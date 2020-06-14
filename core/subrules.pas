@@ -18,6 +18,7 @@ USES //my utilities
      {$endif}
      funcs,
      mnh_messages,
+     serializationUtil,
      patterns;
 TYPE
   T_subruleAttribute=record
@@ -120,6 +121,8 @@ TYPE
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -164,6 +167,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
       FUNCTION getId:T_idString; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
@@ -176,7 +180,7 @@ VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST to
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
-USES sysutils,strutils,funcs_mnh
+USES sysutils,strutils,funcs_mnh,typinfo
      {$ifdef fullVersion},plotstyles{$endif}
      ;
 
@@ -199,6 +203,7 @@ T_builtinExpression=object(T_expression)
     FUNCTION getId:T_idString; virtual;
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
     FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
+    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
@@ -335,7 +340,7 @@ CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; C
     constructExpression(rep,context,recycler,declAt);
   end;
 
-CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation:T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
+CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler: T_recycler);
   begin
     init(et_eachBody,rep^.location);
     pattern.create;
@@ -1121,22 +1126,22 @@ FUNCTION T_subruleExpression.getId: T_idString;
     result+=pattern.toString;
   end;
 
-FUNCTION T_builtinExpression.getId:T_idString;
+FUNCTION T_builtinExpression.getId: T_idString;
   begin
     result:=id;
   end;
 
-FUNCTION T_builtinGeneratorExpression.getId:T_idString;
+FUNCTION T_builtinGeneratorExpression.getId: T_idString;
   begin
     result:=toString();
   end;
 
-FUNCTION T_builtinExpression.equals(CONST other:P_literal):boolean;
+FUNCTION T_builtinExpression.equals(CONST other: P_literal): boolean;
   begin
     result:=(other^.literalType=lt_expression) and (P_expressionLiteral(other)^.typ=et_builtin) and (P_builtinExpression(other)^.func=func);
   end;
 
-FUNCTION T_inlineExpression .arity: T_arityInfo;
+FUNCTION T_inlineExpression.arity: T_arityInfo;
   begin
     result.minPatternLength:=pattern.arity;
     if pattern.isVariadic
@@ -1155,11 +1160,75 @@ FUNCTION T_builtinExpression.arity: T_arityInfo;
 FUNCTION T_builtinGeneratorExpression.arity: T_arityInfo; begin result.minPatternLength:=0; result.minPatternLength:=0; end;
 
 FUNCTION T_expression.containsReturnToken:boolean; begin result:=false; end;
-FUNCTION T_inlineExpression.containsReturnToken:boolean;
+FUNCTION T_inlineExpression.containsReturnToken: boolean;
   VAR p:T_preparedToken;
   begin
     result:=false;
     for p in preparedBody do if p.token.tokType=tt_return then exit(true);
+  end;
+
+FUNCTION T_builtinExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeAnsiString(id);
+    result:=true;
+  end;
+
+FUNCTION T_builtinGeneratorExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  begin
+
+    adapters^.raiseSimpleError('Cannot serialize builtin generator expressions.',locationOfSerializeCall);
+    result:=false;
+  end;
+
+FUNCTION T_inlineExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  VAR i:longint;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeAnsiString(customId);
+    result:=pattern.writeToStream(locationOfSerializeCall,adapters,stream)
+            and stream^.allOkay;
+    stream^.writeNaturalNumber(length(preparedBody));
+    for i:=0 to length(preparedBody)-1 do begin
+      result:=result and preparedBody[i].token.serializeSingleToken(locationOfSerializeCall,adapters,stream);
+      stream^.writeInteger(preparedBody[i].parIdx);
+    end;
+    if (customType=nil)
+    then stream^.writeAnsiString('')
+    else stream^.writeAnsiString(customType^.getName);
+    if typ in C_statefulExpressionTypes
+    then stream^.writeNaturalNumber(indexOfSave);
+    result:=result and stream^.allOkay;
+  end;
+
+FUNCTION T_inlineExpression.loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+  VAR i:longint;
+      customTypeName:string;
+  begin
+    //This must happen on construction:
+    //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
+    customId:=stream^.readAnsiString;
+    result:=pattern.loadFromStream(stream,location,adapters,typeMap)
+            and stream^.allOkay;
+    setLength(preparedBody,stream^.readNaturalNumber);
+    for i:=0 to length(preparedBody)-1 do begin
+      preparedBody[i].token.create;
+      preparedBody[i].token.deserializeSingleToken(location,adapters,stream,typeMap);
+      preparedBody[i].parIdx:=stream^.readInteger;
+    end;
+    customTypeName:=stream^.readAnsiString;
+    if customTypeName<>'' then begin
+      if not(typeMap.containsKey(customTypeName,customType)) then begin
+        if adapters<>nil
+        then adapters^.raiseSimpleError('Unknown custom type for expression: '+customTypeName,location)
+        else raise exception.create    ('Unknown custom type for expression: '+customTypeName);
+        stream^.logWrongTypeError;
+      end;
+    end;
+    if typ in C_statefulExpressionTypes
+    then indexOfSave:=stream^.readNaturalNumber
+    else indexOfSave:=-1;
+    result:=result and stream^.allOkay;
   end;
 
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
@@ -1176,7 +1245,7 @@ FUNCTION T_subruleExpression.inspect: P_mapLiteral;
                               .put('attributes',meta.getAttributesLiteral,false);
   end;
 
-FUNCTION T_inlineExpression.patternString:string; begin result:=pattern.toString; end;
+FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
 
 CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
 DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
@@ -1371,7 +1440,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
     end;
   end;
 
-FUNCTION T_inlineExpression.usedGlobalVariables:T_arrayOfPointer;
+FUNCTION T_inlineExpression.usedGlobalVariables: T_arrayOfPointer;
   VAR prep:T_preparedToken;
   begin
     enterCriticalSection(subruleCallCs);
@@ -1735,11 +1804,57 @@ FUNCTION interpret_imp intFuncSignature;
     end;
   end;
 
+FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
+  VAR expressionType:T_expressionType;
+      builtinId :string;
+      builtinPtr:P_intFuncCallback;
+      inlineEx :P_inlineExpression;
+  begin
+    expressionType:=T_expressionType(stream^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));
+    result:=nil;
+    if stream^.allOkay then case expressionType of
+      et_builtin          ,
+      et_builtinIteratable,
+      et_builtinFuture    :
+        begin
+          builtinId:=stream^.readAnsiString;
+          if builtinRuleMap.containsKey(builtinId,builtinPtr) then
+            result:=getIntrinsicRuleAsExpression(builtinPtr)
+          else begin
+            if adapters<>nil
+            then adapters^.raiseSimpleError('Cannot deserialize builtin function: '+builtinId,location)
+            else raise Exception.create    ('Cannot deserialize builtin function: '+builtinId);
+            stream^.logWrongTypeError;
+          end;
+        end;
+      et_subrule          ,
+      et_inline           ,
+      et_subruleIteratable,
+      et_inlineIteratable ,
+      et_subruleStateful  ,
+      et_inlineStateful:
+        begin
+          new(inlineEx,init(expressionType,location));
+          if not(inlineEx^.loadFromStream(stream,location,adapters,typeMap))
+          then dispose(inlineEx,destroy)
+          else result:=inlineEx;
+        end;
+      else begin
+        if adapters<>nil
+        then adapters^.raiseSimpleError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)),location)
+        else raise Exception.create    ('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
+        stream^.logWrongTypeError;
+      end;
+    end;
+
+  end;
+
 INITIALIZATION
   {$ifdef fullVersion}
   funcs_plot.generateRow:=@generateRow;
   profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$endif}
+  litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary{$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
