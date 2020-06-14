@@ -155,6 +155,22 @@ TYPE
       PROPERTY isPublic:boolean read publicSubrule;
   end;
 
+  T_builtinGeneratorType=(bgt_future,
+                          bgt_listIterator,
+                          bgt_singleValueIterator,
+                          bgt_rangeGenerator,
+                          bgt_permutationIterator,
+                          bgt_filterGenerator,
+                          bgt_mapGenerator,
+                          bgt_futureMapGenerator,
+                          bgt_fileLineIterator,
+                          bgt_primeGenerator,
+                          bgt_stringIterator,
+                          bgt_realRandomGenerator,
+                          bgt_xorIntRandomGenerator,
+                          bgt_isaacIntRandomGenerator,
+                          bgt_vanDerCorputGenerator);
+
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
     private
@@ -177,6 +193,7 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    newGeneratorFromStreamCallback: FUNCTION(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
@@ -1176,8 +1193,10 @@ FUNCTION T_builtinExpression.writeToStream(CONST locationOfSerializeCall: T_toke
 
 FUNCTION T_builtinGeneratorExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
-
-    adapters^.raiseSimpleError('Cannot serialize builtin generator expressions.',locationOfSerializeCall);
+    stream^.logWrongTypeError;
+    if adapters<>nil
+    then adapters^.raiseSimpleError('Cannot serialize builtin generator expression.',locationOfSerializeCall)
+    else raise Exception.create(    'Cannot serialize builtin generator expression.');
     result:=false;
   end;
 
@@ -1221,7 +1240,7 @@ FUNCTION T_inlineExpression.loadFromStream(CONST stream:P_inputStreamWrapper; CO
       if not(typeMap.containsKey(customTypeName,customType)) then begin
         if adapters<>nil
         then adapters^.raiseSimpleError('Unknown custom type for expression: '+customTypeName,location)
-        else raise exception.create    ('Unknown custom type for expression: '+customTypeName);
+        else raise Exception.create    ('Unknown custom type for expression: '+customTypeName);
         stream^.logWrongTypeError;
       end;
     end;
@@ -1813,9 +1832,7 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
     expressionType:=T_expressionType(stream^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));
     result:=nil;
     if stream^.allOkay then case expressionType of
-      et_builtin          ,
-      et_builtinIteratable,
-      et_builtinFuture    :
+      et_builtin          :
         begin
           builtinId:=stream^.readAnsiString;
           if builtinRuleMap.containsKey(builtinId,builtinPtr) then
@@ -1827,6 +1844,9 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
             stream^.logWrongTypeError;
           end;
         end;
+      et_builtinIteratable,
+      et_builtinFuture    :
+        result:=newGeneratorFromStreamCallback(stream,location,adapters,typeMap);
       et_subrule          ,
       et_inline           ,
       et_subruleIteratable,
@@ -1846,7 +1866,6 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
         stream^.logWrongTypeError;
       end;
     end;
-
   end;
 
 INITIALIZATION
