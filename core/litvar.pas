@@ -243,6 +243,7 @@ TYPE
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual; abstract;
+      FUNCTION referencesAnyUserPackage:boolean; virtual; abstract;
   end;
 
   T_typedef=object(T_objectWithIdAndLocation)

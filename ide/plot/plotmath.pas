@@ -18,6 +18,21 @@ TYPE
   P_point = ^T_point;
   FUNCTION pointOf(CONST x,y:double):T_point; inline;
 TYPE
+  //TODO:        Make T_dataRow abstract
+  //Subclasses:  1 NumericList
+  //               direct
+  //               thinned out
+  //               spline interpolated
+  //               bezier interpolated
+  //             2 NumericLists
+  //               direct
+  //               thinned out
+  //               spline interpolated
+  //               bezier interpolated
+  //             expression -> Numeric         (if not expression.referencesAnyUserPackage)
+  //             expression -> NumericList(2)  (if not expression.referencesAnyUserPackage)
+  //Challenge:   find bounding box
+  //TODO: Overhaul plot serialization based on T_datarow sub types
   T_dataRow = object
     private
       dat:P_point;

@@ -123,6 +123,7 @@ TYPE
       FUNCTION containsReturnToken:boolean; virtual;
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
       FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -184,6 +185,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
       FUNCTION getId:T_idString; virtual;
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
@@ -221,6 +223,7 @@ T_builtinExpression=object(T_expression)
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
     FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
     FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
@@ -1866,6 +1869,25 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
         stream^.logWrongTypeError;
       end;
     end;
+  end;
+
+FUNCTION T_inlineExpression.referencesAnyUserPackage: boolean;
+  VAR pt:T_preparedToken;
+  begin
+    for pt in preparedBody do if pt.token.tokType in [tt_userRule,tt_globalVariable] then exit(true);
+    result:=false;
+  end;
+
+FUNCTION T_builtinGeneratorExpression.referencesAnyUserPackage: boolean;
+  begin
+    result:=true;
+    //conservative assumption;
+    //some builtin generators may contain expressions with in turn may refrerence user packages
+  end;
+
+FUNCTION T_builtinExpression.referencesAnyUserPackage: boolean;
+  begin
+    result:=false;
   end;
 
 INITIALIZATION
