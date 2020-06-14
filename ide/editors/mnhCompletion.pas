@@ -130,12 +130,12 @@ DESTRUCTOR T_completionLogic.destroy;
 
 PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData;  CONST isQuickEdit:boolean=false);
   begin
+    quickEdit:=isQuickEdit;
     if (edit=editor) and (ad=assistanceData) then exit;
     editor:=edit;
     assistanceData:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
-    quickEdit:=isQuickEdit;
   end;
 
 CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' '];
