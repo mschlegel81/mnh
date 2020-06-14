@@ -9,20 +9,23 @@ USES sysutils,
      recyclers,
      litVar,
      tokens,
-     contexts;
+     contexts,
+     serializationUtil,
+     out_adapters;
 TYPE
   T_patternElement=object
     private
       elementLocation  :T_tokenLocation;
-      id               :T_idString;
-      restrictionType  :T_tokenType;
-      restrictionValue :P_literal;
-      restrictionIdx   :longint;
       typeWhitelist    :T_literalTypeSet;
-      restrictionId    :T_idString;
-      builtinTypeCheck :T_typeCheck;
-      customTypeCheck  :P_typedef;
-      skipCustomCheck  :boolean;
+      //Pattern element variants:           f(x) f(x:Int) f(x:List(3)) f(x,y>x) f(x>4.1) f(x:MyType) f(1)
+      id               :T_idString;      //   X    X        X              X      X        X
+      restrictionType  :T_tokenType;     // lit   typeChk typeChk       comp.    comp.    lit        ==
+      restrictionValue :P_literal;       //                                       X
+      restrictionIdx   :longint;         //                 X              X
+      restrictionId    :T_idString;      //                                X
+      builtinTypeCheck :T_typeCheck;     //        X        X                             (X)
+      customTypeCheck  :P_typedef;       //                                                X
+      skipCustomCheck  :boolean;         //                                               (X)
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -39,6 +42,9 @@ TYPE
       FUNCTION getBuiltinTypeCheck:T_typeCheck;
       FUNCTION getBuiltinCheckParameter:longint;
       FUNCTION isTypeCheckOnly:boolean;
+
+      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   end;
 
   T_patternElementLocation=object
@@ -90,6 +96,9 @@ TYPE
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
       FUNCTION getFirst:T_patternElement;
       FUNCTION usesStrictCustomTyping:boolean;
+
+      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   end;
 
 {$ifdef fullVersion}
@@ -120,7 +129,7 @@ FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayO
   end;
 {$endif}
 
-CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
+CONSTRUCTOR T_patternElement.createAnonymous(CONST loc: T_tokenLocation);
   begin
     id:='';
     restrictionType :=tt_literal;
@@ -185,7 +194,7 @@ FUNCTION T_patternElement.toString: ansistring;
     end;
   end;
 
-FUNCTION T_patternElement.toCmdLineHelpStringString:ansistring;
+FUNCTION T_patternElement.toCmdLineHelpStringString: ansistring;
   VAR iter:T_arrayOfLiteral;
       l:P_literal;
   begin
@@ -264,7 +273,7 @@ PROCEDURE T_patternElement.thinOutWhitelist;
     end;
   end;
 
-FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
+FUNCTION T_patternElement.hides(CONST e: T_patternElement): boolean;
   TYPE T_valueRelation=(vr_unknown,vr_equal,vr_lesser,vr_greater);
 
   FUNCTION getValueRelation:T_valueRelation;
@@ -321,23 +330,72 @@ DESTRUCTOR T_patternElement.destroy;
     if restrictionValue<>nil then disposeLiteral(restrictionValue);
   end;
 
-FUNCTION T_patternElement.getBuiltinTypeCheck:T_typeCheck;
+FUNCTION T_patternElement.getBuiltinTypeCheck: T_typeCheck;
   begin
     if      restrictionType=tt_typeCheck       then result:=builtinTypeCheck
     else if restrictionType=tt_customTypeCheck then result:=customTypeCheck^.builtinTypeCheck
                                                else result:=tc_any;
   end;
 
-FUNCTION T_patternElement.getBuiltinCheckParameter:longint;
+FUNCTION T_patternElement.getBuiltinCheckParameter: longint;
   begin
     if      restrictionType=tt_typeCheck then result:=restrictionIdx
     else if restrictionType=tt_customTypeCheck then result:=customTypeCheck^.builtinSuperParameter
     else    result:=-1;
   end;
 
-FUNCTION T_patternElement.isTypeCheckOnly:boolean;
+FUNCTION T_patternElement.isTypeCheckOnly: boolean;
   begin
     result:=restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal];
+  end;
+
+FUNCTION T_patternElement.loadFromStream(CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
+  VAR customTypeName:string;
+  begin
+    elementLocation:=location;
+    id:=stream^.readAnsiString;
+    restrictionType :=T_tokenType(stream^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
+    builtinTypeCheck:=T_typeCheck(stream^.readByte([byte(low(T_typeCheck))..byte(high(T_typeCheck))]));
+    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
+      restrictionIdx:=stream^.readInteger;
+      if restrictionIdx<0
+      then restrictionValue:=newLiteralFromStream(stream,location,adapters,typeMap)
+      else restrictionValue:=nil;
+      if restrictionIdx>=0 then restrictionId:=stream^.readAnsiString;
+    end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
+      then restrictionIdx:=stream^.readInteger
+    else if (restrictionType=tt_customTypeCheck) then begin
+      customTypeName:=stream^.readAnsiString;
+      if typeMap.containsKey(customTypeName,customTypeCheck) then begin
+        skipCustomCheck :=customTypeCheck^.isDucktyping and
+                          customTypeCheck^.isAlwaysTrue;
+      end else begin
+        if adapters<>nil
+        then adapters^.raiseSimpleError('Unknown custom type in rule pattern: '+customTypeName,location)
+        else raise Exception.create    ('Unknown custom type in rule pattern: '+customTypeName);
+        stream^.logWrongTypeError;
+        exit(false);
+      end;
+    end;
+    thinOutWhitelist;
+    result:=stream^.allOkay;
+  end;
+
+FUNCTION T_patternElement.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  begin
+    stream^.writeAnsiString(id);
+    stream^.writeByte(byte(restrictionType));
+    stream^.writeByte(byte(builtinTypeCheck));;
+    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
+      stream^.writeInteger(restrictionIdx);
+      if restrictionIdx<0
+      then writeLiteralToStream(restrictionValue,stream,locationOfSerializeCall,adapters);
+      if restrictionIdx>=0 then stream^.writeAnsiString(restrictionId);
+    end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
+      then stream^.writeInteger(restrictionIdx)
+    else if (restrictionType=tt_customTypeCheck) then
+      stream^.writeAnsiString(customTypeCheck^.getName);
+    result:=stream^.allOkay;
   end;
 
 CONSTRUCTOR T_pattern.create;
@@ -429,7 +487,7 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString; CONST location:T_tok
     result:=appendFreeId(id,location);
   end;
 
-FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
+FUNCTION T_pattern.idForIndexInline(CONST index: longint): T_idString;
   begin
     if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);
     if (index>=0) and (index<length(sig))
@@ -499,7 +557,7 @@ FUNCTION T_pattern.toString: ansistring;
     result:=result+')';
   end;
 
-FUNCTION T_pattern.toCmdLineHelpStringString:ansistring;
+FUNCTION T_pattern.toCmdLineHelpStringString: ansistring;
   VAR i:longint;
   begin
     if (length(sig)=0) and not(hasOptionals) then exit('< no parameters >');
@@ -522,7 +580,7 @@ FUNCTION T_pattern.isEquivalent(CONST p: T_pattern): boolean;
     for i:=0 to length(sig)-1 do result:=result and sig[i].isEquivalent(p.sig[i]);
   end;
 
-FUNCTION T_pattern.hides(CONST p:T_pattern):boolean;
+FUNCTION T_pattern.hides(CONST p: T_pattern): boolean;
   VAR i:longint;
   begin
     if not(hasOptionals) then begin
@@ -535,7 +593,7 @@ FUNCTION T_pattern.hides(CONST p:T_pattern):boolean;
     result:=true;
   end;
 
-FUNCTION T_pattern.isValidMainPattern:boolean;
+FUNCTION T_pattern.isValidMainPattern: boolean;
   VAR i:longint;
   begin
     result:=true;
@@ -561,14 +619,14 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
     end;
   end;
 
-FUNCTION T_pattern.getParameterNames:P_listLiteral;
+FUNCTION T_pattern.getParameterNames: P_listLiteral;
   VAR el:T_patternElement;
   begin
     result:=newListLiteral(length(sig));
     for el in sig do result^.appendString(el.id);
   end;
 
-FUNCTION T_pattern.getNamedParameters:T_patternElementLocations;
+FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
   VAR el:T_patternElement;
       i:longint=0;
   begin
@@ -631,6 +689,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           parts[i].first:=recycler.disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_typeCheck) then begin
+              //Type check: f(x:Int)
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;
               parts[i].first:=recycler.disposeToken(parts[i].first);
@@ -638,6 +697,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               if C_typeCheckInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
                 if (parts[i].first=nil) then begin end else
                 if (parts[i].first^.tokType=tt_braceOpen) then begin
+                  //Type check: f(x:List(3))
                   if (parts[i].first^.next<>nil) and
                      (parts[i].first^.next^.tokType=tt_literal) and
                      (P_literal   (parts[i].first^.next^.data)^.literalType in [lt_smallint,lt_bigint]) and
@@ -668,10 +728,12 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
 
               if (parts[i].first=nil) then fail(parts[i].first) else
               if parts[i].first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
+                //f(x,y>x)
                 rulePatternElement.restrictionId:=parts[i].first^.txt;
                 parts[i].first:=recycler.disposeToken(parts[i].first);
                 assertNil(parts[i].first);
               end else begin
+                //f(x>4.1)
                 context.reduceExpression(parts[i].first,recycler);
                 if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
                   rulePatternElement.restrictionValue:=parts[i].first^.data;
@@ -682,6 +744,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               end;
 
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
+              //f(x:MyType)
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.customTypeCheck:=parts[i].first^.data;
               rulePatternElement.builtinTypeCheck:=rulePatternElement.customTypeCheck^.builtinTypeCheck;
@@ -753,21 +816,42 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
   end;
 {$endif}
 
-FUNCTION T_pattern.getFirstParameterTypeWhitelist:T_literalTypeSet;
+FUNCTION T_pattern.getFirstParameterTypeWhitelist: T_literalTypeSet;
   begin
     if length(sig)>=1 then result:=sig[0].typeWhitelist else result:=[];
   end;
 
-FUNCTION T_pattern.getFirst:T_patternElement;
+FUNCTION T_pattern.getFirst: T_patternElement;
   begin
     result:=sig[0];
   end;
 
-FUNCTION T_pattern.usesStrictCustomTyping:boolean;
+FUNCTION T_pattern.usesStrictCustomTyping: boolean;
   VAR s:T_patternElement;
   begin
     result:=false;
     for s in sig do if (s.customTypeCheck<>nil) and not(s.customTypeCheck^.isDucktyping) then exit(true);
+  end;
+
+FUNCTION T_pattern.loadFromStream(CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
+  VAR i:longint;
+  begin
+    setLength(sig,stream^.readNaturalNumber);
+    hasOptionals:=stream^.readBoolean;
+    for i:=0 to length(sig)-1 do if stream^.allOkay then begin
+      sig[i].createAnonymous(location);
+      sig[i].loadFromStream(stream,location,adapters,typeMap);
+    end;
+    result:=stream^.allOkay;
+  end;
+
+FUNCTION T_pattern.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  VAR i:longint;
+  begin
+    stream^.writeNaturalNumber(length(sig));
+    stream^.writeBoolean(hasOptionals);
+    for i:=0 to length(sig)-1 do sig[i].writeToStream(locationOfSerializeCall,adapters,stream);
+    result:=stream^.allOkay;
   end;
 
 end.

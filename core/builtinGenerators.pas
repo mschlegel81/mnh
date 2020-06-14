@@ -13,7 +13,9 @@ USES sysutils,
      subrules;
 
 IMPLEMENTATION
-USES mnh_settings;
+USES mnh_settings,
+     typinfo,
+     serializationUtil;
 {$i func_defines.inc}
 TYPE
   P_listIterator=^T_listIterator;
@@ -25,6 +27,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral({$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
@@ -64,6 +67,7 @@ T_singleValueIterator=object(T_builtinGeneratorExpression)
   FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
   FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
   DESTRUCTOR destroy; virtual;
+  FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
 end;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal; CONST location:T_tokenLocation);
@@ -113,6 +117,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: P_abstractIntLiteral; CONST loc: T_tokenLocation);
@@ -221,6 +226,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_permutationIterator.create(CONST i: int64; CONST loc: T_tokenLocation);
@@ -320,6 +326,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_filterGenerator.create(CONST source,filter: P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -399,6 +406,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -643,6 +651,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
@@ -1028,6 +1037,7 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
     CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
 end;
 
 CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
@@ -1071,8 +1081,159 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
       new(P_vanDerCorputGenerator(result),create(int0^.intValue,tokenLocation));
   end;
 
+FUNCTION T_listIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_listIterator));
+    writeLiteralToStream(underlying,stream,locationOfSerializeCall,adapters);
+    result:=stream^.allOkay;
+  end;
+
+FUNCTION T_singleValueIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_singleValueIterator));
+    writeLiteralToStream(value,stream,locationOfSerializeCall,adapters);
+    result:=stream^.allOkay;
+  end;
+
+FUNCTION T_rangeGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  VAR tmp:T_bigInt;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_rangeGenerator));
+    stream^.writeBoolean(bounding<>bNone);
+    if workBig then begin
+      bigNext.writeToStream(stream);
+      if bounding<>bNone
+      then bigLim .writeToStream(stream);
+    end else begin
+      tmp.fromInt(smallNext);
+      tmp.writeToStream(stream);
+      if bounding<>bNone
+      then begin
+        tmp.fromInt(smallLim);
+        tmp.writeToStream(stream);
+      end;
+    end;
+    result:=stream^.allOkay;
+  end;
+
+FUNCTION T_permutationIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_permutationIterator));
+    writeLiteralToStream(underlying,stream,locationOfSerializeCall,adapters);
+    result:=true;
+  end;
+
+FUNCTION T_filterGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_filterGenerator));
+    writeLiteralToStream(sourceGenerator ,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(filterExpression,stream,locationOfSerializeCall,adapters);
+    result:=true;
+  end;
+
+FUNCTION T_mapGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_mapGenerator));
+    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    result:=true;
+  end;
+
+FUNCTION T_primeGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_primeGenerator));
+    result:=true;
+  end;
+
+FUNCTION T_vanDerCorputGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_vanDerCorputGenerator));
+    stream^.writeNaturalNumber(base);
+    result:=true;
+  end;
+
+FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+  VAR generatorType:T_builtinGeneratorType;
+      lit,lit2:P_literal;
+      bigint:T_bigInt;
+      bounded:boolean;
+  begin
+    generatorType:=T_builtinGeneratorType(stream^.readByte([byte(low(T_builtinGeneratorType))..byte(high(T_builtinGeneratorType))]));
+    result:=nil;
+    case generatorType of
+      bgt_listIterator: begin
+        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        if lit^.literalType in C_compoundTypes
+        then new(P_listIterator(result),create(P_compoundLiteral(lit),location))
+        else stream^.logWrongTypeError;
+        disposeLiteral(lit); //is rereferenced in T_listIterator.create;
+      end;
+      bgt_singleValueIterator: begin
+        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        if lit^.literalType in C_compoundTypes
+        then new(P_listIterator(result),create(P_compoundLiteral(lit),location))
+        else stream^.logWrongTypeError;
+        disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
+      end;
+      bgt_rangeGenerator: begin
+        bounded:=stream^.readBoolean;
+        bigint.createZero;
+        bigint.readFromStream(stream);
+        lit:=newIntLiteral(bigint);
+        if bounded then begin
+          bigint.createZero;
+          bigint.readFromStream(stream);
+          lit2:=newIntLiteral(bigint);
+        end else lit2:=nil;
+        new(P_rangeGenerator(result),create(P_abstractIntLiteral(lit),P_abstractIntLiteral(lit2),location));
+        disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
+        if lit2<>nil then disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
+      end;
+      bgt_permutationIterator: begin
+        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        if lit^.literalType in C_compoundTypes
+        then new(P_permutationIterator(result),create(P_compoundLiteral(lit),location))
+        else if lit^.literalType=lt_smallint
+             then new(P_permutationIterator(result),create(P_smallIntLiteral(lit)^.value,location));
+        disposeLiteral(lit);
+      end;
+      bgt_filterGenerator: begin
+        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
+        then new(P_filterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
+        disposeLiteral(lit);
+        disposeLiteral(lit2);
+      end;
+      bgt_mapGenerator: begin
+        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
+        then new(P_mapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
+        disposeLiteral(lit2);
+      end;
+      bgt_primeGenerator: new(P_primeGenerator(result),create(location));
+      bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(stream^.readNaturalNumber,location));
+    end;
+    if result=nil then begin
+      stream^.logWrongTypeError;
+      if adapters<>nil
+      then adapters^.raiseSimpleError('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)),location)
+      else raise Exception.create    ('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)));
+    end;
+  end;
+
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
+  newGeneratorFromStreamCallback:=@newGeneratorFromStream;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif});
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif});
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
