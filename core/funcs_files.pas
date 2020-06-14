@@ -548,47 +548,21 @@ FUNCTION changeFileExtension_imp intFuncSignature;
   end;
 
 FUNCTION relativeFilename_impl intFuncSignature;
-  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) then case arg0^.literalType of
-      lt_string: case arg1^.literalType of
-        lt_string: exit(newStringLiteral(
-            ansiReplaceStr(
-            extractRelativePath(str0^.value+'/',
-                                str1^.value),
-            '\','/')));
-        lt_stringList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            listResult^.appendString(
-            ansiReplaceStr(
-            extractRelativePath(str0^.value+'/',
-                                P_stringLiteral(list1^.value[i])^.value),
-            '\','/'));
-        end;
-      end;
-      lt_stringList,lt_emptyList: case arg1^.literalType of
-        lt_string: begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            listResult^.appendString(
-            ansiReplaceStr(
-            extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
-                                str1^.value),
-            '\','/'));
-        end;
-        lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            listResult^.appendString(
-            ansiReplaceStr(
-            extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
-                                P_stringLiteral(list1^.value[i])^.value),
-            '\','/'));
-        end;
-      end;
-    end;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
+    then result:=newStringLiteral(
+                 ansiReplaceStr(
+                 extractRelativePath(str0^.value+'/',
+                                     str1^.value),
+                 '\','/'))
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+         then result:=newStringLiteral(
+                      ansiReplaceStr(
+                      extractRelativePath(GetCurrentDirUTF8+'/',
+                                          str0^.value),
+                      '\','/'))
+         else result:=genericVectorization('relativeFileName',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION systemSpecificFilename_impl intFuncSignature;
@@ -655,7 +629,7 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileNameOnly' ,@extractFileNameOnly_imp ,ak_unary {$ifdef fullVersion},'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt'      ,@extractFileExt_imp      ,ak_unary {$ifdef fullVersion},'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,ak_binary{$ifdef fullVersion},'changeFileExt(filename,newExtension);//Returns the path of file with the new extension'{$endif});
-  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_binary{$ifdef fullVersion},'relativeFileName(reference,file);//Returns the path of file relative to reference'{$endif});
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_variadic_1{$ifdef fullVersion},'relativeFileName(reference,file);//Returns the path of file relative to reference#relativeFileName(file);//Returns the path of file relative to the current working directory'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'systemSpecificFilename',@systemSpecificFilename_impl,ak_unary{$ifdef fullVersion},'systemSpecificFilename(name:String);//Returns the path with system specific directory separators#systemSpecificFilename(name:StringCollection);'{$endif});
 
 end.
