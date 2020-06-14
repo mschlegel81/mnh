@@ -5551,7 +5551,7 @@ expectations:=
   "Test serialization of permutationIterator(['a','b','c'])","#251#12#1#4#251#24#3#1'a'#1'b'#1'c'",
   "     reconstructed to permutationIterator(['a','b','c'])",'     equals: false','',
   'Test serialization of permutationIterator(5)','#251#12#1#4#251#4#5','     reconstructed to permutationIterator(5)',
-  '     equals: false','','Test serialization of fileLineIterator(''C:\dev\mnh5\demos\testExpressionSerialization.mnh'')',
+  '     equals: false','',"Test serialization of fileLineIterator('demos/testExpressionSerialization.mnh')",
   'Error: Cannot serialize builtin generator expression.'],
  'testPackages'=>
  ['FDLinux'=>

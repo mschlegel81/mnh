@@ -38,5 +38,5 @@ main->begin
    primeGenerator.filter({isPrime($x+2)}).lazyMap({[$x,$x+2]}),
    permutationIterator(['a'..'c']),
    permutationIterator(5),
-   fileLineIterator(myPath)].map(::testSerialize);
+   fileLineIterator(myPath.relativeFileName)].map(::testSerialize);
 end;
