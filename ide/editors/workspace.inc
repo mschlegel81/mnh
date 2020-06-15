@@ -601,10 +601,13 @@ PROCEDURE T_workspace.onFileScanFinished;
   VAR m:P_editorMeta;
   begin
     enterCriticalSection(workspaceCs);
-    for m in metas do begin
-      if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+    try
+      for m in metas do begin
+        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+      end;
+    finally
+      leaveCriticalSection(workspaceCs);
     end;
-    leaveCriticalSection(workspaceCs);
   end;
 
 PROCEDURE T_workspace.closeCurrentFile;

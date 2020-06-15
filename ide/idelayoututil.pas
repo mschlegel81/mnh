@@ -790,7 +790,6 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
 
       provider:=newVirtualFileCodeProvider(name,lineData);
       codeAssistanceData.create(provider);
-      codeAssistanceData.doCodeAssistanceSynchronously(recycler);
       highlighter:=TMnhInputSyn.create(nil);
       codeAssistanceData.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
       codeAssistanceData.destroy;

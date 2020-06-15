@@ -649,14 +649,9 @@ PROCEDURE T_editorMeta.activate;
     try
       if language=LANG_MNH then begin
         editor.highlighter:=highlighter;
-        if (assistanceData=nil) then new(assistanceData,create(@self));
         assistanceData^.setAddidionalScripts(getOptionalAdditionals);
       end else begin
         editor.highlighter:=fileTypeMeta[language].highlighter;
-        if (assistanceData<>nil) then begin
-          dispose(assistanceData,destroy);
-          assistanceData:=nil;
-        end;
       end;
       completionLogic.assignEditor(editor_,nil);
       editor.readonly       :=runnerModel.areEditorsLocked;
