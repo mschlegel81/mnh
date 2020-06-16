@@ -71,7 +71,7 @@ TYPE
       FUNCTION inputStateHash:T_hashInt;
       FUNCTION isAssistanceDataOutdated:boolean;
       PROCEDURE ensureResponse;
-      FUNCTION  doCodeAssistanceSynchronously(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
+      FUNCTION  doCodeAssistanceSynchronouslyInCritialSection(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
     public
       CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
       DESTRUCTOR destroy;
@@ -174,7 +174,7 @@ PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfStrin
     end;
   end;
 
-FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
+FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -206,7 +206,6 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
   VAR script:ansistring;
       i:longint;
   begin
-    enterCriticalSection(cs);
     initialStateHash:=inputStateHash;
     if ((latestResponse=nil) or (latestResponse^.stateHash<>initialStateHash)) then begin
       {$ifdef debugMode}
@@ -277,10 +276,11 @@ PROCEDURE T_codeAssistanceData.ensureResponse;
         sleep(1);
         enterCriticalSection(cs);
       end;
+      leaveCriticalSection(cs);
     end else begin
       try
         recycler.initRecycler;
-        doCodeAssistanceSynchronously(recycler);
+        doCodeAssistanceSynchronouslyInCritialSection(recycler);
         recycler.cleanup;
       finally
         leaveCriticalSection(cs);
@@ -507,10 +507,9 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       anyScanned:=false;
       while scanIndex<length(codeAssistanceData) do begin
         if codeAssistanceData[scanIndex]^.isAssistanceDataOutdated then begin
-          codeAssistanceData[scanIndex]^.evaluating:=true;
           leaveCriticalSection(codeAssistanceCs);
-
-          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronously(recycler,globals,@adapters)
+          enterCriticalSection(codeAssistanceData[scanIndex]^.cs);
+          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
           then anyScanned:=true;
 
           enterCriticalSection(codeAssistanceCs);
