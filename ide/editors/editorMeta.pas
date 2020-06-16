@@ -479,7 +479,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
       if not(isPseudoFile) then for fileName in workspace.fileHistory.findScriptsUsing(fileInfo.filePath) do begin
         if not(workspace.hasEditorForFile(fileName)) then begin
-          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false);
+          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
           if meta<>nil then begin
             if not(meta^.doRename(ref,oldId,newId,false)) then workspace.closeQuietly(meta);
           end;

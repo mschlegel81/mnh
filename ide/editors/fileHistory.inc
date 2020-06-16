@@ -338,7 +338,7 @@ PROCEDURE T_fileHistory.fileHistoryClick(Sender: TObject);
   begin
     historyIdx:=TMenuItem(Sender).Tag;
     if fileExists(historyItem(historyIdx))
-    then workspace.addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
+    then workspace.addOrGetEditorMetaForFiles(historyItem(historyIdx),true,false)
     else if polishHistory then updateHistoryMenu;
   end;
 
