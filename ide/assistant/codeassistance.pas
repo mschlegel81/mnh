@@ -67,14 +67,15 @@ TYPE
       evaluating:boolean;
       latestResponse:P_codeAssistanceResponse;
       paintedWithStateHash:T_hashInt;
+
       FUNCTION inputStateHash:T_hashInt;
       FUNCTION isAssistanceDataOutdated:boolean;
       PROCEDURE ensureResponse;
+      FUNCTION  doCodeAssistanceSynchronouslyInCritialSection(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
     public
       CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
       DESTRUCTOR destroy;
       PROCEDURE setAddidionalScripts(CONST toScan:T_arrayOfString);
-      FUNCTION  doCodeAssistanceSynchronously(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
       //Highlighter related:
       FUNCTION  needRepaint:boolean;
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
@@ -125,8 +126,11 @@ FUNCTION T_codeAssistanceData.inputStateHash: T_hashInt;
 FUNCTION T_codeAssistanceData.isAssistanceDataOutdated: boolean;
   begin
     enterCriticalSection(cs);
-    result:=(latestResponse=nil) or (latestResponse^.stateHash<>inputStateHash);
-    leaveCriticalSection(cs);
+    try
+      result:=(latestResponse=nil) or (latestResponse^.stateHash<>inputStateHash);
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 VAR isFinalized:boolean=false;
@@ -162,12 +166,15 @@ DESTRUCTOR T_codeAssistanceData.destroy;
 PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString);
   begin
     enterCriticalSection(cs);
-    additionalScriptsToScan:=toScan;
-    ensureCodeAssistanceThread;
-    leaveCriticalSection(cs);
+    try
+      additionalScriptsToScan:=toScan;
+      ensureCodeAssistanceThread;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
-FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
+FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -199,16 +206,8 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
   VAR script:ansistring;
       i:longint;
   begin
-    if givenGlobals=nil then begin
-      adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
-      new(globals,create(@adapters));
-    end else begin
-      globals:=givenGlobals;
-      givenAdapters^.clear;
-    end;
-    enterCriticalSection(cs);
     initialStateHash:=inputStateHash;
-    if (latestResponse=nil) or (latestResponse^.stateHash<>initialStateHash) then begin
+    if ((latestResponse=nil) or (latestResponse^.stateHash<>initialStateHash)) then begin
       {$ifdef debugMode}
       writeln('Code assistance start: ',provider^.getPath);
       {$endif}
@@ -218,6 +217,13 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
       evaluating:=true;
       leaveCriticalSection(cs);
       try
+        if givenGlobals=nil then begin
+          adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
+          new(globals,create(@adapters));
+        end else begin
+          globals:=givenGlobals;
+          givenAdapters^.clear;
+        end;
         globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
         globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
         if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
@@ -240,17 +246,17 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
         enterCriticalSection(cs);
         try
           if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
+          latestResponse:=nil;
           new(latestResponse,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
         finally
           leaveCriticalSection(cs);
         end;
       finally
         evaluating:=false;
-      end;
-      if givenGlobals=nil then begin
-        dispose(globals,destroy);
-        {$WARN 5089 OFF}
-        adapters.destroy;
+        if givenGlobals=nil then begin
+          dispose(globals,destroy);
+          adapters.destroy;
+        end;
       end;
       result:=true;
     end else begin
@@ -262,28 +268,46 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronously(VAR recycler: T_recy
 PROCEDURE T_codeAssistanceData.ensureResponse;
   VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
-    doCodeAssistanceSynchronously(recycler);
-    recycler.cleanup;
+    if latestResponse<>nil then exit;
+    enterCriticalSection(cs);
+    if evaluating then begin
+      while evaluating do begin
+        leaveCriticalSection(cs);
+        sleep(1);
+        enterCriticalSection(cs);
+      end;
+      leaveCriticalSection(cs);
+    end else begin
+      try
+        recycler.initRecycler;
+        doCodeAssistanceSynchronouslyInCritialSection(recycler);
+        recycler.cleanup;
+      finally
+        leaveCriticalSection(cs);
+      end;
+    end;
   end;
 
 FUNCTION T_codeAssistanceData.needRepaint: boolean;
   begin
     enterCriticalSection(cs);
-    if (latestResponse<>nil) and (latestResponse^.stateHash<>paintedWithStateHash) then begin
-      paintedWithStateHash:=latestResponse^.stateHash;
-      result:=true;
-    end else result:=false;
-    leaveCriticalSection(cs);
+    try
+      if (latestResponse<>nil) and (latestResponse^.stateHash<>paintedWithStateHash) then begin
+        paintedWithStateHash:=latestResponse^.stateHash;
+        result:=true;
+      end else result:=false;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_highlightingData);
   VAR k:longint;
       e:P_storedMessage;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       enterCriticalSection(highlightingData.highlightingCs);
       try
         highlightingData.userRules.clear;
@@ -327,9 +351,9 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
     end;
 
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=latestResponse^.package;
@@ -354,9 +378,9 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTok
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=latestResponse^.package;
@@ -372,17 +396,20 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTok
 
 FUNCTION T_codeAssistanceData.usedAndExtendedPackages: T_arrayOfString;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
-    if latestResponse=nil then ensureResponse;
-    result:=latestResponse^.package^.usedAndExtendedPackages;
-    leaveCriticalSection(cs);
+    try
+      result:=latestResponse^.package^.usedAndExtendedPackages;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceData.getImportablePackages: T_arrayOfString;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       result:=listScriptIds(extractFilePath(latestResponse^.package^.getPath));
     finally
       leaveCriticalSection(cs);
@@ -392,9 +419,9 @@ FUNCTION T_codeAssistanceData.getImportablePackages: T_arrayOfString;
 FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
   VAR s:string;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       latestResponse^.package^.ruleMap.updateLists(wordsInEditor,true);
       for s in latestResponse^.localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
       result:=(latestResponse^.package^.ruleMap.size>0) or not(latestResponse^.localIdInfos^.isEmpty);
@@ -405,9 +432,9 @@ FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor: T_setOfStr
 
 FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequirements;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       result:=latestResponse^.functionCallInfos^.getBuiltinRestrictions;
     finally
       leaveCriticalSection(cs);
@@ -416,9 +443,9 @@ FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequireme
 
 FUNCTION T_codeAssistanceData.isExecutablePackage: boolean;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
     try
-      if latestResponse=nil then ensureResponse;
       result:=latestResponse^.package^.isExecutable;
     finally
       leaveCriticalSection(cs);
@@ -427,24 +454,30 @@ FUNCTION T_codeAssistanceData.isExecutablePackage: boolean;
 
 FUNCTION T_codeAssistanceData.getAssistanceResponseRereferenced: P_codeAssistanceResponse;
   begin
+    ensureResponse;
     enterCriticalSection(cs);
-    if latestResponse=nil then ensureResponse;
-    result:=latestResponse^.rereferenced;
-    leaveCriticalSection(cs);
+    try
+      result:=latestResponse^.rereferenced;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 FUNCTION T_codeAssistanceData.assistanceStateHash: T_hashInt;
   begin
     enterCriticalSection(cs);
-    if latestResponse=nil
-    then result:=0
-    else result:=latestResponse^.stateHash;
-    leaveCriticalSection(cs);
+    try
+      if latestResponse=nil
+      then result:=0
+      else result:=latestResponse^.stateHash;
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
-  CONST STOP_AFTER_IDLE_LOOP_COUNT=100;
-        SLEEP_BETWEEN_RUNS_MILLIS =100;
+  CONST STOP_AFTER_IDLE_LOOP_COUNT= 20;
+        SLEEP_BETWEEN_RUNS_MILLIS =500;
   VAR globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
 
@@ -474,10 +507,9 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       anyScanned:=false;
       while scanIndex<length(codeAssistanceData) do begin
         if codeAssistanceData[scanIndex]^.isAssistanceDataOutdated then begin
-          codeAssistanceData[scanIndex]^.evaluating:=true;
           leaveCriticalSection(codeAssistanceCs);
-
-          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronously(recycler,globals,@adapters)
+          enterCriticalSection(codeAssistanceData[scanIndex]^.cs);
+          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
           then anyScanned:=true;
 
           enterCriticalSection(codeAssistanceCs);

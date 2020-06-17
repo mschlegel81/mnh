@@ -172,7 +172,7 @@ USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd;
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   begin
     if length(FileNames)=0 then exit;
-    editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true);
+    editorMeta.workspace.addOrGetEditorMetaForFiles(FileNames,true,true);
     BringToFront;
   end;
 
@@ -394,7 +394,7 @@ PROCEDURE TIdeMainForm.miDockAllClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
   begin
-    workspace.addOrGetEditorMetaForFiles(utilityScriptFileName,true);
+    workspace.addOrGetEditorMetaForFiles(utilityScriptFileName,true,true);
   end;
 
 PROCEDURE TIdeMainForm.miExportToHtmlClick(Sender: TObject);
@@ -473,7 +473,7 @@ PROCEDURE TIdeMainForm.miOpenClassicalClick(Sender: TObject);
     if (openFileDialog.showClassicDialog=mrOk)
     then for fileName in openFileDialog.getSelectedFile do
       if fileExists(fileName)
-      then workspace.addOrGetEditorMetaForFiles(fileName,true);
+      then workspace.addOrGetEditorMetaForFiles(fileName,true,false);
     timer.enabled:=true;
   end;
 
@@ -490,7 +490,7 @@ PROCEDURE TIdeMainForm.miOpenClick(Sender: TObject);
     if (openFileDialog.showForRoot(currentPath)=mrOk)
     then for fileName in openFileDialog.getSelectedFile do
       if fileExists(fileName)
-      then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
+      then workspace.addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true,false);
     timer.enabled:=true;
   end;
 

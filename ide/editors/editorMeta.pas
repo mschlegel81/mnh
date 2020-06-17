@@ -479,7 +479,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
       if not(isPseudoFile) then for fileName in workspace.fileHistory.findScriptsUsing(fileInfo.filePath) do begin
         if not(workspace.hasEditorForFile(fileName)) then begin
-          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false);
+          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
           if meta<>nil then begin
             if not(meta^.doRename(ref,oldId,newId,false)) then workspace.closeQuietly(meta);
           end;
@@ -649,14 +649,9 @@ PROCEDURE T_editorMeta.activate;
     try
       if language=LANG_MNH then begin
         editor.highlighter:=highlighter;
-        if (assistanceData=nil) then new(assistanceData,create(@self));
         assistanceData^.setAddidionalScripts(getOptionalAdditionals);
       end else begin
         editor.highlighter:=fileTypeMeta[language].highlighter;
-        if (assistanceData<>nil) then begin
-          dispose(assistanceData,destroy);
-          assistanceData:=nil;
-        end;
       end;
       completionLogic.assignEditor(editor_,nil);
       editor.readonly       :=runnerModel.areEditorsLocked;

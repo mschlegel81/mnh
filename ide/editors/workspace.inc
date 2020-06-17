@@ -47,7 +47,7 @@ T_workspace=object(T_serializable)
     FUNCTION addEditorMetaForNewFile(CONST languageForMeta:T_language):P_editorMeta;
   public
     FUNCTION createNewFile:P_editorMeta;
-    FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):P_editorMeta;
+    FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback,openEvenIfNonexistent:boolean):P_editorMeta;
     FUNCTION hasEditorForFile(CONST fileName:string):boolean;
 
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
@@ -391,7 +391,7 @@ FUNCTION isPseudoName(CONST fileName:ansistring):boolean;
         and (fileName[length(fileName)]='>');
   end;
 
-FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback: boolean): P_editorMeta;
+FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback,openEvenIfNonexistent: boolean): P_editorMeta;
   PROCEDURE openSingleFile(CONST fileName:ansistring);
 
     PROCEDURE updateMarkers(CONST meta:P_editorMeta);
@@ -416,7 +416,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
           updateMarkers(result);
           //Update history:
           fileHistory.fileClosed(fileName);
-        end else begin
+        end else if not(openEvenIfNonexistent) then begin
           closeQuietly(result);
           result:=nil;
         end;
@@ -485,8 +485,8 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): P_edit
     enterCriticalSection(workspaceCs);
     try
       if isPseudoName(location.fileName)
-      then meta:=addOrGetEditorMetaForFiles(                   location.fileName ,false)
-      else meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false);
+      then meta:=addOrGetEditorMetaForFiles(                   location.fileName ,false,false)
+      else meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false,false);
       if meta<>nil then begin
         inputPageControl.activePage:=meta^.tabsheet;
         meta^.setCaret(location);
@@ -601,10 +601,13 @@ PROCEDURE T_workspace.onFileScanFinished;
   VAR m:P_editorMeta;
   begin
     enterCriticalSection(workspaceCs);
-    for m in metas do begin
-      if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+    try
+      for m in metas do begin
+        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+      end;
+    finally
+      leaveCriticalSection(workspaceCs);
     end;
-    leaveCriticalSection(workspaceCs);
   end;
 
 PROCEDURE T_workspace.closeCurrentFile;
@@ -673,7 +676,7 @@ PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
     if (openMask and 2)>0
     then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
     sortUnique(filesToOpen);
-    addOrGetEditorMetaForFiles(filesToOpen,false);
+    addOrGetEditorMetaForFiles(filesToOpen,false,false);
   end;
 
 PROCEDURE T_workspace.exportCurrentFileToHtml;
@@ -801,13 +804,13 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
       if data^.successful then begin
         if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
           if data^.wantNewEditor then target:=createNewFile
-                                 else target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+                                 else target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false,true);
           if target<>nil then begin
             target^.setLanguageWithFallback(data^.getOutputLanguage,LANG_TXT);
             target^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
           end;
         end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
-          target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false);
+          target:=addOrGetEditorMetaForFiles(data^.inputEditorPseudoName,false,false);
           if target<>nil then target^.insertText(P_stringLiteral(data^.getOutput)^.value);
         end;
       end;

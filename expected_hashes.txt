@@ -72,7 +72,7 @@ core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb 6BC1B22E
 ide/ask/customrundialog.pas                   13.5kb E7341AA2
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.4kb 0DEC1FD7
+ide/assistant/codeassistance.pas              25.8kb 05BB9791
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
 ide/close/closedialog.pas                      4.8kb 743AA4CC
 ide/customForms/component_button.inc           1.4kb 49420208
@@ -96,10 +96,10 @@ ide/debugger/debuggerforms.pas                 8.4kb A2727E1F
 ide/debugger/debuggervarforms.pas              4.4kb B5797815
 ide/debugger/debugging.pas                     8.1kb 891B461E
 ide/debugger/debuggingVar.pas                  7.8kb 644D387D
-ide/editors/editorMeta.pas                    24.5kb F8FAFF88
+ide/editors/editorMeta.pas                    24.3kb DA87FA2F
 ide/editors/editormetabase.pas                34.7kb 3E51FC0E
 ide/editors/editscripts.pas                    6.5kb CB238345
-ide/editors/fileHistory.inc                   11.0kb 7EBF6323
+ide/editors/fileHistory.inc                   11.0kb 5CED2B86
 ide/editors/gotolinedialogs.pas                1.2kb 4441504C
 ide/editors/mnhCompletion.pas                  8.6kb EF1AAF8D
 ide/editors/openfile.pas                       3.4kb 606254C8
@@ -107,11 +107,11 @@ ide/editors/renamedialog.pas                   1.8kb 2E5DF406
 ide/editors/runnermodel.inc                    6.7kb E586CBC5
 ide/editors/savefile.pas                       5.0kb 32103390
 ide/editors/searchModel.pas                    4.0kb 1FCF8333
-ide/editors/workspace.inc                     28.2kb 1142F087
+ide/editors/workspace.inc                     28.3kb 695B60BA
 ide/evalThread.pas                            22.0kb 1C738957
 ide/ide.lpr                                    1.1kb F6D9760E
-ide/idelayoututil.pas                         29.7kb 6A27A3CE
-ide/idemain.pas                               24.3kb E131FEA8
+ide/idelayoututil.pas                         29.6kb C8290CC4
+ide/idemain.pas                               24.3kb B5A45A00
 ide/imig/mnh_imig.pas                         28.1kb 7EE614ED
 ide/imig/mnh_imig_form.pas                     4.2kb 94EF47E8
 ide/ipcModel.pas                               1.5kb 0F5ADD0F
