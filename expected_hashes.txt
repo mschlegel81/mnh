@@ -23,7 +23,7 @@ common/myGenerics.pas                         27.4kb AC01A3F3
 common/myStringUtil.pas                       40.1kb 5917929B
 common/mySys.pas                              21.2kb 7DF258E3
 common/pixMaps.pas                            13.0kb F9807031
-common/serializationUtil.pas                  14.4kb D053787D
+common/serializationUtil.pas                  14.8kb F27E04CE
 consoles/mnh_light.lpr                         0.9kb 9682772C
 consoles/substitute_funcs.pas                  3.6kb EC626359
 core/aggregators.pas                          20.6kb F44C7709
@@ -36,7 +36,7 @@ core/consoleAsk.pas                            4.3kb 403D5E32
 core/contexts.pas                             36.5kb 5432FF86
 core/datastores.pas                            6.4kb 2139706F
 core/evaluation.pas                           61.8kb 4754735B
-core/fileWrappers.pas                         16.1kb DF6D80BF
+core/fileWrappers.pas                         16.1kb AF9721AC
 core/func_defines.inc                          2.4kb 48DCD8A6
 core/funcs.pas                                16.2kb 6DE909D2
 core/funcs_files.pas                          32.0kb 64AFFC37
@@ -72,7 +72,7 @@ core/valueStore.pas                            7.7kb 2D735A2D
 ide/ask/askdialog.pas                          7.7kb 6BC1B22E
 ide/ask/customrundialog.pas                   13.5kb E7341AA2
 ide/assistant/assistanceformunit.pas           3.5kb 59003E98
-ide/assistant/codeassistance.pas              25.8kb 05BB9791
+ide/assistant/codeassistance.pas              26.6kb 3B4642A8
 ide/assistant/helperforms.pas                  3.7kb EDBE727A
 ide/close/closedialog.pas                      4.8kb 743AA4CC
 ide/customForms/component_button.inc           1.4kb 49420208
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.6kb 67FE66BB
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  76 kLOC
-          3425 kB
+          3426 kB

@@ -64,7 +64,7 @@ TYPE
       additionalScriptsToScan:T_arrayOfString;
       //State:
       cs:TRTLCriticalSection;
-      evaluating:boolean;
+      evaluating,querying,destroying:boolean;
       latestResponse:P_codeAssistanceResponse;
       paintedWithStateHash:T_hashInt;
 
@@ -136,10 +136,10 @@ FUNCTION T_codeAssistanceData.isAssistanceDataOutdated: boolean;
 VAR isFinalized:boolean=false;
 DESTRUCTOR T_codeAssistanceData.destroy;
   VAR i,j:longint;
-
   begin
     enterCriticalSection(cs);
-    while evaluating do begin
+    destroying:=true;
+    while evaluating or querying do begin
       leaveCriticalSection(cs);
       sleep(5);
       enterCriticalSection(cs);
@@ -269,22 +269,16 @@ PROCEDURE T_codeAssistanceData.ensureResponse;
   VAR recycler:T_recycler;
   begin
     if latestResponse<>nil then exit;
-    enterCriticalSection(cs);
     if evaluating then begin
       while evaluating do begin
         leaveCriticalSection(cs);
         sleep(1);
         enterCriticalSection(cs);
       end;
-      leaveCriticalSection(cs);
     end else begin
-      try
-        recycler.initRecycler;
-        doCodeAssistanceSynchronouslyInCritialSection(recycler);
-        recycler.cleanup;
-      finally
-        leaveCriticalSection(cs);
-      end;
+      recycler.initRecycler;
+      doCodeAssistanceSynchronouslyInCritialSection(recycler);
+      recycler.cleanup;
     end;
   end;
 
@@ -305,9 +299,13 @@ PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_hi
   VAR k:longint;
       e:P_storedMessage;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit;
+    end else querying:=true;
     try
+      ensureResponse;
       enterCriticalSection(highlightingData.highlightingCs);
       try
         highlightingData.userRules.clear;
@@ -327,6 +325,7 @@ PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_hi
         leaveCriticalSection(highlightingData.highlightingCs);
       end;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
@@ -351,9 +350,13 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
     end;
 
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit;
+    end else querying:=true;
     try
+      ensureResponse;
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=latestResponse^.package;
@@ -369,6 +372,7 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
         lexer.destroy;
       end;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
@@ -378,9 +382,13 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTok
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit(false);
+    end else querying:=true;
     try
+      ensureResponse;
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=latestResponse^.package;
@@ -390,73 +398,88 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTok
       enhanced.destroy;
       lexer.destroy;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION T_codeAssistanceData.usedAndExtendedPackages: T_arrayOfString;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit(C_EMPTY_STRING_ARRAY);
+    end else querying:=true;
     try
+      ensureResponse;
       result:=latestResponse^.package^.usedAndExtendedPackages;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION T_codeAssistanceData.getImportablePackages: T_arrayOfString;
   begin
-    ensureResponse;
-    enterCriticalSection(cs);
-    try
-      result:=listScriptIds(extractFilePath(latestResponse^.package^.getPath));
-    finally
-      leaveCriticalSection(cs);
-    end;
+    result:=listScriptIds(extractFilePath(provider^.getPath));
   end;
 
 FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
   VAR s:string;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit(false);
+    end else querying:=true;
     try
+      ensureResponse;
       latestResponse^.package^.ruleMap.updateLists(wordsInEditor,true);
       for s in latestResponse^.localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
       result:=(latestResponse^.package^.ruleMap.size>0) or not(latestResponse^.localIdInfos^.isEmpty);
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequirements;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit([]);
+    end else querying:=true;
     try
+      ensureResponse;
       result:=latestResponse^.functionCallInfos^.getBuiltinRestrictions;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION T_codeAssistanceData.isExecutablePackage: boolean;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit(false);
+    end else querying:=true;
     try
+      ensureResponse;
       result:=latestResponse^.package^.isExecutable;
     finally
+      querying:=false;
       leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION T_codeAssistanceData.getAssistanceResponseRereferenced: P_codeAssistanceResponse;
   begin
-    ensureResponse;
     enterCriticalSection(cs);
     try
+      ensureResponse;
       result:=latestResponse^.rereferenced;
     finally
       leaveCriticalSection(cs);
@@ -509,7 +532,8 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
         if codeAssistanceData[scanIndex]^.isAssistanceDataOutdated then begin
           leaveCriticalSection(codeAssistanceCs);
           enterCriticalSection(codeAssistanceData[scanIndex]^.cs);
-          if codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
+          if not(codeAssistanceData[scanIndex]^.destroying) and
+             codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
           then anyScanned:=true;
 
           enterCriticalSection(codeAssistanceCs);
@@ -579,6 +603,8 @@ CONSTRUCTOR T_codeAssistanceData.create(CONST editorMeta: P_codeProvider);
     //State:
     initCriticalSection(cs);
     evaluating:=false;
+    querying:=false;
+    destroying:=false;
     latestResponse:=nil;
     paintedWithStateHash:=0;
 
