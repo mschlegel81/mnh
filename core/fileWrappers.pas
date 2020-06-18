@@ -189,7 +189,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
       size:=stream.size;
       stream.Seek(0,soFromBeginning);
       setLength(result,size);
-      stream.ReadBuffer(result[1],size);
+      if size>0 then stream.ReadBuffer(result[1],size);
     except
       accessed:=false;
     end;
@@ -264,7 +264,9 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
       stream:=TFileStream.create(name,fmCreate);
       try
         stream.Seek(0,soFromBeginning);
+        if length(textToWrite)>0 then
         stream.WriteBuffer(textToWrite[1],length(textToWrite));
+        //TODO: Fails for "long" paths?
         result:=true;
       except
         result:=false;
