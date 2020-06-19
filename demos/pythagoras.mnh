@@ -10,6 +10,6 @@ private oyako(perimeter)->format@("In perimeter <=%7d there are %6d pythagorean 
 
 @demo_for=math, recursion/parallel
 //*See http://rosettacode.org/wiki/Pythagorean_triples
-main('rosetta')->(10^[1..6]).each(i,print(oyako(i)));
+main('rosetta')->(10^[1..6]).pMap(::oyako).map(::print);
 //*As above, but abridged for reg test
-main->(10^[1..5]).each(i,print(oyako(i)));
+main->(10^[1..5]).pMap(::oyako).map(::print);

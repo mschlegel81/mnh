@@ -223,6 +223,18 @@ FUNCTION writeFileLines_impl intFuncSignature;
 FUNCTION appendFileLines_impl intFuncSignature;
   begin if context.checkSideEffects('appendFileLines',tokenLocation,[se_readFile,se_writeFile]) then result:=writeOrAppendFileLines(params,tokenLocation,context,true)  else result:=nil; end;
 
+FUNCTION setFileDate_impl intFuncSignature;
+  begin
+    result:=nil;
+    if not(context.checkSideEffects('setFileDate',tokenLocation,[se_writeFile]))
+    then exit(nil);
+    if (params<>nil) and (params^.size=2) and
+       (arg0^.literalType=lt_string) and
+       (arg1^.literalType in [lt_real,lt_smallint]) then begin
+      result:=newBoolLiteral(FileSetDate(str0^.value,DateTimeToFileDate(P_numericLiteral(arg1)^.floatValue))=0);
+    end else result:=genericVectorization('setFileDate',params,tokenLocation,context,recycler);
+  end;
+
 FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST tee:boolean):P_literal;
   VAR teeRoutine:P_expressionLiteral=nil;
       includeStdErr:boolean=true;
@@ -631,5 +643,5 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,ak_binary{$ifdef fullVersion},'changeFileExt(filename,newExtension);//Returns the path of file with the new extension'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_variadic_1{$ifdef fullVersion},'relativeFileName(reference,file);//Returns the path of file relative to reference#relativeFileName(file);//Returns the path of file relative to the current working directory'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'systemSpecificFilename',@systemSpecificFilename_impl,ak_unary{$ifdef fullVersion},'systemSpecificFilename(name:String);//Returns the path with system specific directory separators#systemSpecificFilename(name:StringCollection);'{$endif});
-
+  registerRule(FILES_BUILTIN_NAMESPACE,'setFileDate'           ,@setFileDate_impl           ,ak_binary{$ifdef fullVersion},'setFileDate(filename:String, time:Numeric);//Sets the time of a given file and returns true on success'{$endif});
 end.
