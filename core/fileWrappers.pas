@@ -266,7 +266,6 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
         stream.Seek(0,soFromBeginning);
         if length(textToWrite)>0 then
         stream.WriteBuffer(textToWrite[1],length(textToWrite));
-        //TODO: Fails for "long" paths?
         result:=true;
       except
         result:=false;
