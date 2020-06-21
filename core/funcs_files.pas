@@ -12,8 +12,19 @@ USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$end
      recyclers,
      contexts,datastores;
 IMPLEMENTATION
-USES strutils;
+USES strutils,myStringUtil;
 {$i func_defines.inc}
+
+FUNCTION filenameResult(s:string):string;
+  VAR dummy:boolean;
+  begin
+    result:=replaceRecursively(replaceRecursively(s,'\','/',dummy),'//','/',dummy);
+  end;
+
+FUNCTION filenameResultLiteral(s:string):P_stringLiteral;
+  begin
+    result:=newStringLiteral(filenameResult(s));
+  end;
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders,recurseSubDirs:boolean):P_listLiteral;
   VAR i,j:longint;
@@ -32,13 +43,13 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
       found:=find(searchString(0),filesAndNotFolders,recurseSubDirs);
       if recurseSubDirs and DirectoryExists(P_stringLiteral(pathOrPathList)^.value)
                                         then result^.append(pathOrPathList,true);
-      for i:=0 to length(found)-1 do result^.appendString(ansiReplaceStr(found[i],'\','/'));
+      for i:=0 to length(found)-1 do result^.appendString(filenameResult(found[i]));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
         if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value[j])^.value)
                                           then result^.append(P_listLiteral(pathOrPathList)^.value[j],true);
-        for i:=0 to length(found)-1 do result^.appendString(ansiReplaceStr(found[i],'\','/'));
+        for i:=0 to length(found)-1 do result^.appendString(filenameResult(found[i]));
       end;
     end;
   end;
@@ -60,7 +71,7 @@ FUNCTION allFiles_impl intFuncSignature;
         k:longint;
     begin
       list:=FindAllFiles(root,pattern,recurse);
-      for k:=0 to list.count-1 do listResult^.appendString(ansiReplaceStr(list[k],'\','/'));
+      for k:=0 to list.count-1 do listResult^.appendString(filenameResult(list[k]));
       list.destroy;
     end;
 
@@ -493,64 +504,60 @@ FUNCTION fileInfo_imp intFuncSignature;
 FUNCTION fileStats_imp intFuncSignature;
   VAR lineCount,wordCount,byteCount:longint;
       hash:T_hashInt;
-      i:longint;
   begin
     if not(context.checkSideEffects('fileStats',tokenLocation,[se_readFile])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       fileStats(str0^.value,lineCount,wordCount,byteCount,hash);
       result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash);
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_stringList) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do begin
-        fileStats(P_stringLiteral(list0^.value[i])^.value,lineCount,wordCount,byteCount,hash);
-        listResult^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash),false);
-      end;
-    end;
+    end else result:=genericVectorization('fileStats',params,tokenLocation,context,recycler)
   end;
 
-{$define fileNameBody:=VAR name:P_literal; iter:T_arrayOfLiteral;
+FUNCTION expandedFileName_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      if (arg0^.literalType=lt_string) then result:=newStringLiteral(internal(str0^.value))
-      else if arg0^.literalType in [lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet] then begin
-        result:=collection0^.newOfSameType(true);
-        iter:=collection0^.iteratableList;
-        for name in iter do collResult^.appendString(internal(P_stringLiteral(name)^.value));
-        disposeLiteral(iter);
-      end;
-    end;
-  end}
-
-FUNCTION expandedFileName_imp intFuncSignature;
-  FUNCTION internal(CONST s:string):string;
-    begin result:=ansiReplaceStr(ansiReplaceStr(expandFileName(s),'\','/'),'//','/'); end;
-  fileNameBody;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=filenameResultLiteral(expandFileName(str0^.value))
+    else result:=genericVectorization('expandedFileName',params,tokenLocation,context,recycler);
+  end;
 
 FUNCTION extractFileDirectory_imp intFuncSignature;
   FUNCTION internal(CONST s:string):string;
     begin
       if ExtractFileDir(s)=''
       then result:='.'
-      else result:=ansiReplaceStr(ExtractFileDir(s),'\','/');
+      else result:=filenameResult(ExtractFileDir(s));
     end;
-  fileNameBody;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(internal(str0^.value))
+    else result:=genericVectorization('extractFileDirectory',params,tokenLocation,context,recycler);
+  end;
 
 FUNCTION extractFileName_imp intFuncSignature;
-  FUNCTION internal(CONST s:string):string;
-    begin result:=ansiReplaceStr(extractFileName(s),'\','/'); end;
-  fileNameBody;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=filenameResultLiteral(extractFileName(str0^.value))
+    else result:=genericVectorization('extractFileName',params,tokenLocation,context,recycler);
+  end;
 
 FUNCTION extractFileNameOnly_imp intFuncSignature;
-  FUNCTION internal(CONST s:string):string;
-    begin result:=ansiReplaceStr(ExtractFileNameOnly(s),'\','/'); end;
-  fileNameBody;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=filenameResultLiteral(ExtractFileNameOnly(str0^.value))
+    else result:=genericVectorization('extractFileNameOnly',params,tokenLocation,context,recycler);
+  end;
 
 FUNCTION extractFileExt_imp intFuncSignature;
-  FUNCTION internal(CONST s:string):string;
-    begin result:=ansiReplaceStr(extractFileExt(s),'\','/'); end;
-  fileNameBody;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=filenameResultLiteral(extractFileExt(str0^.value))
+    else result:=genericVectorization('extractFileExt',params,tokenLocation,context,recycler);
+  end;
 
 FUNCTION changeFileExtension_imp intFuncSignature;
   begin
@@ -563,42 +570,24 @@ FUNCTION relativeFilename_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
-    then result:=newStringLiteral(
-                 ansiReplaceStr(
-                 extractRelativePath(str0^.value+'/',
-                                     str1^.value),
-                 '\','/'))
+    then result:=filenameResultLiteral(extractRelativePath(str0^.value+'/',str1^.value))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-         then result:=newStringLiteral(
-                      ansiReplaceStr(
-                      extractRelativePath(GetCurrentDirUTF8+'/',
-                                          str0^.value),
-                      '\','/'))
+         then result:=filenameResultLiteral(extractRelativePath(GetCurrentDirUTF8+'/',str0^.value))
          else result:=genericVectorization('relativeFileName',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION systemSpecificFilename_impl intFuncSignature;
-  FUNCTION convert(CONST s:P_literal):P_literal;
+  FUNCTION convert(CONST s:P_stringLiteral):P_literal;
     begin
       if DirectorySeparator='/'
-      then exit(s^.rereferenced)
-      else exit(newStringLiteral(ansiReplaceStr(P_stringLiteral(s)^.value,'/',DirectorySeparator)));
+      then exit(                         filenameResultLiteral(s^.value))
+      else exit(newStringLiteral(ansiReplaceStr(filenameResult(s^.value),'/',DirectorySeparator)));
     end;
-
-  VAR iter:T_arrayOfLiteral;
-      l   :P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_string: result:=convert(arg0);
-      lt_emptySet,lt_stringSet,
-      lt_emptyList,lt_stringList: begin
-        result:=collection0^.newOfSameType(true);
-        iter:=collection0^.iteratableList;
-        for l in iter do collResult^.append(convert(l),false);
-        disposeLiteral(iter);
-      end;
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=convert(str0)
+    else result:=genericVectorization('systemSpecificFilename',params,tokenLocation,context,recycler);
   end;
 
 INITIALIZATION
