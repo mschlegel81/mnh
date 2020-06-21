@@ -23,7 +23,7 @@ common/myGenerics.pas                         27.4kb AC01A3F3
 common/myStringUtil.pas                       40.1kb 5917929B
 common/mySys.pas                              21.2kb 7DF258E3
 common/pixMaps.pas                            13.0kb F9807031
-common/serializationUtil.pas                  14.8kb F27E04CE
+common/serializationUtil.pas                  15.0kb FA77F7E7
 consoles/mnh_light.lpr                         0.9kb 9682772C
 consoles/substitute_funcs.pas                  3.6kb EC626359
 core/aggregators.pas                          20.6kb F44C7709
@@ -36,17 +36,17 @@ core/consoleAsk.pas                            4.3kb 403D5E32
 core/contexts.pas                             36.5kb 5432FF86
 core/datastores.pas                            6.4kb 2139706F
 core/evaluation.pas                           61.8kb 4754735B
-core/fileWrappers.pas                         16.1kb AF9721AC
+core/fileWrappers.pas                         16.1kb F7AE36F9
 core/func_defines.inc                          2.4kb 48DCD8A6
 core/funcs.pas                                16.2kb 6DE909D2
-core/funcs_files.pas                          32.0kb 64AFFC37
+core/funcs_files.pas                          32.5kb 34BA9A1F
 core/funcs_format.pas                         22.8kb C15B0684
 core/funcs_ipc.pas                            18.7kb DE6DF183
 core/funcs_list.pas                           29.0kb 1D3746C8
 core/funcs_math.pas                           45.3kb 8356C50C
 core/funcs_mnh.pas                             8.3kb 43FBF48A
 core/funcs_package.inc                        15.9kb AB91C1CF
-core/funcs_regex.pas                          11.6kb D566B908
+core/funcs_regex.pas                          11.6kb 2F7F316F
 core/funcs_server.pas                         22.5kb 0C99E282
 core/funcs_strings.pas                        38.8kb 8AC12A12
 core/funcs_system.pas                         11.1kb AAB359F7
@@ -131,7 +131,7 @@ ide/plot/plotstyles.pas                       13.1kb 2D34B4F9
 ide/profiling/profilingview.pas               12.3kb 9D54C993
 ide/quick/quickevalforms.pas                   7.1kb 63B77E23
 ide/reevaluationforms.pas                      3.2kb 83461DE5
-ide/res_defaultFiles.inc                     134.2kb D22F46E0
+ide/res_defaultFiles.inc                     134.2kb C073A2F7
 ide/res_ensureAssoc.inc                        0.6kb 91AB6920
 ide/res_examples.inc                          21.4kb 49D4EB3D
 ide/res_html_template.inc                     74.2kb BA81E0CB
@@ -177,4 +177,4 @@ igSrc/mypics.pas                              54.4kb 874BEB97
 igSrc/workflows.pas                           25.6kb 67FE66BB
 igSrc/workflowsteps.pas                        3.3kb E93DFD0B
 Code Size:  76 kLOC
-          3426 kB
+          3427 kB
