@@ -573,7 +573,9 @@ PROCEDURE TplotForm.pullPlotSettingsToGui();
   begin
     relatedPlot^.startGuiInteraction;
     try
-      currentScalingOptions:=relatedPlot^.currentPlot.options;
+      if (relatedPlot^.animation.frameCount<>0) and (animationFrameIndex>=0) and (animationFrameIndex<relatedPlot^.animation.frameCount)
+      then currentScalingOptions:=relatedPlot^.animation.options[animationFrameIndex]
+      else currentScalingOptions:=relatedPlot^.currentPlot.options;
     finally
       relatedPlot^.doneGuiInteraction;
     end;
@@ -694,6 +696,7 @@ PROCEDURE TplotForm.doPlot;
           relatedPlot^.currentPlot.renderPlot(plotImage);
           relatedPlot^.logPlotDone;
         end;
+        pullPlotSettingsToGui();
       end;
     finally
       relatedPlot^.doneGuiInteraction;

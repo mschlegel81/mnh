@@ -744,8 +744,10 @@ FUNCTION decompress_impl intFuncSignature;
       try
         resultString:=decompressString(str0^.value);
       except
-        context.raiseError('Internal error on decompression. The string may not be a cleanly compressed string.',tokenLocation);
-        exit(nil);
+        on e:Exception do begin
+          context.raiseError('Internal error on decompression. '+e.message,tokenLocation);
+          exit(nil);
+        end;
       end;
       result:=newStringLiteral(resultString);
     end else result:=genericVectorization('decompress',params,tokenLocation,context,recycler);
