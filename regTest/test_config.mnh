@@ -93,6 +93,7 @@ allowedSideEffects((demosRoot&'semordnilap.mnh'   ))->WHITELIST_FOR_TESTS_FETCHI
 allowedSideEffects((demosRoot&'wordCount.mnh'     ))->WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP;
 allowedSideEffects((demosRoot&'testExpressionSerialization.mnh'))->DEFAULT_WHITELIST|['read file'];
 allowedSideEffects((demosRoot&'ipcTest.mnh'       ))->DEFAULT_WHITELIST | ['executing external','ipc','detaching', 'server'];
+allowedSideEffects((demosRoot&'testExitCode.mnh'  ))->DEFAULT_WHITELIST | ['executing external'];
 allowedSideEffects((demosRoot&'helloWorldHttp.mnh'))->DEFAULT_WHITELIST | ['detaching', 'server','http'];
 allowedSideEffects((demosRoot&'logTest.mnh'       ))->DEFAULT_WHITELIST | ['write file','read file', 'executing external'];
 allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['alter plot state','write file'];

@@ -1,0 +1,12 @@
+main('print')->print('Hello world');
+main('note')->note('This is a note');
+main('warn')->warn('This is a warning');
+main('fail')->fail('This is a failure');
+main(code)->print('Setting exit code ',code.toInt) orElse setExitCode(code.toInt);
+
+main->['print','note','warn','fail','40','41','x'].pEach(parameter,begin
+  local output:=executor.exec(['-v1',myPath,parameter]);
+  [format('Calling %s %s',myPath.extractFileName,parameter),
+   output[0].replace(myPath.systemSpecificFilename,'[myPath]'),
+   format('Exit code: %s',output[1])].flatten.join("\n");
+end).join("\n\n").print;
