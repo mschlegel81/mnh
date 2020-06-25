@@ -19,6 +19,9 @@ TYPE
                  {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
+  T_consoleOutMode=(com_normal,
+                    com_stdout_only,
+                    com_stderr_only);
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
@@ -62,7 +65,9 @@ TYPE
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
   T_consoleOutAdapter = object(T_abstractOutAdapter)
-    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
+    printHandle,
+    otherHandle:textFile;
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
@@ -198,7 +203,7 @@ TYPE
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet):P_consoleOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -783,10 +788,10 @@ FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterS
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
-    new(consoleOutAdapter,create(messageTypesToInclude));
+    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode));
     addOutAdapter(consoleOutAdapter,true);
     result:=consoleOutAdapter;
   end;
@@ -988,9 +993,23 @@ PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_: T
 
 //=========================================================:T_abstractOutAdapter
 //T_consoleOutAdapter:==========================================================
-CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet);
+CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
   begin
     inherited create(at_console,messageTypesToInclude_);
+    case consoleOutMode of
+      com_stderr_only:begin
+        printHandle:=stdErr;
+        otherHandle:=stdErr;
+      end;
+      com_stdout_only:begin
+        printHandle:=StdOut;
+        otherHandle:=StdOut;
+      end;
+      else begin
+        printHandle:=StdOut;
+        otherHandle:=stdErr;
+      end;
+    end;
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -1013,14 +1032,14 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
             for i:=0 to length(messageText)-1 do begin
               if messageText[i]=C_formFeedChar
               then mySys.clearConsole
-              else writeln(messageText[i]);
+              else writeln(printHandle,messageText[i]);
             end;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do write(messageText[i]);
+            for i:=0 to length(messageText)-1 do write(printHandle,messageText[i]);
           end;
-          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(stdErr,s);
+          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(otherHandle,s);
         end;
       finally
         leaveCriticalSection(adapterCs);
