@@ -19,7 +19,9 @@ T_cmdLineFlag=(clf_GUI         ,
                clf_PROFILE     ,
                clf_SHOW_HELP   ,
                clf_EXEC_CMD    ,
-               clf_SHOW_INFO);
+               clf_SHOW_INFO   ,
+               clf_FORCE_STDOUT,
+               clf_FORCE_STDERR);
 T_cmdLineFlags=set of T_cmdLineFlag;
 P_Settings=^T_settings;
 T_settings=object(T_serializable)

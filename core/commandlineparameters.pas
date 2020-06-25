@@ -60,6 +60,7 @@ TYPE
 
       FUNCTION getCommandToInterpretFromCommandLine: ansistring;
       FUNCTION getFileToInterpretFromCommandLine: ansistring;
+      FUNCTION getConsoleMode:T_consoleOutMode;
       PROCEDURE pauseIfConfigured(CONST errorOcurred:boolean);
       {$ifdef fullVersion}
       PROCEDURE initFromIde(CONST scriptName,parameters:string);
@@ -80,6 +81,8 @@ CONST
   FLAG_SHOW_HELP    ='-h';
   FLAG_EXEC_CMD     ='-cmd';
   FLAG_SHOW_INFO    ='-info';
+  FLAG_STDOUT       ='-stdout';
+  FLAG_STDERR       ='-stderr';
   FLAG_TEXT:array[T_cmdLineFlag] of string=(FLAG_GUI         ,
                                             FLAG_QUIET       ,
                                             FLAG_SILENT      ,
@@ -89,7 +92,9 @@ CONST
                                             FLAG_PROFILE     ,
                                             FLAG_SHOW_HELP   ,
                                             FLAG_EXEC_CMD    ,
-                                            FLAG_SHOW_INFO);
+                                            FLAG_SHOW_INFO   ,
+                                            FLAG_STDOUT,
+                                            FLAG_STDERR);
 
 PROCEDURE displayHelp(CONST adapters:P_messages);
 IMPLEMENTATION
@@ -227,6 +232,8 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param=FLAG_EXEC_CMD     then begin include(flags,clf_EXEC_CMD    ); exit(true); end;
         if param=FLAG_SHOW_HELP    then begin include(flags,clf_SHOW_HELP   ); exit(true); end;
         if param=FLAG_SHOW_INFO    then begin include(flags,clf_SHOW_INFO   ); exit(true); end;
+        if param=FLAG_STDERR       then begin include(flags,clf_FORCE_STDERR); Exclude(flags,clf_FORCE_STDOUT); exit(true); end;
+        if param=FLAG_STDOUT       then begin include(flags,clf_FORCE_STDOUT); Exclude(flags,clf_FORCE_STDERR); exit(true); end;
         //state changes:
         if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite; exit(true); end;
         if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;  exit(true); end;
@@ -352,6 +359,13 @@ FUNCTION T_mnhExecutionOptions.allowedSideEffects:T_sideEffects;
 
 FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
   begin if mnhExecutionOptions.executeCommand then result:='' else result:=fileOrCommandToInterpret; end;
+
+FUNCTION T_commandLineParameters.getConsoleMode:T_consoleOutMode;
+  begin
+    if      clf_FORCE_STDERR in mnhExecutionOptions.flags then result:=com_stderr_only
+    else if clf_FORCE_STDOUT in mnhExecutionOptions.flags then result:=com_stdout_only
+                                                          else result:=com_normal;
+  end;
 
 PROCEDURE T_commandLineParameters.pauseIfConfigured(CONST errorOcurred:boolean);
   begin
@@ -496,6 +510,8 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then
     wl('                                '+C_sideEffectProfile[i].name);
     wl('  '+FLAG_QUIET+'            disable console output');
+    wl('  '+FLAG_STDOUT+'          write all console output to stdout');
+    wl('  '+FLAG_STDERR+'          write all console output to stderr');
     wl('  '+FLAG_SILENT+'           suppress beeps');
     wl('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
     wl('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
@@ -518,7 +534,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       {$ifdef fullVersion}
       if (clf_PROFILE in mnhExecutionOptions.flags) then include(consoleMessageTypes,mt_profile_call_info);
       {$endif}
-      adapters^.addConsoleOutAdapter(consoleMessageTypes);
+      adapters^.addConsoleOutAdapter(consoleMessageTypes,getConsoleMode);
     end;
     contexts.suppressBeep:=suppressBeep;
 

@@ -741,14 +741,16 @@ FUNCTION decompress_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
-      try
+      {$ifndef debugMode}try{$endif}
         resultString:=decompressString(str0^.value);
+      {$ifndef debugMode}
       except
         on e:Exception do begin
           context.raiseError('Internal error on decompression. '+e.message,tokenLocation);
           exit(nil);
         end;
       end;
+      {$endif}
       result:=newStringLiteral(resultString);
     end else result:=genericVectorization('decompress',params,tokenLocation,context,recycler);
   end;

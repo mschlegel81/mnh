@@ -193,7 +193,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
     messages.addOutAdapter(newProfilingAdapter (true)           ,true);
     {$ifdef debugMode}
-    messages.addConsoleOutAdapter(C_textMessages);
+    messages.addConsoleOutAdapter(C_textMessages,commandLine.getConsoleMode());
     {$endif}
   end;
 
@@ -238,7 +238,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     inherited init(ek_normal);
     commandLine.applyAndReturnOk(@messages,true);
     if not(clf_QUIET in commandLine.mnhExecutionOptions.flags) then begin
-      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString)));
+      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode));
       messages.addOutAdapter(console,true);
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);

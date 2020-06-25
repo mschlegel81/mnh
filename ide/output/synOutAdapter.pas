@@ -70,7 +70,7 @@ TYPE
 
   P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
   T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
-    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
 
@@ -124,9 +124,9 @@ CONSTRUCTOR T_eagerInitializedOutAdapter.create(CONST synEdit_: TSynEdit; CONST 
     ownerForm:=ownerForm_;
   end;
 
-CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet);
+CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
   begin
-    inherited create(messageTypesToInclude_);
+    inherited create(messageTypesToInclude_,consoleMode);
   end;
 
 FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessage): boolean;
