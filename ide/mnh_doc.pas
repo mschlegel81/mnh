@@ -33,6 +33,8 @@ FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
     htmlDocGeneratedForCodeHash:string;
+
+PROCEDURE finalizeFunctionDocMap;
 IMPLEMENTATION
 USES strutils;
 VAR functionDocExamplesReady:boolean=false;
@@ -483,11 +485,14 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
   end;
 
+VAR docMapIsFinalized:boolean=false;
 PROCEDURE finalizeFunctionDocMap;
   VAR entries:functionDocMap.KEY_VALUE_LIST;
       values:T_arrayOfPointer;
       i:longint;
   begin
+    if docMapIsFinalized then exit;
+    docMapIsFinalized:=true;
     entries:=functionDocMap.entrySet;
     setLength(values,0);
     for i:=0 to length(entries)-1 do appendIfNew(values,entries[i].value);

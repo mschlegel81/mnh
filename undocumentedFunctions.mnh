@@ -1,0 +1,18 @@
+functionsCalledInDemos->
+  allFiles('C:\dev\private\mnh5\demos','*.mnh')
+    .map({$script.inspect['called builtin']})
+    .flatten
+    .unique;
+
+functionsCalledInExamples->begin
+  copyFile('C:\dev\private\mnh5\resources\examples.txt',
+           'C:\dev\private\mnh5\resources\examples.mnh');
+  local result:='C:\dev\private\mnh5\resources\examples.mnh'.inspect['called builtin'];
+  deleteFile('C:\dev\private\mnh5\resources\examples.mnh');
+  result;
+end;
+
+main->begin
+  print('The following builtin functions are called in no demo or doc-example:');
+  listBuiltin.minus(functionsCalledInDemos).minus(functionsCalledInExamples).sort.map(::print);
+end;

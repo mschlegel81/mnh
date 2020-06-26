@@ -67,8 +67,12 @@ TYPE
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
   T_consoleOutAdapter = object(T_abstractOutAdapter)
+    {$ifdef Windows}
     printHandle,
-    otherHandle:textFile;
+    otherHandle:text;
+    {$else}
+    mode:T_consoleOutMode;
+    {$endif}
     CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
@@ -172,6 +176,7 @@ TYPE
       //exit code
       PROCEDURE setUserDefinedExitCode(CONST code:longint);
       PROCEDURE setExitCode;
+      FUNCTION  getExitCode:longint;
 
       //messages
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
@@ -892,13 +897,16 @@ PROCEDURE T_messages.setUserDefinedExitCode(CONST code: longint);
   end;
 
 PROCEDURE T_messages.setExitCode;
-  VAR mt:T_messageType;
-      code:longint=0;
   begin
-    if userDefinedExitCode<>0 then ExitCode:=userDefinedExitCode else begin
-      code:=0;
-      for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
-      ExitCode:=code;
+    ExitCode:=getExitCode;
+  end;
+
+FUNCTION T_messages.getExitCode:longint;
+  VAR mt:T_messageType;
+  begin
+    if userDefinedExitCode<>0 then result:=userDefinedExitCode else begin
+      result:=0;
+      for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>result) then result:=C_messageTypeMeta[mt].systemErrorLevel;
     end;
   end;
 
@@ -999,6 +1007,7 @@ PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_: T
 CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
   begin
     inherited create(at_console,messageTypesToInclude_);
+    {$ifdef Windows}
     case consoleOutMode of
       com_stderr_only:begin
         printHandle:=stdErr;
@@ -1013,6 +1022,9 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
         otherHandle:=stdErr;
       end;
     end;
+    {$else}
+    mode:=consoleOutMode;
+    {$endif}
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -1035,14 +1047,39 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
             for i:=0 to length(messageText)-1 do begin
               if messageText[i]=C_formFeedChar
               then mySys.clearConsole
+              {$ifdef Windows}
               else writeln(printHandle,messageText[i]);
+              {$else}
+              else begin
+                if mode in [com_normal,com_stdout_only]
+                then writeln(       messageText[i])
+                else writeln(stdErr,messageText[i]);
+              end;
+              {$endif}
             end;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do write(printHandle,messageText[i]);
-          end;
-          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(otherHandle,s);
+            for i:=0 to length(messageText)-1 do
+              {$ifdef Windows}
+              write(printHandle,messageText[i]);
+              {$else}
+              begin
+                if mode in [com_normal,com_stdout_only]
+                then write(       messageText[i])
+                else write(stdErr,messageText[i]);
+              end;
+              {$endif}                  end;
+          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do
+            {$ifdef Windows}
+            writeln(otherHandle,s);
+            {$else}
+            begin
+              if mode = com_stdout_only
+              then writeln(       s)
+              else writeln(stdErr,s);
+            end;
+            {$endif}
         end;
       finally
         leaveCriticalSection(adapterCs);

@@ -33,7 +33,7 @@ VAR
   reevaluationForm: TreevaluationForm;
 
 IMPLEMENTATION
-USES cmdLineInterpretation,mnh_settings;
+USES cmdLineInterpretation,mnh_settings,mySys,mnh_doc;
 {$R *.lfm}
 PROCEDURE TreevaluationForm.TimerTimer(Sender: TObject);
   PROCEDURE slowUpdates; inline;
@@ -81,6 +81,7 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
     {$endif}
     fastUpdating:=false;
     slowUpdating:=false;
+    memoryCleaner.registerCleanupMethod(@finalizeFunctionDocMap);
 
     initializePlotForm(nil);
     setupEditorMetaBase(nil);

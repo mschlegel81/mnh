@@ -853,12 +853,16 @@ INITIALIZATION
   {$ifdef Windows}
   detectAppStyle;
   {$endif}
+  {$ifdef fullVersion}
   ForceDirectories(configDir);
   initialize(tempFilesCs);
   initCriticalSection(tempFilesCs);
   cleanupTemp;
+  {$endif}
 
 FINALIZATION
+  {$ifdef fullVersion}
   cleanupTemp;
   doneCriticalSection(tempFilesCs);
+  {$endif}
 end.

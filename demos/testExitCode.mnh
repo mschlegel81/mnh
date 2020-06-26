@@ -4,9 +4,41 @@ main('warn')->warn('This is a warning');
 main('fail')->fail('This is a failure');
 main(code)->print('Setting exit code ',code.toInt) orElse setExitCode(code.toInt);
 
-main->['print','note','warn','fail','40','41','x'].pEach(parameter,begin
-  local output:=executor.exec(['-v1','-stdout',myPath,parameter],false);
+runExternally(parameter)->begin
+  local output:=executor.exec(['-v1','-stdout','-silent',myPath,parameter],false);
   [format('Calling %s %s',myPath.extractFileName,parameter),
    output[0].replace(myPath.systemSpecificFilename,'[myPath]'),
-   format('Exit code: %s',output[1])].flatten.join("\n");
-end).join("\n\n").print;
+   format('Exit code: %s',output[1])].flatten;
+end;
+
+PREFIX_OF_MESSAGE_TYPE:=['el1_userNote'   =>'Note',
+                         'el2_userWarning'=>'Warning',
+                         'el3_userDefined'=>'Error',
+                         'el3_evalError'  =>'Error'].toMap;
+
+runSandboxed(parameter)->
+  [format('Calling %s %s',myPath.extractFileName,parameter),
+   ['name'=>myPath,
+    'parameters'=>[parameter],
+    'side effects'=>['alter package state','output','alter context state']].toMap
+   .runScript
+   .map({$message.head=='exitCode'
+        ? format('Exit code: %s',$message.trailing)
+        : $message.head=='printline'
+          ? $message.trailing
+            : PREFIX_OF_MESSAGE_TYPE[$message.head].isVoid
+              ? void
+              : format('%s %s %s',PREFIX_OF_MESSAGE_TYPE[$message[0]],
+                                  $message[1].replace(myPath.systemSpecificFilename,'[myPath]'),
+                                  $message[2])})].flatten;
+
+main->
+  ['print','note','warn','fail','40','41','x'].each(parameter,begin
+    local ext:=runExternally(parameter);
+    printf("%s",ext);
+    local int:=runSandboxed(parameter);
+    ext==int
+    ? print('Sandbox produces the same output')
+    : warn("SANDBOXED OUTPUT IS DIFFERENT: \n",int.join("\n"));
+    print;
+  end);

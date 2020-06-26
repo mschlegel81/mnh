@@ -4,6 +4,8 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
       sideEffectWhitelist:T_sideEffects=[];
       i:longint;
+      messages:T_storedMessages;
+      ExitCode:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and (arg0^.literalType in [lt_string,lt_stringList]) then begin
@@ -15,7 +17,9 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
       end;
       if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist))
       then exit(nil);
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,sideEffectWhitelist,recycler,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
+      messages:=sandbox^.execute(src,sideEffectWhitelist,recycler,ExitCode,context.getGlobals^.prng.dwordRandom);
+      result:=messagesToLiteralForSandbox(messages,C_textMessages-[mt_timing_info],ExitCode);
+      setLength(messages,0);
     end;
   end;
 
@@ -38,7 +42,7 @@ FUNCTION try_imp intFuncSignature;
           result:=newVoidLiteral
         end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3]);
+            messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
             tryMessages.clear;
             context.messages:=oldMessages;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral,nil).literal;
@@ -222,7 +226,7 @@ FUNCTION inspect_imp intFuncSignature;
         k:longint;
     begin
       msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-      loadMessages:=messagesToLiteralForSandbox( msg,C_errorsAndWarnings);
+      loadMessages:=messagesToLiteralForSandbox(msg,C_errorsAndWarnings,SUPPRESS_EXIT_CODE);
       for k:=0 to length(msg)-1 do disposeMessage(msg[k]);
       setLength(msg,0);
     end;

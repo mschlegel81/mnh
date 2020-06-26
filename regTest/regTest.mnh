@@ -8,16 +8,33 @@ private printCase(s:String)->begin
   s=='' ? void : note("Testcase: ",s);
 end;
 
+PREFIX_OF_MESSAGE_TYPE:=['el1_note'        =>'Note',
+                         'el1_userNote'    =>'Note',
+                         'el2_warning'     =>'Warning',
+                         'el2_userWarning' =>'Warning',
+                         'el3_userDefined' =>'Error',
+                         'el3_evalError'   =>'Error',
+                         'echo_input'      =>'in>' ,
+                         'echo_declaration'=>'in>' ,
+                         'echo_output'     =>'out>'].toMap;
+EXAMPLE_EXCLUDES:=['exitCode','timing_info','clearConsole'];
+DEMO_EXCLUDES:=EXAMPLE_EXCLUDES|['echo_input','echo_declaration', 'echo_output','el1_note', 'el2_warning','el1_userNote' ,'el2_userWarning' ];
+
+processSandboxOutput(L:List,excludes:List)->
+  L.each(output,output[0]='printline'
+  ? output[2]
+  : output[0] in excludes
+    ? void
+    : format("%s %s",PREFIX_OF_MESSAGE_TYPE[output[0]] orElse fail('Unkown prefix ',output[0]),output[2])).split("\n").flatten;
+
 testFile(scriptFileName:String,doLog:Boolean)->
  begin
     printCase(scriptFileName);
     local logName:=extractFileNameOnly(scriptFileName);
     local startTime:=time;
     local output:=runScript(testConfiguration(scriptFileName))
-          .filter({$e.head=='printline' OR $e.head.matches('[E|e]rror')})
-          .getInner(2)
-          .split("\n")
-          .flatten|checkAfterTest(scriptFileName);
+                 .processSandboxOutput(DEMO_EXCLUDES)
+                 |checkAfterTest(scriptFileName);
     note("Collected the following output: \n",output.join("\n"));
     scriptFileName.isSmokeTest
     ? logSmokeTestRunTime(logName,
@@ -38,8 +55,7 @@ private sbExecute([])->void;
 private sbExecute(code:StringList)->begin
   note("Examples test code:  \n"&code.join("  \n"));
   printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
-  local out:=sandBoxExecute(code,WHITELIST_FOR_EXAMPLES).each(message,message.get(0)=="timing_info" ? void : message);
-  out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
+  sandBoxExecute(code,WHITELIST_FOR_EXAMPLES).processSandboxOutput(EXAMPLE_EXCLUDES);
 end;
 
 private executeExamples(doLog:Boolean)->begin
@@ -148,3 +164,5 @@ main('makebat',exeName)->begin
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
 end;
+
+executeExamples(false);
