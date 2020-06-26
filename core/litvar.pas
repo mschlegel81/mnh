@@ -493,7 +493,7 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
     nanLit,
     infLit,
     negInfLit     : T_realLiteral;
-CONST maxSingletonInt=4000;
+CONST maxSingletonInt=100;
 IMPLEMENTATION
 USES sysutils, math,
      Classes,LazUTF8;
@@ -1306,7 +1306,7 @@ DESTRUCTOR T_mapLiteral.destroy;
   end;
 //==================================================================:DESTRUCTORS
 FUNCTION T_collectionLiteral.appendString(CONST s: ansistring): P_collectionLiteral; begin result:=P_collectionLiteral(append(newStringLiteral(s),false)); end;
-FUNCTION T_collectionLiteral.appendBool  (CONST b: boolean   ): P_collectionLiteral; begin result:=P_collectionLiteral(append(newBoolLiteral  (b),false)); end;
+FUNCTION T_collectionLiteral.appendBool  (CONST b: boolean   ): P_collectionLiteral; begin result:=P_collectionLiteral(append(boolLit[b].rereferenced,false)); end;
 FUNCTION T_collectionLiteral.appendInt   (CONST i: int64     ): P_collectionLiteral; begin result:=P_collectionLiteral(append(newIntLiteral   (i),false)); end;
 FUNCTION T_collectionLiteral.appendReal  (CONST r: T_myFloat ): P_collectionLiteral; begin result:=P_collectionLiteral(append(newRealLiteral  (r),false)); end;
 FUNCTION T_collectionLiteral.appendAll   (CONST L: P_compoundLiteral): P_collectionLiteral;
@@ -2254,9 +2254,9 @@ FUNCTION T_stringLiteral.softCast: P_literal;
     otherVal: ansistring;
   begin
     if lowercase(val) = LITERAL_BOOL_TEXT[false] then
-      exit(newBoolLiteral(false));
+      exit(boolLit[false].rereferenced);
     if lowercase(val) = LITERAL_BOOL_TEXT[true] then
-      exit(newBoolLiteral(true));
+      exit(boolLit[true].rereferenced);
     result:=parseNumber(val, 1, false, len);
     if (result<>nil) then
       if (len = length(val)) then
@@ -2504,7 +2504,7 @@ FUNCTION T_mapLiteral.put(CONST key,newValue:P_literal; CONST incRefs:boolean):P
 FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(newSingletonString(key), newStringLiteral(newValue),false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newSingletonString(key), newIntLiteral   (newValue),false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newSingletonString(key), newRealLiteral  (newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newSingletonString(key), newBoolLiteral  (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newSingletonString(key), boolLit[newValue].rereferenced,false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   begin
     if incRefs then newValue^.rereference;
@@ -3301,7 +3301,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         exit(result);
       end;
       case literalType of
-        lt_boolean  : result:=newBoolLiteral  (stream^.readBoolean   );
+        lt_boolean  : result:=boolLit[stream^.readBoolean].rereferenced;
         lt_smallint : begin
                         tempInt.readFromStream(stream);
                         result:=newBigIntLiteral(tempInt);
@@ -3425,7 +3425,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       case literalType of
         lt_boolean  : if customTypeName=''
-                      then result:=newBoolLiteral          (stream^.readBoolean)
+                      then result:=boolLit[stream^.readBoolean].rereferenced
                       else new(P_boolLiteral(result),create(stream^.readBoolean));
         lt_bigint   : begin
                         tempInt.readFromStream(stream);
@@ -3542,7 +3542,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         exit(result);
       end;
       case literalType of
-        lt_boolean  : result:=newBoolLiteral          (stream^.readBoolean);
+        lt_boolean  : result:=boolLit[stream^.readBoolean].rereferenced;
         lt_smallint,lt_bigint: result:=nextIntFromStream;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
@@ -3637,7 +3637,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         exit(result);
       end;
       case literalType of
-        lt_boolean  : result:=newBoolLiteral          (stream^.readBoolean);
+        lt_boolean  : result:=boolLit[stream^.readBoolean].rereferenced;
         lt_smallint,lt_bigint: result:=nextIntFromStream;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
