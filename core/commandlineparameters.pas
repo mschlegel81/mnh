@@ -536,7 +536,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       {$endif}
       adapters^.addConsoleOutAdapter(consoleMessageTypes,getConsoleMode);
     end;
-    contexts.suppressBeep:=suppressBeep;
+    contexts.suppressBeep:=clf_SILENT in mnhExecutionOptions.flags;
 
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
