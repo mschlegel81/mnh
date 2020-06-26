@@ -170,6 +170,7 @@ TYPE
       //exit code
       PROCEDURE setUserDefinedExitCode(CONST code:longint);
       PROCEDURE setExitCode;
+      FUNCTION  getExitCode:longint;
 
       //messages
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
@@ -889,13 +890,16 @@ PROCEDURE T_messages.setUserDefinedExitCode(CONST code: longint);
   end;
 
 PROCEDURE T_messages.setExitCode;
-  VAR mt:T_messageType;
-      code:longint=0;
   begin
-    if userDefinedExitCode<>0 then ExitCode:=userDefinedExitCode else begin
-      code:=0;
-      for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
-      ExitCode:=code;
+    ExitCode:=getExitCode;
+  end;
+
+FUNCTION T_messages.getExitCode:longint;
+  VAR mt:T_messageType;
+  begin
+    if userDefinedExitCode<>0 then result:=userDefinedExitCode else begin
+      result:=0;
+      for mt in collectedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>result) then result:=C_messageTypeMeta[mt].systemErrorLevel;
     end;
   end;
 

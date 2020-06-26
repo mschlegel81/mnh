@@ -470,8 +470,6 @@ FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal; inline;
 
-FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;
-
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
 FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
@@ -587,25 +585,6 @@ FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
           else result:=newRealLiteral(P_smallIntLiteral(LHS)^.val  /  P_smallIntLiteral(RHS)^.val);
       end;
     end;
-  end;
-
-FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;
-  FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
-    begin
-      result:=newListLiteral(3);
-      if message^.prefix<>''
-      then result^.appendString(trim(message^.prefix))
-      else result^.appendString(message^.getMessageTypeName);
-    end;
-
-  VAR m:P_storedMessage;
-  begin
-    result:=newListLiteral();
-    for m in messages do if m^.messageType in toInclude then
-      result^.append(
-         headByMessageType(m)^
-        .appendString(ansistring(m^.getLocation))^
-        .appendString(join(m^.messageText,C_lineBreakChar)),false);
   end;
 
 FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;

@@ -473,6 +473,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     recycler.disposeScope(primaryContext.valueScope);
     primaryContext.valueScope:=nil;
     primaryContext.messages^.clear();
+    primaryContext.messages^.setUserDefinedExitCode(0);
     with primaryContext.related do begin
       evaluation:=@self;
       parent:=nil;
