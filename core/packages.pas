@@ -426,15 +426,12 @@ PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBa
     {$endif}
     if bar<>nil then begin
       bar.caption:='Creating packages and demos';
-      bar.position:=0;
-      bar.max:=length(DEFAULT_FILES);
       Application.ProcessMessages;
     end;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
       ensureDefaultFile(i,overwriteExisting);
       if bar<>nil then begin
         bar.position:=i+1;
-        bar.max:=length(DEFAULT_FILES);
         Application.ProcessMessages;
       end;
     end;

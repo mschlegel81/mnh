@@ -1,14 +1,14 @@
 functionsCalledInDemos->
-  allFiles('C:\dev\private\mnh5\demos','*.mnh')
+  allFiles('demos','*.mnh')
     .map({$script.inspect['called builtin']})
     .flatten
     .unique;
 
 functionsCalledInExamples->begin
-  copyFile('C:\dev\private\mnh5\resources\examples.txt',
-           'C:\dev\private\mnh5\resources\examples.mnh');
-  local result:='C:\dev\private\mnh5\resources\examples.mnh'.inspect['called builtin'];
-  deleteFile('C:\dev\private\mnh5\resources\examples.mnh');
+  copyFile('resources\examples.txt',
+           'resources\examples.mnh');
+  local result:='resources\examples.mnh'.inspect['called builtin'];
+  deleteFile('resources\examples.mnh');
   result;
 end;
 

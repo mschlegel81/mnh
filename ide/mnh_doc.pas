@@ -191,8 +191,6 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     decompressed_examples:=split(decompressString(examples_txt),C_lineBreakChar);
     if bar<>nil then begin
       bar.caption:='Executing example code for help/doc';
-      bar.max:=length(decompressed_examples);
-      bar.position:=0;
       Application.ProcessMessages;
     end;
     recycler.initRecycler;
@@ -211,7 +209,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
         if trim(decompressed_examples[i])='' then processExample
                                              else append(code,decompressed_examples[i]);
         if bar<>nil then begin
-          bar.position:=i+1;
+          bar.position:=bar.position+1;
           Application.ProcessMessages;
         end;
       end;
@@ -219,7 +217,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       //---------------------------------------------------------------------:Read examples
       storeExamples;
       setLength(examplesToStore,0);
-    end;
+    end else bar.position:=bar.position+length(decompressed_examples);
     functionDocExamplesReady:=true;
     recycler.cleanup;
   end;
@@ -463,8 +461,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
     decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
     if bar<>nil then begin
       bar.caption:='Creating html documentation';
-      bar.max:=length(decompressedTemplate);
-      bar.position:=0;
+      bar.position:=bar.position+1;
       Application.ProcessMessages;
     end;
     for templateLine in decompressedTemplate do begin
@@ -474,14 +471,14 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
       inc(templateLineCount);
-      if bar<>nil then begin
-        bar.max:=length(decompressedTemplate);
-        bar.position:=templateLineCount;
-        Application.ProcessMessages;
-      end;
     end;
     htmlDocGeneratedForCodeHash:=CODE_HASH;
     with outFile do if isOpen then close(handle);
+    if bar<>nil then begin
+      bar.caption:='Creating html documentation';
+      bar.position:=bar.position+1;
+      Application.ProcessMessages;
+    end;
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
   end;
 

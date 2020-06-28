@@ -14,7 +14,7 @@ private delp->(isLinux ? 'delp' : DelpPath).exec(
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
-  local inLines:=fileLines(inFile).join("\n").compress;
+  local inLines:=fileLines(inFile).join("\n").compress(1);
   local outText:=
   'CONST '&pasId&': string='&inLines.escapePascal&';';
   outFile.fileContents==outText
@@ -24,7 +24,7 @@ end;
 
 private ensureDefaultFilesSource->begin
   local code:=
-  format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress.base92encode)}s)',
+  format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress(1).base92encode)}s)',
   sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh')));
   local header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
   code:=header|code.each(f,f&(index=code.size-1 ? ');':','));

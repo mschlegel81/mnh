@@ -182,11 +182,8 @@ PROCEDURE TIdeMainForm.FormKeyPress(Sender: TObject; VAR key: char);
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
-  VAR stream:T_bufferedInputStreamWrapper;
-      activeComponents:T_ideComponentSet;
   begin
     initIpcServer(self);
-    gui_started:=ide;
     new(dockSites[cpNone        ],create(cpNone        ,nil         ));
     new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1));
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2));
@@ -198,9 +195,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     fastUpdating:=false;
     subTimerCounter:=-10;
     ideLayoutUtil.mainForm:=self;
-
     initializePlotForm(PlotPositionLabel);
-
     setupEditorMetaBase(miLanguage);
     runnerModel.create(self);
     workspace.create(self,
@@ -209,41 +204,14 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      bookmarkImages,
                      smHistory,
                      smScripts);
-
     outlineSettings.create;
 
-    stream.createToReadFromFile(workspaceFilename);
-
-    if stream.allOkay
-    and loadMainFormLayout(stream,activeComponents)
-    and loadOutputSettings(stream)
-    and workspace.loadFromStream(stream)
-    and runnerModel.loadFromStream(stream)
-    and outlineSettings.loadFromStream(stream)
-    then begin
-      if icOutline             in activeComponents then ensureOutlineForm;
-      if icHelp                in activeComponents then ensureHelpForm;
-      if icAssistance          in activeComponents then ensureAssistanceForm;
-      if icQuickEval           in activeComponents then ensureQuickEvalForm;
-      if icDebugger            in activeComponents then ensureDebuggerForm;
-      if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
-      if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
-      if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
-      //Apply splitter positions:
-      FormResize(self);
-
-      miDebug         .checked:=runnerModel.debugMode;
-      miProfile       .checked:=runnerModel.profiling;
-      miKeepStackTrace.checked:=runnerModel.stackTracing;
-
-      workspace.fileHistory.updateHistoryMenu;
-    end;
-    stream.destroy;
-    runParameterHistory.create;
-    runParameterHistory.loadFromFile(runParameterHistoryFileName);
-
-    {$ifdef debugMode}writeln(stdErr,'Done reading ',workspaceFilename);{$endif}
     splashOnStartup;
+    gui_started:=ide;
+    FormResize(self);
+    miDebug         .checked:=runnerModel.debugMode;
+    miProfile       .checked:=runnerModel.profiling;
+    miKeepStackTrace.checked:=runnerModel.stackTracing;
 
     {$ifdef debugMode}writeln(stdErr,'Ensuring edit scripts');{$endif}
     runnerModel.ensureEditScripts;
