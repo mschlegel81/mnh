@@ -123,9 +123,6 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   end;
 
 {$R *.lfm}
-
-{ T_runParameterHistory }
-
 CONSTRUCTOR T_runParameterHistory.create;
   begin
     setLength(historyPerScript,0);

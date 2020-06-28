@@ -41,6 +41,18 @@ PROCEDURE splashOnStartup;
 PROCEDURE splashForAbout;
 
 IMPLEMENTATION
+//Uses for loading and applying settings
+USES serializationUtil,
+     guiOutAdapters,
+     editorMeta,
+     outlineFormUnit,
+     helperForms,
+     assistanceFormUnit,
+     quickEvalForms,
+     debuggerForms,
+     debuggerVarForms,
+     breakpointsForms,
+     customRunDialog;
 {$R *.lfm}
 VAR splashForm:TSplashForm;
 
@@ -68,8 +80,48 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
+  VAR stream:T_bufferedInputStreamWrapper;
+      activeComponents:T_ideComponentSet;
+      okayUpToHere:boolean;
+
+  PROCEDURE loadStepDone(CONST ok:boolean);
+    begin
+      okayUpToHere:=okayUpToHere and ok;
+      ProgressBar.position:=ProgressBar.position+1;
+      Application.ProcessMessages;
+    end;
+
   begin
-    if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then prepareDoc;
+    if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then begin
+      ProgressBar.max:=7 + 1366;
+      ProgressBar.position:=0;
+      ProgressBar.visible:=true;
+      ProgressBar.caption:='Loading/applying settings';
+      stream.createToReadFromFile(workspaceFilename);
+                           loadStepDone(stream.allOkay);
+      if okayUpToHere then loadStepDone(loadMainFormLayout(stream,activeComponents));
+      if okayUpToHere then loadStepDone(loadOutputSettings(stream)                 );
+      if okayUpToHere then loadStepDone(workspace.loadFromStream(stream)           );
+      if okayUpToHere then loadStepDone(runnerModel.loadFromStream(stream)         );
+      if okayUpToHere then loadStepDone(outlineSettings.loadFromStream(stream)     );
+      if okayUpToHere then begin
+        if icOutline             in activeComponents then ensureOutlineForm;
+        if icHelp                in activeComponents then ensureHelpForm;
+        if icAssistance          in activeComponents then ensureAssistanceForm;
+        if icQuickEval           in activeComponents then ensureQuickEvalForm;
+        if icDebugger            in activeComponents then ensureDebuggerForm;
+        if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
+        if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
+        if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
+        //Apply splitter positions:
+        workspace.fileHistory.updateHistoryMenu;
+      end;
+      stream.destroy;
+      runParameterHistory.create;
+      loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
+
+      prepareDoc;
+    end;
     if startupCall and not(doShowSplashScreen) then close;
   end;
 
@@ -108,6 +160,8 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
     sandbox^.runInstallScript;
+    ProgressBar.max:=1366;
+    ProgressBar.visible:=true;
     prepareDoc;
     close;
     {$endif}
@@ -118,6 +172,8 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
     sandbox^.runInstallScript;
+    ProgressBar.max:=1366;
+    ProgressBar.visible:=true;
     prepareDoc;
     close;
     {$endif}
