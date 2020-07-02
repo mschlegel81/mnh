@@ -99,6 +99,9 @@ TYPE
 CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
+  C_messagesSuppressedOnQuietHalt:T_messageTypeSet=[mt_el3_evalError,
+                                                    mt_el3_noMatchingMain,
+                                                    mt_el3_userDefined];
   C_messageTypeMeta:array[T_messageType] of record
     guiMarker:string[3];
     level:shortint;

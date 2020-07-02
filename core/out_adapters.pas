@@ -664,68 +664,74 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
       appended:boolean=false;
       doAppend:boolean=true;
   begin
-    enterCriticalSection(messagesCs);
-    try
-      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-      if message^.messageClass in [mc_error,mc_fatal] then begin
-        inc(errorCount);
-        if errorCount>20 then doAppend:=false;
+    if not((FlagQuietHalt in flags) and (message^.messageType in C_messagesSuppressedOnQuietHalt)) then begin
+      enterCriticalSection(messagesCs);
+      try
+        flags+=C_messageClassMeta[message^.messageClass].triggeredFlags;
+        if (message^.messageClass in [mc_error,mc_fatal]) then begin
+          inc(errorCount);
+          if errorCount>20 then doAppend:=false;
+        end;
+        if doAppend then for a in adapters do if a.adapter^.append(message) then appended:=true;
+        if appended then include(collected,message^.messageType);
+        {$ifdef fullVersion}
+        if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
+        then raiseUnhandledError(message);
+        {$endif}
+      finally
+        leaveCriticalSection(messagesCs);
       end;
-      if doAppend then for a in adapters do if a.adapter^.append(message) then appended:=true;
-      if appended then include(collected,message^.messageType);
-      {$ifdef fullVersion}
-      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled)
-      then raiseUnhandledError(message);
-      {$endif}
-    finally
-      leaveCriticalSection(messagesCs);
-      if disposeAfterPosting then disposeMessage_(message);
     end;
+    if disposeAfterPosting then disposeMessage_(message);
   end;
 
 PROCEDURE T_messagesErrorHolder.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   {$ifdef fullVersion} VAR appended:boolean=false; {$endif}
   begin
-    enterCriticalSection(messagesCs);
-    try
-      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-      if message^.messageType in heldTypes then begin
-        collector.append(message);
-        {$ifdef fullVersion} appended:=true; {$endif}
-      end else if parentMessages<>nil then begin
-        parentMessages^.postCustomMessage(message);
-        {$ifdef fullVersion} appended:=true; {$endif}
+    if not((FlagQuietHalt in flags) and (message^.messageType in C_messagesSuppressedOnQuietHalt)) then begin
+      enterCriticalSection(messagesCs);
+      try
+        flags+=C_messageClassMeta[message^.messageClass].triggeredFlags;
+        if message^.messageType in heldTypes then begin
+          collector.append(message);
+          {$ifdef fullVersion} appended:=true; {$endif}
+        end else if parentMessages<>nil then begin
+          parentMessages^.postCustomMessage(message);
+          {$ifdef fullVersion} appended:=true; {$endif}
+        end;
+        {$ifdef fullVersion}
+        if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+        {$endif}
+      finally
+        leaveCriticalSection(messagesCs);
       end;
-      {$ifdef fullVersion}
-      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
-      {$endif}
-    finally
-      leaveCriticalSection(messagesCs);
-      if disposeAfterPosting then disposeMessage_(message);
     end;
+    if disposeAfterPosting then disposeMessage_(message);
   end;
 
 PROCEDURE T_messagesRedirector.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
   VAR a:T_flaggedAdapter;
       appended:boolean=false;
   begin
-    enterCriticalSection(messagesCs);
-    try
-      flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-      for a in adapters do if a.adapter^.append(message) then appended:=true;
-      if appended then include(collected,message^.messageType);
-      if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
-      then begin
-        messageReceiver^.postCustomMessage(message,false);
-        appended:=true;
+    if not((FlagQuietHalt in flags) and (message^.messageType in C_messagesSuppressedOnQuietHalt)) then begin
+      enterCriticalSection(messagesCs);
+      try
+        flags+=C_messageClassMeta[message^.messageClass].triggeredFlags;
+        for a in adapters do if a.adapter^.append(message) then appended:=true;
+        if appended then include(collected,message^.messageType);
+        if (message^.messageType in messagesToRedirect) and (messageReceiver<>nil)
+        then begin
+          messageReceiver^.postCustomMessage(message,false);
+          appended:=true;
+        end;
+        {$ifdef fullVersion}
+        if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
+        {$endif}
+      finally
+        leaveCriticalSection(messagesCs);
       end;
-      {$ifdef fullVersion}
-      if not(appended) and (message^.messageType in C_messagesLeadingToErrorIfNotHandled) then raiseUnhandledError(message);
-      {$endif}
-    finally
-      leaveCriticalSection(messagesCs);
-      if disposeAfterPosting then disposeMessage_(message);
     end;
+    if disposeAfterPosting then disposeMessage_(message);
   end;
 
 PROCEDURE T_messagesDummy.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting: boolean);
@@ -924,9 +930,7 @@ PROCEDURE T_messages.postTextMessage(CONST kind: T_messageType; CONST location: 
 PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
   VAR message:P_errorMessage;
   begin
-    if (kind<>mt_el4_systemError) and (FlagQuietHalt in flags) then exit;
     new(message,create(kind,location,split(text,C_lineBreakChar)));
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     postCustomMessage(message,true);
   end;
 
@@ -934,7 +938,6 @@ PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST locat
   VAR message:P_errorMessage;
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     postCustomMessage(message,true);
   end;
 
@@ -942,7 +945,6 @@ PROCEDURE T_messages.raiseUnhandledError(CONST unhandledMessage:P_storedMessage)
   VAR message:P_errorMessage;
   begin
     new(message,create(mt_el3_evalError,unhandledMessage^.getLocation,'Unhandled message of type "'+unhandledMessage^.getMessageTypeName+'"'));
-    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     postCustomMessage(message,true);
   end;
 
