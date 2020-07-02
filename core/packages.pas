@@ -133,7 +133,6 @@ TYPE
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
       FUNCTION  usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
-      PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
       {$endif}
   end;
 
@@ -375,68 +374,6 @@ FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfStrin
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
       recycler.cleanup;
     end;
-  end;
-
-PROCEDURE T_sandbox.ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false);
-  {$i res_defaultFiles.inc}
-  VAR recycler:T_recycler;
-  VAR baseDir:string;
-  PROCEDURE ensureDefaultFile(CONST index:longint; CONST overwriteExisting:boolean=false);
-    VAR fileName:string;
-        fileContent:string;
-        functionCallInfos:P_functionCallInfos;
-        clp:T_mnhExecutionOptions;
-    begin
-      clp.create;
-      fileName:=baseDir+DEFAULT_FILES[index,0];
-      if not(fileExists(fileName)) or overwriteExisting then begin
-        {$ifdef debugMode}
-        writeln(stdErr,'Creating ',fileName);
-        {$endif}
-        fileContent:=decompressString(base92Decode(DEFAULT_FILES[index,1]));
-        writeFile(fileName,fileContent);
-        try
-          package.replaceCodeProvider(newCodeProvider(fileName));
-          globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-          new(functionCallInfos,create);
-          package.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY,nil,functionCallInfos);
-          if package.isExecutable then begin
-            clp.clear;
-            clp.initFromShebang('',functionCallInfos^.getBuiltinRestrictions);
-            fileContent:=clp.getShebang+C_lineBreakChar+fileContent;
-            writeFile(fileName,fileContent);
-          end;
-          dispose(functionCallInfos,destroy);
-        finally
-          globals.afterEvaluation(recycler);
-          package.clear(true);
-          globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
-        end;
-      end;
-    end;
-  VAR i:longint;
-  begin
-    recycler.initRecycler;
-    {$ifdef debugMode}
-    writeln(stdErr,'Ensuring default files');
-    {$endif}
-    baseDir:=configDir;
-    {$ifdef debugMode}
-    writeln(stdErr,'config directory=',baseDir);
-    {$endif}
-    if bar<>nil then begin
-      bar.caption:='Creating packages and demos';
-      Application.ProcessMessages;
-    end;
-    for i:=0 to length(DEFAULT_FILES)-1 do begin
-      ensureDefaultFile(i,overwriteExisting);
-      if bar<>nil then begin
-        bar.position:=i+1;
-        Application.ProcessMessages;
-      end;
-    end;
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-    recycler.cleanup;
   end;
 
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);

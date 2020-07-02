@@ -39,7 +39,7 @@ object SaveFileDialog: TSaveFileDialog
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 0
-    Height = 32
+    Height = 30
     Top = 125
     Width = 417
     Align = alCustom
@@ -94,6 +94,8 @@ object SaveFileDialog: TSaveFileDialog
     Width = 125
     Align = alCustom
     Anchors = [akTop, akRight]
+    AutoComplete = True
+    AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
     ItemHeight = 20
     OnChange = extEditChange
     OnKeyPress = dirComboBoxKeyPress

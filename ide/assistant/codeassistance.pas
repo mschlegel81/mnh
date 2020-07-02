@@ -17,7 +17,9 @@ USES
   contexts,
   recyclers,
   packages,
-  funcs;
+  funcs,
+  Forms,
+  ComCtrls;
 
 TYPE
   T_highlightingData=object
@@ -72,6 +74,9 @@ TYPE
       FUNCTION isAssistanceDataOutdated:boolean;
       PROCEDURE ensureResponse;
       FUNCTION  doCodeAssistanceSynchronouslyInCritialSection(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
+      //Documentation-related
+      PROCEDURE doCreateSourceFile(CONST overwriteExisting:boolean);
+      PROCEDURE doCreateHtmlData;
     public
       CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
       DESTRUCTOR destroy;
@@ -99,8 +104,9 @@ PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
 PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureCodeAssistanceThread;
 PROCEDURE forceFullScan;
+PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters;
+USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc;
 
 VAR codeAssistantIsRunning:boolean=false;
     codeAssistantThreadId :TThreadID;
@@ -163,7 +169,8 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     doneCriticalSection(cs);
   end;
 
-PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString);
+PROCEDURE T_codeAssistanceData.setAddidionalScripts(
+  CONST toScan: T_arrayOfString);
   begin
     enterCriticalSection(cs);
     try
@@ -174,7 +181,9 @@ PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfStrin
     end;
   end;
 
-FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals; CONST givenAdapters: P_messagesErrorHolder):boolean;
+FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
+  VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals;
+  CONST givenAdapters: P_messagesErrorHolder): boolean;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -330,7 +339,8 @@ PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_hi
     end;
   end;
 
-FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo): boolean;
+FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring;
+  CONST CaretY, CaretX: longint; VAR info: T_tokenInfo): boolean;
   VAR lexer:T_lexer;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
@@ -377,7 +387,9 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
     end;
   end;
 
-FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId, newId: string; VAR lineText: ansistring; CONST CaretY: longint): boolean;
+FUNCTION T_codeAssistanceData.renameIdentifierInLine(
+  CONST location: T_searchTokenLocation; CONST oldId, newId: string;
+  VAR lineText: ansistring; CONST CaretY: longint): boolean;
   VAR lexer:T_lexer;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
@@ -424,7 +436,8 @@ FUNCTION T_codeAssistanceData.getImportablePackages: T_arrayOfString;
     result:=listScriptIds(extractFilePath(provider^.getPath));
   end;
 
-FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
+FUNCTION T_codeAssistanceData.updateCompletionList(
+  VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
   VAR s:string;
   begin
     enterCriticalSection(cs);
@@ -594,6 +607,142 @@ PROCEDURE forceFullScan;
     finally
       leaveCriticalSection(codeAssistanceCs);
     end;
+  end;
+
+PROCEDURE T_codeAssistanceData.doCreateSourceFile(CONST overwriteExisting:boolean);
+  FUNCTION propopsedShebang: string;
+    VAR clp:T_mnhExecutionOptions;
+    begin
+      clp.create;
+      clp.initFromShebang('',latestResponse^.functionCallInfos^.getBuiltinRestrictions);
+      result:=clp.getShebang+C_lineBreakChar;
+    end;
+
+  VAR fullLines:T_arrayOfString;
+  begin
+    enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit;
+    end else querying:=true;
+    try
+      ensureResponse;
+      if not(fileExists(provider^.getPath)) or overwriteExisting then begin
+        fullLines:=provider^.getLines;
+        if latestResponse^.package^.isExecutable then begin
+          prepend(fullLines,propopsedShebang);
+          writeFileLines(provider^.getPath,fullLines,C_lineBreakChar,false);
+        end;
+      end;
+    finally
+      querying:=false;
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+PROCEDURE T_codeAssistanceData.doCreateHtmlData;
+  FUNCTION getHtmlText: string;
+    VAR highlighter:TMnhInputSyn;
+        SynExporterHTML: TSynExporterHTML;
+        outputStream:TMemoryStream;
+        size:longint;
+        content:TStringList;
+        s:string;
+    begin
+      highlighter:=TMnhInputSyn.create(nil);
+      updateHighlightingData(highlighter.highlightingData);
+      SynExporterHTML:=TSynExporterHTML.create(nil);
+      SynExporterHTML.title:=extractFileName(provider^.getPath);
+      SynExporterHTML.highlighter:=highlighter;
+      content:=TStringList.create;
+      for s in provider^.getLines do content.add(s);
+      SynExporterHTML.ExportAll(content);
+      outputStream:=TMemoryStream.create();
+      SynExporterHTML.saveToStream(outputStream);
+      SynExporterHTML.free;
+      size:=outputStream.size;
+      outputStream.Seek(0,soFromBeginning);
+      setLength(result,size);
+      outputStream.ReadBuffer(result[1],size);
+      outputStream.free;
+      highlighter.free;
+      content.free;
+      enterCriticalSection(cs);
+    end;
+
+  FUNCTION relatedBuiltinFunctionNames: T_arrayOfString;
+    VAR b:T_builtinFunctionMetaData;
+    begin
+      result:=C_EMPTY_STRING_ARRAY;
+      for b in latestResponse^.functionCallInfos^.calledBuiltinFunctions do append(result,b.qualifiedId);
+    end;
+
+  VAR demoIndex:longint;
+      id:string;
+  begin
+    enterCriticalSection(cs);
+    if destroying then begin
+      leaveCriticalSection(cs);
+      exit;
+    end else querying:=true;
+    try
+      ensureResponse;
+      demoIndex:=addDemoFile(extractFileName(provider^.getPath),getHtmlText);
+      for id in relatedBuiltinFunctionNames do linkDemoToDoc(demoIndex,id);
+    finally
+      querying:=false;
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
+  {$i res_defaultFiles.inc}
+  VAR baseDir:string;
+  PROCEDURE ensureFile(CONST index:longint);
+    VAR fileName:string;
+        fileContent:string;
+        assistant:T_codeAssistanceData;
+    begin
+      fileName:=baseDir+DEFAULT_FILES[index,0];
+      if overwriteExisting or not(fileExists(fileName)) then begin
+        fileContent:=decompressString(DEFAULT_FILES[index,1]);
+        assistant.create(newVirtualFileCodeProvider(fileName,myStringUtil.split(fileContent)));
+        assistant.doCreateSourceFile(overwriteExisting);
+        assistant.destroy;
+      end;
+    end;
+
+  PROCEDURE createHtmlPart(CONST index:longint);
+    VAR fileName:string;
+        assistant:T_codeAssistanceData;
+    begin
+      fileName:=baseDir+DEFAULT_FILES[index,0];
+      assistant.create(newFileCodeProvider(fileName));
+      assistant.doCreateHtmlData;
+      assistant.destroy;
+    end;
+
+  VAR i:longint;
+  begin
+    baseDir:=configDir;
+    if bar<>nil then begin
+      bar.caption:='Creating packages and demos';
+      Application.ProcessMessages;
+    end;
+    for i:=0 to length(DEFAULT_FILES)-1 do begin
+      ensureFile(i);
+      if bar<>nil then begin
+        bar.position:=bar.position+1;
+        Application.ProcessMessages;
+      end;
+    end;
+    if createHtmlDat then for i:=0 to length(DEFAULT_FILES)-1 do begin
+      createHtmlPart(i);
+      if bar<>nil then begin
+        bar.position:=bar.position+1;
+        Application.ProcessMessages;
+      end;
+    end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
 
 CONSTRUCTOR T_codeAssistanceData.create(CONST editorMeta: P_codeProvider);

@@ -3554,17 +3554,17 @@ expectations:=
   '28    | Alan   | Alan        | Zombies','      |        | Me          | Things'],
  'heart'=>
  ['FDLinux'=>
-  ['png hash: E5962FB7'],
+  ['png hash: BFBD71D4'],
   'FDWin32'=>
-  ['png hash: A46F25BB'],
+  ['png hash: 1C702873'],
   'FDWin64'=>
-  ['png hash: E5962FB7'],
+  ['png hash: BFBD71D4'],
   'FOLinux'=>
-  ['png hash: E5962FB7'],
+  ['png hash: BFBD71D4'],
   'FOWin32'=>
-  ['png hash: A46F25BB'],
+  ['png hash: 1C702873'],
   'FOWin64'=>
-  ['png hash: E5962FB7']].toMap,
+  ['png hash: BFBD71D4']].toMap,
  'helloWorld'=>
  ['Hello world'],
  'helloWorldHttp'=>
@@ -3655,7 +3655,7 @@ expectations:=
  ['46  7 62 59 38  9 40 53 ','61 58 47  8 51 54 37 10 ',' 6 45 60 63 48 39 52 41 ','57 64 33 44 55 50 11 36 ',
   '20  5 56 49 32 35 42 27 ','23  2 21 34 43 28 15 12 ',' 4 19 24 31 14 17 26 29 ',' 1 22  3 18 25 30 13 16 '],
  'kochCurve'=>
- ['png hash: E78409E3'],
+ ['png hash: F6283C84'],
  'lastSundays'=>
  ['25.01.2015','22.02.2015','29.03.2015','26.04.2015','31.05.2015','28.06.2015','26.07.2015','30.08.2015','27.09.2015',
   '25.10.2015','29.11.2015','27.12.2015'],
@@ -3708,7 +3708,7 @@ expectations:=
   'strings.stringIterator','strings.tokenSplit','strings.trim','strings.trimLeft','strings.trimRight','strings.unbrace',
   'strings.upper','strings.utf8ToAnsi','system.ask','system.assert','system.assertGuiStarted','system.async','system.beep',
   'system.callMemoryCleaner','system.changeDirectory','system.clearPrint','system.deserialize','system.driveInfo','system.fail',
-  'system.future','system.getEnv','system.intRandom','system.intRandomGenerator','system.isGuiStarted',
+  'system.future','system.getEnv','system.halt','system.intRandom','system.intRandomGenerator','system.isGuiStarted',
   'system.isaacRandomGenerator','system.localAsync','system.note','system.print','system.printDirect','system.printf',
   'system.random','system.randomGenerator','system.resetRandom','system.serialize','system.setExitCode','system.systime',
   'system.time','system.try','system.vanDerCorputGenerator','system.warn','system.writeAllDataStores','system.writeDataStores',
@@ -6299,7 +6299,7 @@ expectations:=
  'thueMorseSequence'=>
  ['0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110'],
  'travellingSalesmanProblem'=>
- ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: BF21B5C2'],
+ ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 1B40AFAB'],
  'treePrint'=>
  ["┐","├──1","├──2","├──┐","│  ├──3","│  │  ├──X","│  │  ├──Y",
   "│  │  └──Z","│  └──4","│     └──5","└──┐","   ├──a","   ├──b","   └──c"],
