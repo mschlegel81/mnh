@@ -66,14 +66,14 @@ CONST
 FUNCTION utilityScriptFileName:string;
 IMPLEMENTATION
 USES
-  sysutils,packages;
+  sysutils,packages,codeAssistance;
 FUNCTION utilityScriptFileName:string;
   begin
     {$ifdef Windows}
     if APP_STYLE=APP_STYLE_BLANK then exit('');
     {$endif}
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then sandbox^.ensureDefaultFiles(nil,nil);
+    if not(fileExists(result)) then ensureDefaultFiles(nil,nil);
   end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);

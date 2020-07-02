@@ -52,7 +52,8 @@ USES serializationUtil,
      debuggerForms,
      debuggerVarForms,
      breakpointsForms,
-     customRunDialog;
+     customRunDialog,
+     codeAssistance;
 {$R *.lfm}
 VAR splashForm:TSplashForm;
 
@@ -93,7 +94,7 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
 
   begin
     if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then begin
-      ProgressBar.max:=7 + 1366;
+      ProgressBar.max:=7 + 1548;
       ProgressBar.position:=0;
       ProgressBar.visible:=true;
       ProgressBar.caption:='Loading/applying settings';
@@ -143,7 +144,7 @@ PROCEDURE TSplashForm.prepareDoc;
     {$endif}
     ProgressBar.visible:=true;
     ProgressBar.caption:='Initializing';
-    sandbox^.ensureDefaultFiles(Application,ProgressBar);
+    ensureDefaultFiles(Application,ProgressBar,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
     makeHtmlFromTemplate(Application,ProgressBar);
     ProgressBar.visible:=false;
   end;
@@ -160,7 +161,7 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1366;
+    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;
@@ -172,7 +173,7 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1366;
+    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;

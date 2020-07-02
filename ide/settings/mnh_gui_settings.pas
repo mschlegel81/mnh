@@ -95,7 +95,7 @@ TYPE
 
 FUNCTION SettingsForm: TSettingsForm;
 IMPLEMENTATION
-USES mySys,mnh_doc,closeDialog;
+USES mySys,mnh_doc,closeDialog,codeAssistance;
 VAR mySettingsForm: TSettingsForm=nil;
 FUNCTION SettingsForm: TSettingsForm;
   begin
@@ -176,7 +176,7 @@ PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
   begin
-    sandbox^.ensureDefaultFiles(nil,nil,true);
+    ensureDefaultFiles(nil,nil,true,false);
   end;
 
 PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
@@ -339,7 +339,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
       else APP_STYLE:=APP_STYLE_PORTABLE;
     end;
     workspace.postSaveRequest;
-    sandbox^.ensureDefaultFiles(nil,nil,false);
+    ensureDefaultFiles(nil,nil,true,true);
     htmlDocGeneratedForCodeHash:='';
     makeHtmlFromTemplate(nil,nil);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];

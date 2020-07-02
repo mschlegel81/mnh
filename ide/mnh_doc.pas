@@ -17,6 +17,7 @@ TYPE
     description: ansistring;
     unqualifiedAccess:boolean;
     txtExample,htmlExample: T_arrayOfString;
+    relatedDemos:T_arrayOfLongint;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
@@ -25,6 +26,8 @@ TYPE
     FUNCTION getHtmlLink:string;
   end;
 
+FUNCTION addDemoFile(CONST name,content:string):longint;
+PROCEDURE linkDemoToDoc(CONST demoIndex:longint; CONST qualifiedId:string);
 PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
@@ -38,9 +41,29 @@ PROCEDURE finalizeFunctionDocMap;
 IMPLEMENTATION
 USES strutils;
 VAR functionDocExamplesReady:boolean=false;
+    demoFiles:array of record
+      sourceName,htmlName:string;
+    end;
+
 FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
 FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
+
+FUNCTION addDemoFile(CONST name,content:string):longint;
+  begin
+    result:=length(demoFiles);
+    setLength(demoFiles,result+1);
+    demoFiles[result].sourceName:=name;
+    demoFiles[result].htmlName:=intToStr(result)+ChangeFileExt(demoFiles[length(demoFiles)-1].sourceName,'.html');
+    writeFile(getHtmlRoot+DirectorySeparator+demoFiles[result].htmlName,content);
+  end;
+
+PROCEDURE linkDemoToDoc(CONST demoIndex:longint; CONST qualifiedId:string);
+  VAR doc:P_intrinsicFunctionDocumentation;
+  begin
+    if not(functionDocMap.containsKey(qualifiedId,doc)) then exit;
+    append(doc^.relatedDemos,demoIndex);
+  end;
 
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
   begin
@@ -233,13 +256,11 @@ CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
     unqualifiedId:=shortName(funcName);
     setLength(txtExample,0);
     setLength(htmlExample,0);
+    setLength(relatedDemos,0);
   end;
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
-    {$ifdef debugMode}
-    if (length(txtExample)=0) and functionDocExamplesReady then writeln(stdErr,'               undocumented builtin function: ',id);
-    {$endif}
     id:='';
     description:='';
     setLength(txtExample,0);
@@ -268,6 +289,11 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       result:=result+'<br>Examples:<code>';
       for i:=0 to length(htmlExample)-1 do result:=result+LineEnding+htmlExample[i];
       result:=result+'</code>';
+    end;
+    if length(relatedDemos)>0 then begin
+      result+='<br>Related demos:<ul>';
+      for i in relatedDemos do result+='<li><a href='+demoFiles[i].htmlName+'>'+demoFiles[i].sourceName+'</a></li>';
+      result+='</ul>';
     end;
   end;
 
@@ -480,6 +506,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
       Application.ProcessMessages;
     end;
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
+    setLength(demoFiles,0);
   end;
 
 VAR docMapIsFinalized:boolean=false;

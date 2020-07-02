@@ -327,7 +327,6 @@ FUNCTION assert_impl intFuncSignature;
   end;
 
 FUNCTION halt_impl intFuncSignature;
-  VAR failParam:P_listLiteral;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
