@@ -326,6 +326,20 @@ FUNCTION assert_impl intFuncSignature;
     end;
   end;
 
+FUNCTION halt_impl intFuncSignature;
+  VAR failParam:P_listLiteral;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      context.messages^.setStopFlag;
+      result:=newVoidLiteral;
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
+      context.messages^.setUserDefinedExitCode(P_smallIntLiteral(arg0)^.value);
+      context.messages^.setStopFlag;
+      result:=newVoidLiteral;
+    end;
+  end;
+
 FUNCTION allBuiltinFunctions intFuncSignature;
   VAR id:string;
   begin
@@ -360,6 +374,7 @@ INITIALIZATION
   failFunction:=
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
   system.initCriticalSection(print_cs);
 FINALIZATION
