@@ -34,6 +34,7 @@ TYPE
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
       myPlotForm:TplotForm;
+      anyPlotMessage:boolean;
       cap:string;
       connected:boolean;
       formWasClosedByUser:boolean;
@@ -183,8 +184,7 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
-        if myPlotForm<>nil then myPlotForm.close;
-        myPlotForm:=nil;
+        anyPlotMessage:=false;
         formWasClosedByUser:=false;
         plotChangedSinceLastDisplay:=false;
         inherited processMessage(message);
@@ -194,7 +194,20 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
         plotChangedSinceLastDisplay:=not(formWasClosedByUser);
         formWasClosedByUser:=false;
       end;
-      else inherited processMessage(message);
+      mt_endOfEvaluation:begin
+        inherited processMessage(message);
+        if not(anyPlotMessage) then begin
+          if myPlotForm<>nil then myPlotForm.close;
+          myPlotForm:=nil;
+        end;
+      end;
+      else begin
+        anyPlotMessage:=anyPlotMessage or
+         (message^.messageType in [mt_plot_addText,
+                                   mt_plot_addRow,
+                                   mt_plot_dropRow]);
+        inherited processMessage(message);
+      end;
     end;
   end;
 

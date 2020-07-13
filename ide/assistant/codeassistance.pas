@@ -75,7 +75,6 @@ TYPE
       PROCEDURE ensureResponse;
       FUNCTION  doCodeAssistanceSynchronouslyInCritialSection(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
       //Documentation-related
-      PROCEDURE doCreateSourceFile(CONST overwriteExisting:boolean);
       PROCEDURE doCreateHtmlData;
     public
       CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
@@ -609,37 +608,6 @@ PROCEDURE forceFullScan;
     end;
   end;
 
-PROCEDURE T_codeAssistanceData.doCreateSourceFile(CONST overwriteExisting:boolean);
-  FUNCTION propopsedShebang: string;
-    VAR clp:T_mnhExecutionOptions;
-    begin
-      clp.create;
-      clp.initFromShebang('',latestResponse^.functionCallInfos^.getBuiltinRestrictions);
-      result:=clp.getShebang+C_lineBreakChar;
-    end;
-
-  VAR fullLines:T_arrayOfString;
-  begin
-    enterCriticalSection(cs);
-    if destroying then begin
-      leaveCriticalSection(cs);
-      exit;
-    end else querying:=true;
-    try
-      ensureResponse;
-      if not(fileExists(provider^.getPath)) or overwriteExisting then begin
-        fullLines:=provider^.getLines;
-        if latestResponse^.package^.isExecutable then begin
-          prepend(fullLines,propopsedShebang);
-          writeFileLines(provider^.getPath,fullLines,C_lineBreakChar,false);
-        end;
-      end;
-    finally
-      querying:=false;
-      leaveCriticalSection(cs);
-    end;
-  end;
-
 PROCEDURE T_codeAssistanceData.doCreateHtmlData;
   FUNCTION getHtmlText: string;
     VAR highlighter:TMnhInputSyn;
@@ -706,9 +674,7 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       fileName:=baseDir+DEFAULT_FILES[index,0];
       if overwriteExisting or not(fileExists(fileName)) then begin
         fileContent:=decompressString(DEFAULT_FILES[index,1]);
-        assistant.create(newVirtualFileCodeProvider(fileName,myStringUtil.split(fileContent)));
-        assistant.doCreateSourceFile(overwriteExisting);
-        assistant.destroy;
+        writeFile(fileName,fileContent);
       end;
     end;
 
@@ -731,17 +697,11 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
     end;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
       ensureFile(i);
-      if bar<>nil then begin
-        bar.position:=bar.position+1;
-        Application.ProcessMessages;
-      end;
+      if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
     end;
     if createHtmlDat then for i:=0 to length(DEFAULT_FILES)-1 do begin
       createHtmlPart(i);
-      if bar<>nil then begin
-        bar.position:=bar.position+1;
-        Application.ProcessMessages;
-      end;
+      if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
     end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
 

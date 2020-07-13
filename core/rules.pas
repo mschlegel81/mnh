@@ -224,7 +224,7 @@ TYPE
       localPackage:P_abstractPackage;
       FUNCTION mergeEntry(CONST id:T_idString; entry:T_ruleMapEntry):boolean;
     protected
-      PROCEDURE disposeValue(VAR v:VALUE_TYPE); virtual;
+      PROCEDURE disposeValue(VAR v:MY_VALUE_TYPE); virtual;
     public
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       PROCEDURE clear;
@@ -330,7 +330,7 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
     end;
   end;
 
-PROCEDURE T_ruleMap.disposeValue(VAR v: VALUE_TYPE);
+PROCEDURE T_ruleMap.disposeValue(VAR v: MY_VALUE_TYPE);
   begin
     if not(v.isImported or merging) then begin
       case v.entryType of
