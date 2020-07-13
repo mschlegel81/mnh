@@ -21,6 +21,7 @@ T_fileHistory=object(T_serializable)
     fileItems: T_arrayOfString;
     FUNCTION polishHistory: boolean;
   public
+    //TODO: Extend history by "ignored folders", e.g. network drives...
     folderItems: T_arrayOfString;
     CONSTRUCTOR create(CONST historyRootItem:TMenuItem);
     DESTRUCTOR destroy;
