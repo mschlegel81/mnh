@@ -74,6 +74,8 @@ CONST
   TO_STRING_RULE_ID='toString';
 
 TYPE
+  T_ruleSorting=(rs_none,rs_byNameCaseSensitive,rs_byNameCaseInsensitive,rs_byLocation);
+
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
                        rwc_specialConstruct,

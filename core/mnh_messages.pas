@@ -3,7 +3,8 @@ INTERFACE
 USES sysutils,
      typinfo,
      myGenerics,
-     basicTypes;
+     basicTypes,
+     serializationUtil;
 
 TYPE
   T_stateFlag=(FlagQuietHalt,
@@ -87,11 +88,19 @@ TYPE
     mt_displayCustomForm
     {$endif});
 
-  T_ideMessageConfig=packed record
+  { T_ideMessageConfig }
+
+  T_ideMessageConfig=object(T_serializable)
     echo_input,echo_declaration,echo_output,echo_wrapping,
     show_timing,
     show_all_userMessages:boolean;
     suppressWarningsUnderLevel:byte;
+
+    CONSTRUCTOR create;
+    PROCEDURE reset;
+    FUNCTION getSerialVersion:dword; virtual;
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
 
   T_messageTypeSet=set of T_messageType;
@@ -153,15 +162,6 @@ CONST
     [mt_el2_warning,mt_el2_userWarning],
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
-
-  C_defaultIdeMessageConfig:T_ideMessageConfig=(
-    echo_input:true;
-    echo_declaration:true;
-    echo_output:true;
-    echo_wrapping:false;
-    show_timing:false;
-    show_all_userMessages:false;
-    suppressWarningsUnderLevel:3);
 
 TYPE
   P_storedMessage=^T_storedMessage;
@@ -257,6 +257,58 @@ PROCEDURE disposeMessage_(message:P_storedMessage);
   begin
     if message^.unreference then dispose(message,destroy);
     message:=nil;
+  end;
+
+CONSTRUCTOR T_ideMessageConfig.create;
+  begin
+    reset;
+  end;
+
+PROCEDURE T_ideMessageConfig.reset;
+  begin
+    echo_input           :=true;
+    echo_declaration     :=true;
+    echo_output          :=true;
+    echo_wrapping        :=false;
+    show_timing          :=false;
+    show_all_userMessages:=false;
+    suppressWarningsUnderLevel:=3;
+  end;
+
+FUNCTION T_ideMessageConfig.getSerialVersion: dword;
+  begin
+    result:=232325;
+  end;
+
+FUNCTION T_ideMessageConfig.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  VAR b:byte;
+  begin
+    b:=stream.readByte([0..63]);
+    echo_input           :=(b and  1)>0;
+    echo_declaration     :=(b and  2)>0;
+    echo_output          :=(b and  4)>0;
+    echo_wrapping        :=(b and  8)>0;
+    show_timing          :=(b and 16)>0;
+    show_all_userMessages:=(b and 32)>0;
+    suppressWarningsUnderLevel:=stream.readByte([0..4]);
+    if not(stream.allOkay) then begin
+      reset;
+      result:=false;
+    end else result:=true;
+  end;
+
+PROCEDURE T_ideMessageConfig.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR b:byte;
+  begin
+    b:=0;
+    if echo_input            then b+= 1;
+    if echo_declaration      then b+= 2;
+    if echo_output           then b+= 4;
+    if echo_wrapping         then b+= 8;
+    if show_timing           then b+=16;
+    if show_all_userMessages then b+=32;
+    stream.writeByte(b);
+    stream.writeByte(suppressWarningsUnderLevel);
   end;
 
 FUNCTION T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;

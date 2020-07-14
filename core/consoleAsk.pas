@@ -43,7 +43,7 @@ FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
   end;
 
 FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST messages:P_messages): ansistring;
-  VAR i: longint;
+  VAR i: longint=-1;
   FUNCTION stringIdx(s: string): longint;
     VAR j: longint;
     begin

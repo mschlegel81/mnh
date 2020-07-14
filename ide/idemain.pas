@@ -204,8 +204,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      bookmarkImages,
                      smHistory,
                      smScripts);
-    outlineSettings.create;
-
     splashOnStartup;
     gui_started:=ide;
     FormResize(self);
@@ -576,18 +574,12 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.saveIdeSettings;
-  VAR stream:T_bufferedOutputStreamWrapper;
   begin
     mnh_settings.saveSettings;
-
     runParameterHistory.saveToFile(runParameterHistoryFileName);
-    stream.createToWriteToFile(workspaceFilename);
-    saveMainFormLayout(stream);
-    saveOutputSettings(stream);
-    workspace.saveToStream(stream);
-    runnerModel.saveToStream(stream);
-    outlineSettings.saveToStream(stream);
-    stream.destroy;
+    workspace.saveToFile(ideSettings.workspaceFilename);
+    saveAllIdeSettings();
+    settings.saveToFile(settingsFileName);
   end;
 
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);

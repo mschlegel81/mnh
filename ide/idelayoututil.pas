@@ -125,8 +125,8 @@ PROCEDURE performFastUpdates;
 FUNCTION  focusedEditor:TSynEdit;
 FUNCTION  typeOfFocusedControl:T_controlType;
 
-PROCEDURE saveMainFormLayout(VAR stream:T_bufferedOutputStreamWrapper);
-FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
+PROCEDURE saveAllIdeSettings();
+FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
 PROCEDURE dockAllForms;
 PROCEDURE closeAllForms;
 
@@ -536,9 +536,9 @@ PROCEDURE registerFontControl(control:TWinControl; CONST controlType:T_controlTy
     setLength(fontControls[controlType],length(fontControls[controlType])+1);
     fontControls[controlType][length(fontControls[controlType])-1]:=control;
     if length(fontControls[controlType])=1 then begin
-      control.Font.name:=settings.Font[controlType].fontName;
-      control.Font.size:=settings.Font[controlType].fontSize;
-      control.Font.style:=settings.Font[controlType].style;
+      control.Font.name:=ideSettings.Font[controlType].fontName;
+      control.Font.size:=ideSettings.Font[controlType].fontSize;
+      control.Font.style:=ideSettings.Font[controlType].style;
       control.Font.quality:=fqCleartypeNatural;
     end else control.Font:=fontControls[controlType][0].Font;
 
@@ -563,16 +563,16 @@ PROCEDURE propagateFont(newFont:TFont; CONST controlType:T_controlType);
   VAR e:TControl;
   begin
     for e in fontControls[controlType] do e.Font:=newFont;
-    settings.Font[controlType].fontName:=newFont.name;
-    settings.Font[controlType].fontSize:=newFont.size;
-    settings.Font[controlType].style:=newFont.style;
+    ideSettings.Font[controlType].fontName:=newFont.name;
+    ideSettings.Font[controlType].fontSize:=newFont.size;
+    ideSettings.Font[controlType].style:=newFont.style;
   end;
 
 FUNCTION getFontSize(CONST c: T_controlType): longint;
   begin
     if getFontSize_callback<>nil
     then exit(getFontSize_callback(c))
-    else result:=settings.Font[c].fontSize;
+    else result:=ideSettings.Font[c].fontSize;
   end;
 
 PROCEDURE setFontSize(CONST c: T_controlType; CONST value: longint);
@@ -582,7 +582,7 @@ PROCEDURE setFontSize(CONST c: T_controlType; CONST value: longint);
     then begin setFontSize_callback(c,value); exit; end
     else begin
       for e in fontControls[c] do e.Font.size:=value;
-      settings.Font[c].fontSize:=value;
+      ideSettings.Font[c].fontSize:=value;
     end;
   end;
 
@@ -681,10 +681,14 @@ FUNCTION typeOfFocusedControl:T_controlType;
     for e in fontControls[c] do if e=mainForm.ActiveControl then exit(c);
   end;
 
-PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
+PROCEDURE saveAllIdeSettings();
   VAR ic:T_ideComponent;
       cp:T_componentParent;
+      stream:T_bufferedOutputStreamWrapper;
   begin
+    stream.createToWriteToFile(ideSettingsFilename);
+    ideSettings.saveToStream(stream);
+
     stream.writeLongint(mainForm.top);
     stream.writeLongint(mainForm.Left);
     stream.writeLongint(mainForm.height);
@@ -705,12 +709,18 @@ PROCEDURE saveMainFormLayout(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeBoolean(doShowSplashScreen);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(copyTextAsHtml);
+    stream.destroy;
   end;
 
-FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT activeComponents:T_ideComponentSet):boolean;
+FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
   VAR cp:T_componentParent;
       ic:T_ideComponent;
+      stream:T_bufferedInputStreamWrapper;
   begin
+    activeComponents:=[];
+    stream.createToReadFromFile(ideSettingsFilename);
+    if not(ideSettings.loadFromStream(stream)) then exit(false);
+
     mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
     mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
     mainForm.height:=min(max(stream.readLongint,100),screen.height);
@@ -735,6 +745,7 @@ FUNCTION loadMainFormLayout(VAR stream: T_bufferedInputStreamWrapper; OUT active
       doShowSplashScreen:=true;
       htmlDocGeneratedForCodeHash:='';
     end;
+    stream.destroy;
   end;
 
 PROCEDURE moveAllItems(CONST sourceMenu, destMenu: TMenuItem);

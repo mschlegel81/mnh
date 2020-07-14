@@ -111,36 +111,36 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     ideLayoutUtil.getFontSize_callback:=@getFontSize;
     ideLayoutUtil.setFontSize_callback:=@setFontSize;
 
-    EditorFontButton.caption   :=settings.Font[ctEditor].fontName;
-    EditorFontButton.Font.name :=settings.Font[ctEditor].fontName;
-    EditorFontButton.Font.size :=settings.Font[ctEditor].fontSize;
-    EditorFontButton.Font.style:=settings.Font[ctEditor].style;
+    EditorFontButton.caption   :=ideSettings.Font[ctEditor].fontName;
+    EditorFontButton.Font.name :=ideSettings.Font[ctEditor].fontName;
+    EditorFontButton.Font.size :=ideSettings.Font[ctEditor].fontSize;
+    EditorFontButton.Font.style:=ideSettings.Font[ctEditor].style;
 
-    TableFontButton.caption   :=settings.Font[ctTable].fontName;
-    TableFontButton.Font.name :=settings.Font[ctTable].fontName;
-    TableFontButton.Font.size :=settings.Font[ctTable].fontSize;
-    TableFontButton.Font.style:=settings.Font[ctTable].style;
+    TableFontButton.caption   :=ideSettings.Font[ctTable].fontName;
+    TableFontButton.Font.name :=ideSettings.Font[ctTable].fontName;
+    TableFontButton.Font.size :=ideSettings.Font[ctTable].fontSize;
+    TableFontButton.Font.style:=ideSettings.Font[ctTable].style;
 
-    GeneralFontButton.caption   :=settings.Font[ctGeneral].fontName;
-    GeneralFontButton.Font.name :=settings.Font[ctGeneral].fontName;
-    GeneralFontButton.Font.size :=settings.Font[ctGeneral].fontSize;
-    GeneralFontButton.Font.style:=settings.Font[ctGeneral].style;
+    GeneralFontButton.caption   :=ideSettings.Font[ctGeneral].fontName;
+    GeneralFontButton.Font.name :=ideSettings.Font[ctGeneral].fontName;
+    GeneralFontButton.Font.size :=ideSettings.Font[ctGeneral].fontSize;
+    GeneralFontButton.Font.style:=ideSettings.Font[ctGeneral].style;
 
     propagateFont(EditorFontButton .Font,ctEditor);
     propagateFont(TableFontButton  .Font,ctTable);
     propagateFont(GeneralFontButton.Font,ctGeneral);
 
-    setOutputLimit(guiOutAdapters.outputLinesLimit);
+    setOutputLimit(ideSettings.outputLinesLimit);
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
 
-    case workspace.overwriteLineEnding of
+    case settings.overwriteLineEnding of
       LINE_ENDING_UNCHANGED: rb_saveNoChange.checked:=true;
       LINE_ENDING_DEFAULT  : rb_saveDefault .checked:=true;
       LINE_ENDING_LINUX    : rb_saveLinux   .checked:=true;
       LINE_ENDING_WINDOWS  : rb_saveWindows .checked:=true;
     end;
-    case workspace.newFileLineEnding of
+    case settings.newFileLineEnding of
       LINE_ENDING_DEFAULT  : rb_saveNewDefault.checked:=true;
       LINE_ENDING_LINUX    : rb_saveNewLinux  .checked:=true;
       LINE_ENDING_WINDOWS  : rb_saveNewWindows.checked:=true;
@@ -181,17 +181,17 @@ PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.rb_saveNewDefaultChange(Sender: TObject);
   begin
-    if rb_saveNewDefault.checked then workspace.newFileLineEnding:=LINE_ENDING_DEFAULT;
-    if rb_saveNewLinux  .checked then workspace.newFileLineEnding:=LINE_ENDING_LINUX  ;
-    if rb_saveNewWindows.checked then workspace.newFileLineEnding:=LINE_ENDING_WINDOWS;
+    if rb_saveNewDefault.checked then settings.newFileLineEnding:=LINE_ENDING_DEFAULT;
+    if rb_saveNewLinux  .checked then settings.newFileLineEnding:=LINE_ENDING_LINUX  ;
+    if rb_saveNewWindows.checked then settings.newFileLineEnding:=LINE_ENDING_WINDOWS;
   end;
 
 PROCEDURE TSettingsForm.rb_saveDefaultChange(Sender: TObject);
   begin
-    if rb_saveNoChange.checked then workspace.overwriteLineEnding:= LINE_ENDING_UNCHANGED;
-    if rb_saveDefault .checked then workspace.overwriteLineEnding:= LINE_ENDING_DEFAULT  ;
-    if rb_saveLinux   .checked then workspace.overwriteLineEnding:= LINE_ENDING_LINUX    ;
-    if rb_saveWindows .checked then workspace.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
+    if rb_saveNoChange.checked then settings.overwriteLineEnding:= LINE_ENDING_UNCHANGED;
+    if rb_saveDefault .checked then settings.overwriteLineEnding:= LINE_ENDING_DEFAULT  ;
+    if rb_saveLinux   .checked then settings.overwriteLineEnding:= LINE_ENDING_LINUX    ;
+    if rb_saveWindows .checked then settings.overwriteLineEnding:= LINE_ENDING_WINDOWS  ;
   end;
 
 PROCEDURE TSettingsForm.GeneralFontButtonClick(Sender: TObject);
@@ -253,7 +253,9 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteDirectory(getDemosRoot   ,false);
     DeleteDirectory(getPackagesRoot,false);
     DeleteFile(settingsFileName);
-    DeleteFile(workspaceFilename);
+    DeleteFile(ideSettingsFilename);
+    DeleteFile(defaultWorkspaceFilename);
+    DeleteFile(runParameterHistoryFileName);
     DeleteFile(settings.lightFlavourLocation);
     {$ifdef Windows}
     for fileName in ADDITIONAL_FILES_TO_DELETE do DeleteFile(fileName);
@@ -305,7 +307,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
   VAR sourceFolder:string;
       oldWasNormal:boolean=false;
       foldersToMove:array[0..2,0..1] of string;
-      filesToDelete:array[0..2] of string;
+      filesToDelete:array[0..3] of string;
       k:longint;
       allOkay:boolean=true;
   begin
@@ -314,8 +316,9 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[1,0]:=getDemosRoot;
     foldersToMove[2,0]:=getPackagesRoot;
     filesToDelete[0]:=settingsFileName;
-    filesToDelete[1]:=workspaceFilename;
-    filesToDelete[2]:=runParameterHistoryFileName;
+    filesToDelete[1]:=ideSettingsFilename;
+    filesToDelete[2]:=defaultWorkspaceFilename;
+    filesToDelete[3]:=runParameterHistoryFileName;
     if APP_STYLE=APP_STYLE_NORMAL then begin
       oldWasNormal:=true;
       APP_STYLE:=APP_STYLE_PORTABLE;
@@ -327,7 +330,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     foldersToMove[2,1]:=getPackagesRoot;
     try
       for k:=0 to 2 do allOkay:=allOkay and CopyDirTree(foldersToMove[k,0],foldersToMove[k,1]);
-      for k:=0 to 2 do allOkay:=allOkay and (DeleteFile(filesToDelete[k]) or not(fileExists(filesToDelete[k])));
+      for k:=0 to 3 do allOkay:=allOkay and (DeleteFile(filesToDelete[k]) or not(fileExists(filesToDelete[k])));
       if oldWasNormal  then allOkay:=allOkay and DeleteDirectory(sourceFolder,false)
       else for k:=0 to 2 do allOkay:=allOkay and DeleteDirectory(foldersToMove[k,0],false);
     except
@@ -390,7 +393,7 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
     then setOutputLimit(MINIMUM_OUTPUT_LINES)
     else begin
       outputSizeLimit.text := intToStr(value);
-      guiOutAdapters.outputLinesLimit:=value;
+      ideSettings.outputLinesLimit:=value;
     end;
   end;
 

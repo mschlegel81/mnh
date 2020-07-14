@@ -547,8 +547,8 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
     if (previousName<>'') and (previousName<>fileInfo.filePath) then workspace.fileHistory.fileClosed(previousName);
     if previousName<>fileInfo.filePath
-    then lineEndingSetting:=workspace.newFileLineEnding
-    else lineEndingSetting:=workspace.overwriteLineEnding;
+    then lineEndingSetting:=settings.newFileLineEnding
+    else lineEndingSetting:=settings.overwriteLineEnding;
     setLength(arr,editor.lines.count);
     for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
     with fileInfo do begin

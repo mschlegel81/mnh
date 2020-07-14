@@ -246,7 +246,7 @@ FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfStri
     strings:=TStringList.create;
     accessed:=false;
     try
-      strings.loadFromFile(name);
+      strings.loadFromFile(name,true);
       accessed:=true;
       setLength(result,strings.count);
       for i:=0 to length(result)-1 do result[i]:=strings[i];

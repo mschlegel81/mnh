@@ -157,7 +157,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   PROCEDURE startOutput;
     begin
       setLength(linesToWrite,0);
-      outputLinesLimit:=guiOutAdapters.outputLinesLimit;
+      outputLinesLimit:=ideSettings.outputLinesLimit;
       bufferOffset:=0;
       hadDirectPrint:=false;
       wroteToSyn:=false;

@@ -81,8 +81,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
-  VAR stream:T_bufferedInputStreamWrapper;
-      activeComponents:T_ideComponentSet;
+  VAR activeComponents:T_ideComponentSet;
       okayUpToHere:boolean;
 
   PROCEDURE loadStepDone(CONST ok:boolean);
@@ -98,13 +97,8 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
       ProgressBar.position:=0;
       ProgressBar.visible:=true;
       ProgressBar.caption:='Loading/applying settings';
-      stream.createToReadFromFile(workspaceFilename);
-                           loadStepDone(stream.allOkay);
-      if okayUpToHere then loadStepDone(loadMainFormLayout(stream,activeComponents));
-      if okayUpToHere then loadStepDone(loadOutputSettings(stream)                 );
-      if okayUpToHere then loadStepDone(workspace.loadFromStream(stream)           );
-      if okayUpToHere then loadStepDone(runnerModel.loadFromStream(stream)         );
-      if okayUpToHere then loadStepDone(outlineSettings.loadFromStream(stream)     );
+      ideSettings.create;
+      loadStepDone(loadAllIdeSettings(activeComponents));
       if okayUpToHere then begin
         if icOutline             in activeComponents then ensureOutlineForm;
         if icHelp                in activeComponents then ensureHelpForm;
@@ -114,10 +108,10 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
         if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
         if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
         if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
-        //Apply splitter positions:
-        workspace.fileHistory.updateHistoryMenu;
       end;
-      stream.destroy;
+      loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
+      workspace.fileHistory.updateHistoryMenu;
+
       runParameterHistory.create;
       loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
 

@@ -27,7 +27,6 @@ T_workspace=object(T_serializable)
   public
     saveIntervalIdx:byte;
     autosaveBeforeEachExecution:boolean;
-    newFileLineEnding,overwriteLineEnding:byte;
 
     fileHistory:T_fileHistory;
     checkUsingScripts:boolean;
@@ -94,12 +93,6 @@ CONST
    (text:'10 minutes'; interval:10/(24*60)),
    (text:'30 minutes'; interval:30/(24*60)),
    (text:'1 hour';     interval: 1/24));
-  LINE_ENDING_UNCHANGED=0;
-  LINE_ENDING_DEFAULT=1;
-  LINE_ENDING_LINUX=2;
-  LINE_ENDING_WINDOWS=3;
-
-  LINE_ENDING:array[0..3] of string=('',LineEnding,#10,#13#10);
 
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
 FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
@@ -148,9 +141,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;
     bookmarkImagesList   :=bookmarkImages;
-
-    newFileLineEnding:=LINE_ENDING_DEFAULT;
-    overwriteLineEnding:=LINE_ENDING_UNCHANGED;
 
     nextMetaIndex:=1;
     setLength(metas,0);
@@ -228,12 +218,11 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       currentFile:=stream.readAnsiString;
       saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
       autosaveBeforeEachExecution:=stream.readBoolean;
-      newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);
-      overwriteLineEnding:=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS,LINE_ENDING_UNCHANGED]);
       checkUsingScripts  :=stream.readBoolean;
       result:=stream.allOkay and
       fileHistory  .loadFromStream(stream);
     end;
+    result:=result and runnerModel.loadFromStream(stream);
     if result then begin
       for meta in metas do meta^.updateSheetCaption;
       savedAt:=now;
@@ -263,8 +252,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
 
       saveIntervalIdx:=0;
       autosaveBeforeEachExecution:=false;
-      newFileLineEnding:=LINE_ENDING_DEFAULT;
-      overwriteLineEnding:=LINE_ENDING_UNCHANGED;
       checkUsingScripts:=false;
       {$ifdef debugMode}
       writeln('Loading T_workspace failed @',stream.streamPos);
@@ -294,11 +281,10 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 
     stream.writeByte(saveIntervalIdx);
     stream.writeBoolean(autosaveBeforeEachExecution);
-    stream.writeByte(newFileLineEnding);
-    stream.writeByte(overwriteLineEnding);
     stream.writeBoolean(checkUsingScripts);
 
-    fileHistory  .saveToStream(stream);
+    fileHistory.saveToStream(stream);
+    runnerModel.saveToStream(stream);
     savedAt:=now;
   end;
 

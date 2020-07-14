@@ -37,7 +37,6 @@ USES //my utilities:
 TYPE
   P_package=^T_package;
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance,lu_usageScan);
-  T_ruleSorting=(rs_none,rs_byNameCaseSensitive,rs_byNameCaseInsensitive,rs_byLocation);
 
   T_packageReference=object
     id,path:ansistring;

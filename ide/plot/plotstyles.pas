@@ -337,6 +337,7 @@ FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle
   FUNCTION copyOf(CONST x:T_arrayOfStyle):T_arrayOfStyle;
     VAR i:longint;
     begin
+      initialize(result);
       setLength(result,length(x));
       for i:=0 to length(x)-1 do result[i]:=x[i];
     end;

@@ -74,15 +74,17 @@ FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
   VAR charIndex,
       byteIndex:longint;
       i:longint;
-      sub:ansistring;
+      sub:string[8];
+      literalValue:ansistring;
   begin
     if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(input));
+    literalValue:=P_stringLiteral(input)^.value;
     result:=newListLiteral;
     byteIndex:=1;
-    for charIndex:=1 to UTF8Length(P_stringLiteral(input)^.value) do begin
+    for charIndex:=1 to UTF8Length(literalValue) do begin
       sub:='';
-      for i:=0 to UTF8CodepointSize(@(P_stringLiteral(input)^.value[byteIndex]))-1 do begin
-        sub:=sub+P_stringLiteral(input)^.value[byteIndex];
+      for i:=0 to UTF8CodepointSize(@(literalValue[byteIndex]))-1 do begin
+        sub+=P_stringLiteral(input)^.value[byteIndex];
         inc(byteIndex)
       end;
       result^.appendString(sub);
@@ -501,15 +503,17 @@ FUNCTION reverseString_impl intFuncSignature;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
-        sub:ansistring;
+        value:ansistring;
+        sub:string[8];
     begin
       result:='';
       if P_stringLiteral(input)^.getEncoding=se_utf8 then begin
+        value:=P_stringLiteral(input)^.value;
         byteIndex:=1;
-        for charIndex:=1 to UTF8Length(P_stringLiteral(input)^.value) do begin
+        for charIndex:=1 to UTF8Length(value) do begin
           sub:='';
-          for i:=0 to UTF8CodepointSize(@(P_stringLiteral(input)^.value[byteIndex]))-1 do begin
-            sub:=sub+P_stringLiteral(input)^.value[byteIndex];
+          for i:=0 to UTF8CodepointSize(@(value[byteIndex]))-1 do begin
+            sub+=value[byteIndex];
             inc(byteIndex)
           end;
           result:=sub+result;
