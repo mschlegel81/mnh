@@ -2,7 +2,7 @@ UNIT mnh_constants;
 INTERFACE
 USES sysutils,FileUtil,Classes;
 CONST
-  STACK_DEPTH_LIMIT={$ifdef Windows}11000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
+  STACK_DEPTH_LIMIT={$ifdef Windows}9000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
   {$i build_number.inc}
   FLAVOUR_STRING={$ifdef fullVersion}'F'{$else}'L'{$endif}+
@@ -74,6 +74,8 @@ CONST
   TO_STRING_RULE_ID='toString';
 
 TYPE
+  T_ruleSorting=(rs_none,rs_byNameCaseSensitive,rs_byNameCaseInsensitive,rs_byLocation);
+
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
                        rwc_specialConstruct,

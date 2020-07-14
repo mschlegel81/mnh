@@ -668,7 +668,7 @@ PROCEDURE T_plotSeries.flushFramesToDisk;
     enterCriticalSection(seriesCs);
     cleanupTimeout:=now+1/(24*60*60);
     try
-      if settings.cacheAnimationFrames then begin
+      if ideSettings.cacheAnimationFrames then begin
         //First move cache from images to in-memory PNGs
         for k:=0 to length(frame)-1 do if (now<cleanupTimeout) and (frame[k]^.cachedImage.image<>nil)
         then frame[k]^.doneImage(fcm_inMemoryPng);
@@ -740,7 +740,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
-      if settings.cacheAnimationFrames then begin
+      if ideSettings.cacheAnimationFrames then begin
         if not(isMemoryInComfortZone) then weHadAMemoryPanic:=true;
         if weHadAMemoryPanic
         then cacheMode:=fcm_inMemoryPng
@@ -855,7 +855,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          if not(weHadAMemoryPanic) and isMemoryInComfortZone and (settings.cacheAnimationFrames and not(volatile)) then begin
+          if not(weHadAMemoryPanic) and isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin
@@ -1660,7 +1660,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
-        if settings.doResetPlotOnEvaluation or sandboxed
+        if ideSettings.doResetPlotOnEvaluation or sandboxed
         then currentPlot.setDefaults
         else currentPlot.clear;
         animation.clear;

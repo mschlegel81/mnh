@@ -15,7 +15,7 @@ object SplashForm: TSplashForm
   OnShow = FormShow
   Position = poScreenCenter
   ShowInTaskBar = stAlways
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   Scaled = False
   object Panel1: TPanel
     Left = 0
@@ -1209,6 +1209,7 @@ object SplashForm: TSplashForm
       Top = 286
       Width = 506
       Align = alBottom
+      Max = 1500
       ParentFont = False
       Smooth = True
       Step = 1

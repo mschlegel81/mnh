@@ -298,8 +298,8 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
-    miAutoReset .checked:=settings.doResetPlotOnEvaluation;
-    miCacheFrames .checked:=settings.cacheAnimationFrames;
+    miAutoReset .checked:=ideSettings.doResetPlotOnEvaluation;
+    miCacheFrames .checked:=ideSettings.cacheAnimationFrames;
     secondsPerFrameOverhead:=0;
     secondsPerFrame:=0;
     onPlotRescale:=nil;
@@ -353,7 +353,7 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
   begin
     miAutoReset .checked:=not(miAutoReset.checked);
-    settings.doResetPlotOnEvaluation:=miAutoReset.checked;
+    ideSettings.doResetPlotOnEvaluation:=miAutoReset.checked;
   end;
 
 PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
@@ -371,7 +371,7 @@ PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
 PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
   begin
     miCacheFrames .checked:=not(miCacheFrames.checked);
-    settings.cacheAnimationFrames:=miCacheFrames.checked;
+    ideSettings.cacheAnimationFrames:=miCacheFrames.checked;
   end;
 
 PROCEDURE TplotForm.miCopyOptionsClick(Sender: TObject);

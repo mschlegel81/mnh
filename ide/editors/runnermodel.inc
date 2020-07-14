@@ -110,7 +110,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean);
                            else contextType:=ect_normal;
     end;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
-    evaluation.getStdOut^.outputBehavior:=guiOutAdapters.outputBehavior;
+    evaluation.getStdOut^.outputBehavior:=ideSettings.outputBehavior;
     if mainCall then evaluation.callMain(newFixatedFileProxy(workspace.currentEditor^.getPath),externalRun.mainParameters,contextType,executionDir(workspace.currentEditor))
                 else evaluation.evaluate(newFixatedFileProxy(workspace.currentEditor^.getPath),                           contextType,executionDir(workspace.currentEditor));
   end;

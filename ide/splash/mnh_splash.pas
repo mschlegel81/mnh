@@ -43,7 +43,6 @@ PROCEDURE splashForAbout;
 IMPLEMENTATION
 //Uses for loading and applying settings
 USES serializationUtil,
-     guiOutAdapters,
      editorMeta,
      outlineFormUnit,
      helperForms,
@@ -81,8 +80,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
-  VAR stream:T_bufferedInputStreamWrapper;
-      activeComponents:T_ideComponentSet;
+  VAR activeComponents:T_ideComponentSet;
       okayUpToHere:boolean;
 
   PROCEDURE loadStepDone(CONST ok:boolean);
@@ -94,17 +92,10 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
 
   begin
     if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then begin
-      ProgressBar.max:=7 + 1548;
       ProgressBar.position:=0;
       ProgressBar.visible:=true;
       ProgressBar.caption:='Loading/applying settings';
-      stream.createToReadFromFile(workspaceFilename);
-                           loadStepDone(stream.allOkay);
-      if okayUpToHere then loadStepDone(loadMainFormLayout(stream,activeComponents));
-      if okayUpToHere then loadStepDone(loadOutputSettings(stream)                 );
-      if okayUpToHere then loadStepDone(workspace.loadFromStream(stream)           );
-      if okayUpToHere then loadStepDone(runnerModel.loadFromStream(stream)         );
-      if okayUpToHere then loadStepDone(outlineSettings.loadFromStream(stream)     );
+      loadStepDone(loadAllIdeSettings(activeComponents));
       if okayUpToHere then begin
         if icOutline             in activeComponents then ensureOutlineForm;
         if icHelp                in activeComponents then ensureHelpForm;
@@ -114,22 +105,20 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
         if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
         if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
         if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
-        //Apply splitter positions:
-        workspace.fileHistory.updateHistoryMenu;
       end;
-      stream.destroy;
-      runParameterHistory.create;
+      loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
+      workspace.fileHistory.updateHistoryMenu;
       loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
 
       prepareDoc;
+      if not(doShowSplashScreen) then close;
     end;
-    if startupCall and not(doShowSplashScreen) then close;
   end;
 
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     {$ifdef Windows}
-    if APP_STYLE=APP_STYLE_BLANK then CloseAction:=caNone;
+    if (APP_STYLE=APP_STYLE_BLANK) then halt(17);
     {$endif}
   end;
 
@@ -161,7 +150,6 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;
@@ -173,7 +161,6 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;

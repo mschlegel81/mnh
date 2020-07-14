@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
-  editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
+  editorMeta,editorMetaBase,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,litVar,mnh_messages,
   closeDialog, gotoLineDialogs,SynEdit,askDialog;
@@ -204,7 +204,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      bookmarkImages,
                      smHistory,
                      smScripts);
-    outlineSettings.create;
+    runParameterHistory.create;
 
     splashOnStartup;
     gui_started:=ide;
@@ -576,18 +576,12 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.saveIdeSettings;
-  VAR stream:T_bufferedOutputStreamWrapper;
   begin
     mnh_settings.saveSettings;
-
     runParameterHistory.saveToFile(runParameterHistoryFileName);
-    stream.createToWriteToFile(workspaceFilename);
-    saveMainFormLayout(stream);
-    saveOutputSettings(stream);
-    workspace.saveToStream(stream);
-    runnerModel.saveToStream(stream);
-    outlineSettings.saveToStream(stream);
-    stream.destroy;
+    workspace          .saveToFile(ideSettings.workspaceFilename);
+    saveAllIdeSettings();
+    settings           .saveToFile(settingsFileName);
   end;
 
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);

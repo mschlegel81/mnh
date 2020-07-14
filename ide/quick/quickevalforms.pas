@@ -7,7 +7,8 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
   Menus, SynEdit, ideLayoutUtil, SynHighlighterMnh, editorMeta, editorMetaBase,
-  mnh_settings,guiOutAdapters,evalThread,codeAssistance,basicTypes,synOutAdapter,mnh_messages;
+  mnh_settings,
+  evalThread,codeAssistance,basicTypes,synOutAdapter,mnh_messages;
 
 TYPE
   TQuickEvalForm = class(T_mnhComponentForm)
@@ -83,7 +84,7 @@ FUNCTION TQuickEvalForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
   begin
-    with quickOutputBehavior do begin
+    with ideSettings.quickOutputBehavior do begin
       echo_declaration     :=miEchoDeclarations .checked;
       echo_input           :=miEchoInput        .checked;
       echo_output          :=miEchoOutput       .checked;
@@ -95,8 +96,8 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    quickOutput.outputBehavior:=quickOutputBehavior;
-    quickOutput.wrapEcho:=quickOutputBehavior.echo_wrapping;
+    quickOutput.outputBehavior:=ideSettings.quickOutputBehavior;
+    quickOutput.wrapEcho:=ideSettings.quickOutputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 
@@ -110,10 +111,10 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     outputHighlighter:=TMnhOutputSyn.create(self);
     inputMeta.editor.OnKeyUp:=@tabNextKeyHandling;
     quickOutputSynEdit.highlighter:=outputHighlighter;
-    quickOutput.create(quickOutputSynEdit,self,quickOutputBehavior);
+    quickOutput.create(quickOutputSynEdit,self,ideSettings.quickOutputBehavior);
     quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);
-    with quickOutputBehavior do begin
+    with ideSettings.quickOutputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
       miEchoInput        .checked:=echo_input           ;
       miEchoOutput       .checked:=echo_output          ;
@@ -199,7 +200,7 @@ FUNCTION TQuickEvalForm.stateHash: T_hashInt;
 PROCEDURE TQuickEvalForm.updateWordWrap;
   begin
     if quickOutput.parentMessages=nil then exit;
-    if quickOutputBehavior.echo_wrapping
+    if ideSettings.quickOutputBehavior.echo_wrapping
     then quickOutput.parentMessages^.preferredEchoLineLength:=quickOutputSynEdit.charsInWindow-6
     else quickOutput.parentMessages^.preferredEchoLineLength:=-1;
   end;

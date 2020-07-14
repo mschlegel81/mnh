@@ -284,7 +284,7 @@ PROCEDURE TtableForm.mi_exportCsvTabClick(Sender: TObject);
 PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
   VAR i0:longint=1;
       i,j:longint;
-      content:T_arrayOfString;
+      content:T_arrayOfString=();
       row:ansistring;
   begin
     if SaveTableDialog.execute then begin
@@ -403,7 +403,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
 PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
   VAR dataRows:longint;
       dataColumns:longint=0;
-      cellContents:array of T_arrayOfString;
+      cellContents:array of T_arrayOfString=();
       i,j:longint;
       rowLit:P_literal;
       cellLit:P_literal;

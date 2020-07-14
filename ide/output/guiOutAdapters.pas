@@ -7,7 +7,6 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_settings,
      mnh_messages,
      mnhCustomForm, askDialog,
-     serializationUtil,
      ideLayoutUtil,
      editScripts;
 
@@ -19,41 +18,7 @@ TYPE
     FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
   end;
 
-VAR outputBehavior,
-    quickOutputBehavior: T_ideMessageConfig;
-    outputLinesLimit:longint;
-
-FUNCTION  loadOutputSettings(VAR stream:T_bufferedInputStreamWrapper):boolean;
-PROCEDURE saveOutputSettings(VAR stream:T_bufferedOutputStreamWrapper);
-
 IMPLEMENTATION
-FUNCTION loadOutputSettings(VAR stream: T_bufferedInputStreamWrapper): boolean;
-  begin
-    {$ifdef debugMode}
-    writeln('Loading output settings @',stream.streamPos);
-    {$endif}
-    stream.read(outputBehavior,sizeOf(outputBehavior));
-    stream.read(quickOutputBehavior,sizeOf(quickOutputBehavior));
-    outputLinesLimit:=stream.readLongint;
-    result:=stream.allOkay and (outputLinesLimit>=0);
-
-    if not(result) then begin
-      outputBehavior     :=C_defaultIdeMessageConfig;
-      quickOutputBehavior:=C_defaultIdeMessageConfig;
-      outputLinesLimit:=maxLongint;
-    end;
-  end;
-
-PROCEDURE saveOutputSettings(VAR stream: T_bufferedOutputStreamWrapper);
-  begin
-    {$ifdef debugMode}
-    writeln('Saving output settings @',stream.streamPos);
-    {$endif}
-    stream.write(outputBehavior,sizeOf(outputBehavior));
-    stream.write(quickOutputBehavior,sizeOf(quickOutputBehavior));
-    stream.writeLongint(outputLinesLimit);
-  end;
-
 CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
   begin
     inherited create(at_guiEventsCollector,
@@ -84,10 +49,5 @@ FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeS
       system.leaveCriticalSection(adapterCs);
     end;
   end;
-
-INITIALIZATION
-  outputBehavior:=C_defaultIdeMessageConfig;
-  quickOutputBehavior:=C_defaultIdeMessageConfig;
-  outputLinesLimit:=maxLongint;
 
 end.

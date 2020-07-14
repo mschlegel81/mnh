@@ -6,7 +6,8 @@ INTERFACE
 
 USES
   sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
-  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages, Classes;
+  SynEdit, SynHighlighterMnh, ideLayoutUtil,
+  mnh_settings,out_adapters,synOutAdapter,mnh_messages, Classes;
 
 TYPE
   TIsRunningFunc=FUNCTION:boolean of object;
@@ -123,7 +124,7 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
 
 PROCEDURE TOutputForm.updateAfterSettingsRestore;
   begin
-    with guiOutAdapters.outputBehavior do begin
+    with ideSettings.outputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
       miEchoInput        .checked:=echo_input           ;
       miEchoOutput       .checked:=echo_output          ;
@@ -135,7 +136,7 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
       miErrorL3.checked:=suppressWarningsUnderLevel=3;
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
-    adapter^.outputBehavior:=guiOutAdapters.outputBehavior;
+    adapter^.outputBehavior:=ideSettings.outputBehavior;
     adapter^.autoflush:=false;
   end;
 
@@ -180,14 +181,14 @@ FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
 PROCEDURE TOutputForm.updateWordWrap;
   begin
     if adapter^.parentMessages=nil then exit;
-    if outputBehavior.echo_wrapping
+    if ideSettings.outputBehavior.echo_wrapping
     then adapter^.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
     else adapter^.parentMessages^.preferredEchoLineLength:=-1;
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
   begin
-    with guiOutAdapters.outputBehavior do begin
+    with ideSettings.outputBehavior do begin
       echo_declaration     :=miEchoDeclarations .checked;
       echo_input           :=miEchoInput        .checked;
       echo_output          :=miEchoOutput       .checked;
@@ -199,8 +200,8 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
       if miErrorL3.checked then suppressWarningsUnderLevel:=3;
       if miErrorL4.checked then suppressWarningsUnderLevel:=4;
     end;
-    adapter^.outputBehavior:=guiOutAdapters.outputBehavior;
-    adapter^.wrapEcho:=outputBehavior.echo_wrapping;
+    adapter^.outputBehavior:=ideSettings.outputBehavior;
+    adapter^.wrapEcho:=ideSettings.outputBehavior.echo_wrapping;
     updateWordWrap;
   end;
 

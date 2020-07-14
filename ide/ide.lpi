@@ -162,7 +162,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="95">
+    <Units Count="96">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -654,6 +654,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="renameDialog"/>
       </Unit94>
+      <Unit95>
+        <Filename Value="../common/myCrypto.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit95>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

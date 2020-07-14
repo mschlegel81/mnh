@@ -146,12 +146,16 @@ FUNCTION regexMatch_imp intFuncSignature;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:P_regexMapEntry;
     begin
+      if trip.y='' then exit(trip.x='');
       regex:=regexForExpression(trip.x);
       regex^.RegExpr.inputString:=trip.y;
       try
         result:=regex^.RegExpr.Exec(trip.y);
       except
         on e:Exception do begin
+          {$ifdef debugMode}
+          raise Exception.create(e.message+' regex="'+trip.x+'", input="'+trip.y+'"');
+          {$endif}
           context.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
@@ -176,6 +180,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
     VAR i:longint;
         regex:P_regexMapEntry;
     begin
+      if trip.y='' then exit(newListLiteral(0));
       regex:=regexForExpression(trip.x);
       regex^.RegExpr.inputString:=trip.y;
       result:=newListLiteral;
@@ -193,6 +198,9 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         until not(regex^.RegExpr.ExecNext);
       except
         on e:Exception do begin
+          {$ifdef debugMode}
+          raise Exception.create(e.message+' regex="'+trip.x+'", input="'+trip.y+'"');
+          {$endif}
           context.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
@@ -219,12 +227,16 @@ FUNCTION regexSplit_imp intFuncSignature;
         pieces : TStrings;
         regex:P_regexMapEntry;
     begin
+      if trip.y='' then exit(newListLiteral(0));
       regex:=regexForExpression(trip.x);
       pieces:=TStringList.create;
       try
         regex^.RegExpr.split(trip.y,pieces);
       except
         on e:Exception do begin
+          {$ifdef debugMode}
+          raise Exception.create(e.message+' regex="'+trip.x+'", input="'+trip.y+'"');
+          {$endif}
           context.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
@@ -252,11 +264,15 @@ FUNCTION regexReplace_imp intFuncSignature;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:P_regexMapEntry;
     begin
+      if trip.y='' then exit('');
       regex:=regexForExpression(trip.x);
       try
         result:=regex^.RegExpr.replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
+          {$ifdef debugMode}
+          raise Exception.create(e.message+' regex="'+trip.x+'", input="'+trip.y+'", replacement="'+trip.z+'"');
+          {$endif}
           context.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;

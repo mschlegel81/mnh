@@ -77,7 +77,6 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES guiOutAdapters;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -157,7 +156,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   PROCEDURE startOutput;
     begin
       setLength(linesToWrite,0);
-      outputLinesLimit:=guiOutAdapters.outputLinesLimit;
+      outputLinesLimit:=ideSettings.outputLinesLimit;
       bufferOffset:=0;
       hadDirectPrint:=false;
       wroteToSyn:=false;
