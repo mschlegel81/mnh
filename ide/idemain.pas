@@ -204,6 +204,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      bookmarkImages,
                      smHistory,
                      smScripts);
+    runParameterHistory.create;
+
     splashOnStartup;
     gui_started:=ide;
     FormResize(self);
@@ -577,9 +579,9 @@ PROCEDURE TIdeMainForm.saveIdeSettings;
   begin
     mnh_settings.saveSettings;
     runParameterHistory.saveToFile(runParameterHistoryFileName);
-    workspace.saveToFile(ideSettings.workspaceFilename);
+    workspace          .saveToFile(ideSettings.workspaceFilename);
     saveAllIdeSettings();
-    settings.saveToFile(settingsFileName);
+    settings           .saveToFile(settingsFileName);
   end;
 
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);

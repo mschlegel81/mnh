@@ -92,11 +92,9 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
 
   begin
     if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then begin
-      ProgressBar.max:=7 + 1548;
       ProgressBar.position:=0;
       ProgressBar.visible:=true;
       ProgressBar.caption:='Loading/applying settings';
-      ideSettings.create;
       loadStepDone(loadAllIdeSettings(activeComponents));
       if okayUpToHere then begin
         if icOutline             in activeComponents then ensureOutlineForm;
@@ -110,19 +108,17 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
       end;
       loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
       workspace.fileHistory.updateHistoryMenu;
-
-      runParameterHistory.create;
       loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
 
       prepareDoc;
+      if not(doShowSplashScreen) then close;
     end;
-    if startupCall and not(doShowSplashScreen) then close;
   end;
 
 PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     {$ifdef Windows}
-    if APP_STYLE=APP_STYLE_BLANK then CloseAction:=caNone;
+    if (APP_STYLE=APP_STYLE_BLANK) then halt(17);
     {$endif}
   end;
 
@@ -154,7 +150,6 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;
@@ -166,7 +161,6 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
     sandbox^.runInstallScript;
-    ProgressBar.max:=1548;
     ProgressBar.visible:=true;
     prepareDoc;
     close;

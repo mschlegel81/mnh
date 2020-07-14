@@ -158,7 +158,7 @@ FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapp
     try
       showPrivate:=stream.readBoolean;
       showImported:=stream.readBoolean;
-      ruleSorting:=T_ruleSorting(stream.readByte);
+      ruleSorting:=T_ruleSorting(stream.readByte([byte(low(T_ruleSorting))..byte(high(T_ruleSorting))]));
       result:=stream.allOkay;
     except
       result:=false;
