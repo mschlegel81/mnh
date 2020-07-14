@@ -107,6 +107,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
+      initialize(info);
       if (findFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
       then begin

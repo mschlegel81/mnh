@@ -77,7 +77,6 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES guiOutAdapters;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 

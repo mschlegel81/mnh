@@ -12,7 +12,6 @@ USES
   //funcs,
   packages,//mnh_doc,
   editorMeta,
-  guiOutAdapters,
   ideLayoutUtil;
 
 CONST MINIMUM_OUTPUT_LINES=16;

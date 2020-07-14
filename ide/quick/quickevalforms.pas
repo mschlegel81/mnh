@@ -7,7 +7,8 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
   Menus, SynEdit, ideLayoutUtil, SynHighlighterMnh, editorMeta, editorMetaBase,
-  mnh_settings,guiOutAdapters,evalThread,codeAssistance,basicTypes,synOutAdapter,mnh_messages;
+  mnh_settings,
+  evalThread,codeAssistance,basicTypes,synOutAdapter,mnh_messages;
 
 TYPE
   TQuickEvalForm = class(T_mnhComponentForm)

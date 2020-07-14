@@ -11,8 +11,7 @@ USES
   mnh_settings,
   mnh_constants,basicTypes,
   subrules,rules,packages,editorMeta,
-  codeAssistance,
-  serializationUtil;
+  codeAssistance;
 
 TYPE
   P_outlineNode=^T_outlineNode;

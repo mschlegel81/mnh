@@ -680,7 +680,7 @@ PROCEDURE T_workspace.exportCurrentFileToHtml;
 
 PROCEDURE T_workspace.renameWordUnderCursor;
   VAR meta:P_editorMeta;
-      id:string;
+      id:string='';
       idType:T_tokenType;
       renameLocation:T_searchTokenLocation;
       scanOther:boolean;

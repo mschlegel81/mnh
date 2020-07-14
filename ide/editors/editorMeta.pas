@@ -21,7 +21,6 @@ USES  //basic classes
   funcs,
   debugging,
   evalThread,
-  guiOutAdapters,
   datastores,
   editorMetaBase,
   codeAssistance,

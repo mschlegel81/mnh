@@ -12,7 +12,7 @@ object OutlineForm: TOutlineForm
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   object OutlineTreeView: TTreeView
     Left = 0
     Height = 275
@@ -31,8 +31,8 @@ object OutlineForm: TOutlineForm
   end
   object OutlinePopupMenu: TPopupMenu
     Images = outlineGlyphs
-    left = 200
-    top = 123
+    Left = 200
+    Top = 123
     object showPrivateCheckbox: TMenuItem
       AutoCheck = True
       Caption = 'Show &private rules'
@@ -72,8 +72,8 @@ object OutlineForm: TOutlineForm
   object outlineGlyphs: TImageList
     Height = 15
     Width = 27
-    left = 231
-    top = 79
+    Left = 231
+    Top = 79
     Bitmap = {
       4C69070000001B0000000F000000D9EBFF00D3E9FFFFCBE5FFFFC3E3FFFFBBE0
       FFFFC0E4FFFFC5E9FFFFBCE5FFFFB3E2FFFFAADEFFFFA1DBFFFF98D7FFFF8DD3
@@ -433,8 +433,8 @@ object OutlineForm: TOutlineForm
     }
   end
   object MainMenu1: TMainMenu
-    left = 53
-    top = 75
+    Left = 53
+    Top = 75
     object miDockMain: TMenuItem
       Tag = 99
       Caption = '&View'

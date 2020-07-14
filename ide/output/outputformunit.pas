@@ -6,7 +6,8 @@ INTERFACE
 
 USES
   sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
-  SynEdit, SynHighlighterMnh, ideLayoutUtil, guiOutAdapters,mnh_settings,out_adapters,synOutAdapter,mnh_messages, Classes;
+  SynEdit, SynHighlighterMnh, ideLayoutUtil,
+  mnh_settings,out_adapters,synOutAdapter,mnh_messages, Classes;
 
 TYPE
   TIsRunningFunc=FUNCTION:boolean of object;

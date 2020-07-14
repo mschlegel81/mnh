@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus, ExtCtrls,
   ComCtrls, StdCtrls, ideLayoutUtil, mnh_gui_settings,
-  editorMeta,editorMetaBase,guiOutAdapters,codeAssistance,
+  editorMeta,editorMetaBase,codeAssistance,
   debugging,assistanceFormUnit,debuggerForms,breakpointsForms,searchModel,outlineFormUnit,serializationUtil,mySys,math,customRunDialog,mnh_plotForm,
   helperForms,debuggerVarForms,mnh_settings,quickEvalForms,openFile,ipcModel,editScripts,litVar,mnh_messages,
   closeDialog, gotoLineDialogs,SynEdit,askDialog;

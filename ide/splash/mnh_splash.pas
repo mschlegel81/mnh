@@ -43,7 +43,6 @@ PROCEDURE splashForAbout;
 IMPLEMENTATION
 //Uses for loading and applying settings
 USES serializationUtil,
-     guiOutAdapters,
      editorMeta,
      outlineFormUnit,
      helperForms,

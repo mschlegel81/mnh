@@ -123,7 +123,7 @@ FUNCTION T_codeAssistanceData.inputStateHash: T_hashInt;
   VAR script:ansistring;
   begin
     {$Q-}{$R-}
-    result:=provider^.stateHash*31+hashOfAnsiString(provider^.getPath)+127*length(additionalScriptsToScan);
+    result:=provider^.stateHash*31+int64(hashOfAnsiString(provider^.getPath))+127*int64(length(additionalScriptsToScan));
     for script in additionalScriptsToScan do result:=result*31+hashOfAnsiString(script);
     {$Q+}{$R+}
   end;
@@ -669,7 +669,6 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
   PROCEDURE ensureFile(CONST index:longint);
     VAR fileName:string;
         fileContent:string;
-        assistant:T_codeAssistanceData;
     begin
       fileName:=baseDir+DEFAULT_FILES[index,0];
       if overwriteExisting or not(fileExists(fileName)) then begin
