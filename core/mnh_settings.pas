@@ -45,6 +45,7 @@ T_settings=object(T_serializable)
   newFileLineEnding,overwriteLineEnding:byte;
 
   CONSTRUCTOR create;
+  DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
@@ -278,6 +279,12 @@ CONSTRUCTOR T_settings.create;
     lightFlavourLocation:='';
   end;
 
+DESTRUCTOR T_settings.destroy;
+  begin
+    fullFlavourLocation:='';
+    lightFlavourLocation:='';
+  end;
+
 FUNCTION T_settings.getSerialVersion: dword; begin result:=164423; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
@@ -343,5 +350,7 @@ INITIALIZATION
   {$ifdef fullVersion}
   ideSettings.create;
   {$endif}
+FINALIZATION
+  settings.destroy;
 
 end.

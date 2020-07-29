@@ -162,7 +162,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="96">
+    <Units Count="97">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -658,6 +658,10 @@
         <Filename Value="../common/myCrypto.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit95>
+      <Unit96>
+        <Filename Value="../core/datastores.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit96>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

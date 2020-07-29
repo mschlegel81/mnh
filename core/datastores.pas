@@ -60,7 +60,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
   end;
 
 PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
-  VAR allStores:T_arrayOfString;
+  VAR allStores:T_arrayOfString=();
       i:longint;
       wrapper:T_bufferedInputStreamWrapper;
 
@@ -94,8 +94,8 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
         fileName:=allStores[i];
         fileHasBinaryFormat:=false;
       end;
-
     end;
+    setLength(allStores,0);
     if (fileName='') and createIfMissing then begin
       i:=0;
       repeat
