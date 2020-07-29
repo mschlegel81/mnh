@@ -335,6 +335,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,callContextType,mainParameters,recycler);
+      globals.primaryContext.callDepth:=callerContext^.callDepth+50;
       package.load(lu_forCallingMain,globals,recycler,mainParameters{$ifdef fullVersion},nil,nil{$endif});
     finally
       globals.afterEvaluation(recycler);
@@ -912,7 +913,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
               exit;
             end;
             predigest(statement.firstToken,@self,globals.primaryContext.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-            if globals.primaryContext.messages^.isCollecting(mt_echo_input) then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
+            if globals.primaryContext.messages^.isCollecting(mt_echo_input)
+            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
             globals.primaryContext.reduceExpression(statement.firstToken,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}
