@@ -254,11 +254,9 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     VAR ReadBuffer:array[0..READ_BYTES-1] of char;
         memStream  : TMemoryStream;
         tempProcess: TProcessUTF8;
-        n          : longint;
-        sleepTime  : longint = 1;
-
         teebuffer  : ansistring='';
-    PROCEDURE flushTeeBuffer; inline;
+
+    PROCEDURE flushTeeBuffer;
       VAR wrappedTeeBuffer:P_stringLiteral;
           teeCallResult:T_evaluationResult;
       begin
@@ -274,42 +272,46 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         teebuffer:='';
       end;
 
-    PROCEDURE doTee;
+    FUNCTION flushStdOut:boolean;
       VAR k:longint;
-      begin if tee then begin
-        for k:=0 to n-1 do begin
-          if ReadBuffer[k]=#10 then flushTeeBuffer
-                               else teebuffer+=ReadBuffer[k];
+          n:longint;
+      begin
+        result:=false;
+        while tempProcess.output.NumBytesAvailable>0 do begin
+          n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
+          if n>0 then begin
+            memStream.write(ReadBuffer, n);
+            result:=true;
+            if tee then begin
+              for k:=0 to n-1 do begin
+                if ReadBuffer[k]=#10 then flushTeeBuffer
+                                     else teebuffer+=ReadBuffer[k];
+              end;
+            end;
+          end;
         end;
-      end; end;
+        if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+          tempProcess.stdErr.read(ReadBuffer,READ_BYTES);
+          result:=true;
+        end;
+      end;
 
+    VAR i:longint;
     begin
       initialize(ReadBuffer);
       memStream := TMemoryStream.create;
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
-      for n := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[n]);
+      for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       if includeStdErr then tempProcess.options := [poUsePipes, poStderrToOutPut]
                        else tempProcess.options := [poUsePipes];
       tempProcess.ShowWindow := swoHIDE;
       try
         tempProcess.execute;
         tempProcess.CloseInput;
+        tempProcess.PipeBufferSize:=READ_BYTES;
         while tempProcess.running and context.messages^.continueEvaluation do begin
-          if not(includeStdErr) then while (tempProcess.stdErr.NumBytesAvailable>0) and context.continueEvaluation do begin
-            n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
-            doTee;
-          end;
-          if tempProcess.output.NumBytesAvailable>0 then
-          while (tempProcess.output.NumBytesAvailable>0) and (context.continueEvaluation) do begin
-            n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
-            if n>0 then begin memStream.write(ReadBuffer, n); doTee; end;
-          end
-          else begin
-            n:=0;
-            inc(sleepTime);
-            sleep(sleepTime);
-          end;
+          if not(flushStdOut) then sleep(1);
         end;
         if tempProcess.running then begin
           {$ifdef debugMode}
@@ -317,21 +319,8 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
           {$endif}
           tempProcess.Terminate(999);
         end;
-        if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
-          n:=tempProcess.stdErr.read(ReadBuffer,length(ReadBuffer));
-          doTee;
-        end;
-        while (tempProcess.output.NumBytesAvailable>0) and (context.continueEvaluation) do begin
-          n:=tempProcess.output.read(ReadBuffer,READ_BYTES);
-          if n>0 then begin memStream.write(ReadBuffer, n); doTee; end;
-        end;
+        flushStdOut;
         result := tempProcess.ExitCode;
-        if tempProcess.running then begin
-          {$ifdef debugMode}
-          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Trying again (!) to stop process '+intToStr(tempProcess.ProcessID));
-          {$endif}
-          tempProcess.Terminate(999);
-        end;
       except
         result := $ffffffff;
       end;
@@ -401,11 +390,9 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       end;
       showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch,i);
-      if doAsynch then
-        result:=newIntLiteral(i)
-      else begin
-        result:=newIntLiteral(processExitCode);
-      end;
+      if doAsynch
+      then result:=newIntLiteral(i)
+      else result:=newIntLiteral(processExitCode);
       hideConsole;
     end;
   end;
