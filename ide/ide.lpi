@@ -28,7 +28,7 @@
       <Attributes pvaDebug="True" pvaPreRelease="True" pvaPrivateBuild="True"/>
       <StringTable FileDescription="mnh5 IDE and interpreter" InternalName="mnh5_ide" LegalCopyright="Martin Schlegel 2019" ProductName="mnh"/>
     </VersionInfo>
-    <BuildModes Count="4">
+    <BuildModes Count="3">
       <Item1 Name="default" Default="True"/>
       <Item2 Name="deployment">
         <CompilerOptions>
@@ -100,47 +100,7 @@
           </Other>
         </CompilerOptions>
       </Item3>
-      <Item4 Name="wpo_pass0">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <Target>
-            <Filename Value="mnh"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="../core"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
-            <UnitOutputDirectory Value="compilates"/>
-          </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <AllowLabel Value="False"/>
-            </SyntaxOptions>
-          </Parsing>
-          <CodeGeneration>
-            <SmartLinkUnit Value="True"/>
-            <Optimizations>
-              <OptimizationLevel Value="4"/>
-            </Optimizations>
-          </CodeGeneration>
-          <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="False"/>
-            </Debugging>
-            <LinkSmart Value="True"/>
-          </Linking>
-          <Other>
-            <Verbosity>
-              <ShoLineNum Value="True"/>
-              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
-            </Verbosity>
-            <WriteFPCLogo Value="False"/>
-            <CustomOptions Value="-dfullVersion
--FWwpoData0
--OWoptvmts
--OWdevirtcalls"/>
-          </Other>
-        </CompilerOptions>
-      </Item4>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
