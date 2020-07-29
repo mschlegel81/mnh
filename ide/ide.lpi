@@ -106,9 +106,7 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="1">
-        <Mode0 Name="default"/>
-      </Modes>
+      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
@@ -121,7 +119,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="97">
+    <Units Count="96">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -614,10 +612,6 @@
         <Filename Value="../common/myCrypto.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit95>
-      <Unit96>
-        <Filename Value="../core/datastores.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit96>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
