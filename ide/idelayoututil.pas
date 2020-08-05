@@ -722,16 +722,24 @@ FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
   begin
     activeComponents:=[];
     stream.createToReadFromFile(ideSettingsFilename);
-    if not(ideSettings.loadFromStream(stream)) then exit(false);
+    result:=ideSettings.loadFromStream(stream);
 
-    mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
-    mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
-    mainForm.height:=min(max(stream.readLongint,100),screen.height);
-    mainForm.width :=min(max(stream.readLongint,100),screen.width);
-    mainForm.windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
+    if mainForm<>nil then begin
+      mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
+      mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
+      mainForm.height:=min(max(stream.readLongint,100),screen.height);
+      mainForm.width :=min(max(stream.readLongint,100),screen.width);
+      mainForm.windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
 
-    for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
-    result:=true;
+      for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
+    end else begin
+      stream.readLongint;
+      stream.readLongint;
+      stream.readLongint;
+      stream.readLongint;
+      stream.readByte;
+      for cp in PAGES do stream.readDWord;
+    end;
     activeComponents:=[];
     for ic in T_ideComponent do if ic<>icPlot then begin
       lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
@@ -741,10 +749,12 @@ FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     copyTextAsHtml:=stream.readBoolean;
-    result:=stream.allOkay;
+    result:=result and stream.allOkay;
     if not(result) then begin
-      mainForm.windowStateForUpdate:=wsfuNone;
-      for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
+      if mainForm<>nil then begin
+        mainForm.windowStateForUpdate:=wsfuNone;
+        for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
+      end;
       doShowSplashScreen:=true;
       htmlDocGeneratedForCodeHash:='';
     end;

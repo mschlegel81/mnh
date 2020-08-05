@@ -16,7 +16,7 @@ object tableForm: TtableForm
   OnShow = FormShow
   PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   object stringGrid: TStringGrid
     Left = 0
     Height = 175
@@ -33,8 +33,8 @@ object tableForm: TtableForm
     OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu
-    left = 56
-    top = 88
+    Left = 56
+    Top = 88
     object miDockInMain: TMenuItem
       Caption = '&View'
     end
@@ -84,11 +84,11 @@ object tableForm: TtableForm
     Title = 'Export as'
     Filter = 'All|*.*|CSV|*.csv|Text|*.txt'
     FilterIndex = 2
-    left = 6
-    top = 14
+    Left = 6
+    Top = 14
   end
   object PopupMenu1: TPopupMenu
-    left = 122
-    top = 53
+    Left = 122
+    Top = 53
   end
 end
