@@ -243,9 +243,9 @@ ELEMENTS_TO_RETAIN_ON_CLEANUP:=30;
 
 private calcThreshold(X:NumericList)->X.size<5 ? Inf : begin
   local weights:=1.5^[0..X.size-1];
-  weights/=(weights.agg(+));
-  local weightedMean:=(X*weights).agg(+) orElse 0;
-  local weightedVariance:=(sqr(X-weightedMean)*weights).agg(+);
+  weights/=weights.agg(+);
+  local weightedMean    :=(    X              *weights).agg(+) orElse 0;
+  local weightedVariance:=(sqr(X-weightedMean)*weights).agg(+) orElse 0;
   weightedMean+3*sqrt(weightedVariance);
 end;
 

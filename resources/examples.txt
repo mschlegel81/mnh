@@ -1129,6 +1129,14 @@ void orElse 42; //orElse returns the right-hand-side if the left-hand-side is vo
 //#OPERATOR_STRCONCAT
 3 & 4; //You can concatenate operands of any type
 
+isSubsetOf([1,2,3],[1,2,3]);
+
+isSubsetOf(1,[1,2,3]);
+
+isSubsetOf([1],[1,2,3]);
+
+isSubsetOf([1,4],[1,2,3]);
+
 //==END REG TEST==
 
 driveInfo;
