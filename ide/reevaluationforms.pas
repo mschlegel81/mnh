@@ -75,7 +75,6 @@ PROCEDURE TreevaluationForm.TrayIconClick(Sender: TObject);
   end;
 
 PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
-  VAR activeComponents:T_ideComponentSet;
   begin
     {$ifdef debugMode}
     writeln('Reevaluting with GUI');
@@ -88,7 +87,7 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
     setupEditorMetaBase(nil);
     gui_started:=REEVALUATION;
     subTimerCounter:=0;
-    loadAllIdeSettings(activeComponents);
+    ideSettings.loadFromFile(ideSettingsFilename);
     runner.create();
     timer.enabled:=true;
   end;

@@ -415,6 +415,7 @@ object IdeMainForm: TIdeMainForm
     0000
   }
   Menu = MainMenu
+  OnActivate = FormActivate
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -423,7 +424,7 @@ object IdeMainForm: TIdeMainForm
   OnKeyPress = FormKeyPress
   OnResize = FormResize
   UseDockManager = True
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   object PageControl1: TPageControl
     Left = 440
     Height = 331
@@ -634,8 +635,8 @@ object IdeMainForm: TIdeMainForm
     end
   end
   object MainMenu: TMainMenu
-    left = 470
-    top = 70
+    Left = 470
+    Top = 70
     object smFile: TMenuItem
       Caption = '&File'
       object miNew: TMenuItem
@@ -876,8 +877,8 @@ object IdeMainForm: TIdeMainForm
     end
   end
   object bookmarkImages: TImageList
-    left = 241
-    top = 66
+    Left = 241
+    Top = 66
     Bitmap = {
       4C690A0000001000000010000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000E5E5E5FFD7D7D7FFD6D6D6FFDCDCDCFFEBEBEBFFF0F0F000F0F0F000F0F0
@@ -1205,8 +1206,8 @@ object IdeMainForm: TIdeMainForm
   object breakpointImages: TImageList
     Height = 15
     Width = 15
-    left = 248
-    top = 154
+    Left = 248
+    Top = 154
     Bitmap = {
       4C69010000000F0000000F000000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
@@ -1243,23 +1244,23 @@ object IdeMainForm: TIdeMainForm
     Enabled = False
     Interval = 20
     OnTimer = TimerTimer
-    left = 346
-    top = 73
+    Left = 346
+    Top = 73
   end
   object FindDialog1: TFindDialog
-    left = 326
-    top = 126
+    Left = 326
+    Top = 126
   end
   object ReplaceDialog1: TReplaceDialog
     Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
-    left = 394
-    top = 154
+    Left = 394
+    Top = 154
   end
   object dockImages: TImageList
     Height = 20
     Width = 30
-    left = 190
-    top = 51
+    Left = 190
+    Top = 51
     Bitmap = {
       4C69040000001E00000014000000CBCBCB00DDDDDDFFDBDBDBFFDBDBDBFFDBDB
       DBFFDDDDDDFFC9C9C9FFDDDDDDFFDBDBDBFFDBDBDBFFDBDBDBFFDDDDDDFFC9C9

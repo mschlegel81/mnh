@@ -7,7 +7,8 @@ USES
   mnh_constants,basicTypes,
   mnh_messages,
   mnh_settings,
-  myGenerics,out_adapters;
+  myGenerics,
+  out_adapters;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
                                               mt_printline,
@@ -77,6 +78,7 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
+USES ideLayoutUtil;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
