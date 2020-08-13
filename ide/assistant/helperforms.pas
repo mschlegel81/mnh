@@ -46,7 +46,10 @@ PROCEDURE ensureHelpForm;
     helperForm:=getFormOfType(icHelp);
     if helperForm=nil then begin
       dockNewForm(THelpForm.create(Application));
+      try
       mainForm.ActiveControl:=previouslyActiveControl;
+      except
+      end;
     end else begin
       helperForm.getParents(page,PageControl);
       if (PageControl= nil) and (helperForm.Focused) or

@@ -98,7 +98,6 @@ TYPE
     PROCEDURE onDebuggerEvent;                                virtual; abstract;
     PROCEDURE onEndOfEvaluation;                              virtual; abstract;
     protected
-      windowStateForUpdate:T_windowStateForUpdate;
       dockSites:array[T_componentParent] of P_mnhDockSiteModel;
   end;
 
@@ -106,8 +105,55 @@ TYPE
     FUNCTION textToHtml(CONST title:string; CONST content:TStrings; CONST highlighter:TSynCustomHighlighter):string;
     PROCEDURE OutputSynEditCutCopy(Sender: TObject; VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint; VAR AnAction: TSynCopyPasteAction);
   end;
+
+  T_outlineSettings=object(T_serializable)
+    showPrivate,
+    showImported:boolean;
+    ruleSorting:T_ruleSorting;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION getSerialVersion:dword; virtual;
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+  end;
+
+  T_ideSettings=object(T_serializable)
+    private
+      currentWorkspace:string;
+      workspaceHistory:array of string;
+    public
+    activeComponents:T_ideComponentSet;
+    windowStateForUpdate:T_windowStateForUpdate;
+
+    doShowSplashScreen:boolean;
+    copyTextAsHtml:boolean;
+
+    //IDE:
+    Font:array[ctEditor..ctGeneral] of record
+      fontName :string;
+      style    :byte;
+      fontSize :longint;
+    end;
+    doResetPlotOnEvaluation: boolean;
+    cacheAnimationFrames: boolean;
+
+    outputBehavior,
+    quickOutputBehavior: T_ideMessageConfig;
+    outputLinesLimit:longint;
+
+    outlineSettings:T_outlineSettings;
+
+    CONSTRUCTOR create;
+    FUNCTION getSerialVersion:dword; virtual;
+    FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+    PROCEDURE initDefaults;
+    FUNCTION workspaceFilename: string;
+  end;
+
 VAR
   mainForm:T_mnhIdeForm=nil;
+  ideSettings:T_ideSettings;
 
 PROCEDURE dockNewForm(newForm:T_mnhComponentForm);
 FUNCTION hasAnyForm:boolean;
@@ -125,8 +171,6 @@ PROCEDURE performFastUpdates;
 FUNCTION  focusedEditor:TSynEdit;
 FUNCTION  typeOfFocusedControl:T_controlType;
 
-PROCEDURE saveAllIdeSettings();
-FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
 PROCEDURE dockAllForms;
 PROCEDURE closeAllForms;
 
@@ -140,8 +184,6 @@ TYPE F_getFontSize= FUNCTION (CONST c:T_controlType): longint of object;
 VAR getFontSize_callback:F_getFontSize=nil;
     setFontSize_callback:F_setFontSize=nil;
     htmlExporter:T_htmlExporter;
-VAR doShowSplashScreen:boolean;
-    copyTextAsHtml:boolean;
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
      editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics,strutils;
@@ -239,7 +281,7 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
 PROCEDURE T_htmlExporter.OutputSynEditCutCopy(Sender: TObject; VAR AText: string; VAR AMode: TSynSelectionMode; ALogStartPos: TPoint; VAR AnAction: TSynCopyPasteAction);
   VAR content:TStringList;
   begin
-    if not(copyTextAsHtml) or
+    if not(ideSettings.copyTextAsHtml) or
        (Sender.ClassName<>'TSynEdit') or
        (AnAction<>scaPlainText) or
        (TSynEdit(Sender).highlighter=nil) or
@@ -681,83 +723,6 @@ FUNCTION typeOfFocusedControl:T_controlType;
     for e in fontControls[c] do if e=mainForm.ActiveControl then exit(c);
   end;
 
-PROCEDURE saveAllIdeSettings();
-  VAR ic:T_ideComponent;
-      cp:T_componentParent;
-      stream:T_bufferedOutputStreamWrapper;
-  begin
-    stream.createToWriteToFile(ideSettingsFilename);
-    ideSettings.saveToStream(stream);
-
-    stream.writeLongint(mainForm.top);
-    stream.writeLongint(mainForm.Left);
-    stream.writeLongint(mainForm.height);
-    stream.writeLongint(mainForm.width);
-    case mainForm.WindowState of
-      wsMaximized : stream.writeByte(byte(wsfuMaximized));
-      wsFullScreen: stream.writeByte(byte(wsfuFullscreen));
-      else          stream.writeByte(byte(wsfuNormal));
-    end;
-
-    for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
-
-    for ic in T_ideComponent do begin
-      stream.writeByte(byte(lastDockLocationFor[ic]));
-      stream.writeBoolean(hasFormOfType(ic));
-    end;
-
-    stream.writeBoolean(doShowSplashScreen);
-    stream.writeAnsiString(htmlDocGeneratedForCodeHash);
-    stream.writeBoolean(copyTextAsHtml);
-    stream.destroy;
-  end;
-
-FUNCTION loadAllIdeSettings(OUT activeComponents:T_ideComponentSet):boolean;
-  VAR cp:T_componentParent;
-      ic:T_ideComponent;
-      stream:T_bufferedInputStreamWrapper;
-  begin
-    activeComponents:=[];
-    stream.createToReadFromFile(ideSettingsFilename);
-    result:=ideSettings.loadFromStream(stream);
-
-    if mainForm<>nil then begin
-      mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
-      mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
-      mainForm.height:=min(max(stream.readLongint,100),screen.height);
-      mainForm.width :=min(max(stream.readLongint,100),screen.width);
-      mainForm.windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
-
-      for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
-    end else begin
-      stream.readLongint;
-      stream.readLongint;
-      stream.readLongint;
-      stream.readLongint;
-      stream.readByte;
-      for cp in PAGES do stream.readDWord;
-    end;
-    activeComponents:=[];
-    for ic in T_ideComponent do begin
-      lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
-      if stream.readBoolean then include(activeComponents,ic);
-    end;
-
-    doShowSplashScreen:=stream.readBoolean;
-    htmlDocGeneratedForCodeHash:=stream.readAnsiString;
-    copyTextAsHtml:=stream.readBoolean;
-    result:=result and stream.allOkay;
-    if not(result) then begin
-      if mainForm<>nil then begin
-        mainForm.windowStateForUpdate:=wsfuNone;
-        for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
-      end;
-      doShowSplashScreen:=true;
-      htmlDocGeneratedForCodeHash:='';
-    end;
-    stream.destroy;
-  end;
-
 PROCEDURE moveAllItems(CONST sourceMenu, destMenu: TMenuItem);
   VAR mi:TMenuItem;
       i:longint=0;
@@ -831,7 +796,202 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
     end;
   end;
 
+CONSTRUCTOR T_outlineSettings.create;
+  begin
+    showPrivate:=true;
+    showImported:=false;
+    ruleSorting:=rs_byLocation;
+  end;
+
+DESTRUCTOR T_outlineSettings.destroy;
+  begin
+  end;
+
+FUNCTION T_outlineSettings.getSerialVersion: dword;
+  begin
+    result:=1;
+  end;
+
+FUNCTION T_outlineSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  begin
+    try
+      showPrivate:=stream.readBoolean;
+      showImported:=stream.readBoolean;
+      ruleSorting:=T_ruleSorting(stream.readByte([byte(low(T_ruleSorting))..byte(high(T_ruleSorting))]));
+      result:=stream.allOkay;
+    except
+      result:=false;
+    end;
+    if not(result) then begin
+      showPrivate:=true;
+      showImported:=false;
+      ruleSorting:=rs_byLocation;
+    end;
+  end;
+
+PROCEDURE T_outlineSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  begin
+    stream.writeBoolean(showPrivate);
+    stream.writeBoolean(showImported);
+    stream.writeByte(byte(ruleSorting));
+  end;
+
+CONSTRUCTOR T_ideSettings.create;
+  begin
+    initDefaults;
+    outputBehavior.create;
+    quickOutputBehavior.create;
+    outlineSettings.create;
+    initialize(workspaceHistory);
+  end;
+
+FUNCTION T_ideSettings.getSerialVersion: dword;
+  begin
+    result:=24823582;
+  end;
+
+FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  {$MACRO ON}
+  {$define cleanExit:=begin initDefaults; exit(false) end}
+  VAR c:T_controlType;
+      cp:T_componentParent;
+      ic:T_ideComponent;
+      i:longint;
+
+  begin
+    result:=true;
+    if not(inherited loadFromStream(stream)) then cleanExit;
+    for c:=low(Font) to high(Font) do with Font[c] do begin
+      fontSize:=stream.readLongint;
+      style   :=stream.readByte([0..3]);
+      fontName:=stream.readAnsiString;
+    end;
+    doResetPlotOnEvaluation := stream.readBoolean;
+    cacheAnimationFrames    := stream.readBoolean;
+
+    outputBehavior     .loadFromStream(stream);
+    quickOutputBehavior.loadFromStream(stream);
+    outputLinesLimit:=stream.readLongint;
+    if outputLinesLimit<0 then stream.logWrongTypeError;
+    outlineSettings.loadFromStream(stream);
+    currentWorkspace:=stream.readAnsiString;
+    i:=stream.readNaturalNumber;
+    if (i>MAX_WORKSPACE_HISTORY_SIZE) then stream.logWrongTypeError else begin
+      setLength(workspaceHistory,i);
+      for i:=0 to length(workspaceHistory)-1 do workspaceHistory[i]:=stream.readAnsiString;
+    end;
+
+    if mainForm<>nil then begin
+      mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
+      mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
+      mainForm.height:=min(max(stream.readLongint,100),screen.height);
+      mainForm.width :=min(max(stream.readLongint,100),screen.width);
+      windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
+
+      for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
+    end else begin
+      stream.readLongint;
+      stream.readLongint;
+      stream.readLongint;
+      stream.readLongint;
+      windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
+      for cp in PAGES do stream.readDWord;
+    end;
+    activeComponents:=[];
+    for ic in T_ideComponent do begin
+      lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
+      if stream.readBoolean then include(activeComponents,ic);
+    end;
+
+    doShowSplashScreen:=stream.readBoolean;
+    htmlDocGeneratedForCodeHash:=stream.readAnsiString;
+    copyTextAsHtml:=stream.readBoolean;
+
+    result:=result and stream.allOkay;
+    if not(result) then begin
+      if mainForm<>nil then begin
+        windowStateForUpdate:=wsfuNone;
+        for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=0;
+      end;
+      doShowSplashScreen:=true;
+      htmlDocGeneratedForCodeHash:='';
+      cleanExit;
+    end;
+    if not(stream.allOkay) then cleanExit else result:=true;
+  end;
+
+PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR c:T_controlType;
+      cp:T_componentParent;
+      ic:T_ideComponent;
+      i:longint;
+  begin
+    inherited saveToStream(stream);
+    for c:=low(Font) to high(Font) do with Font[c] do begin
+      stream.writeLongint(fontSize);
+      stream.writeByte(style);
+      stream.writeAnsiString(fontName);
+    end;
+    stream.writeBoolean(doResetPlotOnEvaluation);
+    stream.writeBoolean(cacheAnimationFrames);
+    outputBehavior.saveToStream(stream);
+    quickOutputBehavior.saveToStream(stream);
+    stream.writeLongint(outputLinesLimit);
+    outlineSettings.saveToStream(stream);
+    stream.writeAnsiString(currentWorkspace);
+    if length(workspaceHistory)>MAX_WORKSPACE_HISTORY_SIZE then setLength(workspaceHistory,MAX_WORKSPACE_HISTORY_SIZE);
+    stream.writeNaturalNumber(length(workspaceHistory));
+
+    stream.writeLongint(mainForm.top);
+    stream.writeLongint(mainForm.Left);
+    stream.writeLongint(mainForm.height);
+    stream.writeLongint(mainForm.width);
+    case mainForm.WindowState of
+      wsMaximized : stream.writeByte(byte(wsfuMaximized));
+      wsFullScreen: stream.writeByte(byte(wsfuFullscreen));
+      else          stream.writeByte(byte(wsfuNormal));
+    end;
+
+    for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
+
+    for ic in T_ideComponent do begin
+      stream.writeByte(byte(lastDockLocationFor[ic]));
+      stream.writeBoolean(hasFormOfType(ic));
+    end;
+
+    stream.writeBoolean(doShowSplashScreen);
+    stream.writeAnsiString(htmlDocGeneratedForCodeHash);
+    stream.writeBoolean(copyTextAsHtml);
+
+    for i:=0 to length(workspaceHistory)-1 do stream.writeAnsiString(workspaceHistory[i]);
+  end;
+
+PROCEDURE T_ideSettings.initDefaults;
+  VAR c:T_controlType;
+  begin
+    for c:=low(Font) to high(Font) do with Font[c] do begin
+      fontName:='Courier New';
+      style   :=0;
+      fontSize:=10;
+    end;
+    doResetPlotOnEvaluation:=true;
+    cacheAnimationFrames:=true;
+    outputBehavior.reset;
+    quickOutputBehavior.reset;
+    outputLinesLimit:=maxLongint;
+    currentWorkspace:='';
+    setLength(workspaceHistory,0);
+  end;
+
+FUNCTION T_ideSettings.workspaceFilename: string;
+  begin
+    if currentWorkspace=''
+    then result:=defaultWorkspaceFilename
+    else result:=currentWorkspace;
+  end;
+
 INITIALIZATION
+  ideSettings.create;
   initialize(lastDockLocationFor);
   setLength(activeForms,0);
   setLength(fontControls[ctEditor ],0);

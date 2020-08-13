@@ -93,6 +93,7 @@ TYPE
     Splitter4: TSplitter;
     timer: TTimer;
     PROCEDURE EditorsPageControlChange(Sender: TObject);
+    PROCEDURE FormActivate(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
@@ -189,7 +190,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2));
     new(dockSites[cpPageControl3],create(cpPageControl3,PageControl3));
     new(dockSites[cpPageControl4],create(cpPageControl4,PageControl4));
-    windowStateForUpdate:=wsfuNone;
     quitPosted:=false;
     slowUpdating:=false;
     fastUpdating:=false;
@@ -258,6 +258,27 @@ PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
   begin
     meta:=workspace.currentEditor;
     if meta<>nil then meta^.activate;
+  end;
+
+PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
+  begin
+    with ideSettings do begin
+      case windowStateForUpdate of
+        wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     end;
+        wsfuMaximized : begin BorderStyle:=bsSizeable; WindowState:=wsMaximized;  end;
+        wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; end;
+      end;
+      windowStateForUpdate:=wsfuNone;
+      if icOutline             in activeComponents then ensureOutlineForm;
+      if icHelp                in activeComponents then ensureHelpForm;
+      if icAssistance          in activeComponents then ensureAssistanceForm;
+      if icQuickEval           in activeComponents then ensureQuickEvalForm;
+      if icDebugger            in activeComponents then ensureDebuggerForm;
+      if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
+      if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
+      if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
+      activeComponents:=[];
+    end;
   end;
 
 FUNCTION anyEvaluationRunning:boolean;
@@ -559,8 +580,13 @@ PROCEDURE TIdeMainForm.miShebangClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
   begin
     if WindowState=wsFullScreen
-    then windowStateForUpdate:=wsfuMaximized
-    else windowStateForUpdate:=wsfuFullscreen;
+    then begin
+      BorderStyle:=bsSizeable;
+      WindowState:=wsMaximized;
+    end else begin
+      BorderStyle:=bsNone;
+      WindowState:=wsFullScreen;
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
@@ -580,7 +606,7 @@ PROCEDURE TIdeMainForm.saveIdeSettings;
     mnh_settings.saveSettings;
     runParameterHistory.saveToFile(runParameterHistoryFileName);
     workspace          .saveToFile(ideSettings.workspaceFilename);
-    saveAllIdeSettings();
+    ideSettings        .saveToFile(ideSettingsFilename);
     settings           .saveToFile(settingsFileName);
   end;
 
@@ -692,15 +718,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         result:=intToStr(edit.CaretY)+','+intToStr(edit.CaretX);
       end;
 
-    PROCEDURE processPendingResize;
-      begin
-        case windowStateForUpdate of
-          wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     windowStateForUpdate:=wsfuNone; end;
-          wsfuMaximized : begin BorderStyle:=bsSizeable; WindowState:=wsMaximized;  windowStateForUpdate:=wsfuNone; end;
-          wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; windowStateForUpdate:=wsfuNone; end;
-        end;
-      end;
-
     VAR edit:P_editorMeta;
     begin
       if fastUpdating then exit;
@@ -726,7 +743,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 
         if askForm.displayPending then askForm.Show;
         enableItems;
-        processPendingResize;
       finally
         fastUpdating:=false;
       end;

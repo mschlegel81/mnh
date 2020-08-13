@@ -44,13 +44,6 @@ IMPLEMENTATION
 //Uses for loading and applying settings
 USES serializationUtil,
      editorMeta,
-     outlineFormUnit,
-     helperForms,
-     assistanceFormUnit,
-     quickEvalForms,
-     debuggerForms,
-     debuggerVarForms,
-     breakpointsForms,
      customRunDialog,
      codeAssistance;
 {$R *.lfm}
@@ -76,12 +69,11 @@ PROCEDURE splashForAbout;
 
 PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   begin
-    doShowSplashScreen:=CheckBox1.checked;
+    ideSettings.doShowSplashScreen:=CheckBox1.checked;
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
-  VAR activeComponents:T_ideComponentSet;
-      okayUpToHere:boolean;
+  VAR okayUpToHere:boolean;
 
   PROCEDURE loadStepDone(CONST ok:boolean);
     begin
@@ -95,23 +87,14 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
       ProgressBar.position:=0;
       ProgressBar.visible:=true;
       ProgressBar.caption:='Loading/applying settings';
-      loadStepDone(loadAllIdeSettings(activeComponents));
-      if okayUpToHere then begin
-        if icOutline             in activeComponents then ensureOutlineForm;
-        if icHelp                in activeComponents then ensureHelpForm;
-        if icAssistance          in activeComponents then ensureAssistanceForm;
-        if icQuickEval           in activeComponents then ensureQuickEvalForm;
-        if icDebugger            in activeComponents then ensureDebuggerForm;
-        if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
-        if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
-        if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
-      end;
+      ideSettings.loadFromFile(ideSettingsFilename);
+      CheckBox1.checked:=ideSettings.doShowSplashScreen;
       loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
       workspace.fileHistory.updateHistoryMenu;
       loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
 
       prepareDoc;
-      if not(doShowSplashScreen) then close;
+      if not(ideSettings.doShowSplashScreen) then close;
     end;
   end;
 
@@ -171,7 +154,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
   VAR l:T_arrayOfString;
       i:longint;
   begin
-    CheckBox1.checked:=doShowSplashScreen;
+    CheckBox1.checked:=ideSettings.doShowSplashScreen;
     l:=C_EMPTY_STRING_ARRAY;
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);

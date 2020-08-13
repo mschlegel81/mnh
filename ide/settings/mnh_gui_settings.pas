@@ -152,7 +152,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     FileNameEdit1.fileName:=settings.lightFlavourLocation;
 
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
-    cbCopyAsHtml.checked:=copyTextAsHtml;
+    cbCopyAsHtml.checked:=ideSettings.copyTextAsHtml;
   end;
 
 PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
@@ -224,7 +224,7 @@ PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
   begin
-    copyTextAsHtml:=cbCopyAsHtml.checked;
+    ideSettings.copyTextAsHtml:=cbCopyAsHtml.checked;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);

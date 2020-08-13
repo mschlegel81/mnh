@@ -11,7 +11,7 @@ USES sysutils,
      plotstyles,plotMath,
      litVar,
      EpikTimer,
-     BGRABitmap,BGRACanvas,BGRABitmapTypes;
+     BGRABitmap,BGRACanvas,BGRABitmapTypes,ideLayoutUtil;
 CONST VOLATILE_FRAMES_MAX=100;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
