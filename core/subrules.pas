@@ -459,8 +459,8 @@ FUNCTION T_builtinExpression.canApplyToNumberOfParameters(CONST parCount: longin
   begin
     meta:=getMeta(func);
     result:=(parCount>=C_arityKind[meta.arityKind].fixedParameters) and
-            (parCount<=C_arityKind[meta.arityKind].fixedParameters) or
-                       C_arityKind[meta.arityKind].variadic;
+           ((parCount<=C_arityKind[meta.arityKind].fixedParameters) or
+                       C_arityKind[meta.arityKind].variadic);
   end;
 FUNCTION T_builtinGeneratorExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=parCount=0; end;
 
