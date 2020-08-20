@@ -521,7 +521,7 @@ CONSTRUCTOR T_futureMapGenerator.create(CONST source, mapEx: P_expressionLiteral
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
-    isNullary:=mapEx^.canApplyToNumberOfParameters(0);
+    isNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
     firstToAggregate:=nil;
     lastToAggregate:=nil;
     doneFetching:=false;
