@@ -15,8 +15,8 @@ save;
 end;
 
 main->begin
-  drawLayout(1); renderToFile('dockLocation1.png',30,20,3);
-  drawLayout(2); renderToFile('dockLocation2.png',30,20,3);
-  drawLayout(3); renderToFile('dockLocation3.png',30,20,3);
-  drawLayout(4); renderToFile('dockLocation4.png',30,20,3);
+  drawLayout(1); renderToFile('dockLocation1.png',30,20);
+  drawLayout(2); renderToFile('dockLocation2.png',30,20);
+  drawLayout(3); renderToFile('dockLocation3.png',30,20);
+  drawLayout(4); renderToFile('dockLocation4.png',30,20);
 end;
