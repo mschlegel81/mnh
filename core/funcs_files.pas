@@ -3,6 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}LazFileUtils,LazUTF8,
      myGenerics,mySys,
+     myCrypto,bigint,
      mnh_constants,basicTypes,
      fileWrappers,
      out_adapters,
@@ -489,14 +490,19 @@ FUNCTION fileInfo_imp intFuncSignature;
   end; //fileInfo_imp
 
 FUNCTION fileStats_imp intFuncSignature;
-  VAR lineCount,wordCount,byteCount:longint;
-      hash:T_hashInt;
+  VAR lineCount,wordCount,byteCount,i:longint;
+      sha256Int:T_bigInt;
+      sha256Digest:T_sha256Hash;
+      sha256Digits:T_arrayOfLongint;
   begin
     if not(context.checkSideEffects('fileStats',tokenLocation,[se_readFile])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      fileStats(str0^.value,lineCount,wordCount,byteCount,hash);
-      result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash);
+      fileStats(str0^.value,lineCount,wordCount,byteCount,sha256Digest);
+      setLength(sha256Digits,length(sha256Digest));
+      for i:=0 to length(sha256Digest)-1 do sha256Digits[i]:=sha256Digest[i];
+      sha256Int.createFromDigits(256,sha256Digits);
+      result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.append(newIntLiteral(sha256Int),false);
     end else result:=genericVectorization('fileStats',params,tokenLocation,context,recycler)
   end;
 

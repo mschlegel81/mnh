@@ -186,7 +186,7 @@ expectations:=
  ['[]               o.k.','][][             NOT o.k.','][][][           NOT o.k.',']][][][[         NOT o.k.',
   '][[[]]][][       NOT o.k.','[][][][]]][[     NOT o.k.','][]][][[][[[]]   NOT o.k.','[[]]]][[][]][[][ NOT o.k.'],
  'barnsleyFern'=>
- ['png hash: FBAF5086'],
+ ['png hash: 589386DB0CCC9288FBCE580182A8F4BCBF5E9241F6B21D6C3C0E9A67D05BFA1D'],
  'benford'=>
  ['actual expected','   300   301.03','   177   176.09','   125   124.94','    96    96.91','    80    79.18','    67    66.95',
   '    57    57.99','    53    51.15','    45    45.76'],
@@ -3305,7 +3305,7 @@ expectations:=
   '  [7,8,3,4,5,6,9]','  [8,7,3,5,4,6,9]','  [9,6,4,5,3,7,8]','  [9,6,5,4,3,8,7]',
   'The number of solutions for 0..9 (nonunique) is: 2860'],
  'fractalPlant'=>
- ['png hash: CA1D8CE4'],
+ ['png hash: B3336FDBE3E21181652B9F861EC1A2A6552FAB7C35202E62F5C3EF88BC4BA7'],
  'fractran'=>
  ['0: 2^1 = 2','1: 3^1*5^1 = 15','2: 3^1*5^2*11^1 = 825','3: 5^2*29^1 = 725','4: 5^2*7^1*11^1 = 1925','5: 5^2*7^1*13^1 = 2275',
   '6: 5^2*17^1 = 425','7: 2^1*3^1*5^1*13^1 = 390','8: 2^1*3^1*5^1*11^1 = 330','9: 2^1*5^1*29^1 = 290',
@@ -3578,17 +3578,17 @@ expectations:=
   '28    | Alan   | Alan        | Zombies','      |        | Me          | Things'],
  'heart'=>
  ['FDLinux'=>
-  ['png hash: BFBD71D4'],
+  ['png hash: 5B17E85451D1B46A97054F507E771420AF6F58D6E8426B9F180E345FF5715D6D'],
   'FDWin32'=>
-  ['png hash: 1C702873'],
+  ['png hash: B1D031AC585836C120BCC6C18C84A745711882AD09CF37C4B5817381077CB8C6'],
   'FDWin64'=>
-  ['png hash: BFBD71D4'],
+  ['png hash: 5B17E85451D1B46A97054F507E771420AF6F58D6E8426B9F180E345FF5715D6D'],
   'FOLinux'=>
-  ['png hash: BFBD71D4'],
+  ['png hash: 5B17E85451D1B46A97054F507E771420AF6F58D6E8426B9F180E345FF5715D6D'],
   'FOWin32'=>
-  ['png hash: 1C702873'],
+  ['png hash: B1D031AC585836C120BCC6C18C84A745711882AD09CF37C4B5817381077CB8C6'],
   'FOWin64'=>
-  ['png hash: BFBD71D4']].toMap,
+  ['png hash: 5B17E85451D1B46A97054F507E771420AF6F58D6E8426B9F180E345FF5715D6D']].toMap,
  'helloWorld'=>
  ['Hello world'],
  'helloWorldHttp'=>
@@ -3679,7 +3679,7 @@ expectations:=
  ['46  7 62 59 38  9 40 53 ','61 58 47  8 51 54 37 10 ',' 6 45 60 63 48 39 52 41 ','57 64 33 44 55 50 11 36 ',
   '20  5 56 49 32 35 42 27 ','23  2 21 34 43 28 15 12 ',' 4 19 24 31 14 17 26 29 ',' 1 22  3 18 25 30 13 16 '],
  'kochCurve'=>
- ['png hash: F6283C84'],
+ ['png hash: 9207A5CC8DA7704A8B7CC8686B94E9B0FBF21BE0E161D4BFCA196C3836CDB803'],
  'lastSundays'=>
  ['25.01.2015','22.02.2015','29.03.2015','26.04.2015','31.05.2015','28.06.2015','26.07.2015','30.08.2015','27.09.2015',
   '25.10.2015','29.11.2015','27.12.2015'],
@@ -5343,17 +5343,17 @@ expectations:=
    'Root found at   1.0','Root found at   2.0']].toMap,
  'rotatingCube'=>
  ['FDLinux'=>
-  ['png hash: 9DB06BF3'],
+  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
   'FDWin32'=>
-  ['png hash: 11D76D9'],
+  ['png hash: 768F93F928DDF8FBA310BF2F9B173F35CDB50F039814E4E53EFE3BB80BBA3DD8'],
   'FDWin64'=>
-  ['png hash: 9DB06BF3'],
+  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
   'FOLinux'=>
-  ['png hash: 9DB06BF3'],
+  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
   'FOWin32'=>
-  ['png hash: 11D76D9'],
+  ['png hash: 768F93F928DDF8FBA310BF2F9B173F35CDB50F039814E4E53EFE3BB80BBA3DD8'],
   'FOWin64'=>
-  ['png hash: 9DB06BF3']].toMap,
+  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0']].toMap,
  'rsa'=>
  ['Creating key pair',' private key: [128143,593].toKey','  public key: [128143,65537].toKey','',
   'Cipher: 102030405060708090 with public...','        104399454243902252327','Decipher with private...',
@@ -5494,7 +5494,7 @@ expectations:=
   '[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]'
  ],
  'sierpinskiCurve'=>
- ['png hash: 570EBB73'],
+ ['png hash: 218DBE2CB5C79809DFCB3B53287D7750C3DACB43B581B27DC007ED214F171AEE'],
  'sierpinskiTriangle'=>
  ['                               A                                                               ',
   '                              A A                                                             ',
@@ -6320,7 +6320,8 @@ expectations:=
  'thueMorseSequence'=>
  ['0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110'],
  'travellingSalesmanProblem'=>
- ['Path length after construction is 32.932','Path length after polishing is    31.713','png hash: 1B40AFAB'],
+ ['Path length after construction is 32.932','Path length after polishing is    31.713',
+  'png hash: C5BB896E2BB5B8754FEE21CF6C7BDDEAF06C4680A93913E44CC4F489B892446C'],
  'treePrint'=>
  ["┐","├──1","├──2","├──┐","│  ├──3","│  │  ├──X","│  │  ├──Y",
   "│  │  └──Z","│  └──4","│     └──5","└──┐","   ├──a","   ├──b","   └──c"],
@@ -6329,7 +6330,7 @@ expectations:=
   'There are 70 right truncatable primes, the largest of which is 739399',
   'The largest prime which is both left- and right truncatable is 739397'],
  'turtleGfx'=>
- ['png hash: 23E841C6'],
+ ['png hash: 2753A05F8EC8D3FFEA0EEA60E3ECC69AEC0E18218397D23565B5F298E73B2F2C'],
  'ulam'=>
  ['          XX                                        XX          XX                      XX          XX                  ',
   '                   XX                XX          XX    XX          XX                                        XX         ',

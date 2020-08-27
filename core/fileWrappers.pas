@@ -1,6 +1,6 @@
 UNIT fileWrappers;
 INTERFACE
-USES basicTypes, mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
+USES basicTypes, mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils,myCrypto;
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object
@@ -52,7 +52,7 @@ TYPE
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_codeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_sha256Hash);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
@@ -179,81 +179,91 @@ FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_ar
   begin new(result,create(path,lineData)); end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-  VAR stream:TMemoryStream;
+  VAR stream:TFileStream;
       size:longint;
   begin
-    stream:=TMemoryStream.create;
     accessed:=false;
     try
-      stream.loadFromFile(name);
-      accessed:=true;
-      size:=stream.size;
-      stream.Seek(0,soFromBeginning);
-      setLength(result,size);
-      if size>0 then stream.ReadBuffer(result[1],size);
-    except
-      accessed:=false;
+      stream:=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
+      try
+        accessed:=true;
+        size:=stream.size;
+        stream.Seek(0,soFromBeginning);
+        setLength(result,size);
+        if size>0 then stream.ReadBuffer(result[1],size);
+      except
+        accessed:=false;
+      end;
+    finally
+      stream.destroy;
     end;
-    stream.destroy;
   end;
 
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
-  VAR stream:TMemoryStream;
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_sha256Hash);
+  CONST BUFFER_SIZE=8192;
+  VAR buffer:array[0..BUFFER_SIZE-1] of byte;
+      bufferFill:longint;
+      stream:TFileStream;
       i:longint;
       b:byte;
       space:boolean=true;
+      sha256:T_sha256;
   begin
-    stream:=TMemoryStream.create;
+    stream:=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
     lineCount:=0;
     wordCount:=0;
     byteCount:=0;
-    hash:=0;
     if trim(name) = '' then exit;
+    sha256.create;
     try
-      stream.loadFromFile(name);
       stream.Seek(0,soFromBeginning);
-      byteCount:=stream.size;
-      hash:=T_hashInt(lt_string)+T_hashInt(byteCount);
-      for i:=1 to byteCount do begin
-        b:=stream.readByte;
-        case b of
-        ord('a')..ord('z'),ord('A')..ord('Z'): begin
-          if space then inc(wordCount);
-          space:=false;
+      repeat
+        bufferFill:=stream.read(buffer,BUFFER_SIZE);
+        byteCount+=bufferFill;
+        sha256.fillBuffer(buffer,bufferFill);
+        for i:=0 to bufferFill-1 do begin
+          b:=buffer[i];
+          case b of
+          ord('a')..ord('z'),ord('A')..ord('Z'): begin
+            if space then inc(wordCount);
+            space:=false;
+          end;
+          ord(C_lineBreakChar): begin
+            inc(lineCount);
+            space:=true;
+          end;
+          else space:=true;
+          end;
         end;
-        ord(C_lineBreakChar): begin
-          inc(lineCount);
-          space:=true;
-        end;
-        else space:=true;
-        end;
-        {$Q-}{$R-}
-        hash:=hash*31+b;
-        {$Q+}{$R+}
-      end;
+      until bufferFill=0;;
     except
       lineCount:=0;
       wordCount:=0;
       byteCount:=0;
-      hash:=0;
+      for i:=0 to length(hash)-1 do hash[i]:=0;
     end;
+    hash:=sha256.getHash;
+    sha256.destroy;
     stream.destroy;
   end;
 
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
-  VAR strings:TStringList;
+  VAR stream:TFileStream;
+      strings:TStringList;
       i:longint;
   begin
+    stream :=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
     strings:=TStringList.create;
     accessed:=false;
     try
-      strings.loadFromFile(name,true);
+      strings.loadFromStream(stream,true);
       accessed:=true;
       setLength(result,strings.count);
       for i:=0 to length(result)-1 do result[i]:=strings[i];
     except
       accessed:=false;
     end;
+    stream.destroy;
     strings.destroy;
   end;
 
