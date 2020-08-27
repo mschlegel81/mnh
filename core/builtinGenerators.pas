@@ -1,7 +1,7 @@
 UNIT builtinGenerators;
 INTERFACE
-USES sysutils,
-     mySys,myCrypto,bigint,
+USES sysutils,Classes,
+     mySys,myCrypto,bigint,myGenerics,
      myStringUtil,
      mnh_constants,
      basicTypes,
@@ -521,7 +521,7 @@ CONSTRUCTOR T_futureMapGenerator.create(CONST source, mapEx: P_expressionLiteral
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
-    isNullary:=mapEx^.canApplyToNumberOfParameters(0);
+    isNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
     firstToAggregate:=nil;
     lastToAggregate:=nil;
     doneFetching:=false;
@@ -576,23 +576,55 @@ TYPE
   P_fileLineIterator=^T_fileLineIterator;
   T_fileLineIterator=object(T_builtinGeneratorExpression)
     private
-      initialized:boolean;
+      queue       : specialize G_queue<string>;
+      stringBuffer: ansistring;
+      fileStream  : TStream;
       fname:string;
-      fileHandle:textFile;
+      stopAt,timeout:double;
+      initialized:boolean;
+      eofReached:boolean;
+      FUNCTION fillQueue:boolean;
     public
-      CONSTRUCTOR create(CONST fileName:string; CONST loc:T_tokenLocation; VAR context:T_context);
+      CONSTRUCTOR create(CONST fileName:string; CONST fileChangeTimeoutInSeconds:double; CONST loc:T_tokenLocation; VAR context:T_context);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST loc: T_tokenLocation; VAR context: T_context);
+FUNCTION T_fileLineIterator.fillQueue:boolean;
+  CONST READ_BYTES = 8192;
+  VAR k:longint;
+      n:longint;
+      ReadBuffer  : array[0..READ_BYTES-1] of char;
+  begin
+    result:=false;
+    n:=fileStream.read(ReadBuffer,READ_BYTES);
+    if n>0 then begin
+      result:=true;
+      stopAt:=now+timeout;
+      for k:=0 to n-1 do begin
+        if ReadBuffer[k]=#10 then begin
+          if (length(stringBuffer)>0) and (stringBuffer[length(stringBuffer)]=#13)
+          then setLength(stringBuffer,length(stringBuffer)-1);
+          queue.append(stringBuffer);
+          stringBuffer:='';
+        end else stringBuffer+=ReadBuffer[k];
+      end;
+    end else eofReached:=true;
+  end;
+
+CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST fileChangeTimeoutInSeconds:double; CONST loc: T_tokenLocation; VAR context: T_context);
   begin
     inherited create(loc);
     try
+      eofReached:=false;
+      queue.create;
       fname:=fileName;
-      assign(fileHandle,fileName);
-      reset(fileHandle);
+      timeout:=fileChangeTimeoutInSeconds/(24*60*60);
+      fileStream := TFileStream.create(fileName, fmOpenRead or fmShareDenyNone);
+      fileStream.Seek(0, soFromBeginning);
+      stringBuffer:='';
+      fillQueue;
       initialized:=true;
     except
       context.raiseError('Error when trying to open file: '+fileName,loc);
@@ -609,27 +641,37 @@ FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CO
   VAR l:string;
   begin
     result.triggeredByReturn:=false;
-    if eof(fileHandle)
-    then result.literal:=newVoidLiteral
-    else begin
-      readln(fileHandle,l);
-      result.literal:=newStringLiteral(l);
+    //The following call might block for "fileChangeTimeoutInSeconds" seconds = "timeout" days
+    while (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue) then begin
+      if timeout>0.0000011574074074074074 then sleep(100);
     end;
+    if queue.hasNext
+    then result.literal:=newStringLiteral(queue.next)
+    else if stringBuffer<>'' then begin
+      result.literal:=newStringLiteral(stringBuffer);
+      stringBuffer:='';
+    end else result.literal:=newVoidLiteral;
   end;
 
 DESTRUCTOR T_fileLineIterator.destroy;
   begin
-    if initialized then try
-      close(fileHandle);
-    finally
+    try
+      fileStream.free;
+      queue.destroy;
+    except
     end;
   end;
 
 FUNCTION fileLineIterator intFuncSignature;
+  VAR timeout:double=-1;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and fileExists(str0^.value) and context.checkSideEffects('fileLineIterator',tokenLocation,[se_readFile]) then begin
-      new(P_fileLineIterator(result),create(str0^.value,tokenLocation,context));
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
+       (arg0^.literalType=lt_string) and fileExists(str0^.value) and
+       ((params^.size=1) or (arg1^.literalType in [lt_smallint,lt_bigint,lt_real])) and
+       context.checkSideEffects('fileLineIterator',tokenLocation,[se_readFile]) then begin
+      if (params^.size=2) then timeout:=P_numericLiteral(arg1)^.floatValue;
+      new(P_fileLineIterator(result),create(str0^.value,-1,tokenLocation,context));
       if not(P_fileLineIterator(result)^.initialized) then begin
         dispose(result,destroy);
         result:=nil;
@@ -1240,7 +1282,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary{$ifdef fullVersion},'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc'{$endif});
   registerRule(LIST_NAMESPACE,'futureMap', @futureMap_imp,ak_binary{$ifdef fullVersion},'futureMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc. The tasks are processed in parallel.'{$endif});
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f'{$endif});
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_variadic_1{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif});
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary{$ifdef fullVersion},'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)'{$endif});
