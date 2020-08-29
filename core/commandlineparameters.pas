@@ -83,6 +83,7 @@ CONST
   FLAG_SHOW_INFO    ='-info';
   FLAG_STDOUT       ='-stdout';
   FLAG_STDERR       ='-stderr';
+  FLAG_EDIT         ='-edit';
   FLAG_TEXT:array[T_cmdLineFlag] of string=(FLAG_GUI         ,
                                             FLAG_QUIET       ,
                                             FLAG_SILENT      ,
@@ -222,6 +223,7 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
           exit(true);
         end;
         //flags:
+        if param=FLAG_EDIT         then begin parsingState.parsingState:=pst_parsingFileToEdit; exit(true); end;
         if param=FLAG_PROFILE      then begin include(flags,{$ifdef fullVersion}clf_PROFILE{$else}clf_GUI{$endif}); exit(true); end;
         if param=FLAG_GUI          then begin include(flags,clf_GUI         ); exit(true); end;
         if param=FLAG_QUIET        then begin include(flags,clf_QUIET       ); exit(true); end;
@@ -235,8 +237,8 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param=FLAG_STDERR       then begin include(flags,clf_FORCE_STDERR); Exclude(flags,clf_FORCE_STDOUT); exit(true); end;
         if param=FLAG_STDOUT       then begin include(flags,clf_FORCE_STDOUT); Exclude(flags,clf_FORCE_STDERR); exit(true); end;
         //state changes:
-        if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite; exit(true); end;
-        if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;  exit(true); end;
+        if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite;     exit(true); end;
+        if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;      exit(true); end;
         if param='-restrict'       then begin parsingState.parsingState:=pst_parsingSideEffectProfile;  exit(true); end;
       end;
       pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
@@ -288,17 +290,20 @@ PROCEDURE T_commandLineParameters.initFromCommandLine;
       if mnhExecutionOptions.parseSingleMnhParameter(paramStr(i),parsingState)
       then inc(i) else case parsingState.parsingState of
         pst_initial: begin
-          if (paramStr(i)='-edit')
-          then parsingState.parsingState:=pst_parsingFileToEdit
-          else begin
-            fileOrCommandToInterpret:=paramStr(i);
-            if not(mnhExecutionOptions.executeCommand) then begin
-              if fileExists(fileOrCommandToInterpret) then begin
-                mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState);
-                fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
-              end else parsingState.logCmdLineParsingError('Given script does not exist: '+fileOrCommandToInterpret);
-            end;
-            parsingState.parsingState:=pst_parsingScriptParameters;
+          fileOrCommandToInterpret:=paramStr(i);
+          if not(mnhExecutionOptions.executeCommand) then begin
+            if fileExists(fileOrCommandToInterpret) then begin
+              mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState);
+              fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
+              if parsingState.parsingState=pst_parsingFileToEdit then begin
+                {$ifdef fullVersion}
+                  addFileToOpen(paramStr(i));
+                {$else}
+                  include(mnhExecutionOptions.flags,clf_GUI);
+                {$endif}
+                fileOrCommandToInterpret:='';
+              end;
+            end else parsingState.logCmdLineParsingError('Given script does not exist: '+fileOrCommandToInterpret);
           end;
           inc(i);
         end;
@@ -321,8 +326,7 @@ PROCEDURE T_commandLineParameters.initFromCommandLine;
     end;
   end;
 
-FUNCTION T_mnhExecutionOptions.parseShebangParameters(CONST fileName: string;
-  VAR parsingState: T_parsingState): boolean;
+FUNCTION T_mnhExecutionOptions.parseShebangParameters(CONST fileName: string; VAR parsingState: T_parsingState): boolean;
   VAR parameters:T_arrayOfString;
       k:longint;
   begin
@@ -502,7 +506,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     wl('  '+FLAG_EXEC_CMD+'              directly execute the following command');
     wl('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
     wl('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
-    wl('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
+    wl('  '+FLAG_EDIT+' <filename>  opens file(s) in editor instead of interpreting directly');
     wl('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     wl('                    if no options are given, the global output settings will be used');
     wl('  +out <filename>[(options)]  As -out but appending to the file if existing.');
