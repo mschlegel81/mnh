@@ -185,17 +185,14 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
     accessed:=false;
     try
       stream:=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
-      try
-        accessed:=true;
-        size:=stream.size;
-        stream.Seek(0,soFromBeginning);
-        setLength(result,size);
-        if size>0 then stream.ReadBuffer(result[1],size);
-      except
-        accessed:=false;
-      end;
-    finally
+      size:=stream.size;
+      stream.Seek(0,soFromBeginning);
+      setLength(result,size);
+      if size>0 then stream.ReadBuffer(result[1],size);
+      accessed:=true;
       stream.destroy;
+    except
+      accessed:=false;
     end;
   end;
 
