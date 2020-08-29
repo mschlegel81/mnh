@@ -336,6 +336,7 @@ FUNCTION T_mnhExecutionOptions.parseShebangParameters(CONST fileName: string; VA
       parsingState.logCmdLineParsingError('Invalid parameter/switch given by shebang: "'+parameters[k]+'"');
       exit(false);
     end;
+    if parsingState.parsingState=pst_initial then parsingState.parsingState:=pst_parsingScriptParameters;
     result:=true;
   end;
 
