@@ -103,13 +103,13 @@ private buildExe(B:Map)->
       ensureBuildNumber;
       tprint('Building ',B['targetDest'].systemSpecificFilename);
       local compilerOutput:=exec@(B['compilerCall']);
-      assert(compilerOutput[1]==0,' compiler returned a nonzero exit code ',compilerOutput[1]);
       local sepLine:=repeat('-',compilerOutput[0].each(line,line.length,max) orElse 0);
-      compilerOutput:=sepLine|
-                      B['compilerCall'].flatten.join(' ')|
-                      sepLine|
-                      compilerOutput[0];
-      BUILD_LOG.appendFileLines(compilerOutput);
+      compilerOutput[0]:=sepLine|
+                         B['compilerCall'].flatten.join(' ')|
+                         sepLine|
+                         compilerOutput[0];
+      BUILD_LOG.appendFileLines(compilerOutput[0]);
+      assert(compilerOutput[1]==0,' compiler returned a nonzero exit code ',compilerOutput[1]);
       myMove(B['compilate'],B['targetDest']);
       B.needBuild
       ? fail('Build failed - see '&BUILD_LOG&' for details')
