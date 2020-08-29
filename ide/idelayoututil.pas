@@ -890,7 +890,6 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       mainForm.height:=min(max(stream.readLongint,100),screen.height);
       mainForm.width :=min(max(stream.readLongint,100),screen.width);
       windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
-
       for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
     end else begin
       stream.readLongint;
@@ -898,7 +897,7 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       stream.readLongint;
       stream.readLongint;
       windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
-      for cp in PAGES do stream.readDWord;
+      for cp in PAGES do stream.readWord;
     end;
     activeComponents:=[];
     for ic in T_ideComponent do if ic<>icImage then begin
