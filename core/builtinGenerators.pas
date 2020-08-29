@@ -638,12 +638,16 @@ FUNCTION T_fileLineIterator.toString(CONST lengthLimit:longint=maxLongint):strin
   end;
 
 FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
-  VAR l:string;
   begin
     result.triggeredByReturn:=false;
     //The following call might block for "fileChangeTimeoutInSeconds" seconds = "timeout" days
     while (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue) then begin
-      if timeout>0.0000011574074074074074 then sleep(100);
+      if context^.continueEvaluation then begin
+        if (timeout>0.0000011574074074074074) then sleep(100);
+      end else begin
+        result.literal:=newVoidLiteral;
+        exit;
+      end;
     end;
     if queue.hasNext
     then result.literal:=newStringLiteral(queue.next)
@@ -671,7 +675,7 @@ FUNCTION fileLineIterator intFuncSignature;
        ((params^.size=1) or (arg1^.literalType in [lt_smallint,lt_bigint,lt_real])) and
        context.checkSideEffects('fileLineIterator',tokenLocation,[se_readFile]) then begin
       if (params^.size=2) then timeout:=P_numericLiteral(arg1)^.floatValue;
-      new(P_fileLineIterator(result),create(str0^.value,-1,tokenLocation,context));
+      new(P_fileLineIterator(result),create(str0^.value,timeout,tokenLocation,context));
       if not(P_fileLineIterator(result)^.initialized) then begin
         dispose(result,destroy);
         result:=nil;
