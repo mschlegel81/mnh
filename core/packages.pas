@@ -953,7 +953,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationG
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
-        t:T_tokenRange;
+        t:T_tokenRange=(first:nil;last:nil);
         i:longint;
         {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin

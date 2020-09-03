@@ -367,33 +367,6 @@ DESTRUCTOR T_filterGenerator.destroy;
     disposeLiteral(filterExpression);
   end;
 
-FUNCTION filter_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
-      case arg0^.literalType of
-        lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
-        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
-          new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
-        end;
-      end;
-    end;
-  end;
-
-FUNCTION parallelFilter_imp intFuncSignature;
-  begin
-    result:=nil;
-    if not(tco_spawnWorker in context.threadOptions) or (context.callDepth>STACK_DEPTH_LIMIT-16) or not(isMemoryInComfortZone) then exit(filter_imp(params,tokenLocation,context,recycler));
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
-      case arg0^.literalType of
-        lt_list..lt_emptyMap: result:=processFilterParallel(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
-        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
-          new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
-        end;
-      end;
-    end;
-  end;
-
 TYPE
   P_mapGenerator=^T_mapGenerator;
   T_mapGenerator=object(T_builtinGeneratorExpression)
@@ -413,6 +386,7 @@ CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST
   begin
     inherited create(loc);
     sourceGenerator:=source;
+    sourceGenerator^.rereference;
     mapExpression:=mapEx;
     mapExpression^.rereference;
     isNullary:=mapEx^.canApplyToNumberOfParameters(0);
@@ -449,127 +423,395 @@ DESTRUCTOR T_mapGenerator.destroy;
     disposeLiteral(mapExpression);
   end;
 
-FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
-  begin
-    new(P_mapGenerator(result),create(newIterator(generator,tokenLocation),mapping,tokenLocation));
-  end;
-
-FUNCTION lazyMap_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
-                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      new(P_mapGenerator(result),create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
-    end;
-  end;
-
 TYPE
-  P_futureMapGenerator=^T_futureMapGenerator;
-  T_futureMapGenerator=object(T_builtinGeneratorExpression)
+  P_parallelMapGenerator=^T_parallelMapGenerator;
+  T_parallelMapGenerator=object(T_builtinGeneratorExpression)
     private
-      sourceGenerator:P_expressionLiteral;
-      mapExpression:P_expressionLiteral;
-      isNullary:boolean;
-      firstToAggregate,
-      lastToAggregate:P_futureMapLiteral;
-      doneFetching:boolean;
-      PROCEDURE enqueueNext(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer);
+      isExpressionNullary:boolean;
+      firstToAggregate   :P_mapTask;
+      lastToAggregate    :P_mapTask;
+      sourceGenerator    :P_expressionLiteral;
+      mapExpression      :P_expressionLiteral;
+      doneFetching       :boolean;
+      recycling:record
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
+        fill:longint;
+      end;
+      taskChain   : T_taskChain;
+      outputQueue : specialize G_queue<P_literal>;
+      FUNCTION canAggregate:longint;
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
     public
-      CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation; VAR context:T_context);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
   end;
 
-PROCEDURE T_futureMapGenerator.enqueueNext(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer);
-  VAR nextUnmapped:P_literal;
-      task:P_futureMapLiteral;
-      taskParameters:P_listLiteral;
-  begin
-    nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-    if nextUnmapped=nil then begin
-      doneFetching:=true;
-      exit;
-    end;
-    if nextUnmapped^.literalType=lt_void
-    then begin
-      doneFetching:=true;
-      disposeLiteral(nextUnmapped);
-      exit;
-    end;
-    if (P_context(context)^.messages^.continueEvaluation) then begin
-      taskParameters:=newListLiteral(1);
-      if not(isNullary) then taskParameters^.append(nextUnmapped,false)
-                        else disposeLiteral(nextUnmapped);
-      new(task,create(mapExpression,taskParameters,location));
-      task^.rereference;
-      enqueueFutureTask(task,P_context(context)^,P_recycler(recycler)^);
-      disposeLiteral(taskParameters);
-      if firstToAggregate=nil then begin
-        firstToAggregate:=task;
-        lastToAggregate:=task;
-      end else begin
-        lastToAggregate^.nextToAggregate:=task;
-        lastToAggregate:=task;
+  P_parallelFilterGenerator=^T_parallelFilterGenerator;
+  T_parallelFilterGenerator=object(T_builtinGeneratorExpression)
+    private
+      firstToAggregate   :P_filterTask;
+      lastToAggregate    :P_filterTask;
+      sourceGenerator    :P_expressionLiteral;
+      filterExpression   :P_expressionLiteral;
+      doneFetching       :boolean;
+      recycling:record
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_filterTask;
+        fill:longint;
       end;
-    end else disposeLiteral(nextUnmapped);
+      taskChain   : T_taskChain;
+      outputQueue : specialize G_queue<P_literal>;
+      FUNCTION canAggregate:longint;
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+    public
+      CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation; VAR context:T_context);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
   end;
 
-CONSTRUCTOR T_futureMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
+CONST TASKS_TO_QUEUE_PER_CPU=4;
+
+CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation; VAR context:T_context);
   begin
     inherited create(loc);
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
-    isNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
+    taskChain.create(TASKS_TO_QUEUE_PER_CPU*settings.cpuCount,context);
+    isExpressionNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
+    recycling.fill:=0;
+    doneFetching:=false;
+    outputQueue.create;
     firstToAggregate:=nil;
     lastToAggregate:=nil;
+  end;
+
+CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressionLiteral; CONST loc: T_tokenLocation; VAR context:T_context);
+  begin
+    inherited create(loc);
+    sourceGenerator:=source;
+    filterExpression:=filterEx;
+    filterExpression^.rereference;
+    taskChain.create(TASKS_TO_QUEUE_PER_CPU*settings.cpuCount,context);
+    recycling.fill:=0;
     doneFetching:=false;
+    outputQueue.create;
+    firstToAggregate:=nil;
+    lastToAggregate:=nil;
   end;
 
-FUNCTION T_futureMapGenerator.toString(CONST lengthLimit: longint): string;
+FUNCTION T_parallelMapGenerator.canAggregate:longint;
+  VAR toAggregate:P_mapTask;
   begin
-    result:=sourceGenerator^.toString(30)+'.futureMap('+mapExpression^.toString(20)+')';
+    result:=0;
+    while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
+      assert(firstToAggregate^.getContext<>nil);
+      assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
+      inc(result);
+      toAggregate:=firstToAggregate;
+      firstToAggregate:=firstToAggregate^.nextToAggregate;
+      assert(toAggregate^.mapTaskResult<>nil);
+      if toAggregate^.mapTaskResult^.literalType=lt_void
+      then disposeLiteral    (toAggregate^.mapTaskResult)
+      else outputQueue.append(toAggregate^.mapTaskResult);
+      with recycling do if fill<length(dat) then begin
+        toAggregate^.mapTaskResult:=nil;
+        toAggregate^.nextToAggregate:=nil;
+        dat[fill]:=toAggregate;
+        inc(fill);
+      end else dispose(toAggregate,destroy);
+    end;
   end;
 
-FUNCTION T_futureMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
-  VAR curr:P_futureMapLiteral;
+FUNCTION T_parallelFilterGenerator.canAggregate:longint;
+  VAR toAggregate:P_filterTask;
   begin
-    if firstToAggregate=nil then exit(NIL_EVAL_RESULT);
+    result:=0;
+    while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
+      assert(firstToAggregate^.getContext<>nil);
+      assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
+      inc(result);
+      toAggregate:=firstToAggregate;
+      firstToAggregate:=P_filterTask(firstToAggregate^.nextToAggregate);
+      if toAggregate^.mapTaskResult<>nil then begin
+        if toAggregate^.mapTaskResult^.literalType=lt_void
+        then disposeLiteral    (toAggregate^.mapTaskResult)
+        else outputQueue.append(toAggregate^.mapTaskResult);
+      end;
+      with recycling do if fill<length(dat) then begin
+        toAggregate^.mapTaskResult:=nil;
+        toAggregate^.nextToAggregate:=nil;
+        dat[fill]:=toAggregate;
+        inc(fill);
+      end else dispose(toAggregate,destroy);
+    end;
+  end;
+
+PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+  VAR nextUnmapped  :P_literal=nil;
+      parameterValue:P_literal=nil;
+      task          :P_mapTask=nil;
+      doneQueuing:boolean=false;
+  begin
+    if doneFetching then begin
+      canAggregate;
+      exit;
+    end;
     repeat
-      curr:=firstToAggregate;
-      firstToAggregate:=firstToAggregate^.nextToAggregate;
-      result:=curr^.evaluateToLiteral(location,context,recycler);
-      disposeLiteral(curr);
-      if not(doneFetching) then enqueueNext(location,context,recycler);
-    until (firstToAggregate=nil) or (result.literal<>nil) and (result.literal^.literalType<>lt_void);
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
+      if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
+        doneFetching:=true;
+        taskChain.flush;
+      end else begin
+        nextUnmapped^.rereference;
+        with recycling do if fill>0 then begin
+          dec(fill);
+          task:=dat[fill];
+          task^.reattach(recycler);
+        end else new(task,createMapTask(context.getFutureEnvironment(recycler),mapExpression));
+        if firstToAggregate=nil then begin
+          firstToAggregate:=task;
+          lastToAggregate:=task;
+        end else begin
+          lastToAggregate^.nextToAggregate:=task;
+          lastToAggregate:=task;
+        end;
+        if isExpressionNullary
+        then parameterValue:=nil
+        else parameterValue:=nextUnmapped;
+        if taskChain.enqueueOrExecute(task^.define(parameterValue,loc),recycler) then doneQueuing:=true;
+        disposeLiteral(nextUnmapped);
+      end;
+    until doneFetching or doneQueuing or not(context.continueEvaluation);
   end;
 
-DESTRUCTOR T_futureMapGenerator.destroy;
-  VAR curr:P_futureMapLiteral;
+PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+  VAR nextUnmapped  :P_literal=nil;
+      task          :P_filterTask=nil;
+      doneQueuing:boolean=false;
   begin
-    while firstToAggregate<>nil do begin
-      curr:=firstToAggregate;
-      firstToAggregate:=firstToAggregate^.nextToAggregate;
-      disposeLiteral(curr);
+    if doneFetching then begin
+      canAggregate;
+      exit;
+    end;
+    repeat
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
+      if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
+        doneFetching:=true;
+        taskChain.flush;
+      end else begin
+        with recycling do if fill>0 then begin
+          dec(fill);
+          task:=dat[fill];
+          task^.reattach(recycler);
+        end else new(task,createFilterTask(context.getFutureEnvironment(recycler),filterExpression));
+        if firstToAggregate=nil then begin
+          firstToAggregate:=task;
+          lastToAggregate:=task;
+        end else begin
+          lastToAggregate^.nextToAggregate:=task;
+          lastToAggregate:=task;
+        end;
+        if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true;
+      end;
+    until doneFetching or doneQueuing or not(context.continueEvaluation);
+  end;
+
+FUNCTION T_parallelMapGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:=sourceGenerator^.toString(30)+'.pMap('+mapExpression^.toString(20)+')';
+  end;
+
+FUNCTION T_parallelFilterGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:=sourceGenerator^.toString(30)+'.pFilter('+filterExpression^.toString(20)+')';
+  end;
+
+FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  begin
+    result.triggeredByReturn:=false;
+    if outputQueue.hasNext then begin
+      result.literal:=outputQueue.next;
+    end else begin
+      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
+      if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
+      then begin
+        result.literal:=newVoidLiteral;
+      end else repeat
+        sleep(1);
+        canAggregate;
+        if outputQueue.hasNext then begin
+          result.literal:=outputQueue.next;
+          exit(result);
+        end;
+      until not(context^.continueEvaluation);
+    end;
+  end;
+
+FUNCTION T_parallelFilterGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  begin
+    result.triggeredByReturn:=false;
+    if outputQueue.hasNext then begin
+      result.literal:=outputQueue.next;
+    end else begin
+      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
+      if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
+      then begin
+        result.literal:=newVoidLiteral;
+      end else repeat
+        sleep(1);
+        canAggregate;
+        if outputQueue.hasNext then begin
+          result.literal:=outputQueue.next;
+          exit(result);
+        end;
+      until not(context^.continueEvaluation);
+    end;
+  end;
+
+PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+  begin
+    repeat
+      if outputQueue.hasNext
+      then container^.append(outputQueue.next,false)
+      else doEnqueueTasks(loc,context,recycler);
+    until doneFetching and (firstToAggregate=nil) or not(context.continueEvaluation);
+    while outputQueue.hasNext do container^.append(outputQueue.next,false)
+  end;
+
+PROCEDURE T_parallelFilterGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+  begin
+    repeat
+      if outputQueue.hasNext
+      then container^.append(outputQueue.next,false)
+      else doEnqueueTasks(loc,context,recycler);
+    until doneFetching and (firstToAggregate=nil) or not(context.continueEvaluation);
+    while outputQueue.hasNext do container^.append(outputQueue.next,false)
+  end;
+
+DESTRUCTOR T_parallelMapGenerator.destroy;
+  VAR literal:P_literal;
+  begin
+    while firstToAggregate<>nil do canAggregate;
+    with recycling do while fill>0 do begin
+      dec(fill);
+      dispose(dat[fill],destroy);
     end;
     disposeLiteral(sourceGenerator);
     disposeLiteral(mapExpression);
+    while outputQueue.hasNext do begin
+      {$ifdef debugMode}
+      writeln(stdErr,'T_parallelMapGenerator.destroy - remaining item in queue: ',literal^.toString());
+      {$endif}
+      literal:=outputQueue.next;
+      disposeLiteral(literal);
+    end;
+    outputQueue.destroy;
   end;
 
-FUNCTION futureMap_imp intFuncSignature;
-  CONST TASKS_TO_QUEUE_PER_CPU=4;
-  VAR f:P_futureMapGenerator;
-      i:longint;
+DESTRUCTOR T_parallelFilterGenerator.destroy;
+  VAR literal:P_literal;
+  begin
+    while firstToAggregate<>nil do canAggregate;
+    with recycling do while fill>0 do begin
+      dec(fill);
+      dispose(dat[fill],destroy);
+    end;
+    disposeLiteral(sourceGenerator);
+    disposeLiteral(filterExpression);
+    while outputQueue.hasNext do begin
+      {$ifdef debugMode}
+      writeln(stdErr,'T_parallelFilterGenerator.destroy - remaining item in queue: ',literal^.toString());
+      {$endif}
+      literal:=outputQueue.next;
+      disposeLiteral(literal);
+    end;
+    outputQueue.destroy;
+  end;
+
+FUNCTION map_imp intFuncSignature;
   begin
     result:=nil;
-    if not(tco_spawnWorker in context.threadOptions) then exit(lazyMap_imp(params,tokenLocation,context,recycler));
-    if (params<>nil) and (params^.size=2) and ((arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) or (arg0^.literalType in C_compoundTypes))
-                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      new(f,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
-      for i:=1 to TASKS_TO_QUEUE_PER_CPU*settings.cpuCount do f^.enqueueNext(tokenLocation,@context,@recycler);
-      result:=f;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
+        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+      case arg0^.literalType of
+        lt_list..lt_emptyMap: result:=processMapSerial(arg0,P_expressionLiteral(arg1),tokenLocation,context,recycler);
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
+          new(P_mapGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
+      end;
     end;
+  end;
+
+FUNCTION filter_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      case arg0^.literalType of
+        lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
+          new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
+      end;
+    end;
+  end;
+
+FUNCTION pMap_imp intFuncSignature;
+  VAR mapGenerator:P_parallelMapGenerator;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
+        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
+      then begin
+        new(mapGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation,context));
+        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(mapGenerator);
+        result:=newListLiteral();
+        mapGenerator^.collectResults(P_listLiteral(result),tokenLocation,context,recycler);
+        dispose(mapGenerator,destroy);
+        {$ifdef debugMode}
+        writeln(stdErr,'pMap (',string(tokenLocation),') returns ',result^.typeString,': ',result^.toString());
+        writeln(stdErr,'Result is referenced       ',result^.getReferenceCount,' times');
+        writeln(stdErr,'arg0 is referenced         ',arg0^.getReferenceCount,' times');
+        {$endif}
+      end else result:=map_imp(params,tokenLocation,context,recycler);
+    end;
+  end;
+
+FUNCTION parallelFilter_imp intFuncSignature;
+  VAR filterGenerator:P_parallelFilterGenerator;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
+        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
+      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
+      then begin
+        new(filterGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation,context));
+        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(filterGenerator);
+        if arg0^.literalType= lt_set then begin
+          result:=newSetLiteral(set0^.size div 2);
+          filterGenerator^.collectResults(P_setLiteral(result),tokenLocation,context,recycler);
+        end else begin
+          result:=newListLiteral();
+          filterGenerator^.collectResults(P_listLiteral(result),tokenLocation,context,recycler);
+        end;
+        dispose(filterGenerator,destroy);
+        {$ifdef debugMode}
+        writeln(stdErr,'pFilter (',string(tokenLocation),') returns ',result^.typeString,': ',result^.toString());
+        writeln(stdErr,'Result is referenced          ',result^.getReferenceCount,' times');
+        writeln(stdErr,'arg0 is referenced            ',arg0^.getReferenceCount,' times');
+        {$endif}
+      end else result:=filter_imp(params,tokenLocation,context,recycler);
+    end;
+  end;
+
+FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+  begin
+    new(P_mapGenerator(result),create(generator,mapping,tokenLocation));
   end;
 
 TYPE
@@ -1282,10 +1524,11 @@ INITIALIZATION
   newGeneratorFromStreamCallback:=@newGeneratorFromStream;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif});
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif});
+  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
+  BUILTIN_PMAP:=
+  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
   registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
-  registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary{$ifdef fullVersion},'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc'{$endif});
-  registerRule(LIST_NAMESPACE,'futureMap', @futureMap_imp,ak_binary{$ifdef fullVersion},'futureMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc. The tasks are processed in parallel.'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_variadic_1{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif});
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});

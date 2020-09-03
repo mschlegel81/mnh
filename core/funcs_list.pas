@@ -582,28 +582,6 @@ FUNCTION group_imp intFuncSignature;
     end;
   end;
 
-FUNCTION map_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      result:=processMapSerial(arg0,P_expressionLiteral(arg1),tokenLocation,context,recycler);
-    end;
-  end;
-
-FUNCTION pMap_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
-      then result:=processMapParallel(arg0,P_expressionLiteral(arg1),tokenLocation,context,recycler)
-      else result:=processMapSerial  (arg0,P_expressionLiteral(arg1),tokenLocation,context,recycler);
-    end;
-  end;
-
 FUNCTION toGenerator_imp intFuncSignature;
   begin
     result:=nil;
@@ -652,9 +630,6 @@ INITIALIZATION
   {$ifdef fullVersion}groupLoc:={$endif}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,
                               'group',  @group_imp ,ak_variadic_2{$ifdef fullVersion},'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif});
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
-  BUILTIN_PMAP:=
-  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
   registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
   registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
                                                                             ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});
