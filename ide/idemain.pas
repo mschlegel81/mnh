@@ -261,6 +261,7 @@ PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
+  VAR meta:P_editorMeta;
   begin
     with ideSettings do begin
       case windowStateForUpdate of
@@ -279,6 +280,9 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
       activeComponents:=[];
     end;
+    meta:=workspace.currentEditor;
+    if meta<>nil then ActiveControl:=meta^.editor
+                 else ActiveControl:=workspace.createNewFile^.editor;
   end;
 
 FUNCTION anyEvaluationRunning:boolean;
