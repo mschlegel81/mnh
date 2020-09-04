@@ -356,7 +356,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
     context^.beginEvaluation;
     if context^.messages^.continueEvaluation then with mapPayload do begin
       if mapRule^.evaluateToBoolean(location,context,@recycler,true,mapParameter,nil)
-      then mapTaskResult:=mapParameter
+      then mapTaskResult:=mapParameter^.rereferenced
       else mapTaskResult:=nil;
     end;
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);

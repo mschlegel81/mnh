@@ -351,90 +351,94 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if (first^.tokType=tt_userRule) then begin
-        {$ifdef useTryCatchBlocks}
-        try
-        {$endif}
-          if not(P_rule(first^.data)^.canBeApplied(first^.location,parameterListLiteral,replace,@context,recycler)) then begin
-            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
-            exit;
+      case first^.tokType of
+        tt_userRule: begin
+          {$ifdef useTryCatchBlocks}
+          try
+          {$endif}
+            if not(P_rule(first^.data)^.canBeApplied(first^.location,parameterListLiteral,replace,@context,recycler)) then begin
+              context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
+              exit;
+            end;
+          {$ifdef useTryCatchBlocks}
+          except
+            on e:Exception do begin
+              context.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
+              exit;
+            end;
           end;
-        {$ifdef useTryCatchBlocks}
-        except
-          on e:Exception do begin
-            context.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
-            exit;
-          end;
+          {$endif}
         end;
-        {$endif}
-      end else if (first^.tokType=tt_rulePutCacheValue) then begin
-        newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral);
-        replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
-        replace.last:=replace.first;
-      end else if (first^.tokType=tt_aggregatorConstructor) then begin
-        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
-           (parameterListLiteral^.value[0]^.literalType=lt_expression) and
-           (P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(2) or
-            P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(1))
-        then begin
-          newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
-          replace.first:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
-          replace.last:=replace.first;
-        end else begin
-          context.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
-          exit;
-        end;
-      end else if (first^.tokType=tt_intrinsicRule) then begin
-        {$ifdef useTryCatchBlocks}
-        try
-        {$endif}
-        {$ifdef fullVersion}
-        if tco_stackTrace in context.threadOptions then begin
-          context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),newCallParametersNode(parameterListLiteral));
-          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
-          context.callStackPop(nil);
-        end else
-        {$endif}
-        newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
-        {$ifdef useTryCatchBlocks}
-        except
-          on e:Exception do begin
-            context.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
-            exit;
-          end;
-        end;
-        {$endif}
-        if newLiteral<>nil then begin
+        tt_rulePutCacheValue: begin
+          newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral);
           replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
           replace.last:=replace.first;
-        end else if not(context.messages^.continueEvaluation) then exit else begin
-          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
-          exit;
         end;
-      end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
-        if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
-          newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,@recycler,parameterListLiteral).literal;
+        tt_aggregatorConstructor: begin
+          if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
+             (parameterListLiteral^.value[0]^.literalType=lt_expression) and
+             (P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(2) or
+              P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(1))
+          then begin
+            newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
+            replace.first:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
+            replace.last:=replace.first;
+          end else begin
+            context.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+            exit;
+          end;
+        end;
+        tt_intrinsicRule: begin
+          {$ifdef useTryCatchBlocks}
+          try
+          {$endif}
+          {$ifdef fullVersion}
+          if tco_stackTrace in context.threadOptions then begin
+            context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),newCallParametersNode(parameterListLiteral));
+            newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
+            context.callStackPop(nil);
+          end else
+          {$endif}
+          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
+          {$ifdef useTryCatchBlocks}
+          except
+            on e:Exception do begin
+              context.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
+              exit;
+            end;
+          end;
+          {$endif}
           if newLiteral<>nil then begin
             replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
             replace.last:=replace.first;
           end else if not(context.messages^.continueEvaluation) then exit else begin
-            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
+            context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
             exit;
           end;
-        end else begin
-          inlineRule:=first^.data;
-          //failing "replaces" for inline rules will raise evaluation error.
-          if not(inlineRule^.matchesPatternAndReplaces(parameterListLiteral,first^.location,replace,context,recycler)) then exit;
         end;
-      end else begin
-        context.raiseError('Trying to apply a rule which is no rule!',errorLocation);
-        {$ifdef debugMode}
-        writeln('***********');
-        writeln('* No-rule token has type: ',first^.tokType);
-        writeln('* No-rule token reads   : ',first^.singleTokenToString);
-        writeln('***********');
-        {$endif}
-        exit;
+        tt_literal,tt_aggregatorExpressionLiteral: if (P_literal(first^.data)^.literalType=lt_expression) then begin
+          if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
+            newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,@recycler,parameterListLiteral).literal;
+            if newLiteral<>nil then begin
+              replace.first:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
+              replace.last:=replace.first;
+            end else if not(context.messages^.continueEvaluation) then exit else begin
+              context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
+              exit;
+            end;
+          end else begin
+            inlineRule:=first^.data;
+            //failing "replaces" for inline rules will raise evaluation error.
+            if not(inlineRule^.matchesPatternAndReplaces(parameterListLiteral,first^.location,replace,context,recycler)) then exit;
+          end
+        end else begin
+          context.raiseError('Trying to apply a rule which is no rule! ('+P_literal(first^.data)^.typeString+')',errorLocation);
+          exit;
+        end;
+        else begin
+          context.raiseError('Trying to apply a rule which is no rule!',errorLocation);
+          exit;
+        end;
       end;
       recycler.disposeToken(first);
       if parameterListToken<>nil then recycler.disposeToken(parameterListToken);
