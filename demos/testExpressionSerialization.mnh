@@ -35,7 +35,7 @@ main->begin
    primeGenerator,
    isaacRandomGenerator(123,5),
    primeGenerator.sqrt,
-   primeGenerator.filter({isPrime($x+2)}).lazyMap({[$x,$x+2]}),
+   primeGenerator.filter({isPrime($x+2)}).map({[$x,$x+2]}),
    permutationIterator(['a'..'c']),
    permutationIterator(5),
    fileLineIterator(myPath.relativeFileName)].map(::testSerialize);

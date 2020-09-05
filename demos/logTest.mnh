@@ -4,7 +4,7 @@ EXIT_CODE:=156; //For Linux, exit codes must be in range 0..255
 main->begin
   deleteFile(LOG_FILE_NAME);
   local code:=executor.exec([myPath,'out']).trailing;
-  fileLineIterator(LOG_FILE_NAME).map(::print);
+  fileLines(LOG_FILE_NAME).map(::print);
   deleteFile(LOG_FILE_NAME);
   code==EXIT_CODE
   ? print('Exit code is okay')
@@ -13,7 +13,7 @@ end;
 
 main('out')->begin
   note('Creating output...');
-  rangeGenerator(1,1000).lazyMap(::factorize).map(::print);
+  rangeGenerator(1,1000).map(::factorize).map(::print).agg(|);
   warn('This is all...');
   setExitCode(156);
 end;

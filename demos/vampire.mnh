@@ -5,20 +5,25 @@ private getFangs(i:Int)->begin
   local dividers:=factorize(i).elementFrequency.each(x,powers(x),*).toList;
   dividers:=dividers[minDiv<=dividers and sqr(dividers)<=i];
   [dividers,i div dividers].transpose
-    .pFilter({!($f mod 10=0).agg(AND) AND $f.digits.flatten.sort==iDigits});
+    .filter({!($f mod 10=0).agg(AND) AND $f.digits.flatten.sort==iDigits});
 end;
 
 @SuppressUnusedWarning
 isVampire(i:Int)->(i.digits.size and 1)=0 AND getFangs(i).size>=1;
 
-private printVampire(i:Int)->begin
+private printableVampire(i:Int)->begin
   local fangs:=getFangs(i);
   fangs==[]
   ? void
-  : print(i," is a vampire. It's fangs are: ",join(fangs," or ")) orElse true;
+  : format("%s is a vampire. It's fangs are: %s",i, join(fangs," or "));
 end;
 
-private verbosePrintVampire(i)->printVampire(i) orElse print(i,' is not a vampire.');
+private verbosePrintVampire(i)->begin
+   local v:=printableVampire(i);
+   v.isVoid
+   ? print(i,' is not a vampire.')
+   : print(v);
+end;
 
 private vampireCandidateGenerator->{
 begin
@@ -41,4 +46,4 @@ main('rosetta')->begin
 end;
 
 //*As above but abridged for regression test
-main->vampireCandidateGenerator().lazyMap(::printVampire).head(25);
+main->vampireCandidateGenerator().pMap(::printableVampire).head(25).map(::print);

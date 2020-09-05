@@ -23,25 +23,25 @@ Q(n)->Q(n-Q(n-1))+Q(n-Q(n-2));
 
 @class=Hofstaedter
 @OEIS=A005228
-A005228->rangeGenerator(1).lazyMap(::R);
+A005228->rangeGenerator(1).map(::R);
 @class=Hofstaedter
 @OEIS=A030124
-A030124->rangeGenerator(1).lazyMap(::S);
+A030124->rangeGenerator(1).map(::S);
 @class=Hofstaedter
 @OEIS=A005206
-A005206->rangeGenerator(0).lazyMap(::G);
+A005206->rangeGenerator(0).map(::G);
 @class=Hofstaedter
 @OEIS=A005374
-A005374->rangeGenerator(0).lazyMap(::H);
+A005374->rangeGenerator(0).map(::H);
 @class=Hofstaedter
 @OEIS=A005378
-A005378->rangeGenerator(0).lazyMap(::F);
+A005378->rangeGenerator(0).map(::F);
 @class=Hofstaedter
 @OEIS=A005379
-A005379->rangeGenerator(0).lazyMap(::M);
+A005379->rangeGenerator(0).map(::M);
 @class=Hofstaedter
 @OEIS=A005185
-A005185->rangeGenerator(1).lazyMap(::Q);
+A005185->rangeGenerator(1).map(::Q);
 
 @demo_for=memoization, math
 main->

@@ -780,11 +780,11 @@ primeGenerator.head(10);
 [-1,1,-1,1,-2,2].agg(+); //+ is a valid aggregator marker
 
 //#permutationIterator
-permutationIterator([3,1,2]).map(::print);
+permutationIterator([3,1,2]).map(::print).toList;
 
-//#lists.lazyMap
-//The result is a new generator
-rangeGenerator(1,100).lazyMap({$x^2});
+//#lists.map
+//The result of <generator>.map(<f>) is a new generator
+rangeGenerator(1,100).map({$x^2});
 
 //#lists.mergeMaps
 //Merge maps; resolve conflicts via ::+

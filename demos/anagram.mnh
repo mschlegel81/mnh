@@ -5,7 +5,6 @@ readAnagramGroups(filename)->fileLines(filename)
                     .unique
                     .{$words.group($words.pMap({join($word.chars.sort)}))};
 
-
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);
 

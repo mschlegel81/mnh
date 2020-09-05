@@ -1,3 +1,4 @@
+#!C:\bin\mnh.exe -v1
 //This program finds values a,b,c,d,e,f,g such that a+b = b+c+d = d+e+f = f+g
 //Instead of brute-forcing, we may employ a multi-step filtering process:
 //  - Iterate over the first 4 elements, check via isPartialSolution if we should continue
@@ -19,14 +20,14 @@ main->begin
    \     X     X     X     /
     \___/ \___/ \___/ \___/~);
   print('The solutions for 1..7 (unique) are: ');
-  permutationIterator([1..7]).filter({isSolution@$p}).map({print('  ',$s)});
+  permutationIterator([1..7]).pMap({isSolution@$p ? $p : void}).map({print('  ',$s)}).agg(|);
   print('The solutions for 3..9 (unique) are: ');
-  permutationIterator([3..9]).filter({isSolution@$p}).map({print('  ',$s)});
+  permutationIterator([3..9]).pMap({isSolution@$p ? $p : void}).map({print('  ',$s)}).agg(|);
   print('The number of solutions for 0..9 (nonunique) is: ',
   cross([0..9],[0..9],[0..9],[0..9]).pEach(abcd,
     begin
       isPartialSolution@abcd
-      ? cross([0..9],[0..9]).pEach(ef,
+      ? cross([0..9],[0..9]).each(ef,
           begin
             local abcdef:=abcd|ef;
             isPartialSolution@abcdef AND (0<=(findG@abcdef)<=9);
