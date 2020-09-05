@@ -249,18 +249,18 @@ FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfStri
       strings:TStringList;
       i:longint;
   begin
-    stream :=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
     strings:=TStringList.create;
     accessed:=false;
     try
+      stream :=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
       strings.loadFromStream(stream,true);
+      stream.destroy;
       accessed:=true;
       setLength(result,strings.count);
       for i:=0 to length(result)-1 do result[i]:=strings[i];
     except
       accessed:=false;
     end;
-    stream.destroy;
     strings.destroy;
   end;
 

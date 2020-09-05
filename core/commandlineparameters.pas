@@ -124,11 +124,6 @@ FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
       if (copy(firstFileLine,1,2)='#!')
       then result:=splitCommandLine(copy(firstFileLine,3,length(firstFileLine)-2))
       else result:=C_EMPTY_STRING_ARRAY;
-      {$ifdef debugMode}
-      if length(result)>0
-      then for firstFileLine in result do writeln(stdErr,'        SHEBANG: |',firstFileLine,'|')
-      else                                writeln(stdErr,'        SHEBANG: none found');
-      {$endif}
     end else result:=C_EMPTY_STRING_ARRAY;
   end;
 

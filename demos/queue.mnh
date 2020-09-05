@@ -26,5 +26,5 @@ main->begin
   local enq:=enqueueConsumer(Q);
   [1..100].each(i,enq(i),(i and 1)=1 ? deq() : void);
   print('The next element is ',Q.pop);
-  deq.map(::print);
+  deq.map(::print).agg(|);
 end;

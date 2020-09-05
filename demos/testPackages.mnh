@@ -19,9 +19,9 @@ end;
 USE '..\packages\generators.mnh';
 testGenerators->begin
   print('Package generators - chunkIterator');
-  chunkIterator([1..10],3).map(::print);
+  chunkIterator([1..10],3).map(::print).toList;
   print('Package generators - pairGenerator');
-  pairGenerator(3,4,0).map(::print);
+  pairGenerator(3,4,0).map(::print).toList;
   void;
 end;
 

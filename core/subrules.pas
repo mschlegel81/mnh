@@ -163,14 +163,15 @@ TYPE
                           bgt_permutationIterator,
                           bgt_filterGenerator,
                           bgt_mapGenerator,
-                          bgt_futureMapGenerator,
+                          bgt_parallelMapGenerator,
                           bgt_fileLineIterator,
                           bgt_primeGenerator,
                           bgt_stringIterator,
                           bgt_realRandomGenerator,
                           bgt_xorIntRandomGenerator,
                           bgt_isaacIntRandomGenerator,
-                          bgt_vanDerCorputGenerator);
+                          bgt_vanDerCorputGenerator,
+                          bgt_parallelFilterGenerator);
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)

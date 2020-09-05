@@ -1,0 +1,30 @@
+accept(x:Int)->trueCount(0=(x mod [2,3,5,7]))=0;
+acceptOrVoid(x:Int)->x.accept ? x : void;
+
+testAndCompare(includeTiming:Boolean)->begin
+  local results:=[
+  print('gen.filter.toList')  orElse time({rangeGenerator(0,1000)       . filter(::accept      ).toList}),
+  print('gen.pFilter.toList') orElse time({rangeGenerator(0,1000)       .pFilter(::accept      ).toList}),
+  print('gen.map.toList')     orElse time({rangeGenerator(0,1000)       .    map(::acceptOrVoid).toList}),
+  print('gen.pMap.toList')    orElse time({rangeGenerator(0,1000)       .   pMap(::acceptOrVoid).toList}),
+  print('gen.toList.filter')  orElse time({rangeGenerator(0,1000).toList. filter(::accept      )       }),
+  print('gen.toList.pFilter') orElse time({rangeGenerator(0,1000).toList.pFilter(::accept      )       }),
+  print('gen.toList.map')     orElse time({rangeGenerator(0,1000).toList.    map(::acceptOrVoid)       }),
+  print('gen.toList.pMap')    orElse time({rangeGenerator(0,1000).toList.   pMap(::acceptOrVoid)       })];
+
+  includeTiming
+  ? begin
+      local timedInfo:=results.map({$r.getAll(['time','expression'])}).sort;
+      printf("%8.3f\vms\t%s",
+        timedInfo.getInner(0)*1000,
+        timedInfo.getInner(1));
+    end
+  : void;
+  results:=results.getInner('result');
+
+  results.cross(results).unique.each(pair,assert(pair[0]==pair[1],'A: ',pair[0],"\nB:",pair[1]));
+  print('All is good');
+end;
+
+main        ->testAndCompare(false);
+main('time')->testAndCompare(true);

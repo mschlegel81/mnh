@@ -149,6 +149,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST level:longint);
       DESTRUCTOR destroy;
+      PROPERTY getQueuedCount:longint read queuedCount;
   end;
 
   P_taskQueue=^T_taskQueue;

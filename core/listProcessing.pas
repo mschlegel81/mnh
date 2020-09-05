@@ -11,6 +11,28 @@ CONST FUTURE_RECYCLER_MAX_SIZE=64;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 
+  P_mapTask=^T_mapTask;
+  T_mapTask=object(T_queueTask)
+    mapPayload:record
+      mapRule:P_expressionLiteral;
+      mapParameter:P_literal;
+      location:T_tokenLocation;
+    end;
+    mapTaskResult:P_literal;
+    nextToAggregate:P_mapTask;
+    CONSTRUCTOR createMapTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
+    FUNCTION define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
+    PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION canGetResult:boolean;
+  end;
+
+  P_filterTask=^T_filterTask;
+  T_filterTask=object(T_mapTask)
+    CONSTRUCTOR createFilterTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
+    PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
+  end;
+
   P_futureLiteral=^T_futureLiteral;
   T_futureLiteral=object(T_builtinGeneratorExpression)
     private
@@ -43,13 +65,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList:T_expressio
 FUNCTION processMapSerial  (CONST input:P_literal; CONST expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
                             VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
-FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLiteral;
-                            CONST mapLocation:T_tokenLocation;
-                            VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
 FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpression:P_expressionLiteral;
-                               CONST filterLocation:T_tokenLocation;
-                               VAR context:T_context; VAR recycler:T_recycler):P_compoundLiteral;
-FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpression:P_expressionLiteral;
                                CONST filterLocation:T_tokenLocation;
                                VAR context:T_context; VAR recycler:T_recycler):P_compoundLiteral;
 PROCEDURE aggregate(CONST input:P_literal; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
@@ -74,28 +90,6 @@ TYPE
     FUNCTION define(CONST payload_:T_eachPayload):P_eachTask;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     FUNCTION canGetResult:boolean;
-  end;
-
-  P_mapTask=^T_mapTask;
-  T_mapTask=object(T_queueTask)
-    mapPayload:record
-      mapRule:P_expressionLiteral;
-      mapParameter:P_literal;
-      location:T_tokenLocation;
-    end;
-    mapResult:P_literal;
-    nextToAggregate:P_mapTask;
-    CONSTRUCTOR createMapTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
-    FUNCTION define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
-    PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
-    DESTRUCTOR destroy; virtual;
-    FUNCTION canGetResult:boolean;
-  end;
-
-  P_filterTask=^T_filterTask;
-  T_filterTask=object(T_mapTask)
-    CONSTRUCTOR createFilterTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
-    PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
   end;
 
   P_futureTask=^T_futureTask;
@@ -278,104 +272,6 @@ FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
     end;
   end;
 
-FUNCTION processMapParallel(CONST input:P_literal; CONST expr:P_expressionLiteral;
-                            CONST mapLocation:T_tokenLocation;
-                            VAR context:T_context; VAR recycler:T_recycler):P_listLiteral;
-
-  VAR firstToAggregate:P_mapTask=nil;
-      lastToAggregate:P_mapTask=nil;
-      resultLiteral:P_listLiteral;
-      recycling:record
-        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
-        fill:longint;
-      end;
-      taskChain:T_taskChain;
-
-  FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
-    VAR toAggregate:P_mapTask;
-    begin
-      result:=0;
-      while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-        assert(firstToAggregate^.getContext<>nil);
-        assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
-        inc(result);
-        toAggregate:=firstToAggregate;
-        firstToAggregate:=firstToAggregate^.nextToAggregate;
-        assert(toAggregate^.mapResult<>nil);
-        resultLiteral^.append(toAggregate^.mapResult,false);
-        with recycling do if fill<length(dat) then begin
-          toAggregate^.mapResult:=nil;
-          toAggregate^.nextToAggregate:=nil;
-          dat[fill]:=toAggregate;
-          inc(fill);
-        end else dispose(toAggregate,destroy);
-      end;
-    end;
-
-  FUNCTION enqueueValue(CONST x:P_literal):boolean; {$ifndef debugMode} inline; {$endif}
-    VAR task:P_mapTask;
-    begin
-      if x<>nil then x^.rereference;
-      result:=true;
-
-      with recycling do if fill>0 then begin
-        dec(fill);
-        task:=dat[fill];
-        task^.reattach(recycler);
-      end else new(task,createMapTask(context.getFutureEnvironment(recycler),expr));
-      if firstToAggregate=nil then begin
-        firstToAggregate:=task;
-        lastToAggregate:=task;
-      end else begin
-        lastToAggregate^.nextToAggregate:=task;
-        lastToAggregate:=task;
-      end;
-      if taskChain.enqueueOrExecute(task^.define(x,mapLocation),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
-    end;
-
-  VAR x:P_literal;
-      isExpressionNullary:boolean;
-      iter:T_arrayOfLiteral;
-  begin
-    taskChain.create(4*settings.cpuCount,context);
-    isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
-    resultLiteral:=newListLiteral();
-    recycling.fill:=0;
-
-    if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
-      x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
-      if isExpressionNullary then while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        enqueueValue(nil);
-        disposeLiteral(x);
-        x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
-      end else while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
-        enqueueValue(x);
-        disposeLiteral(x);
-        x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
-      end;
-      if x<>nil then disposeLiteral(x);
-    end else if input^.literalType in C_compoundTypes then begin
-      iter:=P_compoundLiteral(input)^.iteratableList;
-      if isExpressionNullary then begin for x in iter do if context.continueEvaluation then enqueueValue(nil) end
-                             else       for x in iter do if context.continueEvaluation then enqueueValue(x  );
-      disposeLiteral(iter);
-    end else begin
-      if isExpressionNullary
-      then enqueueValue(nil  )
-      else enqueueValue(input);
-    end;
-    taskChain.flush;
-    taskChain.destroy;
-
-    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while (firstToAggregate<>nil)                                                          do canAggregate;
-    with recycling do while fill>0 do begin
-      dec(fill);
-      dispose(dat[fill],destroy);
-    end;
-    result:=resultLiteral;
-  end;
-
 FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpression:P_expressionLiteral;
                                CONST filterLocation:T_tokenLocation;
                                VAR context:T_context; VAR recycler:T_recycler):P_compoundLiteral;
@@ -396,88 +292,6 @@ FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpres
       result:=P_listLiteral(result)^.toMap(filterLocation,@context);
       disposeLiteral(x);
     end;
-  end;
-
-FUNCTION processFilterParallel(CONST input:P_compoundLiteral; CONST filterExpression:P_expressionLiteral;
-                               CONST filterLocation:T_tokenLocation;
-                               VAR context:T_context; VAR recycler:T_recycler):P_compoundLiteral;
-  VAR firstToAggregate:P_filterTask=nil;
-      lastToAggregate:P_filterTask=nil;
-      recycling:record
-        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_filterTask;
-        fill:longint;
-      end;
-      output:P_collectionLiteral;
-      taskChain:T_taskChain;
-
-  FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
-    VAR toAggregate:P_filterTask;
-        value:P_literal;
-    begin
-      result:=0;
-      while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-        inc(result);
-        toAggregate:=firstToAggregate;
-        firstToAggregate:=P_filterTask(toAggregate^.nextToAggregate);
-        value:=toAggregate^.mapResult;
-        if value<>nil then output^.append(value,true);
-        with recycling do if fill<length(dat) then begin
-          toAggregate^.nextToAggregate:=nil;
-          dat[fill]:=toAggregate;
-          inc(fill);
-        end else dispose(toAggregate,destroy);
-      end;
-    end;
-
-  VAR elementsProcessed:longint=0;
-  FUNCTION enqueueValue(CONST x:P_literal):boolean; {$ifndef debugMode} inline; {$endif}
-    VAR task:P_filterTask;
-    begin
-      inc(elementsProcessed);
-      result:=true;
-
-      with recycling do if fill>0 then begin
-        dec(fill);
-        task:=dat[fill];
-        task^.reattach(recycler);
-      end else new(task,createFilterTask(context.getFutureEnvironment(recycler),filterExpression));
-      if firstToAggregate=nil then begin
-        firstToAggregate:=task;
-        lastToAggregate:=task;
-      end else begin
-        lastToAggregate^.nextToAggregate:=task;
-        lastToAggregate:=task;
-      end;
-      if taskChain.enqueueOrExecute(task^.define(x^.rereferenced,filterLocation),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
-    end;
-
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
-  begin
-    case input^.literalType of
-      lt_emptyList,lt_emptySet,lt_emptyMap                                       : exit(P_compoundLiteral(input^.rereferenced));
-      lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: output:=newListLiteral;
-      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : output:=newSetLiteral(input^.size);
-      lt_map                                                                     : output:=newListLiteral;
-    end;
-    taskChain.create(4*settings.cpuCount,context);
-    recycling.fill:=0;
-    iter:=input^.iteratableList;
-    for x in iter do if context.continueEvaluation then enqueueValue(x);
-    disposeLiteral(iter);
-    taskChain.flush;
-    taskChain.destroy;
-
-    while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
-    while (firstToAggregate<>nil)                                                          do canAggregate;
-    with recycling do while fill>0 do begin
-      dec(fill);
-      dispose(dat[fill],destroy);
-    end;
-    if input^.literalType=lt_map
-    then begin
-      result:=output^.toMap(filterLocation,@context);
-    end else result:=output;
   end;
 
 PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
@@ -542,8 +356,8 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
     context^.beginEvaluation;
     if context^.messages^.continueEvaluation then with mapPayload do begin
       if mapRule^.evaluateToBoolean(location,context,@recycler,true,mapParameter,nil)
-      then mapResult:=mapParameter
-      else mapResult:=nil;
+      then mapTaskResult:=mapParameter^.rereferenced
+      else mapTaskResult:=nil;
     end;
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
@@ -560,11 +374,11 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
     if context^.continueEvaluation
-    then with mapPayload do mapResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
+    then with mapPayload do mapTaskResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
     if mapPayload.mapParameter<>nil
     then disposeLiteral(mapPayload.mapParameter);
-    if mapResult=nil
-    then mapResult:=newVoidLiteral;
+    if mapTaskResult=nil
+    then mapTaskResult:=newVoidLiteral;
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
