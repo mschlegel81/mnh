@@ -23,9 +23,8 @@
     <LazDoc Paths="../doc"/>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <BuildNr Value="280"/>
+      <MajorVersionNr Value="1"/>
       <CharSet Value="04B0"/>
-      <Attributes pvaDebug="True" pvaPreRelease="True" pvaPrivateBuild="True"/>
       <StringTable FileDescription="mnh5 IDE and interpreter" InternalName="mnh5_ide" LegalCopyright="Martin Schlegel 2019" ProductName="mnh"/>
     </VersionInfo>
     <BuildModes Count="3">
