@@ -50,5 +50,5 @@ subSetIterator(C:Collection)->
 begin
   local elements:=C.elementFrequency.sort;
   local basePerElement:=elements.getInner(1)+1;
-  rangeGenerator(0,basePerElement.agg(*)-1).futureMap(subsetMapping(elements.getInner(0),basePerElement));
+  rangeGenerator(0,basePerElement.agg(*)-1).pMap(subsetMapping(elements.getInner(0),basePerElement));
 end;

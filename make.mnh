@@ -63,27 +63,19 @@ currentCodeHash:=begin
   ensureFilesToDeleteSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
-  local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);
-  local expectedContents:=format("CODE_HASH='%s';",result);
-  fileContents('core/code_hash.inc')==expectedContents
+  local result:=format('%x',fileStats(hashFiles).getInner(3).agg(+));
+  local expectedContents:=expectedVersionInfoSource(result);
+  fileLines('core/res_version.inc')==expectedContents
   ? void
   : begin
-      writeFile('core/code_hash.inc',expectedContents);
-      tprint('core/code_hash.inc updated with current hash ',result);
+      print('Version info updated:');
+      printf('  %s',expectedContents);
+      writeFileLines('core/res_version.inc',expectedContents);
     end;
   result;
 end;
-private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
 
-private ensureBuildNumber->begin
-  local expectedContents:=format("BUILD_NUMBER=%s;",getBuildNumber(ensureCodeHash));
-  fileContents('core/build_number.inc')==expectedContents
-  ? void
-  : begin
-      writeFile('core/build_number.inc',expectedContents);
-      tprint('core/build_number.inc updated with current build number ',getBuildNumber(ensureCodeHash));
-    end;
-end;
+private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
 
 private myMove(source,dest:String)->fileExists(source) ? begin
   local tries:=3;
@@ -100,7 +92,6 @@ private buildExe(B:Map)->
   B.needBuild AND B['canBuild']
   ? begin
       ensureCodeHash;
-      ensureBuildNumber;
       tprint('Building ',B['targetDest'].systemSpecificFilename);
       local compilerOutput:=exec@(B['compilerCall']);
       local sepLine:=repeat('-',compilerOutput[0].each(line,line.length,max) orElse 0);
@@ -141,7 +132,6 @@ end;
 private showStatus->begin
   print;
   tprint('Current code hash: ',ensureCodeHash);
-  tprint('Current build no.: ',getBuildNumber(currentCodeHash));
   BUILDS.each(B,begin
     local exe  :=B['targetDest'].systemSpecificFilename;
     local exist:=fileExists(exe);
@@ -151,7 +141,7 @@ private showStatus->begin
     local cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
     [B['flavour'],
      exe,
-     version==currentCodeHash ? 'o.k.' : version,
+     version==currentCodeHash ? 'o.k.' : version.copy(0,8),
      cmpTime,
      B['doTest'] ? timeForFullTest(B['flavour'],testVersion).roundToRelevantDigits(4) : '(n/a)'
      ];
@@ -179,6 +169,7 @@ private cleanup->begin
    files(['consoles','ide']&'/wpoData*')|
    allFiles('ide/compilates')|
    files('ide/res_*.inc')|
+   files('core/res_*.inc')|
    files('regTest/testFailures.log')|
    allFiles('versions')|
    allFiles('demos/inputs','*.txt')|
@@ -222,11 +213,9 @@ end;
 main('beep')->beep;
 
 main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
-
   BUILDS.each(B,B['canBuild'] AND B['distro'] ? B.testExe : void,AND)
   ? void
   : fail('Cannot make distro because there are failed tests');
-
   writeAllDataStores;
   {fileExists($0)
    ? runScript(['name'=>$0,"side effects"=>listSideEffects,"connection level"=>3].toMap)

@@ -4,14 +4,13 @@ USES sysutils,FileUtil,Classes;
 CONST
   STACK_DEPTH_LIMIT={$ifdef Windows}{$ifdef fullVersion}{$ifdef debugMode}2000{$else}8000{$endif}{$else}16000{$endif}
                     {$else}         {$ifdef debugMode}2000{$else}4100 {$endif}{$endif};
-  {$i code_hash.inc}
-  {$i build_number.inc}
+  {$i res_version.inc}
   FLAVOUR_STRING={$ifdef fullVersion}'F'{$else}'L'{$endif}+
                  {$ifdef profilingFlavour}'P'{$else}
                    {$ifdef debugMode}'D'{$else}'O'{$endif}
                  {$endif}+{$I %FPCTargetOS%};
   LOGO:array[0..21] of string=(
-  ' ___      ___ ___   ___ ___   ___',
+  ' ___      ___ ___   ___ ___   ___  '+VERSION,
   '|   \    /   |   \ |   |   | |   |  ______',
   '|    \  /    |    \|   |   |_|   | |   ___|',
   '|     \/     |     \   |         | |  |__',

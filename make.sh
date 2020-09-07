@@ -1,6 +1,5 @@
 #!/bin/bash
-if [ ! -f core/code_hash.inc ]; then echo "CODE_HASH='xxxxxxxx';" > core/code_hash.inc;fi
-if [ ! -f core/build_number.inc ]; then echo "BUILD_NUMBER=0;" > core/build_number.inc;fi
+if [ ! -f core\res_version.inc ]; then echo "CODE_HASH='x'; BUILD_NUMBER=1; VERSION='0.0.0';" > core\res_version.inc;fi
 if [ ! -f target/Linux/mnh_light ]; then
   lazbuild -B --bm=deployment consoles/mnh_light.lpi
   mv consoles/mnh_light mnh_tmp

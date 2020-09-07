@@ -77,7 +77,8 @@ USE inspectionUtil;
 @SuppressUnusedParameterWarning
 demosByCategory(dummyParameter)->
 allFiles(mnhInfo['configDir'],'*.mnh')
-  .futureMap({inspect($file)})
+  .toIteratableExpression
+  .pMap({inspect($file)})
   .map({$x['path']=>$x['declares'].map(::ruleAttributes).map({$att['demo_for']})})
   .map({$x[1].size>0 ? $x[0]=>$x[1].head.split(',').trim : void})
   .each(e,e[1].each(b,[e[0],b]),|)

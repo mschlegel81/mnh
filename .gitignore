@@ -5,7 +5,6 @@
 *.compiled
 *.a
 gui/res_*.inc
-code_hash.inc
 demos/inputs/*.txt
 demos/*.datastore*
 */lib/*/*.lfm
@@ -18,7 +17,6 @@ regTest/testLog.datastore0
 */backup/*
 buildLogDigest.datastore0
 versions/*.zip
-core/build_number.inc
 /regTest/testExpectation.datastore1
 /mnh_light_prof
 /callgrind.out.*
@@ -30,5 +28,7 @@ core/build_number.inc
 /ide/res_*.inc
 /ide/*/backup/*
 /ide/mnh_debug
+/core/res_version.inc
 /*/wpoData*
 *.lps
+
