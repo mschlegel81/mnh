@@ -169,11 +169,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
-
-    FileVerInfo:=TFileVersionInfo.create(nil);
-    FileVerInfo.ReadFileInfo;
-    Label2.caption:=FileVerInfo.VersionStrings.values['FileVersion']+', build '+intToStr(BUILD_NUMBER)+' ['+CODE_HASH+']';
-    FileVerInfo.free;
+    Label2.caption:=VERSION+', build '+intToStr(BUILD_NUMBER)+' ['+copy(CODE_HASH,0,8)+'...]';
 
     buttonInitNormal  .enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
     buttonInitNormal  .visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};

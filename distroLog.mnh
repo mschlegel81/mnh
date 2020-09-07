@@ -1,22 +1,62 @@
-plain datastore log;
+private plain datastore log;
+private plain datastore versionInfo;
 
-maxLoggedBuildNumber->try({max(log.getInner(1))},0);
+maxLoggedBuildNumber->try({max(log.getInner(1).getInner(0))},0);
 
 @SuppressUnusedWarning
-memoized getBuildNumber(codeHash:String)->begin
-  isVoid(log)
-  ? begin
-      log:=[].toMap;
-    end
-  : void;
+private ensureVersionInfo:=versionInfo.isVoid ? begin
+  versionInfo:=['MajorVersionNr'=>0,
+                'MinorVersionNr'=>0,
+                'RevisionNr'=>0].toMap;
+end : void;
 
-  log[codeHash] orElse begin
-    local nextNo:=maxLoggedBuildNumber+1;
-    log[codeHash]:=nextNo;
-    nextNo;
-  end;
+
+@SuppressUnusedWarning
+getVersionInfoTag(fullVersion:Boolean)->begin
+  format(//!~    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <MajorVersionNr Value="%s"/>
+      <MinorVersionNr Value="%s"/>
+      <RevisionNr Value="%s"/>
+      <CharSet Value="04B0"/>
+      <StringTable CompanyName="Martin Schlegel" FileDescription="%s" InternalName="%s" LegalCopyright="LGPL" OriginalFilename="%s" ProductName="MNH5"/>
+    </VersionInfo>~,
+    versionInfo['MajorVersionNr'] orElse 0,
+    versionInfo['MinorVersionNr'] orElse 0,
+    versionInfo['RevisionNr'] orElse 0,
+    fullVersion ? "MNH5 IDE and interpreter" : "MNH5 light interpreter",
+    fullVersion ? "mnh5_full" : "mnh5_light",
+    fullVersion ? "mnh" : "mnh_light").split("\n");
 end;
 
+versionString->format('%s.%s.%s',versionInfo['MajorVersionNr'] orElse 0,
+                                 versionInfo['MinorVersionNr'] orElse 0,
+                                 versionInfo['RevisionNr'] orElse 0);
+versionVector->[versionInfo['MajorVersionNr'] orElse 0,
+                versionInfo['MinorVersionNr'] orElse 0,
+                versionInfo['RevisionNr'] orElse 0];
+
+memoized expectedVersionInfoSource(codeHash:String)->
+  begin
+    local buildAndVersion:=getBuildNumberAndVersion(codeHash);
+    ["BUILD_NUMBER=%s;".format(buildAndVersion[0]),
+     "CODE_HASH=%s;".format(codeHash.escapePascal),
+     "VERSION=%s;".format(escapePascal(versionVector.join('.')))];
+  end;
+
+memoized getBuildNumberAndVersion(codeHash:String)->
+  begin
+    isVoid(log)
+    ? log:=[].toMap
+    : void;
+    (log[codeHash] orElse begin
+      local nextNo:=maxLoggedBuildNumber+1;
+      log[codeHash]:=[nextNo,versionVector];
+      [nextNo,versionVector];
+    end);
+  end;
+
+//*Show info on logged versions
 main->isVoid(log)
       ? print('No build version logged')
       : begin
@@ -27,4 +67,48 @@ main->isVoid(log)
               print('Log has ',log.size,' entries - limiting to last 50');
               log:=log.sort(1).trailing(50).toMap;
             end;
-        end;
+          void;
+        end
+      orElse print('Current version: ',versionString);
+
+private fixLpiFile(lpiPath:String,fullVersion:Boolean)->
+  begin
+    local versionInfoTag:=getVersionInfoTag(fullVersion);
+    local nextLine:=lpiPath.fileLineIterator;
+    local newLines:=[];
+    local currLine:=void;
+    while(!isVoid(currLine:=nextLine()),
+      currLine.trim=='<VersionInfo>'
+      ? begin
+          newLines|=versionInfoTag;
+          while(!isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>'));
+        end
+      : newLines|=currLine);
+    lpiPath.writeFileLines(newLines);
+  end;
+
+private updateProjectFiles->begin
+  fixLpiFile(myPath.extractFileDirectory&'/ide/ide.lpi',true);
+  fixLpiFile(myPath.extractFileDirectory&'/consoles/mnh_light.lpi',false);
+end;
+
+main('inc','major'   )->begin
+  versionInfo['MajorVersionNr']:=(versionInfo['MajorVersionNr'] orElse 0)+1;
+  versionInfo['MinorVersionNr']:=0;
+  versionInfo['RevisionNr']:=0;
+  updateProjectFiles;
+  print('Current version: ',versionString);
+end;
+
+main('inc','minor')->begin
+  versionInfo['MinorVersionNr']:=(versionInfo['MinorVersionNr'] orElse 0)+1;
+  versionInfo['RevisionNr']:=0;
+  updateProjectFiles;
+  print('Current version: ',versionString);
+end;
+
+main('inc','revision')->begin
+  versionInfo['RevisionNr']:=(versionInfo['RevisionNr'] orElse 0)+1;
+  updateProjectFiles;
+  print('Current version: ',versionString);
+end;
