@@ -45,15 +45,7 @@ IMPLEMENTATION
 USES serializationUtil,
      editorMeta,
      customRunDialog,
-     codeAssistance,
-     fileInfo,
-     {$ifdef Windows}
-     winpeimagereader {need this for reading exe info}
-     {$endif}
-     {$ifdef UNIX}
-     elfreader {needed for reading ELF executables}
-     {$endif}
-     ;
+     codeAssistance;
 {$R *.lfm}
 VAR splashForm:TSplashForm;
 
@@ -161,7 +153,6 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
 PROCEDURE TSplashForm.FormShow(Sender: TObject);
   VAR l:T_arrayOfString;
       i:longint;
-      FileVerInfo: TFileVersionInfo;
   begin
 
     CheckBox1.checked:=ideSettings.doShowSplashScreen;
@@ -169,7 +160,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
-    Label2.caption:=VERSION+', build '+intToStr(BUILD_NUMBER)+' ['+copy(CODE_HASH,0,8)+'...]';
+    Label2.caption:='Version '+VERSION+', build '+intToStr(BUILD_NUMBER)+' ['+copy(CODE_HASH,0,8)+'...]';
 
     buttonInitNormal  .enabled:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
     buttonInitNormal  .visible:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};

@@ -27,7 +27,7 @@
       <MinorVersionNr Value="2"/>
       <RevisionNr Value="3"/>
       <CharSet Value="04B0"/>
-	  <StringTable CompanyName="Martin Schlegel" FileDescription="mnh5 IDE and interpreter" InternalName="mnh5_light" LegalCopyright="LGPL" OriginalFilename="mnh5_light" ProductName="MNH5"/>
+      <StringTable CompanyName="Martin Schlegel" FileDescription="mnh5 IDE and interpreter" InternalName="mnh5_light" LegalCopyright="LGPL" OriginalFilename="mnh5_light" ProductName="MNH5"/>
     </VersionInfo>
     <BuildModes Count="3">
       <Item1 Name="default" Default="True"/>
