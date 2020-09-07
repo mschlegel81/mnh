@@ -141,7 +141,7 @@ private showStatus->begin
     local cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
     [B['flavour'],
      exe,
-     version==currentCodeHash ? 'o.k.' : version,
+     version==currentCodeHash ? 'o.k.' : version.copy(0,8),
      cmpTime,
      B['doTest'] ? timeForFullTest(B['flavour'],testVersion).roundToRelevantDigits(4) : '(n/a)'
      ];
@@ -169,6 +169,7 @@ private cleanup->begin
    files(['consoles','ide']&'/wpoData*')|
    allFiles('ide/compilates')|
    files('ide/res_*.inc')|
+   files('core/res_*.inc')|
    files('regTest/testFailures.log')|
    allFiles('versions')|
    allFiles('demos/inputs','*.txt')|

@@ -84,7 +84,8 @@ private fixLpiFile(lpiPath:String,fullVersion:Boolean)->
           while(!isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>'));
         end
       : newLines|=currLine);
-    lpiPath.writeFileLines(newLines);
+    nextLine:=void; //close iterator
+    lpiPath.writeFileLines(newLines).assert;
   end;
 
 private updateProjectFiles->begin
