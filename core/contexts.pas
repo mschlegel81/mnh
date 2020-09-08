@@ -170,6 +170,7 @@ TYPE
       destructionPending:boolean;
       poolThreadsRunning:longint;
       FUNCTION  dequeue:P_queueTask;
+      PROCEDURE cleanupQueues;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -820,6 +821,9 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepCount:longint;
       currentTask:P_queueTask;
       recycler:T_recycler;
+      {$ifdef debugMode}
+      taskCounter:longint=0;
+      {$endif}
   begin
     recycler.initRecycler;
     sleepCount:=0;
@@ -831,6 +835,9 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           ThreadSwitch;
           sleep(1);
         end else begin
+          {$ifdef debugMode}
+          inc(taskCounter);
+          {$endif}
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
             dispose(currentTask,destroy);
@@ -924,6 +931,7 @@ DESTRUCTOR T_queueTask.destroy;
 CONSTRUCTOR T_taskQueue.create;
   begin
     system.initCriticalSection(cs);
+    memoryCleaner.registerObjectForCleanup(@cleanupQueues);
     destructionPending:=false;
     setLength(subQueue,0);
   end;
@@ -935,6 +943,7 @@ DESTRUCTOR T_taskQueue.destroy;
       sleep(1);
       ThreadSwitch;
     end;
+    cleanupQueues;
     system.doneCriticalSection(cs);
   end;
 
@@ -1020,15 +1029,16 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
   begin
     system.enterCriticalSection(cs);
     try
+      result:=nil;
       k:=length(subQueue)-1;
+      while (k>=0) and (subQueue[k]^.queuedCount=0) do dec(k);
       if (k<0)
-      then result:=nil
-      else begin
+      then begin
+        result:=nil;
+        for k:=0 to length(subQueue)-1 do dispose(subQueue[k],destroy);
+        setLength(subQueue,0);
+      end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
-        if emptyAfter then begin
-          dispose(subQueue[k],destroy);
-          setLength(subQueue,k);
-        end;
       end;
     finally
       system.leaveCriticalSection(cs);
@@ -1048,6 +1058,21 @@ FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;
         task^.evaluate(recycler);
         dispose(task,destroy);
       end else task^.evaluate(recycler);
+    end;
+  end;
+
+PROCEDURE T_taskQueue.cleanupQueues;
+  VAR k:longint;
+  begin
+    system.enterCriticalSection(cs);
+    try
+      k:=length(subQueue)-1;
+      while (k>=0) and (subQueue[k]^.queuedCount=0) do begin
+        dispose(subQueue[k],destroy);
+        setLength(subQueue,k);
+      end;
+    finally
+      system.leaveCriticalSection(cs);
     end;
   end;
 

@@ -11,20 +11,29 @@ CONST FUTURE_RECYCLER_MAX_SIZE=64;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 
+  P_chainTask=^T_chainTask;
+  T_chainTask=object(T_queueTask)
+    protected
+      isCancelled:boolean;
+    public
+      nextToAggregate:P_chainTask;
+      CONSTRUCTOR createChainTask(CONST taskEnv:P_context);
+      PROCEDURE cancelAllInAggregationChain;
+      FUNCTION canGetResult:boolean;
+  end;
+
   P_mapTask=^T_mapTask;
-  T_mapTask=object(T_queueTask)
+  T_mapTask=object(T_chainTask)
     mapPayload:record
       mapRule:P_expressionLiteral;
       mapParameter:P_literal;
       location:T_tokenLocation;
     end;
     mapTaskResult:P_literal;
-    nextToAggregate:P_mapTask;
     CONSTRUCTOR createMapTask(CONST taskEnv:P_context; CONST expr:P_expressionLiteral);
     FUNCTION define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION canGetResult:boolean;
   end;
 
   P_filterTask=^T_filterTask;
@@ -48,12 +57,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE executeInContext(CONST context:P_context; VAR recycler:T_recycler);
-  end;
-
-  P_futureMapLiteral=^T_futureMapLiteral;
-  T_futureMapLiteral=object(T_futureLiteral)
-    nextToAggregate:P_futureMapLiteral;
-    CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation);
   end;
 
 PROCEDURE processListSerial  (CONST input:P_literal; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
@@ -82,14 +85,12 @@ TYPE
   end;
 
   P_eachTask=^T_eachTask;
-  T_eachTask=object(T_queueTask)
+  T_eachTask=object(T_chainTask)
     payloads:T_eachPayload;
-    nextToAggregate:P_eachTask;
     evaluationResult:T_evaluationResult;
     CONSTRUCTOR createEachTask(CONST taskEnv:P_context);
     FUNCTION define(CONST payload_:T_eachPayload):P_eachTask;
     PROCEDURE evaluate(VAR recycler:T_recycler); virtual;
-    FUNCTION canGetResult:boolean;
   end;
 
   P_futureTask=^T_futureTask;
@@ -143,15 +144,15 @@ end}
 
 PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
   VAR taskChain:T_taskChain;
-      firstToAggregate:P_eachTask=nil;
-      lastToAggregate:P_eachTask=nil;
+      firstToAggregate:P_chainTask=nil;
+      lastToAggregate:P_chainTask=nil;
       recycling:record
-        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_eachTask;
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_chainTask;
         fill:longint;
       end;
 
   FUNCTION canAggregate:longint; {$ifndef debugMode} inline; {$endif}
-    VAR toAggregate:P_eachTask;
+    VAR toAggregate:P_chainTask;
     begin
       result:=0;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
@@ -160,7 +161,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
         inc(result);
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
-        aggregator^.addToAggregation(toAggregate^.evaluationResult,true,eachLocation,@context,recycler);
+        aggregator^.addToAggregation(P_eachTask(toAggregate)^.evaluationResult,true,eachLocation,@context,recycler);
         with recycling do if fill<length(dat) then begin
           toAggregate^.nextToAggregate:=nil;
           dat[fill]:=toAggregate;
@@ -182,7 +183,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       inc(processed);
       with recycling do if fill>0 then begin
         dec(fill);
-        newTask:=dat[fill];
+        newTask:=P_eachTask(dat[fill]);
         newTask^.reattach(recycler);
       end else new(newTask,createEachTask(context.getFutureEnvironment(recycler)));
       if firstToAggregate=nil
@@ -230,6 +231,7 @@ end}
     taskChain.flush;
     taskChain.destroy;
 
+    if not(proceed) and (firstToAggregate<>nil) then firstToAggregate^.cancelAllInAggregationChain;
     while (firstToAggregate<>nil) and context.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate;
     while (firstToAggregate<>nil)                                                          do canAggregate;
     with recycling do while fill>0 do begin
@@ -326,12 +328,6 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_context;
     task^.defineAndEnqueueOrEvaluate(recycler);
   end;
 
-CONSTRUCTOR T_futureMapLiteral.create(CONST func_: P_expressionLiteral; CONST param_: P_listLiteral; CONST loc: T_tokenLocation);
-  begin
-    inherited create(func_,param_,loc,true);
-    nextToAggregate:=nil;
-  end;
-
 CONSTRUCTOR T_futureTask.create(CONST taskEnv:P_context; CONST future: P_futureLiteral);
   begin
     inherited create(true,taskEnv);
@@ -348,13 +344,13 @@ PROCEDURE T_futureTask.evaluate(VAR recycler:T_recycler);
 
 CONSTRUCTOR T_filterTask.createFilterTask(CONST taskEnv:P_context; CONST expr: P_expressionLiteral);
   begin
-    createMapTask(taskEnv,expr);
+    inherited createMapTask(taskEnv,expr);
   end;
 
 PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
-    if context^.messages^.continueEvaluation then with mapPayload do begin
+    if not(isCancelled) and context^.messages^.continueEvaluation then with mapPayload do begin
       if mapRule^.evaluateToBoolean(location,context,@recycler,true,mapParameter,nil)
       then mapTaskResult:=mapParameter^.rereferenced
       else mapTaskResult:=nil;
@@ -365,7 +361,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
 
 CONSTRUCTOR T_mapTask.createMapTask(CONST taskEnv:P_context; CONST expr: P_expressionLiteral);
   begin
-    create(false,taskEnv);
+    inherited createChainTask(taskEnv);
     mapPayload.mapRule:=expr;
     mapPayload.mapParameter:=nil;
   end;
@@ -373,12 +369,10 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST taskEnv:P_context; CONST expr: P_expre
 PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
-    if context^.continueEvaluation
+    if not(isCancelled) and (context^.continueEvaluation)
     then with mapPayload do mapTaskResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
     if mapPayload.mapParameter<>nil
     then disposeLiteral(mapPayload.mapParameter);
-    if mapTaskResult=nil
-    then mapTaskResult:=newVoidLiteral;
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -390,7 +384,7 @@ DESTRUCTOR T_mapTask.destroy;
 
 CONSTRUCTOR T_eachTask.createEachTask(CONST taskEnv:P_context);
   begin
-    create(false,taskEnv);
+    inherited createChainTask(taskEnv);
   end;
 
 FUNCTION T_mapTask.define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
@@ -415,7 +409,7 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
     evaluationResult.literal:=nil;
-    if context^.messages^.continueEvaluation then with payloads do begin
+    if not(isCancelled) and context^.messages^.continueEvaluation then with payloads do begin
       indexLiteral:=newIntLiteral(eachIndex);
       evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,context,@recycler,eachParameter,indexLiteral);
       disposeLiteral(indexLiteral);
@@ -424,12 +418,26 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
-FUNCTION T_eachTask.canGetResult:boolean;
+CONSTRUCTOR T_chainTask.createChainTask(CONST taskEnv:P_context);
   begin
-    result:=context^.state=fts_finished;
+    inherited create(false,taskEnv);
+    isCancelled:=false;
+    nextToAggregate:=nil;
   end;
 
-FUNCTION T_mapTask.canGetResult:boolean;
+PROCEDURE T_chainTask.cancelAllInAggregationChain;
+  VAR current:P_chainTask;
+  begin
+    enterCriticalSection(taskCs);
+    current:=@self;
+    while current<>nil do begin
+      current^.isCancelled:=true;
+      current:=current^.nextToAggregate;
+    end;
+    leaveCriticalSection(taskCs);
+  end;
+
+FUNCTION T_chainTask.canGetResult: boolean;
   begin
     result:=context^.state=fts_finished;
   end;
