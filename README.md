@@ -12,7 +12,15 @@ Previously on MNH (or: why 5?)
 * Started as MNH ("**m**inimal **n**umeric **h**elper"), a small toolset for interpreting mathematical expressions, based on a substitution system
 * Later versions added vectors, custom functions, etc.y
 
-## Installation
+## Installation for users
+
+* Download and unpack the build artifacts
+* Linux/UNIX only: you may want to copy the executables to /usr/bin
+* Start mnh.exe (Windows) or mnh (Linux)
+* The application automatically "installs" itself, creating offline documentation and file associations (Windows only)
+* Windows users can choose between a "portable" and a "normal" installation, which differ only by the location of the configuration files. You can change this later.
+
+## Installation for developers
 * Prerequisites:
 ** Lazarus compiler (https://www.lazarus-ide.org/)
 ** BGRA Bitmap package (https://github.com/bgrabitmap)
