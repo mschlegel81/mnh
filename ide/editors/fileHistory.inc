@@ -1,6 +1,7 @@
 {$ifdef includeInterface}
 CONST FILE_HISTORY_MAX_SIZE=100;
 TYPE
+T_usagePair=record usedScript,usingScript:string; end;
 
 P_fileHistory=^T_fileHistory;
 T_fileHistory=object(T_serializable)
@@ -12,7 +13,7 @@ T_fileHistory=object(T_serializable)
     scriptUsage:record
       cs:TRTLCriticalSection;
       destructionPending:boolean;
-      dat:array of record usedScript,usingScript:string; end;
+      dat:array of T_usagePair;
       foldersScanned:T_arrayOfString;
       scanning:boolean;
     end;
@@ -233,64 +234,71 @@ PROCEDURE T_fileHistory.updateScriptUsage(CONST scriptName:string; CONST allUses
   end;
 
 FUNCTION scanScripts(p:pointer):ptrint;
-  VAR foldersToScan:T_arrayOfString;
+  VAR foldersToScan:T_arrayOfString=();
       folder,script,usedScript:string;
       list:TStringList;
-      scriptsToScan:T_arrayOfString;
-      anyAdded:boolean=false;
+      scriptsToScan:T_arrayOfString=();
+      foundUsages:array of T_usagePair=();
+      i0,i:longint;
+  FUNCTION isDestructionPending:boolean;
+    begin
+      result:=P_fileHistory(p)^.scriptUsage.destructionPending;
+    end;
+
   begin
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
-      try
-        //Determine folders to scan:
-        setLength(foldersToScan,0);
-        append(foldersToScan,folderItems);
-        for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
-        //Update scriptUsage.foldersScanned
-        append(scriptUsage.foldersScanned,foldersToScan);
+      //Determine folders to scan:
+      append(foldersToScan,folderItems);
+      for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
+      //Update scriptUsage.foldersScanned
+      append(scriptUsage.foldersScanned,foldersToScan);
+      leaveCriticalSection(scriptUsage.cs);
+    end;
+    {$ifdef debugMode}
+    if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned');
+    {$endif}
+    //Determine scripts to scan:
+    for folder in foldersToScan do begin
+      list:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
+      for script in list do append(scriptsToScan,script);
+      list.free;
+    end;
+    sortUnique(scriptsToScan);
+    {$ifdef debugMode}
+    if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(scriptsToScan),' scripts must be scanned');
+    {$endif}
 
+    //Load scripts
+    for script in scriptsToScan do if not(isDestructionPending) then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'fileHistory/scanScripts: loading ',script);
+      {$endif}
+      for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
+        setLength(foundUsages,length(foundUsages)+1);
+        foundUsages[length(foundUsages)-1].usingScript:=script;
+        foundUsages[length(foundUsages)-1].usedScript :=usedScript;
         {$ifdef debugMode}
-        if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned [',scriptUsage.destructionPending,']');
+        writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
         {$endif}
-        //Determine scripts to scan:
-        setLength(scriptsToScan,0);
-        for folder in foldersToScan do if not(scriptUsage.destructionPending) then begin
-          list:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
-          for script in list do append(scriptsToScan,script);
-          list.free;
-        end;
-        sortUnique(scriptsToScan);
-        {$ifdef debugMode}
-        if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(scriptsToScan),' scripts must be scanned [',scriptUsage.destructionPending,']');
-        {$endif}
-
-        //Load scripts
-        for script in scriptsToScan do if not(scriptUsage.destructionPending) then begin
-          {$ifdef debugMode}
-          writeln(stdErr,'fileHistory/scanScripts: loading ',script);
-          {$endif}
-          for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
-            setLength(scriptUsage.dat,length(scriptUsage.dat)+1);
-            scriptUsage.dat[length(scriptUsage.dat)-1].usingScript:=script;
-            scriptUsage.dat[length(scriptUsage.dat)-1].usedScript :=usedScript;
-            {$ifdef debugMode}
-            writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
-            {$endif}
-          end;
-          anyAdded:=true;
-        end;
-      finally
-        {$ifdef debugMode}
-        if length(scriptsToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: done scanning');
-        {$endif}
-        scriptUsage.scanning:=false;
-        if scriptUsage.destructionPending then anyAdded:=false;
-        leaveCriticalSection(scriptUsage.cs);
-        setLength(foldersToScan,0);
-        setLength(scriptsToScan,0);
       end;
     end;
-    if anyAdded then workspace.onFileScanFinished;
+    with P_fileHistory(p)^ do try
+      enterCriticalSection(scriptUsage.cs);
+      {$ifdef debugMode}
+      if length(scriptsToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: done scanning');
+      {$endif}
+      scriptUsage.scanning:=false;
+      i0:=length(scriptUsage.dat);
+      setLength(scriptUsage.dat,i0+length(foundUsages));
+      for i:=0 to length(foundUsages)-1 do scriptUsage.dat[i0+i]:=foundUsages[i];
+    finally
+      leaveCriticalSection(scriptUsage.cs);
+    end;
+    setLength(foldersToScan,0);
+    setLength(scriptsToScan,0);
+    if (length(foundUsages)>0) and not(isDestructionPending) then workspace.onFileScanFinished;
+    setLength(foundUsages,0);
     result:=1;
   end;
 
