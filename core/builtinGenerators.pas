@@ -430,19 +430,20 @@ TYPE
   T_parallelMapGenerator=object(T_builtinGeneratorExpression)
     private
       isExpressionNullary:boolean;
-      firstToAggregate   :P_mapTask;
-      lastToAggregate    :P_mapTask;
+      firstToAggregate   :P_chainTask;
+      lastToAggregate    :P_chainTask;
       sourceGenerator    :P_expressionLiteral;
       mapExpression      :P_expressionLiteral;
       doneFetching       :boolean;
       pendingCount       :longint;
       recycling:record
-        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_mapTask;
+        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_chainTask;
         fill:longint;
       end;
       outputQueue : specialize G_queue<P_literal>;
-      PROCEDURE canAggregate;
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+      globals:P_evaluationGlobals;
+      PROCEDURE canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -453,27 +454,12 @@ TYPE
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
-  T_parallelFilterGenerator=object(T_builtinGeneratorExpression)
+  T_parallelFilterGenerator=object(T_parallelMapGenerator)
     private
-      firstToAggregate   :P_filterTask;
-      lastToAggregate    :P_filterTask;
-      sourceGenerator    :P_expressionLiteral;
-      filterExpression   :P_expressionLiteral;
-      doneFetching       :boolean;
-      pendingCount       :longint;
-      recycling:record
-        dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_filterTask;
-        fill:longint;
-      end;
-      outputQueue : specialize G_queue<P_literal>;
-      PROCEDURE canAggregate;
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
     public
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
@@ -496,56 +482,29 @@ CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiter
 
 CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressionLiteral; CONST loc: T_tokenLocation);
   begin
-    inherited create(loc);
-    pendingCount:=0;
-    sourceGenerator:=source;
-    filterExpression:=filterEx;
-    filterExpression^.rereference;
-    recycling.fill:=0;
-    doneFetching:=false;
-    outputQueue.create;
-    firstToAggregate:=nil;
-    lastToAggregate:=nil;
+    inherited create(source,filterEx,loc);
   end;
 
-PROCEDURE T_parallelMapGenerator.canAggregate;
-  VAR toAggregate:P_mapTask;
+PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
+  VAR toAggregate:P_chainTask;
   begin
+    if forceAggregate and (firstToAggregate<>nil) and not(firstToAggregate^.canGetResult)
+    then begin
+      if not(context.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
+    end;
     while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
       assert(firstToAggregate^.getContext<>nil);
       assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
       dec(pendingCount);
       toAggregate:=firstToAggregate;
       firstToAggregate:=firstToAggregate^.nextToAggregate;
-      assert(toAggregate^.mapTaskResult<>nil);
-      if toAggregate^.mapTaskResult^.literalType=lt_void
-      then disposeLiteral    (toAggregate^.mapTaskResult)
-      else outputQueue.append(toAggregate^.mapTaskResult);
-      with recycling do if fill<length(dat) then begin
-        toAggregate^.mapTaskResult:=nil;
-        toAggregate^.nextToAggregate:=nil;
-        dat[fill]:=toAggregate;
-        inc(fill);
-      end else dispose(toAggregate,destroy);
-    end;
-  end;
-
-PROCEDURE T_parallelFilterGenerator.canAggregate;
-  VAR toAggregate:P_filterTask;
-  begin
-    while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
-      assert(firstToAggregate^.getContext<>nil);
-      assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
-      dec(pendingCount);
-      toAggregate:=firstToAggregate;
-      firstToAggregate:=P_filterTask(firstToAggregate^.nextToAggregate);
-      if toAggregate^.mapTaskResult<>nil then begin
-        if toAggregate^.mapTaskResult^.literalType=lt_void
-        then disposeLiteral    (toAggregate^.mapTaskResult)
-        else outputQueue.append(toAggregate^.mapTaskResult);
+      if P_mapTask(toAggregate)^.mapTaskResult<>nil then begin
+        if P_mapTask(toAggregate)^.mapTaskResult^.literalType=lt_void
+        then disposeLiteral    (P_mapTask(toAggregate)^.mapTaskResult)
+        else outputQueue.append(P_mapTask(toAggregate)^.mapTaskResult);
       end;
       with recycling do if fill<length(dat) then begin
-        toAggregate^.mapTaskResult:=nil;
+        P_mapTask(toAggregate)^.mapTaskResult:=nil;
         toAggregate^.nextToAggregate:=nil;
         dat[fill]:=toAggregate;
         inc(fill);
@@ -559,8 +518,9 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
       doneQueuing:boolean=false;
       taskChain   : T_taskChain;
   begin
-    canAggregate;
+    canAggregate(doneFetching,context,recycler);
     if doneFetching then exit;
+    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -570,10 +530,9 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
       end else begin
         if isExpressionNullary
         then disposeLiteral(nextUnmapped);
-
         with recycling do if fill>0 then begin
           dec(fill);
-          task:=dat[fill];
+          task:=P_mapTask(dat[fill]);
           task^.reattach(recycler);
         end else new(task,createMapTask(context.getFutureEnvironment(recycler),mapExpression));
         if firstToAggregate=nil then begin
@@ -596,8 +555,9 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
       doneQueuing   :boolean=false;
       taskChain     :T_taskChain;
   begin
-    canAggregate;
+    canAggregate(doneFetching,context,recycler);
     if doneFetching then exit;
+    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -607,9 +567,9 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
       end else begin
         with recycling do if fill>0 then begin
           dec(fill);
-          task:=dat[fill];
+          task:=P_filterTask(dat[fill]);
           task^.reattach(recycler);
-        end else new(task,createFilterTask(context.getFutureEnvironment(recycler),filterExpression));
+        end else new(task,createFilterTask(context.getFutureEnvironment(recycler),mapExpression));
         if firstToAggregate=nil then begin
           firstToAggregate:=task;
           lastToAggregate:=task;
@@ -631,7 +591,7 @@ FUNCTION T_parallelMapGenerator.toString(CONST lengthLimit: longint): string;
 
 FUNCTION T_parallelFilterGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:=sourceGenerator^.toString(30)+'.pFilter('+filterExpression^.toString(20)+')';
+    result:=sourceGenerator^.toString(30)+'.pFilter('+mapExpression^.toString(20)+')';
   end;
 
 FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
@@ -648,31 +608,7 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
         result.literal:=newVoidLiteral;
       end else repeat
         if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^)
-                                  else canAggregate;
-        if outputQueue.hasNext then begin
-          result.literal:=outputQueue.next;
-          exit(result);
-        end;
-      until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
-    end;
-  end;
-
-FUNCTION T_parallelFilterGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
-  begin
-    result.triggeredByReturn:=false;
-    result.literal:=nil;
-    if outputQueue.hasNext then begin
-      if pendingCount<settings.cpuCount*TASKS_TO_QUEUE_PER_CPU then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
-      result.literal:=outputQueue.next;
-    end else begin
-      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
-      if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
-      then begin
-        result.literal:=newVoidLiteral;
-      end else repeat
-        sleep(1);
-        if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^)
-                                  else canAggregate;
+                                  else canAggregate(true      ,P_context(context)^,P_recycler(recycler)^);
         if outputQueue.hasNext then begin
           result.literal:=outputQueue.next;
           exit(result);
@@ -691,43 +627,22 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
     while outputQueue.hasNext do container^.append(outputQueue.next,false)
   end;
 
-PROCEDURE T_parallelFilterGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
-  begin
-    repeat
-      if outputQueue.hasNext
-      then container^.append(outputQueue.next,false)
-      else doEnqueueTasks(loc,context,recycler);
-    until doneFetching and (firstToAggregate=nil) or not(context.continueEvaluation);
-    while outputQueue.hasNext do container^.append(outputQueue.next,false)
-  end;
-
 DESTRUCTOR T_parallelMapGenerator.destroy;
   VAR literal:P_literal;
+      recycler:T_recycler;
   begin
-    while firstToAggregate<>nil do canAggregate;
+    if firstToAggregate<>nil then begin
+      firstToAggregate^.cancelAllInAggregationChain;
+      recycler.initRecycler;
+      while (firstToAggregate<>nil) do canAggregate(true,globals^.primaryContext,recycler);
+      recycler.cleanup;
+    end;
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
     disposeLiteral(sourceGenerator);
     disposeLiteral(mapExpression);
-    while outputQueue.hasNext do begin
-      literal:=outputQueue.next;
-      disposeLiteral(literal);
-    end;
-    outputQueue.destroy;
-  end;
-
-DESTRUCTOR T_parallelFilterGenerator.destroy;
-  VAR literal:P_literal;
-  begin
-    while firstToAggregate<>nil do canAggregate;
-    with recycling do while fill>0 do begin
-      dec(fill);
-      dispose(dat[fill],destroy);
-    end;
-    disposeLiteral(sourceGenerator);
-    disposeLiteral(filterExpression);
     while outputQueue.hasNext do begin
       literal:=outputQueue.next;
       disposeLiteral(literal);
@@ -1428,8 +1343,8 @@ FUNCTION T_parallelMapGenerator.writeToStream(CONST locationOfSerializeCall:T_to
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_parallelMapGenerator));
-    writeLiteralToStream(sourceGenerator ,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(mapExpression,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
@@ -1437,8 +1352,8 @@ FUNCTION T_parallelFilterGenerator.writeToStream(CONST locationOfSerializeCall:T
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_parallelFilterGenerator));
-    writeLiteralToStream(sourceGenerator ,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(filterExpression,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
