@@ -168,8 +168,7 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     doneCriticalSection(cs);
   end;
 
-PROCEDURE T_codeAssistanceData.setAddidionalScripts(
-  CONST toScan: T_arrayOfString);
+PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString);
   begin
     enterCriticalSection(cs);
     try

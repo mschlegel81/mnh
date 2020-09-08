@@ -654,7 +654,6 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
       currentScalingOptions:=relatedPlot^.currentPlot.options;
       updateCurrent;
       relatedPlot^.currentPlot.options:=currentScalingOptions;
-      pullPlotSettingsToGui();
       i:=0;
       while i<relatedPlot^.animation.frameCount do begin
         currentScalingOptions:=relatedPlot^.animation.options[i];
@@ -662,6 +661,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer();
         relatedPlot^.animation.options[i]:=currentScalingOptions;
         inc(i);
       end;
+      pullPlotSettingsToGui();
       relatedPlot^.logPlotChanged;
     finally
       relatedPlot^.doneGuiInteraction;
