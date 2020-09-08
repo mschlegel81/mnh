@@ -10,7 +10,7 @@ private memoized neighbors(P:CoordPair)->
 private nextMoves(open:CoordCollection,P:CoordPair)->begin
   local nextWithNeighborCount:=open
         .intersect(P.neighbors)                          //Only consider neighbors of P
-        .pMap({[$o,$o.neighbors.intersect(open).size]}); //Add data about neighbor count
+        .map({[$o,$o.neighbors.intersect(open).size]}); //Add data about neighbor count
   local minNeighbors:=nextWithNeighborCount.getInner(1).min;
   nextWithNeighborCount.each(q,q[1]==minNeighbors
                                ? q[0]   //if it has minNeighbors, return q[0] (the coordinates) ...
