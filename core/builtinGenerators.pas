@@ -745,6 +745,8 @@ TYPE
 FUNCTION T_fileLineIterator.fillQueue:boolean;
   CONST READ_BYTES = 8192;
   VAR k:longint;
+      k0:longint=0;
+      offset:longint;
       n:longint;
       ReadBuffer  : array[0..READ_BYTES-1] of char;
   begin
@@ -755,11 +757,23 @@ FUNCTION T_fileLineIterator.fillQueue:boolean;
       stopAt:=now+timeout;
       for k:=0 to n-1 do begin
         if ReadBuffer[k]=#10 then begin
+          if k>k0 then begin
+            offset:=length(stringBuffer);
+            setLength(stringBuffer,offset+k-k0);
+            move(ReadBuffer[k0],stringBuffer[offset+1],k-k0);
+          end;
           if (length(stringBuffer)>0) and (stringBuffer[length(stringBuffer)]=#13)
           then setLength(stringBuffer,length(stringBuffer)-1);
           queue.append(stringBuffer);
+          k0:=k+1;
           stringBuffer:='';
-        end else stringBuffer+=ReadBuffer[k];
+        end;
+      end;
+      k:=n;
+      if k>k0 then begin
+        offset:=length(stringBuffer);
+        setLength(stringBuffer,offset+k-k0);
+        move(ReadBuffer[k0],stringBuffer[offset+1],k-k0);
       end;
     end else eofReached:=true;
   end;
