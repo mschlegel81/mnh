@@ -237,6 +237,37 @@ FUNCTION isGuiStarted_impl intFuncSignature;
     result:=newBoolLiteral(gui_started<>NO);
   end;
 
+FUNCTION getCPULoadPercentage_impl intFuncSignature;
+  begin
+    {$ifdef Windows}
+    result:=newIntLiteral(mySys.getCPULoadPercentage);
+    {$else}
+    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    result:=nil;
+    {$endif}
+  end;
+
+FUNCTION getTaskInfo_impl intFuncSignature;
+  {$ifdef Windows}
+  VAR info:T_taskInfoArray;
+      i   :T_taskInfo;
+  {$endif}
+  begin
+    {$ifdef Windows}
+    info:=mySys.getTaskInfo;
+    result:=newListLiteral(length(info));
+    for i in info do listResult^.append(newMapLiteral(5)
+      ^.put('caption',i.caption)
+      ^.put('commandLine',i.commandLine)
+      ^.put('PID',i.pid)
+      ^.put('parentPID',i.parentPID)
+      ^.put('workingSetSize',i.workingSetSize),false);
+    {$else}
+    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    result:=nil;
+    {$endif}
+  end;
+
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
@@ -254,4 +285,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization',sfr_needs_gui{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started',sfr_needs_gui{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif});
 end.
