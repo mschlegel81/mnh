@@ -153,6 +153,7 @@ TYPE
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE TimerTimer(Sender: TObject);
   private
+    firstStart,
     fastUpdating,
     slowUpdating,
     quitPosted:boolean;
@@ -206,7 +207,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      smScripts);
     runParameterHistory.create;
 
-    splashOnStartup;
+    firstStart:=splashOnStartup;
     gui_started:=ide;
     FormResize(self);
     miDebug         .checked:=runnerModel.debugMode;
@@ -283,6 +284,7 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
     meta:=workspace.currentEditor;
     if meta<>nil then ActiveControl:=meta^.editor
                  else ActiveControl:=workspace.createNewFile^.editor;
+    if firstStart then miSettingsClick(Sender);
   end;
 
 FUNCTION anyEvaluationRunning:boolean;

@@ -37,7 +37,7 @@ TYPE
     PROCEDURE showAbout;
   end;
 
-PROCEDURE splashOnStartup;
+FUNCTION splashOnStartup:boolean;
 PROCEDURE splashForAbout;
 
 IMPLEMENTATION
@@ -49,8 +49,9 @@ USES serializationUtil,
 {$R *.lfm}
 VAR splashForm:TSplashForm;
 
-PROCEDURE splashOnStartup;
+FUNCTION splashOnStartup:boolean;
   begin
+    result:={$ifdef Windows}APP_STYLE=APP_STYLE_BLANK{$else}false{$endif};
     splashForm:=TSplashForm.create(nil);
     splashForm.startupCall:=true;
     splashForm.position:=poScreenCenter;
@@ -132,7 +133,6 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
-    sandbox^.runInstallScript;
     ProgressBar.visible:=true;
     prepareDoc;
     close;
@@ -143,7 +143,6 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
-    sandbox^.runInstallScript;
     ProgressBar.visible:=true;
     prepareDoc;
     close;

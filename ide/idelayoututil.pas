@@ -6,12 +6,13 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
-  SynEditTypes,SynExportHTML,SynEditHighlighter;
+  SynEditTypes,SynExportHTML,SynEditHighlighter,myGenerics;
 
 CONST
   CL_INACTIVE_GREY=TColor($E0E0E0);
 
 TYPE
+  T_registeredAssociation=(raNone,raFullVersion,raLightVersion);
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
   T_ideComponent=(icOutline,
                   icHelp,
@@ -121,7 +122,7 @@ TYPE
   T_ideSettings=object(T_serializable)
     private
       currentWorkspace:string;
-      workspaceHistory:array of string;
+      workspaceHistory:T_arrayOfString;
     public
     activeComponents:T_ideComponentSet;
     windowStateForUpdate:T_windowStateForUpdate;
@@ -129,6 +130,7 @@ TYPE
     doShowSplashScreen:boolean;
     copyTextAsHtml:boolean;
 
+    registeredAssociation:T_registeredAssociation;
     //IDE:
     Font:array[ctEditor..ctGeneral] of record
       fontName :string;
@@ -150,6 +152,7 @@ TYPE
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
     PROCEDURE initDefaults;
     FUNCTION workspaceFilename: string;
+    PROPERTY allWorkspaceFiles:T_arrayOfString read workspaceHistory;
   end;
 
 VAR
@@ -187,7 +190,7 @@ VAR getFontSize_callback:F_getFontSize=nil;
     htmlExporter:T_htmlExporter;
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
-     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,myGenerics,strutils;
+     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,strutils;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -850,7 +853,7 @@ CONSTRUCTOR T_ideSettings.create;
 
 FUNCTION T_ideSettings.getSerialVersion: dword;
   begin
-    result:=24823582;
+    result:=24823583;
   end;
 
 FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -908,7 +911,7 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     copyTextAsHtml:=stream.readBoolean;
-
+    registeredAssociation:=T_registeredAssociation(stream.readByte([byte(raNone),byte(raFullVersion),byte(raLightVersion)]));
     result:=result and stream.allOkay;
     if not(result) then begin
       if mainForm<>nil then begin
@@ -964,13 +967,14 @@ PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     stream.writeBoolean(doShowSplashScreen);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(copyTextAsHtml);
-
+    stream.writeByte(byte(registeredAssociation));
     for i:=0 to length(workspaceHistory)-1 do stream.writeAnsiString(workspaceHistory[i]);
   end;
 
 PROCEDURE T_ideSettings.initDefaults;
   VAR c:T_controlType;
   begin
+    registeredAssociation:=raNone;
     for c:=low(Font) to high(Font) do with Font[c] do begin
       fontName:='Courier New';
       style   :=0;

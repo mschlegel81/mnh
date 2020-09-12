@@ -129,7 +129,7 @@ TYPE
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; VAR recycler:T_recycler{$ifdef fullVersion}; OUT functionCallInfos:P_functionCallInfos{$endif}):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
-      PROCEDURE runInstallScript;
+      PROCEDURE runInstallScript(CONST associateFullVersion:boolean);
       PROCEDURE runUninstallScript;
       FUNCTION  usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
       {$endif}
@@ -327,7 +327,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     if connectLevel=0 then callContextType:=ect_silent
                       else callContextType:=ect_normal;
     messages.clear;
-    messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
+    if connectLevel>0 then messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);
     if length(scriptSource)=0
@@ -335,7 +335,9 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,callContextType,mainParameters,recycler);
-      globals.primaryContext.callDepth:=callerContext^.callDepth+50;
+      if callerContext=nil
+      then globals.primaryContext.callDepth:=0
+      else globals.primaryContext.callDepth:=callerContext^.callDepth+50;
       package.load(lu_forCallingMain,globals,recycler,mainParameters{$ifdef fullVersion},nil,nil{$endif});
     finally
       globals.afterEvaluation(recycler);
@@ -346,11 +348,25 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_sandbox.runInstallScript;
+PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
   {$i res_ensureAssoc.inc}
   VAR recycler:T_recycler;
-      exitDummy:longint;
-  begin recycler.initRecycler; execute(split(decompressString(ensureAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler,exitDummy); recycler.cleanup; end;
+      noLoc:T_tokenLocation;
+      targetExe:string;
+  begin
+    if associateFullVersion
+    then targetExe:=settings.fullFlavourLocation
+    else targetExe:=settings.lightFlavourLocation;
+    recycler.initRecycler;
+    runScript('tempFile',
+        {src} split(decompressString(ensureAssoc_mnh),C_lineBreakChar),
+              targetExe,
+              C_allSideEffects,
+              noLoc,
+              nil,
+              recycler,0,false);
+    recycler.cleanup;
+  end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}

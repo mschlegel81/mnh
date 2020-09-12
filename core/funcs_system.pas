@@ -11,7 +11,7 @@ USES sysutils,
      recyclers,
      contexts;
 IMPLEMENTATION
-USES out_adapters;
+USES out_adapters,mnh_messages;
 {$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
@@ -173,6 +173,11 @@ FUNCTION setExitCode_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION scriptTime_imp intFuncSignature;
+  begin
+    result:=newRealLiteral(context.wallclockTime);
+  end;
+
 {$ifdef fullVersion}VAR timeLoc:P_intFuncCallback;{$endif}
 FUNCTION time_imp intFuncSignature;
   VAR res:P_literal;
@@ -187,7 +192,10 @@ FUNCTION time_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
+    if (params=nil) or (params^.size=0) then begin
+      context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'time() is deprecated. Use scriptTime instead.');
+      exit(newRealLiteral(context.wallclockTime));
+    end
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
@@ -279,7 +287,8 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif});
   {$ifdef fullVersion}timeLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//Returns an internal time for time difference measurement.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});

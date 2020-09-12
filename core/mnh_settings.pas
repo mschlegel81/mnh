@@ -149,12 +149,18 @@ PROCEDURE T_settings.initDefaults;
 PROCEDURE T_settings.fixLocations;
   begin
     {$ifdef fullVersion}
-    fullFlavourLocation :=paramStr(0);
+    fullFlavourLocation:=paramStr(0);
     if lightFlavourLocation='' then begin
       lightFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh_light'{$ifdef Windows}+'.exe'{$endif};
       if not(fileExists(lightFlavourLocation)) then lightFlavourLocation:='';
     end;
-    {$else} lightFlavourLocation:=paramStr(0);{$endif};
+    {$else}
+    lightFlavourLocation:=paramStr(0);
+    if fullFlavourLocation='' then begin
+      fullFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh'{$ifdef Windows}+'.exe'{$endif};
+      if not(fileExists(fullFlavourLocation)) then fullFlavourLocation:='';
+    end;
+    {$endif};
   end;
 
 INITIALIZATION
@@ -162,6 +168,9 @@ INITIALIZATION
   if fileExists(settingsFileName)
   then settings.loadFromFile(settingsFileName)
   else settings.initDefaults;
+  {$ifndef FULLVERSION}
+  settings.fixLocations;
+  {$endif}
 
 FINALIZATION
   settings.destroy;

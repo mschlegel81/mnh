@@ -291,7 +291,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
 
 {$endif}
 {$ifdef include_initialization}
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source,,sideEffectWhitelist:StringCollection);//Executes the source (String or StringList) and returns created messages#//Optionally you can specify allowed side effects'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source,sideEffectWhitelist:StringCollection);//Executes the source (String or StringList) and returns created messages#//Optionally you can specify allowed side effects'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,ak_variadic{$ifdef fullVersion},
              'try(E:Expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
              'try(E:Expression,parameters:List);//Evaluates E with the given parameters - the parameter list length must match the arity of E#'+

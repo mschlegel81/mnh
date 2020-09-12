@@ -9,8 +9,7 @@ USES
   StdCtrls, ExtCtrls, EditBtn,
   mnh_constants,
   mnh_settings,
-  //funcs,
-  packages,//mnh_doc,
+  packages,
   editorMeta,
   ideLayoutUtil;
 
@@ -19,13 +18,21 @@ CONST MINIMUM_OUTPUT_LINES=16;
         ('Convert to normal (non-portable) version',
          'Convert to portable version');
 TYPE
+
+  { TSettingsForm }
+
   TSettingsForm = class(TForm)
+    buttonApplyAssociations: TButton;
     cbCopyAsHtml: TCheckBox;
     CloseButton: TButton;
     FileNameEdit1: TFileNameEdit;
+    fileAssociationGroupBox: TGroupBox;
     Label8: TLabel;
     miSaveBeforeRun: TCheckBox;
     clearFileHistoryButton: TButton;
+    rbAssociateFull: TRadioButton;
+    rbAssociateLight: TRadioButton;
+    rbAssociateNone: TRadioButton;
     TableFontButton: TButton;
     GeneralFontButton: TButton;
     GroupBox1: TGroupBox;
@@ -42,7 +49,6 @@ TYPE
     TabSheet_lineEnding: TTabSheet;
     togglePortableButton: TButton;
     restorePacksAndDemosButton: TButton;
-    installButton: TButton;
     Panel1: TPanel;
     Panel2: TPanel;
     Panel3: TPanel;
@@ -62,6 +68,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE buttonApplyAssociationsClick(Sender: TObject);
     PROCEDURE cbCopyAsHtmlChange(Sender: TObject);
     PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
     PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
@@ -72,7 +79,6 @@ TYPE
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
     PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
     PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
-    PROCEDURE installButtonClick(Sender: TObject);
     PROCEDURE EditorFontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
@@ -150,7 +156,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
 
     FileNameEdit1.fileName:=settings.lightFlavourLocation;
-
+    rbAssociateLight.enabled:=fileExists(settings.lightFlavourLocation);
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
     cbCopyAsHtml.checked:=ideSettings.copyTextAsHtml;
   end;
@@ -165,12 +171,6 @@ PROCEDURE TSettingsForm.EditorFontButtonClick(Sender: TObject);
       EditorFontButton.Font.style:= [];
       propagateFont(EditorFontButton.Font,ctEditor);
     end;
-  end;
-
-PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
-  begin
-    sandbox^.runInstallScript;
-    settings.fixLocations;
   end;
 
 PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
@@ -213,6 +213,7 @@ PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
 PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
   begin
     settings.lightFlavourLocation:=FileNameEdit1.fileName;
+    rbAssociateLight.enabled:=fileExists(settings.lightFlavourLocation);
   end;
 
 PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
@@ -225,6 +226,13 @@ PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
 PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
   begin
     ideSettings.copyTextAsHtml:=cbCopyAsHtml.checked;
+  end;
+
+PROCEDURE TSettingsForm.buttonApplyAssociationsClick(Sender: TObject);
+  begin
+    if      rbAssociateFull .checked then begin sandbox^.runInstallScript(true) ; ideSettings.registeredAssociation:=raFullVersion;   end
+    else if rbAssociateLight.checked then begin sandbox^.runInstallScript(false); ideSettings.registeredAssociation:=raLightVersion; end
+    else if rbAssociateNone .checked then begin sandbox^.runUninstallScript;      ideSettings.registeredAssociation:=raNone;         end;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
@@ -267,14 +275,19 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
   begin
     {$ifndef Windows}
-    installButton.visible:=false;
-    installButton.enabled:=false;
     uninstallButton.visible:=false;
     uninstallButton.enabled:=false;
     togglePortableButton.visible:=false;
     togglePortableButton.enabled:=false;
+    fileAssociationGroupBox.visible:=false;
+    fileAssociationGroupBox.enabled:=false;
     {$else}
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
+    case ideSettings.registeredAssociation of
+      raFullVersion : rbAssociateFull.checked :=true;
+      raLightVersion: rbAssociateLight.checked:=true;
+      raNone        : rbAssociateNone.checked :=true;
+    end;
     {$endif}
   end;
 
