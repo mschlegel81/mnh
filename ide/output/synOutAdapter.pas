@@ -23,6 +23,7 @@ CONST
                                               mt_el4_systemError,
                                               mt_timing_info];
 TYPE
+  //TODO Enhance output by setting line context in highlighter instead of highlighting depending on invisible marker
   P_abstractSynOutAdapter=^T_abstractSynOutAdapter;
   T_abstractSynOutAdapter=object(T_abstractGuiOutAdapter)
     private

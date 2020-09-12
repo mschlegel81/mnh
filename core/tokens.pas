@@ -61,27 +61,40 @@ TYPE
   T_bodyParts=array of record first,last:P_token; end;
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
+FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
 
 IMPLEMENTATION
-USES typinfo;
+USES typinfo,myStringUtil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
+  begin
+    result:=join(tokensToStrings(first,limit),'');
+  end;
+
+FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
   VAR p:P_token;
       idLike,prevIdLike:boolean;
       remainingLength:longint;
+      resultFill:longint=0;
   begin
+    setLength(result,100);
     prevIdLike:=false;
-    result:='';
     remainingLength:=limit;
     p:=first;
     while (p<>nil) and (remainingLength>0) do begin
-      result:=result+p^.toString(prevIdLike,idLike,remainingLength);
-      remainingLength:=limit-length(result);
+      if resultFill>=length(result) then setLength(result,round(length(result)*1.1));
+      result[resultFill]:=p^.toString(prevIdLike,idLike,remainingLength);
+      remainingLength-=length(result[resultFill]);
+      inc(resultFill);
       prevIdLike:=idLike;
       p:=p^.next;
     end;
-    if (p<>nil) or (remainingLength<=0) then result:=result+' ...';
+    if (p<>nil) or (remainingLength<=0) then begin
+      if resultFill>=length(result) then setLength(result,resultFill+1);
+      result[resultFill]:=' ...';
+    end;
+    setLength(result,resultFill);
   end;
 
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;

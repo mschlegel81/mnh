@@ -511,8 +511,7 @@ DESTRUCTOR T_messagesRedirector.destroy;
     collector.destroy;
   end;
 
-PROCEDURE T_messagesRedirector.setupMessageRedirection(
-  CONST receiver: P_messages; CONST typesToRedirect: T_messageTypeSet);
+PROCEDURE T_messagesRedirector.setupMessageRedirection(CONST receiver: P_messages; CONST typesToRedirect: T_messageTypeSet);
   begin
     messageReceiver:=receiver;
     messagesToRedirect:=typesToRedirect;
