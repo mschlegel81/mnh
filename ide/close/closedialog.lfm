@@ -1,21 +1,21 @@
 object closeDialogForm: TcloseDialogForm
   Left = 420
-  Height = 67
+  Height = 187
   Top = 240
   Width = 478
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'The current file has been changed'
-  ClientHeight = 67
+  ClientHeight = 187
   ClientWidth = 478
   DesignTimePPI = 120
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   object ButtonPanel1: TButtonPanel
     Left = 8
-    Height = 51
-    Top = 8
+    Height = 91
+    Top = 88
     Width = 462
     Align = alClient
     BorderSpacing.Around = 8
@@ -29,5 +29,21 @@ object closeDialogForm: TcloseDialogForm
     CancelButton.DefaultCaption = True
     TabOrder = 0
     ShowButtons = [pbOK, pbCancel, pbClose]
+  end
+  object Memo1: TMemo
+    Left = 0
+    Height = 75
+    Top = 5
+    Width = 478
+    Align = alTop
+    Alignment = taCenter
+    BorderSpacing.Top = 5
+    BorderStyle = bsNone
+    Color = clBtnFace
+    Lines.Strings = (
+      'Memo1 45kj4bt 2jb23k4jbfkj23jlqe 2j3b4k2j3b4kj23b42j3j 34j32h4jhwefjb2kjbkj2nl34nr 2j34kb524khtbf3k'
+    )
+    ReadOnly = True
+    TabOrder = 1
   end
 end
