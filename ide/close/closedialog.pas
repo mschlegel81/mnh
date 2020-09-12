@@ -84,49 +84,49 @@ FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_c
 FUNCTION TcloseDialogForm.showOnOverwrite(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:='File already exists';
-    memo1.Text:=fileName+' already exists';
+    memo1.text:=fileName+' already exists';
     result:=showFor(cda_overwrite,cda_pickAnother,cda_cancel);
   end;
 
 FUNCTION TcloseDialogForm.showOnLoad(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:='File has been changed';
-    memo1.Text:=fileName+' has been changed';
+    memo1.text:=fileName+' has been changed';
     result:=showFor(cda_saveAndChange,cda_cancelAndStay,cda_discardChanges);
   end;
 
 FUNCTION TcloseDialogForm.showOnClose(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:='File has been changed';
-    memo1.Text:=fileName+' has been changed';
+    memo1.text:=fileName+' has been changed';
     result:=showFor(cda_saveAndClose,cda_cancelAndStay,cda_discardChanges);
   end;
 
 FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:='File is ouf of sync';
-    memo1.Text:=fileName+' is out of sync';
+    memo1.text:=fileName+' is out of sync';
     result:=showFor(cda_reload,cda_ignoreChanges,cda_overwrite);
   end;
 
 FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName: string): T_closeDialogAnswer;
   begin
     caption:='File is deleted';
-    memo1.Text:=fileName+' is deleted';
+    memo1.text:=fileName+' is deleted';
     result:=showFor(cda_close,cda_ignoreChanges,cda_overwrite);
   end;
 
 FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating: T_closeDialogAnswer;
   begin
     caption:='Still evaluating...';
-    memo1.Text:='An evaluation is still running.';
+    memo1.text:='An evaluation is still running.';
     result:=showFor(cda_quitAfterEval,cda_dontQuit,cda_cancelEvalAndQuit);
   end;
 
 FUNCTION TcloseDialogForm.showOnUninstall:T_closeDialogAnswer;
   begin
     caption:='Do you really want to uninstall MNH?';
-    memo1.Text:='Do you really want to uninstall MNH?';
+    memo1.text:='Do you really want to uninstall MNH?';
     result:=showFor(cda_continueUninstall,cda_cancel,cda_noneOrInvalid);
   end;
 
