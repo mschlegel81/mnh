@@ -938,6 +938,7 @@ CONSTRUCTOR T_taskQueue.create;
 
 DESTRUCTOR T_taskQueue.destroy;
   begin
+    memoryCleaner.unregisterObjectForCleanup(@cleanupQueues);
     while poolThreadsRunning>0 do begin
       destructionPending:=true;
       sleep(1);
