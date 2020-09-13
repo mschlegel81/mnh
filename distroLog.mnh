@@ -12,29 +12,31 @@ end : void;
 
 
 @SuppressUnusedWarning
-getVersionInfoTag(fullVersion:Boolean)->begin
+getVersionInfoTag(fullVersion:Boolean,buildNr)->begin
   format(//!~    <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="%s"/>
       <MinorVersionNr Value="%s"/>
       <RevisionNr Value="%s"/>
+      <BuildNr Value="%s"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="%s" InternalName="%s" LegalCopyright="LGPL" OriginalFilename="%s" ProductName="MNH5"/>
     </VersionInfo>~,
     versionInfo['MajorVersionNr'] orElse 0,
     versionInfo['MinorVersionNr'] orElse 0,
     versionInfo['RevisionNr'] orElse 0,
+    buildNr,
     fullVersion ? "MNH5 IDE and interpreter" : "MNH5 light interpreter",
     fullVersion ? "mnh5_full" : "mnh5_light",
     fullVersion ? "mnh" : "mnh_light").split("\n");
 end;
 
-versionString->format('%s.%s.%s',versionInfo['MajorVersionNr'] orElse 0,
-                                 versionInfo['MinorVersionNr'] orElse 0,
-                                 versionInfo['RevisionNr'] orElse 0);
-versionVector->[versionInfo['MajorVersionNr'] orElse 0,
-                versionInfo['MinorVersionNr'] orElse 0,
-                versionInfo['RevisionNr'] orElse 0];
+private versionString->format('%s.%s.%s',versionInfo['MajorVersionNr'] orElse 0,
+                                         versionInfo['MinorVersionNr'] orElse 0,
+                                         versionInfo['RevisionNr'] orElse 0);
+private versionVector->[versionInfo['MajorVersionNr'] orElse 0,
+                        versionInfo['MinorVersionNr'] orElse 0,
+                        versionInfo['RevisionNr'] orElse 0];
 
 memoized expectedVersionInfoSource(codeHash:String)->
   begin
@@ -44,6 +46,11 @@ memoized expectedVersionInfoSource(codeHash:String)->
      "VERSION=%s;".format(escapePascal(versionVector.join('.')))];
   end;
 
+private updateProjectFiles(buildNr)->begin
+  fixLpiFile(myPath.extractFileDirectory&'/ide/ide.lpi',true,buildNr);
+  fixLpiFile(myPath.extractFileDirectory&'/consoles/mnh_light.lpi',false,buildNr);
+end;
+
 memoized getBuildNumberAndVersion(codeHash:String)->
   begin
     isVoid(log)
@@ -52,6 +59,7 @@ memoized getBuildNumberAndVersion(codeHash:String)->
     (log[codeHash] orElse begin
       local nextNo:=maxLoggedBuildNumber+1;
       log[codeHash]:=[nextNo,versionVector];
+      updateProjectFiles(nextNo);
       [nextNo,versionVector];
     end);
   end;
@@ -71,9 +79,10 @@ main->isVoid(log)
         end
       orElse print('Current version: ',versionString);
 
-private fixLpiFile(lpiPath:String,fullVersion:Boolean)->
+
+private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr)->
   begin
-    local versionInfoTag:=getVersionInfoTag(fullVersion);
+    local versionInfoTag:=getVersionInfoTag(fullVersion,buildNr);
     local nextLine:=lpiPath.fileLineIterator;
     local newLines:=[];
     local currLine:=void;
@@ -88,28 +97,20 @@ private fixLpiFile(lpiPath:String,fullVersion:Boolean)->
     lpiPath.writeFileLines(newLines).assert;
   end;
 
-private updateProjectFiles->begin
-  fixLpiFile(myPath.extractFileDirectory&'/ide/ide.lpi',true);
-  fixLpiFile(myPath.extractFileDirectory&'/consoles/mnh_light.lpi',false);
-end;
-
 main('inc','major'   )->begin
   versionInfo['MajorVersionNr']:=(versionInfo['MajorVersionNr'] orElse 0)+1;
   versionInfo['MinorVersionNr']:=0;
   versionInfo['RevisionNr']:=0;
-  updateProjectFiles;
   print('Current version: ',versionString);
 end;
 
 main('inc','minor')->begin
   versionInfo['MinorVersionNr']:=(versionInfo['MinorVersionNr'] orElse 0)+1;
   versionInfo['RevisionNr']:=0;
-  updateProjectFiles;
   print('Current version: ',versionString);
 end;
 
 main('inc','revision')->begin
   versionInfo['RevisionNr']:=(versionInfo['RevisionNr'] orElse 0)+1;
-  updateProjectFiles;
   print('Current version: ',versionString);
 end;
