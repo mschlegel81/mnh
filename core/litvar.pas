@@ -3786,7 +3786,10 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
           end;
         end;
         lt_expression: begin
-          P_expressionLiteral(L)^.writeToStream(location,adapters,stream);
+          if not(P_expressionLiteral(L)^.writeToStream(location,adapters,stream)) then begin
+            if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
+                             else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
+          end;
         end
         else begin
           if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)

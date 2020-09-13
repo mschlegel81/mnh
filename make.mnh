@@ -146,7 +146,7 @@ private showStatus->begin
      B['doTest'] ? timeForFullTest(B['flavour'],testVersion).roundToRelevantDigits(4) : '(n/a)'
      ];
   end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print;
-  BUILDS.each(B,B['distro'] ? allTestsPassed(B['flavour'],currentCodeHash) : void,AND)
+  BUILDS.each(B,B['distro'] ? allTestsPassed(B['flavour'],currentCodeHash) AND B['targetDest'].systemSpecificFilename.fileExists : void,AND)
   ? ASTERISK_FRAME_FMT.printf('READY FOR DISTRO')
   : print;
 end;

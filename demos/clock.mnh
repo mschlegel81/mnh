@@ -9,8 +9,7 @@ formatTimeNoDate(t<100/24)->begin
 end;
 formatTimeNoDate(t)->'995959';
 
-BIG:=//!~
- ********    ****     *******  ********    *      ********** ******** ********** ********  ********.
+BIG:=//!~ ********    ****     *******  ********    *      ********** ******** ********** ********  ********.
 **********  *****    *******************  **      **************************************************
 ****  **** ******   ***    ***       *** **  ***  ***       ***              *******  *******    ***
 ****  ****    ***         ***   ******* ******************* *********       ***  ******** **********
@@ -19,8 +18,7 @@ BIG:=//!~
 **********    ***   ********************     ***  ********************   ***    ********************
  ********     ***   ********** ********      ***  *********  ********   ***      ********  ********.~
 .replace(['*','.'],['#',' ']).split("\n").map({$s.copy([0..9]*10,10)}).transpose;
-TINY:=//!~
- _    __ __     _  _ ___ _  _.
+TINY:=//!~ _    __ __     _  _ ___ _  _.
 | | /  _) _)/_ |_ |_   /(_)(_)
 |_| | /____) | __)(_) / (_) /.~
 .replace('.',' ').split("\n").map({$s.copy([0..9]*3,3)}).transpose;
@@ -39,7 +37,6 @@ asciiArtTime(s:String)->begin
   (repeat('-',length(result).max+1)&'+');
 end;
 asciiArtTime(t:Real)->asciiArtTime(formatTime('hhnnss',t));
-
 
 guessTimeOrInterval(TimeOrIntervalString:String)->
   begin
@@ -94,6 +91,7 @@ main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
       nextSecond;
     end);
     AFTER_METHOD[after]();
+    halt;
   end});
   ask('Press enter to cancel');
 end;

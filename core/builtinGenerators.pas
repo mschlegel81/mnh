@@ -586,12 +586,18 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
 
 FUNCTION T_parallelMapGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:=sourceGenerator^.toString(30)+'.pMap('+mapExpression^.toString(20)+')';
+    result:=sourceGenerator^.toString(30)+
+            '.pMap('+
+            mapExpression^.toString(20)+
+            ')';
   end;
 
 FUNCTION T_parallelFilterGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:=sourceGenerator^.toString(30)+'.pFilter('+mapExpression^.toString(20)+')';
+    result:=sourceGenerator^.toString(30)+
+            '.pFilter('+
+            mapExpression^.toString(20)+
+            ')';
   end;
 
 FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
