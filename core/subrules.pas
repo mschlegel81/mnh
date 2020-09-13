@@ -1207,6 +1207,7 @@ FUNCTION T_builtinGeneratorExpression.writeToStream(CONST locationOfSerializeCal
 FUNCTION T_inlineExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   VAR i:longint;
   begin
+    if referencesAnyUserPackage then exit(false);
     stream^.writeByte(byte(typ));
     stream^.writeAnsiString(customId);
     result:=pattern.writeToStream(locationOfSerializeCall,adapters,stream)
@@ -1874,8 +1875,21 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
 
 FUNCTION T_inlineExpression.referencesAnyUserPackage: boolean;
   VAR pt:T_preparedToken;
+      locals:T_setOfString;
   begin
-    for pt in preparedBody do if pt.token.tokType in [tt_userRule,tt_globalVariable] then exit(true);
+    locals.create;
+    for pt in preparedBody do begin
+      if pt.token.tokType in [tt_userRule,tt_globalVariable] then begin
+        locals.destroy;
+        exit(true);
+      end;
+      if pt.token.tokType=tt_assignNewBlockLocal then locals.put(pt.token.txt);
+      if (pt.token.tokType in [tt_assignExistingBlockLocal,tt_blockLocalVariable]) and not(locals.contains(pt.token.txt)) then begin
+        locals.destroy;
+        exit(true);
+      end;
+    end;
+    locals.destroy;
     result:=false;
   end;
 
