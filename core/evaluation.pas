@@ -8,7 +8,7 @@ IMPLEMENTATION
 USES sysutils,
      myGenerics,
      mySys,
-     {$ifndef debugMode}
+     {$ifdef useTryCatchBlocks}
      myStringUtil,
      {$endif}
      {$ifdef fullVersion}
@@ -363,7 +363,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           {$ifdef useTryCatchBlocks}
           except
             on e:Exception do begin
-              context.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
+              context.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message+C_lineBreakChar+'Call depth: '+intToStr(context.callDepth),first^.location);
               exit;
             end;
           end;
@@ -403,7 +403,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           {$ifdef useTryCatchBlocks}
           except
             on e:Exception do begin
-              context.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
+              context.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message+C_lineBreakChar+'Call depth: '+intToStr(context.callDepth),first^.location);
               exit;
             end;
           end;

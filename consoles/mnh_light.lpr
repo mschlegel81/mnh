@@ -1,4 +1,3 @@
-{$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cthreads,{$endif}
      sysutils, mySys, mnh_settings,

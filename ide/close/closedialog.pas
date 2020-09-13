@@ -26,7 +26,7 @@ CONST
 TYPE
   TcloseDialogForm = class(TForm)
     ButtonPanel1: TButtonPanel;
-    Memo1: TMemo;
+    memo1: TMemo;
     PROCEDURE FormShow(Sender: TObject);
   private
     FUNCTION showFor(CONST okAnswer,cancelAnswer,closeAnswer:T_closeDialogAnswer):T_closeDialogAnswer;

@@ -2,8 +2,25 @@ UNIT mnh_constants;
 INTERFACE
 USES sysutils,FileUtil,Classes;
 CONST
-  STACK_DEPTH_LIMIT={$ifdef Windows}{$ifdef fullVersion}{$ifdef debugMode}2000{$else}8000{$endif}{$else}16000{$endif}
-                    {$else}         {$ifdef debugMode}2000{$else}4100 {$endif}{$endif};
+  STACK_DEPTH_LIMIT={$ifdef Windows}
+                       {$ifdef debugMode}
+                         {$ifdef CPU64} 4100      //Win64 debug
+                         {$else}        5800      //Win32 debug
+                         {$endif}
+                       {$else}
+                       {$ifdef CPU64}   6100      //Win64
+                         {$else}        8300      //Win32
+                         {$endif}
+                       {$endif}
+                    {$else}
+                      {$ifdef profilingFlavour}
+                                        2500
+                      {$else}
+                      {$ifdef debugMode}2500     //Linux debug
+                      {$else}           4000     //Linux
+                      {$endif}
+                      {$endif}
+                    {$endif};
   {$i res_version.inc}
   FLAVOUR_STRING={$ifdef fullVersion}'F'{$else}'L'{$endif}+
                  {$ifdef profilingFlavour}'P'{$else}
