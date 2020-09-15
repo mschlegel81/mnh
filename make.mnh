@@ -229,6 +229,9 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
    : void}('distro_hook.mnh');
 end;
 
+//*Create FP-Doc
+main('doc')->make_config.makedoc;
+
 //*Build one specific target
 main(target:String)->begin
   local testAfterBuild:=false;
