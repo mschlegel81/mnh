@@ -2,9 +2,12 @@
 Lazarus64Path:='..\lazarus64';
 Lazarus32Path:='..\lazarus32';
 DelpPath     :='..\lazarus64\fpc\3.0.4\bin\x86_64-win64\delp.exe';
+FPDocPath    :='..\lazarus64\fpc\3.2.0\bin\x86_64-win64\fpdoc.exe';
 SSL32   :=files('../3rd_party/openSsl32/*').expandedFileName;
 SSL64   :=files('../3rd_party/openSsl64/*').expandedFileName;
 SSL(w)->copy(w,0,5)=='Win32' ? SSL32 : SSL64;
+
+makedoc->FPDocPath.exec('--package=mnh'|hashFiles.map({format('--input=%s',$0)}));
 
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
