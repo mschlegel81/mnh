@@ -296,7 +296,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
           c:array[0..1] of char=(#0,#0);
       begin
         result:='';
-        stream:=TFileStream.create(name,fmOpenRead);
+        stream:=TFileStream.create(name,fmOpenRead or fmShareDenyNone);
         try
           stream.Seek(0,soFromBeginning);
           i:=stream.size;
@@ -346,7 +346,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
       findTextLineEnding;
       if doAppend and fileExists(name)
       then begin
-             stream:=TFileStream.create(name,fmOpenReadWrite);
+             stream:=TFileStream.create(name,fmOpenReadWrite or fmShareDenyWrite);
              stream.Seek(0, soEnd);
            end
       else stream:=TFileStream.create(name,fmCreate);
@@ -360,7 +360,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     except
       on e:Exception do begin
         result := false;
-        writeln(stdErr,'Error in writeFile Lines: ',e.message,'; ',e.ClassName);
+        writeln(stdErr,'Error in writeFileLines: ',e.message,'; ',e.ClassName);
       end;
     end;
   end;
