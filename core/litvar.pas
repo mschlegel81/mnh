@@ -244,6 +244,7 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual; abstract;
       FUNCTION referencesAnyUserPackage:boolean; virtual; abstract;
+      FUNCTION getComment:string; virtual; abstract;
   end;
 
   T_typedef=object(T_objectWithIdAndLocation)
@@ -271,6 +272,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION getDocTxt:string;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList;
   end;
 
   GENERIC G_literalKeyMap<VALUE_TYPE>= object
@@ -926,6 +928,14 @@ FUNCTION T_typedef.getLocation: T_tokenLocation;
 FUNCTION T_typedef.getDocTxt:string;
   begin
     result:=ECHO_MARKER+ducktyperule^.getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
+  end;
+
+FUNCTION T_typedef.getStructuredInfo:T_structuredRuleInfoList;
+  begin
+    setLength(result,1);
+    result[0].idAndSignature:=ducktyperule^.getId;
+    result[0].comment       :=ducktyperule^.getComment;
+    result[0].location      :=getLocation;
   end;
 
 //=====================================================================================================================

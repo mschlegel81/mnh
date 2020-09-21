@@ -60,7 +60,7 @@ TYPE
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       {$ifdef fullVersion}
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual; abstract;
-      FUNCTION getDocTxt:string; virtual; abstract;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
@@ -245,10 +245,10 @@ CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
 
 DESTRUCTOR T_abstractRule.destroy;                    begin id:='';                   end;
 FUNCTION T_abstractRule.getId: T_idString;            begin result:=id; end;
-FUNCTION T_abstractRule.getRootId:T_idString;         begin result:=id; end;
+FUNCTION T_abstractRule.getRootId: T_idString;         begin result:=id; end;
 FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
 
-FUNCTION T_abstractRule.innerRuleType:T_ruleType;
+FUNCTION T_abstractRule.innerRuleType: T_ruleType;
   begin
     result:=ruleType;
   end;
@@ -276,13 +276,13 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
     disposeLiteral(parList);
   end;
 
-FUNCTION T_abstractRule.getTypedef:P_typedef;
+FUNCTION T_abstractRule.getTypedef: P_typedef;
   begin
     raise Exception.create('getTypeDef is not implemented for this rule type');
     result:=nil;
   end;
 
-FUNCTION T_abstractRule.getInlineValue:P_literal;
+FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
 
 end.

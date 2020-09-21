@@ -19,6 +19,16 @@ TYPE
     line, column: longint;
   end;
   T_searchTokenLocations=array of T_searchTokenLocation;
+
+  T_structuredRuleInfo=record
+    location:T_searchTokenLocation;
+    idAndSignature:string;
+    comment       :string;
+    body          :string;
+  end;
+
+  T_structuredRuleInfoList=array of T_structuredRuleInfo;
+
 CONST
   C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 TYPE

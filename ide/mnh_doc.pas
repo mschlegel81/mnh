@@ -21,7 +21,7 @@ TYPE
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
-    FUNCTION getPlainText(CONST lineSplitter:string):ansistring;
+    FUNCTION getStructuredInfo(OUT examples:T_arrayOfString):T_structuredRuleInfoList;
     PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
     FUNCTION getHtmlLink:string;
   end;
@@ -302,12 +302,22 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtmlLink:string;
     result:='file:///'+ansiReplaceStr(expandFileName(getHtmlRoot+'/builtin.html#'),'\','/')+id;
   end;
 
-FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
+FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_arrayOfString):T_structuredRuleInfoList;
   VAR i:longint;
+      parts:T_arrayOfString;
+      sigAndComment:T_arrayOfString;
   begin
-    result:=ECHO_MARKER+id+lineSplitter+join(formatTabs(split(ECHO_MARKER+ansiReplaceStr(ansiReplaceStr(description,'//',C_tabChar+'//'),'#',C_lineBreakChar+ECHO_MARKER),C_lineBreakChar)),lineSplitter);
-    if length(txtExample)>0 then result:=result+lineSplitter+'Examples:';
-    for i:=0 to length(txtExample)-1 do result:=result+lineSplitter+txtExample[i];
+    parts:=split(description,'#');
+    setLength(result,length(parts));
+    for i:=0 to length(result)-1 do begin
+      result[i].location:=C_nilTokenLocation;
+      sigAndComment:=split(parts[i],'//');
+      result[i].idAndSignature:=sigAndComment[0];
+      if length(sigAndComment)>1
+      then result[i].comment:=sigAndComment[1]
+      else result[i].comment:='';
+    end;
+    examples:=txtExample;
   end;
 
 PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);

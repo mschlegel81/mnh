@@ -57,15 +57,11 @@ TYPE
   end;
 
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
+
+VAR localServerCs:TRTLCriticalSection;
+    localServers:specialize G_stringKeyMap<P_microserver>;
+
 {$i func_defines.inc}
-
-PROCEDURE sendKillRequest(s:P_microserver); begin s^.hasKillRequest:=true; end;
-
-FUNCTION serverIsAssociatedWithPackage(s:P_microserver; package:pointer):boolean;
-  begin
-    result:=s^.feedbackLocation.package=package;
-    if result then s^.hasKillRequest:=true;
-  end;
 
 FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
@@ -141,8 +137,9 @@ FUNCTION startServer_impl intFuncSignature;
         end else begin
           context.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
           dispose(microserver,destroy);
+          exit(nil);
         end;
-        result:=newVoidLiteral;
+        result:=newStringLiteral(microserver^.ip);
       end else context.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
@@ -223,6 +220,9 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     context:=context_;
     hasKillRequest:=false;
     httpListener.create(ip,maxConnections);
+    enterCriticalSection(localServerCs);
+    localServers.put(ip,@self);
+    leaveCriticalSection(localServerCs);
   end;
 
 DESTRUCTOR T_microserver.destroy;
@@ -235,6 +235,9 @@ DESTRUCTOR T_microserver.destroy;
     httpListener.destroy;
     recycler.cleanup;
     doneCriticalSection(serverCs);
+    enterCriticalSection(localServerCs);
+    localServers.dropKey(ip);
+    leaveCriticalSection(localServerCs);
     inherited destroy;
   end;
 
@@ -521,9 +524,24 @@ FUNCTION openUrl_imp intFuncSignature;
     else result:=nil;
   end;
 
+FUNCTION isServerRunning_imp intFuncSignature;
+  VAR serverIsRunning:boolean;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      enterCriticalSection(localServerCs);
+      serverIsRunning:=localServers.containsKey(str0^.value);
+      leaveCriticalSection(localServerCs);
+      //TODO: Try to connect to server port
+      result:=newBoolLiteral(serverIsRunning);
+    end;
+  end;
+
 INITIALIZATION
   {$WARN 5058 OFF}
-  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   {$ifdef fullVersion},'startHttpServer(urlAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance'{$endif});
+  initCriticalSection(localServerCs);
+  localServers.create();
+  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,ak_ternary   {$ifdef fullVersion},'startHttpServer(ipAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance and returns the cleaned up ip and port'{$endif});
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,ak_variadic_1{$ifdef fullVersion},'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html", code: 200)#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type with code 200.#wrapTextInHttp(s:String,code:Int,header:Map);//Wraps s in a custom http-response'{$endif});
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,ak_variadic  {$ifdef fullVersion},'httpError;//Returns http-representation of error 404.#httpError(code:Int);//Returns http-representation of given error code.'{$endif});
   registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,ak_unary     {$ifdef fullVersion},'extractParameters(request:String);//Returns the parameters of an http request as a keyValueList'{$endif});
@@ -535,10 +553,13 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,ak_unary     {$ifdef fullVersion},'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,ak_unary     {$ifdef fullVersion},'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif});
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,ak_unary     {$ifdef fullVersion},'openUrl(URL:String);//Opens the URL in the default browser'{$endif});
+  registerRule(HTTP_NAMESPACE,'isServerRunning'     ,@isServerRunning_imp      ,ak_unary     {$ifdef fullVersion},'isServerRunning(ipAndPort:String);//Returns true if the server is running - only servers in the current instance are checked!'{$endif});
 
   initialize(httpRequestCs);
   initCriticalSection(httpRequestCs);
 FINALIZATION
   doneCriticalSection(httpRequestCs);
+  doneCriticalSection(localServerCs);
+  localServers.destroy;
 
 end.
