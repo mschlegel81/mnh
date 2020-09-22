@@ -168,9 +168,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorConcatAlt: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),t^.location,context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data))
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),t^.location,context)
               else if isPureAggregator then context.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
@@ -185,10 +185,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context,recycler{$ifdef fullVersion},nil{$endif});
             if context.messages^.continueEvaluation
-            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),t^.location,context);
           end else context.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
-        result:=true;
+        result:=context.continueEvaluation;
         aggregatorPresent:=(aggregator<>nil);
         if aggregatorPresent then begin
           recycler.disposeToken(bodyParts[lastPart].first);
@@ -263,7 +263,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       disposeLiteral(input);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
-      didSubstitution:=true;
+      didSubstitution:=context.continueEvaluation;
     end;
 
   PROCEDURE resolveWhile;

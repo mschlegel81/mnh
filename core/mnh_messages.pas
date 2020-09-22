@@ -39,8 +39,8 @@ CONST
     {mc_timing } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
     {mc_note   } (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
     {mc_warning} (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
-    {mc_error  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagQuietHalt,FlagError]),
-    {mc_fatal  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagFatalError,FlagQuietHalt])
+    {mc_error  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagError]),
+    {mc_fatal  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
     {mc_plot   } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
     {mc_gui}     (htmlSpan:''     ; includeLocation:false; triggeredFlags:[])

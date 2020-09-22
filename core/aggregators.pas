@@ -150,7 +150,7 @@ FUNCTION newHeadAggregator                  :P_headAggregator;
 FUNCTION newTrailingAggregator              :P_trailingAggregator;
 FUNCTION newSetAggregator                   :P_setAggregator;
 FUNCTION newElementFrequencyAggregator      :P_elementFrequencyAggregator;
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_aggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
   begin
@@ -173,16 +173,19 @@ FUNCTION newTrailingAggregator:P_trailingAggregator; begin new(result,create); e
 FUNCTION newSetAggregator     :P_setAggregator;      begin new(result,create); end;
 FUNCTION newElementFrequencyAggregator:P_elementFrequencyAggregator; begin new(result,create); end;
 
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_aggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_aggregator;
   VAR res1:P_unaryExpressionAggregator;
       res2:P_binaryExpressionAggregator;
   begin
     if (ex^.canApplyToNumberOfParameters(2)) then begin
       new(res2,create(ex));
       result:=res2;
-    end else begin
+    end else if (ex^.canApplyToNumberOfParameters(1)) then begin
       new(res1,create(ex));
       result:=res1;
+    end else begin
+      result:=nil;
+      context.raiseError('Invalid expression for aggregation: '+ex^.toString(50),tokenLocation);
     end;
   end;
 
