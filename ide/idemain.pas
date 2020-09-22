@@ -20,6 +20,7 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    miEventsView: TMenuItem;
     openRelatedSubmenu: TMenuItem;
     miOpenDependenciesUsed: TMenuItem;
     miOpenDependenciesUsing: TMenuItem;
@@ -114,6 +115,7 @@ TYPE
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDockAllClick(Sender: TObject);
     PROCEDURE miEditScriptFileClick(Sender: TObject);
+    PROCEDURE miEventsViewClick(Sender: TObject);
     PROCEDURE miExportToHtmlClick(Sender: TObject);
     PROCEDURE miFindClick(Sender: TObject);
     PROCEDURE miFindNextClick(Sender: TObject);
@@ -168,7 +170,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -199,6 +201,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     initializePlotForm(PlotPositionLabel);
     setupEditorMetaBase(miLanguage);
     runnerModel.create(self);
+    postIdeMessage('Setting up workspace',false);
     workspace.create(self,
                      EditorsPageControl,
                      breakpointImages,
@@ -279,6 +282,7 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       if icDebuggerVariables   in activeComponents then ensureDebuggerVarForm;
       if icDebuggerBreakpoints in activeComponents then ensureBreakpointsForm;
       if icOutput              in activeComponents then runnerModel.ensureStdOutForm;
+      if icIdeEvents           in activeComponents then ensureEventsForm;
       activeComponents:=[];
     end;
     meta:=workspace.currentEditor;
@@ -390,6 +394,11 @@ PROCEDURE TIdeMainForm.miDockAllClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miEditScriptFileClick(Sender: TObject);
   begin
     workspace.addOrGetEditorMetaForFiles(utilityScriptFileName,true,true);
+  end;
+
+PROCEDURE TIdeMainForm.miEventsViewClick(Sender: TObject);
+  begin
+    ensureEventsForm;
   end;
 
 PROCEDURE TIdeMainForm.miExportToHtmlClick(Sender: TObject);

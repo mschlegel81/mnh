@@ -26,7 +26,8 @@ TYPE
                   icCustomForm,
                   icTable,
                   icVariableView,
-                  icProfilingOutput);
+                  icProfilingOutput,
+                  icIdeEvents);
   T_ideComponentSet=set of T_ideComponent;
 
   T_componentParent=(cpNone,
@@ -118,6 +119,7 @@ TYPE
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
 
+  //TODO extend IDE settings to store the window dimensions of detached components
   T_ideSettings=object(T_serializable)
     private
       currentWorkspace:string;
@@ -206,7 +208,8 @@ CONST C_defaultDock:T_dockSetup
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1,
-    {icProfiling...}cpPageControl2);
+    {icProfiling...}cpPageControl2,
+                    cpPageControl2);
 
 VAR lastDockLocationFor:T_dockSetup
     {icOutline}   =(cpPageControl3,
@@ -221,7 +224,8 @@ VAR lastDockLocationFor:T_dockSetup
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1,
-                    cpPageControl1);
+                    cpPageControl1,
+                    cpPageControl2);
 
 PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
   begin

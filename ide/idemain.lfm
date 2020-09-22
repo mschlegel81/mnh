@@ -826,6 +826,10 @@ object IdeMainForm: TIdeMainForm
         ShortCut = 16450
         OnClick = miBreakpointsClick
       end
+      object miEventsView: TMenuItem
+        Caption = 'IDE E&vents'
+        OnClick = miEventsViewClick
+      end
       object miAbout: TMenuItem
         Caption = 'About'
         OnClick = miAboutClick

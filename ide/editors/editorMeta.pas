@@ -136,7 +136,8 @@ IMPLEMENTATION
 USES renameDialog,
      recyclers,
      packages,
-     strutils;
+     strutils,
+     eventsComponent;
 VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin

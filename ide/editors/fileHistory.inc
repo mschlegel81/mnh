@@ -240,8 +240,9 @@ FUNCTION scanScripts(p:pointer):ptrint;
       scriptsInThisFolder:TStringList;
       foundUsages:array of T_usagePair=();
       i0,i:longint;
-      timeout:double;
+      scanStart:double;
       foldersScannedInThisRun:T_arrayOfString=();
+      startFolderScan:double;
 
   FUNCTION isDestructionPending:boolean;
     begin
@@ -249,7 +250,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
     end;
 
   begin
-    timeout:=now+ONE_SECOND;
+    scanStart:=now;
     with P_fileHistory(p)^ do begin
       enterCriticalSection(scriptUsage.cs);
       //Determine folders to scan:
@@ -261,23 +262,19 @@ FUNCTION scanScripts(p:pointer):ptrint;
     if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned');
     {$endif}
     //Determine scripts to scan:
-    for folder in foldersToScan do if not(isDestructionPending) and (now<timeout) then begin
+    for folder in foldersToScan do if not(isDestructionPending) and (now<scanStart+ONE_SECOND) then begin
+      startFolderScan:=now;
       append(foldersScannedInThisRun,folder);
       scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
       //Load scripts
       for script in scriptsInThisFolder do begin
-        {$ifdef debugMode}
-        writeln(stdErr,'fileHistory/scanScripts: loading ',script);
-        {$endif}
         for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
           setLength(foundUsages,length(foundUsages)+1);
           foundUsages[length(foundUsages)-1].usingScript:=script;
           foundUsages[length(foundUsages)-1].usedScript :=usedScript;
-          {$ifdef debugMode}
-          writeln(stdErr,'fileHistory/scanScripts: ',script,' uses "',usedScript,'"');
-          {$endif}
         end;
       end;
+      if now-startFolderScan>0.5/(24*60*60) then postIdeMessage('Background folder scan: finished "'+folder+'" in '+myTimeToStr(now-startFolderScan),true);
       scriptsInThisFolder.free;
     end;
     with P_fileHistory(p)^ do try
@@ -292,6 +289,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       leaveCriticalSection(scriptUsage.cs);
     end;
     setLength(foldersToScan,0);
+    if length(foldersScannedInThisRun)>0 then postIdeMessage('Background folder scan for '+intToStr(length(foldersScannedInThisRun))+' folders finished in '+myTimeToStr(now-scanStart),false);
     if (length(foundUsages)>0) and not(isDestructionPending) then workspace.onFileScanFinished;
     setLength(foundUsages,0);
     result:=1;
