@@ -649,7 +649,7 @@ PROCEDURE T_editorMeta.activate;
     try
       if language=LANG_MNH then begin
         editor.highlighter:=highlighter;
-        assistanceData^.setAddidionalScripts(getOptionalAdditionals);
+        assistanceData^.setAddidionalScripts(getOptionalAdditionals,true);
       end else begin
         editor.highlighter:=fileTypeMeta[language].highlighter;
       end;
