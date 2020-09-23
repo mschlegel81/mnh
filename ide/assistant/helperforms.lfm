@@ -66,21 +66,34 @@ object HelpForm: THelpForm
       AnchorSideTop.Side = asrBottom
       AnchorSideRight.Side = asrBottom
       Left = 230
-      Height = 24
+      Height = 213
       Top = 1
-      Width = 115
+      Width = 192
       Anchors = []
       AutoSize = True
       BorderSpacing.Left = 5
       Caption = 'Bultin function'
+      ClientHeight = 188
+      ClientWidth = 188
       TabOrder = 1
+      object builtinScrollBox: TScrollBox
+        Left = 0
+        Height = 188
+        Top = 0
+        Width = 188
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Align = alClient
+        AutoSize = True
+        TabOrder = 0
+      end
     end
     object examplesGroupBox: TGroupBox
       AnchorSideTop.Side = asrBottom
       AnchorSideRight.Side = asrBottom
       Left = 6
       Height = 213
-      Top = 132
+      Top = 214
       Width = 596
       Anchors = []
       AutoSize = True
@@ -594,7 +607,7 @@ object HelpForm: THelpForm
       AnchorSideRight.Side = asrBottom
       Left = 6
       Height = 192
-      Top = 345
+      Top = 427
       Width = 315
       Anchors = []
       BorderSpacing.Left = 5
