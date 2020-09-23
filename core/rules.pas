@@ -57,7 +57,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE fillCallInfos(CONST callInfos:P_functionCallInfos); virtual;
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
-      FUNCTION getDocTxt: ansistring; virtual;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual;
       PROCEDURE checkParameters(VAR context:T_context); virtual;
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
@@ -85,7 +85,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE fillCallInfos(CONST callInfos:P_functionCallInfos); virtual;
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
-      FUNCTION getDocTxt: ansistring; virtual;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual;
       PROCEDURE checkParameters(VAR context:T_context); virtual;
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
@@ -175,7 +175,7 @@ TYPE
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral; virtual;
       {$ifdef fullVersion}
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
-      FUNCTION getDocTxt: ansistring; virtual;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual;
       {$endif}
       FUNCTION getValueOrElseVoid(VAR context:T_context; VAR recycler:T_recycler):P_literal;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
@@ -1563,27 +1563,37 @@ FUNCTION T_variable.hasAnnotationMarkingAsUsed:boolean;
             metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
   end;
 
-FUNCTION T_delegatorRule.getDocTxt: string;
-  VAR r:P_rule;
+FUNCTION T_delegatorRule.getStructuredInfo:T_structuredRuleInfoList;
+  VAR i,i0:longint;
+      fromDelegate:T_structuredRuleInfoList;
+      r:P_ruleWithSubrules;
   begin
-    if localRule<>nil then result:=localRule^.getDocTxt
-                      else result:='';
-    for r in imported do   result:=result+BoolToStr(result='','',C_lineBreakChar)+r^.getDocTxt;
+    if localRule<>nil
+    then result:=localRule^.getStructuredInfo
+    else setLength(result,0);
+
+    for r in imported do begin
+      fromDelegate:=r^.getStructuredInfo;
+      i0:=length(result);
+      setLength(result,i0+length(fromDelegate));
+      for i:=0 to length(fromDelegate)-1 do result[i+i0]:=fromDelegate[i];
+      setLength(fromDelegate,0);
+    end;
   end;
 
-FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
-  VAR s:P_subruleExpression;
+FUNCTION T_ruleWithSubrules.getStructuredInfo:T_structuredRuleInfoList;
+  VAR i:longint=0;
   begin
-    result:='';
-    for s in subrules do result:=result+C_lineBreakChar+s^.getDocTxt();
-    result:=join(formatTabs(split(result)),LineEnding);
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
+    setLength(result,length(subrules));
+    for i:=0 to length(subrules)-1 do result[i]:=subrules[i]^.getStructuredInfo;
   end;
 
-FUNCTION T_variable.getDocTxt: ansistring;
+FUNCTION T_variable.getStructuredInfo:T_structuredRuleInfoList;
   begin
-    result:=meta.getDocTxt+
-            ECHO_MARKER+C_varTypeText[varType]+' variable '+getId+' '+ansistring(getLocation);
+    setLength(result,1);
+    result[0].location:=getLocation;
+    result[0].idAndSignature:=C_varTypeText[varType]+' '+getId;
+    result[0].comment:=meta.getDocTxt;
   end;
 {$endif}
 

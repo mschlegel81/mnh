@@ -271,6 +271,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION getDocTxt:string;
+      FUNCTION getStructuredInfo:T_structuredRuleInfoList;
   end;
 
   GENERIC G_literalKeyMap<VALUE_TYPE>= object
@@ -926,6 +927,14 @@ FUNCTION T_typedef.getLocation: T_tokenLocation;
 FUNCTION T_typedef.getDocTxt:string;
   begin
     result:=ECHO_MARKER+ducktyperule^.getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
+  end;
+
+FUNCTION T_typedef.getStructuredInfo:T_structuredRuleInfoList;
+  begin
+    setLength(result,1);
+    result[0].idAndSignature:=ducktyperule^.getId;
+    result[0].comment       :=''; //TODO: This should be the comment of the underlying subrule
+    result[0].location      :=getLocation;
   end;
 
 //=====================================================================================================================

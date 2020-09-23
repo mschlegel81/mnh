@@ -127,7 +127,7 @@ T_bookmarkIndex=0..9;
 {$i workspace.inc}
 {$undef includeInterface}
 
-FUNCTION getHelpText(OUT helpLink:string):string;
+FUNCTION getCurrentTokenInfo:T_tokenInfo;
 TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
 VAR safeCallback:F_safeCallback=nil;
     runnerModel:T_runnerModel;
@@ -136,7 +136,8 @@ IMPLEMENTATION
 USES renameDialog,
      recyclers,
      packages,
-     strutils;
+     strutils,
+     eventsComponent;
 VAR underCursor:T_tokenInfo;
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin
@@ -679,10 +680,9 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
     end;
   end;
 
-FUNCTION getHelpText(OUT helpLink:string):string;
+FUNCTION getCurrentTokenInfo:T_tokenInfo;
   begin
-    result:=underCursor.infoText;
-    helpLink:=underCursor.linkToHelp;
+    result:=underCursor;
   end;
 
 PROCEDURE T_editorMeta.reloadFile;

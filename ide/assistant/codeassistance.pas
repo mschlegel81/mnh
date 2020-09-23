@@ -343,17 +343,9 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   PROCEDURE appendUsageInfo;
-    VAR ref:T_searchTokenLocations;
-        r  :T_searchTokenLocation;
     begin
       if (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
-        ref:=latestResponse^.functionCallInfos^.whoReferencesLocation(info.location);
-        if length(ref)=0 then begin
-          info.infoText+=C_lineBreakChar+C_lineBreakChar+'No reference found';
-        end else begin
-          info.infoText+=C_lineBreakChar+C_lineBreakChar+'Is referenced at';
-          for r in ref do info.infoText+=C_lineBreakChar+string(r);
-        end;
+        info.referencedAt:=latestResponse^.functionCallInfos^.whoReferencesLocation(info.location);
       end;
     end;
 

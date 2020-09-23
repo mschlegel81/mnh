@@ -81,7 +81,7 @@ TYPE
   end;
 
   P_extendedPackage=^T_extendedPackage;
-  T_extendedPackage=object(T_abstractPackage)
+    T_extendedPackage=object(T_abstractPackage)
     private
       extender:P_abstractPackage;
     public
@@ -131,13 +131,29 @@ TYPE
   end;
 
   T_tokenInfo=record
-    infoText,fullLine:ansistring;
-    CaretX:longint;
-    location,startLoc,endLoc:T_searchTokenLocation;
-    canRename,mightBeUsedInOtherPackages:boolean;
-    tokenType:T_tokenType;
-    idWithoutIsPrefix:string;
+    //position info
+    fullLine    :ansistring;
+    CaretX      :longint;
+    startLoc,
+    endLoc,
+    location    :T_searchTokenLocation;
+    referencedAt:T_searchTokenLocations;
+
+    //basic info
+    tokenText,
+    shortInfo,
     linkToHelp:string;
+    tokenType :T_tokenType;
+
+    //rule info
+    builtinRuleInfo,
+    userDefRuleInfo:T_structuredRuleInfoList;
+    exampleText    :T_arrayOfString;
+
+    //Renaming related:
+    canRename,
+    mightBeUsedInOtherPackages:boolean;
+    idWithoutIsPrefix         :string;
   end;
 
   T_enhancedToken=object
@@ -545,20 +561,19 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   VAR i:longint;
-      tokenText:string;
-  FUNCTION getBuiltinRuleInfo(OUT link:string):string;
+  PROCEDURE getBuiltinRuleInfo(OUT link:string);
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
-      if (length(tokenText)>1) and (tokenText[1]='.')
-      then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
-      else doc:=functionDocMap.get(tokenText);
-      if doc=nil then exit('');
-      result:='builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
-      link:=doc^.getHtmlLink;
+      if isQualified(result.tokenText)
+      then doc:=functionDocMap.get(copy(result.tokenText,2,length(result.tokenText)-1))
+      else doc:=functionDocMap.get(     result.tokenText                              );
+      if doc<>nil then begin
+        result.builtinRuleInfo:=doc^.getStructuredInfo(result.exampleText);
+        link:=doc^.getHtmlLink;
+      end;
     end;
   begin
     result.linkToHelp:=getDocIndexLinkForBrowser;
-    result.infoText:='(eol)';
     result.location:=C_nilTokenLocation;
     result.startLoc:=C_nilTokenLocation;
     result.endLoc  :=C_nilTokenLocation;
@@ -566,6 +581,10 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.mightBeUsedInOtherPackages:=false;
     result.idWithoutIsPrefix:='';
     result.tokenType:=tt_EOL;
+    setLength(result.exampleText    ,0);
+    setLength(result.builtinRuleInfo,0);
+    setLength(result.userDefRuleInfo,0);
+
     if token=nil then exit;
     result.tokenType    :=token^.tokType;
     if C_tokenDoc[result.tokenType].helpLink<>''
@@ -576,64 +595,63 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
     result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
-    tokenText:=safeTokenToString(token);
+    result.tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
         tt_each,tt_parallelEach:           result.idWithoutIsPrefix:=token^.txt;
         tt_customType,tt_customTypeCheck:  result.idWithoutIsPrefix:=P_typedef(token^.data)^.getId;
         tt_userRule,tt_globalVariable:     result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
-        else                               result.idWithoutIsPrefix:=tokenText;
+        else                               result.idWithoutIsPrefix:=result.tokenText;
       end;
       result.mightBeUsedInOtherPackages:=(token^.tokType in [tt_userRule,tt_globalVariable]) and (P_abstractRule(token^.data)^.hasPublicSubrule) or (token^.tokType in [tt_customTypeCheck,tt_customType]);
     end;
-    result.infoText:=ECHO_MARKER+tokenText;
+    result.shortInfo:='';
     case linksTo of
       packageUse: begin
-        result.infoText+=C_lineBreakChar+'Used package: '+ansistring(references);
+        result.shortInfo:=C_lineBreakChar+'Used package: '+ansistring(references);
         exit;
       end;
       packageInclude: begin
-        result.infoText+=C_lineBreakChar+'Included package: '+ansistring(references);
+        result.shortInfo:=C_lineBreakChar+'Included package: '+ansistring(references);
         exit;
       end;
     end;
-    result.infoText+=C_lineBreakChar
-                    +ansiReplaceStr(C_tokenDoc[token^.tokType].helpText,'#',C_lineBreakChar);
+    result.shortInfo:=ansiReplaceStr(C_tokenDoc[token^.tokType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
-      if C_specialWordInfo[i].txt=tokenText then
-      result.infoText+=C_lineBreakChar+ansiReplaceStr(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+      if C_specialWordInfo[i].txt=result.tokenText then
+      result.shortInfo:=C_lineBreakChar+ansiReplaceStr(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
     case token^.tokType of
       tt_intrinsicRule:
-        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
+        getBuiltinRuleInfo(result.linkToHelp);
       tt_blockLocalVariable, tt_parameterIdentifier, tt_eachParameter, tt_eachIndex:
-        result.infoText+=C_lineBreakChar+'Declared '+ansistring(references);
+        begin end;
       tt_comparatorEq..tt_unaryOpMinus: begin
-        tokenText:=operatorName[token^.tokType];
-        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo(result.linkToHelp);
+        result.tokenText:=operatorName[token^.tokType];
+        getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_attributeComment: begin
-        if tokenText=ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE then result.infoText+=C_lineBreakChar+'marks a nullary subrule for execution after the script is finished without raising an error';
-        if startsWith(tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then result.infoText+=C_lineBreakChar+'suppresses warnings about unused rules';
-        if tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE then result.infoText+=C_lineBreakChar+'suppresses warnings about unused parameters';
+        if result.tokenText=ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE
+        then result.shortInfo:='marks a nullary subrule for execution after the script is finished without raising an error';
+        if startsWith(result.tokenText,ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE)
+        then result.shortInfo:='suppresses warnings about unused rules';
+        if result.tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE
+        then result.shortInfo:='suppresses warnings about unused parameters';
       end;
       tt_userRule, tt_globalVariable: begin
-        result.infoText+=C_lineBreakChar
-                        +ansiReplaceStr(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
-        if builtinRuleMap.containsKey(tokenText) then
-        result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo(result.linkToHelp);
+        result.userDefRuleInfo:=P_abstractRule(token^.data)^.getStructuredInfo;
+        if builtinRuleMap.containsKey(result.tokenText) then getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_customType, tt_customTypeCheck: begin
-        result.infoText+=C_lineBreakChar+ECHO_MARKER+BoolToStr(P_typedef(token^.data)^.isDucktyping,
-                                                               C_ruleTypeText[rt_duckTypeCheck],
-                                                               C_ruleTypeText[rt_customTypeCheck])+token^.txt+' '+ansistring(P_typedef(token^.data)^.getLocation)
-        +C_lineBreakChar+P_typedef(token^.data)^.getDocTxt;
+        if P_typedef(token^.data)^.isDucktyping
+        then result.shortInfo:=C_ruleTypeText[rt_duckTypeCheck  ]
+        else result.shortInfo:=C_ruleTypeText[rt_customTypeCheck];
+        result.userDefRuleInfo:=P_typedef(token^.data)^.getStructuredInfo;
       end;
-
       tt_type,tt_typeCheck:
-        result.infoText+=C_lineBreakChar+ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
+        result.shortInfo:=ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:
-        result.infoText+=C_lineBreakChar+ansiReplaceStr(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
+        result.shortInfo:=ansiReplaceStr(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
     end;
   end;
 {$endif}

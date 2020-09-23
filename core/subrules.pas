@@ -144,7 +144,7 @@ TYPE
       FUNCTION getInlineValue:P_literal;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION getCmdLineHelpText:ansistring;
-      FUNCTION getDocTxt:ansistring;
+      FUNCTION getStructuredInfo:T_structuredRuleInfo; virtual;
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
@@ -466,7 +466,7 @@ FUNCTION T_builtinExpression.canApplyToNumberOfParameters(CONST parCount: longin
 FUNCTION T_builtinGeneratorExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=parCount=0; end;
 
 FUNCTION T_inlineExpression.isVariadic: boolean; begin result:=pattern.isVariadic;                             end;
-FUNCTION T_subruleExpression.hasValidMainPattern                                 :boolean; begin result:=pattern.isValidMainPattern;                     end;
+FUNCTION T_subruleExpression.hasValidMainPattern: boolean; begin result:=pattern.isValidMainPattern;                     end;
 FUNCTION T_subruleExpression.hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean; begin result:=pattern.isValidCustomTypeCheckPattern(forDuckTyping) end;
 FUNCTION T_subruleExpression.hasEquivalentPattern(CONST s:P_subruleExpression)   :boolean; begin result:=pattern.isEquivalent(s^.pattern);               end;
 FUNCTION T_subruleExpression.hidesSubrule        (CONST s:P_subruleExpression)   :boolean; begin result:=pattern.hides(s^.pattern);                      end;
@@ -1116,7 +1116,7 @@ FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
     if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+ansiReplaceStr(meta.comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
   end;
 
-FUNCTION T_subruleExpression.getDocTxt: ansistring;
+FUNCTION T_subruleExpression.getStructuredInfo: T_structuredRuleInfo;
   FUNCTION bodyToString(CONST lengthLimit:longint):ansistring;
     VAR t:T_preparedToken;
         lastWasIdLike:boolean=false;
@@ -1129,9 +1129,13 @@ FUNCTION T_subruleExpression.getDocTxt: ansistring;
     end;
 
   begin
-    result:=meta.getDocTxt+ECHO_MARKER;
-    if not(publicSubrule) then result:=result+'private ';
-    result+=getId+'->'+bodyToString(50)+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
+    result.comment:=meta.getDocTxt;
+    if not(publicSubrule)
+    then result.idAndSignature:=PRIVATE_TEXT+' '
+    else result.idAndSignature:='';
+    result.idAndSignature+=getId;
+    result.body:=bodyToString(50);
+    result.location:=getLocation;
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
@@ -1360,7 +1364,7 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_subruleExpression.getUsedParameters:T_arrayOfLongint;
+FUNCTION T_subruleExpression.getUsedParameters: T_arrayOfLongint;
   VAR t:T_preparedToken;
   begin
     result:=C_EMPTY_LONGINT_ARRAY;
@@ -1378,7 +1382,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
 
-PROCEDURE T_subruleExpression.fillCallInfos(CONST infos:P_functionCallInfos);
+PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_functionCallInfos);
   VAR t:T_preparedToken;
   begin
     for t in preparedBody do infos^.add(parent,@t.token);
@@ -1408,7 +1412,6 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
       if att.value<>'' then result:=result+'='+att.value;
     end;
     if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(COMMENT_PREFIX+s);
-    if result<>'' then result:=result+C_lineBreakChar;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);

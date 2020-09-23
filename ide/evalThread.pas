@@ -129,7 +129,8 @@ USES mnh_constants,
      mySys,
      profilingView,
      mnh_imig,
-     mnh_settings;
+     mnh_settings,
+     eventsComponent;
 FUNCTION newPlotAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_plotSystem ;
   begin
     if headlessMode then new(P_plotSystem   (result),create(nil,false))
@@ -373,7 +374,9 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
         script:P_scriptMeta;
         scriptType:T_scriptType;
         isValid:boolean;
+        t0:double;
     begin
+      t0:=now;
       if not(package.codeChanged) then exit;
       setupEdit;
       for script in utilityScriptList do dispose(script,destroy);
@@ -392,13 +395,17 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
         end;
       end;
       doneEdit;
+      postIdeMessage('Prepared custom GUI scripts in '+myTimeToStr(now-t0)+'s',false);
     end;
 
   PROCEDURE executeEditScript_impl;
+    VAR t0:double;
     begin
+      t0:=now;
       setupEdit;
       evalRequest^.execute(globals,recycler);
       doneEdit;
+      postIdeMessage('Evaluation of IDE request finished in '+myTimeToStr(now-t0)+'s',false);
     end;
 
 begin
