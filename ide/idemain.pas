@@ -170,7 +170,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -216,6 +216,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     miDebug         .checked:=runnerModel.debugMode;
     miProfile       .checked:=runnerModel.profiling;
     miKeepStackTrace.checked:=runnerModel.stackTracing;
+
 
     {$ifdef debugMode}writeln(stdErr,'Ensuring edit scripts');{$endif}
     runnerModel.ensureEditScripts;
@@ -692,7 +693,10 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       if slowUpdating then exit;
       try
         slowUpdating:=true;
-        if workspace.savingRequested then saveIdeSettings;
+        if workspace.savingRequested then begin
+          postIdeMessage('Saving settings',False);
+          saveIdeSettings;
+        end;
         performSlowUpdates(runnerModel.anyRunning(false));
         drawMemoryUsage;
 

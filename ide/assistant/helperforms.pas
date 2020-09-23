@@ -10,6 +10,9 @@ USES
   tokenArray,basicTypes;
 
 TYPE
+
+  { THelpForm }
+
   THelpForm = class(T_mnhComponentForm)
     builtinGroupBox: TGroupBox;
     examplesGroupBox: TGroupBox;
@@ -17,6 +20,7 @@ TYPE
     referenceListBox: TListBox;
     Panel1: TPanel;
     examplesSynEdit: TSynEdit;
+    builtinScrollBox: TScrollBox;
     usedAtGroupBox: TGroupBox;
     subrulesGroupBox: TGroupBox;
     shortInfoLabel: TLabel;
@@ -40,7 +44,7 @@ TYPE
     PROCEDURE dockChanged; override;
     PROCEDURE locationLabelDblClick(Sender: TObject);
   private
-    temporaryComponents:array of TComponent;
+    temporaryComponents:array of TControl;
     currentLink:string;
     tempLocations:array of T_searchTokenLocation;
     PROCEDURE toggleUpdate(CONST force:boolean=false; CONST enable:boolean=false);
@@ -118,6 +122,7 @@ PROCEDURE THelpForm.performFastUpdate;
       ruleInfo:T_structuredRuleInfo;
       textLine:string;
       i:longint;
+
   PROCEDURE clearTemporaryComponents;
     VAR c:TComponent;
     begin
@@ -127,17 +132,25 @@ PROCEDURE THelpForm.performFastUpdate;
     end;
 
   FUNCTION getNewLabel(CONST italic:boolean; CONST parent:TWinControl):TLabel;
+    VAR c       :TControl;
+        neighbor:TControl=nil;
     begin
+      for c in temporaryComponents do if c.Parent=parent then neighbor:=c;
       result:=TLabel.create(self);
       setLength(temporaryComponents,length(temporaryComponents)+1);
       temporaryComponents[length(temporaryComponents)-1]:=result;
-      if italic then result.Font.style:=[fsItalic];
+      if italic then begin
+        result.Font.style:=[fsItalic];
+      end;
       result.parent:=parent;
-      result.top:=parent.ClientHeight+1;
-      result.Align:=alTop;
+      if neighbor<>nil then begin
+        result.Align:=alCustom;
+        result.AnchorToNeighbour(akTop ,0,neighbor);
+        result.AnchorParallel   (akLeft,0,neighbor);
+      end else result.Align:=alTop;
     end;
 
-  PROCEDURE addRuleInfo(CONST r:T_structuredRuleInfo; CONST box:TGroupBox);
+  PROCEDURE addRuleInfo(CONST r:T_structuredRuleInfo; CONST box:TWinControl);
     VAR lab:TLabel;
     begin
       if length(r.comment)>0 then getNewLabel(true,box).caption:=r.comment;
@@ -157,11 +170,12 @@ PROCEDURE THelpForm.performFastUpdate;
     end;
 
   begin
-    //if not(showing and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
+    if not(showing and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.setUnderCursor(false,true)
     then begin
+      BeginFormUpdate;
       clearTemporaryComponents;
       info :=getCurrentTokenInfo;
       tokenLabel.caption:='Token: '+info.tokenText;
@@ -172,7 +186,8 @@ PROCEDURE THelpForm.performFastUpdate;
       for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
 
       builtinGroupBox.visible:=length(info.builtinRuleInfo)>0;
-      for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinGroupBox);
+      for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinScrollBox);
+      builtinGroupBox.Constraints.MaxHeight:=ClientHeight;
 
       if (length(info.userDefRuleInfo)>0) and (length(info.builtinRuleInfo)>0)
       then builtinGroupBox.caption:='Overloads builtin function'
@@ -185,6 +200,7 @@ PROCEDURE THelpForm.performFastUpdate;
       usedAtGroupBox.visible:=length(info.referencedAt)>0;
       referenceListBox.items.clear;
       for i:=0 to length(info.referencedAt)-1 do referenceListBox.items.append(info.referencedAt[i]);
+      EndFormUpdate;
     end;
   end;
 
@@ -221,9 +237,6 @@ PROCEDURE THelpForm.toggleUpdate(CONST force: boolean; CONST enable: boolean);
     if force
     then UpdateToggleBox.checked:=enable
     else UpdateToggleBox.checked:=not(UpdateToggleBox.checked);
-    //if UpdateToggleBox.checked
-    //then examplesSynEdit.color:=clWhite
-    //else examplesSynEdit.color:=CL_INACTIVE_GREY;
   end;
 
 end.

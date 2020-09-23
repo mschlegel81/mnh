@@ -315,7 +315,12 @@ FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_array
       result[i].idAndSignature:=sigAndComment[0];
       if length(sigAndComment)>1
       then result[i].comment:=sigAndComment[1]
-      else result[i].comment:='';
+      else begin
+        if startsWith(parts[i],'//') then begin
+          result[i].comment:=result[i].idAndSignature;
+          result[i].idAndSignature:='';
+        end else result[i].comment:='';
+      end;
     end;
     examples:=txtExample;
   end;

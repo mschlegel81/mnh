@@ -79,7 +79,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST editorMeta:P_codeProvider);
       DESTRUCTOR destroy;
-      PROCEDURE setAddidionalScripts(CONST toScan:T_arrayOfString);
+      PROCEDURE setAddidionalScripts(CONST toScan:T_arrayOfString; CONST forceScan:boolean);
       //Highlighter related:
       FUNCTION  needRepaint:boolean;
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
@@ -168,11 +168,12 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     doneCriticalSection(cs);
   end;
 
-PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString);
+PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString; CONST forceScan:boolean);
   begin
     enterCriticalSection(cs);
     try
       additionalScriptsToScan:=toScan;
+      if forceScan and (latestResponse<>nil) then latestResponse^.responseStateHash:=0;
       ensureCodeAssistanceThread;
     finally
       leaveCriticalSection(cs);

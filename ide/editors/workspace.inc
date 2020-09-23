@@ -589,7 +589,7 @@ PROCEDURE T_workspace.onFileScanFinished;
     enterCriticalSection(workspaceCs);
     try
       for m in metas do begin
-        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals);
+        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals,false);
       end;
     finally
       leaveCriticalSection(workspaceCs);
