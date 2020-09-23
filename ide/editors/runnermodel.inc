@@ -111,7 +111,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean);
     end;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     evaluation.getStdOut^.outputBehavior:=ideSettings.outputBehavior;
-    postIdeMessage('Starting evaluation',False);
+    postIdeMessage('Starting evaluation',false);
     if mainCall then evaluation.callMain(newFixatedFileProxy(workspace.currentEditor^.getPath),externalRun.mainParameters,contextType,executionDir(workspace.currentEditor))
                 else evaluation.evaluate(newFixatedFileProxy(workspace.currentEditor^.getPath),                           contextType,executionDir(workspace.currentEditor));
   end;
@@ -123,7 +123,7 @@ PROCEDURE T_runnerModel.runExternally();
     externalRun.mnhExecutionOptions.flags+=[clf_PAUSE_ALWAYS];
     callParameters:=externalRun.getCommandLineArgumentsArray;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
-    postIdeMessage('Starting evaluation using external executor',False);
+    postIdeMessage('Starting evaluation using external executor',false);
     runCommandAsyncOrPipeless(externalRun.mnhExecutionOptions.executor,callParameters,true,pid,executionDir(workspace.currentEditor));
   end;
 

@@ -217,7 +217,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     miProfile       .checked:=runnerModel.profiling;
     miKeepStackTrace.checked:=runnerModel.stackTracing;
 
-
     {$ifdef debugMode}writeln(stdErr,'Ensuring edit scripts');{$endif}
     runnerModel.ensureEditScripts;
 
@@ -694,7 +693,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       try
         slowUpdating:=true;
         if workspace.savingRequested then begin
-          postIdeMessage('Saving settings',False);
+          postIdeMessage('Saving settings',false);
           saveIdeSettings;
         end;
         performSlowUpdates(runnerModel.anyRunning(false));

@@ -22,7 +22,7 @@
       <MajorVersionNr Value="1"/>
       <MinorVersionNr Value="1"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="396"/>
+      <BuildNr Value="397"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 light interpreter" InternalName="mnh5_light" LegalCopyright="LGPL" OriginalFilename="mnh_light" ProductName="MNH5"/>
     </VersionInfo>

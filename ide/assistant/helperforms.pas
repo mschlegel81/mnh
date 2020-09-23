@@ -135,7 +135,7 @@ PROCEDURE THelpForm.performFastUpdate;
     VAR c       :TControl;
         neighbor:TControl=nil;
     begin
-      for c in temporaryComponents do if c.Parent=parent then neighbor:=c;
+      for c in temporaryComponents do if c.parent=parent then neighbor:=c;
       result:=TLabel.create(self);
       setLength(temporaryComponents,length(temporaryComponents)+1);
       temporaryComponents[length(temporaryComponents)-1]:=result;
