@@ -1260,7 +1260,7 @@ end}
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_separatorMapItem..tt_operatorConcatAlt,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_ponFlipper, tt_each,tt_parallelEach: applyRule(nil,first^.next);
+          tt_ponFlipper, tt_each,tt_parallelEach,tt_pow2,tt_pow3: applyRule(nil,first^.next);
         end;
 {cT[0]=}tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=recycler.disposeToken(first^.next);
