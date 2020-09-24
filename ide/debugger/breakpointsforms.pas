@@ -63,7 +63,7 @@ PROCEDURE TBreakpointsForm.BreakpointsListBoxKeyDown(Sender: TObject;
 
 PROCEDURE TBreakpointsForm.FormCreate(Sender: TObject);
   begin
-    Caption:=getCaption;
+    caption:=getCaption;
     registerFontControl(BreakpointsListBox,ctGeneral);
     initDockMenuItems(MainMenu1,MenuItem1);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);

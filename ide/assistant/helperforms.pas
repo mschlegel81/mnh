@@ -83,9 +83,9 @@ PROCEDURE ensureHelpForm;
 
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
-    Caption:=getCaption;
+    caption:=getCaption;
     registerFontControl(examplesSynEdit,ctEditor);
-    registerFontControl(Self,ctGeneral);
+    registerFontControl(self,ctGeneral);
     helpHighlighter:=TMnhOutputSyn.create(self);
     examplesSynEdit.highlighter:=helpHighlighter;
     currentLink:=getDocIndexLinkForBrowser;

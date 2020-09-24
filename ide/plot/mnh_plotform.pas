@@ -216,7 +216,7 @@ PROCEDURE T_guiPlotSystem.ensureForm(CONST dockToMain:boolean);
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(Application);
       if cap=''
-      then myPlotForm.Caption:=myPlotForm.getCaption
+      then myPlotForm.caption:=myPlotForm.getCaption
       else myPlotForm.caption:=cap;
       myPlotForm.relatedPlot:=@self;
       pullSettingsToGui:=@myPlotForm.pullPlotSettingsToGui;

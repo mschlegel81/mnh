@@ -151,7 +151,7 @@ PROCEDURE TprofilingOutputForm.StringGrid1PrepareCanvas(Sender: TObject; aCol, a
 
 PROCEDURE TprofilingOutputForm.FormCreate(Sender: TObject);
   begin
-    Caption:=getCaption;
+    caption:=getCaption;
     grid1Sorting:=255;
     grid2Sorting:=255;
     registerFontControl(StringGrid1,ctTable);
