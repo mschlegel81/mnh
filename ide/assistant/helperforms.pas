@@ -10,9 +10,6 @@ USES
   tokenArray,basicTypes;
 
 TYPE
-
-  { THelpForm }
-
   THelpForm = class(T_mnhComponentForm)
     builtinGroupBox: TGroupBox;
     examplesGroupBox: TGroupBox;

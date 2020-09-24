@@ -32,7 +32,7 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText:string; CONST warn:boolean);
 PROCEDURE ensureEventsForm;
 IMPLEMENTATION
-USES basicTypes,myGenerics;
+USES basicTypes,myGenerics,mySys,myStringUtil,mnh_settings;
 TYPE
   P_ideMessage=^T_ideMessage;
   T_ideMessage=object
@@ -81,10 +81,17 @@ PROCEDURE ensureEventsForm;
     end;
   end;
 
+PROCEDURE memoryCleanerCallback;
+  VAR dummy:double;
+  begin
+    postIdeMessage('Cleaning memory; '+mySys.getMemoryUsedAsString(dummy)+' used = '+IntToStr(round(dummy*100))+'% of threshold value',dummy>1);
+  end;
+
 PROCEDURE setupEventsComponentOnIdeStartup;
   begin
     if eventsAdapterSingleton=nil then begin
       new(eventsAdapterSingleton,create);
+      memoryCleaner.registerCleanupMethod(@memoryCleanerCallback);
     end;
   end;
 
@@ -169,8 +176,10 @@ FUNCTION TeventsForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TeventsForm.FormCreate(Sender: TObject);
   begin
+    Caption:=getCaption;
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
+    registerFontControl(eventsGrid,ctTable);
   end;
 
 PROCEDURE TeventsForm.performSlowUpdate(CONST isEvaluationRunning: boolean);

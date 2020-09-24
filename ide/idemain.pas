@@ -170,7 +170,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -265,8 +265,23 @@ PROCEDURE TIdeMainForm.EditorsPageControlChange(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
+  PROCEDURE updateShortcuts;
+    begin
+      COMPONENT_SHORTCUT[icOutline            ]:=shortcutToString(miOutline    .ShortCut);
+      COMPONENT_SHORTCUT[icHelp               ]:=shortcutToString(miHelp       .ShortCut);
+      COMPONENT_SHORTCUT[icAssistance         ]:=shortcutToString(miAssistant  .ShortCut);
+      COMPONENT_SHORTCUT[icQuickEval          ]:=shortcutToString(miQuickEval  .ShortCut);
+      COMPONENT_SHORTCUT[icDebugger           ]:=shortcutToString(miDebugger   .ShortCut);
+      COMPONENT_SHORTCUT[icDebuggerVariables  ]:=shortcutToString(miDebuggerVar.ShortCut);
+      COMPONENT_SHORTCUT[icDebuggerBreakpoints]:=shortcutToString(miBreakpoints.ShortCut);
+      COMPONENT_SHORTCUT[icOutput             ]:=shortcutToString(miOutput     .ShortCut);
+      COMPONENT_SHORTCUT[icIdeEvents          ]:=shortcutToString(miEventsView .ShortCut);
+    end;
+
   VAR meta:P_editorMeta;
   begin
+    updateShortcuts;
+    postIdeMessage('Activating IDE',false);
     with ideSettings do begin
       case windowStateForUpdate of
         wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     end;
@@ -693,7 +708,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       try
         slowUpdating:=true;
         if workspace.savingRequested then begin
-          postIdeMessage('Saving settings',false);
           saveIdeSettings;
         end;
         performSlowUpdates(runnerModel.anyRunning(false));
