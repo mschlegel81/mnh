@@ -8,9 +8,6 @@ USES
   Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
   SynEditTypes,SynExportHTML,SynEditHighlighter,myGenerics;
 
-CONST
-  CL_INACTIVE_GREY=TColor($E0E0E0);
-
 TYPE
   T_registeredAssociation=(raNone,raFullVersion,raLightVersion);
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
@@ -35,13 +32,17 @@ TYPE
                      cpPageControl2,
                      cpPageControl3,
                      cpPageControl4);
+VAR COMPONENT_SHORTCUT:array [T_ideComponent] of string;
 CONST
+  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot','Custom Form',
+                                                       'Table','Variable','Profiling output','Events');
   PAGES:set of T_componentParent=[cpPageControl1..cpPageControl4];
 TYPE
   T_mnhComponentForm=class(TForm)
     published
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
+      FUNCTION getCaption:string; virtual;
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
       PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); virtual; abstract;
       PROCEDURE performFastUpdate; virtual; abstract;
@@ -434,7 +435,8 @@ PROCEDURE T_mnhDockSiteModel.undockAll;
     if needSizeFix then fixSize;
   end;
 
-PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT PageControl: TPageControl);
+procedure T_mnhComponentForm.getParents(out page: TTabSheet; out
+  PageControl: TPageControl);
   begin
     page:=nil;
     PageControl:=nil;;
@@ -445,12 +447,13 @@ PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT PageControl: TP
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+procedure T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; var key: word;
+  Shift: TShiftState);
   begin
     if (mainForm<>nil) and (mainForm.dockSites[myComponentParent]<>nil) then mainForm.dockSites[myComponentParent]^.tabNextKeyHandling(Sender,key,Shift);
   end;
 
-PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
+procedure T_mnhComponentForm.showComponent(const retainOriginalFocus: boolean);
   VAR page:TTabSheet;
       PageControl:TPageControl;
       oldActive:TWinControl;
@@ -474,7 +477,7 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
     dockChanged;
   end;
 
-PROCEDURE T_mnhComponentForm.changeDock(CONST newSite: T_componentParent);
+procedure T_mnhComponentForm.changeDock(const newSite: T_componentParent);
   VAR prevSite:T_componentParent;
   begin
     if myComponentParent=newSite then exit;
@@ -495,7 +498,7 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite: T_componentParent);
     showComponent(false);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);
+procedure T_mnhComponentForm.defaultCloseClick(Sender: TObject);
   VAR page:TTabSheet;
       PageControl:TPageControl;
       CloseAction:TCloseAction=caFree;
@@ -510,19 +513,20 @@ PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);
     if CloseAction=caFree then FreeAndNil(self);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
-PROCEDURE T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
-PROCEDURE T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
-PROCEDURE T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
-PROCEDURE T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
-PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
+procedure T_mnhComponentForm.defaultUndockClick(Sender: TObject); begin changeDock(cpNone);         end;
+procedure T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
+procedure T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
+procedure T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
+procedure T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
+procedure T_mnhComponentForm.defaultReattachClick(Sender: TObject);
   begin
     if lastDock=cpNone
     then changeDock(C_defaultDock[getIdeComponentType])
     else changeDock(lastDock);
   end;
 
-PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST dockRoot: TMenuItem);
+procedure T_mnhComponentForm.initDockMenuItems(const menuToInit: TMenu;
+  const dockRoot: TMenuItem);
   VAR useRoot,item:TMenuItem;
   begin
     if mainForm=nil then exit;
@@ -542,7 +546,7 @@ PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST do
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
   end;
 
-PROCEDURE T_mnhComponentForm.setComponentFormVisible(CONST visible_:boolean);
+procedure T_mnhComponentForm.setComponentFormVisible(const visible_: boolean);
   VAR page:TTabSheet;
       PageControl:TPageControl;
   begin
@@ -635,7 +639,7 @@ PROCEDURE setFontSize(CONST c: T_controlType; CONST value: longint);
     end;
   end;
 
-CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
+constructor T_mnhComponentForm.create(TheOwner: TComponent);
   VAR k:longint;
   begin
     inherited create(TheOwner);
@@ -647,7 +651,7 @@ CONSTRUCTOR T_mnhComponentForm.create(TheOwner: TComponent);
     OnKeyUp:=@tabNextKeyHandling;
   end;
 
-DESTRUCTOR T_mnhComponentForm.destroy;
+destructor T_mnhComponentForm.destroy;
   VAR k:longint=0;
       cp:T_componentParent;
   begin
@@ -661,7 +665,8 @@ DESTRUCTOR T_mnhComponentForm.destroy;
     if mainForm<>nil then mainForm.dockSites[cp]^.fixSize;
   end;
 
-PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: integer);
+procedure T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,
+  Y: integer);
   VAR n:string;
   begin
     if (target<>nil) then begin
@@ -683,7 +688,15 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: intege
     dockChanged;
   end;
 
-FUNCTION T_mnhComponentForm.getDefaultControl: TWinControl;
+function T_mnhComponentForm.getCaption: string;
+  VAR i:T_ideComponent;
+  begin
+    i:=getIdeComponentType;
+    result:=COMPONENT_CAPTION[i];
+    if COMPONENT_SHORTCUT[i]<>'' then result+=' ('+COMPONENT_SHORTCUT[i]+')';
+  end;
+
+function T_mnhComponentForm.getDefaultControl: TWinControl;
   begin
     result:=self;
   end;
@@ -997,7 +1010,14 @@ FUNCTION T_ideSettings.workspaceFilename: string;
     else result:=currentWorkspace;
   end;
 
+PROCEDURE clearComponentShortcuts;
+  VAR i:T_ideComponent;
+  begin
+    for i in T_ideComponent do COMPONENT_SHORTCUT[i]:='';
+  end;
+
 INITIALIZATION
+  clearComponentShortcuts;
   ideSettings.create;
   initialize(lastDockLocationFor);
   setLength(activeForms,0);

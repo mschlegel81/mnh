@@ -1,7 +1,7 @@
 UNIT editScripts;
 
 {$mode objfpc}{$H+}
-
+//TODO: If an editor's content is calculated (@newEditor) then add a button to the editor to allow "re-creating" the editor
 INTERFACE
 USES Classes,
      myGenerics,

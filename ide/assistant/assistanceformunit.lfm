@@ -13,7 +13,7 @@ object AssistanceForm: TAssistanceForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   inline AssistanceEdit: TSynEdit
     Left = 0
     Height = 276
@@ -493,11 +493,11 @@ object AssistanceForm: TAssistanceForm
     TabOrder = 1
   end
   object MainMenu1: TMainMenu
-    left = 146
-    top = 139
+    Left = 146
+    Top = 139
   end
   object PopupMenu1: TPopupMenu
-    left = 129
-    top = 57
+    Left = 129
+    Top = 57
   end
 end

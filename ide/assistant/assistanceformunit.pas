@@ -93,8 +93,8 @@ PROCEDURE TAssistanceForm.performFastUpdate;
       if (codeAssistanceResponse<>nil) and ((codeAssistanceResponse^.stateHash<>paintedWithStateHash) or (AssistanceEdit.charsInWindow<>paintedWithWidth))
       then begin
         codeAssistanceResponse^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
-        caption:=conditionalCaption[hasErrors,hasWarnings];
-        if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings];
+        caption                           :=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
+        if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
         paintedWithStateHash:=codeAssistanceResponse^.stateHash;
         paintedWithWidth:=AssistanceEdit.charsInWindow;
       end;

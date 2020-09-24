@@ -174,10 +174,10 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
   VAR plot:P_guiPlotSystem;
   begin
     inherited init(ek_normal);
-    stdOutAdapter:=newStdOutAdapter('Output',@isRunning,C_textMessages);
+    stdOutAdapter:=newStdOutAdapter('',@isRunning,C_textMessages);
     stdOutAdapter^.parentMessages:=@messages;
     messages.addOutAdapter(stdOutAdapter,true);
-    plot:=P_guiPlotSystem(newPlotAdapter      ('MNH plot'));
+    plot:=P_guiPlotSystem(newPlotAdapter      (''));
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);

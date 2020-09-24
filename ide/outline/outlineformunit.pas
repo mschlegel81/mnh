@@ -251,6 +251,7 @@ PROCEDURE T_outlineNode.refresh;
 
 PROCEDURE TOutlineForm.FormCreate(Sender: TObject);
   begin
+    Caption:=getCaption;
     setLength(packageNodes,0);
     showPrivateCheckbox.checked:=ideSettings.outlineSettings.showPrivate;
     showImportedCheckbox.checked:=ideSettings.outlineSettings.showImported;
