@@ -16,7 +16,7 @@ TYPE
       cap:string;
       PROCEDURE ensureForm;
     public
-      CONSTRUCTOR create(CONST plotFormCaption:string='MNH image');
+      CONSTRUCTOR create(CONST plotFormCaption:string='');
       DESTRUCTOR destroy; virtual;
       PROCEDURE displayImage;
       PROCEDURE formDestroyed;
@@ -54,7 +54,9 @@ PROCEDURE T_guiImageSystem.ensureForm;
   begin
     if myImageForm=nil then begin
       myImageForm:=TDisplayImageForm.create(Application);
-      myImageForm.caption:=cap;
+      if cap=''
+      then myImageForm.caption:=myImageForm.getCaption
+      else myImageForm.caption:=cap;
       myImageForm.relatedAdapters:=@self;
       dockNewForm(myImageForm);
     end;

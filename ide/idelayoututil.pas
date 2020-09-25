@@ -35,8 +35,9 @@ TYPE
                      cpPageControl4);
 VAR COMPONENT_SHORTCUT:array [T_ideComponent] of string;
 CONST
-  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot','Custom Form',
-                                                       'Table','Variable','Profiling output','Events');
+  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot',
+                                                       'Image',
+                                                       'Custom Form','Table','Variable','Profiling output','Events');
   PAGES:set of T_componentParent=[cpPageControl1..cpPageControl4];
 TYPE
   T_windowPosition=record
