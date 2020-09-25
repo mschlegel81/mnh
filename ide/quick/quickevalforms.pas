@@ -103,6 +103,7 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
 
 PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
   begin
+    caption:=getCaption;
     inputMeta.createWithExistingEditor(quickInputSynEdit,nil);
     inputMeta.language:=LANG_MNH;
     inputMeta.editor.OnChange:=@quickInputEditChange;

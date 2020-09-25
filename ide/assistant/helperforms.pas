@@ -10,17 +10,13 @@ USES
   tokenArray,basicTypes;
 
 TYPE
-
-  { THelpForm }
-
   THelpForm = class(T_mnhComponentForm)
     builtinGroupBox: TGroupBox;
     examplesGroupBox: TGroupBox;
-    FlowPanel1: TFlowPanel;
     referenceListBox: TListBox;
     Panel1: TPanel;
     examplesSynEdit: TSynEdit;
-    builtinScrollBox: TScrollBox;
+    ScrollBox1: TScrollBox;
     usedAtGroupBox: TGroupBox;
     subrulesGroupBox: TGroupBox;
     shortInfoLabel: TLabel;
@@ -87,7 +83,9 @@ PROCEDURE ensureHelpForm;
 
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
+    caption:=getCaption;
     registerFontControl(examplesSynEdit,ctEditor);
+    registerFontControl(self,ctGeneral);
     helpHighlighter:=TMnhOutputSyn.create(self);
     examplesSynEdit.highlighter:=helpHighlighter;
     currentLink:=getDocIndexLinkForBrowser;
@@ -99,6 +97,7 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
 PROCEDURE THelpForm.FormDestroy(Sender: TObject);
   begin
     unregisterFontControl(examplesSynEdit);
+    unregisterFontControl(self);
   end;
 
 FUNCTION THelpForm.getIdeComponentType: T_ideComponent;
@@ -135,11 +134,12 @@ PROCEDURE THelpForm.performFastUpdate;
     VAR c       :TControl;
         neighbor:TControl=nil;
     begin
-      for c in temporaryComponents do if c.Parent=parent then neighbor:=c;
+      for c in temporaryComponents do if c.parent=parent then neighbor:=c;
       result:=TLabel.create(self);
       setLength(temporaryComponents,length(temporaryComponents)+1);
       temporaryComponents[length(temporaryComponents)-1]:=result;
       if italic then begin
+        result.Font:=Font;
         result.Font.style:=[fsItalic];
       end;
       result.parent:=parent;
@@ -186,7 +186,7 @@ PROCEDURE THelpForm.performFastUpdate;
       for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
 
       builtinGroupBox.visible:=length(info.builtinRuleInfo)>0;
-      for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinScrollBox);
+      for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinGroupBox);
       builtinGroupBox.Constraints.MaxHeight:=ClientHeight;
 
       if (length(info.userDefRuleInfo)>0) and (length(info.builtinRuleInfo)>0)

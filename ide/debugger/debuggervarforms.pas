@@ -50,6 +50,7 @@ FUNCTION TDebuggerVarForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TDebuggerVarForm.FormCreate(Sender: TObject);
   begin
+    caption:=getCaption;
     registerFontControl(StackGrid,ctTable);
     registerFontControl(VariablesTree,ctGeneral);
     variablesTreeViewModel.create(VariablesTree);

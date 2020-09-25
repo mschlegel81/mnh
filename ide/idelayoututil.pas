@@ -8,9 +8,6 @@ USES
   Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
   SynEditTypes,SynExportHTML,SynEditHighlighter,myGenerics;
 
-CONST
-  CL_INACTIVE_GREY=TColor($E0E0E0);
-
 TYPE
   T_registeredAssociation=(raNone,raFullVersion,raLightVersion);
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
@@ -36,13 +33,21 @@ TYPE
                      cpPageControl2,
                      cpPageControl3,
                      cpPageControl4);
+VAR COMPONENT_SHORTCUT:array [T_ideComponent] of string;
 CONST
+  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot','Custom Form',
+                                                       'Table','Variable','Profiling output','Events');
   PAGES:set of T_componentParent=[cpPageControl1..cpPageControl4];
 TYPE
+  T_windowPosition=record
+    Left,top,height,width:longint;
+  end;
+
   T_mnhComponentForm=class(TForm)
     published
       CONSTRUCTOR create(TheOwner: TComponent); override;
       PROCEDURE defaultEndDock(Sender, target: TObject; X,Y: integer);
+      FUNCTION getCaption:string; virtual;
       FUNCTION getIdeComponentType:T_ideComponent; virtual; abstract;
       PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); virtual; abstract;
       PROCEDURE performFastUpdate; virtual; abstract;
@@ -120,7 +125,6 @@ TYPE
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
 
-  //TODO extend IDE settings to store the window dimensions of detached components
   T_ideSettings=object(T_serializable)
     private
       currentWorkspace:string;
@@ -128,6 +132,7 @@ TYPE
     public
     activeComponents:T_ideComponentSet;
     windowStateForUpdate:T_windowStateForUpdate;
+    ideComponentSize:array[T_ideComponent] of T_windowPosition;
 
     doShowSplashScreen:boolean;
     copyTextAsHtml:boolean;
@@ -190,6 +195,11 @@ TYPE F_getFontSize= FUNCTION (CONST c:T_controlType): longint of object;
 VAR getFontSize_callback:F_getFontSize=nil;
     setFontSize_callback:F_setFontSize=nil;
     htmlExporter:T_htmlExporter;
+FUNCTION loadWindowPositionFromStream(VAR stream:T_bufferedInputStreamWrapper):T_windowPosition;
+PROCEDURE saveWindowPositionToSream(VAR stream:T_bufferedOutputStreamWrapper; CONST pos:T_windowPosition);
+FUNCTION getWindowPosition(CONST form:TForm):T_windowPosition;
+PROCEDURE applyWindowPosition(CONST form:TForm; CONST pos:T_windowPosition);
+
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
      editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,strutils;
@@ -437,7 +447,8 @@ PROCEDURE T_mnhDockSiteModel.undockAll;
     if needSizeFix then fixSize;
   end;
 
-PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT PageControl: TPageControl);
+PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT
+  PageControl: TPageControl);
   begin
     page:=nil;
     PageControl:=nil;;
@@ -448,7 +459,8 @@ PROCEDURE T_mnhComponentForm.getParents(OUT page: TTabSheet; OUT PageControl: TP
     end;
   end;
 
-PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE T_mnhComponentForm.tabNextKeyHandling(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   begin
     if (mainForm<>nil) and (mainForm.dockSites[myComponentParent]<>nil) then mainForm.dockSites[myComponentParent]^.tabNextKeyHandling(Sender,key,Shift);
   end;
@@ -461,6 +473,7 @@ PROCEDURE T_mnhComponentForm.showComponent(CONST retainOriginalFocus: boolean);
     getParents(page,PageControl);
     if PageControl=nil then begin
       Show;
+      applyWindowPosition(self,ideSettings.ideComponentSize[getIdeComponentType]);
       BringToFront;
     end else begin
       oldActive:=mainForm.ActiveControl;
@@ -485,6 +498,7 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite: T_componentParent);
     if newSite=cpNone
     then begin
       ManualDock(nil);
+      applyWindowPosition(self,ideSettings.ideComponentSize[getIdeComponentType]);
       ShowInTaskBar:=stAlways;
     end else begin
       ManualDock(mainForm.dockSites[newSite]^.PageControl);
@@ -513,19 +527,20 @@ PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);
     if CloseAction=caFree then FreeAndNil(self);
   end;
 
-PROCEDURE T_mnhComponentForm.defaultUndockClick   (Sender: TObject); begin changeDock(cpNone);         end;
+PROCEDURE T_mnhComponentForm.defaultUndockClick(Sender: TObject); begin changeDock(cpNone);         end;
 PROCEDURE T_mnhComponentForm.defaultDockSite1Click(Sender: TObject); begin changeDock(cpPageControl1); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite2Click(Sender: TObject); begin changeDock(cpPageControl2); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite3Click(Sender: TObject); begin changeDock(cpPageControl3); end;
 PROCEDURE T_mnhComponentForm.defaultDockSite4Click(Sender: TObject); begin changeDock(cpPageControl4); end;
-PROCEDURE T_mnhComponentForm.defaultReattachClick (Sender: TObject);
+PROCEDURE T_mnhComponentForm.defaultReattachClick(Sender: TObject);
   begin
     if lastDock=cpNone
     then changeDock(C_defaultDock[getIdeComponentType])
     else changeDock(lastDock);
   end;
 
-PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST dockRoot: TMenuItem);
+PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu;
+  CONST dockRoot: TMenuItem);
   VAR useRoot,item:TMenuItem;
   begin
     if mainForm=nil then exit;
@@ -545,7 +560,7 @@ PROCEDURE T_mnhComponentForm.initDockMenuItems(CONST menuToInit: TMenu; CONST do
     item:=TMenuItem.create(menuToInit); item.OnClick:=@defaultCloseClick;     item.caption:='&Close';                      useRoot.add(item);
   end;
 
-PROCEDURE T_mnhComponentForm.setComponentFormVisible(CONST visible_:boolean);
+PROCEDURE T_mnhComponentForm.setComponentFormVisible(CONST visible_: boolean);
   VAR page:TTabSheet;
       PageControl:TPageControl;
   begin
@@ -686,6 +701,14 @@ PROCEDURE T_mnhComponentForm.defaultEndDock(Sender, target: TObject; X,Y: intege
     dockChanged;
   end;
 
+FUNCTION T_mnhComponentForm.getCaption: string;
+  VAR i:T_ideComponent;
+  begin
+    i:=getIdeComponentType;
+    result:=COMPONENT_CAPTION[i];
+    if COMPONENT_SHORTCUT[i]<>'' then result+=' ('+COMPONENT_SHORTCUT[i]+')';
+  end;
+
 FUNCTION T_mnhComponentForm.getDefaultControl: TWinControl;
   begin
     result:=self;
@@ -694,7 +717,11 @@ FUNCTION T_mnhComponentForm.getDefaultControl: TWinControl;
 PROCEDURE performSlowUpdates(CONST isEvaluationRunning:boolean);
   VAR f:T_mnhComponentForm;
   begin
-    for f in activeForms do f.performSlowUpdate(isEvaluationRunning);
+    for f in activeForms do begin
+      f.performSlowUpdate(isEvaluationRunning);
+      if f.myComponentParent=cpNone then
+      ideSettings.ideComponentSize[f.getIdeComponentType]:=getWindowPosition(f);
+    end;
   end;
 
 PROCEDURE performFastUpdates;
@@ -759,6 +786,38 @@ OPERATOR:=(x: TFontStyles): byte;
     result:=0;
     if fsBold   in x then result+=FONT_STYLE_BOLD;
     if fsItalic in x then result+=FONT_STYLE_ITALIC;
+  end;
+
+FUNCTION loadWindowPositionFromStream(VAR stream: T_bufferedInputStreamWrapper): T_windowPosition;
+  begin
+    result.top   :=min(max(stream.readLongint,0  ),screen.height-100);
+    result.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
+    result.height:=min(max(stream.readLongint,100),screen.height);
+    result.width :=min(max(stream.readLongint,100),screen.width);
+  end;
+
+PROCEDURE saveWindowPositionToSream(VAR stream: T_bufferedOutputStreamWrapper; CONST pos: T_windowPosition);
+  begin
+    stream.writeLongint(pos.top);
+    stream.writeLongint(pos.Left);
+    stream.writeLongint(pos.height);
+    stream.writeLongint(pos.width);
+  end;
+
+FUNCTION getWindowPosition(CONST form: TForm): T_windowPosition;
+  begin
+    result.top   :=form.top   ;
+    result.Left  :=form.Left  ;
+    result.height:=form.height;
+    result.width :=form.width ;
+  end;
+
+PROCEDURE applyWindowPosition(CONST form: TForm; CONST pos: T_windowPosition);
+  begin
+    form.top   :=pos.top   ;
+    form.Left  :=pos.Left  ;
+    form.height:=pos.height;
+    form.width :=pos.width ;
   end;
 
 {$i func_defines.inc}
@@ -857,7 +916,7 @@ CONSTRUCTOR T_ideSettings.create;
 
 FUNCTION T_ideSettings.getSerialVersion: dword;
   begin
-    result:=24823583;
+    result:=24823584;
   end;
 
 FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -892,23 +951,18 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     end;
 
     if mainForm<>nil then begin
-      mainForm.top   :=min(max(stream.readLongint,0  ),screen.height-100);
-      mainForm.Left  :=min(max(stream.readLongint,0  ),screen.width-100);
-      mainForm.height:=min(max(stream.readLongint,100),screen.height);
-      mainForm.width :=min(max(stream.readLongint,100),screen.width);
+      applyWindowPosition(mainForm,loadWindowPositionFromStream(stream));
       windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
       for cp in PAGES do mainForm.dockSites[cp]^.relativeSize:=stream.readWord;
     end else begin
-      stream.readLongint;
-      stream.readLongint;
-      stream.readLongint;
-      stream.readLongint;
+      loadWindowPositionFromStream(stream);
       windowStateForUpdate:=T_windowStateForUpdate(stream.readByte([byte(wsfuFullscreen),byte(wsfuMaximized),byte(wsfuNormal)]));
       for cp in PAGES do stream.readWord;
     end;
     activeComponents:=[];
     for ic in T_ideComponent do if ic<>icImage then begin
       lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
+      ideComponentSize   [ic]:=loadWindowPositionFromStream(stream);
       if stream.readBoolean then include(activeComponents,ic);
     end;
 
@@ -951,10 +1005,7 @@ PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     if length(workspaceHistory)>MAX_WORKSPACE_HISTORY_SIZE then setLength(workspaceHistory,MAX_WORKSPACE_HISTORY_SIZE);
     stream.writeNaturalNumber(length(workspaceHistory));
 
-    stream.writeLongint(mainForm.top);
-    stream.writeLongint(mainForm.Left);
-    stream.writeLongint(mainForm.height);
-    stream.writeLongint(mainForm.width);
+    saveWindowPositionToSream(stream,getWindowPosition(mainForm));
     case mainForm.WindowState of
       wsMaximized : stream.writeByte(byte(wsfuMaximized));
       wsFullScreen: stream.writeByte(byte(wsfuFullscreen));
@@ -965,6 +1016,7 @@ PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 
     for ic in T_ideComponent do if ic<>icImage then begin
       stream.writeByte(byte(lastDockLocationFor[ic]));
+      saveWindowPositionToSream(stream,ideComponentSize[ic]);
       stream.writeBoolean(hasFormOfType(ic));
     end;
 
@@ -1000,7 +1052,14 @@ FUNCTION T_ideSettings.workspaceFilename: string;
     else result:=currentWorkspace;
   end;
 
+PROCEDURE clearComponentShortcuts;
+  VAR i:T_ideComponent;
+  begin
+    for i in T_ideComponent do COMPONENT_SHORTCUT[i]:='';
+  end;
+
 INITIALIZATION
+  clearComponentShortcuts;
   ideSettings.create;
   initialize(lastDockLocationFor);
   setLength(activeForms,0);

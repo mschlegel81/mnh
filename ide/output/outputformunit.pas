@@ -117,7 +117,9 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
   begin
     if outputForm=nil then begin
       outputForm:=TOutputForm.create(nil);
-      outputForm.caption:=formCaption;
+      if formCaption=''
+      then outputForm.caption:=outputForm.getCaption
+      else outputForm.caption:=formCaption;
       outputForm.adapter:=@self;
       dockNewForm(outputForm);
       outputForm.updateAfterSettingsRestore;
@@ -219,7 +221,7 @@ PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
     if not(isEvaluationRunning) then cbFreezeOutput.checked:=false;
     if cbFreezeOutput.checked
-    then OutputSynEdit.color:=CL_INACTIVE_GREY
+    then OutputSynEdit.color:=clBtnFace
     else OutputSynEdit.color:=clWhite;
   end;
 

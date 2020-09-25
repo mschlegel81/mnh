@@ -87,6 +87,7 @@ FUNCTION TDebuggerForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TDebuggerForm.FormCreate(Sender: TObject);
   begin
+    caption:=getCaption;
     parameterInfo:=nil;
     new(inlineVariableReport,create(dvc_inline));
     treeViewModel.create(inlineVariablesTreeView);

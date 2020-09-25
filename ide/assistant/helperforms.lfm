@@ -14,99 +14,58 @@ object HelpForm: THelpForm
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
   LCLVersion = '2.0.10.0'
-  object FlowPanel1: TFlowPanel
+  object ScrollBox1: TScrollBox
     Left = 0
     Height = 634
     Top = 0
     Width = 609
+    HorzScrollBar.Page = 605
+    VertScrollBar.Page = 522
     Align = alClient
-    ControlList = <    
-      item
-        Control = Panel1
-        WrapAfter = waAuto
-        Index = 0
-      end    
-      item
-        Control = subrulesGroupBox
-        WrapAfter = waAuto
-        Index = 1
-      end    
-      item
-        Control = builtinGroupBox
-        WrapAfter = waAuto
-        Index = 2
-      end    
-      item
-        Control = examplesGroupBox
-        WrapAfter = waAuto
-        Index = 3
-      end    
-      item
-        Control = usedAtGroupBox
-        WrapAfter = waAuto
-        Index = 4
-      end>
-    FlowLayout = tlTop
-    FlowStyle = fsLeftRightTopBottom
+    ClientHeight = 630
+    ClientWidth = 605
     TabOrder = 0
-    object subrulesGroupBox: TGroupBox
-      AnchorSideTop.Side = asrBottom
-      Left = 150
-      Height = 24
-      Top = 6
-      Width = 75
-      Anchors = []
-      AutoSize = True
+    object usedAtGroupBox: TGroupBox
+      Left = 5
+      Height = 192
+      Top = 330
+      Width = 600
+      Align = alTop
       BorderSpacing.Left = 5
-      BorderSpacing.Top = 5
-      Caption = 'Subrules'
+      Caption = 'Referenced at'
+      ClientHeight = 167
+      ClientWidth = 596
       TabOrder = 0
-    end
-    object builtinGroupBox: TGroupBox
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Side = asrBottom
-      Left = 230
-      Height = 213
-      Top = 1
-      Width = 192
-      Anchors = []
-      AutoSize = True
-      BorderSpacing.Left = 5
-      Caption = 'Bultin function'
-      ClientHeight = 188
-      ClientWidth = 188
-      TabOrder = 1
-      object builtinScrollBox: TScrollBox
+      object referenceListBox: TListBox
         Left = 0
-        Height = 188
+        Height = 167
         Top = 0
-        Width = 188
-        HorzScrollBar.Page = 1
-        VertScrollBar.Page = 1
+        Width = 596
         Align = alClient
-        AutoSize = True
+        ItemHeight = 0
+        OnKeyDown = referenceListBoxKeyDown
         TabOrder = 0
       end
     end
     object examplesGroupBox: TGroupBox
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Side = asrBottom
-      Left = 6
-      Height = 213
-      Top = 214
-      Width = 596
-      Anchors = []
+      Left = 5
+      Height = 200
+      Top = 130
+      Width = 600
+      Align = alTop
       AutoSize = True
       BorderSpacing.Left = 5
-      Caption = 'examples'
-      ClientHeight = 188
-      ClientWidth = 592
-      TabOrder = 2
+      Caption = 'Examples'
+      ClientHeight = 175
+      ClientWidth = 596
+      Constraints.MinHeight = 200
+      TabOrder = 1
       inline examplesSynEdit: TSynEdit
         Left = 0
-        Height = 188
+        Height = 175
         Top = 0
-        Width = 592
+        Width = 596
+        Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
         Font.Pitch = fpFixed
@@ -602,92 +561,72 @@ object HelpForm: THelpForm
         end
       end
     end
-    object usedAtGroupBox: TGroupBox
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Side = asrBottom
-      Left = 6
-      Height = 192
-      Top = 427
-      Width = 315
-      Anchors = []
-      BorderSpacing.Left = 5
-      Caption = 'Referenced at'
-      ClientHeight = 167
-      ClientWidth = 311
-      TabOrder = 3
-      object referenceListBox: TListBox
-        Left = 0
-        Height = 167
-        Top = 0
-        Width = 311
-        Align = alClient
-        ItemHeight = 0
-        OnKeyDown = referenceListBoxKeyDown
-        TabOrder = 0
-      end
-    end
     object Panel1: TPanel
-      Left = 1
-      Height = 131
-      Top = 1
-      Width = 144
-      Anchors = []
+      Left = 0
+      Height = 77
+      Top = 0
+      Width = 605
+      Align = alTop
       AutoSize = True
-      ClientHeight = 131
-      ClientWidth = 144
-      TabOrder = 4
+      ClientHeight = 77
+      ClientWidth = 605
+      TabOrder = 2
       object openHtmlButton: TButton
-        Left = 1
+        AnchorSideLeft.Control = UpdateToggleBox
+        AnchorSideTop.Control = UpdateToggleBox
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = Panel1
+        AnchorSideRight.Side = asrBottom
+        Left = 462
         Height = 30
-        Top = 100
+        Top = 25
         Width = 142
-        Align = alBottom
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
         AutoSize = True
         Caption = 'Show in browser'
         OnClick = openHtmlButtonClick
         ParentFont = False
         TabOrder = 0
       end
-      object tokenLabel: TLabel
-        Left = 6
-        Height = 20
-        Top = 6
-        Width = 137
-        Align = alTop
-        BorderSpacing.Left = 5
-        BorderSpacing.Top = 5
-        Caption = 'Token: ...'
-        ParentColor = False
-      end
       object shortInfoGroupBox: TGroupBox
+        AnchorSideLeft.Control = tokenLabel
+        AnchorSideTop.Control = tokenLabel
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = tokenLabel
+        AnchorSideRight.Side = asrBottom
         Left = 6
         Height = 45
         Top = 31
-        Width = 137
-        Align = alClient
+        Width = 456
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 5
         BorderSpacing.Top = 5
         Caption = 'Short info'
         ClientHeight = 20
-        ClientWidth = 133
+        ClientWidth = 452
         TabOrder = 1
         object shortInfoLabel: TLabel
           Left = 0
           Height = 20
           Top = 0
-          Width = 133
+          Width = 452
           Align = alClient
           Caption = 'shortInfoLabel'
           ParentColor = False
         end
       end
       object UpdateToggleBox: TToggleBox
-        Left = 1
+        AnchorSideTop.Control = Panel1
+        AnchorSideRight.Control = Panel1
+        AnchorSideRight.Side = asrBottom
+        Left = 462
         Height = 24
-        Top = 76
+        Top = 1
         Width = 142
-        Align = alBottom
+        Align = alCustom
+        Anchors = [akTop, akRight]
         AutoSize = True
         Caption = 'Update for Cursor'
         Checked = True
@@ -696,6 +635,44 @@ object HelpForm: THelpForm
         State = cbChecked
         TabOrder = 2
       end
+      object tokenLabel: TLabel
+        AnchorSideLeft.Control = Panel1
+        AnchorSideTop.Control = Panel1
+        AnchorSideRight.Control = UpdateToggleBox
+        Left = 6
+        Height = 20
+        Top = 6
+        Width = 456
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        Caption = 'Token: ...'
+        ParentColor = False
+      end
+    end
+    object builtinGroupBox: TGroupBox
+      Left = 5
+      Height = 24
+      Top = 77
+      Width = 600
+      Align = alTop
+      AutoSize = True
+      BorderSpacing.Left = 5
+      Caption = 'Bultin function'
+      TabOrder = 3
+    end
+    object subrulesGroupBox: TGroupBox
+      Left = 5
+      Height = 24
+      Top = 106
+      Width = 600
+      Align = alTop
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Subrules'
+      TabOrder = 4
     end
   end
   object MainMenu1: TMainMenu
