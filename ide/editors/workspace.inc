@@ -609,6 +609,7 @@ PROCEDURE T_workspace.closeCurrentFile;
       end;
     end;
     closeQuietly(toClose);
+    if length(metas)=0 then addEditorMetaForNewFile(LANG_MNH);
   end;
 
 FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil): boolean;
