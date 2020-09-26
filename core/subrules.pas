@@ -1911,7 +1911,6 @@ FUNCTION T_builtinExpression.referencesAnyUserPackage: boolean;
 INITIALIZATION
   {$ifdef fullVersion}
   funcs_plot.generateRow:=@generateRow;
-  profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$endif}
   litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
