@@ -12,7 +12,7 @@ end : void;
 
 
 @SuppressUnusedWarning
-getVersionInfoTag(fullVersion:Boolean,buildNr)->begin
+getVersionInfoTag(fullVersion:Boolean,buildNr:Int,version:IntList(3))->begin
   format(//!~    <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="%s"/>
@@ -22,9 +22,9 @@ getVersionInfoTag(fullVersion:Boolean,buildNr)->begin
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="%s" InternalName="%s" LegalCopyright="LGPL" OriginalFilename="%s" ProductName="MNH5"/>
     </VersionInfo>~,
-    versionInfo['MajorVersionNr'] orElse 0,
-    versionInfo['MinorVersionNr'] orElse 0,
-    versionInfo['RevisionNr'] orElse 0,
+    version[0],
+    version[1],
+    version[2],
     buildNr,
     fullVersion ? "MNH5 IDE and interpreter" : "MNH5 light interpreter",
     fullVersion ? "mnh5_full" : "mnh5_light",
@@ -46,9 +46,9 @@ memoized expectedVersionInfoSource(codeHash:String)->
      "VERSION=%s;".format(escapePascal(versionVector.join('.')))];
   end;
 
-private updateProjectFiles(buildNr)->begin
-  fixLpiFile(myPath.extractFileDirectory&'/ide/ide.lpi',true,buildNr);
-  fixLpiFile(myPath.extractFileDirectory&'/consoles/mnh_light.lpi',false,buildNr);
+private updateProjectFiles(buildNr:Int,version:IntList(3))->begin
+  fixLpiFile(myPath.extractFileDirectory&'/ide/ide.lpi'           ,true ,buildNr,version);
+  fixLpiFile(myPath.extractFileDirectory&'/consoles/mnh_light.lpi',false,buildNr,version);
 end;
 
 memoized getBuildNumberAndVersion(codeHash:String)->
@@ -56,12 +56,13 @@ memoized getBuildNumberAndVersion(codeHash:String)->
     isVoid(log)
     ? log:=[].toMap
     : void;
-    (log[codeHash] orElse begin
+    local result:=log[codeHash] orElse begin
       local nextNo:=maxLoggedBuildNumber+1;
       log[codeHash]:=[nextNo,versionVector];
-      updateProjectFiles(nextNo);
       [nextNo,versionVector];
-    end);
+    end;
+    updateProjectFiles@result;
+    result;
   end;
 
 //*Show info on logged versions
@@ -80,9 +81,9 @@ main->isVoid(log)
       orElse print('Current version: ',versionString);
 
 
-private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr)->
+private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr:Int,version:IntList(3))->
   begin
-    local versionInfoTag:=getVersionInfoTag(fullVersion,buildNr);
+    local versionInfoTag:=getVersionInfoTag(fullVersion,buildNr,version);
     local nextLine:=lpiPath.fileLineIterator;
     local newLines:=[];
     local currLine:=void;
