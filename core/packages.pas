@@ -1263,7 +1263,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCateg
         tt_globalVariable: begin
           variable:=P_variable(entry.value);
           if not(variable^.isReportable(value)) then exit;
-          variableReport.addEntry(filenameToPackageId(rule^.getLocation.package^.getPath)+'.'+rule^.getId,value,true);
+          variableReport.addEntry(filenameToPackageId(variable^.getLocation.package^.getPath)+'.'+variable^.getId,value,true);
         end;
       end;
     end;
