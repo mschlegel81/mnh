@@ -10,9 +10,6 @@ USES
   SynHighlighterMnh;
 
 TYPE
-
-  { TDebuggerForm }
-
   TDebuggerForm = class(T_mnhComponentForm)
     bbRunContinue: TBitBtn;
     bbStepIn: TBitBtn;

@@ -821,9 +821,6 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepCount:longint;
       currentTask:P_queueTask;
       recycler:T_recycler;
-      {$ifdef debugMode}
-      taskCounter:longint=0;
-      {$endif}
   begin
     recycler.initRecycler;
     sleepCount:=0;
@@ -835,9 +832,6 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           ThreadSwitch;
           sleep(1);
         end else begin
-          {$ifdef debugMode}
-          inc(taskCounter);
-          {$endif}
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
             dispose(currentTask,destroy);

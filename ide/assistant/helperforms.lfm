@@ -654,7 +654,7 @@ object HelpForm: THelpForm
     object builtinGroupBox: TGroupBox
       Left = 5
       Height = 24
-      Top = 77
+      Top = 106
       Width = 600
       Align = alTop
       AutoSize = True
@@ -665,7 +665,7 @@ object HelpForm: THelpForm
     object subrulesGroupBox: TGroupBox
       Left = 5
       Height = 24
-      Top = 106
+      Top = 82
       Width = 600
       Align = alTop
       AutoSize = True

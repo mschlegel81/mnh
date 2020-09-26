@@ -222,7 +222,7 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,strutils,math;
+USES sysutils,strutils,math,subrules,profiling;
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
   VAR s:string;
   begin
@@ -556,6 +556,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
     end;
     result:=true;
+    if line[endsAtColumn]=' ' then dec(endsAtColumn);
     line:=copy(line,1,token^.location.column-1)+newName+copy(line,endsAtColumn+1,length(line));
   end;
 
@@ -646,7 +647,8 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         if P_typedef(token^.data)^.isDucktyping
         then result.shortInfo:=C_ruleTypeText[rt_duckTypeCheck  ]
         else result.shortInfo:=C_ruleTypeText[rt_customTypeCheck];
-        result.userDefRuleInfo:=P_typedef(token^.data)^.getStructuredInfo;
+        setLength(result.userDefRuleInfo,1);
+        result.userDefRuleInfo[0]:=P_subruleExpression(P_typedef(token^.data)^.getDuckTypeRule)^.getStructuredInfo;
       end;
       tt_type,tt_typeCheck:
         result.shortInfo:=ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
@@ -1399,6 +1401,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
 INITIALIZATION
   BLANK_ABSTRACT_PACKAGE.create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
   MNH_PSEUDO_PACKAGE.create();
+  profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$ifdef fullVersion}
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}

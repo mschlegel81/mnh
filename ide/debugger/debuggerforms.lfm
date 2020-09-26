@@ -14,7 +14,7 @@ object DebuggerForm: TDebuggerForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
-  LCLVersion = '2.0.4.0'
+  LCLVersion = '2.0.10.0'
   inline currentExpressionEdit: TSynEdit
     Left = 0
     Height = 270
@@ -603,8 +603,8 @@ object DebuggerForm: TDebuggerForm
   object DebuggerIcons: TImageList
     Height = 30
     Width = 30
-    left = 94
-    top = 39
+    Left = 94
+    Top = 39
     Bitmap = {
       4C690C0000001E0000001E000000F4F4F4E1F2F2F2ECF2F2F2ECF3F3F3ECF4F4
       F4ECF4F4F4ECF3F3F3ECF2F2F2ECF2F2F2ECF0F0F0ECEEEEEEECEDEDEDECE9E9
@@ -1960,11 +1960,11 @@ object DebuggerForm: TDebuggerForm
     }
   end
   object MainMenu1: TMainMenu
-    left = 95
-    top = 173
+    Left = 95
+    Top = 173
   end
   object PopupMenu1: TPopupMenu
-    left = 259
-    top = 178
+    Left = 259
+    Top = 178
   end
 end

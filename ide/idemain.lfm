@@ -788,17 +788,17 @@ object IdeMainForm: TIdeMainForm
       end
       object miAssistant: TMenuItem
         Caption = '&Assistant'
-        ShortCut = 8305
+        ShortCut = 32817
         OnClick = miAssistantClick
       end
       object miOutput: TMenuItem
         Caption = 'Out&put'
-        ShortCut = 113
+        ShortCut = 32818
         OnClick = miOutputClick
       end
       object miOutline: TMenuItem
         Caption = '&Outline'
-        ShortCut = 8304
+        ShortCut = 32819
         OnClick = miOutlineClick
       end
       object miHelp: TMenuItem
@@ -808,26 +808,27 @@ object IdeMainForm: TIdeMainForm
       end
       object miQuickEval: TMenuItem
         Caption = '&Quick evaluation'
-        ShortCut = 115
+        ShortCut = 32820
         OnClick = miQuickEvalClick
       end
       object miDebugger: TMenuItem
         Caption = '&Debugger'
-        ShortCut = 16452
+        ShortCut = 32821
         OnClick = miDebuggerClick
       end
       object miDebuggerVar: TMenuItem
         Caption = 'Debugger &variables'
-        ShortCut = 24644
+        ShortCut = 32822
         OnClick = miDebuggerVarClick
       end
       object miBreakpoints: TMenuItem
         Caption = '&Breakpoints'
-        ShortCut = 16450
+        ShortCut = 32823
         OnClick = miBreakpointsClick
       end
       object miEventsView: TMenuItem
         Caption = 'IDE E&vents'
+        ShortCut = 32824
         OnClick = miEventsViewClick
       end
       object miAbout: TMenuItem
@@ -836,7 +837,7 @@ object IdeMainForm: TIdeMainForm
       end
       object miFocusEditor: TMenuItem
         Caption = 'Focus &editor'
-        ShortCut = 117
+        ShortCut = 115
         OnClick = miFocusEditorClick
       end
       object MenuItem1: TMenuItem
