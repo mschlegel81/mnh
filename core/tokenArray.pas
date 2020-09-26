@@ -556,6 +556,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
     end;
     result:=true;
+    if line[endsAtColumn]=' ' then dec(endsAtColumn);
     line:=copy(line,1,token^.location.column-1)+newName+copy(line,endsAtColumn+1,length(line));
   end;
 
