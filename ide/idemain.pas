@@ -222,9 +222,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     FormDropFiles(Sender,commandLine.filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
-    {$ifdef LINUX}
-    miIncFontSize.ShortCut:=16605;
-    {$endif}
     miFocusEditorClick(Sender);
     timer.enabled:=true;
   end;
@@ -240,19 +237,12 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    {$ifdef debugMode} writeln('Suspending timer'); {$endif}
     ensureTimerSuspend;
-    {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
-
     closeAllForms;
-    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
     finalizeCodeAssistance;
-    {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
-    {$ifdef debugMode} writeln('Destroying runner'); {$endif}
     runnerModel.destroy;
-    {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
     runParameterHistory.destroy;
   end;
@@ -276,12 +266,12 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       COMPONENT_SHORTCUT[icDebuggerBreakpoints]:=shortcutToString(miBreakpoints.ShortCut);
       COMPONENT_SHORTCUT[icOutput             ]:=shortcutToString(miOutput     .ShortCut);
       COMPONENT_SHORTCUT[icIdeEvents          ]:=shortcutToString(miEventsView .ShortCut);
+      miIncFontSize.ShortCut:=VK_OEM_PLUS+scCtrl;
     end;
 
   VAR meta:P_editorMeta;
   begin
     updateShortcuts;
-    postIdeMessage('Activating IDE',false);
     with ideSettings do begin
       case windowStateForUpdate of
         wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     end;
@@ -289,6 +279,7 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
         wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; end;
       end;
       windowStateForUpdate:=wsfuNone;
+      if activeComponents<>[] then postIdeMessage('Activating IDE',false);
       if icOutline             in activeComponents then ensureOutlineForm;
       if icHelp                in activeComponents then ensureHelpForm;
       if icAssistance          in activeComponents then ensureAssistanceForm;
