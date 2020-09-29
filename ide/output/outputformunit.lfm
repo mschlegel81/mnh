@@ -7,14 +7,12 @@ object OutputForm: TOutputForm
   ClientHeight = 275
   ClientWidth = 400
   DesignTimePPI = 120
-  DragKind = dkDock
-  DragMode = dmAutomatic
   Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   inline OutputSynEdit: TSynEdit
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = cbShowOnOutput
@@ -536,8 +534,8 @@ object OutputForm: TOutputForm
     TabOrder = 2
   end
   object OutputPopupMenu: TPopupMenu
-    left = 214
-    top = 156
+    Left = 214
+    Top = 156
     object miEchoInput: TMenuItem
       AutoCheck = True
       Caption = 'Echo &input'
@@ -598,8 +596,8 @@ object OutputForm: TOutputForm
     end
   end
   object MainMenu1: TMainMenu
-    left = 95
-    top = 114
+    Left = 95
+    Top = 114
     object miDockMainRoot: TMenuItem
       Caption = '&View'
     end

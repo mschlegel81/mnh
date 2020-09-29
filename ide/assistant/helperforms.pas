@@ -195,7 +195,7 @@ PROCEDURE THelpForm.performFastUpdate;
 
       examplesGroupBox.visible:=length(info.exampleText)>0;
       examplesSynEdit.lines.clear;
-      for textline in info.exampleText do examplesSynEdit.lines.append(textLine);
+      for textLine in info.exampleText do examplesSynEdit.lines.append(textLine);
 
       usedAtGroupBox.visible:=length(info.referencedAt)>0;
       referenceListBox.items.clear;

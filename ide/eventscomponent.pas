@@ -13,11 +13,15 @@ CONST TIME_COLUMN_INDEX=0;
       RETAIN_MESSAGE_THRESHOLD:array[false..true] of double=(10/(24*60), //=10 minutes for notes
                                                               1/(24  )); //=1 hour for warnings
 TYPE
+
+  { TeventsForm }
+
   TeventsForm = class(T_mnhComponentForm)
     eventsGrid: TStringGrid;
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
@@ -180,6 +184,11 @@ PROCEDURE TeventsForm.FormCreate(Sender: TObject);
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
     registerFontControl(eventsGrid,ctTable);
+  end;
+
+PROCEDURE TeventsForm.FormDestroy(Sender: TObject);
+  begin
+    eventsFormSingleton:=nil;
   end;
 
 PROCEDURE TeventsForm.performSlowUpdate(CONST isEvaluationRunning: boolean);

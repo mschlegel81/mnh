@@ -7,8 +7,6 @@ object tableForm: TtableForm
   ClientHeight = 175
   ClientWidth = 266
   DesignTimePPI = 120
-  DragKind = dkDock
-  DragMode = dmAutomatic
   Menu = tableMenu
   OnClose = FormClose
   OnCreate = FormCreate

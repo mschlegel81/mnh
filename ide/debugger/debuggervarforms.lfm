@@ -7,8 +7,6 @@ object DebuggerVarForm: TDebuggerVarForm
   ClientHeight = 300
   ClientWidth = 400
   DesignTimePPI = 120
-  DragKind = dkDock
-  DragMode = dmAutomatic
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
