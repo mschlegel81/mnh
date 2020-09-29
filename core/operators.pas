@@ -180,6 +180,18 @@ FUNCTION operator_In       intFuncSignature;
                       else exit(newBoolLiteral(false));
   end;
 
+FUNCTION perform_NotIn(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+  begin
+    exit(newBoolLiteral(LHS^.isInRelationTo(tt_operatorNotIn,RHS)));
+  end;
+
+FUNCTION operator_NotIn       intFuncSignature;
+  begin
+    result:=nil;
+    if params^.size=2 then exit(newBoolLiteral(arg0^.isInRelationTo(tt_operatorNotIn,arg1)))
+                      else exit(newBoolLiteral(false));
+  end;
+
 {$define defaultLHScases:=
   lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
   lt_void:       exit(RHS^.rereferenced);
@@ -1048,6 +1060,7 @@ INITIALIZATION
   registerOperator(tt_operatorConcat   ,@operator_Concat   ,@perform_concat   );
   registerOperator(tt_operatorConcatAlt,@operator_ConcatAlt,@perform_concatAlt);
   registerOperator(tt_operatorIn       ,@operator_In       ,@perform_In       );
+  registerOperator(tt_operatorNotIn    ,@operator_NotIn    ,@perform_NotIn    );
   registerUnary(tt_unaryOpNegate,@logicalNegationOf_impl   ,@logicalNegationOf   );
   registerUnary(tt_unaryOpPlus  ,@unaryNoOp_impl           ,@unaryNoOp           );
   registerUnary(tt_unaryOpMinus ,@arithmeticNegationOf_impl,@arithmeticNegationOf);

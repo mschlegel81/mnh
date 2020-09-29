@@ -56,6 +56,7 @@ PROCEDURE initIntrinsicRuleList;
         intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(id,ID_QUALIFY_CHARACTER)[1]);
       end;
     end;
+    intrinsicRulesForCompletion.put(C_tokenDefaultId[tt_operatorNotIn]);
     for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
       intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],ID_QUALIFY_CHARACTER,''))
     else if (copy(C_tokenDefaultId[tt],1,1)='.') and isIdentifier(copy(C_tokenDefaultId[tt],2,1000),false) then

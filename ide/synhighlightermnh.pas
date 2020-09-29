@@ -80,7 +80,7 @@ TYPE
     FUNCTION getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
 
     PROCEDURE handle194; virtual;
-    PROCEDURE handleId(CONST id:string; CONST line,col:longint); virtual;
+    PROCEDURE handleId(CONST id:string; CONST line:longint; VAR col:longint); virtual;
   end;
 
   TMnhInputSyn = class(TAbstractSynMnhSyn)
@@ -92,7 +92,7 @@ TYPE
       DESTRUCTOR destroy; override;
       FUNCTION setMarkedWord(CONST s:ansistring):boolean;
       PROCEDURE next; override;
-      PROCEDURE handleId(CONST id:string; CONST line,col:longint); override;
+      PROCEDURE handleId(CONST id: string; CONST line: longint; VAR col: longint); virtual;
   end;
 
   TMnhOutputSyn = class(TAbstractSynMnhSyn)
@@ -283,23 +283,25 @@ PROCEDURE TMnhDebugSyn.handle194;
     if fLine[run]<>#0 then inc(run);
   end;
 
-PROCEDURE TAbstractSynMnhSyn.handleId(CONST id: string; CONST line, col: longint);
+PROCEDURE TAbstractSynMnhSyn.handleId(CONST id:string; CONST line:longint; VAR col:longint);
   begin
     if not(tokenTypeMap.containsKey(id,fTokenId))
     then begin
       if builtinRules.contains(id)
       then fTokenId:=tkBultinRule
+      else if (id='not') and (fLine[col]=' ') and (fLine[col+1]='i') and (fLine[col+2]='n') then begin fTokenId:=tkOperator; inc(col,3); end
       else fTokenId:=tkDefault;
     end;
   end;
 
-PROCEDURE TMnhInputSyn.handleId(CONST id: string; CONST line, col: longint);
+PROCEDURE TMnhInputSyn.handleId(CONST id:string; CONST line:longint; VAR col:longint);
   begin
     if id=markedWord then fTokenId:=tkHighlightedItem
     else if tokenTypeMap.containsKey(id,fTokenId)    then begin end
     else if highlightingData.isUserRule(id)          then fTokenId:=tkUserRule
     else if highlightingData.isLocalId (id,line,col) then fTokenId:=tkLocalVar
     else if builtinRules    .contains  (id)          then fTokenId:=tkBultinRule
+    else if (id='not') and (fLine[col]=' ') and (fLine[col+1]='i') and (fLine[col+2]='n') then begin fTokenId:=tkOperator; inc(col,3); end
     else                                                  fTokenId:=tkDefault;
   end;
 

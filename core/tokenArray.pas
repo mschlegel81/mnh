@@ -24,6 +24,7 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
        'COMPARATOR_GRT',
        'COMPARATOR_LISTEQ',
        'OPERATOR_IN',
+       'OPERATOR_NOT_IN',
        'OPERATOR_AND',
        'OPERATOR_OR',
        'OPERATOR_XOR',
@@ -820,7 +821,10 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; CONST messages:P_messages; VAR
         result^.txt:=leadingId;
         result^.tokType:=tt_parameterIdentifier;
       end;
-      'a'..'z','A'..'Z': begin
+      'a'..'z','A'..'Z':
+      if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn]
+      then apply(tt_operatorNotIn)
+      else begin
         result^.txt:=leadingId;
         result^.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
