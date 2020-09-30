@@ -783,6 +783,9 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 PROCEDURE TIdeMainForm.ensureTimerSuspend;
   VAR counter:longint=0;
   begin
+    {$ifdef debugMode}
+    writeln('TIdeMainForm.ensureTimerSuspend...');
+    {$endif}
     if timer.enabled then begin
       timer.enabled:=false;
       while (slowUpdating or fastUpdating) and (counter<1000) do begin
@@ -790,6 +793,9 @@ PROCEDURE TIdeMainForm.ensureTimerSuspend;
         sleep(1);
       end;
     end;
+    {$ifdef debugMode}
+    writeln('TIdeMainForm.ensureTimerSuspend - timer suspended');
+    {$endif}
   end;
 
 end.
