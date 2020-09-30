@@ -322,17 +322,17 @@ PROCEDURE T_fileHistory.updateHistoryMenu;
   begin
     if menuRoot=nil then exit;
     for i:=0 to length(historyMenuItems)-1 do begin
-       menuRoot.remove(historyMenuItems[i]);
-       FreeAndNil(historyMenuItems[i]);
-     end;
-     setLength(historyMenuItems,length(fileItems));
-     for i:=0 to length(fileItems)-1 do begin
-       historyMenuItems[i]:=TMenuItem.create(menuRoot);
-       historyMenuItems[i].caption:=intToStr(i)+': '+fileItems[i];
-       historyMenuItems[i].Tag:=i;
-       historyMenuItems[i].OnClick:=@fileHistoryClick;
-       menuRoot.add(historyMenuItems[i]);
-     end;
+      menuRoot.remove(historyMenuItems[i]);
+      FreeAndNil(historyMenuItems[i]);
+    end;
+    setLength(historyMenuItems,length(fileItems));
+    for i:=0 to length(fileItems)-1 do begin
+      historyMenuItems[i]:=TMenuItem.create(menuRoot);
+      historyMenuItems[i].caption:=intToStr(i)+': '+fileItems[i];
+      historyMenuItems[i].Tag:=i;
+      historyMenuItems[i].OnClick:=@fileHistoryClick;
+      menuRoot.add(historyMenuItems[i]);
+    end;
   end;
 
 PROCEDURE T_fileHistory.fileHistoryClick(Sender: TObject);

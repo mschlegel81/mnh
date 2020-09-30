@@ -401,7 +401,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
         if couldOpenFile then begin
           updateMarkers(result);
           //Update history:
-          fileHistory.fileClosed(fileName);
+          fileHistory.logFolder(ExtractFileDir(fileName));
         end else if not(openEvenIfNonexistent) then begin
           closeQuietly(result);
           result:=nil;
@@ -564,6 +564,7 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
           then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
           else oldMarkers[length(oldMarkers)-1].markIndex:=10;
         end;
+        fileHistory.fileClosed(toClose^.fileInfo.filePath);
       end;
 
       //actually close editor...
