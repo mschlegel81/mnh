@@ -170,7 +170,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil,mnh_constants;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -291,10 +291,13 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       if icIdeEvents           in activeComponents then ensureEventsForm;
       activeComponents:=[];
     end;
+    if firstStart then begin
+      miSettingsClick(Sender);
+      workspace.addOrGetEditorMetaForFiles(configDir+'/demos/helloWorld.mnh',false,false);
+    end;
     meta:=workspace.currentEditor;
     if meta<>nil then ActiveControl:=meta^.editor
                  else ActiveControl:=workspace.createNewFile^.editor;
-    if firstStart then miSettingsClick(Sender);
   end;
 
 FUNCTION anyEvaluationRunning:boolean;
