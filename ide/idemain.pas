@@ -170,7 +170,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil,mnh_constants;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -222,9 +222,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
 
     FormDropFiles(Sender,commandLine.filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
-    {$ifdef LINUX}
-    miIncFontSize.ShortCut:=16605;
-    {$endif}
     miFocusEditorClick(Sender);
     timer.enabled:=true;
   end;
@@ -240,19 +237,12 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    {$ifdef debugMode} writeln('Suspending timer'); {$endif}
     ensureTimerSuspend;
-    {$ifdef debugMode} writeln('Saving settings'); {$endif}
     saveIdeSettings;
-
     closeAllForms;
-    {$ifdef debugMode} writeln('Finalizing code assistance'); {$endif}
     finalizeCodeAssistance;
-    {$ifdef debugMode} writeln('Destroying workspace'); {$endif}
     workspace.destroy;
-    {$ifdef debugMode} writeln('Destroying runner'); {$endif}
     runnerModel.destroy;
-    {$ifdef debugMode} writeln('Destroying searchReplaceModel'); {$endif}
     searchReplaceModel.destroy;
     runParameterHistory.destroy;
   end;
@@ -276,12 +266,12 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       COMPONENT_SHORTCUT[icDebuggerBreakpoints]:=shortcutToString(miBreakpoints.ShortCut);
       COMPONENT_SHORTCUT[icOutput             ]:=shortcutToString(miOutput     .ShortCut);
       COMPONENT_SHORTCUT[icIdeEvents          ]:=shortcutToString(miEventsView .ShortCut);
+      miIncFontSize.ShortCut:=VK_OEM_PLUS+scCtrl;
     end;
 
   VAR meta:P_editorMeta;
   begin
     updateShortcuts;
-    postIdeMessage('Activating IDE',false);
     with ideSettings do begin
       case windowStateForUpdate of
         wsfuNormal    : begin BorderStyle:=bsSizeable; WindowState:=wsNormal;     end;
@@ -289,6 +279,7 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
         wsfuFullscreen: begin BorderStyle:=bsNone;     WindowState:=wsFullScreen; end;
       end;
       windowStateForUpdate:=wsfuNone;
+      if activeComponents<>[] then postIdeMessage('Activating IDE',false);
       if icOutline             in activeComponents then ensureOutlineForm;
       if icHelp                in activeComponents then ensureHelpForm;
       if icAssistance          in activeComponents then ensureAssistanceForm;
@@ -300,10 +291,13 @@ PROCEDURE TIdeMainForm.FormActivate(Sender: TObject);
       if icIdeEvents           in activeComponents then ensureEventsForm;
       activeComponents:=[];
     end;
+    if firstStart then begin
+      miSettingsClick(Sender);
+      workspace.addOrGetEditorMetaForFiles(configDir+'/demos/helloWorld.mnh',false,false);
+    end;
     meta:=workspace.currentEditor;
     if meta<>nil then ActiveControl:=meta^.editor
                  else ActiveControl:=workspace.createNewFile^.editor;
-    if firstStart then miSettingsClick(Sender);
   end;
 
 FUNCTION anyEvaluationRunning:boolean;
@@ -792,6 +786,9 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
 PROCEDURE TIdeMainForm.ensureTimerSuspend;
   VAR counter:longint=0;
   begin
+    {$ifdef debugMode}
+    writeln('TIdeMainForm.ensureTimerSuspend...');
+    {$endif}
     if timer.enabled then begin
       timer.enabled:=false;
       while (slowUpdating or fastUpdating) and (counter<1000) do begin
@@ -799,6 +796,9 @@ PROCEDURE TIdeMainForm.ensureTimerSuspend;
         sleep(1);
       end;
     end;
+    {$ifdef debugMode}
+    writeln('TIdeMainForm.ensureTimerSuspend - timer suspended');
+    {$endif}
   end;
 
 end.

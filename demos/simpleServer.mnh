@@ -3,7 +3,6 @@ private address:='http://'+ipAndPort;
 private upSince:=systime;
 
 serve(request:Map)->serve(request['request','path']);
-
 serve('/index.html'):=//!~
 <body>
 <h3>serverTest @{$0}</h3>
@@ -18,17 +17,14 @@ serve('/index.html'):=//!~
 serve('/time'  )->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',systime),'text');
 serve('/uptime')->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',upSince-systime),'text');
 serve('/ping'  ):=wrapTextInHttp('Pong!','text');
+//*Fallback
+serve(request)->complainOnce@$params;
 
-memoized complainOnce(method,request,protocol)->begin
-  warn("Unhandled request:",
-       "\n  method  = ",method  ,
-       "\n  request = ",request ,
-       "\n  protocol= ",protocol);
+memoized complainOnce(request)->begin
+  warn("Unhandled request:",request);
   httpError;
 end;
 
-//*Fallback
-serve(request,path,rawParameters)->complainOnce@$params;
 
 @demo_for=httpServer
 main->begin

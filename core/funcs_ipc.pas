@@ -161,7 +161,10 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
       memoryStream:TMemoryStream;
       typeMap:T_typeMap;
   begin
-    if not(receiver.PeekMessage(0,true)) then exit(false);
+    if not(receiver.PeekMessage(0,true)) then begin
+      payload:=nil;
+      exit(false);
+    end;
     memoryStream:=TMemoryStream.create;
     receiver.GetMessageData(memoryStream);
     streamWrapper.create(memoryStream);

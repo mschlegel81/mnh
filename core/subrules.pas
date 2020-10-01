@@ -171,7 +171,9 @@ TYPE
                           bgt_xorIntRandomGenerator,
                           bgt_isaacIntRandomGenerator,
                           bgt_vanDerCorputGenerator,
-                          bgt_parallelFilterGenerator);
+                          bgt_parallelFilterGenerator,
+                          bgt_flatMapGenerator,
+                          bgt_chunkMapGenerator);
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)

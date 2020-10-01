@@ -476,13 +476,11 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     result:=false;
     if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then begin
-      for meta in workspace.metas do if meta<>@self then meta^.doRename(ref,oldId,newId);
-      if not(isPseudoFile) then for fileName in workspace.fileHistory.findScriptsUsing(fileInfo.filePath) do begin
+      if not(isPseudoFile) then for fileName in workspace.fileHistory.findRelatedScriptsTransitive(fileInfo.filePath) do begin
         if not(workspace.hasEditorForFile(fileName)) then begin
           meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
-          if meta<>nil then begin
-            if not(meta^.doRename(ref,oldId,newId,false)) then workspace.closeQuietly(meta);
-          end;
+          if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false))
+          then workspace.closeQuietly(meta);
         end;
       end;
     end;
@@ -545,7 +543,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-    if (previousName<>'') and (previousName<>fileInfo.filePath) then workspace.fileHistory.fileClosed(previousName);
+    workspace.fileHistory.fileClosed(fileInfo.filePath);
     if previousName<>fileInfo.filePath
     then lineEndingSetting:=settings.newFileLineEnding
     else lineEndingSetting:=settings.overwriteLineEnding;

@@ -7,8 +7,6 @@ object profilingOutputForm: TprofilingOutputForm
   ClientHeight = 365
   ClientWidth = 687
   DesignTimePPI = 120
-  DragKind = dkDock
-  DragMode = dmAutomatic
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate

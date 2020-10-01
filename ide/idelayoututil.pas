@@ -259,7 +259,12 @@ PROCEDURE dockNewForm(newForm: T_mnhComponentForm);
 
 PROCEDURE closeAllForms;
   begin
-    while length(activeForms)>0 do activeForms[0].destroy;
+    while length(activeForms)>0 do begin
+      {$ifdef debugMode}
+      writeln('Destroying form of type ',activeForms[0].getIdeComponentType);
+      {$endif}
+      activeForms[0].destroy;
+    end;
   end;
 
 PROCEDURE dockAllForms;

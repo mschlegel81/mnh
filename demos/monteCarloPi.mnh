@@ -1,7 +1,14 @@
+private randomsToPi(samples:NumericList)->4*trueCount(samples<1)/samples.size;
+
 @SuppressUnusedWarning=Used in printf
-private monteCarloPi(sampleSize>0)->4*trueCount(random(sampleSize)²+random(sampleSize)²<1)/sampleSize;
+private monteCarloPi  (sampleSize>0)->randomsToPi(random(sampleSize)²+
+                                                  random(sampleSize)²);
+@SuppressUnusedWarning=Used in printf
+private vanDerCorputPi(sampleSize>0)->randomsToPi(vanDerCorputGenerator(2).head(sampleSize)²+
+                                                  vanDerCorputGenerator(3).head(sampleSize)²);
+
 
 @demo_for=math/monte carlo
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
 main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
-      printf("n=%{$0}7d pi approximated as %{monteCarloPi($0)}-9.7g",10^[1..6]);
+      printf("n=%{$0}7d pi approximated as %{monteCarloPi($0)}-9.7g (random) and as %{vanDerCorputPi($0)}-9.7g (Van der Corput generator)",10^[1..6]);

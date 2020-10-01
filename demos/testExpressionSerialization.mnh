@@ -1,6 +1,6 @@
 testBinaryWithParameterRestriction->begin
   print("\nTest deserialization of binary function");
-  local f:='+wwDAAIAAXgAHgF5MR4AAXgDAgF5ATr8/wIBeAAA'.base64decode.deserialize;
+  local f:='+wwDAAIAAXgAHgF5MR4AAXgDAgF5ATv8/wIBeAAA'.base64decode.deserialize;
   print('  f      = ',f);
   try(f,[1,1],{print('  Fails for parameters (1,1)')}).isVoid.assert;
   print('  f(1,2) = ',f(1,2));
@@ -23,9 +23,9 @@ testSerialize(x:Expression)->begin
 end;
 
 main->begin
-  ['+wwEAAEAAiR4AB4GHfz/APsEAfz/Ovz/AwIkeAAe/P8b/P8A',
+  ['+wwEAAEAAiR4AB4GHfz/APsEAfz/O/z/AwIkeAAe/P8b/P8A',
    '+wwACG1hdGguY29z',
-   '+wwEAAEAAiR4AB4NBQNzaW78/x38/wMCJHgAHvz/PPz/Hfz/APsEAfz/Ofz/BQNjb3P8/x38/wMCJHgAHvz/Hvz/AA==']
+   '+wwEAAEAAiR4AB4NBQNzaW78/x38/wMCJHgAHvz/Pfz/Hfz/APsEAfz/Ovz/BQNjb3P8/x38/wMCJHgAHvz/Hvz/AA==']
   .map(::testUnary);
   testBinaryWithParameterRestriction;
   [{$x+1},

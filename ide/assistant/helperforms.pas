@@ -169,8 +169,18 @@ PROCEDURE THelpForm.performFastUpdate;
       end;
     end;
 
+  FUNCTION isActiveInTabSheet:boolean;
+    VAR
+      PageControl: TPageControl;
+      page: TTabSheet;
+    begin
+      getParents(page,PageControl);
+      if (PageControl=nil) or (page=nil) then exit(showing);
+      result:=PageControl.activePage=page;
+    end;
+
   begin
-    if not(showing and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
+    if not(isActiveInTabSheet and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.setUnderCursor(false,true)
@@ -178,6 +188,7 @@ PROCEDURE THelpForm.performFastUpdate;
       BeginFormUpdate;
       clearTemporaryComponents;
       info :=getCurrentTokenInfo;
+      currentLink:=info.linkToHelp;
       tokenLabel.caption:='Token: '+info.tokenText;
       shortInfoGroupBox.visible:=info.shortInfo<>'';
       shortInfoLabel.caption:=info.shortInfo;
@@ -195,7 +206,7 @@ PROCEDURE THelpForm.performFastUpdate;
 
       examplesGroupBox.visible:=length(info.exampleText)>0;
       examplesSynEdit.lines.clear;
-      for textline in info.exampleText do examplesSynEdit.lines.append(textLine);
+      for textLine in info.exampleText do examplesSynEdit.lines.append(textLine);
 
       usedAtGroupBox.visible:=length(info.referencedAt)>0;
       referenceListBox.items.clear;

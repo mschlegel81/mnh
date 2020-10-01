@@ -13,9 +13,10 @@ private ensureServer->begin
 end;
 
 main('serve')->begin
-  print('Serving for 10 seconds');
+  print('Serving for 1 second');
   startIpcServer(serverId,::serve);
   sleep(1);
+  halt;
 end;
 
 main->begin

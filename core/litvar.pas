@@ -1589,7 +1589,8 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
   VAR ovl: boolean;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_boolean].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit(    (other^.literalType in C_typeInfo[lt_boolean].containedIn) and   (P_compoundLiteral(other)^.contains(@self)) );
+      tt_operatorNotIn   : exit(not((other^.literalType in C_typeInfo[lt_boolean].containedIn) and   (P_compoundLiteral(other)^.contains(@self))));
       tt_comparatorListEq: exit(equals(other));
     end;
     if other^.literalType<>lt_boolean then exit(false);
@@ -1603,7 +1604,8 @@ FUNCTION T_bigIntLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
   VAR cr:T_comparisonResult;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_bigint].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit(    (other^.literalType in C_typeInfo[lt_bigint].containedIn) and (P_compoundLiteral(other)^.contains(@self)) );
+      tt_operatorNotIn   : exit(not((other^.literalType in C_typeInfo[lt_bigint].containedIn) and (P_compoundLiteral(other)^.contains(@self))));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
@@ -1635,7 +1637,8 @@ FUNCTION T_smallIntLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
       f:T_myFloat;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_smallint].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit(    (other^.literalType in C_typeInfo[lt_smallint].containedIn) and (P_compoundLiteral(other)^.contains(@self)) );
+      tt_operatorNotIn   : exit(not((other^.literalType in C_typeInfo[lt_smallint].containedIn) and (P_compoundLiteral(other)^.contains(@self))));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
@@ -1667,7 +1670,8 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
       i:longint;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_real].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit(    (other^.literalType in C_typeInfo[lt_real].containedIn) and (P_compoundLiteral(other)^.contains(@self)) );
+      tt_operatorNotIn   : exit(not((other^.literalType in C_typeInfo[lt_real].containedIn) and (P_compoundLiteral(other)^.contains(@self))));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
@@ -1697,7 +1701,8 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
   VAR ovl: ansistring;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_string].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit(    (other^.literalType in C_typeInfo[lt_string].containedIn) and (P_compoundLiteral(other)^.contains(@self)) );
+      tt_operatorNotIn   : exit(not((other^.literalType in C_typeInfo[lt_string].containedIn) and (P_compoundLiteral(other)^.contains(@self))));
       tt_comparatorListEq: exit(equals(other));
     end;
     if other^.literalType<>lt_string then exit(false);
@@ -1716,7 +1721,8 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
   begin
     if not(other^.literalType in C_compoundTypes) then exit(false);
     case relation of
-      tt_operatorIn: result:=P_compoundLiteral(other)^.contains(@self);
+      tt_operatorIn   : result:=    P_compoundLiteral(other)^.contains(@self) ;
+      tt_operatorNotIn: result:=not(P_compoundLiteral(other)^.contains(@self));
       tt_comparatorListEq,tt_comparatorNeq: begin
         if (literalType in C_emptyCompoundTypes) and (other^.literalType in C_emptyCompoundTypes)
         then result:=true

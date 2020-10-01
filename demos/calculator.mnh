@@ -1,19 +1,24 @@
 USE customFormUtil;
 
+private IGNORE:=['exitCode'];
 private REMAP:=
-[['in>'        ,#226#128#139' in>'],
- ['out>'       ,#226#128#139'out>'],
- ['...>'       ,#226#128#139'...>'],
- ['Note'       ,#226#128#140'Note'],
- ['Warning'    ,#226#129#163'Warning'],
- ['Error'      ,#226#129#162'Error'],
- ['Stack trace',#226#129#162'Stack trace'],
- ['User-Error' ,#226#129#162'User-Error'],
- ['Sys. Error' ,#226#129#162'Sys. Error'],
- ['printline'  ,'']].toMap;
+['echo_declaration'=>#226#128#139' in>',
+ 'echo_input'      =>#226#128#139' in>',
+ 'echo_output'     =>#226#128#139'out>',
+ 'echo_continued'  =>#226#128#139'...>',
+ 'el1_userNote'    =>#226#128#140'Note:',
+ 'el1_note'        =>#226#128#140'Note:',
+ 'el2_warning'     =>#226#129#163'Warning:',
+ 'el2_userWarning' =>#226#129#163'Warning:',
+ 'el3_evalError'     =>#226#129#162'Error:',
+ 'el3_noMatchingMain'=>#226#129#162'Error:',
+ 'el3_userDefined'   =>#226#129#162'Error:',
+ 'el4_systemError'   =>#226#129#162'Error:',
+ 'printline'  =>''].toMap;
 
 private prettyExecute(input:String)->
   sandBoxExecute(input,['output','alter package state','alter context state'])
+    .filter({$x.head not in IGNORE})
     .map({(REMAP[$x.head] orElse $x.head) & "\t" & $x.trailing}).join("\n")
     .formatTabs
     .join("\n");

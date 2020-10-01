@@ -147,7 +147,7 @@ TYPE
     //comparators
     tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
     tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-    tt_operatorIn,
+    tt_operatorIn, tt_operatorNotIn,
     //logical operators
     tt_operatorAnd, tt_operatorOr, tt_operatorXor,
     tt_operatorLazyAnd, tt_operatorLazyOr,
@@ -207,7 +207,7 @@ CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];
   C_operators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
   C_unaryOperators: T_tokenTypeSet=[tt_unaryOpNegate,tt_unaryOpPlus,tt_unaryOpMinus];
-  C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
+  C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorNotIn];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
@@ -241,7 +241,7 @@ CONST
   C_opPrecedence: array[tt_separatorMapItem..tt_unaryOpMinus,0..1] of byte =
    ((2,2),
     (6,6),(6,6),(6,6),(6,6),(6,6),(6,6),(6,6), //comparators
-    (7,7),                      //in
+    (7,7),(7,7),                //in, not in
     (8,8),(9,9),(9,9),          //logical operators
     (8,8),(9,9),                //lazy logical operators
     (4,4),(4,4),(3,3),(3,3),(3,3),(3,3),(2,3), //arthmetical operators
@@ -327,6 +327,7 @@ CONST
   {tt_comparatorGrt}              '>',
   {tt_comparatorListEq}           '==',
   {tt_operatorIn}                 'in',
+  {tt_operatorNotIn}              'not in',
   {tt_operatorAnd}                'and',
   {tt_operatorOr}                 'or',
   {tt_operatorXor}                'xor',
@@ -437,6 +438,7 @@ CONST
 {tt_comparatorGrt}              (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Greater operator#Returns true if the scalar comparands are type-compatible#and the left hand side is greater than the right hand side#For list operands a list of booleans is returned'; helpLink:'/operators.html#compOps'),
 {tt_comparatorListEq}           (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Strict-equals operator#Returns true if the comparands are strictly equal.#Always returns a scalar boolean'; helpLink:'/operators.html#compOps'),
 {tt_operatorIn}                 (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'In operator#Applies to all literals on the left hand side and lists on the right hand side.#Returns true if the RHS contains the LHS'; helpLink:'/operators.html#listOps'),
+{tt_operatorNotIn}              (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Not-In operator#Applies to all literals on the left hand side and lists on the right hand side.#Returns true if the RHS does not contain the LHS'; helpLink:'/operators.html#listOps'),
 {tt_operatorAnd}                (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Bit-wise and operator#Applies to (lists of) integers and (lists of) booleans'; helpLink:'/operators.html#logOps'),
 {tt_operatorOr}                 (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Bit-wise or operator#Applies to (lists of) integers and (lists of) booleans'; helpLink:'/operators.html#logOps'),
 {tt_operatorXor}                (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Bit-wise xor operator#Applies to (lists of) integers and (lists of) booleans'; helpLink:'/operators.html#logOps'),

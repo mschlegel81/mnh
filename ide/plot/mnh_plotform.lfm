@@ -7,8 +7,6 @@ object plotForm: TplotForm
   ClientHeight = 351
   ClientWidth = 584
   DesignTimePPI = 120
-  DragKind = dkDock
-  DragMode = dmAutomatic
   Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate

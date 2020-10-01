@@ -263,7 +263,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       idLike:=false; exit(result);
     end;
     if lastWasIdLike and (result[1] in ['$','a'..'z','A'..'Z','?',':','0'..'9'])
-      or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_operatorOrElse,tt_iifCheck,tt_iifElse])
+      or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_operatorOrElse,tt_iifCheck,tt_iifElse])
     then result:=' '+result;
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
@@ -308,7 +308,7 @@ FUNCTION T_token.singleTokenToString: ansistring;
   VAR dummy:boolean;
   begin
     result:=toString(false,dummy);
-    if tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse,tt_operatorOrElse]
+    if tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse,tt_operatorOrElse]
     then result:=trim(result);
   end;
 
@@ -509,7 +509,7 @@ FUNCTION T_token.serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocat
       tt_separatorComma, tt_separatorCnt, tt_separatorMapItem,
       tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
       tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-      tt_operatorIn,
+      tt_operatorIn, tt_operatorNotIn,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorLazyAnd, tt_operatorLazyOr,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult,
@@ -621,7 +621,7 @@ PROCEDURE T_token.deserializeSingleToken(CONST locationOfDeserializeCall:T_token
       tt_separatorComma, tt_separatorCnt, tt_separatorMapItem,
       tt_comparatorEq, tt_comparatorNeq, tt_comparatorLeq,
       tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-      tt_operatorIn,
+      tt_operatorIn, tt_operatorNotIn,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorLazyAnd, tt_operatorLazyOr,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult,

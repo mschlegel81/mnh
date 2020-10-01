@@ -1,4 +1,3 @@
-#!C:\bin\mnh.exe -v1
 //This program finds values a,b,c,d,e,f,g such that a+b = b+c+d = d+e+f = f+g
 //Instead of brute-forcing, we may employ a multi-step filtering process:
 //  - Iterate over the first 4 elements, check via isPartialSolution if we should continue

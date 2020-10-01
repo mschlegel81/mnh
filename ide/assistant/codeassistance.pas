@@ -169,11 +169,13 @@ DESTRUCTOR T_codeAssistanceData.destroy;
   end;
 
 PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfString; CONST forceScan:boolean);
+  VAR additionalsChanged:boolean;
   begin
     enterCriticalSection(cs);
     try
+      additionalsChanged:=not(arrEquals(toScan,additionalScriptsToScan));
       additionalScriptsToScan:=toScan;
-      if forceScan and (latestResponse<>nil) then latestResponse^.responseStateHash:=0;
+      if (additionalsChanged or forceScan) and (latestResponse<>nil) then latestResponse^.responseStateHash:=0;
       ensureCodeAssistanceThread;
     finally
       leaveCriticalSection(cs);
@@ -198,9 +200,6 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
     VAR user:T_package;
         secondaryCallInfos:T_functionCallInfos;
     begin
-      {$ifdef debugMode}
-      writeln('Loading ',name,' using ',provider^.getPath);
-      {$endif}
       globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
@@ -378,8 +377,7 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring;
     end;
   end;
 
-FUNCTION T_codeAssistanceData.renameIdentifierInLine(
-  CONST location: T_searchTokenLocation; CONST oldId, newId: string;
+FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId, newId: string;
   VAR lineText: ansistring; CONST CaretY: longint): boolean;
   VAR lexer:T_lexer;
       loc:T_tokenLocation;

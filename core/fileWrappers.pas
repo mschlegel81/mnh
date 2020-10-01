@@ -206,42 +206,48 @@ PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:lon
       space:boolean=true;
       sha256:T_sha256;
   begin
-    stream:=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
     lineCount:=0;
     wordCount:=0;
     byteCount:=0;
     if trim(name) = '' then exit;
-    sha256.create;
     try
-      stream.Seek(0,soFromBeginning);
-      repeat
-        bufferFill:=stream.read(buffer,BUFFER_SIZE);
-        byteCount+=bufferFill;
-        sha256.fillBuffer(buffer,bufferFill);
-        for i:=0 to bufferFill-1 do begin
-          b:=buffer[i];
-          case b of
-          ord('a')..ord('z'),ord('A')..ord('Z'): begin
-            if space then inc(wordCount);
-            space:=false;
-          end;
-          ord(C_lineBreakChar): begin
-            inc(lineCount);
-            space:=true;
-          end;
-          else space:=true;
-          end;
-        end;
-      until bufferFill=0;;
-    except
+      stream:=TFileStream.create(name, fmOpenRead or fmShareDenyNone);
       lineCount:=0;
       wordCount:=0;
       byteCount:=0;
-      for i:=0 to length(hash)-1 do hash[i]:=0;
+      sha256.create;
+      try
+        stream.Seek(0,soFromBeginning);
+        repeat
+          bufferFill:=stream.read(buffer,BUFFER_SIZE);
+          byteCount+=bufferFill;
+          sha256.fillBuffer(buffer,bufferFill);
+          for i:=0 to bufferFill-1 do begin
+            b:=buffer[i];
+            case b of
+            ord('a')..ord('z'),ord('A')..ord('Z'): begin
+              if space then inc(wordCount);
+              space:=false;
+            end;
+            ord(C_lineBreakChar): begin
+              inc(lineCount);
+              space:=true;
+            end;
+            else space:=true;
+            end;
+          end;
+        until bufferFill=0;;
+      except
+        lineCount:=0;
+        wordCount:=0;
+        byteCount:=0;
+        for i:=0 to length(hash)-1 do hash[i]:=0;
+      end;
+      hash:=sha256.getHash;
+      sha256.destroy;
+      stream.destroy;
+    except
     end;
-    hash:=sha256.getHash;
-    sha256.destroy;
-    stream.destroy;
   end;
 
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
