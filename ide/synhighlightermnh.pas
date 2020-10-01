@@ -92,7 +92,7 @@ TYPE
       DESTRUCTOR destroy; override;
       FUNCTION setMarkedWord(CONST s:ansistring):boolean;
       PROCEDURE next; override;
-      PROCEDURE handleId(CONST id: string; CONST line: longint; VAR col: longint); virtual;
+      PROCEDURE handleId(CONST id: string; CONST line: longint; VAR col: longint); override;
   end;
 
   TMnhOutputSyn = class(TAbstractSynMnhSyn)
