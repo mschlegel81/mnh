@@ -465,7 +465,6 @@ TYPE
   end;
 
 CONST TASKS_TO_QUEUE_PER_CPU=4;
-
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
@@ -751,24 +750,25 @@ TYPE
   end;
 
 FUNCTION T_fileLineIterator.fillQueue:boolean;
-  CONST READ_BYTES = 8192;
+  CONST READ_BYTES = 1024*1024; //=1MB
   VAR k:longint;
       k0:longint=0;
       offset:longint;
       n:longint;
-      ReadBuffer  : array[0..READ_BYTES-1] of char;
+      readBfrPtr:PChar;
   begin
     result:=false;
-    n:=fileStream.read(ReadBuffer,READ_BYTES);
+    getMem(readBfrPtr,READ_BYTES);
+    n:=fileStream.read(readBfrPtr^,READ_BYTES);
     if n>0 then begin
       result:=true;
       stopAt:=now+timeout;
       for k:=0 to n-1 do begin
-        if ReadBuffer[k]=#10 then begin
+        if readBfrPtr[k]=#10 then begin
           if k>k0 then begin
             offset:=length(stringBuffer);
             setLength(stringBuffer,offset+k-k0);
-            move(ReadBuffer[k0],stringBuffer[offset+1],k-k0);
+            move(readBfrPtr[k0],stringBuffer[offset+1],k-k0);
           end;
           if (length(stringBuffer)>0) and (stringBuffer[length(stringBuffer)]=#13)
           then setLength(stringBuffer,length(stringBuffer)-1);
@@ -781,13 +781,14 @@ FUNCTION T_fileLineIterator.fillQueue:boolean;
       if k>k0 then begin
         offset:=length(stringBuffer);
         setLength(stringBuffer,offset+k-k0);
-        move(ReadBuffer[k0],stringBuffer[offset+1],k-k0);
+        move(readBfrPtr[k0],stringBuffer[offset+1],k-k0);
       end;
       eofReached:=false;
     end else begin
       eofReached:=true;
-      if fileStream.Position>fileStream.Size then fileTruncated:=true;
+      if fileStream.position>fileStream.size then fileTruncated:=true;
     end;
+    freeMem(readBfrPtr,READ_BYTES);
   end;
 
 CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST fileChangeTimeoutInSeconds:double; CONST loc: T_tokenLocation; VAR context: T_context);
