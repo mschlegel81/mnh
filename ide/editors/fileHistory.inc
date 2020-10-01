@@ -9,9 +9,9 @@ T_fileHistory=object(T_serializable)
     //nonpersistent:
     menuRoot:TMenuItem;
     historyMenuItems:array of TMenuItem;
+    historyCs:TRTLCriticalSection;
 
     scriptUsage:record
-      cs:TRTLCriticalSection;
       destructionPending:boolean;
       dat:array of T_usagePair;
       foldersScanned:T_arrayOfString;
@@ -34,6 +34,7 @@ T_fileHistory=object(T_serializable)
     FUNCTION historyItem(CONST index:longint):ansistring;
     FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
     FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
+    FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
     PROCEDURE updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
     PROCEDURE postUsageScan();
     PROCEDURE clear;
@@ -51,10 +52,10 @@ CONSTRUCTOR T_fileHistory.create(CONST historyRootItem: TMenuItem);
     folderItems:=C_EMPTY_STRING_ARRAY;
     fileWrappers.logFolderCallback:=@logFolder;
 
+    initCriticalSection(historyCs);
     initialize(scriptUsage);
     with scriptUsage do begin
       destructionPending:=false;
-      initCriticalSection(cs);
       setLength(dat,0);
       setLength(foldersScanned,0);
       scanning:=false;
@@ -75,7 +76,7 @@ DESTRUCTOR T_fileHistory.destroy;
       end;
       setLength(dat,0);
       setLength(foldersScanned,0);
-      if not(scanning) then doneCriticalSection(cs);
+      if not(scanning) then doneCriticalSection(historyCs);
     end;
   end;
 
@@ -124,12 +125,17 @@ PROCEDURE T_fileHistory.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     end;
 
   begin
-    {$ifdef debugMode}
-    writeln('Saving T_fileHistory @',stream.streamPos);
-    {$endif}
-    inherited saveToStream(stream);
-    writeArray(fileItems);
-    writeArray(folderItems);
+    try
+      enterCriticalSection(historyCs);
+      {$ifdef debugMode}
+      writeln('Saving T_fileHistory @',stream.streamPos);
+      {$endif}
+      inherited saveToStream(stream);
+      writeArray(fileItems);
+      writeArray(folderItems);
+    finally
+      leaveCriticalSection(historyCs);
+    end;
   end;
 
 FUNCTION T_fileHistory.polishHistory: boolean;
@@ -160,22 +166,37 @@ FUNCTION T_fileHistory.polishHistory: boolean;
 
 PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
   begin
-    prepend(fileItems,canonicalFileName(fileName));
-    logFolder(ExtractFileDir(fileName));
-    polishHistory;
-    updateHistoryMenu;
+    try
+      enterCriticalSection(historyCs);
+      prepend(fileItems,canonicalFileName(fileName));
+      logFolder(ExtractFileDir(fileName));
+      polishHistory;
+      updateHistoryMenu;
+    finally
+      leaveCriticalSection(historyCs);
+    end;
   end;
 
 PROCEDURE T_fileHistory.logFolder(CONST folderName:string);
   begin
-    appendIfNew(folderItems,canonicalFileName(folderName));
+    try
+      enterCriticalSection(historyCs);
+      appendIfNew(folderItems,canonicalFileName(folderName));
+    finally
+      leaveCriticalSection(historyCs);
+    end;
   end;
 
 FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
   begin
-    if (index>=0) and (index<length(fileItems))
-    then result:=fileItems[index]
-    else result:='';
+    try
+      enterCriticalSection(historyCs);
+      if (index>=0) and (index<length(fileItems))
+      then result:=fileItems[index]
+      else result:='';
+    finally
+      leaveCriticalSection(historyCs);
+    end;
   end;
 
 FUNCTION T_fileHistory.findFiles(CONST rootPath: string): T_arrayOfString;
@@ -184,38 +205,67 @@ FUNCTION T_fileHistory.findFiles(CONST rootPath: string): T_arrayOfString;
       pathToScan:string;
       list:TStringList;
   begin
-    allPathsToScan:=folderItems;
-    result:=listScriptFileNames(rootPath);
-    for pathToScan in allPathsToScan do begin
-      list:=FindAllFiles(pathToScan+DirectorySeparator,'*.*',false);
-      for fileName in list do append(result,fileName);
-      list.free;
+    try
+      enterCriticalSection(historyCs);
+      allPathsToScan:=folderItems;
+      result:=listScriptFileNames(rootPath);
+      for pathToScan in allPathsToScan do begin
+        list:=FindAllFiles(pathToScan+DirectorySeparator,'*.*',false);
+        for fileName in list do append(result,fileName);
+        list.free;
+      end;
+      sortUnique(result);
+    finally
+      leaveCriticalSection(historyCs);
     end;
-    sortUnique(result);
   end;
 
 FUNCTION T_fileHistory.findScriptsUsing(CONST scriptName:string):T_arrayOfString;
   VAR i:longint;
   begin
-    with scriptUsage do if scanning then result:=C_EMPTY_STRING_ARRAY else begin
-      enterCriticalSection(scriptUsage.cs);
-      try
+    try
+      enterCriticalSection(historyCs);
+      with scriptUsage do begin
         setLength(result,0);
         for i:=0 to length(dat)-1 do if dat[i].usedScript=scriptName then appendIfNew(result,dat[i].usingScript);
-        {$ifdef debugMode}
-        writeln('T_fileHistory.findScriptsUsing found ',length(result),' scripts using ',scriptName);
-        {$endif}
-      finally
-        leaveCriticalSection(scriptUsage.cs);
       end;
+    finally
+      leaveCriticalSection(historyCs);
+    end;
+  end;
+
+FUNCTION T_fileHistory.findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
+  VAR i:longint;
+      countBefore:longint=0;
+      script:string;
+  begin
+    try
+      enterCriticalSection(historyCs);
+      with scriptUsage do begin
+        result:=scriptName;
+        repeat
+          countBefore:=length(result);
+          for script in result do
+          for i:=0 to length(dat)-1 do
+            if dat[i].usedScript=script
+            then appendIfNew(result,dat[i].usingScript)
+            else if dat[i].usingScript=script
+            then appendIfNew(result,dat[i].usedScript);
+        until countBefore=length(result);
+        dropValues(result,scriptName);
+        sortUnique(result);
+      end;
+    finally
+      leaveCriticalSection(historyCs);
     end;
   end;
 
 PROCEDURE T_fileHistory.updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
   VAR i,j:longint;
   begin
-    with scriptUsage do if not scanning then begin
-      if tryEnterCriticalsection(scriptUsage.cs)<>0 then try
+    try
+      enterCriticalSection(historyCs);
+      with scriptUsage do begin
         j:=0;
         for i:=0 to length(dat)-1 do if dat[i].usingScript<>scriptName
         then begin
@@ -227,9 +277,9 @@ PROCEDURE T_fileHistory.updateScriptUsage(CONST scriptName:string; CONST allUses
           dat[j+i].usingScript:=scriptName;
           dat[j+i].usedScript:=allUses[i];
         end;
-      finally
-        leaveCriticalSection(scriptUsage.cs);
       end;
+    finally
+      leaveCriticalSection(historyCs);
     end;
   end;
 
@@ -252,15 +302,15 @@ FUNCTION scanScripts(p:pointer):ptrint;
   begin
     scanStart:=now;
     with P_fileHistory(p)^ do begin
-      enterCriticalSection(scriptUsage.cs);
-      //Determine folders to scan:
-      append(foldersToScan,folderItems);
-      for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
-      leaveCriticalSection(scriptUsage.cs);
+      try
+        enterCriticalSection(historyCs);
+        //Determine folders to scan:
+        append(foldersToScan,folderItems);
+        for folder in scriptUsage.foldersScanned do dropValues(foldersToScan,folder);
+      finally
+        leaveCriticalSection(historyCs);
+      end;
     end;
-    {$ifdef debugMode}
-    if length(foldersToScan)>0 then writeln(stdErr,'fileHistory/scanScripts: ',length(foldersToScan),' folders must be scanned');
-    {$endif}
     //Determine scripts to scan:
     for folder in foldersToScan do if not(isDestructionPending) and (now<scanStart+ONE_SECOND) then begin
       startFolderScan:=now;
@@ -268,6 +318,9 @@ FUNCTION scanScripts(p:pointer):ptrint;
       scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
       //Load scripts
       for script in scriptsInThisFolder do begin
+        {$ifdef debugMode}
+        writeln(stdErr,'fileHistory/scanScripts: scanning ',script);
+        {$endif}
         for usedScript in sandbox^.usedAndExtendedPackages(script) do begin
           setLength(foundUsages,length(foundUsages)+1);
           foundUsages[length(foundUsages)-1].usingScript:=script;
@@ -278,15 +331,15 @@ FUNCTION scanScripts(p:pointer):ptrint;
       scriptsInThisFolder.free;
     end;
     with P_fileHistory(p)^ do try
-      enterCriticalSection(scriptUsage.cs);
-      scriptUsage.scanning:=false;
+      enterCriticalSection(historyCs);
       i0:=length(scriptUsage.dat);
       setLength(scriptUsage.dat,i0+length(foundUsages));
       for i:=0 to length(foundUsages)-1 do scriptUsage.dat[i0+i]:=foundUsages[i];
       //Update scriptUsage.foldersScanned
       append(scriptUsage.foldersScanned,foldersScannedInThisRun);
     finally
-      leaveCriticalSection(scriptUsage.cs);
+      scriptUsage.scanning:=false;
+      leaveCriticalSection(historyCs);
     end;
     setLength(foldersToScan,0);
     if length(foldersScannedInThisRun)>0 then postIdeMessage('Background folder scan for '+intToStr(length(foldersScannedInThisRun))+' folders finished in '+myTimeToStr(now-scanStart),false);
@@ -297,23 +350,28 @@ FUNCTION scanScripts(p:pointer):ptrint;
 
 PROCEDURE T_fileHistory.postUsageScan();
   begin
-    if scriptUsage.scanning or scriptUsage.destructionPending then exit;
-    scriptUsage.scanning:=true;
-    beginThread(@scanScripts,@self);
+    try
+      enterCriticalSection(historyCs);
+      if scriptUsage.scanning or scriptUsage.destructionPending then exit;
+      scriptUsage.scanning:=true;
+      beginThread(@scanScripts,@self);
+    finally
+      leaveCriticalSection(historyCs);
+    end;
   end;
 
 PROCEDURE T_fileHistory.clear;
   begin
-    setLength(fileItems,0);
-    setLength(folderItems,0);
-    with scriptUsage do begin
-      enterCriticalSection(cs);
-      try
+    try
+      enterCriticalSection(historyCs);
+      setLength(fileItems,0);
+      setLength(folderItems,0);
+      with scriptUsage do begin
         setLength(dat,0);
         setLength(foldersScanned,0);
-      finally
-        leaveCriticalSection(cs);
       end;
+    finally
+      leaveCriticalSection(historyCs);
     end;
   end;
 
@@ -321,17 +379,22 @@ PROCEDURE T_fileHistory.updateHistoryMenu;
   VAR i:longint;
   begin
     if menuRoot=nil then exit;
-    for i:=0 to length(historyMenuItems)-1 do begin
-      menuRoot.remove(historyMenuItems[i]);
-      FreeAndNil(historyMenuItems[i]);
-    end;
-    setLength(historyMenuItems,length(fileItems));
-    for i:=0 to length(fileItems)-1 do begin
-      historyMenuItems[i]:=TMenuItem.create(menuRoot);
-      historyMenuItems[i].caption:=intToStr(i)+': '+fileItems[i];
-      historyMenuItems[i].Tag:=i;
-      historyMenuItems[i].OnClick:=@fileHistoryClick;
-      menuRoot.add(historyMenuItems[i]);
+    try
+      enterCriticalSection(historyCs);
+      for i:=0 to length(historyMenuItems)-1 do begin
+        menuRoot.remove(historyMenuItems[i]);
+        FreeAndNil(historyMenuItems[i]);
+      end;
+      setLength(historyMenuItems,length(fileItems));
+      for i:=0 to length(fileItems)-1 do begin
+        historyMenuItems[i]:=TMenuItem.create(menuRoot);
+        historyMenuItems[i].caption:=intToStr(i)+': '+fileItems[i];
+        historyMenuItems[i].Tag:=i;
+        historyMenuItems[i].OnClick:=@fileHistoryClick;
+        menuRoot.add(historyMenuItems[i]);
+      end;
+    finally
+      leaveCriticalSection(historyCs);
     end;
   end;
 
