@@ -7,9 +7,6 @@ private niceRational(L:IntList(BASE.size))->
   .join('*')                   //join the list ...
   &" = "&(BASE^L).agg(*);      //... and append the numeric result
 
-//  [L,BASE].transpose.filter({$p[0]!=0}).transpose
-//[0..size(L)-1].each(i,L.get(i)<>0 ? BASE.get(i)&"^"&L.get(i) : void).join("*")&" = "&(BASE^L).agg(*);
-
 //*This routine transforms a rational number to the corresponding prime factor powers
 //*e.g. rational(15,4)->[-2,1,1,0,0,0,0,0,0,0] - read as 15/4 = 2^(-2)*3^1*5^1*7^0*...
 private rational(enumerator:Int,denominator:Int)->begin

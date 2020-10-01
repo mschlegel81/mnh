@@ -81,7 +81,7 @@ main('files')->begin
            allFiles('consoles','*.lpr'),
            allFiles('common','*.inc'),
            allFiles('3rd_party','*.inc'),
-           allFiles('core','*.inc').minus(['core/res_version.inc']))
+           allFiles('core','*.inc')).minus(['core/res_version.inc','ide/res_toDeleteOnUninstall.inc'])
     .sort;
 
   newList.escape.each(s,s,index mod 4=3 ? ",\n\v" : ",\t").leading.join

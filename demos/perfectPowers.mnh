@@ -5,8 +5,9 @@
 @demo_for=math, list constructiob
 perfectPowers(maxVal)->
   primes(round(ln(maxVal)/ln(2)))
-  .pEach(power,([2..round(maxVal^(1/power))]^power)
-  .filter({$x<=maxVal}),|)
+  .pMap({[2..round(maxVal^(1/$power))]^$power})
+  .flatMap({$x<=maxVal ? $x : void})
+  .toList
   .|(1)
   .unique;
 

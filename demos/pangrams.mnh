@@ -1,10 +1,12 @@
 USE inputs;
 private missingLetters(s:String)->['A'..'Z'].minus(s.charSet.upper);
 
-private memoized dictionary->dict.fileLines.trim;
+private memoized dictionary->dict.fileLines.trim.unique;
 private memoized letterMap->begin
   local result:=[].toMap;
-  dictionary.each(word,word.upper.charSet.each(key,result[key]|=word));
+  local t0:=scriptTime;
+  dictionary.each(word,word.charSet.upper.each(key,result[key]|=word));
+  note('Lettermap initialized in ',scriptTime-t0,' seconds');
   result;
 end;
 
@@ -34,14 +36,13 @@ randomPangram->begin
   s;
 end;
 
-private mutable lookForRandomPangram:=true;
 findShortRandomPangram->begin
   local shortestLength:=2^63-1;
   async({begin
            ask('Press enter to stop.');
-           lookForRandomPangram:=false;
+           halt;
          end});
-  while(lookForRandomPangram,begin
+  while(true,begin
     local p:=randomPangram;
     p.length<shortestLength
     ? begin
