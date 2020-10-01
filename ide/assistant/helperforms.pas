@@ -188,6 +188,7 @@ PROCEDURE THelpForm.performFastUpdate;
       BeginFormUpdate;
       clearTemporaryComponents;
       info :=getCurrentTokenInfo;
+      currentLink:=info.linkToHelp;
       tokenLabel.caption:='Token: '+info.tokenText;
       shortInfoGroupBox.visible:=info.shortInfo<>'';
       shortInfoLabel.caption:=info.shortInfo;
