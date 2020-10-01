@@ -427,6 +427,237 @@ DESTRUCTOR T_mapGenerator.destroy;
   end;
 
 TYPE
+  P_flatMapGenerator=^T_flatMapGenerator;
+  T_flatMapGenerator=object(T_builtinGeneratorExpression)
+    private
+      sourceGenerator:P_expressionLiteral;
+      mapExpression:P_expressionLiteral;
+      isNullary:boolean;
+      queue:specialize G_queue<P_literal>;
+    public
+      CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+  end;
+
+CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    sourceGenerator:=source;
+    mapExpression:=mapEx;
+    if mapExpression<>nil then mapExpression^.rereference;
+    queue.create;
+    isNullary:=(mapEx<>nil) and not(mapEx^.canApplyToNumberOfParameters(1));
+  end;
+
+FUNCTION T_flatMapGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    if mapExpression=nil
+    then result:=sourceGenerator^.toString(30)+'.flatMap()'
+    else result:=sourceGenerator^.toString(30)+'.flatMap('+mapExpression^.toString(20)+')';
+  end;
+
+FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  VAR doneFetching:boolean=false;
+  PROCEDURE fillQueue;
+    VAR someFetched:boolean=false;
+    PROCEDURE appendEvaluated(unmapped:P_literal);
+      VAR valueToAppend:P_literal;
+      begin
+        if mapExpression=nil
+        then begin
+          queue.append(unmapped);
+          someFetched:=true;
+        end else begin
+          if isNullary
+          then valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,nil     ,nil).literal
+          else valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,unmapped,nil).literal;
+          disposeLiteral(unmapped);
+          if (valueToAppend<>nil) then begin
+            if valueToAppend^.literalType=lt_void
+            then disposeLiteral(valueToAppend)
+            else begin
+              queue.append(valueToAppend);
+              someFetched:=true;
+            end;
+          end;
+        end;
+      end;
+
+    VAR nextUnmapped:P_literal;
+        iter:T_arrayOfLiteral;
+        sub :P_literal;
+    begin
+      result:=NIL_EVAL_RESULT;
+      repeat
+        nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+        if (nextUnmapped<>nil) and not(nextUnmapped^.literalType in [lt_void,lt_emptyList,lt_emptyMap,lt_emptySet,lt_error]) then begin
+          case nextUnmapped^.literalType of
+            lt_boolean,
+            lt_smallint,
+            lt_bigint,
+            lt_real,
+            lt_string: appendEvaluated(nextUnmapped);
+            lt_list,
+            lt_booleanList,
+            lt_intList,
+            lt_realList,
+            lt_numList,
+            lt_stringList,
+            lt_set,
+            lt_booleanSet,
+            lt_intSet,
+            lt_realSet,
+            lt_numSet,
+            lt_stringSet,
+            lt_map: begin
+              iter:=P_compoundLiteral(nextUnmapped)^.iteratableList;
+              for sub in iter do appendEvaluated(sub^.rereferenced);
+              disposeLiteral(iter);
+              disposeLiteral(nextUnmapped);
+            end;
+            lt_expression: begin
+              if (P_expressionLiteral(nextUnmapped)^.typ in C_iteratableExpressionTypes) then begin
+                sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+                while (sub<>nil) and (sub^.literalType<>lt_void) and (context^.continueEvaluation) do begin
+                  appendEvaluated(nextUnmapped);
+                  sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+                end;
+                disposeLiteral(nextUnmapped);
+              end else appendEvaluated(nextUnmapped);
+            end;
+          end;
+        end else begin
+          if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
+          doneFetching:=true;
+        end;
+      until someFetched or doneFetching or not(context^.continueEvaluation);
+    end;
+
+  begin
+    if not(queue.hasNext) then fillQueue;
+    result.triggeredByReturn:=false;
+    if not(queue.hasNext)
+    then result.literal:=newVoidLiteral
+    else result.literal:=queue.next;
+  end;
+
+DESTRUCTOR T_flatMapGenerator.destroy;
+  VAR l:P_literal;
+  begin
+    disposeLiteral(sourceGenerator);
+    if mapExpression<>nil then disposeLiteral(mapExpression);
+    while queue.hasNext do begin
+      l:=queue.next;
+      disposeLiteral(l);
+    end;
+    queue.destroy;
+  end;
+
+FUNCTION flatMap_imp intFuncSignature;
+  VAR mappingFunction:P_expressionLiteral=nil;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) then begin
+      if params^.size=2 then begin
+        if (arg1^.literalType=lt_expression) and
+           (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
+            P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0))
+        then mappingFunction:=P_expressionLiteral(arg1)
+        else exit(nil);
+      end;
+      new(P_flatMapGenerator(result),create(newIterator(arg0,tokenLocation),mappingFunction,tokenLocation));
+    end;
+  end;
+
+TYPE
+  P_chunkIterator=^T_chunkIterator;
+  T_chunkIterator=object(T_builtinGeneratorExpression)
+    private
+      sourceGenerator:P_expressionLiteral;
+      mapExpression:P_expressionLiteral;
+      chunkSize:longint;
+      isNullary:boolean;
+    public
+      CONSTRUCTOR create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+  end;
+
+CONSTRUCTOR T_chunkIterator.create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+  begin
+    inherited create(loc);
+    sourceGenerator:=source;
+    chunkSize:=elementsPerChunk;
+    mapExpression:=mapEx;
+    if mapExpression<>nil then mapExpression^.rereference;
+    isNullary:=(mapEx<>nil) and not(mapEx^.canApplyToNumberOfParameters(1));
+  end;
+
+FUNCTION T_chunkIterator.toString(CONST lengthLimit: longint): string;
+  begin
+    if mapExpression=nil
+    then result:=sourceGenerator^.toString(30)+'.chunkMap()'
+    else result:=sourceGenerator^.toString(30)+'.chunkMap('+mapExpression^.toString(20)+')';
+  end;
+
+FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  VAR unmappedList:P_listLiteral;
+      nextUnmapped:P_literal;
+      doneFetching:boolean=false;
+  begin
+    result:=NIL_EVAL_RESULT;
+    unmappedList:=newListLiteral(chunkSize);
+    repeat
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+      if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
+        unmappedList^.append(nextUnmapped,false)
+      end else begin
+        if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
+        doneFetching:=true;
+      end;
+    until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
+    if doneFetching and (unmappedList^.size=0) then begin
+      disposeLiteral(unmappedList);
+      result.literal:=newVoidLiteral;
+    end else begin
+      if mapExpression=nil then result.literal:=unmappedList
+      else begin
+        if isNullary
+        then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
+        else result:=mapExpression^.evaluateToLiteral(location,context,recycler,unmappedList,nil);
+        disposeLiteral(unmappedList);
+      end;
+    end;
+  end;
+
+DESTRUCTOR T_chunkIterator.destroy;
+  begin
+    disposeLiteral(sourceGenerator);
+    if mapExpression<>nil then disposeLiteral(mapExpression);
+  end;
+
+FUNCTION chunkMap_imp intFuncSignature;
+  VAR mappingFunction:P_expressionLiteral=nil;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and (arg1^.literalType=lt_smallint) and (int1^.intValue>0) then begin
+      if params^.size=3 then begin
+        if (arg2^.literalType=lt_expression) and
+           (P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(1) or
+            P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(0))
+        then mappingFunction:=P_expressionLiteral(arg2)
+        else exit(nil);
+      end;
+      new(P_chunkIterator(result),create(newIterator(arg0,tokenLocation),int1^.intValue,mappingFunction,tokenLocation));
+    end;
+  end;
+
+TYPE
   P_parallelMapGenerator=^T_parallelMapGenerator;
   T_parallelMapGenerator=object(T_builtinGeneratorExpression)
     private
@@ -1368,6 +1599,29 @@ FUNCTION T_mapGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocat
     result:=true;
   end;
 
+FUNCTION T_flatMapGenerator.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_flatMapGenerator));
+    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    stream^.writeBoolean(mapExpression<>nil);
+    if mapExpression<>nil
+    then writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    result:=true;
+  end;
+
+FUNCTION T_chunkIterator.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+  begin
+    stream^.writeByte(byte(typ));
+    stream^.writeByte(byte(bgt_chunkMapGenerator));
+    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    stream^.writeNaturalNumber(chunkSize);
+    stream^.writeBoolean(mapExpression<>nil);
+    if mapExpression<>nil
+    then writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    result:=true;
+  end;
+
 FUNCTION T_parallelMapGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
@@ -1404,6 +1658,7 @@ FUNCTION T_vanDerCorputGenerator.writeToStream(CONST locationOfSerializeCall:T_t
 FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
   VAR generatorType:T_builtinGeneratorType;
       lit,lit2:P_literal;
+      intParameter:longint;
       bigint:T_bigInt;
       bounded:boolean;
   begin
@@ -1478,6 +1733,27 @@ FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST locatio
         disposeLiteral(lit);
         disposeLiteral(lit2);
       end;
+      bgt_flatMapGenerator: begin
+        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        if stream^.readBoolean
+        then lit2:=newLiteralFromStream(stream,location,adapters,typeMap)
+        else lit2:=nil;
+        if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
+        then new(P_flatMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
+        disposeLiteral(lit);
+        if lit2<>nil then disposeLiteral(lit2);
+      end;
+      bgt_chunkMapGenerator: begin
+        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        intParameter:=stream^.readNaturalNumber;
+        if stream^.readBoolean
+        then lit2:=newLiteralFromStream(stream,location,adapters,typeMap)
+        else lit2:=nil;
+        if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
+        then new(P_chunkIterator(result),create(P_expressionLiteral(lit),intParameter,P_expressionLiteral(lit2),location));
+        disposeLiteral(lit);
+        if lit2<>nil then disposeLiteral(lit2);
+      end;
       bgt_primeGenerator: new(P_primeGenerator(result),create(location));
       bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(stream^.readNaturalNumber,location));
     end;
@@ -1495,6 +1771,8 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif});
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif});
   registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
+  registerRule(LIST_NAMESPACE,'flatMap', @flatMap_imp ,ak_variadic_1{$ifdef fullVersion},'flatMap(L,f:Expression(1));//flattens L and applies f#flatMap(L);#//Note that the mapping function (if present) is applied AFTER flattening!#//Always returns an iteratable expression'{$endif});
+  registerRule(LIST_NAMESPACE,'chunkMap',@chunkMap_imp,ak_variadic_1{$ifdef fullVersion},'chunkMap(L,chunkSize>0,f:Expression(1));//joins L in chunks of the specified size and applies f#chunkMap(L,chunkSize>0);#//Note that the mapping function (if present) is applied AFTER chunking!#//Always returns an iteratable expression'{$endif});
   BUILTIN_PMAP:=
   registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
