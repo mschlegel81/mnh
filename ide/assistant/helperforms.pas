@@ -169,8 +169,18 @@ PROCEDURE THelpForm.performFastUpdate;
       end;
     end;
 
+  FUNCTION isActiveInTabSheet:boolean;
+    var
+      pageControl: TPageControl;
+      page: TTabSheet;
+    begin
+      getParents(page,pageControl);
+      if (pageControl=nil) or (page=nil) then exit(showing);
+      result:=pageControl.ActivePage=page;
+    end;
+
   begin
-    if not(showing and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
+    if not(isActiveInTabSheet and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.setUnderCursor(false,true)
