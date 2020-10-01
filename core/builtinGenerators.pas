@@ -15,7 +15,8 @@ USES sysutils,Classes,
 IMPLEMENTATION
 USES mnh_settings,
      typinfo,
-     serializationUtil;
+     serializationUtil,
+     mnh_messages;
 {$i func_defines.inc}
 TYPE
   P_listIterator=^T_listIterator;
@@ -740,6 +741,7 @@ TYPE
       stopAt,timeout:double;
       initialized:boolean;
       eofReached:boolean;
+      fileTruncated:boolean;
       FUNCTION fillQueue:boolean;
     public
       CONSTRUCTOR create(CONST fileName:string; CONST fileChangeTimeoutInSeconds:double; CONST loc:T_tokenLocation; VAR context:T_context);
@@ -781,7 +783,11 @@ FUNCTION T_fileLineIterator.fillQueue:boolean;
         setLength(stringBuffer,offset+k-k0);
         move(ReadBuffer[k0],stringBuffer[offset+1],k-k0);
       end;
-    end else eofReached:=true;
+      eofReached:=false;
+    end else begin
+      eofReached:=true;
+      if fileStream.Position>fileStream.Size then fileTruncated:=true;
+    end;
   end;
 
 CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST fileChangeTimeoutInSeconds:double; CONST loc: T_tokenLocation; VAR context: T_context);
@@ -789,6 +795,7 @@ CONSTRUCTOR T_fileLineIterator.create(CONST fileName: string; CONST fileChangeTi
     inherited create(loc);
     try
       eofReached:=false;
+      fileTruncated:=false;
       queue.create;
       fname:=fileName;
       timeout:=fileChangeTimeoutInSeconds/(24*60*60);
@@ -812,7 +819,7 @@ FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CO
   begin
     result.triggeredByReturn:=false;
     //The following call might block for "fileChangeTimeoutInSeconds" seconds = "timeout" days
-    while (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue) then begin
+    while not(fileTruncated) and (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue) then begin
       if context^.continueEvaluation then begin
         if (timeout>0.0000011574074074074074) then sleep(100);
       end else begin
@@ -820,6 +827,7 @@ FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CO
         exit;
       end;
     end;
+    if fileTruncated then P_context(context)^.messages^.postTextMessage(mt_el1_note,location,'File was (probably) truncated');
     if queue.hasNext
     then result.literal:=newStringLiteral(queue.next)
     else if stringBuffer<>'' then begin
