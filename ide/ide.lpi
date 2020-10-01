@@ -670,6 +670,12 @@
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
       </Verbosity>
       <WriteFPCLogo Value="False"/>
+      <ConfigFile>
+        <StopAfterErrCount Value="10"/>
+      </ConfigFile>
+      <CompilerMessages>
+        <IgnoredMessages idx6058="True"/>
+      </CompilerMessages>
       <CustomOptions Value="-dfullVersion
 -dVerboseDocking
 -ddebugMode"/>

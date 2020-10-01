@@ -563,7 +563,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   VAR i:longint;
-  PROCEDURE getBuiltinRuleInfo(OUT link:string);
+  PROCEDURE getBuiltinRuleInfo(VAR link:string);
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
       if isQualified(result.tokenText)

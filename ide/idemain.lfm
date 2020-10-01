@@ -1,7 +1,7 @@
 object IdeMainForm: TIdeMainForm
-  Left = 881
+  Left = 548
   Height = 378
-  Top = 250
+  Top = 261
   Width = 561
   AllowDropFiles = True
   Caption = 'mnh'
@@ -518,11 +518,10 @@ object IdeMainForm: TIdeMainForm
         Top = 0
         Width = 152
         Align = alClient
-        MultiLine = True
         ParentFont = False
         TabOrder = 2
         OnChange = EditorsPageControlChange
-        Options = [nboMultiLine, nboKeyboardTabSwitch]
+        Options = [nboKeyboardTabSwitch]
       end
     end
   end

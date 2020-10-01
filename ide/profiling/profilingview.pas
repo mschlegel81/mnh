@@ -171,6 +171,7 @@ PROCEDURE TprofilingOutputForm.FormDestroy(Sender: TObject);
     unregisterFontControl(StringGrid1);
     unregisterFontControl(StringGrid2);
     unregisterFontControl(StringGrid3);
+    myProfilingForm:=nil;
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid1Selection(Sender: TObject; aCol,aRow: integer);

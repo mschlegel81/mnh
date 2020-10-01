@@ -170,13 +170,13 @@ PROCEDURE THelpForm.performFastUpdate;
     end;
 
   FUNCTION isActiveInTabSheet:boolean;
-    var
-      pageControl: TPageControl;
+    VAR
+      PageControl: TPageControl;
       page: TTabSheet;
     begin
-      getParents(page,pageControl);
-      if (pageControl=nil) or (page=nil) then exit(showing);
-      result:=pageControl.ActivePage=page;
+      getParents(page,PageControl);
+      if (PageControl=nil) or (page=nil) then exit(showing);
+      result:=PageControl.activePage=page;
     end;
 
   begin
