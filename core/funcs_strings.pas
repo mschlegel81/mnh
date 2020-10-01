@@ -71,24 +71,13 @@ FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
   end;
 
 FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
-  VAR charIndex,
-      byteIndex:longint;
-      i:longint;
-      sub:string[8];
+  VAR sub:ansistring;
       literalValue:ansistring;
   begin
     if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(input));
     literalValue:=P_stringLiteral(input)^.value;
     result:=newListLiteral;
-    byteIndex:=1;
-    for charIndex:=1 to UTF8Length(literalValue) do begin
-      sub:='';
-      for i:=0 to UTF8CodepointSize(@(literalValue[byteIndex]))-1 do begin
-        sub+=P_stringLiteral(input)^.value[byteIndex];
-        inc(byteIndex)
-      end;
-      result^.appendString(sub);
-    end;
+    for sub in literalValue do result^.appendString(sub);
   end;
 
 FUNCTION chars_imp intFuncSignature;
@@ -129,26 +118,15 @@ FUNCTION byteToChar_imp intFuncSignature;
 
 FUNCTION charSet_imp intFuncSignature;
   FUNCTION charset_internal(CONST input:P_stringLiteral):P_setLiteral;
-    VAR charIndex,
-        byteIndex:longint;
-        i:longint;
-        sub:ansistring;
+    VAR sub:ansistring;
         charSetUtf8:T_setOfString;
         byteSet:T_charSet=[];
         c:char;
     begin
       if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
-        byteIndex:=1;
-        for charIndex:=1 to UTF8Length(input^.value) do begin
-          sub:='';
-          for i:=0 to UTF8CodepointSize(@(input^.value[byteIndex]))-1 do begin
-            sub:=sub+input^.value[byteIndex];
-            inc(byteIndex)
-          end;
-          charSetUtf8.put(sub);
-        end;
-        result:=newSetLiteral(100);
+        for sub in input^.value do charSetUtf8.put(sub);
+        result:=newSetLiteral(charSetUtf8.size);
         for sub in charSetUtf8.values do result^.appendString(sub);
         charSetUtf8.destroy;
       end else begin
