@@ -224,6 +224,197 @@ VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 USES sysutils,strutils,math,subrules,profiling;
+
+TYPE
+T_scopeType=(sc_block,sc_each,sc_bracketOnly);
+T_addIdResult=(air_ok,air_reintroduce,air_notInBlock);
+
+T_idStack=object
+  scope:array of record
+    scopeType:T_scopeType;
+    scopeStartToken:P_token;
+    ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
+  end;
+  bracketLevel:longint;
+  {$ifdef fullVersion}
+  localIdInfos:P_localIdInfos;
+  {$endif}
+  lastWasLocalModifier:boolean;
+  lastLocation:T_tokenLocation;
+
+  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
+  DESTRUCTOR destroy;
+  PROCEDURE clear;
+  PROCEDURE applyToken(CONST token:P_token; CONST messages:P_messages);
+
+  PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
+  {$ifdef fullVersion}
+  PROCEDURE popRemaining;
+  {$endif}
+  FUNCTION oneAboveBottom:boolean;
+  FUNCTION scopeBottom:boolean;
+  FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
+  FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
+end;
+
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
+  begin
+    setLength(scope,0);
+    {$ifdef fullVersion}
+    localIdInfos:=info;
+    {$endif}
+    clear;
+  end;
+
+DESTRUCTOR T_idStack.destroy;
+  begin
+    clear;
+  end;
+
+PROCEDURE T_idStack.clear;
+  VAR i:longint;
+  begin
+    lastWasLocalModifier:=false;
+    for i:=0 to length(scope)-1 do setLength(scope[i].ids,0);
+    setLength(scope,0);
+    bracketLevel:=0;
+  end;
+
+PROCEDURE T_idStack.applyToken(CONST token:P_token; CONST messages:P_messages);
+  PROCEDURE scopePush(CONST scopeType:T_scopeType);
+    VAR newTopIdx:longint;
+    begin
+      newTopIdx:=length(scope);
+      setLength(scope,newTopIdx+1);
+      setLength(scope[newTopIdx].ids,0);
+      scope[newTopIdx].scopeType:=scopeType;
+      scope[newTopIdx].scopeStartToken:=token;
+    end;
+
+  VAR idType:T_tokenType;
+      idLoc:T_tokenLocation;
+  begin
+    lastLocation:=token^.location;
+    case token^.tokType of
+      tt_beginBlock:
+        scopePush(sc_block);
+      tt_endBlock:
+        scopePop(messages,lastLocation,false,true);
+      tt_braceOpen:
+        scopePush(sc_bracketOnly);
+      tt_braceClose:
+        scopePop(messages,lastLocation,true,true);
+      tt_each,tt_parallelEach:begin
+        scopePush(sc_each);
+        addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
+        addId(token^.txt           ,lastLocation,tt_eachParameter);
+      end;
+      tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType,tt_customTypeCheck:begin
+        if lastWasLocalModifier then begin
+          token^.tokType:=tt_blockLocalVariable;
+          case addId(token^.txt,lastLocation,tt_blockLocalVariable) of
+            air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+token^.txt+'"',lastLocation);
+            air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastLocation);
+          end;
+        end else if (hasId(token^.txt,idType,idLoc)) then begin
+          token^.tokType:=idType;
+          if idType=tt_eachIndex then token^.location:=idLoc;
+        end;
+      end;
+    end;
+    lastWasLocalModifier:=(token^.tokType=tt_modifier) and (token^.getModifier=modifier_local);
+
+  end;
+
+PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeByBracket,warnAboutUnused:boolean);
+  VAR topIdx:longint;
+      i:longint;
+  begin
+    topIdx:=length(scope)-1;
+    if topIdx<0 then begin
+      adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
+      exit;
+    end;
+    if closeByBracket then begin
+      if scope[topIdx].scopeType=sc_block then begin
+        adapters^.raiseSimpleError('Mismatch; begin closed by )',scope[topIdx].scopeStartToken^.location);
+        adapters^.raiseSimpleError('Mismatch; begin closed by )',location);
+      end;
+    end else begin
+      if scope[topIdx].scopeType<>sc_block then begin
+        adapters^.raiseSimpleError('Mismatch; ( closed by end',scope[topIdx].scopeStartToken^.location);
+        adapters^.raiseSimpleError('Mismatch; ( closed by end',location);
+      end;
+    end;
+    with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+      if warnAboutUnused and not(ids[i].used) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
+      {$ifdef fullVersion}
+      if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,location,ids[i].idType);
+      {$endif}
+    end;
+    setLength(scope[topIdx].ids,0);
+    setLength(scope,topIdx);
+  end;
+
+{$ifdef fullVersion}
+PROCEDURE T_idStack.popRemaining;
+  VAR topIdx:longint;
+      i:longint;
+  begin
+    topIdx:=length(scope)-1;
+    while topIdx>=0 do begin
+      with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+        if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,lastLocation,ids[i].idType);
+      end;
+      setLength(scope[topIdx].ids,0);
+      topIdx-=1;
+    end;
+    setLength(scope,0);
+  end;
+{$endif}
+
+FUNCTION T_idStack.oneAboveBottom:boolean;
+  begin
+    result:=length(scope)=1;
+  end;
+
+FUNCTION T_idStack.scopeBottom:boolean;
+  begin
+    result:=length(scope)=0;
+  end;
+
+FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
+  VAR i,j:longint;
+  begin
+    i:=length(scope)-1;
+    if idType=tt_blockLocalVariable
+    then while (i>=0) and (scope[i].scopeType<>sc_block) do dec(i);
+    if i<0 then exit(air_notInBlock);
+    with scope[i] do begin
+      for j:=0 to length(ids)-1 do if ids[j].name=id then exit(air_reintroduce);
+      j:=length(ids);
+      setLength(ids,j+1);
+      ids[j].name:=id;
+      ids[j].used:=idType<>tt_blockLocalVariable;
+      ids[j].location:=location;
+      ids[j].idType:=idType;
+      result:=air_ok;
+    end;
+  end;
+
+FUNCTION T_idStack.hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
+  VAR i,j:longint;
+  begin
+    result:=false;
+    for i:=length(scope)-1 downto 0 do with scope[i] do
+    for j:=0 to length(ids)-1 do if ids[j].name=id then begin
+      ids[j].used:=true;
+      idType:=ids[j].idType;
+      idLoc:=ids[j].location;
+      exit(true);
+    end;
+  end;
+
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
   VAR s:string;
   begin
@@ -1097,55 +1288,19 @@ DESTRUCTOR T_lexer.destroy;
 PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR t:P_token;
       localIdStack:T_idStack;
-      lastWasLocalModifier:boolean=false;
-      idType:T_tokenType;
-      lastLocation:T_tokenLocation;
-      idLoc:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
     while (t<>nil) do begin
-      lastLocation:=t^.location;
-      case t^.tokType of
-        tt_beginBlock:
-          localIdStack.scopePush(sc_block,lastLocation);
-        tt_endBlock:
-          localIdStack.scopePop(messages,lastLocation,false,true);
-        tt_braceOpen:
-          localIdStack.scopePush(sc_bracketOnly,lastLocation);
-        tt_braceClose:
-          localIdStack.scopePop(messages,lastLocation,true,true);
-        tt_each,tt_parallelEach:begin
-          localIdStack.scopePush(sc_each,lastLocation);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
-          localIdStack.addId(t^.txt               ,lastLocation,tt_eachParameter);
-        end;
-        tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType,tt_customTypeCheck:begin
-          if lastWasLocalModifier then begin
-            t^.tokType:=tt_blockLocalVariable;
-            case localIdStack.addId(t^.txt,lastLocation,tt_blockLocalVariable) of
-              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+t^.txt+'"',lastLocation);
-              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastLocation);
-            end;
-          end else if (localIdStack.hasId(t^.txt,idType,idLoc)) then begin
-            t^.tokType:=idType;
-            if idType=tt_eachIndex then t^.location:=idLoc;
-          end;
-        end;
-      end;
-      lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
+      localIdStack.applyToken(t,messages);
       t:=t^.next;
     end;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false,true);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,localIdStack.lastLocation,false,true);
     localIdStack.destroy;
   end;
 
 FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
   VAR localIdStack:T_idStack;
-      lastWasLocalModifier:boolean=false;
-      idType:T_tokenType;
-      lastLocation:T_tokenLocation;
-      idLoc:T_tokenLocation;
       earlierSuppressedUnusedAttribute:boolean=false;
   FUNCTION hasSuppressedUnusedAttribute:boolean;
     VAR s:string;
@@ -1158,33 +1313,8 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(messages,recycler{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do begin
-      lastLocation:=lastTokenized^.location;
-      case lastTokenized^.tokType of
-        tt_beginBlock:
-          localIdStack.scopePush(sc_block,lastLocation);
-        tt_endBlock:
-          localIdStack.scopePop(messages,lastLocation,false,not(hasSuppressedUnusedAttribute));
-        tt_braceOpen:
-          localIdStack.scopePush(sc_bracketOnly,lastLocation);
-        tt_braceClose:
-          localIdStack.scopePop(messages,lastLocation,true,not(hasSuppressedUnusedAttribute));
-        tt_each,tt_parallelEach:begin
-          localIdStack.scopePush(sc_each,lastLocation);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,lastLocation,tt_eachIndex);
-          localIdStack.addId(lastTokenized^.txt   ,lastLocation,tt_eachParameter);
-        end;
-        tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType,tt_customTypeCheck:
-          if lastWasLocalModifier then begin
-            lastTokenized^.tokType:=tt_blockLocalVariable;
-            case localIdStack.addId(lastTokenized^.txt,lastLocation,tt_blockLocalVariable) of
-              air_reintroduce: messages^.raiseSimpleError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastLocation);
-              air_notInBlock : messages^.raiseSimpleError('You can only declare local variables in begin-end-blocks',lastLocation);
-            end;
-          end else if (localIdStack.hasId(lastTokenized^.txt,idType,idLoc)) then begin
-            lastTokenized^.tokType:=idType;
-            if idType=tt_eachIndex then lastTokenized^.location:=idLoc;
-          end;
-        tt_semicolon: if localIdStack.scopeBottom then begin
+      if lastTokenized^.tokType=tt_semicolon then begin
+        if localIdStack.scopeBottom then begin
           if beforeLastTokenized<>nil then begin;
             beforeLastTokenized^.next:=nil;
             recycler.disposeToken(lastTokenized);
@@ -1194,19 +1324,18 @@ FUNCTION T_lexer.getNextStatement(CONST messages:P_messages; VAR recycler:T_recy
           resetTemp;
           localIdStack.destroy;
           exit;
-        end;
-      end;
-      lastWasLocalModifier:=(lastTokenized<>nil) and (lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
+        end else localIdStack.applyToken(lastTokenized,messages);
+      end else localIdStack.applyToken(lastTokenized,messages);
     end;
     result:=nextStatement;
     if not(messages^.continueEvaluation) then begin
       {$ifdef fullVersion}
-      localIdStack.popRemaining(lastLocation);
+      localIdStack.popRemaining;
       {$endif}
       recycler.cascadeDisposeToken(result.firstToken);
     end;
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,false,not(hasSuppressedUnusedAttribute));
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,localIdStack.lastLocation,false,not(hasSuppressedUnusedAttribute));
     localIdStack.destroy;
   end;
 
