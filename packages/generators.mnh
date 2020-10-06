@@ -3,9 +3,9 @@
 timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
 {begin
    local gen:=sourceGenerator;
-   local timeout:=time+runForSeconds;
+   local timeout:=scriptTime+runForSeconds;
  save;
-   time<timeout
+   scriptTime<timeout
    ? gen()
    : void;
  end}.toIteratableExpression;
@@ -23,19 +23,6 @@ end}.toIteratableExpression;
 //*Warning: (potentially) infinite generator!
 pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);
 
-//*Returns a chunk iterator
-chunkIterator(iter:Iteratable,chunkSize>=1)->{begin
-  local g:=iter.isIteratableExpression
-           ? iter
-           : iter.toIteratableExpression;
-  local next:={begin
-    local r:=g.head(chunkSize);
-    r==[] ? void : r;
-  end};
-save;
-  next();
-end}.toIteratableExpression;
-
 private subsetMapping(elements,basePerElement)->begin
   assert(elements.isList);
   assert(basePerElement.isList(elements.size));
@@ -52,3 +39,12 @@ begin
   local basePerElement:=elements.getInner(1)+1;
   rangeGenerator(0,basePerElement.agg(*)-1).pMap(subsetMapping(elements.getInner(0),basePerElement));
 end;
+
+//*Returns the count of iteratable expression i
+count(i:IteratableExpression)->begin
+  local result:=0;
+  while(!isVoid(i()),result+=1);
+  result;
+end;
+//*The fallback for other literals is size
+count(i)->i.size;
