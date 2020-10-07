@@ -1713,34 +1713,46 @@ FUNCTION tokenSplit_impl intFuncSignature;
   end;
 
 FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
-  VAR lexer:T_lexer;
+  VAR lexer:T_singleStringLexer;
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
     statement:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
-    lexer.destroy;
-    if statement.firstToken=nil then begin
-      context.raiseError('The parsed expression appears to be empty',location);
-      exit(nil);
-    end else if not(context.messages^.continueEvaluation) then begin
-      exit(nil); //Parsing error ocurred
+    result:=statement.token.first;
+    statement:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
+    if statement.token.first<>nil then begin
+      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler.cascadeDisposeToken(statement.token.first);
     end;
-    result:=statement.firstToken;
+    lexer.destroy;
+    if result=nil
+    then context.raiseError('The parsed expression appears to be empty',location)
+    else if not (context.messages^.continueEvaluation) then begin
+      recycler.cascadeDisposeToken(result);
+      result:=nil
+    end;
   end;
 
 FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
-  VAR last :P_token=nil;
-      i:longint;
-      lexer:T_lexer;
+  VAR lexer:T_variableLexer;
+      statement: T_enhancedStatement;
   begin
     result:=nil;
-    lexer.create(C_EMPTY_STRING_ARRAY,location,package);
-    for i:=0 to L^.size-1 do begin
-      if L^.value[i]^.literalType=lt_string
-      then lexer.rawTokenize(P_stringLiteral(L^.value[i])^.value,location,result,last,context.messages,recycler)
-      else lexer.rawTokenize(L^.value[i]                        ,location,result,last,recycler);
+    lexer.create(l^.iteratableList,location,package);
+    statement:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
+    result:=statement.token.first;
+    statement:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
+    if statement.token.first<>nil then begin
+      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler.cascadeDisposeToken(statement.token.first);
     end;
-    preprocessStatement(result,context.messages{$ifdef fullVersion},nil{$endif});
+    lexer.destroy;
+    if result=nil
+    then context.raiseError('The parsed expression appears to be empty',location)
+    else if not (context.messages^.continueEvaluation) then begin
+      recycler.cascadeDisposeToken(result);
+      result:=nil
+    end;
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
@@ -1753,10 +1765,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context,recycler)
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context,recycler);
     if first=nil then exit(nil);
-    if not(first^.areBracketsPlausible(context.messages)) then begin
-      recycler.cascadeDisposeToken(first);
-      exit(nil);
-    end;
+
     if first^.tokType<>tt_expBraceOpen then begin
       temp:=recycler.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;

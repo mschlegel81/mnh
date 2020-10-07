@@ -430,7 +430,7 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
   end;
 
 PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
-  VAR lexer:T_lexer;
+  VAR lexer:T_linesLexer;
       stmt :T_enhancedStatement;
   begin
     if parentProvider=nil then begin
@@ -444,12 +444,12 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY,nil,nil);
       messages.postSingal(mt_clearConsole,C_nilTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
-      while (globals.primaryContext.messages^.continueEvaluation) and (stmt.firstToken<>nil) do begin
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+      while (globals.primaryContext.messages^.continueEvaluation) and (stmt.token.first<>nil) do begin
         package.interpret(stmt,lu_forDirectExecution,globals,recycler,nil,nil);
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler{$ifdef fullVersion},nil{$endif});
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
       end;
-      if (stmt.firstToken<>nil) then recycler.cascadeDisposeToken(stmt.firstToken);
+      if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
       lexer.destroy;
       globals.afterEvaluation(recycler);
     end;

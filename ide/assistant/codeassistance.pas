@@ -337,9 +337,8 @@ PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_hi
     end;
   end;
 
-FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring;
-  CONST CaretY, CaretX: longint; VAR info: T_tokenInfo): boolean;
-  VAR lexer:T_lexer;
+FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo): boolean;
+  VAR lexer:T_singleStringLexer;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   PROCEDURE appendUsageInfo;
@@ -379,7 +378,7 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring;
 
 FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTokenLocation; CONST oldId, newId: string;
   VAR lineText: ansistring; CONST CaretY: longint): boolean;
-  VAR lexer:T_lexer;
+  VAR lexer:T_singleStringLexer;
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin

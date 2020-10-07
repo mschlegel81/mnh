@@ -606,7 +606,7 @@ FUNCTION T_pattern.isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):bo
             and (forDuckTyping or
                  (sig[0].typeWhitelist-C_typables=[]));
   end;
-FUNCTION T_pattern.isValidMutablePattern        :boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
+FUNCTION T_pattern.isValidMutablePattern:boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   VAR t:P_token;
@@ -661,11 +661,11 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     end;
 
   begin
-    if (first^.next<>nil) and (first^.next^.tokType=tt_braceClose) then begin
+    if (first^.next<>nil) and (first^.next^.tokType in [tt_endOfPatternAssign,tt_endOfPatternDeclare]) then begin
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      parts:=getBodyParts(first,0,@context,closingBracket);
+      parts:=getBodyParts(first,0,@context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
       if closingBracket=nil then begin
         recycler.cascadeDisposeToken(first);
         exit;
@@ -782,7 +782,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler);
     recycler.disposeToken(first);
-    first:=recycler.disposeToken(closingBracket);
+    first:=closingBracket;
   end;
 
 {$ifdef fullVersion}

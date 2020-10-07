@@ -185,6 +185,10 @@ TYPE
     tt_docComment,
     tt_attributeComment,
     tt_use,tt_include,tt_nameOf,
+    tt_startOfPattern,     //lexer interal
+    tt_endOfPatternDeclare,//lexer interal
+    tt_endOfPatternAssign, //lexer interal
+    tt_functionPattern,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -195,20 +199,12 @@ TYPE
   end;
 
 CONST
-  C_forbiddenTokenTypes: T_tokenTypeSet=[tt_rulePutCacheValue, tt_agg, tt_parList_constructor, tt_parList,
-    tt_declare,
-    //type checks:
-    tt_typeCheck..tt_customTypeCheck,
-    //special: [E]nd [O]f [L]ine
-    tt_EOL,
-    tt_blank];
-
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];
   C_operators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
   C_unaryOperators: T_tokenTypeSet=[tt_unaryOpNegate,tt_unaryOpPlus,tt_unaryOpMinus];
   C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorNotIn];
-  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
-  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
+  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck,tt_startOfPattern];
+  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_endOfPatternAssign,tt_endOfPatternDeclare];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
@@ -381,6 +377,10 @@ CONST
   {tt_use}                        'USE',
   {tt_include}                    'INCLUDE',
   {tt_nameOf}                     'nameOf',
+  {tt_startOfPattern}             '(',
+  {tt_endOfPatternDeclare}        ')->',
+  {tt_endOfPatternAssign}         '):=',
+  {tt_functionPattern}            '',
   {tt_blank}                      '');
 {$ifdef fullVersion}
   C_tokenDoc:array[T_tokenType] of record
@@ -492,6 +492,10 @@ CONST
 {tt_use}                        (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'; helpLink:'/packages.html#importing'),
 {tt_include}                    (defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'; helpLink:'/packages.html#including'),
 {tt_nameOf}                     (defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Returns the name of the argument or the blank string if there is none'; helpLink:'/specials.html#nameof'),
+{tt_startOfPattern}             (defaultHtmlSpan:'operator';   reservedWordClass:rwc_not_reserved;     helpText:'Start-of-pattern'; helpLink:''),
+{tt_endOfPatternDeclare}        (defaultHtmlSpan:'operator';   reservedWordClass:rwc_not_reserved;     helpText:'End-of-pattern/declare'; helpLink:''),
+{tt_endOfPatternAssign}         (defaultHtmlSpan:'operator';   reservedWordClass:rwc_not_reserved;     helpText:'End-of-pattern/assign'; helpLink:''),
+{tt_functionPattern}            (defaultHtmlSpan:'operator';   reservedWordClass:rwc_not_reserved;     helpText:'Function pattern'; helpLink:''),
 {tt_blank}                      (defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'; helpLink:''));
 {$endif}
 TYPE

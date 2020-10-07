@@ -108,6 +108,7 @@ PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
 PROCEDURE TSplashForm.prepareDoc;
   begin
+    {$ifdef debugMode} exit; {$endif}
     settings.fixLocations;
     {$ifdef Windows}
     buttonInitNormal  .enabled:=APP_STYLE=APP_STYLE_BLANK;
