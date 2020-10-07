@@ -10,6 +10,7 @@ USES myGenerics,myStringUtil,
      {$ifdef fullVersion}
      mnh_html,
      mnh_doc,
+     tokenStack,
      {$endif}
      tokens,
      mnh_messages,
@@ -76,7 +77,7 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual; abstract;
+      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual;
       {$endif}
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
   end;
@@ -103,9 +104,6 @@ TYPE
     CONSTRUCTOR create;
     FUNCTION getId:T_idString; virtual;
     FUNCTION getPath:ansistring; virtual;
-    {$ifdef fullVersion}
-    PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual;
-    {$endif}
   end;
 
   T_enhancedStatement=record
@@ -486,7 +484,6 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_localIdInfos): T
       tokenToProcess:=tokenQueue.next;
       associatedPackage^.resolveId(tokenToProcess^,nil);
       result.add(tokenToProcess,idInfos,associatedPackage);
-      recycler.disposeToken(tokenToProcess);
     end;
     result.addLineEnder(inputLocation.column);
     resetTemp;
@@ -1000,7 +997,7 @@ FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_mnhSystemPseudoPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_functionCallInfos);
+PROCEDURE T_abstractPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_functionCallInfos);
   begin
     //no op
   end;
