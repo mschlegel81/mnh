@@ -676,14 +676,12 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     if (first^.next<>nil) and (first^.next^.tokType in [tt_endOfPatternAssign,tt_endOfPatternDeclare]) then begin
       setLength(parts,0);
       closingBracket:=first^.next;
-      if replaceOpeningBracketByPatternToken then context.raiseError('Invalid inline expression pattern.',first^.location);
     end else begin
       if replaceOpeningBracketByPatternToken
       then parts:=getBodyParts(first,0,@context,closingBracket,[                      tt_endOfPatternDeclare])
       else parts:=getBodyParts(first,0,@context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
       if closingBracket=nil then begin
         context.raiseError('Invalid pattern. This is probably a bug',first^.location);
-        recycler.cascadeDisposeToken(first);
         exit;
       end;
       for i:=0 to length(parts)-1 do begin
@@ -793,14 +791,9 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler);
     if replaceOpeningBracketByPatternToken then begin
-      if context.continueEvaluation then begin
-        first^.tokType:=tt_functionPattern;
-        first^.data:=@self;
-        first^.next:=recycler.disposeToken(closingBracket);;
-      end else begin
-        recycler.disposeToken(first);
-        recycler.cascadeDisposeToken(closingBracket);
-      end;
+      first^.tokType:=tt_functionPattern;
+      first^.data:=@self;
+      first^.next:=recycler.disposeToken(closingBracket);;
     end else begin
       recycler.disposeToken(first);
       first:=closingBracket;
@@ -878,7 +871,9 @@ FUNCTION T_pattern.writeToStream(CONST locationOfSerializeCall: T_tokenLocation;
 
 FUNCTION patternToString(CONST p:pointer):ansistring;
   begin
-    result:=P_pattern(p)^.toString+'->';
+    if length(P_pattern(p)^.sig)=0
+    then result:='()'                  +C_tokenDefaultId[tt_declare]
+    else result:=P_pattern(p)^.toString+C_tokenDefaultId[tt_declare];
   end;
 
 PROCEDURE disposePattern(VAR pattern:pointer);

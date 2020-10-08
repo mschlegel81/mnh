@@ -273,7 +273,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
@@ -732,7 +732,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
     with scope[topIdx] do for i:=0 to length(ids)-1 do begin
       if warnAboutUnused and not(ids[i].used) and (adapters<>nil) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
       {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,location,ids[i].idType);
+      if localIdInfos<>nil then localIdInfos^.addIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
       {$endif}
     end;
     setLength(scope[topIdx].ids,0);
@@ -747,7 +747,7 @@ PROCEDURE T_idStack.popRemaining;
     topIdx:=length(scope)-1;
     while topIdx>=0 do begin
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-        if localIdInfos<>nil then localIdInfos^.add(ids[i].name,ids[i].location,prevToken^.location,ids[i].idType);
+        if localIdInfos<>nil then localIdInfos^.addIdInfo(ids[i].name,ids[i].location,prevToken^.location,ids[i].idType);
       end;
       setLength(scope[topIdx].ids,0);
       topIdx-=1;
@@ -805,10 +805,38 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
       pattern:P_pattern;
+  PROCEDURE prepareLambdaBody;
+    VAR parameterId: T_patternElementLocation;
+        uniqueIds: T_arrayOfString=();
+        lastTokenInRule:P_token;
+        bracketLevel:longint=0;
+        parameterIds: T_patternElementLocations;
+
+    begin
+      parameterIds:=pattern^.getNamedParameters;
+      for parameterId in parameterIds do appendIfNew(uniqueIds,parameterId.id);
+
+      lastTokenInRule:=t;
+      while (lastTokenInRule^.next<>nil) and (bracketLevel>=0) do begin
+        if      lastTokenInRule^.tokType in C_openingBrackets then inc(bracketLevel)
+        else if lastTokenInRule^.tokType in C_closingBrackets then dec(bracketLevel);
+        if (lastTokenInRule^.tokType in [tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule]) and
+           arrContains(uniqueIds,lastTokenInRule^.txt)
+        then lastTokenInRule^.tokType:=tt_parameterIdentifier;
+        lastTokenInRule:=lastTokenInRule^.next;
+      end;
+      {$ifdef fullVersion}
+      if localIdInfos<>nil then
+      for parameterId in parameterIds do localIdInfos^.addIdInfo(parameterId.id,parameterId.location,lastTokenInRule^.location,tt_parameterIdentifier);
+      {$endif}
+      setLength(parameterIds,0);
+      setLength(uniqueIds,0)
+    end;
+
   begin
     t:=first;
     while t<>nil do begin
@@ -826,7 +854,12 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
         tt_startOfPattern:begin
           new(pattern,create);
           pattern^.parse(t,t^.location,context,recycler,true);
-          if not(context.continueEvaluation) then dispose(pattern,destroy);
+          if context.continueEvaluation
+          then prepareLambdaBody
+          else begin
+            dispose(pattern,destroy);
+            t^.tokType:=tt_EOL;
+          end;
         end;
         tt_identifier,tt_globalVariable: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;

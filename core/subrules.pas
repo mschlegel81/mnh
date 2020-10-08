@@ -19,7 +19,8 @@ USES //my utilities
      funcs,
      mnh_messages,
      serializationUtil,
-     patterns;
+     patterns,
+     tokenStack;
 TYPE
   T_subruleAttribute=record
     key,value:string;
@@ -192,7 +193,7 @@ TYPE
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
@@ -229,13 +230,12 @@ T_builtinExpression=object(T_expression)
     FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
       lambdaForm:boolean;
   begin
-    predigest(rep,nil,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
     if not(rep^.tokType in [tt_expBraceOpen,tt_functionPattern]) then begin
       context.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -248,9 +248,10 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
       while (t<>nil) and (bracketLevel>=0) do begin
         case t^.tokType of
           tt_expBraceOpen,tt_functionPattern: begin
-            digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            digestInlineExpression(t,context,recycler);
             if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
           end;
+          tt_semicolon:
           else if t^.tokType in C_openingBrackets then inc(bracketLevel)
           else if t^.tokType in C_closingBrackets then dec(bracketLevel);
         end;
@@ -277,7 +278,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
       while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
         case t^.tokType of
           tt_expBraceOpen,tt_functionPattern: begin
-            digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            digestInlineExpression(t,context,recycler);
             if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
           end;
         end;
@@ -1807,13 +1808,14 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context,recycler);
     if first=nil then exit(nil);
 
-    if first^.tokType<>tt_expBraceOpen then begin
+    if not(first^.tokType in [tt_expBraceOpen,tt_startOfPattern]) then begin
       temp:=recycler.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;
       temp^.next:=recycler.newToken(location,'',tt_expBraceClose);
     end;
-    digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
+    predigest(first,package,context,recycler{$ifdef fullVersion},nil,nil{$endif});
+    digestInlineExpression(first,context,recycler);
     if (context.messages^.continueEvaluation) and (first^.next<>nil) then context.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.messages^.continueEvaluation) then begin
       recycler.cascadeDisposeToken(first);
@@ -1841,7 +1843,7 @@ FUNCTION toExpression_imp intFuncSignature;
       first^.next      :=recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
       first^.next^.next:=recycler.newToken(tokenLocation,'',tt_expBraceClose);
       //Reduce to inline expression
-      digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
+      digestInlineExpression(first,context,recycler);
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;

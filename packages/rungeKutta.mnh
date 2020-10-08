@@ -8,9 +8,9 @@ absNorm(l:List)->begin
   f.isNumericList ? absNorm(f) : fail;
 end;
 
-private rkCodeStart(intermediate,y,dt,...)->[
-                          ...[0],'F0'         ,':=',dt,'*$1(',y,')',';']|
-  intermediate.each(stage,...[0],'F'&(index+1),':=',dt,'*$1(',y ,
+private rkCodeStart(intermediate)->[
+                          'local F0'         ,':=dt*f(y0)',';']|
+  intermediate.each(stage,'local F'&(index+1),':=dt*f(y0' ,
                           stage.each(a ,a=0 ? void : [a,'F'&index])
                                .each(af,'+',
                                         af[0]=1 ? void : af[0],
@@ -18,7 +18,7 @@ private rkCodeStart(intermediate,y,dt,...)->[
                                         af[1],|),
                           ')',';',|);
 private summationStageCode(summationStage:NumericList,intern:Boolean)->
-  (intern ? 'y+=' :'$0')| summationStage.each(a ,a=0 ? void : [a,'F'&index])
+  (intern ? 'y+=' :'y0')| summationStage.each(a ,a=0 ? void : [a,'F'&index])
                       .each(af,'+',
                             af[0]=1 ? void : af[0],
                             af[0]=1 ? void : '*',
@@ -29,22 +29,22 @@ private summationStageCode(summationStage:NumericList,intern:Boolean)->
 private rungeKuttaStepper(Tableau:ERK_ButcherTableau)->begin
   local intermediate  :=Tableau.leading;
   local summationStage:=Tableau.trailing;
-  toExpression('begin'|rkCodeStart(intermediate,'$0','$2','local')|
-                summationStageCode(summationStage,false)|';'|'end');
+  ('(y0,f:Expression(1),dt>0.0)->begin'|rkCodeStart(intermediate)|
+                summationStageCode(summationStage,false)|';'|'end').toExpression;
 end;
 
-private YComb(F)->{F($0,$1,$2,$3,F)};
+private YComb(embed:Expression(5))->((y0,F:Expression(1),dt>0.0,errorTolerance>=1E-10)->embed(y0,F,dt,errorTolerance,embed));
 
 //*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
 private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   local intermediate   :=Tableau.leading(2);
   local summationStages:=Tableau.trailing(2);
-  local code:=['begin'             ,rkCodeStart       (intermediate,'$0','$2','local'),
+  local code:=['(y0,f,dt,errorTolerance,RK)->begin'             ,rkCodeStart       (intermediate),
                    'local result:=',summationStageCode(summationStages[0],false),';',
-  '(local subSteps:=ceil((absNorm(',summationStageCode(summationStages[1],false),'-result)/$3)^',1/order,'))<=1 ? result : ',
-  'begin','local dt:=$2/subSteps',';','local y:=$0',';','[1..subSteps].each(step,','begin',
-  'y:=$4(y,$1,dt,$3,$4)',';','void',';',
+  '(local subSteps:=ceil((absNorm(',summationStageCode(summationStages[1],false),'-result)/errorTolerance)^',1/order,'))<=1 ? result : ',
+  'begin','local dtSub:=dt/subSteps',';','local y:=y0; [1..subSteps].each(step,','begin',
+  'y:=RK(y,f,dtSub,errorTolerance,RK)',';','void',';',
   'end)',';','y',';','end',';','end'].flatten;
   code.toExpression.YComb;
 end;

@@ -87,7 +87,7 @@ TYPE
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION whoReferencesLocation(CONST location:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
-      PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+      PROCEDURE addIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
       PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
       FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
       PROCEDURE copyFrom(CONST original:P_localIdInfos);
@@ -157,7 +157,7 @@ FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       end;
   end;
 
-PROCEDURE T_localIdInfos.add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+PROCEDURE T_localIdInfos.addIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
   VAR i:longint;
   begin
     i:=length(infos);

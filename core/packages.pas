@@ -543,7 +543,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       if (localIdInfos<>nil) and (first^.next<>nil) then begin
         clauseEnd:=first^.last^.location;
         inc(clauseEnd.column);
-        localIdInfos^.add(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
+        localIdInfos^.addIdInfo(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
       end;
       {$endif}
       if extendsLevel>=32 then begin
@@ -642,7 +642,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         if first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
-          if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
+          if localIdInfos<>nil then localIdInfos^.addIdInfo(first^.txt,first^.location,clauseEnd,tt_use);
           {$endif}
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
             if (gui_started=NO) and not(usecase in [lu_forCodeAssistance,lu_usageScan]) then globals.primaryContext.messages^.logGuiNeeded;
@@ -656,7 +656,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
           {$ifdef fullVersion}
-          if localIdInfos<>nil then localIdInfos^.add(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
+          if localIdInfos<>nil then localIdInfos^.addIdInfo(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
           {$endif}
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
@@ -758,7 +758,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       if (localIdInfos<>nil) and (ruleBody<>nil) then begin
         ruleDeclarationEnd:=ruleBody^.last^.location;
         for parameterId in rulePattern.getNamedParameters do
-          localIdInfos^.add(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
+          localIdInfos^.addIdInfo(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
       end;
       {$endif}
 
@@ -857,7 +857,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           //check, but ignore result
           globals.primaryContext.messages^.clearFlags;
         end;
-        predigest(assignmentToken,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+        predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
@@ -889,7 +889,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             {$endif}
             if profile then globals.timeBaseComponent(pc_interpretation);
             if (statement.token.first=nil) then exit;
-            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
             then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.token.first)+';');
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
@@ -913,7 +913,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             end;
           end;
           lu_forCodeAssistance: if (statement.token.first<>nil) then begin
-            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
             resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
           end
           else globals.primaryContext.messages^.postTextMessage(mt_el1_note,statement.token.first^.location,'Skipping expression '+tokensToString(statement.token.first,50));
