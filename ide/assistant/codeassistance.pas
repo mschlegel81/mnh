@@ -237,10 +237,11 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
         new(localIdInfos,create);
         new(functionCallInfos,create);
         {$ifdef debugMode}
-        writeln('Additional scripts to scan :',length(additionals),': ');
+        write('Additional scripts to scan :',length(additionals),': ');
         for script in additionals do write(script,',');
         writeln;
         {$endif}
+
         for script in additionals do loadSecondaryPackage(script);
         globals^.primaryContext.messages^.clear();
         package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
@@ -264,6 +265,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
           dispose(globals,destroy);
           adapters.destroy;
         end;
+        leaveCriticalSection(cs);
       end;
       result:=true;
     end else begin

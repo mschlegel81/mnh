@@ -616,6 +616,7 @@ PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Sh
 
 DESTRUCTOR T_editorMeta.destroy;
   begin
+    language:=LANG_TXT;
     if assistanceData<>nil then dispose(assistanceData,destroy);
     inherited destroy;
     fileInfo.filePath:='';
