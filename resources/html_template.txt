@@ -872,6 +872,15 @@ While the first one is virtually unreadable without bracket highlighting, the se
 then replace every ocurring 'x' by a space, then trim each line, then sort the lines by ascending length.".<br>
 This notation can be ambiguous however, since in <code>a.b</code> identifier <code>a</code> can either denote a package (so <code>a.b</code> is a fully qualified function) or
 a local function or variable (so <code>a.b</code> is interpreted as <code>b(a)</code>). This is resolved by favouring the first interpretation: if there is an imported package "a", it will be used.
+<br>
+Pseudo-Object-Notation can also be applied to expressions after the dot, e.g. the
+following statements are equivalent: <code>
+<!--mnh-->
+  [1..10].{$x²*3};
+  {$x²*3}([1..10]);
+  [1..10]²*3;
+<!--end-->
+</code>
 </li>
 </ul>
 
@@ -1294,7 +1303,11 @@ Strings in the first three representations are joined directly within the lexer,
 </code>
 
 <h4><br><a name="expressions">Expressions</a></h4>
-Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
+Expression literals are a MNH5's version of anonymous functions. They can be declared using curly brackets or using the <i>lambda function</i> notation known from Java.
+The following two sections describe the usage of each notation.
+<br>
+<br><b>Curly notation:</b><br>
+To define a parameter to an expression literal, use $-Variables.<br>
 Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
 Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
 If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
@@ -1321,13 +1334,45 @@ Note the special behavior of operations on expressions:<code>
    in> sqr({$x}); //some functions can be inlined in expressions
   out> {sqr($x)}
   
-   in> {$x}+{$y}; //not quiet intuitive, but same as below
+   in> {$x}+{$y}; //not quite intuitive, but same as below
   out> {$x+$x}
 
    in> {$0}+{$0}; //as above but more intuitive
   out> {$0+$0}
 <!--end-->
 </code>
+
+<br><b>Lambda notation:</b><br>
+To define a parameter to an expression literal, use a pattern as for <a href="functions.html#restrictions">functions</a>.<br>
+Example 1: <code>()->sin(x)  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
+Example 2: <code>(x)->sin(x) </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
+Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
+<!--mnh-->
+  f(a,b)->((x)->a+b*x)
+<!--end-->
+</code> will return a linear scalar function.<br>
+<b><i>Note that the brackets around <code>(x)->a+b*x</code> cannot be omitted, because the closing bracket marks the end of the expression!</i></b>
+Instead of using named parameters you can also refer to parameters by their (zero based) index. This is however strongly discouraged for expresions in lambda notation.
+
+Note the special behavior of operations on expressions:<code>
+<!--mnh-->
+   in> ((x)->x)+1;
+  out> (x)->x+1
+
+   in> ((x)->x)+(()->1);
+  out> (x)->x+1
+
+   in> sqr((x)->x); //some functions can be inlined in expressions
+  out> (x)->sqr(x)
+
+   in> ((x)->x)+((y)->y); //not quite intuitive, but same as below
+  out> (x)->x+x
+
+   in> ((x)->x)+((x)->x); //as above but more intuitive
+  out> (x)->x+x
+<!--end-->
+</code>
+
 
 <h4><br><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
@@ -1701,7 +1746,7 @@ Every placeholder begins with a percent-sign "<code>%</code>". If you want to ha
 A placeholder looks as follows<code>
   '%' [{expression}] ['-'] [Width] ['.' Precision] ArgType
 </code>
-where <ul><li><code>expression</code> is a valid MNH expression (in curly brackets)</li>
+where <ul><li><code>expression</code> is a valid MNH expression (in curly bracket notation)</li>
 <li>the minus indicates that the formatted string shall be left-aligned</li>
 <li><code>width</code> is the width of the result</li>
 <li><code>precision</code> is the number of decimal digits for number formats and</li>
