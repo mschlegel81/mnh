@@ -683,7 +683,6 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       else parts:=getBodyParts(first,0,@context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
       if closingBracket=nil then begin
         context.raiseError('Invalid pattern. This is probably a bug',first^.location);
-        recycler.cascadeDisposeToken(first);
         exit;
       end;
       for i:=0 to length(parts)-1 do begin
@@ -793,14 +792,9 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler);
     if replaceOpeningBracketByPatternToken then begin
-      if context.continueEvaluation then begin
-        first^.tokType:=tt_functionPattern;
-        first^.data:=@self;
-        first^.next:=recycler.disposeToken(closingBracket);;
-      end else begin
-        recycler.disposeToken(first);
-        recycler.cascadeDisposeToken(closingBracket);
-      end;
+      first^.tokType:=tt_functionPattern;
+      first^.data:=@self;
+      first^.next:=recycler.disposeToken(closingBracket);;
     end else begin
       recycler.disposeToken(first);
       first:=closingBracket;
