@@ -813,6 +813,16 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
     t:=first;
     while t<>nil do begin
       case t^.tokType of
+        tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen:
+          if (t^.next<>nil) and (t^.next^.next<>nil) and (t^.next^.tokType in [tt_literal,tt_globalVariable,tt_blockLocalVariable]) then case t^.next^.tokType of
+            tt_operatorMinus: t^.next^.tokType:=tt_unaryOpMinus;
+            tt_operatorPlus : t^.next:=recycler.disposeToken(t^.next);
+          end;
+        tt_unaryOpMinus:
+          if (t^.next<>nil) and (t^.next^.tokType=tt_unaryOpMinus) then begin
+            t:=recycler.disposeToken(t);
+            t:=recycler.disposeToken(t);
+          end;
         tt_startOfPattern:begin
           new(pattern,create);
           pattern^.parse(t,t^.location,context,recycler,true);
@@ -1515,20 +1525,6 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
     nextToken:=fetch(messages,recycler,lexingStyle);
     if nextToken=nil then exit(false);
     while nextToken<>nil do case nextToken^.tokType of
-     //tt_literal: if (beforeLastTokenized<>nil) and (beforeLastTokenized^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])
-     //                 and (lastTokenized<>nil) and (lastTokenized^.tokType in [tt_operatorMinus,tt_operatorPlus]) then begin
-     //  if lastTokenized^.tokType=tt_operatorMinus
-     //  then lastTokenized^.tokType:=tt_unaryOpMinus
-     //  else begin
-     //    recycler.disposeToken(lastTokenized);
-     //    lastTokenized:=beforeLastTokenized;
-     //  end;
-     //  appendToken(nextToken);
-     //  nextToken:=nil;
-     //end else begin
-     //  appendToken(nextToken);
-     //  nextToken:=nil;
-     //end;
       tt_iifElse: begin
         n[1]:=fetch(messages,recycler,lexingStyle);
         if n[1]<>nil then begin

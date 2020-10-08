@@ -613,6 +613,7 @@ FUNCTION T_pattern.isNaiveInlinePattern:boolean;
   VAR i:longint;
   begin
     if hasOptionals then exit(false);
+    if length(sig)=0 then exit(true);
     for i:=0 to length(sig)-1 do
       if (length(sig[i].id)>1) and (sig[i].id[1]='$') then exit(true);
     result:=false;

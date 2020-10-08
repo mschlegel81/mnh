@@ -32,7 +32,7 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText:string; CONST warn:boolean);
 PROCEDURE ensureEventsForm;
 IMPLEMENTATION
-USES basicTypes,myGenerics,mySys,myStringUtil,mnh_settings;
+USES basicTypes,myGenerics,mySys,mnh_settings;
 TYPE
   P_ideMessage=^T_ideMessage;
   T_ideMessage=object
