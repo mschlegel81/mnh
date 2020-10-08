@@ -14,6 +14,7 @@ USES myGenerics,myStringUtil,
      {$endif}
      tokens,
      mnh_messages,
+     contexts,
      out_adapters;
 CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
       ('COMPARATOR_EQ',
@@ -272,12 +273,12 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,strutils,math,subrules,profiling,typinfo;
+USES sysutils,strutils,math,subrules,profiling,typinfo,patterns;
 
 TYPE
 T_scopeType=(sc_block,sc_each,sc_bracketOnly);
@@ -804,13 +805,19 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
+      pattern:P_pattern;
   begin
     t:=first;
     while t<>nil do begin
       case t^.tokType of
+        tt_startOfPattern:begin
+          new(pattern,create);
+          pattern^.parse(t,t^.location,context,recycler,true);
+          if not(context.continueEvaluation) then dispose(pattern,destroy);
+        end;
         tt_identifier,tt_globalVariable: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier
@@ -827,8 +834,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
                 if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                 t^.txt:=t^.txt;
                 t^.next:=recycler.disposeToken(t^.next);
-              end else messages^.raiseSimpleError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
-            end else messages^.raiseSimpleError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
+              end else context.raiseError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
+            end else context.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
         tt_userRule: begin
@@ -836,7 +843,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if functionCallInfos<>nil then functionCallInfos^.add(t);
           {$endif}
         end;
-        tt_modifier: if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        tt_modifier: if t^.getModifier<>modifier_local then context.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
         else if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;

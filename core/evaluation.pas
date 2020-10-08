@@ -1190,7 +1190,7 @@ end}
         tt_operatorMult..tt_operatorConcatAlt:
           context.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
 {cT[0]=}tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
-{cT[0]=}tt_expBraceOpen: begin
+{cT[0]=}tt_expBraceOpen,tt_functionPattern: begin
           digestInlineExpression(first,context,recycler{$ifdef fullVersion},nil{$endif});
           didSubstitution:=true;
         end;

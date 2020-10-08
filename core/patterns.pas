@@ -77,6 +77,7 @@ TYPE
       FUNCTION isValidMainPattern:boolean;
       FUNCTION isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
       FUNCTION isValidMutablePattern:boolean;
+      FUNCTION isNaiveInlinePattern:boolean;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
@@ -86,7 +87,7 @@ TYPE
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST replaceOpeningBracketByPatternToken:boolean=false);
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
@@ -607,6 +608,16 @@ FUNCTION T_pattern.isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):bo
                  (sig[0].typeWhitelist-C_typables=[]));
   end;
 FUNCTION T_pattern.isValidMutablePattern:boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
+
+FUNCTION T_pattern.isNaiveInlinePattern:boolean;
+  VAR i:longint;
+  begin
+    if hasOptionals then exit(false);
+    for i:=0 to length(sig)-1 do
+      if (length(sig[i].id)>1) and (sig[i].id[1]='$') then exit(true);
+    result:=false;
+  end;
+
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   VAR t:P_token;
@@ -639,7 +650,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     setLength(result,i);
   end;
 
-PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST replaceOpeningBracketByPatternToken:boolean=false);
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -664,17 +675,16 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     if (first^.next<>nil) and (first^.next^.tokType in [tt_endOfPatternAssign,tt_endOfPatternDeclare]) then begin
       setLength(parts,0);
       closingBracket:=first^.next;
+      if replaceOpeningBracketByPatternToken then context.raiseError('Invalid inline expression pattern.',first^.location);
     end else begin
-      parts:=getBodyParts(first,0,@context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
+      if replaceOpeningBracketByPatternToken
+      then parts:=getBodyParts(first,0,@context,closingBracket,[                      tt_endOfPatternDeclare])
+      else parts:=getBodyParts(first,0,@context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
       if closingBracket=nil then begin
+        context.raiseError('Invalid pattern. This is probably a bug',first^.location);
         recycler.cascadeDisposeToken(first);
         exit;
       end;
-      if (closingBracket^.next<>nil) and not(closingBracket^.next^.tokType in [tt_assign,tt_declare]) then begin
-        context.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
-        recycler.cascadeDisposeToken(closingBracket^.next);
-      end;
-
       for i:=0 to length(parts)-1 do begin
         partLocation:=parts[i].first^.location;
         if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
@@ -781,8 +791,19 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       parts:=nil;
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler);
-    recycler.disposeToken(first);
-    first:=closingBracket;
+    if replaceOpeningBracketByPatternToken then begin
+      if context.continueEvaluation then begin
+        first^.tokType:=tt_functionPattern;
+        first^.data:=@self;
+        first^.next:=recycler.disposeToken(closingBracket);;
+      end else begin
+        recycler.disposeToken(first);
+        recycler.cascadeDisposeToken(closingBracket);
+      end;
+    end else begin
+      recycler.disposeToken(first);
+      first:=closingBracket;
+    end;
   end;
 
 {$ifdef fullVersion}
@@ -856,7 +877,7 @@ FUNCTION T_pattern.writeToStream(CONST locationOfSerializeCall: T_tokenLocation;
 
 FUNCTION patternToString(CONST p:pointer):ansistring;
   begin
-    result:=P_pattern(p)^.toString;
+    result:=P_pattern(p)^.toString+'->';
   end;
 
 PROCEDURE disposePattern(VAR pattern:pointer);

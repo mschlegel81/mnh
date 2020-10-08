@@ -857,7 +857,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           //check, but ignore result
           globals.primaryContext.messages^.clearFlags;
         end;
-        predigest(assignmentToken,@self,globals.primaryContext.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+        predigest(assignmentToken,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
@@ -889,7 +889,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             {$endif}
             if profile then globals.timeBaseComponent(pc_interpretation);
             if (statement.token.first=nil) then exit;
-            predigest(statement.token.first,@self,globals.primaryContext.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
             then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.token.first)+';');
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
@@ -913,7 +913,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             end;
           end;
           lu_forCodeAssistance: if (statement.token.first<>nil) then begin
-            predigest(statement.token.first,@self,globals.primaryContext.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},functionCallInfos{$endif});
             resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
           end
           else globals.primaryContext.messages^.postTextMessage(mt_el1_note,statement.token.first^.location,'Skipping expression '+tokensToString(statement.token.first,50));
