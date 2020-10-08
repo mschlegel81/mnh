@@ -1,8 +1,7 @@
 @demo_for=expressions, formatting
-Y(F:Expression)->{F($n,F)};
-fakForY:={$n<=1 ? 1 : $n*$f($n-1,$f)};
-fibForY:={$n<=1 ? 1 :    $f($n-1,$f)+
-                         $f($n-2,$f)};
+Y(F:Expression(2))->((x)->F(x,F));
+fakForY:=((n,f)->(n<=1 ? 1 : n*f(n-1,f)));
+fibForY:=((n,f)->(n<=1 ? 1 : f(n-1,f)+f(n-2,f)));
 //*Solves the http://rosettacode.org/wiki/Y_combinator
 main->printf("%s\t%s\t%s",
              [0..20],
