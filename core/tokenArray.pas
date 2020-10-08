@@ -127,7 +127,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE add(CONST rulePointer:pointer; CONST token:P_token);
+      PROCEDURE add(CONST token:P_token);
       PROCEDURE cleanup;
       FUNCTION  calledBuiltinFunctions:T_builtinFunctionMetaDatas;
       FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
@@ -272,13 +272,12 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST messages:P_messages; VAR recycler:T_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_functionCallInfos{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,strutils,math,subrules,profiling,typinfo,patterns;
+USES sysutils,strutils,math,subrules,profiling,typinfo;
 
 TYPE
 T_scopeType=(sc_block,sc_each,sc_bracketOnly);
@@ -640,10 +639,6 @@ PROCEDURE T_idStack.applyToken(CONST token:P_token; CONST messages:P_messages);
   VAR idType:T_tokenType;
       idLoc:T_tokenLocation;
   begin
-    //{$ifdef debugMode}
-    //writeln('T_idStack.applyToken ',length(scope),': [',token^.tokType,'] ',token^.singleTokenToString);
-    //{$endif}
-
     if (messages<>nil) and (prevToken<>nil) then begin
       if (prevToken^.tokType in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
          (token    ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression  ,tt_expBraceClose,tt_iifElse]) then begin
@@ -821,7 +816,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil);
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(nil,t)
+          if functionCallInfos<>nil then functionCallInfos^.add(t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
@@ -838,7 +833,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
         end;
         tt_userRule: begin
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(nil,t);
+          if functionCallInfos<>nil then functionCallInfos^.add(t);
           {$endif}
         end;
         tt_modifier: if t^.getModifier<>modifier_local then messages^.raiseSimpleError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
@@ -859,7 +854,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           t^.next:=recycler.disposeToken(t^.next);
         end;
         {$ifdef fullVersion}
-        else if functionCallInfos<>nil then functionCallInfos^.add(nil,t);
+        else if functionCallInfos<>nil then functionCallInfos^.add(t);
         {$endif}
       end;
       t:=t^.next;
@@ -886,7 +881,7 @@ PROCEDURE T_functionCallInfos.clear;
     fill:=0;
   end;
 
-PROCEDURE T_functionCallInfos.add(CONST rulePointer:pointer; CONST token: P_token);
+PROCEDURE T_functionCallInfos.add(CONST token: P_token);
   begin
     if (token=nil) then exit;
     if      token^.tokType in [tt_comparatorEq..tt_operatorConcatAlt] then usedBuiltins.put(intFuncForOperator[token^.tokType])
@@ -1500,9 +1495,6 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
 FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle): boolean;
   PROCEDURE appendToken(CONST tok:P_token); inline;
     begin
-      //{$ifdef debugMode}
-      //writeln('               append : [',tok^.tokType,'] ',tok^.singleTokenToString);
-      //{$endif}
       if (tok<>nil) and
          (tok^.tokType=tt_intrinsicRule) and
          (tok^.data=pointer(BUILTIN_MYPATH))
@@ -1648,20 +1640,6 @@ PROCEDURE T_abstractLexer.resetTemp;
     nextStatement.attributes:=C_EMPTY_STRING_ARRAY;
     nextStatement.comments  :=C_EMPTY_STRING_ARRAY;
     nextStatement.token     :=EMPTY_TOKEN_RANGE;
-  end;
-
-PROCEDURE preprocessStatement(CONST token:P_token; CONST messages:P_messages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
-  VAR t:P_token;
-      localIdStack:T_idStack;
-  begin
-    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
-    t:=token;
-    while (t<>nil) do begin
-      localIdStack.applyToken(t,messages);
-      t:=t^.next;
-    end;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,localIdStack.prevToken^.location,nil,true);
-    localIdStack.destroy;
   end;
 
 PROCEDURE T_abstractPackage.clearCustomOperators;

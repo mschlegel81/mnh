@@ -709,7 +709,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
     begin
       ruleDeclarationStart:=statement.token.first^.location;
-      evaluateBody:=(assignmentToken^.tokType=tt_assign);
+      evaluateBody:=(assignmentToken^.tokType in [tt_endOfPatternAssign,tt_assign]);
       ruleBody:=assignmentToken^.next;
       assignmentToken^.next:=nil;
       //plausis:

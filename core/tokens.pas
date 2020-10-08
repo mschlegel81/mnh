@@ -60,12 +60,13 @@ TYPE
   T_bodyParts=array of T_tokenRange;
 
 CONST EMPTY_TOKEN_RANGE:T_tokenRange=(first:nil;last:nil);
-
+VAR patternToString:FUNCTION (CONST pattern:pointer):ansistring=nil;
+    disposePattern :PROCEDURE(VAR pattern:pointer)             =nil;
+    clonePattern   :FUNCTION (CONST pattern:pointer):pointer     =nil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
-
 IMPLEMENTATION
 USES typinfo,myStringUtil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
@@ -185,6 +186,7 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
       tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
+      tt_functionPattern: data:=clonePattern(original.data);
     end;
     {$ifdef debugMode}
     if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
@@ -197,6 +199,7 @@ PROCEDURE T_token.undefine;
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
+      tt_functionPattern: disposePattern(data);
     end;
     data:=nil;
     tokType:=tt_EOL;
@@ -258,6 +261,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_blank: result:=txt;
       tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
       tt_docComment      :result:=COMMENT_PREFIX+txt;
+      tt_functionPattern :result:=patternToString(data);
       else result:=C_tokenDefaultId[tokType];
     end;
     if length(result)<1 then begin

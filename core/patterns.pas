@@ -854,4 +854,25 @@ FUNCTION T_pattern.writeToStream(CONST locationOfSerializeCall: T_tokenLocation;
     result:=stream^.allOkay;
   end;
 
+FUNCTION patternToString(CONST p:pointer):ansistring;
+  begin
+    result:=P_pattern(p)^.toString;
+  end;
+
+PROCEDURE disposePattern(VAR pattern:pointer);
+  begin
+    dispose(P_pattern(pattern),destroy);
+    pattern:=nil;
+  end;
+
+FUNCTION clonePattern(CONST pattern:pointer):pointer;
+  begin
+    new(P_pattern(result),clone(P_pattern(pattern)^));
+  end;
+
+INITIALIZATION
+  tokens.patternToString:=@patternToString;
+  tokens.disposePattern :=@disposePattern;
+  tokens.clonePattern   :=@clonePattern;
+
 end.

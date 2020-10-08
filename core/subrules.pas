@@ -1387,7 +1387,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
 PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_functionCallInfos);
   VAR t:T_preparedToken;
   begin
-    for t in preparedBody do infos^.add(parent,@t.token);
+    for t in preparedBody do infos^.add(@t.token);
   end;
 {$endif}
 
