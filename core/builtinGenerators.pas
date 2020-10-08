@@ -611,28 +611,36 @@ FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONS
       doneFetching:boolean=false;
   begin
     result:=NIL_EVAL_RESULT;
-    unmappedList:=newListLiteral(chunkSize);
     repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-      if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-        unmappedList^.append(nextUnmapped,false)
-      end else begin
-        if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
-        doneFetching:=true;
-      end;
-    until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
-    if doneFetching and (unmappedList^.size=0) then begin
-      disposeLiteral(unmappedList);
-      result.literal:=newVoidLiteral;
-    end else begin
-      if mapExpression=nil then result.literal:=unmappedList
-      else begin
-        if isNullary
-        then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
-        else result:=mapExpression^.evaluateToLiteral(location,context,recycler,unmappedList,nil);
+      unmappedList:=newListLiteral(chunkSize);
+      repeat
+        nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+        if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
+          unmappedList^.append(nextUnmapped,false)
+        end else begin
+          if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
+          doneFetching:=true;
+        end;
+      until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
+      if doneFetching and (unmappedList^.size=0) then begin
         disposeLiteral(unmappedList);
+        result.literal:=newVoidLiteral;
+        exit(result);
+      end else begin
+        if mapExpression=nil then result.literal:=unmappedList
+        else begin
+          if isNullary
+          then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
+          else result:=mapExpression^.evaluateToLiteral(location,context,recycler,unmappedList,nil);
+          disposeLiteral(unmappedList);
+          if (result.literal<>nil) then begin
+            if result.literal^.literalType=lt_void
+            then disposeLiteral(result.literal)
+            else exit(result);
+          end;
+        end;
       end;
-    end;
+    until doneFetching or (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
 DESTRUCTOR T_chunkIterator.destroy;

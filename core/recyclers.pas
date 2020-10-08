@@ -103,9 +103,14 @@ PROCEDURE T_recycler.cleanup;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
+  {$ifdef debugMode}VAR i:longint; {$endif}
   begin
     if p=nil then result:=nil
     else begin
+      {$ifdef debugMode}
+      for i:=0 to tokens.fill-1 do if (pointer(tokens.dat[i])=pointer(p)) then raise Exception.create('Disposing already disposed token $'+IntToHex(ptrint(pointer(p)),16));
+      {$endif}
+
       result:=p^.next;
       with tokens do if (fill>=length(dat))
       then dispose(p,destroy)

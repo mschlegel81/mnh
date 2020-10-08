@@ -95,7 +95,7 @@ TYPE
       FUNCTION usedGlobalVariables:T_arrayOfPointer;
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
-      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString='');
+      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
@@ -233,38 +233,71 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
+      lambdaForm:boolean;
   begin
-    predigest(rep,nil,context.messages,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-    if (rep^.tokType<>tt_expBraceOpen) then begin
+    predigest(rep,nil,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+    if not(rep^.tokType in [tt_expBraceOpen,tt_functionPattern]) then begin
       context.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
-    t:=rep^.next; prev:=rep;
-    inlineRuleTokens:=t;
-    while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
-      case t^.tokType of
-        tt_expBraceOpen: begin
-          digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-          if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
+    lambdaForm:=rep^.tokType=tt_functionPattern;
+    if lambdaForm then begin
+
+      t:=rep^.next; prev:=rep;
+      inlineRuleTokens:=rep;
+      while (t<>nil) and (bracketLevel>=0) do begin
+        case t^.tokType of
+          tt_expBraceOpen,tt_functionPattern: begin
+            digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
+          end;
+          else if t^.tokType in C_openingBrackets then inc(bracketLevel)
+          else if t^.tokType in C_closingBrackets then dec(bracketLevel);
+        end;
+        if bracketLevel>=0 then begin
+          prev:=t;
+          t:=t^.next;
         end;
       end;
-      prev:=t;
-      t:=t^.next;
-    end;
-    if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-      context.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
-      exit;
-    end;
-
-    rep^.next:=t^.next; //remove expression from parent expression
-    prev^.next:=nil; //unlink closing curly bracket
-    recycler.disposeToken(t); //dispose closing curly bracket
-    if context.messages^.continueEvaluation then begin
-      new(inlineSubRule,createFromInline(inlineRuleTokens,context,recycler));
+      prev^.next:=nil; //unlink closing curly bracket
       if context.messages^.continueEvaluation then begin
-        rep^.tokType:=tt_literal;
-        rep^.data:=inlineSubRule;
-      end else dispose(inlineSubRule,destroy);
+        new(inlineSubRule,createFromInline(inlineRuleTokens,context,recycler,'',lambdaForm));
+        if context.messages^.continueEvaluation then begin
+          rep^.tokType:=tt_literal;
+          rep^.data:=inlineSubRule;
+          rep^.next:=t;
+        end else begin
+          dispose(inlineSubRule,destroy);
+          prev^.next:=t;
+        end;
+      end;
+    end else begin//-------------------------------------------------------------------------------------------------
+      t:=rep^.next; prev:=rep;
+      inlineRuleTokens:=t;
+      while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
+        case t^.tokType of
+          tt_expBraceOpen,tt_functionPattern: begin
+            digestInlineExpression(t,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+            if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
+          end;
+        end;
+        prev:=t;
+        t:=t^.next;
+      end;
+      if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
+        context.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
+        exit;
+      end;
+      rep^.next:=t^.next; //remove expression from parent expression
+      prev^.next:=nil; //unlink closing curly bracket
+      recycler.disposeToken(t); //dispose closing curly bracket
+      if context.messages^.continueEvaluation then begin
+        new(inlineSubRule,createFromInline(inlineRuleTokens,context,recycler));
+        if context.messages^.continueEvaluation then begin
+          rep^.tokType:=tt_literal;
+          rep^.data:=inlineSubRule;
+        end else dispose(inlineSubRule,destroy);
+      end;
     end;
   end;
 
@@ -400,7 +433,7 @@ PROCEDURE T_inlineExpression.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_context; VAR recycler:T_recycler; CONST customId_:T_idString);
+CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_context; VAR recycler:T_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
@@ -408,6 +441,14 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
   begin
     init(et_inline,rep^.location);
     customId:=customId_;
+    if rep^.tokType=tt_functionPattern then begin
+      assert(retainFirstToken,'Invalid state!');
+      pattern.clone(P_pattern(rep^.data)^);
+      disposePattern(rep^.data);
+      rep^.tokType:=tt_EOL;
+      constructExpression(rep^.next,context,recycler,rep^.location);
+      exit;
+    end;
     pattern.create;
     t:=rep;
     i:=0;
@@ -991,7 +1032,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
       prevIdLike:=idLike;
     end;
     if not(includePattern) then exit(result);
-    if      typ in C_inlineExpressionTypes
+    if      (typ in C_inlineExpressionTypes) and (pattern.isNaiveInlinePattern)
                             then result:=                 '{'+result+'}'
     else if typ=et_eachBody then result:=pattern.toString+'{'+result+'}'
     else                         result:=pattern.toString+C_tokenDefaultId[tt_declare]+result;
@@ -1387,7 +1428,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
 PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_functionCallInfos);
   VAR t:T_preparedToken;
   begin
-    for t in preparedBody do infos^.add(parent,@t.token);
+    for t in preparedBody do infos^.add(@t.token);
   end;
 {$endif}
 
@@ -1713,34 +1754,46 @@ FUNCTION tokenSplit_impl intFuncSignature;
   end;
 
 FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
-  VAR lexer:T_lexer;
+  VAR lexer:T_singleStringLexer;
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
-    lexer.destroy;
-    if statement.firstToken=nil then begin
-      context.raiseError('The parsed expression appears to be empty',location);
-      exit(nil);
-    end else if not(context.messages^.continueEvaluation) then begin
-      exit(nil); //Parsing error ocurred
+    statement:=lexer.getNextStatement(context.messages,recycler);
+    result:=statement.token.first;
+    statement:=lexer.getNextStatement(context.messages,recycler);
+    if statement.token.first<>nil then begin
+      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler.cascadeDisposeToken(statement.token.first);
     end;
-    result:=statement.firstToken;
+    lexer.destroy;
+    if result=nil
+    then context.raiseError('The parsed expression appears to be empty',location)
+    else if not (context.messages^.continueEvaluation) then begin
+      recycler.cascadeDisposeToken(result);
+      result:=nil
+    end;
   end;
 
 FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
-  VAR last :P_token=nil;
-      i:longint;
-      lexer:T_lexer;
+  VAR lexer:T_variableLexer;
+      statement: T_enhancedStatement;
   begin
     result:=nil;
-    lexer.create(C_EMPTY_STRING_ARRAY,location,package);
-    for i:=0 to L^.size-1 do begin
-      if L^.value[i]^.literalType=lt_string
-      then lexer.rawTokenize(P_stringLiteral(L^.value[i])^.value,location,result,last,context.messages,recycler)
-      else lexer.rawTokenize(L^.value[i]                        ,location,result,last,recycler);
+    lexer.create(l^.iteratableList,location,package);
+    statement:=lexer.getNextStatement(context.messages,recycler);
+    result:=statement.token.first;
+    statement:=lexer.getNextStatement(context.messages,recycler);
+    if statement.token.first<>nil then begin
+      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler.cascadeDisposeToken(statement.token.first);
     end;
-    preprocessStatement(result,context.messages{$ifdef fullVersion},nil{$endif});
+    lexer.destroy;
+    if result=nil
+    then context.raiseError('The parsed expression appears to be empty',location)
+    else if not (context.messages^.continueEvaluation) then begin
+      recycler.cascadeDisposeToken(result);
+      result:=nil
+    end;
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
@@ -1753,10 +1806,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context,recycler)
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context,recycler);
     if first=nil then exit(nil);
-    if not(first^.areBracketsPlausible(context.messages)) then begin
-      recycler.cascadeDisposeToken(first);
-      exit(nil);
-    end;
+
     if first^.tokType<>tt_expBraceOpen then begin
       temp:=recycler.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;

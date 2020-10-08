@@ -17,8 +17,7 @@ sieve(maxToCheck>2)->begin
 end;
 
 main(n)->sieve(n.toInt)
-         .chunkIterator(20)
-         .map({$x.join("\v,\v")})
+         .chunkMap(20,{$x.join("\v,\v")})
          .toList
          .join("\n")
          .print;

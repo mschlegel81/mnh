@@ -40,7 +40,6 @@ TYPE
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
     FUNCTION singleTokenToString:ansistring;
-    FUNCTION areBracketsPlausible(CONST adaptersForComplaints:P_messages):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
@@ -58,13 +57,16 @@ TYPE
     PROCEDURE deserializeSingleToken(CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
   end;
 
-  T_bodyParts=array of record first,last:P_token; end;
+  T_bodyParts=array of T_tokenRange;
 
+CONST EMPTY_TOKEN_RANGE:T_tokenRange=(first:nil;last:nil);
+VAR patternToString:FUNCTION (CONST pattern:pointer):ansistring=nil;
+    disposePattern :PROCEDURE(VAR pattern:pointer)             =nil;
+    clonePattern   :FUNCTION (CONST pattern:pointer):pointer     =nil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
-
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
 IMPLEMENTATION
 USES typinfo,myStringUtil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
@@ -103,7 +105,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -119,7 +121,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CO
       setLength(result,0);
       exit;
     end;
-    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+    while (t<>nil) and not((t^.tokType in acceptedClosers) and (bracketLevel=1)) do begin
       if t^.tokType in C_openingBrackets then inc(bracketLevel)
       else if t^.tokType in C_closingBrackets then dec(bracketLevel)
       else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
@@ -137,8 +139,8 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CO
       exit;
     end;
     result[length(result)-1].last:=p; //end of body part is token before comma
-    if (p=nil) or (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-      context^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+    if (p=nil) or (t=nil) or not(t^.tokType in acceptedClosers) or (bracketLevel<>1) then begin
+      context^.raiseError('Invalid special construct; Cannot find closing bracket...',first^.location);
       setLength(result,0);
       exit;
     end;
@@ -184,6 +186,7 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
       tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
+      tt_functionPattern: data:=clonePattern(original.data);
     end;
     {$ifdef debugMode}
     if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
@@ -196,6 +199,7 @@ PROCEDURE T_token.undefine;
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
+      tt_functionPattern: disposePattern(data);
     end;
     data:=nil;
     tokType:=tt_EOL;
@@ -257,6 +261,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_blank: result:=txt;
       tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
       tt_docComment      :result:=COMMENT_PREFIX+txt;
+      tt_functionPattern :result:=patternToString(data);
       else result:=C_tokenDefaultId[tokType];
     end;
     if length(result)<1 then begin
@@ -310,73 +315,6 @@ FUNCTION T_token.singleTokenToString: ansistring;
     result:=toString(false,dummy);
     if tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse,tt_operatorOrElse]
     then result:=trim(result);
-  end;
-
-FUNCTION T_token.areBracketsPlausible(CONST adaptersForComplaints: P_messages): boolean;
-  VAR bracketStack:array of P_token;
-  PROCEDURE push(CONST token:P_token);
-    begin
-      setLength(bracketStack,length(bracketStack)+1);
-      bracketStack[length(bracketStack)-1]:=token;
-    end;
-
-  FUNCTION popPlausible(CONST token:P_token):boolean;
-    begin
-      if length(bracketStack)<=0 then begin
-        adaptersForComplaints^.raiseSimpleError('Missing opening bracket for closing '+safeTokenToString(token),token^.location);
-        exit(false);
-      end;
-      if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenDefaultId[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]]+'")',bracketStack[length(bracketStack)-1]^.location);
-        adaptersForComplaints^.raiseSimpleError('Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
-        exit(false);
-      end;
-      setLength(bracketStack,length(bracketStack)-1);
-      result:=true;
-    end;
-
-  FUNCTION stackIsEmpty:boolean;
-    begin
-      if length(bracketStack)<=0 then exit(true);
-      adaptersForComplaints^.raiseSimpleError('Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
-      result:=false;
-    end;
-
-  VAR t:P_token;
-  begin
-    setLength(bracketStack,0);
-    t:=@self;
-    result:=true;
-    while result and (t<>nil) do begin
-      if t^.tokType in C_forbiddenTokenTypes then begin
-        adaptersForComplaints^.raiseSimpleError('Invalid symbol '+safeTokenToString(t),t^.location);
-        result:=false;
-      end;
-      if      t^.tokType in C_openingBrackets then push(t)
-      else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
-      if t^.next<>nil then begin
-        if (t^.tokType=tt_iifCheck) and (t^.next^.tokType=tt_iifElse) then begin
-          adaptersForComplaints^.raiseSimpleError('Inline-if with empty then-clause',t^.location);
-          result:=false;
-        end;
-        if (t^.tokType=tt_iifElse) and (t^.next^.tokType in [tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_semicolon,
-                                                             tt_separatorComma ..tt_operatorLazyOr,tt_operatorMult..tt_operatorConcatAlt,tt_listToParameterList]) then begin
-          adaptersForComplaints^.raiseSimpleError('Inline-if with empty else-clause',t^.location);
-          result:=false;
-        end;
-        if (t^.tokType       in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
-           (t^.next^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression  ,tt_expBraceClose,tt_iifElse]) then begin
-          adaptersForComplaints^.raiseSimpleError('Empty '+t^.singleTokenToString+'-'+t^.next^.singleTokenToString+' block',t^.location);
-          result:=false;
-        end;
-        if (t^.tokType in [tt_separatorCnt,tt_separatorComma]) and (t^.next^.tokType in C_closingBrackets) then begin
-          adaptersForComplaints^.raiseSimpleError('Missing element in '+t^.singleTokenToString+'-separated list',t^.location);
-          result:=false;
-        end;
-      end;
-      t:=t^.next;
-    end;
-    result:=result and stackIsEmpty;
   end;
 
 FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLevel: longint; CONST initialLevel: longint): P_token;

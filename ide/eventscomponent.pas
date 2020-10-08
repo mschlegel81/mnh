@@ -13,9 +13,6 @@ CONST TIME_COLUMN_INDEX=0;
       RETAIN_MESSAGE_THRESHOLD:array[false..true] of double=(10/(24*60), //=10 minutes for notes
                                                               1/(24  )); //=1 hour for warnings
 TYPE
-
-  { TeventsForm }
-
   TeventsForm = class(T_mnhComponentForm)
     eventsGrid: TStringGrid;
     MainMenu1: TMainMenu;
@@ -26,8 +23,7 @@ TYPE
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
-    PROCEDURE eventsGridPrepareCanvas(Sender: TObject; aCol, aRow: integer;
-      aState: TGridDrawState);
+    PROCEDURE eventsGridPrepareCanvas(Sender: TObject; aCol, aRow: integer; aState: TGridDrawState);
   public
 
   end;
@@ -36,7 +32,7 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText:string; CONST warn:boolean);
 PROCEDURE ensureEventsForm;
 IMPLEMENTATION
-USES basicTypes,myGenerics,mySys,myStringUtil,mnh_settings;
+USES basicTypes,myGenerics,mySys,mnh_settings;
 TYPE
   P_ideMessage=^T_ideMessage;
   T_ideMessage=object
@@ -83,6 +79,7 @@ PROCEDURE ensureEventsForm;
       eventsFormSingleton:=TeventsForm.create(Application);
       dockNewForm(eventsFormSingleton);
     end;
+    eventsFormSingleton.showComponent(false);
   end;
 
 PROCEDURE memoryCleanerCallback;

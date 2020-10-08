@@ -136,7 +136,7 @@ FUNCTION T_datastoreMeta.fileExists:boolean;
 
 FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
-      lexer:T_lexer;
+      lexer:T_linesLexer;
       fileLines:T_arrayOfString;
       accessed:boolean;
       stmt:T_enhancedStatement;
@@ -163,10 +163,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       else begin
         dropFirst(fileLines,1);
         lexer.create(fileLines,location,P_abstractPackage(location.package));
-        stmt:=lexer.getNextStatement(context.messages,recycler{$ifdef fullVersion},nil{$endif});
-        stmt.firstToken^.setSingleLocationForExpression(location);
+        stmt:=lexer.getNextStatement(context.messages,recycler);
+        stmt.token.first^.setSingleLocationForExpression(location);
         lexer.destroy;
-        result:=context.reduceToLiteral(stmt.firstToken,recycler).literal;
+        result:=context.reduceToLiteral(stmt.token.first,recycler).literal;
       end;
     end;
     fileAge(fileName,fileReadAt);

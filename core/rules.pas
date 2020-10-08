@@ -738,7 +738,7 @@ FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST
 PROCEDURE T_ruleMap.markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos);
   begin
     if (token=nil) or not(token^.tokType in [tt_customType,tt_customTypeCheck]) then exit;
-    if functionCallInfos<>nil then functionCallInfos^.add(nil,token);
+    if functionCallInfos<>nil then functionCallInfos^.add(token);
   end;
 
 PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
