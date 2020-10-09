@@ -19,9 +19,10 @@ main->begin
    \     X     X     X     /
     \___/ \___/ \___/ \___/~);
   print('The solutions for 1..7 (unique) are: ');
-  permutationIterator([1..7]).pMap({isSolution@$p ? $p : void}).map({print('  ',$s)}).agg(|);
+  local filterAndPrintSolutions:=(source:Iteratable)->source.pFilter((p)->isSolution@p).agg((s)->print('  ',s));
+  permutationIterator([1..7]).filterAndPrintSolutions;
   print('The solutions for 3..9 (unique) are: ');
-  permutationIterator([3..9]).pMap({isSolution@$p ? $p : void}).map({print('  ',$s)}).agg(|);
+  permutationIterator([3..9]).filterAndPrintSolutions;
   print('The number of solutions for 0..9 (nonunique) is: ',
   cross([0..9],[0..9],[0..9],[0..9]).pEach(abcd,
     begin
