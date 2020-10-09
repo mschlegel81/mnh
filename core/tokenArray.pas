@@ -121,9 +121,9 @@ TYPE
 
   T_functionCallInfos=object
     private
-      fill:longint;
+      usageInfoFill:longint;
       usedBuiltins :T_setOfPointer;
-      dat:array of T_usageInfo;
+      usageInfos:array of T_usageInfo;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -812,26 +812,40 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
   PROCEDURE prepareLambdaBody;
     VAR parameterId: T_patternElementLocation;
         uniqueIds: T_arrayOfString=();
-        lastTokenInRule:P_token;
+        tokenInLambda:P_token;
         bracketLevel:longint=0;
         parameterIds: T_patternElementLocations;
-
+        lastLocation:T_tokenLocation;
     begin
       parameterIds:=pattern^.getNamedParameters;
       for parameterId in parameterIds do appendIfNew(uniqueIds,parameterId.id);
+      {$ifdef DEBUGMODE}
+      write(stderr,'Preparing lambda: ');
+      {$endif}
 
-      lastTokenInRule:=t;
-      while (lastTokenInRule^.next<>nil) and (bracketLevel>=0) do begin
-        if      lastTokenInRule^.tokType in C_openingBrackets then inc(bracketLevel)
-        else if lastTokenInRule^.tokType in C_closingBrackets then dec(bracketLevel);
-        if (lastTokenInRule^.tokType in [tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule]) and
-           arrContains(uniqueIds,lastTokenInRule^.txt)
-        then lastTokenInRule^.tokType:=tt_parameterIdentifier;
-        lastTokenInRule:=lastTokenInRule^.next;
+      tokenInLambda:=t;
+      lastLocation:=tokenInLambda^.location;
+      while (tokenInLambda<>nil) and (bracketLevel>=0) do begin
+        {$ifdef DEBUGMODE}
+        write(stderr,' ',tokenInLambda^.singleTokenToString);
+        {$endif}
+        if      tokenInLambda^.tokType in C_openingBrackets then inc(bracketLevel)
+        else if tokenInLambda^.tokType in C_closingBrackets then dec(bracketLevel)
+        else if (tokenInLambda^.tokType in [tt_separatorComma,tt_semicolon]) and (bracketLevel=0) then dec(bracketLevel);
+        if (tokenInLambda^.tokType in [tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule]) and
+           arrContains(uniqueIds,tokenInLambda^.txt)
+        then tokenInLambda^.tokType:=tt_parameterIdentifier;
+        lastLocation:=tokenInLambda^.location;
+        tokenInLambda:=tokenInLambda^.next;
       end;
+      if tokenInLambda<>nil
+      then lastLocation:=tokenInLambda^.location;
+      {$ifdef DEBUGMODE}
+      writeln(stderr,'');
+      {$endif}
       {$ifdef fullVersion}
       if localIdInfos<>nil then
-      for parameterId in parameterIds do localIdInfos^.addIdInfo(parameterId.id,parameterId.location,lastTokenInRule^.location,tt_parameterIdentifier);
+      for parameterId in parameterIds do localIdInfos^.addIdInfo(parameterId.id,parameterId.location,lastLocation,tt_parameterIdentifier);
       {$endif}
       setLength(parameterIds,0);
       setLength(uniqueIds,0)
@@ -926,9 +940,9 @@ DESTRUCTOR T_functionCallInfos.destroy;
 
 PROCEDURE T_functionCallInfos.clear;
   begin
-    setLength(dat,0);
+    setLength(usageInfos,0);
     usedBuiltins.clear;
-    fill:=0;
+    usageInfoFill:=0;
   end;
 
 PROCEDURE T_functionCallInfos.add(CONST token: P_token);
@@ -937,10 +951,10 @@ PROCEDURE T_functionCallInfos.add(CONST token: P_token);
     if      token^.tokType in [tt_comparatorEq..tt_operatorConcatAlt] then usedBuiltins.put(intFuncForOperator[token^.tokType])
     else if token^.tokType=tt_intrinsicRule                           then usedBuiltins.put(token^.data)
     else if token^.tokType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck] then begin
-      if fill>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
-      dat[fill].referencedAt:=token^.location;
-      dat[fill].targetLocation:=P_objectWithIdAndLocation(token^.data)^.getLocation;
-      inc(fill);
+      if usageInfoFill>=length(usageInfos) then setLength(usageInfos,round(length(usageInfos)*1.1)+1);
+      usageInfos[usageInfoFill].referencedAt:=token^.location;
+      usageInfos[usageInfoFill].targetLocation:=P_objectWithIdAndLocation(token^.data)^.getLocation;
+      inc(usageInfoFill);
     end;
   end;
 
@@ -950,13 +964,13 @@ PROCEDURE T_functionCallInfos.cleanup;
       newDat:temporary.VALUE_TYPE_ARRAY;
       k:longint;
   begin
-    setLength(dat,fill);
+    setLength(usageInfos,usageInfoFill);
     temporary.create();
-    for info in dat do temporary.put(string(info.referencedAt),info);
+    for info in usageInfos do temporary.put(string(info.referencedAt),info);
     newDat:=temporary.valueSet;
-    fill:=length(newDat);
-    setLength(dat,fill);
-    for k:=0 to length(dat)-1 do dat[k]:=newDat[k];
+    usageInfoFill:=length(newDat);
+    setLength(usageInfos,usageInfoFill);
+    for k:=0 to length(usageInfos)-1 do usageInfos[k]:=newDat[k];
     temporary.destroy;
   end;
 
@@ -983,9 +997,9 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
   begin
     //TODO: Can import-overloads be taken into account?
     //This would require modification of the rule map
-    if fill<>length(dat) then cleanup;
+    if usageInfoFill<>length(usageInfos) then cleanup;
     setLength(result,0);
-    for info in dat do if info.targetLocation=loc then begin
+    for info in usageInfos do if info.targetLocation=loc then begin
       setLength(result,length(result)+1);
       result[length(result)-1]:=info.referencedAt;
     end;
@@ -994,32 +1008,32 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
 FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
   VAR info:T_usageInfo;
   begin
-    if fill<>length(dat) then cleanup;
-    for info in dat do if info.targetLocation=loc then exit(true);
+    if usageInfoFill<>length(usageInfos) then cleanup;
+    for info in usageInfos do if info.targetLocation=loc then exit(true);
     result:=false;
   end;
 
 FUNCTION T_functionCallInfos.isPackageReferenced(CONST packagePath:string):boolean;
   VAR info:T_usageInfo;
   begin
-    if fill<>length(dat) then cleanup;
-    for info in dat do if (info.referencedAt.fileName<>packagePath) and (info.targetLocation.fileName=packagePath) then exit(true);
+    if usageInfoFill<>length(usageInfos) then cleanup;
+    for info in usageInfos do if (info.referencedAt.fileName<>packagePath) and (info.targetLocation.fileName=packagePath) then exit(true);
     result:=false;
   end;
 
 FUNCTION T_functionCallInfos.isEmpty:boolean;
   begin
-    result:=fill=0;
+    result:=usageInfoFill=0;
   end;
 
 PROCEDURE T_functionCallInfos.includeUsages(CONST other:P_functionCallInfos);
   VAR k :longint;
   begin
     other^.cleanup;
-    setLength(dat,fill+other^.fill);
-    for k:=0 to other^.fill-1 do begin
-      dat[fill]:=other^.dat[k];
-      inc(fill);
+    setLength(usageInfos,usageInfoFill+other^.usageInfoFill);
+    for k:=0 to other^.usageInfoFill-1 do begin
+      usageInfos[usageInfoFill]:=other^.usageInfos[k];
+      inc(usageInfoFill);
     end;
     usedBuiltins.put(other^.usedBuiltins.values);
   end;

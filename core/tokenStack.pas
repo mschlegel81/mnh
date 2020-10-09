@@ -76,11 +76,12 @@ TYPE
   P_localIdInfos=^T_localIdInfos;
   T_localIdInfos=object
     private
-      infos: array of T_localIdInfo;
+      localIdInfos: array of T_localIdInfo;
       blobLines:array of record
         lineIndex:longint;
         blobCloser:char;
       end;
+
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -111,8 +112,8 @@ PROCEDURE T_localIdInfos.copyFrom(CONST original:P_localIdInfos);
       clear;
       exit;
     end;
-    setLength(infos,length(original^.infos));
-    for k:=0 to length(infos)-1 do infos[k]:=original^.infos[k];
+    setLength(localIdInfos,length(original^.localIdInfos));
+    for k:=0 to length(localIdInfos)-1 do localIdInfos[k]:=original^.localIdInfos[k];
     setLength(blobLines,length(original^.blobLines));
     for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
   end;
@@ -121,7 +122,7 @@ FUNCTION T_localIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longi
   VAR entry:T_localIdInfo;
   begin
     result:=tt_literal;
-    for entry in infos do
+    for entry in localIdInfos do
       if (entry.name=id) and
          not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
              positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
@@ -136,7 +137,7 @@ FUNCTION T_localIdInfos.whoReferencesLocation(CONST location:T_searchTokenLocati
       i0:longint=0;
   begin
     setLength(result,0);
-    for entry in infos do if location=entry.validFrom then begin
+    for entry in localIdInfos do if location=entry.validFrom then begin
       setLength(result,i0+entry.validUntil.line-entry.validFrom.line+1);
       for i:=i0 to entry.validUntil.line-entry.validFrom.line do begin
         result[i0+i]:=location;
@@ -150,7 +151,7 @@ FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
   VAR entry:T_localIdInfo;
   begin
     setLength(result,0);
-    for entry in infos do
+    for entry in localIdInfos do
       if not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
              positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
         append(result,entry.name);
@@ -160,12 +161,12 @@ FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
 PROCEDURE T_localIdInfos.addIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
   VAR i:longint;
   begin
-    i:=length(infos);
-    setLength(infos,i+1);
-    infos[i].name      :=id;
-    infos[i].validFrom :=validFrom;
-    infos[i].validUntil:=validUntil;
-    infos[i].tokenType :=typ;
+    i:=length(localIdInfos);
+    setLength(localIdInfos,i+1);
+    localIdInfos[i].name      :=id;
+    localIdInfos[i].validFrom :=validFrom;
+    localIdInfos[i].validUntil:=validUntil;
+    localIdInfos[i].tokenType :=typ;
   end;
 
 PROCEDURE T_localIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:char);
@@ -186,13 +187,13 @@ FUNCTION T_localIdInfos.getBlobCloserOrZero(CONST lineIndex:longint):char;
 
 PROCEDURE T_localIdInfos.clear;
   begin
-    setLength(infos,0);
+    setLength(localIdInfos,0);
     setLength(blobLines,0);
   end;
 
 FUNCTION T_localIdInfos.isEmpty:boolean;
   begin
-    result:=(length(infos)=0) and (length(blobLines)=0);
+    result:=(length(localIdInfos)=0) and (length(blobLines)=0);
   end;
 
 CONSTRUCTOR T_callStack.create;

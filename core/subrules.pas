@@ -251,7 +251,8 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
             digestInlineExpression(t,context,recycler);
             if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
           end;
-          tt_semicolon:
+          tt_separatorComma,tt_semicolon:
+            if bracketLevel=0 then dec(bracketLevel);
           else if t^.tokType in C_openingBrackets then inc(bracketLevel)
           else if t^.tokType in C_closingBrackets then dec(bracketLevel);
         end;
