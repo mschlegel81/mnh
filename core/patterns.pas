@@ -692,6 +692,9 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           appendOptional;
           parts[i].first:=recycler.disposeToken(parts[i].first);
           assertNil(parts[i].first);
+        end else if (parts[i].first^.tokType in [tt_blockLocalVariable]) then begin
+          context.raiseError(parts[i].first^.txt+' is a block local variable and cannot be used as lambda parameter',parts[i].first^.location);
+          recycler.cascadeDisposeToken(parts[i].first);
         end else if (parts[i].first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType]) then begin
           //Identified parameter: f(x)->
           rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
