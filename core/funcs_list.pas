@@ -187,6 +187,8 @@ FUNCTION transpose_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes)
     then result:=list0^.transpose(arg1)
+    else if (params<>nil) and (params^.size>=1) and (arg0^.literalType in C_mapTypes)
+    then result:=map0^.transpose
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
     then begin
       result:=list0^.transpose(nil);
