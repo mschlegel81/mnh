@@ -16,7 +16,9 @@ TYPE
       packagePath,ruleId,
       fileName:string;
       fileReadAt:double;
-      PROCEDURE tryObtainName(CONST createIfMissing:boolean);
+      FUNCTION newStoreName:string;
+      {Returns true if new name is returned}
+      FUNCTION tryObtainName(CONST createIfMissing:boolean):boolean;
     public
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
@@ -28,6 +30,7 @@ TYPE
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
 IMPLEMENTATION
+USES FileUtil;
 VAR globalDatastoreCs:TRTLCriticalSection;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
@@ -59,7 +62,17 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
     wrapper.destroy;
   end;
 
-PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
+FUNCTION T_datastoreMeta.newStoreName:string;
+  VAR i:longint;
+  begin
+    i:=0;
+    repeat
+      result:=ChangeFileExt(packagePath,'.datastore'+intToStr(i));
+      inc(i);
+    until not(sysutils.fileExists(result));
+  end;
+
+FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
   VAR allStores:T_arrayOfString=();
       i:longint;
       wrapper:T_bufferedInputStreamWrapper;
@@ -80,7 +93,8 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
     end;
 
   begin
-    if fileName<>'' then exit;
+    if fileName<>'' then exit(false);
+    result:=false;
     enterCriticalSection(globalDatastoreCs);
     allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
     for i:=0 to length(allStores)-1 do if fileName='' then begin
@@ -97,11 +111,8 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
     end;
     setLength(allStores,0);
     if (fileName='') and createIfMissing then begin
-      i:=0;
-      repeat
-        fileName:=ChangeFileExt(packagePath,'.datastore'+intToStr(i));
-        inc(i);
-      until not(sysutils.fileExists(fileName));
+      fileName:=newStoreName;
+      result:=true;
     end;
     leaveCriticalSection(globalDatastoreCs);
   end;
@@ -176,20 +187,34 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
+      tempFileName:string;
+      useTempFile:boolean;
   begin
-    tryObtainName(true);
+    useTempFile:=not(tryObtainName(true));
+    if useTempFile
+    then tempFileName:=newStoreName
+    else tempFileName:=fileName;
+
     enterCriticalSection(globalDatastoreCs);
     if writePlainText then begin
       plainText:=ruleId+':=';
       append(plainText,serializeToStringList(L,location,threadLocalMessages));
-      writeFileLines(fileName,plainText,C_lineBreakChar,false);
+      writeFileLines(tempFileName,plainText,C_lineBreakChar,false);
     end else begin
-      wrapper.createToWriteToFile(fileName);
+      wrapper.createToWriteToFile(tempFileName);
       wrapper.writeAnsiString(ruleId);
       writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
       wrapper.destroy;
     end;
     leaveCriticalSection(globalDatastoreCs);
+
+    if useTempFile then begin
+      if not(RenameFile(tempFileName,fileName))
+      then begin
+        if CopyFile(tempFileName,fileName,[cffOverwriteFile,cffPreserveTime],false)
+        then DeleteFile(tempFileName);
+      end;
+    end;
   end;
 
 INITIALIZATION
