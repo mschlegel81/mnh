@@ -13,7 +13,7 @@ private l2:=($2 orElse 1).toReal; //Length of lower leg
 private m1:=($3 orElse 1).toReal; //Upper mass
 private m2:=($4 orElse 1).toReal; //Lower mass
 private g:=9.81;
-//Helper variables
+//Helper variables - we can calculate them on declaration in a plain script
 private F1fak:=-m2/(m1+m2)*l2/l1;
 private F2fak:=-l1/l2;
 //*phi1'', dependent on phi2''

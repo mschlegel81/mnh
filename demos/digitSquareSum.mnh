@@ -1,21 +1,18 @@
 @demo_for=list processing
-count89(x0:IntList)->begin
+count89(x0>200)->begin
   local result:=0;
-  local x:=x0.digits.sqr        //vectorized: digits.sqr
-             .pMap({$L.agg(+)}) //parallelized aggregation per sub-list
-             .elementFrequency; //group to reduce working set size
+  local DSS:=[1..x0].pMap((x)->x=>x.digits.sqr.agg(+)).toMap;
+  local x:=DSS.getInner(1).elementFrequency;
   while(x.size>0,begin
+    //Work with a map of frequencies: [value,count]
     result+=x[89] orElse 0;
     x[89]:=void;
     x[ 1]:=void;
-    x:=x.pMap({[$x[0].digits.sqr.agg(+),$x[1]]})
-        .toList
-        .group(0)
-        .pMap({$g[0] => $g[1].getInner(1).agg(+)})
-        .toMap;
+    local t:=x.transpose;
+    x:=t[1].group(t[0].pMap((k)->(DSS[k] orElse DSS[k]:=k.digits.sqr.agg(+)) ),::+);
   end);
   result;
 end;
 
 //*See http://rosettacode.org/wiki/Iterated_digits_squaring
-main->count89([1..100000]).print;
+main->count89(100000).print;

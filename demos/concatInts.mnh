@@ -1,5 +1,5 @@
 @demo_for=custom sorting
-private largestNumberFromConcatenation(I)->sort(I,{$a&$b>=$b&$a}).join.softCast;
+private largestNumberFromConcatenation(I)->sort(I,(a,b)-> a&b >= b&a).join.softCast;
 //*See http://rosettacode.org/wiki/Largest_int_from_concatenated_ints
 main->print(largestNumberFromConcatenation([1, 34, 3, 98, 9, 76, 45, 4])) and
       print(largestNumberFromConcatenation([54, 546, 548, 60]));

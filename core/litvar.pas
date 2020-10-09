@@ -441,6 +441,7 @@ TYPE
       FUNCTION put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION put(CONST key:P_literal;  CONST newValue:int64    ; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION putAll(CONST map:P_mapLiteral):P_mapLiteral;
+      FUNCTION transpose: P_listLiteral;
   end;
 
 CONST
@@ -1422,6 +1423,19 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
       result^.append(innerList,false);
     end;
     if containsError then disposeLiteral(result);
+  end;
+
+FUNCTION T_mapLiteral.transpose: P_listLiteral;
+  VAR keyList,valueList:P_listLiteral;
+      entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+  begin
+    keyList  :=newListLiteral(dat.fill);
+    valueList:=newListLiteral(dat.fill);
+    for entry in dat.keyValueList do begin
+      keyList  ^.append(entry.key  ,true);
+      valueList^.append(entry.value,true);
+    end;
+    result:=P_listLiteral(newListLiteral(2)^.append(keyList,false)^.append(valueList,false));
   end;
 
 CONST listType:array[false..true,false..true,false..true,false..true] of T_literalType=

@@ -1,6 +1,5 @@
-private sumOfDigits(n:Int)->n.digits.agg(+);
-isHarshadNumber(n:Int)->n mod sumOfDigits(n) = 0;
-private harshadGen(start:Int)->rangeGenerator(start,start+10000).filter(::isHarshadNumber);
+isHarshadNumber(n:Int)->n mod n.digits.agg(+) = 0;
+private harshadGen(start:Int)->rangeGenerator(start).filter(::isHarshadNumber);
 
 //*See http://rosettacode.org/wiki/Harshad_or_Niven_series
 @demo_for=generator, math

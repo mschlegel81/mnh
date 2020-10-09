@@ -2,14 +2,14 @@ USE customFormUtil;
 
 private IGNORE:=['exitCode'];
 private REMAP:=
-['echo_declaration'=>#226#128#139' in>',
- 'echo_input'      =>#226#128#139' in>',
- 'echo_output'     =>#226#128#139'out>',
- 'echo_continued'  =>#226#128#139'...>',
- 'el1_userNote'    =>#226#128#140'Note:',
- 'el1_note'        =>#226#128#140'Note:',
- 'el2_warning'     =>#226#129#163'Warning:',
- 'el2_userWarning' =>#226#129#163'Warning:',
+['echo_declaration'  =>#226#128#139' in>',
+ 'echo_input'        =>#226#128#139' in>',
+ 'echo_output'       =>#226#128#139'out>',
+ 'echo_continued'    =>#226#128#139'...>',
+ 'el1_userNote'      =>#226#128#140'Note:',
+ 'el1_note'          =>#226#128#140'Note:',
+ 'el2_warning'       =>#226#129#163'Warning:',
+ 'el2_userWarning'   =>#226#129#163'Warning:',
  'el3_evalError'     =>#226#129#162'Error:',
  'el3_noMatchingMain'=>#226#129#162'Error:',
  'el3_userDefined'   =>#226#129#162'Error:',

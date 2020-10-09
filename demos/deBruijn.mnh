@@ -1,23 +1,23 @@
-//*Constructs a De Bruijn sequence for an alphabet of k entries
+//*Constructs a De Bruijn sequence for an alphabet of base entries
 //*containing all substrings of length n
 //*See: https://en.wikipedia.org/wiki/De_Bruijn_sequence
-deBruijn(k:Int,n:Int)->begin
-  local a:=[1..k*n]*0;
+deBruijn(base:Int,n:Int)->begin
+  local a:=[1..base*n]*0;
   local sequence:=[];
-  local db:={begin
-    $t>n
-    ? n mod $p=0
-      ? sequence|=a[[1..$p]]
+  local constructSequence:=((t,p)->begin
+    t>n
+    ? n mod p=0
+      ? sequence|=a[[1..p]]
       : void
     : begin
-        a[$t]:=a[$t-$p];
-        db($t+1,$p);
-        k>a[$t-$p]+1 ?
-        [a[$t-$p]+1..k-1].each(j,
-          a[$t]:=j,
-          db($t+1,$t)) : void;
-      end; end};
-  db(1,1);
+        a[t]:=a[t-p];
+        constructSequence(t+1,p);
+        base>a[t-p]+1 ?
+        [a[t-p]+1..base-1].each(j,
+          a[t]:=j,
+          constructSequence(t+1,t)) : void;
+      end; end);
+  constructSequence(1,1);
   sequence;
 end;
 

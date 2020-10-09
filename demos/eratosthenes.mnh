@@ -1,5 +1,3 @@
-USE '..\packages\generators.mnh';
-
 sieve(maxToCheck>2)->begin
   //initialize boolean array, marking 0 and 1 as "not prime"
   local prim:=[0..maxToCheck]>=2;
@@ -16,6 +14,7 @@ sieve(maxToCheck>2)->begin
   indexOf(prim);
 end;
 
+//*Prints out primes <=n
 main(n)->sieve(n.toInt)
          .chunkMap(20,{$x.join("\v,\v")})
          .toList

@@ -36,7 +36,7 @@ main(rootFolder,...)->begin
   .map({[$x[0]*$x[1].size,$x]})
   .sort
   .getInner(1);
-  print;
+  printf("\r%5.1f%%   ",100);
   findings
   .each(finding,
     print('Found group of ',finding[1].size,' files, ',finding[0],' bytes each (total ',finding[0]*finding[1].size,' bytes):'),
@@ -44,6 +44,7 @@ main(rootFolder,...)->begin
   size(...)>0 ? main@... : void;
 
   findings:=findings.getInner(1).flatten;
+  print(findings.size,' Findings');
   findings.group(findings.extractFileDirectory)
           .each(entry,begin
              local folder:=entry[0];

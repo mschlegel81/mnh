@@ -8,6 +8,7 @@ asTwoPowersOfFive(i:Int)->begin
 end;
 
 asFourPowersOfFive(i:Int)->begin
+  //First construct powers of 5 in the relevant range
   local P:=([1..floor(i^(1/5))]^5).toSet;
   local r:=intersect(P:=P+P,i-P);
   r.size=0 ? void : begin
@@ -18,4 +19,7 @@ end;
 
 //*See http://rosettacode.org/wiki/Euler%27s_sum_of_powers_conjecture
 @demo_for=math, list processing
-main->'%s^5 + %s^5 + %s^5 + %s^5 = %s^5'.printf@(rangeGenerator(1).each(k,asFourPowersOfFive(k^5),orElse));
+main->'%s^5 + %s^5 + %s^5 + %s^5 = %s^5'.printf@(rangeGenerator(1).pEach(k,asFourPowersOfFive(k^5),orElse));
+
+
+
