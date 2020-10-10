@@ -20,6 +20,3 @@ end;
 //*See http://rosettacode.org/wiki/Euler%27s_sum_of_powers_conjecture
 @demo_for=math, list processing
 main->'%s^5 + %s^5 + %s^5 + %s^5 = %s^5'.printf@(rangeGenerator(1).pEach(k,asFourPowersOfFive(k^5),orElse));
-
-
-
