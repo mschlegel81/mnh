@@ -19,8 +19,7 @@ USES //my utilities
      funcs,
      mnh_messages,
      serializationUtil,
-     patterns,
-     tokenStack;
+     patterns;
 TYPE
   T_subruleAttribute=record
     key,value:string;
