@@ -4,7 +4,7 @@ private longestIncreasingSubsequence(prev,rest)->begin
   [0..gRest.size-1].pEach(tailLength,begin
     local T:=gRest.tail(tailLength);
     longestIncreasingSubsequence(T.head,T.tail);
-  end,aggregator({$x.size>=$y.size?$x:$y}));
+  end,aggregator((x,y)->x.size>=y.size?x:y));
   prev|longestRest;
 end;
 

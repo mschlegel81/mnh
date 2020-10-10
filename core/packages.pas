@@ -858,7 +858,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           globals.primaryContext.messages^.clearFlags;
         end;
         predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
-        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
+        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) and (usecase<>lu_forCallingMain) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -874,7 +874,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
         {$endif}
         if profile then globals.timeBaseComponent(pc_declaration);
-        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
+        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) and (usecase<>lu_forCallingMain) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseDataStore;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -890,14 +890,14 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             if profile then globals.timeBaseComponent(pc_interpretation);
             if (statement.token.first=nil) then exit;
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
-            if globals.primaryContext.messages^.isCollecting(mt_echo_input)
+            if globals.primaryContext.messages^.isCollecting(mt_echo_input) and (usecase<>lu_forCallingMain)
             then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.token.first)+';');
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}
             globals.primaryContext.callStackPop(nil);
             {$endif}
-            if (statement.token.first<>nil) and globals.primaryContext.messages^.isCollecting(mt_echo_output) then begin
+            if (statement.token.first<>nil) and globals.primaryContext.messages^.isCollecting(mt_echo_output) and (usecase<>lu_forCallingMain) then begin
               {$ifdef fullVersion}
               if (statement.token.first<>nil) and
                  (statement.token.first^.next=nil) and

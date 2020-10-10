@@ -367,6 +367,7 @@ FUNCTION T_editorMeta.markLocation(CONST line,column:longint):T_searchTokenLocat
 PROCEDURE T_editorMeta._add_breakpoint_or_bookmark_(CONST lineIndex: longint; CONST columnIndex:longint=1; CONST bookmarkIndex:byte=10);
   VAR m:TSynEditMark;
   begin
+    assert(bookmarkIndex<=10,'Invalid bookmark index '+intToStr(bookmarkIndex));
     m:=TSynEditMark.create(editor);
     m.line:=lineIndex;
     m.column:=columnIndex;

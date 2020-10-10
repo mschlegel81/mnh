@@ -382,10 +382,18 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
 
     PROCEDURE updateMarkers(CONST meta:P_editorMeta);
       VAR k:longint=0;
+          markLocation:T_searchTokenLocation;
+          markIdx     :byte;
       begin
         while k<length(oldMarkers) do if oldMarkers[k].location.fileName=fileName then begin
+          markLocation:=oldMarkers[k].location;
+          markIdx     :=oldMarkers[k].markIndex;
           meta^._add_breakpoint_or_bookmark_(oldMarkers[k].location.line,oldMarkers[k].location.column,oldMarkers[k].markIndex);
-          //old bookmark is removed by T_editorMeta.onPlaceBookmark
+          //old bookmark should be removed by T_editorMeta.onPlaceBookmark
+          if (oldMarkers[k].location=markLocation) and (oldMarkers[k].markIndex=markIdx) then begin
+            oldMarkers[k]:=oldMarkers[length(oldMarkers)-1];
+            setLength(oldMarkers,length(oldMarkers)-1);
+          end;
         end else inc(k);
       end;
 
