@@ -312,7 +312,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       end;
     end;
     //Determine scripts to scan:
-    for folder in foldersToScan do if not(isDestructionPending) and (now<scanStart+ONE_SECOND) then begin
+    for folder in foldersToScan do if not(isDestructionPending) then begin
       startFolderScan:=now;
       append(foldersScannedInThisRun,folder);
       scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
