@@ -246,7 +246,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
       inlineRuleTokens:=rep;
       while (t<>nil) and (bracketLevel>=0) do begin
         case t^.tokType of
-          tt_expBraceOpen,tt_functionPattern: begin
+          tt_expBraceOpen: begin
             digestInlineExpression(t,context,recycler);
             if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
           end;
@@ -445,6 +445,9 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     if rep^.tokType=tt_functionPattern then begin
       assert(retainFirstToken,'Invalid state!');
       pattern.clone(P_pattern(rep^.data)^);
+      {$ifdef debugMode}
+      writeln(stdErr,'Creating lambda expression with pattern ',pattern.toString,' and body ',tokensToString(rep^.next));
+      {$endif}
       disposePattern(rep^.data);
       rep^.tokType:=tt_EOL;
       constructExpression(rep^.next,context,recycler,rep^.location);
@@ -952,6 +955,10 @@ FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST e
     for i:=givenParameters^.size to expectedArity-1 do begin
       last^.next:=recycler.newToken(location,'$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
       last:=last^.next;
+      if i<expectedArity-1 then begin
+        last^.next:=recycler.newToken(location,'',tt_separatorComma);
+        last:=last^.next;
+      end;
     end;
     last^.next:=recycler.newToken(location,'',tt_braceClose);
     last:=last^.next;
