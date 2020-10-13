@@ -294,8 +294,6 @@ FUNCTION scanScripts(p:pointer):ptrint;
       foldersScannedInThisRun:T_arrayOfString=();
       startFolderScan:double;
 
-      //TODO: log time per script, warn about long running analyses
-
   FUNCTION isDestructionPending:boolean;
     begin
       result:=P_fileHistory(p)^.scriptUsage.destructionPending;

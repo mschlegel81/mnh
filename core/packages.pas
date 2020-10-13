@@ -111,7 +111,23 @@ TYPE
       PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual;
       {$endif}
     end;
+CONST
+  C_packageLoadUsecaseMeta:array[T_packageLoadUsecase] of record
+    import_useCase:T_packageLoadUsecase;
+    assistanceRun,
+    loadUsedPacks ,
+    interpretInputStatements,
+    finalizeWorkers:boolean;
+  end=(
+ {lu_NONE              }(import_usecase:lu_NONE             ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_beingLoaded       }(import_usecase:lu_NONE             ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_forImport         }(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_forCallingMain    }(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:true ),
+ {lu_forDirectExecution}(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:true ; finalizeWorkers:true ),
+ {lu_forCodeAssistance }(import_usecase:lu_forCodeAssistance;assistanceRun:true ;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_usageScan         }(import_usecase:lu_usageScan        ;assistanceRun:true ;loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false));
 
+TYPE
   P_sandbox=^T_sandbox;
   T_sandbox=object
     private
@@ -163,7 +179,14 @@ PROCEDURE doneSandboxes;
   begin
     enterCriticalSection(sbLock);
     try
-      for i:=0 to length(sandboxes)-1 do dispose(sandboxes[i],destroy);
+      for i:=0 to length(sandboxes)-1 do begin
+        while sandboxes[i]^.busy do begin
+          leaveCriticalSection(sbLock);
+          sleep(1); ThreadSwitch;
+          enterCriticalSection(sbLock);
+        end;
+        dispose(sandboxes[i],destroy);
+      end;
       setLength(sandboxes,0);
     finally
       leaveCriticalSection(sbLock);
@@ -440,7 +463,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$include funcs_package.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler; CONST parentUsecase:T_packageLoadUsecase);
-  CONST import_usacase:array[T_packageLoadUsecase] of T_packageLoadUsecase = (lu_forImport,lu_forImport,lu_forImport,lu_forImport,lu_forImport,lu_forCodeAssistance,lu_usageScan);
   VAR i:longint;
   begin
     with containingPackage^.mainPackage^ do begin
@@ -454,8 +476,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
-            if secondaryPackages[i]^.readyForUsecase<>import_usacase[parentUsecase] then
-            secondaryPackages[i]^.load(import_usacase[parentUsecase],globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
+            if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_useCase then
+            secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_useCase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -466,7 +488,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      pack^.load(import_usacase[parentUsecase],globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
+      pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_useCase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},nil,nil{$endif});
     end;
   end;
 
@@ -645,7 +667,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           if localIdInfos<>nil then localIdInfos^.addIdInfo(first^.txt,first^.location,clauseEnd,tt_use);
           {$endif}
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-            if (gui_started=NO) and not(usecase in [lu_forCodeAssistance,lu_usageScan]) then globals.primaryContext.messages^.logGuiNeeded;
+            if (gui_started=NO) and not(C_packageLoadUsecaseMeta[usecase].assistanceRun) then globals.primaryContext.messages^.logGuiNeeded;
           end else begin
             j:=length(packageUses);
             setLength(packageUses,j+1);
@@ -677,7 +699,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
         setLength(packageUses,0);
       end;
-      reloadAllPackages(locationForErrorFeedback);
+      if C_packageLoadUsecaseMeta[usecase].loadUsedPacks then reloadAllPackages(locationForErrorFeedback);
     end;
 
   VAR assignmentToken:P_token;
@@ -722,7 +744,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         include(ruleModifiers,statement.token.first^.getModifier);
         statement.token.first:=recycler.disposeToken(statement.token.first);
       end;
-      evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
+      evaluateBody:=(evaluateBody or (modifier_mutable in ruleModifiers)) and not(C_packageLoadUsecaseMeta[usecase].assistanceRun);
       if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
       if not(statement.token.first^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.token.first^.location);
@@ -771,9 +793,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end;
       rulePattern.toParameterIds(ruleBody);
 
-      if evaluateBody and
-         not(usecase in [lu_forCodeAssistance,lu_usageScan]) and
-         (globals.primaryContext.messages^.continueEvaluation)
+      if evaluateBody and (globals.primaryContext.messages^.continueEvaluation)
       then globals.primaryContext.reduceExpression(ruleBody,recycler);
 
       if globals.primaryContext.messages^.continueEvaluation then begin
@@ -819,9 +839,9 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.token.first=nil then exit;
-    if usecase in [lu_forCodeAssistance,lu_usageScan] then globals.primaryContext.messages^.clearFlags;
+    if C_packageLoadUsecaseMeta[usecase].assistanceRun then globals.primaryContext.messages^.clearFlags;
 
-    if not(usecase in [lu_forCodeAssistance,lu_usageScan]) and not(globals.primaryContext.messages^.continueEvaluation) then begin
+    if not(C_packageLoadUsecaseMeta[usecase].assistanceRun) and not(globals.primaryContext.messages^.continueEvaluation) then begin
       recycler.cascadeDisposeToken(statement.token.first);
       exit;
     end;
@@ -853,12 +873,12 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           recycler.cascadeDisposeToken(statement.token.first);
           exit;
         end;
-        if usecase=lu_forCodeAssistance then begin
+        if C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
           //check, but ignore result
           globals.primaryContext.messages^.clearFlags;
         end;
         predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
-        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) and (usecase<>lu_forCallingMain) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
+        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -874,7 +894,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
         {$endif}
         if profile then globals.timeBaseComponent(pc_declaration);
-        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) and (usecase<>lu_forCallingMain) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
+        if globals.primaryContext.messages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.token.first)+';');
         parseDataStore;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -890,14 +910,14 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             if profile then globals.timeBaseComponent(pc_interpretation);
             if (statement.token.first=nil) then exit;
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
-            if globals.primaryContext.messages^.isCollecting(mt_echo_input) and (usecase<>lu_forCallingMain)
+            if globals.primaryContext.messages^.isCollecting(mt_echo_input)
             then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.token.first)+';');
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}
             globals.primaryContext.callStackPop(nil);
             {$endif}
-            if (statement.token.first<>nil) and globals.primaryContext.messages^.isCollecting(mt_echo_output) and (usecase<>lu_forCallingMain) then begin
+            if (statement.token.first<>nil) and globals.primaryContext.messages^.isCollecting(mt_echo_output) then begin
               {$ifdef fullVersion}
               if (statement.token.first<>nil) and
                  (statement.token.first^.next=nil) and
@@ -922,7 +942,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     end;
     if statement.token.first<>nil then recycler.cascadeDisposeToken(statement.token.first);
     statement.token.first:=nil;
-    if usecase in [lu_forCodeAssistance,lu_usageScan] then globals.primaryContext.messages^.clearFlags;
+    if C_packageLoadUsecaseMeta[usecase].assistanceRun then globals.primaryContext.messages^.clearFlags;
   end;
 
 PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluationGlobals; VAR recycler: T_recycler; CONST mainParameters: T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
@@ -1035,7 +1055,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
     if profile then globals.timeBaseComponent(pc_tokenizing);
 
-    while ((usecase in [lu_forCodeAssistance,lu_usageScan]) or (globals.primaryContext.messages^.continueEvaluation)) and (stmt.token.first<>nil) do begin
+    while (C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.messages^.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
       if profile then globals.timeBaseComponent(pc_tokenizing);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
@@ -1043,15 +1063,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
     if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
     lexer.destroy;
-    if usecase in [lu_forCodeAssistance,lu_usageScan] then begin
+    if C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
       readyForUsecase:=usecase;
       logReady(newCodeHash);
       {$ifdef fullVersion}
       if usecase=lu_forCodeAssistance then afterLoadForAssistance;
       {$endif}
       exit;
-    end;
-    if globals.primaryContext.messages^.continueEvaluation then begin
+    end else if globals.primaryContext.messages^.continueEvaluation then begin
       customOperatorRules:=ruleMap.getOperators;
       readyForUsecase:=usecase;
       logReady(newCodeHash);
@@ -1068,8 +1087,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
     end;
 
-    if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
-    then begin
+    if isMain and C_packageLoadUsecaseMeta[usecase].finalizeWorkers then begin
       globals.startFinalization;
       finalize(globals.primaryContext,recycler);
       globals.stopWorkers(recycler);
