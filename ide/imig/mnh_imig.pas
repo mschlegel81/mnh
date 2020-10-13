@@ -6,6 +6,7 @@ USES sysutils,
      myGenerics,mySys,
      //mnh:
      mnh_constants, basicTypes,
+     mnh_settings,
      funcs,litVar,contexts,funcs_list,mnh_plotData,
      out_adapters,mnh_messages,
      recyclers,
@@ -114,6 +115,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
         dispose(msg,destroy);
         msg:=result.messageQueue^.get;
       end;
+      imageContexts.maxImageManipulationThreads:=settings.cpuCount;
     end;
     if steps<>tmpSteps then disposeLiteral(tmpSteps);
     if not(isValid) and not(validating) and not(errorRaised) then context.raiseError('Invalid workflow',tokenLocation);

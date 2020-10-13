@@ -40,7 +40,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -80,7 +80,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -108,7 +108,6 @@
           </Other>
         </CompilerOptions>
       </Item3>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -432,11 +431,8 @@
         <UnitName Value="reevaluationForms"/>
       </Unit53>
       <Unit54>
-        <Filename Value="imig/mnh_imig_form.pas"/>
+        <Filename Value="plot/funcs_plot.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="DisplayImageForm"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
       </Unit54>
       <Unit55>
         <Filename Value="editors/workspace.inc"/>
@@ -605,7 +601,7 @@
         <IsPartOfProject Value="True"/>
       </Unit91>
       <Unit92>
-        <Filename Value="plot/funcs_plot.pas"/>
+        <Filename Value="../core/datastores.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit92>
       <Unit93>
@@ -641,7 +637,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="../core"/>
-      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;imig;../igSrc;profiling"/>
+      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
       <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>
