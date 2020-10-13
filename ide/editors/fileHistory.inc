@@ -294,6 +294,8 @@ FUNCTION scanScripts(p:pointer):ptrint;
       foldersScannedInThisRun:T_arrayOfString=();
       startFolderScan:double;
 
+      //TODO: log time per script, warn about long running analyses
+
   FUNCTION isDestructionPending:boolean;
     begin
       result:=P_fileHistory(p)^.scriptUsage.destructionPending;
@@ -317,7 +319,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       append(foldersScannedInThisRun,folder);
       scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
       //Load scripts
-      for script in scriptsInThisFolder do begin
+      for script in scriptsInThisFolder do if not(isDestructionPending) then begin
         {$ifdef debugMode}
         writeln(stdErr,'fileHistory/scanScripts: scanning ',script);
         {$endif}
