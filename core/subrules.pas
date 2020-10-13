@@ -151,7 +151,7 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
       PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
-      PROCEDURE fillCallInfos(CONST infos:P_functionCallInfos);
+      PROCEDURE fillCallInfos(CONST infos:P_callAndIdInfos);
       {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
   end;
@@ -1433,7 +1433,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
 
-PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_functionCallInfos);
+PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_callAndIdInfos);
   VAR t:T_preparedToken;
   begin
     for t in preparedBody do infos^.add(@t.token);
@@ -1821,7 +1821,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
       temp:=first^.last;
       temp^.next:=recycler.newToken(location,'',tt_expBraceClose);
     end;
-    predigest(first,package,context,recycler{$ifdef fullVersion},nil,nil{$endif});
+    predigest(first,package,context,recycler{$ifdef fullVersion},nil{$endif});
     digestInlineExpression(first,context,recycler);
     if (context.messages^.continueEvaluation) and (first^.next<>nil) then context.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.messages^.continueEvaluation) then begin

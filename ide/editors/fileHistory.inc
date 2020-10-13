@@ -284,7 +284,6 @@ PROCEDURE T_fileHistory.updateScriptUsage(CONST scriptName:string; CONST allUses
   end;
 
 FUNCTION scanScripts(p:pointer):ptrint;
-  CONST ONE_SECOND = 1/(24*60*60);
   VAR foldersToScan:T_arrayOfString=();
       folder,script,usedScript:string;
       scriptsInThisFolder:TStringList;

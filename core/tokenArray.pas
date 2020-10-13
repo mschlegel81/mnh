@@ -10,7 +10,6 @@ USES myGenerics,myStringUtil,
      {$ifdef fullVersion}
      mnh_html,
      mnh_doc,
-     tokenStack,
      {$endif}
      tokens,
      mnh_messages,
@@ -49,7 +48,7 @@ CONST operatorName:array[tt_comparatorEq..tt_unaryOpMinus] of string=
 TYPE
   T_customOperatorArray=array[tt_comparatorEq..tt_unaryOpMinus] of P_abstractRule;
   {$ifdef fullVersion}
-  P_functionCallInfos=^T_functionCallInfos;
+  P_callAndIdInfos=^T_callAndIdInfos;
   {$endif}
 
   P_abstractPackage=^T_abstractPackage;
@@ -78,9 +77,9 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual;
+      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -91,9 +90,9 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages); virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
       {$ifdef fullVersion}
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_functionCallInfos); virtual;
+      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
   end;
 
@@ -119,11 +118,23 @@ TYPE
     referencedAt:T_searchTokenLocation;
   end;
 
-  T_functionCallInfos=object
+  T_localIdInfo=record
+                  name:string;
+                  validFrom,validUntil:T_tokenLocation;
+                  tokenType:T_tokenType;
+                end;
+
+  T_callAndIdInfos=object
     private
       usageInfoFill:longint;
       usedBuiltins :T_setOfPointer;
       usageInfos:array of T_usageInfo;
+
+      localIdInfos: array of T_localIdInfo;
+      blobLines:array of record
+        lineIndex:longint;
+        blobCloser:char;
+      end;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -136,7 +147,14 @@ TYPE
       FUNCTION  isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
       FUNCTION  isPackageReferenced(CONST packagePath:string):boolean;
       FUNCTION  isEmpty:boolean;
-      PROCEDURE includeUsages(CONST other:P_functionCallInfos);
+      PROCEDURE includeUsages(CONST other:P_callAndIdInfos);
+
+      FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
+      FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
+      PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+      PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
+      FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
+      PROCEDURE copyFrom(CONST original:P_callAndIdInfos);
   end;
 
   T_tokenInfo=record
@@ -174,7 +192,7 @@ TYPE
       endsAtColumn:longint;
       FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName:string; newName:string):boolean;
     public
-      CONSTRUCTOR create(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
+      CONSTRUCTOR create(CONST tok:P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
       FUNCTION toInfo:T_tokenInfo;
   end;
@@ -182,7 +200,7 @@ TYPE
   T_enhancedTokens=object
     private
       dat:array of T_enhancedToken;
-      PROCEDURE add(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
+      PROCEDURE add(CONST tok:P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package:P_abstractPackage);
       PROCEDURE addLineEnder(CONST lineLength:longint);
     public
       CONSTRUCTOR create;
@@ -209,14 +227,13 @@ TYPE
       end;
       associatedPackage:P_abstractPackage;
       {$ifdef fullVersion}
-      localIdInfos     :P_localIdInfos;
-      functionCallInfos:P_functionCallInfos;
+      callAndIdInfos:P_callAndIdInfos;
       {$endif}
       FUNCTION getToken(CONST line: ansistring; VAR inputLocation: T_tokenLocation; CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle): P_token;
       FUNCTION fetchNext(                                                           CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):boolean;
       FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual; abstract;
     public
-      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       FUNCTION getNextStatement(CONST messages:P_messages; VAR recycler:T_recycler):T_enhancedStatement;
   end;
@@ -231,10 +248,10 @@ TYPE
       FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST inputString:string; CONST parseLocation:T_tokenLocation;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
-      FUNCTION getEnhancedTokens(CONST idInfos:P_localIdInfos):T_enhancedTokens;
+      FUNCTION getEnhancedTokens(CONST idInfos:P_callAndIdInfos):T_enhancedTokens;
       {$endif}
   end;
 
@@ -251,7 +268,7 @@ TYPE
       FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input:T_arrayOfLiteral; CONST parseLocation_:T_tokenLocation;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -266,14 +283,14 @@ TYPE
       FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST parseLocation_:T_tokenLocation;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       CONSTRUCTOR createForExtendedPackage(CONST importWrapper:P_extendedPackage;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
-      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
@@ -292,12 +309,12 @@ T_idStack=object
   end;
   bracketLevel:longint;
   {$ifdef fullVersion}
-  localIdInfos:P_localIdInfos;
+  localIdInfos:P_callAndIdInfos;
   {$endif}
   lastWasLocalModifier:boolean;
   prevToken:P_token;
 
-  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
+  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
   DESTRUCTOR destroy;
   PROCEDURE clear;
   PROCEDURE applyToken(CONST token:P_token; CONST messages:P_messages);
@@ -341,9 +358,9 @@ FUNCTION T_linesLexer.fetch(CONST messages: P_messages; VAR recycler: T_recycler
   end;
 
 CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocation_: T_tokenLocation;
-                                CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                                CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},localIdInfos_,functionCallInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
     input:=input_;
     inputIndex:=0;
     inputLocation:=parseLocation_;
@@ -351,14 +368,14 @@ CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocati
   end;
 
 CONSTRUCTOR T_linesLexer.createForExtendedPackage(CONST importWrapper: P_extendedPackage;
-                                                  CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                                                  CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},localIdInfos_,functionCallInfos_{$endif});
+    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},callAndIdInfos_{$endif});
   end;
 
-CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},localIdInfos_,functionCallInfos_{$endif});
+    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},callAndIdInfos_{$endif});
   end;
 
 DESTRUCTOR T_linesLexer.destroy;
@@ -403,9 +420,9 @@ FUNCTION T_variableLexer.fetch(CONST messages: P_messages; VAR recycler: T_recyc
     if result<>nil then result^.location:=parseLocation;
   end;
 
-CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLocation_: T_tokenLocation; CONST package: P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_: P_localIdInfos; CONST functionCallInfos_: P_functionCallInfos{$endif});
+CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLocation_: T_tokenLocation; CONST package: P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},localIdInfos_,functionCallInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
     data:=input;
     dataIdx:=-1;
     parseLocation:=parseLocation_;
@@ -447,9 +464,9 @@ FUNCTION T_singleStringLexer.fetch(CONST messages: P_messages; VAR recycler: T_r
   end;
 
 CONSTRUCTOR T_singleStringLexer.create(CONST inputString: string; CONST parseLocation: T_tokenLocation;
-                                       CONST package:P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+                                       CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},localIdInfos,functionCallInfos{$endif});
+    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
     text:=inputString;
     inputLocation:=parseLocation;
     inputLocation.column:=1;
@@ -463,7 +480,7 @@ DESTRUCTOR T_singleStringLexer.destroy;
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_localIdInfos): T_enhancedTokens;
+FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos): T_enhancedTokens;
   VAR adapters:T_messagesDummy;
       recycler:T_recycler;
       tokenToProcess:P_token;
@@ -524,13 +541,12 @@ FUNCTION T_abstractPackage.getExtended(CONST idOrPath:string):P_abstractPackage;
 
 { T_abstractLexer }
 
-CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST localIdInfos_:P_localIdInfos=nil; CONST functionCallInfos_:P_functionCallInfos=nil {$endif});
+CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
     associatedPackage:=package;
 
     {$ifdef fullVersion}
-    localIdInfos:=localIdInfos_;
-    functionCallInfos:=functionCallInfos_;
+    callAndIdInfos:=callAndIdInfos_;
     {$endif}
 
     setLength(blob.lines,0);
@@ -576,7 +592,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycl
 
   VAR nextToProcess:P_token=nil;
   begin
-    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
+    localIdStack.create({$ifdef fullVersion}callAndIdInfos{$endif});
     while tokenQueue.hasNext or (fetchNext(messages,recycler,ls_onlyInterpretable) and tokenQueue.hasNext) do begin
       nextToProcess:=tokenQueue.next;
       if nextToProcess^.tokType=tt_semicolon then begin
@@ -603,7 +619,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycl
     localIdStack.destroy;
   end;
 
-CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
   begin
     setLength(scope,0);
     {$ifdef fullVersion}
@@ -733,7 +749,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
     with scope[topIdx] do for i:=0 to length(ids)-1 do begin
       if warnAboutUnused and not(ids[i].used) and (adapters<>nil) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
       {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.addIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
+      if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
       {$endif}
     end;
     setLength(scope[topIdx].ids,0);
@@ -748,7 +764,7 @@ PROCEDURE T_idStack.popRemaining;
     topIdx:=length(scope)-1;
     while topIdx>=0 do begin
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-        if localIdInfos<>nil then localIdInfos^.addIdInfo(ids[i].name,ids[i].location,prevToken^.location,ids[i].idType);
+        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,prevToken^.location,ids[i].idType);
       end;
       setLength(scope[topIdx].ids,0);
       topIdx-=1;
@@ -806,7 +822,7 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos; CONST functionCallInfos:P_functionCallInfos{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
       pattern:P_pattern;
@@ -845,8 +861,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
       writeln(stdErr,'');
       {$endif}
       {$ifdef fullVersion}
-      if localIdInfos<>nil then
-      for parameterId in parameterIds do localIdInfos^.addIdInfo(parameterId.id,parameterId.location,lastLocation,tt_parameterIdentifier);
+      if callAndIdInfos<>nil then
+      for parameterId in parameterIds do callAndIdInfos^.addLocalIdInfo(parameterId.id,parameterId.location,lastLocation,tt_parameterIdentifier);
       {$endif}
       setLength(parameterIds,0);
       setLength(uniqueIds,0)
@@ -881,7 +897,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
           if t^.tokType=tt_identifier
           then inPackage^.resolveId(t^,nil);
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(t)
+          if callAndIdInfos<>nil then callAndIdInfos^.add(t)
           {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
@@ -898,7 +914,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
         end;
         tt_userRule: begin
           {$ifdef fullVersion}
-          if functionCallInfos<>nil then functionCallInfos^.add(t);
+          if callAndIdInfos<>nil then callAndIdInfos^.add(t);
           {$endif}
         end;
         tt_modifier: if t^.getModifier<>modifier_local then context.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
@@ -919,7 +935,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
           t^.next:=recycler.disposeToken(t^.next);
         end;
         {$ifdef fullVersion}
-        else if functionCallInfos<>nil then functionCallInfos^.add(t);
+        else if callAndIdInfos<>nil then callAndIdInfos^.add(t);
         {$endif}
       end;
       t:=t^.next;
@@ -927,26 +943,28 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
   end;
 
 {$ifdef fullVersion}
-CONSTRUCTOR T_functionCallInfos.create;
+CONSTRUCTOR T_callAndIdInfos.create;
   begin
     usedBuiltins.create;
     clear;
   end;
 
-DESTRUCTOR T_functionCallInfos.destroy;
+DESTRUCTOR T_callAndIdInfos.destroy;
   begin
     clear;
     usedBuiltins.destroy;
   end;
 
-PROCEDURE T_functionCallInfos.clear;
+PROCEDURE T_callAndIdInfos.clear;
   begin
     setLength(usageInfos,0);
     usedBuiltins.clear;
     usageInfoFill:=0;
+    setLength(localIdInfos,0);
+    setLength(blobLines,0);
   end;
 
-PROCEDURE T_functionCallInfos.add(CONST token: P_token);
+PROCEDURE T_callAndIdInfos.add(CONST token: P_token);
   begin
     if (token=nil) then exit;
     if      token^.tokType in [tt_comparatorEq..tt_operatorConcatAlt] then usedBuiltins.put(intFuncForOperator[token^.tokType])
@@ -959,7 +977,7 @@ PROCEDURE T_functionCallInfos.add(CONST token: P_token);
     end;
   end;
 
-PROCEDURE T_functionCallInfos.cleanup;
+PROCEDURE T_callAndIdInfos.cleanup;
   VAR temporary:specialize G_stringKeyMap<T_usageInfo>;
       info:T_usageInfo;
       newDat:temporary.VALUE_TYPE_ARRAY;
@@ -975,7 +993,7 @@ PROCEDURE T_functionCallInfos.cleanup;
     temporary.destroy;
   end;
 
-FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
+FUNCTION T_callAndIdInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
   VAR func:pointer;
       k:longint=0;
   begin
@@ -986,14 +1004,14 @@ FUNCTION T_functionCallInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
     end;
   end;
 
-FUNCTION T_functionCallInfos.getBuiltinRestrictions:T_specialFunctionRequirements;
+FUNCTION T_callAndIdInfos.getBuiltinRestrictions:T_specialFunctionRequirements;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=[];
     for meta in calledBuiltinFunctions do include(result,meta.specialRequirement);
   end;
 
-FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
+FUNCTION T_callAndIdInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
   VAR info:T_usageInfo;
   begin
     //TODO: Can import-overloads be taken into account?
@@ -1006,7 +1024,7 @@ FUNCTION T_functionCallInfos.whoReferencesLocation(CONST loc: T_searchTokenLocat
     end;
   end;
 
-FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+FUNCTION T_callAndIdInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
   VAR info:T_usageInfo;
   begin
     if usageInfoFill<>length(usageInfos) then cleanup;
@@ -1014,7 +1032,7 @@ FUNCTION T_functionCallInfos.isLocationReferenced(CONST loc:T_searchTokenLocatio
     result:=false;
   end;
 
-FUNCTION T_functionCallInfos.isPackageReferenced(CONST packagePath:string):boolean;
+FUNCTION T_callAndIdInfos.isPackageReferenced(CONST packagePath:string):boolean;
   VAR info:T_usageInfo;
   begin
     if usageInfoFill<>length(usageInfos) then cleanup;
@@ -1022,12 +1040,12 @@ FUNCTION T_functionCallInfos.isPackageReferenced(CONST packagePath:string):boole
     result:=false;
   end;
 
-FUNCTION T_functionCallInfos.isEmpty:boolean;
+FUNCTION T_callAndIdInfos.isEmpty:boolean;
   begin
-    result:=usageInfoFill=0;
+    result:=(usageInfoFill=0) and (length(localIdInfos)=0) and (length(blobLines)=0);
   end;
 
-PROCEDURE T_functionCallInfos.includeUsages(CONST other:P_functionCallInfos);
+PROCEDURE T_callAndIdInfos.includeUsages(CONST other:P_callAndIdInfos);
   VAR k :longint;
   begin
     other^.cleanup;
@@ -1039,6 +1057,67 @@ PROCEDURE T_functionCallInfos.includeUsages(CONST other:P_functionCallInfos);
     usedBuiltins.put(other^.usedBuiltins.values);
   end;
 
+PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
+  VAR k:longint;
+  begin
+    clear;
+    if original=nil then exit;
+    setLength(localIdInfos,length(original^.localIdInfos));
+    for k:=0 to length(localIdInfos)-1 do localIdInfos[k]:=original^.localIdInfos[k];
+    setLength(blobLines,length(original^.blobLines));
+    for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
+  end;
+
+FUNCTION T_callAndIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
+  VAR entry:T_localIdInfo;
+  begin
+    result:=tt_literal;
+    for entry in localIdInfos do
+      if (entry.name=id) and
+         not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
+             positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
+        declaredAt:=entry.validFrom;
+        exit(entry.tokenType);
+      end;
+  end;
+
+FUNCTION T_callAndIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
+  VAR entry:T_localIdInfo;
+  begin
+    setLength(result,0);
+    for entry in localIdInfos do
+      if not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
+             positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
+        append(result,entry.name);
+      end;
+  end;
+
+PROCEDURE T_callAndIdInfos.addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+  VAR i:longint;
+  begin
+    i:=length(localIdInfos);
+    setLength(localIdInfos,i+1);
+    localIdInfos[i].name      :=id;
+    localIdInfos[i].validFrom :=validFrom;
+    localIdInfos[i].validUntil:=validUntil;
+    localIdInfos[i].tokenType :=typ;
+  end;
+
+PROCEDURE T_callAndIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:char);
+  VAR k:longint;
+  begin
+    k:=length(blobLines);
+    setLength(blobLines,k+1);
+    blobLines[k].lineIndex :=lineIndex;
+    blobLines[k].blobCloser:=closer;
+  end;
+
+FUNCTION T_callAndIdInfos.getBlobCloserOrZero(CONST lineIndex:longint):char;
+  VAR k:longint;
+  begin
+    result:=#0;
+    for k:=0 to length(blobLines)-1 do if blobLines[k].lineIndex=lineIndex then exit(blobLines[k].blobCloser);
+  end;
 {$endif}
 
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
@@ -1057,22 +1136,22 @@ FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_abstractPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_functionCallInfos);
+PROCEDURE T_abstractPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_callAndIdInfos);
   begin
     //no op
   end;
 
-PROCEDURE T_extendedPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_functionCallInfos);
+PROCEDURE T_extendedPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_callAndIdInfos);
   begin
     if extender<>nil then extender^.markTypeAsUsed(token,functionCallInfos);
   end;
 
-PROCEDURE T_enhancedTokens.add(CONST tok: P_token; CONST localIdInfos: P_localIdInfos; CONST package: P_abstractPackage);
+PROCEDURE T_enhancedTokens.add(CONST tok: P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package: P_abstractPackage);
   VAR i:longint;
   begin
     i:=length(dat);
     setLength(dat,i+1);
-    dat[i].create(tok,localIdInfos,package);
+    dat[i].create(tok,callAndIdInfos,package);
     if (i>0) and (tok<>nil) then begin
       dat[i-1].endsAtColumn:=tok^.location.column-1;
     end;
@@ -1117,7 +1196,7 @@ FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation
     end;
   end;
 
-CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_localIdInfos; CONST package:P_abstractPackage);
+CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package:P_abstractPackage);
   VAR tokenText:string;
   begin
     linksTo:=nothing;
@@ -1136,7 +1215,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_loc
 
     tokenText:=safeTokenToString(token);
     if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal,tt_globalVariable,tt_customType]) then
-    case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
+    case callAndIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
       tt_eachParameter: begin
         token^.tokType:=tt_eachParameter;
         references.package:=package;
@@ -1388,7 +1467,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
       {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.markBlobLine(inputLocation.line,closer);
+      if callAndIdInfos<>nil then callAndIdInfos^.markBlobLine(inputLocation.line,closer);
       {$endif}
       //id now is rest of line
       id:=copy(line,inputLocation.column,length(line));
@@ -1586,7 +1665,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
             nextToken^.txt    :=n[1]^.txt;
             nextToken^.data   :=n[1]^.data;
             {$ifdef fullVersion}
-            associatedPackage^.markTypeAsUsed(nextToken,functionCallInfos);
+            associatedPackage^.markTypeAsUsed(nextToken,callAndIdInfos);
             {$endif}
             recycler.disposeToken(n[1]);
           end else begin
@@ -1756,7 +1835,7 @@ PROCEDURE T_extendedPackage.resolveId(VAR token: T_token;
     extender^.resolveId(token,adaptersOrNil);
   end;
 
-FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}):P_mapLiteral;
+FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral;
   begin
     {$ifdef fullVersion}
     if functionCallInfos<>nil then new(functionCallInfos,create);
@@ -1764,7 +1843,7 @@ FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST conte
     result:=newMapLiteral(0);
   end;
 
-FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; VAR recycler: T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_functionCallInfos{$endif}): P_mapLiteral;
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; VAR recycler: T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
   begin
     {$ifdef fullVersion}
     if functionCallInfos=nil then new(functionCallInfos,create);
