@@ -581,6 +581,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycl
       nextToProcess:=tokenQueue.next;
       if nextToProcess^.tokType=tt_semicolon then begin
         if localIdStack.scopeBottom then begin
+          if nextStatement.token.first=nil then messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
           recycler.disposeToken(nextToProcess);
           result:=nextStatement;
           if not(messages^.continueEvaluation) then recycler.cascadeDisposeToken(result.token.first);
