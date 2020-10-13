@@ -221,7 +221,7 @@ FUNCTION inspect_imp intFuncSignature;
       end;
     end;
 
-  PROCEDURE loadTemporaryPackage({$ifdef fullVersion}OUT functionCallInfos:P_functionCallInfos{$endif});
+  PROCEDURE loadTemporaryPackage({$ifdef fullVersion}OUT functionCallInfos:P_callAndIdInfos{$endif});
     VAR msg:T_storedMessages;
         k:longint;
     begin
@@ -232,7 +232,7 @@ FUNCTION inspect_imp intFuncSignature;
     end;
 
   {$ifdef fullVersion}
-  VAR functionCallInfos:P_functionCallInfos=nil;
+  VAR functionCallInfos:P_callAndIdInfos=nil;
   {$endif}
   begin
     result:=nil;
@@ -260,7 +260,7 @@ FUNCTION inspect_imp intFuncSignature;
 FUNCTION inspectAll_imp intFuncSignature;
   VAR main,p:P_package;
       {$ifdef fullVersion}
-      functionCallInfos:P_functionCallInfos=nil;
+      functionCallInfos:P_callAndIdInfos=nil;
       {$endif}
   begin
     result:=nil;

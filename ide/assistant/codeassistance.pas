@@ -11,7 +11,6 @@ USES
   mnh_constants,
   fileWrappers,
   tokenArray,
-  tokenStack,
   mnh_messages,
   out_adapters,
   contexts,
@@ -27,7 +26,7 @@ TYPE
       highlightingCs:TRTLCriticalSection;
       warnLocations:array of record line,column:longint; isError:boolean; end;
       userRules    :T_setOfString;
-      localIdInfos :T_localIdInfos;
+      localIdInfos :T_callAndIdInfos;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -44,11 +43,10 @@ TYPE
       responseCs:TRTLCriticalSection;
       referenceCount:longint;
       localErrors,externalErrors:T_storedMessages;
-      localIdInfos:P_localIdInfos;
-      functionCallInfos:P_functionCallInfos;
+      callAndIdInfos:P_callAndIdInfos;
       responseStateHash:T_hashInt;
 
-      CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos; CONST functionCallInfos_:P_functionCallInfos);
+      CONSTRUCTOR create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST callAndIdInfos_:P_callAndIdInfos);
       DESTRUCTOR destroy;
 
       FUNCTION  rereferenced:P_codeAssistanceResponse;
@@ -191,21 +189,20 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
       //output
       initialStateHash:T_hashInt;
       package:P_package;
-      localIdInfos:P_localIdInfos;
-      functionCallInfos:P_functionCallInfos;
+      callAndIdInfos:P_callAndIdInfos;
       loadMessages:T_storedMessages;
       additionals:T_arrayOfString;
 
   PROCEDURE loadSecondaryPackage(CONST name:string);
     VAR user:T_package;
-        secondaryCallInfos:T_functionCallInfos;
+        secondaryCallInfos:T_callAndIdInfos;
     begin
       globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
       secondaryCallInfos.create;
-      user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,nil,@secondaryCallInfos);
-      functionCallInfos^.includeUsages(@secondaryCallInfos);
+      user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
+      callAndIdInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;
       user.destroy;
@@ -234,8 +231,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
         globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
         globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
         if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
-        new(localIdInfos,create);
-        new(functionCallInfos,create);
+        new(callAndIdInfos,create);
         {$ifdef debugMode}
         write('Additional scripts to scan :',length(additionals),': ');
         for script in additionals do write(script,',');
@@ -244,7 +240,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
 
         for script in additionals do loadSecondaryPackage(script);
         globals^.primaryContext.messages^.clear();
-        package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,localIdInfos,functionCallInfos);
+        package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
         if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                              else loadMessages:=adapters      .storedMessages(true);
         globals^.afterEvaluation(recycler);
@@ -255,7 +251,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
         try
           if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
           latestResponse:=nil;
-          new(latestResponse,create(package,loadMessages,initialStateHash,localIdInfos,functionCallInfos));
+          new(latestResponse,create(package,loadMessages,initialStateHash,callAndIdInfos));
         finally
           leaveCriticalSection(cs);
         end;
@@ -319,7 +315,7 @@ PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData: T_hi
       try
         highlightingData.userRules.clear;
         latestResponse^.package^.ruleMap.updateLists(highlightingData.userRules,false);
-        highlightingData.localIdInfos.copyFrom(latestResponse^.localIdInfos);
+        highlightingData.localIdInfos.copyFrom(latestResponse^.callAndIdInfos);
         setLength(highlightingData.warnLocations,length(latestResponse^.localErrors));
         k:=0;
         for e in latestResponse^.localErrors do begin
@@ -346,7 +342,7 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
   PROCEDURE appendUsageInfo;
     begin
       if (info.tokenType in [tt_userRule,tt_customType,tt_globalVariable,tt_customTypeCheck]) then begin
-        info.referencedAt:=latestResponse^.functionCallInfos^.whoReferencesLocation(info.location);
+        info.referencedAt:=latestResponse^.callAndIdInfos^.whoReferencesLocation(info.location);
       end;
     end;
 
@@ -364,7 +360,7 @@ FUNCTION T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONS
       result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
       if result then begin
         lexer.create(fullLine,loc,latestResponse^.package);
-        enhanced:=lexer.getEnhancedTokens(latestResponse^.localIdInfos);
+        enhanced:=lexer.getEnhancedTokens(latestResponse^.callAndIdInfos);
         info:=enhanced.getTokenAtIndex(CaretX).toInfo;
         info.fullLine:=fullLine;
         info.CaretX:=CaretX;
@@ -395,7 +391,7 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location: T_searchTok
       loc.column:=1;
       loc.package:=latestResponse^.package;
       lexer.create(lineText,loc,latestResponse^.package);
-      enhanced:=lexer.getEnhancedTokens(latestResponse^.localIdInfos);
+      enhanced:=lexer.getEnhancedTokens(latestResponse^.callAndIdInfos);
       result:=enhanced.renameInLine(lineText,location,oldId,newId);
       enhanced.destroy;
       lexer.destroy;
@@ -438,8 +434,8 @@ FUNCTION T_codeAssistanceData.updateCompletionList(
     try
       ensureResponse;
       latestResponse^.package^.ruleMap.updateLists(wordsInEditor,true);
-      for s in latestResponse^.localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-      result:=(latestResponse^.package^.ruleMap.size>0) or not(latestResponse^.localIdInfos^.isEmpty);
+      for s in latestResponse^.callAndIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
+      result:=(latestResponse^.package^.ruleMap.size>0) or not(latestResponse^.callAndIdInfos^.isEmpty);
     finally
       querying:=false;
       leaveCriticalSection(cs);
@@ -455,7 +451,7 @@ FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequireme
     end else querying:=true;
     try
       ensureResponse;
-      result:=latestResponse^.functionCallInfos^.getBuiltinRestrictions;
+      result:=latestResponse^.callAndIdInfos^.getBuiltinRestrictions;
     finally
       querying:=false;
       leaveCriticalSection(cs);
@@ -633,7 +629,7 @@ PROCEDURE T_codeAssistanceData.doCreateHtmlData;
     VAR b:T_builtinFunctionMetaData;
     begin
       result:=C_EMPTY_STRING_ARRAY;
-      for b in latestResponse^.functionCallInfos^.calledBuiltinFunctions do append(result,b.qualifiedId);
+      for b in latestResponse^.callAndIdInfos^.calledBuiltinFunctions do append(result,b.qualifiedId);
     end;
 
   VAR demoIndex:longint;
@@ -801,7 +797,7 @@ PROCEDURE T_highlightingData.clearLocalIdInfos;
     end;
   end;
 
-CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST localIdInfos_:P_localIdInfos; CONST functionCallInfos_:P_functionCallInfos);
+CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST callAndIdInfos_:P_callAndIdInfos);
   VAR m:P_storedMessage;
       level:longint;
   begin
@@ -811,9 +807,8 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
       referenceCount:=1;
       package:=package_;
       responseStateHash:=stateHash_;
-      localIdInfos:=localIdInfos_;
-      functionCallInfos:=functionCallInfos_;
-      functionCallInfos^.cleanup;
+      callAndIdInfos:=callAndIdInfos_;
+      callAndIdInfos^.cleanup;
       setLength(localErrors,0);
       setLength(externalErrors,0);
       for level:=4 downto 1 do for m in messages do
@@ -841,8 +836,7 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
       setLength(localErrors,0);
       for m in externalErrors do disposeMessage_(m);
       setLength(externalErrors,0);
-      dispose(localIdInfos,destroy);
-      dispose(functionCallInfos,destroy);
+      dispose(callAndIdInfos,destroy);
       dispose(package,destroy);
     finally
       leaveCriticalSection(responseCs);
