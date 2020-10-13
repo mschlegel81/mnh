@@ -642,7 +642,7 @@ PROCEDURE T_idStack.applyToken(CONST token:P_token; CONST messages:P_messages);
   begin
     if (messages<>nil) and (prevToken<>nil) then begin
       if (prevToken^.tokType in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
-         (token    ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression  ,tt_expBraceClose,tt_iifElse]) then begin
+         (token    ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression                                                     ,tt_expBraceClose,tt_iifElse]) then begin
         messages^.raiseSimpleError('Empty '+prevToken^.singleTokenToString+'-'+token^.singleTokenToString+' block',token^.location);
       end;
       if (prevToken^.tokType in [tt_separatorCnt,tt_separatorComma]) and (token^.tokType in C_closingBrackets) then begin
@@ -1592,6 +1592,9 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
             appendToken(nextToken);
             nextToken:=n[1]; //=> repeat case distinction
           end;
+        end else begin
+          appendToken(nextToken);
+          nextToken:=nil;
         end;
       end;
       tt_identifier: if (associatedPackage<>nil) then begin
