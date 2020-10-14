@@ -4,5 +4,5 @@
 	branch = master
 [submodule "igSrc"]
 	path = igSrc
-	url = C:/dev/git/igSrc
+	url = https://github.com/mschlegel81/igSrc.git
 	branch = master
