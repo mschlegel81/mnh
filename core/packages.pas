@@ -112,7 +112,7 @@ TYPE
     end;
 CONST
   C_packageLoadUsecaseMeta:array[T_packageLoadUsecase] of record
-    import_useCase:T_packageLoadUsecase;
+    import_usecase:T_packageLoadUsecase;
     assistanceRun,
     loadUsedPacks ,
     interpretInputStatements,
@@ -475,8 +475,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
-            if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_useCase then
-            secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_useCase,globals,recycler,C_EMPTY_STRING_ARRAY);
+            if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_usecase then
+            secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -487,7 +487,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_useCase,globals,recycler,C_EMPTY_STRING_ARRAY);
+      pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY);
     end;
   end;
 
