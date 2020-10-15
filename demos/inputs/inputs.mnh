@@ -3,8 +3,8 @@ private ensureLocal(path,src)-> fileExists(path) ? path : fileExists (src) ? beg
   path;
 end : fail;
 
-kjv ->ensureLocal(extractFileDirectory(myPath)&"/kjv.txt"     ,'C:\dev\web\page\data/kjv.dat');
-dict->ensureLocal(extractFileDirectory(myPath)&"/unixdict.txt",'C:\dev\web\page\data/dict.dat');
+kjv ->ensureLocal(extractFileDirectory(myPath)&"/kjv.txt"     ,'..\..\..\web\page\data/kjv.dat');
+dict->ensureLocal(extractFileDirectory(myPath)&"/unixdict.txt",'..\..\..\web\page\data/dict.dat');
 editedDict->begin
   local path:=dict.changeFileExt('2.txt');
   fileExists(path)
