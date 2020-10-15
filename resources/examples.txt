@@ -148,11 +148,7 @@ exp({1+$x});
 
 ln(-0.92);
 
-ln(3);
-
 ln({1+$x});
-
-ln(-0.92);
 
 sin(3);
 
@@ -308,6 +304,10 @@ unbrace('"3"');
 //#elementFrequency
 chars('Testtext').elementFrequency;
 
+//#elementFrequency
+//elementFrequency can be used for aggregating
+chars('Testtext').agg(elementFrequency);
+
 flatten([1,[2,[3,4],[5]],6]);
 
 head(['A'..'Z']);
@@ -342,13 +342,19 @@ trailing(['A'..'Z'],3);
 rangeGenerator(1,10).trailing(3);
 
 //Odd squares
-minus([1..10]^2,2*[0..50])
+minus([1..10]²,2*[0..50])
+
+//#chunkMap
+rangeGenerator(1,20).chunkMap(5,(x)->format('%2s',x)).toList;
+
+//flatMap
+[1,[2,3],[4,5,6]].flatMap((x)->x³).toList;
 
 //#sort
 sort(intRandom(10,5));
 
 //#sort
-sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
+sort(['01','10','100','1','010'],(x,y)->softCast(x)<=softCast(y));
 
 //#sortPerm
 //A random permutation:
@@ -956,7 +962,7 @@ divMod(10,7);
 
 'abba'.hasPrefix('ab');
 
-isPrime(47531677974672740279381824573269878221106369761801704860769848227327108403647);
+isPrime(47531677974672740279381824573269878221106369761817);
 
 //#mnh.COMPARATOR_LISTEQ
 3==3.0; //not equal, because types differ
@@ -1066,6 +1072,12 @@ true xor false;
 //#OPERATOR_IN
 3.0 in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
 
+//#OPERATOR_NOT_IN
+3 not in [1..5];
+
+//#OPERATOR_NOT_IN
+3.0 not in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
+
 //#OPERATOR_CONCAT
 1|2;
 
@@ -1141,12 +1153,22 @@ isSubsetOf([1,4],[1,2,3]);
 
 driveInfo;
 
+getCPULoadPercentage;
+
+//#getTaskInfo
+getTaskInfo.filter((task)->task['PID']=mnhInfo['PID']);
+
 wrapTextInHttp('Test');
 
 //#sleep
-t0:=time;
+t0:=scriptTime;
 sleep(0.1);
-time-t0;
+scriptTime-t0;
+
+//#scriptTime
+t0:=scriptTime;
+sleep(0.01);
+scriptTime-t0;
 
 //#time
 time({sin(random(1000)).agg(+)});
@@ -1193,3 +1215,6 @@ mnhInfo;
 myPath;
 
 expandedFileName('/home/user/file.ext');
+
+ln(3);
+
