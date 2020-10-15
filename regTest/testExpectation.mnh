@@ -26,7 +26,6 @@ private flavourDependentScripts:=
    'rotatingCube',
    'root',
    'shannonEntropy',
-   'thieleInterpolation',
    'test_rationals',
    'testPackages',
    EXAMPLES_LOG_NAME];

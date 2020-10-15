@@ -70,7 +70,9 @@ TYPE
 
       FUNCTION inputStateHash:T_hashInt;
       FUNCTION isAssistanceDataOutdated:boolean;
+      {Precondition: Own cs; Postcondition: Own cs; cs may be left in between}
       PROCEDURE ensureResponse;
+      {Precondition: Own cs; Postcondition: Own cs; cs may be left in between}
       FUNCTION  doCodeAssistanceSynchronouslyInCritialSection(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):boolean;
       //Documentation-related
       PROCEDURE doCreateHtmlData;
@@ -180,8 +182,7 @@ PROCEDURE T_codeAssistanceData.setAddidionalScripts(CONST toScan: T_arrayOfStrin
     end;
   end;
 
-FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
-  VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals;
+FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR recycler: T_recycler; CONST givenGlobals: P_evaluationGlobals;
   CONST givenAdapters: P_messagesErrorHolder): boolean;
   VAR //temporary
       globals:P_evaluationGlobals;
@@ -248,24 +249,14 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(
         writeln('Code assistance end  : ',provider^.getPath);
         {$endif}
         enterCriticalSection(cs);
-        try
-          if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
-          latestResponse:=nil;
-          new(latestResponse,create(package,loadMessages,initialStateHash,callAndIdInfos));
-        finally
-          leaveCriticalSection(cs);
-        end;
+        if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
+        latestResponse:=nil;
+        new(latestResponse,create(package,loadMessages,initialStateHash,callAndIdInfos));
       finally
         evaluating:=false;
-        if givenGlobals=nil then begin
-          dispose(globals,destroy);
-          adapters.destroy;
-        end;
-        leaveCriticalSection(cs);
       end;
       result:=true;
     end else begin
-      leaveCriticalSection(cs);
       result:=false;
     end;
   end;
@@ -534,7 +525,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
           if not(codeAssistanceData[scanIndex]^.destroying) and
              codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
           then anyScanned:=true;
-
+          leaveCriticalSection(codeAssistanceData[scanIndex]^.cs);
           enterCriticalSection(codeAssistanceCs);
         end;
         inc(scanIndex);
@@ -923,8 +914,9 @@ PROCEDURE finalizeCodeAssistance;
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
     end;
-    if codeAssistantIsRunning then KillThread(codeAssistantThreadId);
-    doneCriticalSection(codeAssistanceCs);
+    if codeAssistantIsRunning
+    then KillThread(codeAssistantThreadId)
+    else doneCriticalSection(codeAssistanceCs);
     isFinalized:=true;
   end;
 

@@ -27,8 +27,8 @@ main->begin
   local aSin:=invSample(::sin);
   local aCos:=invSample(::cos);
   local aTan:=invSample(::tan);
-  print('Internal pi         : ',pi);
-  print('Thiele 6*InvSin(0.5): ',6*aSin(0.5));
-  print('Thiele 3*InvCos(0.5): ',3*aCos(0.5));
-  print('Thiele 4*InvTan(1)  : ',4*aTan(1));
+  printf('Internal pi         : %0.16d',pi);
+  printf('Thiele 6*InvSin(0.5): %0.16d',6*aSin(0.5));
+  printf('Thiele 3*InvCos(0.5): %0.16d',3*aCos(0.5));
+  printf('Thiele 4*InvTan(1)  : %0.16d',4*aTan(1));
 end;
