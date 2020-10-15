@@ -1,15 +1,14 @@
 object SplashForm: TSplashForm
   Left = 629
-  Height = 309
+  Height = 367
   Top = 188
   Width = 512
   AutoSize = True
   Caption = 'MNH5 - Splash'
-  ClientHeight = 309
+  ClientHeight = 367
   ClientWidth = 512
   Color = clWhite
   DefaultMonitor = dmPrimary
-  DesignTimePPI = 120
   OnActivate = FormActivate
   OnClose = FormClose
   OnShow = FormShow
@@ -19,13 +18,13 @@ object SplashForm: TSplashForm
   Scaled = False
   object Panel1: TPanel
     Left = 0
-    Height = 309
+    Height = 367
     Top = 0
     Width = 512
     Align = alClient
     AutoSize = True
     BevelWidth = 3
-    ClientHeight = 309
+    ClientHeight = 367
     ClientWidth = 512
     ParentFont = False
     TabOrder = 0
@@ -1139,7 +1138,7 @@ object SplashForm: TSplashForm
     end
     object Label1: TLabel
       Left = 3
-      Height = 14
+      Height = 78
       Top = 178
       Width = 506
       Align = alClient
@@ -1155,8 +1154,8 @@ object SplashForm: TSplashForm
     end
     object CheckBox1: TCheckBox
       Left = 3
-      Height = 24
-      Top = 212
+      Height = 23
+      Top = 271
       Width = 506
       Align = alBottom
       Caption = 'Stay open on startup'
@@ -1168,8 +1167,8 @@ object SplashForm: TSplashForm
     end
     object Label2: TLabel
       Left = 3
-      Height = 20
-      Top = 192
+      Height = 15
+      Top = 256
       Width = 506
       Align = alBottom
       Alignment = taRightJustify
@@ -1180,7 +1179,7 @@ object SplashForm: TSplashForm
     object buttonInitNormal: TButton
       Left = 3
       Height = 25
-      Top = 236
+      Top = 294
       Width = 506
       Align = alBottom
       Caption = 'Initialize as normal application'
@@ -1193,7 +1192,7 @@ object SplashForm: TSplashForm
     object buttonInitPortable: TButton
       Left = 3
       Height = 25
-      Top = 261
+      Top = 319
       Width = 506
       Align = alBottom
       Caption = 'Initialize as portable version'
@@ -1206,7 +1205,7 @@ object SplashForm: TSplashForm
     object ProgressBar: TProgressBar
       Left = 3
       Height = 20
-      Top = 286
+      Top = 344
       Width = 506
       Align = alBottom
       Max = 1500
