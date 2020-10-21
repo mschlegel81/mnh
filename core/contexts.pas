@@ -297,6 +297,7 @@ CONSTRUCTOR T_contextRecycler.create;
     initCriticalSection(recyclerCS);
     fill:=0;
     initialize(contexts);
+    memoryCleaner.registerObjectForCleanup(@cleanup);
   end;
 
 PROCEDURE T_contextRecycler.cleanup;
@@ -317,6 +318,7 @@ DESTRUCTOR T_contextRecycler.destroy;
   begin
     cleanup;
     doneCriticalSection(recyclerCS);
+    memoryCleaner.unregisterObjectForCleanup(@cleanup);
   end;
 
 PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
@@ -788,10 +790,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
     end;
   end;
 
-PROCEDURE T_context.raiseCannotApplyError(CONST ruleWithType: string;
-  CONST parameters: P_listLiteral; CONST location: T_tokenLocation;
-  CONST suffix: string; CONST missingMain: boolean);
-  VAR message:string;
+PROCEDURE T_context.raiseCannotApplyError(CONST ruleWithType: string; CONST parameters: P_listLiteral; CONST location: T_tokenLocation; CONST suffix: string; CONST missingMain: boolean); VAR message:string;
   begin
     message:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
     if length(suffix)>0 then message+=C_lineBreakChar+suffix;

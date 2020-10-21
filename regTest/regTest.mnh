@@ -31,7 +31,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
  begin
     printCase(scriptFileName);
     local logName:=extractFileNameOnly(scriptFileName);
-    local startTime:=time;
+    local startTime:=scriptTime;
     local output:=runScript(testConfiguration(scriptFileName))
                  .processSandboxOutput(DEMO_EXCLUDES)
                  |checkAfterTest(scriptFileName);
@@ -43,7 +43,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
     : checkExpectation(
         logName,
         output,
-        time-startTime,
+        scriptTime-startTime,
         doLog);
   end;
 
@@ -65,7 +65,7 @@ private executeExamples(doLog:Boolean)->begin
   local collectOut:=true;
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
-  local startTime:=time;
+  local startTime:=scriptTime;
   inputLines.each(line,
     line==''
     ? begin
@@ -80,7 +80,7 @@ private executeExamples(doLog:Boolean)->begin
   checkExpectation(
         EXAMPLES_LOG_NAME,
         output,
-        time-startTime,
+        scriptTime-startTime,
         doLog);
 end;
 
@@ -164,5 +164,3 @@ main('makebat',exeName)->begin
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
 end;
-
-executeExamples(false);

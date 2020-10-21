@@ -61,7 +61,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
   VAR caption:string='';
       Post:P_treeDisplayRequest;
   begin
-    if not(context.checkSideEffects('showVariable',tokenLocation,[se_output,se_input])) then exit(nil);
+    if not(context.checkSideEffects('showVariable',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
@@ -201,6 +201,6 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showVariable',@showVariable_impl,ak_variadic_1,'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a table with given caption',sfr_needs_gui);
+  registerRule(GUI_NAMESPACE,'showVariable',@showVariable_impl,ak_variadic_1,'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a table with given caption',[se_alterGuiState]);
 end.
 

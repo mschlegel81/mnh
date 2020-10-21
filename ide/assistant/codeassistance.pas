@@ -91,7 +91,7 @@ TYPE
       FUNCTION  getImportablePackages:T_arrayOfString;
       FUNCTION  updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       //Shebang related
-      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
+      FUNCTION  getBuiltinSideEffects:T_sideEffects;
       FUNCTION  isExecutablePackage:boolean;
       //Export
       FUNCTION getAssistanceResponseRereferenced:P_codeAssistanceResponse;
@@ -252,6 +252,11 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR 
         if latestResponse<>nil then disposeCodeAssistanceResponse(latestResponse);
         latestResponse:=nil;
         new(latestResponse,create(package,loadMessages,initialStateHash,callAndIdInfos));
+
+        if givenGlobals=nil then begin
+          adapters.destroy;
+          dispose(globals,destroy);
+        end;
       finally
         evaluating:=false;
       end;
@@ -433,7 +438,7 @@ FUNCTION T_codeAssistanceData.updateCompletionList(
     end;
   end;
 
-FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequirements;
+FUNCTION T_codeAssistanceData.getBuiltinSideEffects:T_sideEffects;
   begin
     enterCriticalSection(cs);
     if destroying then begin
@@ -442,7 +447,7 @@ FUNCTION T_codeAssistanceData.getBuiltinRestrictions: T_specialFunctionRequireme
     end else querying:=true;
     try
       ensureResponse;
-      result:=latestResponse^.callAndIdInfos^.getBuiltinRestrictions;
+      result:=latestResponse^.callAndIdInfos^.getBuiltinSideEffects;
     finally
       querying:=false;
       leaveCriticalSection(cs);

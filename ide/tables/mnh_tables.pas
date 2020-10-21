@@ -102,7 +102,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
       tableDisplayRequest:P_tableDisplayRequest;
   begin
-    if not(context.checkSideEffects('showTable',tokenLocation,[se_output,se_input])) then exit(nil);
+    if not(context.checkSideEffects('showTable',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (gui_started=NO) then begin
       context.messages^.logGuiNeeded;
       exit(nil);
@@ -489,7 +489,7 @@ INITIALIZATION
   registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#'+
     'showTable(L:list,caption:string);//Shows L in a table with given caption.#'+
     'showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.#'+
-    'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns',sfr_needs_gui);
+    'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns',[se_alterGuiState]);
 
 end.
 

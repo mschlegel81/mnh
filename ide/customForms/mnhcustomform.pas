@@ -699,6 +699,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       context.messages^.logGuiNeeded;
       exit(nil);
     end;
+    if not(context.checkSideEffects('showDialog',location,[se_alterGuiState,se_input])) then exit(nil);
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
       new(formRequest,create(P_stringLiteral(params^.value[0])^.value,
                          P_mapLiteral(params^.value[1]),
@@ -781,7 +782,7 @@ DESTRUCTOR T_customFormAdapter.destroy;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed',sfr_needs_gui);
+  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed',[se_alterGuiState,se_input]);
 
 end.
 

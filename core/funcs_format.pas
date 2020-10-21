@@ -360,13 +360,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       else fpar^.append(iter[k][    0],true);
 
       if formatSubrule<>nil then begin
-        oldSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious([
-          se_readPackageState,
-          se_alterContextState,
-          se_readFile,
-          se_accessHttp,
-          se_accessIpc,
-          se_executingExternal]*context.sideEffectWhitelist);
+        oldSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious(C_sideEffectsForFormatting*context.sideEffectWhitelist);
         temp:=formatSubrule^.evaluateFormat(tokenLocation,context,recycler,fpar);
         context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);

@@ -30,33 +30,20 @@ CONST
                           {ak_variadic_3} (fixedParameters:3;       variadic:true ));
 
 TYPE
-  {$ifdef fullVersion}
-  T_specialFunctionRequirement=(sfr_none,sfr_needs_full_version,sfr_needs_gui,sfr_beeps,sfr_asks);
-  T_specialFunctionRequirements=set of T_specialFunctionRequirement;
-  {$endif}
   P_intFuncCallback=FUNCTION intFuncSignature;
 
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
   T_builtinFunctionMetaData=object
     arityKind    :T_arityKind;
-    {$ifdef fullVersion}
-    specialRequirement:T_specialFunctionRequirement;
-    {$endif}
     namespace    :T_namespace;
     unqualifiedId:T_idString;
+    sideEffects  :T_sideEffects;
     FUNCTION qualifiedId:string;
   end;
   T_builtinFunctionMetaDatas=array of T_builtinFunctionMetaData;
   T_builtinRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
 
-VAR
-  intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
-  builtinRuleMap  :T_builtinRuleMap;
-  builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
-  failFunction    :P_intFuncCallback;
-  print_cs        :system.TRTLCriticalSection;
-  makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring; CONST requirement:T_specialFunctionRequirement=sfr_none;{$endif}CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
@@ -64,12 +51,19 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
 FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
+VAR builtinRuleMap  :T_builtinRuleMap;
+    makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
+    intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
+    print_cs        :system.TRTLCriticalSection;
+    failFunction    :P_intFuncCallback;
 IMPLEMENTATION
 USES sysutils,Classes,
      myStringUtil
      {$ifdef fullVersion},
      mnh_doc{$endif};
-VAR builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
+VAR
+  builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
+  builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
 
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
   begin
@@ -78,7 +72,7 @@ OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; {$ifdef fullVersion}CONST explanation: ansistring; CONST requirement:T_specialFunctionRequirement=sfr_none;{$endif} CONST fullNameOnly: boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
@@ -88,9 +82,7 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
     meta.arityKind:=aritiyKind;
     meta.namespace:=namespace;
     meta.unqualifiedId:=name;
-    {$ifdef fullVersion}
-    meta.specialRequirement:=requirement;
-    {$endif}
+    meta.sideEffects:=sideEffects;
     builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
@@ -224,8 +216,11 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
   end;
 
 {$WARN 5024 OFF}
+{$define FUNC_ID:='clearPrint'}
+{$define SIDE_EFFECTS:=[se_output]}
 FUNCTION clearPrint_imp intFuncSignature;
   begin
+    CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
       context.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
@@ -265,9 +260,10 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
     if tabOrBreak then result:=formatTabs(split(result[0]));
   end;
 
+{$define FUNC_ID:='print'}
 FUNCTION print_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
+    CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
       context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
@@ -277,9 +273,10 @@ FUNCTION print_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
+{$define FUNC_ID:='printDirect'}
 FUNCTION printDirect_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
+    CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
       context.messages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
@@ -289,16 +286,18 @@ FUNCTION printDirect_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
+{$define FUNC_ID:='note'}
 FUNCTION note_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('note',tokenLocation,[se_output])) then exit(nil);
+    CHECK_SIDE;
     context.messages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
+{$define FUNC_ID:='warn'}
 FUNCTION warn_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('warn',tokenLocation,[se_output])) then exit(nil);
+    CHECK_SIDE;
     context.messages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
@@ -326,8 +325,11 @@ FUNCTION assert_impl intFuncSignature;
     end;
   end;
 
+{$define FUNC_ID:='halt'}
+{$define SIDE_EFFECTS:=[se_alterContextState]}
 FUNCTION halt_impl intFuncSignature;
   begin
+    CHECK_SIDE;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       context.messages^.setStopFlag;
@@ -365,15 +367,15 @@ INITIALIZATION
   builtinMetaMap.create;
   builtinExpressionMap.create(@disposeIdentifiedInternalFunction);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif},[se_output]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif},[se_output]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif},[se_output]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif},[se_output]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif},[se_output]);
   failFunction:=
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif},[se_alterContextState]);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
   system.initCriticalSection(print_cs);
 FINALIZATION

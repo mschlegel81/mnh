@@ -142,7 +142,7 @@ TYPE
       PROCEDURE add(CONST token:P_token);
       PROCEDURE cleanup;
       FUNCTION  calledBuiltinFunctions:T_builtinFunctionMetaDatas;
-      FUNCTION  getBuiltinRestrictions:T_specialFunctionRequirements;
+      FUNCTION  getBuiltinSideEffects:T_sideEffects;
       FUNCTION  whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION  isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
       FUNCTION  isPackageReferenced(CONST packagePath:string):boolean;
@@ -1004,11 +1004,11 @@ FUNCTION T_callAndIdInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
     end;
   end;
 
-FUNCTION T_callAndIdInfos.getBuiltinRestrictions:T_specialFunctionRequirements;
+FUNCTION T_callAndIdInfos.getBuiltinSideEffects:T_sideEffects;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=[];
-    for meta in calledBuiltinFunctions do include(result,meta.specialRequirement);
+    for meta in calledBuiltinFunctions do result+=meta.sideEffects;
   end;
 
 FUNCTION T_callAndIdInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;

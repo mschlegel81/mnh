@@ -15,7 +15,7 @@ USES out_adapters,mnh_messages;
 {$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
+    if not(context.checkSideEffects('resetRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
     result:=nil;
     if (params= nil) or  (params^.size=0) then begin context.getGlobals^.prng.resetSeed(0); result:=newVoidLiteral; end else
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context.getGlobals^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
@@ -25,7 +25,7 @@ FUNCTION resetRandom_impl intFuncSignature;
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
-    if not(context.checkSideEffects('random',tokenLocation,[se_alterContextState])) then exit(nil);
+    if not(context.checkSideEffects('random',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getGlobals^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
       count:=int0^.intValue;
@@ -48,8 +48,7 @@ FUNCTION intRandom_imp intFuncSignature;
     end;
 
   begin
-    if not(context.checkSideEffects('intRandom',tokenLocation,[se_alterContextState])) then exit(nil);
-
+    if not(context.checkSideEffects('intRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint])
     then exit(singleIntRandom)
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
@@ -65,6 +64,7 @@ FUNCTION intRandom_imp intFuncSignature;
 
 FUNCTION systime_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('systime',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0)
     then exit(newRealLiteral(now));
@@ -122,6 +122,7 @@ FUNCTION driveInfo_imp intFuncSignature;
   VAR c:char;
       info:P_literal;
   begin
+    if not(context.checkSideEffects('driveInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newMapLiteral(4);
@@ -146,6 +147,7 @@ FUNCTION getEnv_impl intFuncSignature;
       inner:P_listLiteral;
 
   begin
+    if not(context.checkSideEffects('getEnv',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newMapLiteral(30);
@@ -166,6 +168,7 @@ FUNCTION getEnv_impl intFuncSignature;
 
 FUNCTION setExitCode_impl intFuncSignature;
   begin
+
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.intValue;
       context.messages^.setUserDefinedExitCode(ExitCode);
@@ -175,6 +178,7 @@ FUNCTION setExitCode_impl intFuncSignature;
 
 FUNCTION scriptTime_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('scriptTime',tokenLocation,[se_readContextState])) then exit(nil);
     result:=newRealLiteral(context.wallclockTime);
   end;
 
@@ -191,6 +195,7 @@ FUNCTION time_imp intFuncSignature;
     end;
 
   begin
+    if not(context.checkSideEffects('time',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'time() is deprecated. Use scriptTime instead.');
@@ -218,6 +223,7 @@ FUNCTION time_imp intFuncSignature;
 
 FUNCTION changeDirectory_impl intFuncSignature;
   begin
+    if not(context.checkSideEffects('changeDirectory',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState])  then begin
       SetCurrentDir(str0^.value);
       result:=newVoidLiteral;
@@ -226,6 +232,7 @@ FUNCTION changeDirectory_impl intFuncSignature;
 
 FUNCTION callMemoryCleaner_impl intFuncSignature;
   begin
+    if not(context.checkSideEffects('callMemoryCleaner',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       memoryCleaner.callCleanupMethods;
       result:=newVoidLiteral;
@@ -248,6 +255,7 @@ FUNCTION isGuiStarted_impl intFuncSignature;
 FUNCTION getCPULoadPercentage_impl intFuncSignature;
   begin
     {$ifdef Windows}
+    if not(context.checkSideEffects('getCPULoadPercentage',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=newIntLiteral(mySys.getCPULoadPercentage);
     {$else}
     context.raiseError('Implemented for Windows flavours only',tokenLocation);
@@ -262,6 +270,7 @@ FUNCTION getTaskInfo_impl intFuncSignature;
   {$endif}
   begin
     {$ifdef Windows}
+    if not(context.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     info:=mySys.getTaskInfo;
     result:=newListLiteral(length(info));
     for i in info do listResult^.append(newMapLiteral(5)
@@ -277,23 +286,23 @@ FUNCTION getTaskInfo_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep',sfr_beeps{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   {$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif},[se_readContextState,se_alterContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif},[se_readContextState,se_alterContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif},[se_readContextState,se_alterContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif},[se_readContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep'{$endif},[se_sound]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif},[se_executingExternal]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   {$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif},[se_executingExternal]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif},[se_alterContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif},[se_alterContextState]);
   {$ifdef fullVersion}timeLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif},[se_readContextState]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization',sfr_needs_gui{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started',sfr_needs_gui{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif});
+               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif},[se_readContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif},[se_alterContextState]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif},[se_executingExternal]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif},[se_executingExternal]);
 end.

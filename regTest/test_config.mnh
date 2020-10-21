@@ -82,8 +82,8 @@ isSmokeTest(scriptFileName:String)->false;
 checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
 checkAfterTest(file)->void;
 
-private DEFAULT_WHITELIST:=['output','sound','sleep','read package state','alter package state','alter context state'].toSet;
-WHITELIST_FOR_EXAMPLES:=DEFAULT_WHITELIST | ['alter plot state','write file','detaching'];
+private DEFAULT_WHITELIST:=['output','sound','sleep','read context state','read package state','alter package state','alter context state'].toSet;
+WHITELIST_FOR_EXAMPLES:=DEFAULT_WHITELIST | ['read GUI state','alter GUI state','write file','detaching'];
 private WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP:=DEFAULT_WHITELIST | ['write file','read file','http'];
 allowedSideEffects((demosRoot&'anagram.mnh'       ))->WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP;
 allowedSideEffects((demosRoot&'diff.mnh'          ))->WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP;
@@ -96,7 +96,7 @@ allowedSideEffects((demosRoot&'ipcTest.mnh'       ))->DEFAULT_WHITELIST | ['exec
 allowedSideEffects((demosRoot&'testExitCode.mnh'  ))->DEFAULT_WHITELIST | ['executing external'];
 allowedSideEffects((demosRoot&'helloWorldHttp.mnh'))->DEFAULT_WHITELIST | ['detaching', 'server','http'];
 allowedSideEffects((demosRoot&'logTest.mnh'       ))->DEFAULT_WHITELIST | ['write file','read file', 'executing external'];
-allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['alter plot state','write file'];
+allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['read GUI state','alter GUI state','write file'];
 allowedSideEffects(file            )->DEFAULT_WHITELIST;
 
 testConfiguration(file)->["name"=>file,

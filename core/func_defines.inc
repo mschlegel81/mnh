@@ -45,4 +45,6 @@
 {$define listResult:=P_listLiteral(result)}
 {$define setResult :=P_setLiteral(result)}
 {$define mapResult :=P_mapLiteral(result)}
+{$define VECTORIZE :=genericVectorization(FUNC_ID,params,tokenLocation,context,recycler)}
+{$define CHECK_SIDE:=if not(context.checkSideEffects(FUNC_ID,tokenLocation,SIDE_EFFECTS)) then exit(nil);}
 
