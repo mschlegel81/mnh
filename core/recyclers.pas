@@ -70,6 +70,8 @@ TYPE
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
+      {Return "pure" for the sake of constant inlining, i.e. memoized rules are pure by definition}
+      FUNCTION isPure:boolean; virtual; abstract;
   end;
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
