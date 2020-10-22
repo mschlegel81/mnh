@@ -1050,7 +1050,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
-     parameterList:T_listLiteral;
+      parameterList:T_listLiteral;
   begin
     parameterList.create(2);
     if a<>nil then parameterList.append(a,true);
@@ -1061,8 +1061,9 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
       result:=false;
-      if allowRaiseError then P_context(context)^.raiseError('Expression does not return a boolean.',location);
+      if allowRaiseError and (resultLiteral<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+resultLiteral^.typeString,location);
     end;
+    if resultLiteral<>nil then disposeLiteral(resultLiteral);
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
