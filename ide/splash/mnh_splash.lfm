@@ -9,6 +9,7 @@ object SplashForm: TSplashForm
   ClientWidth = 512
   Color = clWhite
   DefaultMonitor = dmPrimary
+  DesignTimePPI = 120
   OnActivate = FormActivate
   OnClose = FormClose
   OnShow = FormShow
@@ -1138,7 +1139,7 @@ object SplashForm: TSplashForm
     end
     object Label1: TLabel
       Left = 3
-      Height = 78
+      Height = 72
       Top = 178
       Width = 506
       Align = alClient
@@ -1154,8 +1155,8 @@ object SplashForm: TSplashForm
     end
     object CheckBox1: TCheckBox
       Left = 3
-      Height = 23
-      Top = 271
+      Height = 24
+      Top = 270
       Width = 506
       Align = alBottom
       Caption = 'Stay open on startup'
@@ -1167,8 +1168,8 @@ object SplashForm: TSplashForm
     end
     object Label2: TLabel
       Left = 3
-      Height = 15
-      Top = 256
+      Height = 20
+      Top = 250
       Width = 506
       Align = alBottom
       Alignment = taRightJustify

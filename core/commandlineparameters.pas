@@ -32,7 +32,7 @@ TYPE
     PROCEDURE copyFrom(CONST other:T_mnhExecutionOptions);
     FUNCTION parseSingleMnhParameter(CONST param: string; VAR parsingState:T_parsingState): boolean;
     {$ifdef fullVersion}
-    PROCEDURE initFromShebang(CONST shebangLine:string; CONST requires:T_specialFunctionRequirements);
+    PROCEDURE initFromShebang(CONST shebangLine:string; CONST requires:T_sideEffects);
     FUNCTION getShebang:ansistring;
     FUNCTION getCommandLineArgumentsArray:T_arrayOfString;
     {$endif}
@@ -403,7 +403,7 @@ FUNCTION T_commandLineParameters.getCommandToInterpretFromCommandLine: ansistrin
   begin if mnhExecutionOptions.executeCommand then result:=fileOrCommandToInterpret else result:=''; end;
 
 {$ifdef fullVersion}
-PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST requires: T_specialFunctionRequirements);
+PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST requires: T_sideEffects);
   VAR k:longint;
       parameters:T_arrayOfString;
       parsingState:T_parsingState;
@@ -415,11 +415,12 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
       executor:=parameters[0];
       for k:=1 to length(parameters)-1 do parseSingleMnhParameter(parameters[k],parsingState);
     end;
-    if sfr_needs_gui in requires then include(flags,clf_GUI);
-    if sfr_beeps     in requires then Exclude(flags,clf_SILENT);
-    if sfr_asks      in requires then Exclude(flags,clf_HEADLESS);
+
+    if requires*C_sideEffectsRequiringGui<>[] then include(flags,clf_GUI);
+    if se_sound in requires then Exclude(flags,clf_SILENT);
+    if se_input in requires then Exclude(flags,clf_HEADLESS);
     setCallLightFlavour(not((clf_GUI in flags) or
-                            (sfr_needs_full_version in requires) or
+                            (requires*C_sideEffectsRequiringGui<>[]) or
                             (executor=settings.fullFlavourLocation)));
   end;
 

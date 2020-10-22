@@ -291,11 +291,28 @@ FUNCTION scanScripts(p:pointer):ptrint;
       i0,i:longint;
       scanStart:double;
       foldersScannedInThisRun:T_arrayOfString=();
-      startFolderScan:double;
+      fileScanTimes:array of record
+        scriptFile:string;
+        scanTime:double;
+      end=();
 
   FUNCTION isDestructionPending:boolean;
     begin
       result:=P_fileHistory(p)^.scriptUsage.destructionPending;
+    end;
+
+  PROCEDURE warnAboutSlowScans;
+    VAR scanTimes:T_arrayOfDouble=();
+        scanTime90Percentile:double;
+        i:longint;
+    begin
+      setLength(scanTimes,length(fileScanTimes));
+      for i:=0 to length(scanTimes)-1 do scanTimes[i]:=fileScanTimes[i].scanTime;
+      sort(scanTimes);
+      scanTime90Percentile:=scanTimes[round(length(scanTimes)*0.9)];
+      for i:=0 to length(fileScanTimes)-1 do with fileScanTimes[i] do if scanTime>scanTime90Percentile*2
+      then postIdeMessage('Slow background scan of file '+scriptFile+' '+myTimeToStr(scanTime),scanTime>4*scanTime90Percentile);
+      setLength(scanTimes,0);
     end;
 
   begin
@@ -312,11 +329,13 @@ FUNCTION scanScripts(p:pointer):ptrint;
     end;
     //Determine scripts to scan:
     for folder in foldersToScan do if not(isDestructionPending) then begin
-      startFolderScan:=now;
       append(foldersScannedInThisRun,folder);
       scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
       //Load scripts
       for script in scriptsInThisFolder do if not(isDestructionPending) then begin
+        setLength(fileScanTimes,length(fileScanTimes)+1);
+        fileScanTimes[length(fileScanTimes)-1].scriptFile:=script;
+        fileScanTimes[length(fileScanTimes)-1].scanTime:=-now;
         {$ifdef debugMode}
         writeln(stdErr,'fileHistory/scanScripts: scanning ',script);
         {$endif}
@@ -325,10 +344,11 @@ FUNCTION scanScripts(p:pointer):ptrint;
           foundUsages[length(foundUsages)-1].usingScript:=script;
           foundUsages[length(foundUsages)-1].usedScript :=usedScript;
         end;
+        fileScanTimes[length(fileScanTimes)-1].scanTime+=now;
       end;
-      if now-startFolderScan>0.5/(24*60*60) then postIdeMessage('Background folder scan: finished "'+folder+'" in '+myTimeToStr(now-startFolderScan),true);
       scriptsInThisFolder.free;
     end;
+    if length(fileScanTimes)>10 then warnAboutSlowScans;
     with P_fileHistory(p)^ do try
       enterCriticalSection(historyCs);
       i0:=length(scriptUsage.dat);
@@ -340,6 +360,7 @@ FUNCTION scanScripts(p:pointer):ptrint;
       scriptUsage.scanning:=false;
       leaveCriticalSection(historyCs);
     end;
+    setLength(fileScanTimes,0);
     setLength(foldersToScan,0);
     if length(foldersScannedInThisRun)>0 then postIdeMessage('Background folder scan for '+intToStr(length(foldersScannedInThisRun))+' folders finished in '+myTimeToStr(now-scanStart),false);
     if (length(foundUsages)>0) and not(isDestructionPending) then workspace.onFileScanFinished;

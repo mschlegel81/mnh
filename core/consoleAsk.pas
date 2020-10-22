@@ -119,7 +119,7 @@ INITIALIZATION
   system.initCriticalSection(cs);
   registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,ak_variadic_1{$ifdef fullVersion},
                'ask(q:string);//Asks the user question q and returns the user input#'+
-               'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option',sfr_asks{$endif});
+               'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option'{$endif},[se_input]);
 FINALIZATION;
   system.doneCriticalSection(cs);
 end.

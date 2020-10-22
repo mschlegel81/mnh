@@ -13,7 +13,7 @@ object scriptedForm: TscriptedForm
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
   Position = poScreenCenter
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.0.10.0'
   object closeButtonPanel: TPanel
     Left = 0
     Height = 30
@@ -40,11 +40,11 @@ object scriptedForm: TscriptedForm
     end
   end
   object MainMenu1: TMainMenu
-    left = 135
-    top = 107
+    Left = 135
+    Top = 107
   end
   object PopupMenu1: TPopupMenu
-    left = 89
-    top = 83
+    Left = 89
+    Top = 83
   end
 end

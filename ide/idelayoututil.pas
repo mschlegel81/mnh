@@ -827,8 +827,11 @@ PROCEDURE applyWindowPosition(CONST form: TForm; CONST pos: T_windowPosition);
   end;
 
 {$i func_defines.inc}
+{$define FUNC_ID:='anyFormShowing'}
+{$define SIDE_EFFECTS:=[se_readGuiState]}
 FUNCTION anyFormShowing_imp intFuncSignature;
   begin
+    CHECK_SIDE;
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=newBoolLiteral(hasAnyForm);
   end;
@@ -1072,7 +1075,7 @@ INITIALIZATION
   setLength(fontControls[ctEditor ],0);
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
-  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',sfr_needs_gui);
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',[se_readGuiState]);
   registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary,'formatHtmlPage(lines:StringList,filename:String);//formats naive html');
 end.
 

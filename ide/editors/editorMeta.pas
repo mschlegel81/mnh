@@ -712,11 +712,10 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     ensureCodeAssistanceThread;
   end;
 
-FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,
-  isExecutable: boolean): T_mnhExecutionOptions;
-  VAR requires:T_specialFunctionRequirements;
+FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable: boolean): T_mnhExecutionOptions;
+  VAR requires:T_sideEffects;
   begin
-    requires:=assistanceData^.getBuiltinRestrictions;
+    requires:=assistanceData^.getBuiltinSideEffects;
     isExecutable:=assistanceData^.isExecutablePackage;
     result.create;
     if (editor.lines.count>0) and (startsWith(editor.lines[0],'#!')) then begin

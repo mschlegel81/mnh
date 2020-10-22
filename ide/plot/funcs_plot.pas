@@ -66,7 +66,7 @@ FUNCTION addPlot intFuncSignature;
     end;
 
   begin
-    if not(context.checkSideEffects('addPlot',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('addPlot',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
       if (params^.value[params^.size-1]^.literalType = lt_string) then begin
@@ -105,7 +105,7 @@ FUNCTION addPlot intFuncSignature;
 
 FUNCTION plot intFuncSignature;
   begin
-    if not(context.checkSideEffects('plot',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('plot',tokenLocation,[se_alterGuiState])) then exit(nil);
     context.messages^.postSingal(mt_plot_clear,C_nilTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
@@ -212,7 +212,7 @@ FUNCTION setOptions intFuncSignature;
       iter:T_arrayOfLiteral;
       postOptionsMessage:P_plotOptionsMessage;
   begin
-    if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
     opt.setDefaults;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
@@ -239,7 +239,7 @@ FUNCTION resetOptions_impl intFuncSignature;
   VAR opt:T_scalingOptions;
       postOptionsMessage:P_plotOptionsMessage;
   begin
-    if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       opt.setDefaults;
       new(postOptionsMessage,createPostRequest(opt,[low(T_scalingOptionElement)..high(T_scalingOptionElement)]));
@@ -253,7 +253,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
-    if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile])) then exit(nil);
+    if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile,se_readGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=3) and
       (arg0^.literalType = lt_string) and
@@ -282,6 +282,7 @@ FUNCTION renderToString_impl intFuncSignature;
   VAR width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
+    if not(context.checkSideEffects('renderToString',tokenLocation,[se_readGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=2) and
       (arg0^.literalType in [lt_smallint,lt_bigint]) and
@@ -302,7 +303,7 @@ FUNCTION removePlot_imp intFuncSignature;
   VAR toDrop:longint=1;
       dropPlotMessage:P_plotDropRowRequest;
   begin
-    if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
@@ -316,7 +317,7 @@ FUNCTION removeText_imp intFuncSignature;
   VAR toDrop:longint=1;
       dropPlotMessage:P_plotDropRowRequest;
   begin
-    if not(context.checkSideEffects('removeText',tokenLocation,[se_alterPlotState])) then exit(nil);
+    if not(context.checkSideEffects('removeText',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
@@ -383,8 +384,8 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
     end;
   end;
 
-FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSideEffects('drawText'        ,tokenLocation,[se_alterPlotState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
-FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterPlotState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
+FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSideEffects('drawText'        ,tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
+FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
   funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
@@ -416,30 +417,30 @@ INITIALIZATION
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]'+
-    '#Transparency Index:'+'  #  TI$;// with an integer $',sfr_needs_full_version);
+    '#Transparency Index:'+'  #  TI$;// with an integer $',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
-    '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',sfr_needs_full_version);
+    '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
-    'getOptions;//returns plot options as a key-value-list.',sfr_needs_full_version);
+    'getOptions;//returns plot options as a key-value-list.',[se_readGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
     'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
-    'setOptions(key:string,value);//Sets a single plot option',sfr_needs_full_version);
+    'setOptions(key:string,value);//Sets a single plot option',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
-    'resetOptions;//Sets the default plot options',sfr_needs_full_version);
+    'resetOptions;//Sets the default plot options',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_ternary,
-    'renderToFile(filename<>'',width>=1,height>=1]);//Renders the current plot to a file.',sfr_needs_full_version);
+    'renderToFile(filename<>'',width>=1,height>=1]);//Renders the current plot to a file.',[se_writeFile,se_readGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
-    'renderToString(width,height);//Renders the current plot to a string.',sfr_needs_full_version);
+    'renderToString(width,height);//Renders the current plot to a string.',[se_readGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
-    'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot',sfr_needs_full_version);
+    'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'removeText',@removeText_imp, ak_variadic,
-    'removeText;//Removes the last custom text from the plot#removeText(n>=1);//Removed the last n custom texts from the plot',sfr_needs_full_version);
+    'removeText;//Removes the last custom text from the plot#removeText(n>=1);//Removed the last n custom texts from the plot',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
     'drawText(x,y,text);//Draws custom text#'+
-    'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',sfr_needs_full_version);
+    'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
   funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
     'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
-    'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',sfr_needs_full_version);
+    'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
 end.

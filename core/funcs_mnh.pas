@@ -147,6 +147,7 @@ FUNCTION ord_imp intFuncSignature;
 
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
     result:=newMapLiteral(17)^
       .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
@@ -173,20 +174,21 @@ FUNCTION mnhInfo_imp intFuncSignature;
 FUNCTION getMnhInfo:T_arrayOfString;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
-      dummyContext:T_context;
+      globals:T_evaluationGlobals;
       recycler:T_recycler;
   begin
     recycler.initRecycler;
-    initialize(dummyContext);
-    L:=mnhInfo_imp(nil,pseudoLoc,dummyContext,recycler);
+    globals.create(nil);
+    L:=mnhInfo_imp(nil,pseudoLoc,globals.primaryContext,recycler);
     result:=serializeToStringList(L,pseudoLoc,nil);
     disposeLiteral(L);
+    globals.destroy;
     recycler.cleanup;
   end;
 
 INITIALIZATION
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  {$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  {$ifdef fullVersion},'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  {$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void'{$endif},[se_sleep]);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  {$ifdef fullVersion},'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value'{$endif},[se_sleep]);
   BUILTIN_MYPATH:=
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary{$ifdef fullVersion},'myPath;//returns the path to the current package'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary{$ifdef fullVersion},'executor;//returns the path to the currently executing instance of MNH'{$endif});

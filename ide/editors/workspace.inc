@@ -833,7 +833,7 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
 
 {$endif}
 {$ifdef includeInitialization}
-  registerRule(GUI_NAMESPACE,'editors'       ,failFunction,ak_nullary,'editors(...);//Lists all editors');
-  registerRule(GUI_NAMESPACE,'editorContent' ,failFunction,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+  registerRule(GUI_NAMESPACE,'editors'       ,failFunction,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
+  registerRule(GUI_NAMESPACE,'editorContent' ,failFunction,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
 {$endif}
 

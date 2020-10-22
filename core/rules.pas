@@ -62,6 +62,7 @@ TYPE
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
       FUNCTION arity:T_arityInfo; virtual;
+      FUNCTION isPure:boolean; virtual;
   end;
 
   P_delegatorRule=^T_delegatorRule;
@@ -94,6 +95,7 @@ TYPE
       PROCEDURE clearImported;
       PROCEDURE addRule(CONST ruleOrDelegateToAdd:P_abstractRule);
       PROPERTY getLocalRule:P_ruleWithSubrules read localRule;
+      FUNCTION isPure:boolean; virtual;
   end;
 
   P_variable=^T_variable;
@@ -120,6 +122,7 @@ TYPE
       PROCEDURE clearCache; virtual;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
+      FUNCTION isPure:boolean; virtual;
   end;
 
   P_typeCheckRule=^T_typeCheckRule;
@@ -186,6 +189,7 @@ TYPE
       FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual;
       {Part of T_abstractRule, but should not be called and throws exception}
       FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual;
+      FUNCTION isPure:boolean; virtual;
   end;
 
   P_datastore=^T_datastore;
@@ -937,6 +941,31 @@ FUNCTION T_typeCastRule.arity:T_arityInfo;
   begin
     result.minPatternLength:=1;
     result.maxPatternLength:=1;
+  end;
+
+FUNCTION T_ruleWithSubrules.isPure:boolean;
+  VAR i:longint;
+  begin
+    for i:=0 to length(subrules)-1 do if subrules[i]^.getSideEffects<>[] then exit(false);
+    result:=true;
+  end;
+
+FUNCTION T_delegatorRule.isPure:boolean;
+  VAR i:longint;
+  begin
+    result:=((hiddenRule=nil) or (getMeta(hiddenRule).sideEffects=[])
+        and  (localRule=nil)  or (localRule^.isPure));
+    if result then for i:=0 to length(imported)-1 do if not(imported[i]^.isPure) then exit(false);
+  end;
+
+FUNCTION T_memoizedRule.isPure:boolean;
+  begin
+    result:=true;
+  end;
+
+FUNCTION T_variable.isPure:boolean;
+  begin
+    result:=false;
   end;
 
 {$ifdef fullVersion}

@@ -47,6 +47,7 @@ TYPE
   T_ruleMetaData=object
     private
       attributes:array of T_subruleAttribute;
+      sideEffects:T_sideEffects;
       FUNCTION getAttributeValue(CONST index:longint):string;
       PROCEDURE setAttributeValue(CONST index:longint; CONST value:string);
     public
@@ -124,6 +125,7 @@ TYPE
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
       FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
+      FUNCTION getSideEffects:T_sideEffects;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -1326,7 +1328,7 @@ FUNCTION T_subruleExpression.inspect: P_mapLiteral;
 
 FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
 
-CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
+CONSTRUCTOR T_ruleMetaData.create; begin sideEffects:=[]; comment:=''; setLength(attributes,0); end;
 DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
@@ -1487,6 +1489,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
       if (functionIdsReady=NOT_READY) or
          (functionIdsReady=IDS_RESOLVED) and (resolveIdContext in [ON_DELEGATION,ON_EVALUATION]) then begin
         idsReady:=true;
+        meta.sideEffects:=[];
         for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
           case token.tokType of
             tt_identifier: if (parIdx<0) then begin
@@ -1500,12 +1503,15 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
               end;
             end;
           end;
-          if (token.tokType=tt_userRule) and (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
-            inlineValue:=P_abstractRule(token.data)^.getInlineValue;
-            if inlineValue<>nil then begin
-              token.data:=inlineValue;
-              token.tokType:=tt_literal;
+          case token.tokType of
+            tt_userRule: if (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
+              inlineValue:=P_abstractRule(token.data)^.getInlineValue;
+              if inlineValue<>nil then begin
+                token.data:=inlineValue;
+                token.tokType:=tt_literal;
+              end;
             end;
+            tt_intrinsicRule: meta.sideEffects+=getMeta(token.data).sideEffects;
           end;
         end;
       end;
@@ -1513,6 +1519,17 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
         ON_EVALUATION: functionIdsReady:=IDS_RESOLVED_AND_INLINED
         else           functionIdsReady:=IDS_RESOLVED;
       end else functionIdsReady:=NOT_READY;
+    finally
+      leaveCriticalSection(subruleCallCs);
+    end;
+  end;
+
+FUNCTION T_inlineExpression.getSideEffects:T_sideEffects;
+  begin
+    enterCriticalSection(subruleCallCs);
+    try
+      if functionIdsReady=NOT_READY then resolveIds(nil,ON_DELEGATION);
+      result:=meta.sideEffects;
     finally
       leaveCriticalSection(subruleCallCs);
     end;
@@ -1976,9 +1993,14 @@ INITIALIZATION
   litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary{$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary{$ifdef fullVersion},'parameterNames(e:expression);//Returns the IDs of named parameters of e'{$endif});
-  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1{$ifdef fullVersion},'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>'{$endif});
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary{$ifdef fullVersion},'toExpression(S);//Returns an expression parsed from string or list S'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary{$ifdef fullVersion},'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary
+    {$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary
+    {$ifdef fullVersion},'parameterNames(e:expression);//Returns the IDs of named parameters of e'{$endif});
+  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1
+    {$ifdef fullVersion},'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>'{$endif});
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary
+    {$ifdef fullVersion},'toExpression(S);//Returns an expression parsed from string or list S'{$endif});
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary
+    {$ifdef fullVersion},'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.'{$endif});
 end.

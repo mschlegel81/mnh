@@ -14,11 +14,19 @@ end;
 
 main->begin
   local list:=[0..3];
-  print('initial list: ',list);
+  printf('initial list: {list}');
   list.addElement('X');
   list.removeElement(0);
-  print('list still is: ',list);
+  printf('list still is: {list}');
   list:=list.addElement('X');
   list:=list.removeElement(0);
-  print('Now my list is: ',list);
+  printf('Now my list is: {list}');
+
+  local A:=[1,2,3];
+  local B:=A;
+  printf('(1) A==B = {A==B} //A={A} and B={B} point to the same value object');
+  B[1]:=4;
+  printf('(2) A==B = {A==B} //B={B} points to another value object after copy-on-write');
+  B[1]:=2;
+  printf('(3) A==B = {A==B} //B={B} still points to another value which is equal to A');
 end;

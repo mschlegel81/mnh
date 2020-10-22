@@ -731,34 +731,40 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
   end else result:=nil; end;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
-  begin if (params=nil) or (params^.size=0) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
-    result:=newVoidLiteral;
-    context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
-  end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
-    result:=newVoidLiteral;
-    if bool0^.value
-    then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilTokenLocation)
-    else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilTokenLocation);
-  end else result:=nil; end;
+  begin
+    if not(context.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if (params=nil) or (params^.size=0) then begin
+      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      result:=newVoidLiteral;
+      context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
+      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      result:=newVoidLiteral;
+      if bool0^.value
+      then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilTokenLocation)
+      else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilTokenLocation);
+    end else result:=nil;
+  end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
   VAR request:P_plotAddAnimationFrameRequest;
       sleepInSeconds:double;
-  begin if (params=nil) or (params^.size=0) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
-    new(request,create());
-    context.messages^.postCustomMessage(request);
-    sleepInSeconds:=request^.getProposedSleepTime(context.messages);
-    disposeMessage(request);
-    if sleepInSeconds>0 then sleep(round(1000*sleepInSeconds));
-    result:=newVoidLiteral;
-  end else result:=nil; end;
+  begin
+    if not(context.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if (params=nil) or (params^.size=0) then begin
+      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      new(request,create());
+      context.messages^.postCustomMessage(request);
+      sleepInSeconds:=request^.getProposedSleepTime(context.messages);
+      disposeMessage(request);
+      if sleepInSeconds>0 then sleep(round(1000*sleepInSeconds));
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
 
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
-  begin if ((params=nil) or (params^.size=0)) and context.checkSideEffects('display',tokenLocation,[se_input]) then begin
+  begin if ((params=nil) or (params^.size=0)) and context.checkSideEffects('display',tokenLocation,[se_alterGuiState]) then begin
     if (gui_started=NO) then context.messages^.logGuiNeeded;
     new(displayRequest,create());
     context.messages^.postCustomMessage(displayRequest);
@@ -769,12 +775,15 @@ FUNCTION display_imp intFuncSignature;
 
 FUNCTION postdisplay_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
-  begin if (params=nil) or (params^.size=0) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
-    new(displayRequest,create());
-    context.messages^.postCustomMessage(displayRequest,true);
-    result:=newVoidLiteral;
-  end else result:=nil; end;
+  begin
+    if not(context.checkSideEffects('postDisplay',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if (params=nil) or (params^.size=0) then begin
+      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      new(displayRequest,create());
+      context.messages^.postCustomMessage(displayRequest,true);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
 
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   begin
@@ -782,11 +791,11 @@ PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   end;
 
 INITIALIZATION
-  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction',sfr_needs_gui);
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_variadic,'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode',sfr_needs_gui);
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation',sfr_needs_gui);
-  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution',sfr_needs_gui);
-  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately',sfr_needs_gui);
+  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction',[se_readGuiState]);
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,ak_variadic,'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode',[se_alterGuiState]);
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation',[se_alterGuiState]);
+  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution',[se_alterGuiState]);
+  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately',[se_alterGuiState]);
 
 end.
 

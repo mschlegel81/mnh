@@ -740,8 +740,12 @@ TYPE
                 se_server,
                 se_readPackageState,
                 se_alterPackageState,
+                se_readContextState,
                 se_alterContextState,
-                se_alterPlotState,
+                se_readGuiState,
+                se_alterGuiState,
+                se_readIdeState,
+                se_alterIdeState,
                 se_readFile,
                 se_writeFile,
                 se_accessHttp,
@@ -759,8 +763,12 @@ CONST
                 'server',
                 'read package state',
                 'alter package state',
+                'read context state',
                 'alter context state',
-                'alter plot state',
+                'read GUI state',
+                'alter GUI state',
+                'read IDE state',
+                'alter IDE state',
                 'read file',
                 'write file',
                 'http',
@@ -768,12 +776,14 @@ CONST
                 'executing external');
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
   C_sideEffectsForCodeAssistance=[se_readPackageState,se_alterPackageState];
+  C_sideEffectsForFormatting=[se_input,se_readPackageState,se_alterPackageState,se_readContextState,se_alterContextState,se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState,se_readFile,se_accessHttp,se_accessIpc,se_executingExternal];
+  C_sideEffectsRequiringGui=[se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState];
   C_sideEffectProfile:array [0..3] of record
     name:string;
     allowed:T_sideEffects;
   end=((name:''; allowed:[low(T_sideEffect)..high(T_sideEffect)]),
-       (name:'readonly'; allowed:[se_input,se_output,se_sound,se_sleep,se_detaching,se_server,se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState,se_readFile,se_accessHttp,se_accessIpc]),
-       (name:'isolated'; allowed:[se_input,se_output,se_sound,se_sleep,se_detaching,          se_readPackageState,se_alterPackageState,se_alterContextState,se_alterPlotState                                       ]),
+       (name:'readonly'; allowed:[se_input,se_output,se_sound,se_sleep,se_detaching,se_server,se_readPackageState,se_alterPackageState,se_readContextState,se_alterContextState,se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState,se_readFile,se_accessHttp]),
+       (name:'isolated'; allowed:[         se_output,se_sound,se_sleep,                       se_readPackageState,se_alterPackageState,se_readContextState,se_alterContextState,se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState                          ]),
        (name:'noexe';    allowed:[se_input..se_accessIpc]));
 
 FUNCTION isQualified(CONST s:string):boolean;
