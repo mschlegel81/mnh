@@ -354,7 +354,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
       if mapRule^.evaluateToBoolean(location,context,@recycler,true,mapParameter,nil)
       then mapTaskResult:=mapParameter^.rereferenced
       else mapTaskResult:=nil;
-    end;
+    end else mapTaskResult:=nil;
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
@@ -370,7 +370,8 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
     if not(isCancelled) and (context^.continueEvaluation)
-    then with mapPayload do mapTaskResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal;
+    then with mapPayload do mapTaskResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal
+    else mapTaskResult:=nil;
     if mapPayload.mapParameter<>nil
     then disposeLiteral(mapPayload.mapParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
