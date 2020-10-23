@@ -303,15 +303,16 @@ FUNCTION scanScripts(p:pointer):ptrint;
 
   PROCEDURE warnAboutSlowScans;
     VAR scanTimes:T_arrayOfDouble=();
-        scanTime90Percentile:double;
+        warnThreshold:double;
         i:longint;
     begin
       setLength(scanTimes,length(fileScanTimes));
       for i:=0 to length(scanTimes)-1 do scanTimes[i]:=fileScanTimes[i].scanTime;
       sort(scanTimes);
-      scanTime90Percentile:=scanTimes[round(length(scanTimes)*0.9)];
-      for i:=0 to length(fileScanTimes)-1 do with fileScanTimes[i] do if scanTime>scanTime90Percentile*2
-      then postIdeMessage('Slow background scan of file '+scriptFile+' '+myTimeToStr(scanTime),scanTime>4*scanTime90Percentile);
+      warnThreshold:=scanTimes[round(length(scanTimes)*0.9)]*4;
+      if (length(scanTimes)>5) and (scanTimes[length(scanTimes)-5]>warnThreshold) then warnThreshold:=scanTimes[length(scanTimes)-5];
+      for i:=0 to length(fileScanTimes)-1 do with fileScanTimes[i] do if scanTime>=warnThreshold
+      then postIdeMessage('Slow background scan of file '+scriptFile+' '+myTimeToStr(scanTime),true);
       setLength(scanTimes,0);
     end;
 
