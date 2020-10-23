@@ -986,17 +986,19 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   PROCEDURE ensurePoolThreads();
     VAR aimPoolThreads:longint;
+        spawnCount:longint=0;
     begin
       if isMemoryInComfortZone
       then aimPoolThreads:=settings.cpuCount
       else aimPoolThreads:=1;
       while poolThreadsRunning<aimPoolThreads do begin
+        spawnCount+=1;
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
-        {$ifdef fullVersion}
-        postIdeMessage('Spawned new worker thread',false);
-        {$endif}
       end;
+      {$ifdef fullVersion}
+      if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
+      {$endif}
     end;
 
   FUNCTION ensureQueue:P_subQueue;

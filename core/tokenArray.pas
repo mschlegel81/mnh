@@ -836,16 +836,10 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
     begin
       parameterIds:=pattern^.getNamedParameters;
       for parameterId in parameterIds do appendIfNew(uniqueIds,parameterId.id);
-      {$ifdef debugMode}
-      write(stdErr,'Preparing lambda: ');
-      {$endif}
 
       tokenInLambda:=t;
       lastLocation:=tokenInLambda^.location;
       while (tokenInLambda<>nil) and (bracketLevel>=0) do begin
-        {$ifdef debugMode}
-        write(stdErr,' ',tokenInLambda^.singleTokenToString);
-        {$endif}
         if      tokenInLambda^.tokType in C_openingBrackets then inc(bracketLevel)
         else if tokenInLambda^.tokType in C_closingBrackets then dec(bracketLevel)
         else if (tokenInLambda^.tokType in [tt_separatorComma,tt_semicolon]) and (bracketLevel=0) then dec(bracketLevel);
@@ -857,9 +851,6 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
       end;
       if tokenInLambda<>nil
       then lastLocation:=tokenInLambda^.location;
-      {$ifdef debugMode}
-      writeln(stdErr,'');
-      {$endif}
       {$ifdef fullVersion}
       if callAndIdInfos<>nil then
       for parameterId in parameterIds do callAndIdInfos^.addLocalIdInfo(parameterId.id,parameterId.location,lastLocation,tt_parameterIdentifier);
