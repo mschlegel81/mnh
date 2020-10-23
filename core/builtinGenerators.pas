@@ -395,7 +395,8 @@ CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST
 
 FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
   begin
-    result:=sourceGenerator^.toString(30)+'.map('+mapExpression^.toString(20)+')';
+    result:=sourceGenerator^.toString(30)+
+            '.map('+mapExpression^.toString(20)+')';
   end;
 
 FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
@@ -522,7 +523,7 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
               if (P_expressionLiteral(nextUnmapped)^.typ in C_iteratableExpressionTypes) then begin
                 sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
                 while (sub<>nil) and (sub^.literalType<>lt_void) and (context^.continueEvaluation) do begin
-                  appendEvaluated(nextUnmapped);
+                  appendEvaluated(sub);
                   sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
                 end;
                 disposeLiteral(nextUnmapped);
