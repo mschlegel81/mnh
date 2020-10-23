@@ -52,7 +52,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE cleanup;
       PROCEDURE disposeContext(VAR context:P_context);
-      FUNCTION newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
+      FUNCTION newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
   end;
 
   T_taskState=(fts_pending, //set on construction
@@ -239,6 +239,9 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
+    {$ifdef fullVersion}
+    postIdeMessage:PROCEDURE (CONST messageText:string; CONST warn:boolean);
+    {$endif}
 IMPLEMENTATION
 CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
   VAR myContext: T_context);
@@ -340,7 +343,7 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
     context:=nil;
   end;
 
-FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST parentScopeAccess:AccessLevel):P_context;
+FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
   begin
     if (tryEnterCriticalsection(recyclerCS)<>0) then begin
       try
@@ -367,9 +370,9 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
       callDepth:=parentThread^.callDepth+2;
       messages:=parentThread^.messages;
 
-      if parentScopeAccess=ACCESS_BLOCKED
-      then valueScope:=nil
-      else valueScope:=recycler.newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
+      if allowAccessToParentScope
+      then valueScope:=recycler.newValueScopeAsChildOf(parentThread^.valueScope)
+      else valueScope:=nil;
 
       {$ifdef fullVersion}
       parentCustomForm:=nil;
@@ -628,12 +631,9 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
   end;
 
 FUNCTION T_context.getNewAsyncContext(VAR recycler:T_recycler; CONST local: boolean): P_context;
-  VAR parentAccess:AccessLevel;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
-    if local then parentAccess:=ACCESS_READWRITE
-             else parentAccess:=ACCESS_BLOCKED;
-    result:=contextPool.newContext(recycler,@self,parentAccess);
+    result:=contextPool.newContext(recycler,@self,local);
     result^.messages:=related.evaluation^.globalMessages;
   end;
 
@@ -699,7 +699,7 @@ FUNCTION T_context.setAllowedSideEffectsReturningPrevious(CONST se: T_sideEffect
 
 FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
   begin
-    result:=contextPool.newContext(recycler,@self,ACCESS_READWRITE);
+    result:=contextPool.newContext(recycler,@self,true);
   end;
 
 PROCEDURE T_context.beginEvaluation;
@@ -713,7 +713,7 @@ PROCEDURE T_context.reattachToParent(VAR recycler:T_recycler);
     assert(state=fts_finished,'Wrong state before calling T_threadContext.reattachToParent');
     assert(valueScope=nil,'valueScope must be nil on T_threadContext.reattachToParent');
     enterCriticalSection(contextCS);
-    valueScope:=recycler.newValueScopeAsChildOf(related.parent^.valueScope,ACCESS_READWRITE);
+    valueScope:=recycler.newValueScopeAsChildOf(related.parent^.valueScope);
     state:=fts_pending;
     related.parent^.addChildContext;
     leaveCriticalSection(contextCS);
@@ -820,6 +820,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepCount:longint;
       currentTask:P_queueTask;
       recycler:T_recycler;
+      stopBecauseOfMemoryUsage:boolean=false;
   begin
     recycler.initRecycler;
     sleepCount:=0;
@@ -839,10 +840,17 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           end;
           sleepCount:=0;
         end;
+        stopBecauseOfMemoryUsage:=(not(isMemoryInComfortZone) and (taskQueue.poolThreadsRunning>1));
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
-            (not(isMemoryInComfortZone) and (taskQueue.poolThreadsRunning>1)); //memory panic with more than 1 pool thread running
+            stopBecauseOfMemoryUsage; //memory panic with more than 1 pool thread running
+      {$ifdef fullVersion}
+      if stopBecauseOfMemoryUsage
+      then postIdeMessage('Worker thread stopped because of memory panic',true)
+      else postIdeMessage('Worker thread stopped',false);
+      {$endif}
+
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
     end;
@@ -985,6 +993,9 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
       while poolThreadsRunning<aimPoolThreads do begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
+        {$ifdef fullVersion}
+        postIdeMessage('Spawned new worker thread',false);
+        {$endif}
       end;
     end;
 

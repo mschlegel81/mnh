@@ -32,7 +32,7 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText:string; CONST warn:boolean);
 PROCEDURE ensureEventsForm;
 IMPLEMENTATION
-USES basicTypes,myGenerics,mySys,mnh_settings;
+USES basicTypes,myGenerics,mySys,mnh_settings,contexts;
 TYPE
   P_ideMessage=^T_ideMessage;
   T_ideMessage=object
@@ -210,6 +210,9 @@ begin
      else eventsGrid.Canvas.Font.color :=  clBlack;
    end;
 end;
+
+INITIALIZATION
+  contexts.postIdeMessage:=@postIdeMessage;
 
 FINALIZATION
   if eventsAdapterSingleton<>nil then dispose(eventsAdapterSingleton,destroy);
