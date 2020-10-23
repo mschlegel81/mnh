@@ -447,9 +447,6 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     if rep^.tokType=tt_functionPattern then begin
       assert(retainFirstToken,'Invalid state!');
       pattern.clone(P_pattern(rep^.data)^);
-      {$ifdef debugMode}
-      writeln(stdErr,'Creating lambda expression with pattern ',pattern.toString,' and body ',tokensToString(rep^.next));
-      {$endif}
       disposePattern(rep^.data);
       rep^.tokType:=tt_EOL;
       constructExpression(rep^.next,context,recycler,rep^.location);
@@ -635,9 +632,12 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
           {$endif}
           if indexOfSave>=0 then begin
             if saveValueStore=nil then begin
-              saveValueStore:=recycler.newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+              saveValueStore:=recycler.newValueScopeAsChildOf(context.valueScope);
               firstCallOfResumable:=true;
+            end else begin
+              saveValueStore^.attachParent(context.valueScope);
             end;
+            //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
             previousValueScope:=context.valueScope;
             context.valueScope:=saveValueStore;
 
@@ -651,10 +651,12 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if firstCallOfResumable then begin
               if context.messages^.continueEvaluation then begin
                 updateBody;
+                //We have to detach the parent after evaluation to resolve temporary cyclic referencing
+                saveValueStore^.detachParent;
               end else begin
                 recycler.disposeScope(saveValueStore);
               end;
-            end;
+            end else saveValueStore^.detachParent;
             {$ifdef fullVersion}
             context.callStackPop(output.first);
             {$endif}
@@ -1050,7 +1052,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
-     parameterList:T_listLiteral;
+      parameterList:T_listLiteral;
   begin
     parameterList.create(2);
     if a<>nil then parameterList.append(a,true);
@@ -1061,8 +1063,9 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
       result:=false;
-      if allowRaiseError then P_context(context)^.raiseError('Expression does not return a boolean.',location);
+      if allowRaiseError and (resultLiteral<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+resultLiteral^.typeString,location);
     end;
+    if resultLiteral<>nil then disposeLiteral(resultLiteral);
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;

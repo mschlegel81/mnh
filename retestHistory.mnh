@@ -1,0 +1,40 @@
+assertOkAndGet(execResult:List(2))->assert(execResult[1]==0) orElse execResult[0];
+
+tagsAfterIntroductionOfFPC3:=begin
+  local entries:=exec('git',['tag','--contains','6a9c9c19dbbfa4501368b6fa1e89ca45a3053a8e',
+                                   '--format="%(refname:short) %(objectname)"',
+                                   '--sort=committerdate']).assertOkAndGet.split(' ');
+  local result:=[];
+  //Filter out duplicates in e[1] while preserving order
+  entries.each(e,e[1] in result.getInner(1) ? void : result||=e);
+  result;
+end;
+
+checkout(commitHash)->
+  note('Checking out ',commitHash) orElse
+  exec('git',['checkout','-f',commitHash]).assertOkAndGet.map(::print);
+
+buildAndTest->
+  note('Testing...') orElse
+  ['name'=>'make.mnh',
+   'parameters'=>['clean','LOWin64!','FOWin64!'],
+   'side effects'=>listSideEffects,
+   'connection level'=>2].toMap.runScript;
+
+makeStatus->['name'=>'make.mnh',
+   'parameters'=>['status'],
+   'side effects'=>listSideEffects,
+   'connection level'=>2].toMap.runScript;
+
+TARGETS:=('target/Win'&[32,64].toSet&'/mnh'&['','_light'].toSet&'.exe');
+
+main->tagsAfterIntroductionOfFPC3.each(tagAndRevision,begin
+  local tag:=tagAndRevision[0];
+  local rev:=tagAndRevision[1];
+  print(formatTime(systime),' TAG: ',tag);
+  checkout(rev);
+  TARGETS.filter(::fileExists).map(::deleteFile);
+  buildAndTest;
+  makeStatus;
+  TARGETS.filter(::fileExists).map((f)->copyFile(f,f.changeFileExt('_'+tag+f.extractFileExt)));
+end);

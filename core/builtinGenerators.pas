@@ -760,7 +760,7 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
     canAggregate(doneFetching,context,recycler);
     if doneFetching then exit;
     globals:=context.getGlobals;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU,context);
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
@@ -797,7 +797,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
     canAggregate(doneFetching,context,recycler);
     if doneFetching then exit;
     globals:=context.getGlobals;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU,context);
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
@@ -863,13 +863,23 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
   end;
 
 PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+  VAR tmp:P_literal;
   begin
     repeat
       if outputQueue.hasNext
       then container^.append(outputQueue.next,false)
       else doEnqueueTasks(loc,context,recycler);
     until doneFetching and (firstToAggregate=nil) or not(context.continueEvaluation);
-    while outputQueue.hasNext do container^.append(outputQueue.next,false)
+    while firstToAggregate<>nil do canAggregate(true,context,recycler);
+
+    if context.continueEvaluation
+    then while outputQueue.hasNext do container^.append(outputQueue.next,false)
+    else begin
+      while outputQueue.hasNext do begin
+        tmp:=outputQueue.next;
+        disposeLiteral(tmp);
+      end;
+    end;
   end;
 
 DESTRUCTOR T_parallelMapGenerator.destroy;

@@ -71,7 +71,7 @@ FUNCTION allFiles_impl intFuncSignature;
     VAR list:TStringList;
         k:longint;
     begin
-      list:=FindAllFiles(root,pattern,recurse);
+      list:=FindAllFiles(root,pattern,recurse,faAnyFile and not faArchive);
       for k:=0 to list.count-1 do listResult^.appendString(filenameResult(list[k]));
       list.destroy;
     end;

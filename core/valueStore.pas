@@ -27,23 +27,14 @@ TYPE
       FUNCTION clone:P_namedVariable;
   end;
 
-CONST
-  ACCESS_BLOCKED  =0;
-  ACCESS_READONLY =1;
-  ACCESS_READWRITE=2;
-
-TYPE
-  AccessLevel=0..2;
-
   P_valueScope=^T_valueScope;
   T_valueScope=object
     parentScope :P_valueScope;
-    parentAccess:AccessLevel;
     refCount    :longint;
     variables   :array of P_namedVariable;
     varFill     :longint;
-    CONSTRUCTOR create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
-    PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
+    CONSTRUCTOR create(CONST asChildOf:P_valueScope);
+    PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope);
     DESTRUCTOR destroy;
     PROCEDURE insteadOfDestroy;
 
@@ -56,6 +47,8 @@ TYPE
     //For debugging:
     PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
     {$endif}
+    PROCEDURE attachParent(CONST parent:P_valueScope);
+    PROCEDURE detachParent;
   end;
 
 IMPLEMENTATION
@@ -140,29 +133,23 @@ FUNCTION T_namedVariable.clone: P_namedVariable;
     end;
   end;
 
-CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
+CONSTRUCTOR T_valueScope.create(CONST asChildOf:P_valueScope);
   begin
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
       interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
-    if parentScope=nil
-    then parentAccess:=ACCESS_BLOCKED
-    else parentAccess:=accessToParent;
     refCount        :=1;
     setLength(variables,0);
     varFill:=0;
   end;
 
-PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope; CONST accessToParent:AccessLevel);
+PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope);
   begin
     if asChildOf<>nil then begin
       parentScope:=asChildOf;
       interLockedIncrement(parentScope^.refCount);
     end else parentScope:=nil;
-    if parentScope=nil
-    then parentAccess:=ACCESS_BLOCKED
-    else parentAccess:=accessToParent;
     refCount        :=1;
   end;
 
@@ -215,7 +202,7 @@ FUNCTION T_valueScope.setVariableValue(CONST id:T_idString; CONST value:P_litera
       variables[k]^.setValue(value);
       exit(true);
     end;
-    if (parentAccess>=ACCESS_READWRITE)
+    if parentScope<>nil
     then parentScope^.setVariableValue(id,value,location,context)
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
   end;
@@ -228,16 +215,31 @@ FUNCTION T_valueScope.mutateVariableValue(CONST id:T_idString; CONST mutation:T_
       result:=variables[k]^.mutate(mutation,RHS,location,context,recycler);
       exit(result);
     end;
-    if (parentAccess>=ACCESS_READWRITE)
+    if parentScope<>nil
     then result:=parentScope^.mutateVariableValue(id,mutation,RHS,location,context,recycler)
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
+  end;
+
+PROCEDURE T_valueScope.attachParent(CONST parent:P_valueScope);
+  begin
+    assert(parentScope=nil);
+    if parent=nil then exit;
+    parentScope:=parent;
+    interLockedIncrement(parent^.refCount);
+  end;
+
+PROCEDURE T_valueScope.detachParent;
+  begin
+    assert(parentScope<>nil);
+    interlockedDecrement(parentScope^.refCount);
+    parentScope:=nil;
   end;
 
 {$ifdef fullVersion}
 PROCEDURE T_valueScope.reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
   VAR k:longint;
   begin
-    if parentAccess>=ACCESS_READONLY then parentScope^.reportVariables(variableReport);
+    if parentScope<>nil then parentScope^.reportVariables(variableReport);
     for k:=0 to varFill-1 do variableReport.addEntry(variables[k]^.id,variables[k]^.value,false);
   end;
 {$endif}
