@@ -92,9 +92,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           then level:=0
           else context.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
         end else case first^.tokType of
-          tt_beginBlock:            begin stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginBlock:            begin stack.push(first); recycler.scopePush(context.valueScope); end;
           tt_beginExpression,
-          tt_beginRule: begin inc(level); stack.push(first); recycler.scopePush(context.valueScope,ACCESS_READWRITE); end;
+          tt_beginRule: begin inc(level); stack.push(first); recycler.scopePush(context.valueScope); end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
@@ -1135,7 +1135,7 @@ end}
           end;
         end;
 {cT[0]=}tt_beginRule,tt_beginBlock,tt_beginExpression: begin
-          recycler.scopePush(context.valueScope,ACCESS_READWRITE);
+          recycler.scopePush(context.valueScope);
           stack.push(first);
           didSubstitution:=true;
         end;

@@ -33,8 +33,8 @@ TYPE
       FUNCTION newToken(CONST original:P_token):P_token; inline;
 
       PROCEDURE disposeScope(VAR scope:P_valueScope); inline;
-      FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope; inline;
-      PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel); inline;
+      FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope):P_valueScope; inline;
+      PROCEDURE scopePush(VAR scope:P_valueScope); inline;
       PROCEDURE scopePop(VAR scope:P_valueScope); inline;
       FUNCTION  cloneSafeValueStore(CONST oldStore:P_valueScope):P_valueScope;
   end;
@@ -188,26 +188,26 @@ PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
     scope:=nil;
   end;
 
-FUNCTION T_recycler.newValueScopeAsChildOf(CONST scope: P_valueScope; CONST parentAccess: AccessLevel): P_valueScope;
+FUNCTION T_recycler.newValueScopeAsChildOf(CONST scope: P_valueScope): P_valueScope;
   begin
     with scopeRecycler do begin
       if (fill>0) then begin
         dec(fill);
         result:=dat[fill];
-        result^.insteadOfCreate(scope,parentAccess);
-      end else new(result,create(scope,parentAccess));
+        result^.insteadOfCreate(scope);
+      end else new(result,create(scope));
     end;
   end;
 
-PROCEDURE T_recycler.scopePush(VAR scope: P_valueScope; CONST parentAccess: AccessLevel);
+PROCEDURE T_recycler.scopePush(VAR scope: P_valueScope);
   VAR newScope:P_valueScope;
   begin
     with scopeRecycler do begin
       if (fill>0) then begin
         dec(fill);
         newScope:=dat[fill];
-        newScope^.insteadOfCreate(scope,parentAccess);
-      end else new(newScope,create(scope,parentAccess));
+        newScope^.insteadOfCreate(scope);
+      end else new(newScope,create(scope));
     end;
     scope:=newScope;
   end;
@@ -237,7 +237,7 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
 FUNCTION T_recycler.cloneSafeValueStore(CONST oldStore: P_valueScope): P_valueScope;
   VAR k:longint;
   begin
-    result:=newValueScopeAsChildOf(oldStore^.parentScope,oldStore^.parentAccess);
+    result:=newValueScopeAsChildOf(oldStore^.parentScope);
     setLength(result^.variables,oldStore^.varFill);
     result^.varFill:=oldStore^.varFill;
     for k:=0 to oldStore^.varFill-1 do result^.variables[k]:=oldStore^.variables[k]^.clone;
