@@ -206,7 +206,7 @@ FUNCTION getElementFreqency intFuncSignature;
       iter:T_arrayOfLiteral;
       x:P_literal;
 
-      valueToAppend:P_literal;
+      valueToAppend:T_evaluationResult;
       aggregator:P_elementFrequencyAggregator;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
@@ -214,10 +214,10 @@ FUNCTION getElementFreqency intFuncSignature;
     if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
       new(aggregator,create);
 
-      valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-      while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
-        listResult^.append(valueToAppend,false);
-        valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+      valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil);
+      while (valueToAppend.literal<>nil) and (valueToAppend.literal^.literalType<>lt_void) do begin
+        aggregator^.addToAggregation(valueToAppend,true,tokenLocation,@context,recycler);
+        valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil);
       end;
       result:=aggregator^.getResult;
       dispose(aggregator,destroy);
