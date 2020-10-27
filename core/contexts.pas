@@ -844,7 +844,8 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
-            stopBecauseOfMemoryUsage; //memory panic with more than 1 pool thread running
+            stopBecauseOfMemoryUsage or //memory panic with more than 1 pool thread running
+            (taskQueue.poolThreadsRunning>settings.cpuCount);
       {$ifdef fullVersion}
       if stopBecauseOfMemoryUsage
       then postIdeMessage('Worker thread stopped because of memory panic',true)

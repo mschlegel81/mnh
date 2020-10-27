@@ -759,7 +759,7 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
       taskChain   : T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching then exit;
+    if doneFetching or not(context.continueEvaluation) then exit;
     globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
@@ -796,7 +796,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
       taskChain     :T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching then exit;
+    if doneFetching or not(context.continueEvaluation) then exit;
     globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
