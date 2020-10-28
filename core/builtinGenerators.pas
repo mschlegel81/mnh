@@ -46,7 +46,7 @@ FUNCTION T_listIterator.toString(CONST lengthLimit:longint=maxLongint):string;
 
 FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     if index>=length(values)
     then result.literal:=newVoidLiteral
     else result.literal:=values[index]^.rereferenced;
@@ -88,7 +88,7 @@ FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation;
     if didDeliver
     then result.literal:=newVoidLiteral
     else result.literal:=value^.rereferenced;
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     didDeliver:=true;
   end;
 
@@ -156,7 +156,7 @@ FUNCTION T_rangeGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
 FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   VAR tmp:T_bigInt;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     if workBig then case bounding of
       bUpper:
         if bigNext.compare(bigLim) in [CR_LESSER,CR_EQUAL] then begin
@@ -262,7 +262,7 @@ FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation;
   VAR i,k,l:longint;
       swapTmp:P_literal;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     if first then begin
       result.literal:=newListLiteral(length(nextPermutation));
       for i:=0 to length(nextPermutation)-1 do P_listLiteral(result.literal)^.append(nextPermutation[i],true);
@@ -356,7 +356,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
         else disposeLiteral(nextUnfiltered.literal);
       end else begin
         if nextUnfiltered.literal=nil
-        then begin result.triggeredByReturn:=false; result.literal:=newVoidLiteral; exit(result); end
+        then begin result.reasonForStop:=rr_ok; result.literal:=newVoidLiteral; exit(result); end
         else exit(nextUnfiltered);
       end;
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
@@ -410,13 +410,13 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
                      else result:=mapExpression^.evaluateToLiteral(location,context,recycler,nextUnmapped,nil);
         disposeLiteral(nextUnmapped);
         //error handling
-        if result.literal=nil then begin result.literal:=newVoidLiteral; result.triggeredByReturn:=false; exit(result); end;
+        if result.literal=nil then begin result.literal:=newVoidLiteral; result.reasonForStop:=rr_ok; exit(result); end;
         if result.literal^.literalType=lt_void then disposeLiteral(result.literal);
       end else begin
         if nextUnmapped=nil
         then result.literal:=newVoidLiteral
         else result.literal:=nextUnmapped;
-        result.triggeredByReturn:=false; exit(result);
+        result.reasonForStop:=rr_ok; exit(result);
       end;
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
@@ -539,7 +539,7 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
 
   begin
     if not(queue.hasNext) then fillQueue;
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     if not(queue.hasNext)
     then result.literal:=newVoidLiteral
     else result.literal:=queue.next;
@@ -759,7 +759,7 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
       taskChain   : T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching then exit;
+    if doneFetching or not(context.continueEvaluation) then exit;
     globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
@@ -796,7 +796,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
       taskChain     :T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching then exit;
+    if doneFetching or not(context.continueEvaluation) then exit;
     globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
@@ -842,7 +842,7 @@ FUNCTION T_parallelFilterGenerator.toString(CONST lengthLimit: longint): string;
 
 FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=nil;
     if outputQueue.hasNext then begin
       if pendingCount<settings.cpuCount*TASKS_TO_QUEUE_PER_CPU then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
@@ -1068,7 +1068,7 @@ FUNCTION T_fileLineIterator.toString(CONST lengthLimit:longint=maxLongint):strin
 
 FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     //The following call might block for "fileChangeTimeoutInSeconds" seconds = "timeout" days
     while not(fileTruncated) and (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue) then begin
       if context^.continueEvaluation then begin
@@ -1183,7 +1183,7 @@ FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
       inc(index);
       if index>=int64(CHUNK_SIZE)*int64(length(table)) then extendTable;
     end;
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newIntLiteral(index);
     inc(index);
   end;
@@ -1267,14 +1267,14 @@ FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
       end;
     end;
     if length(currIdx)>maxL then begin
-      result.triggeredByReturn:=false;
+      result.reasonForStop:=rr_ok;
       result.literal:=newVoidLiteral;
       exit(result);
     end;
 
     setLength(s,length(currIdx));
     for i:=0 to length(currIdx)-1 do s[length(s)-i]:=charSet[currIdx[i]];
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newStringLiteral(s);
   end;
 
@@ -1375,7 +1375,7 @@ FUNCTION T_abstractRandomGenerator.canApplyToNumberOfParameters(CONST parCount: 
 
 FUNCTION T_abstractRandomGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=nil;
     if (parameters=nil) or (parameters^.size=0) then begin
       result:=evaluateToLiteral(location,context,recycler,nil,nil);
@@ -1457,19 +1457,19 @@ FUNCTION T_isaacRandomGenerator.toString(CONST lengthLimit: longint): string;
 
 FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newRealLiteral(XOS.realRandom);
   end;
 
 FUNCTION T_intRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newIntLiteral(bigint.randomInt(@XOS.dwordRandom,range));
   end;
 
 FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newIntLiteral(bigint.randomInt(@isaac.iRandom,range));
   end;
 
@@ -1543,7 +1543,7 @@ FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location:T_tokenLocatio
       k   := k div base;
       inc(i);
     end;
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     result.literal:=newRealLiteral(x);
   end;
 

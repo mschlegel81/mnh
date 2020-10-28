@@ -3,7 +3,7 @@ UNIT mnh_tables;
 {$mode objfpc}{$H+}
 
 INTERFACE
-
+//TODO Add export option: "Convert to ANSI"
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   myGenerics,

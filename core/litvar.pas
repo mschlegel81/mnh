@@ -199,9 +199,10 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
+  T_reduceResult=(rr_fail,rr_ok,rr_okWithReturn,rr_patternMismatch);
   T_evaluationResult=record
     literal:P_literal;
-    triggeredByReturn:boolean;
+    reasonForStop:T_reduceResult;
   end;
   P_typableLiteral   = ^T_typableLiteral;
   T_typableLiteral=object(T_literal)
@@ -445,7 +446,7 @@ TYPE
   end;
 
 CONST
-  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
+  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; reasonForStop:rr_ok);
   NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;

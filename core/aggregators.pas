@@ -235,7 +235,7 @@ if earlyAbort then begin
   disposeLiteral(er.literal);
   exit;
 end;
-if er.triggeredByReturn then begin
+if er.reasonForStop=rr_okWithReturn then begin
   if resultLiteral<>nil then disposeLiteral(resultLiteral);
   resultLiteral:=er.literal;
   hasReturnLiteral:=true;
