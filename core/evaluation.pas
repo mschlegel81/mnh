@@ -306,7 +306,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         if (bodyRule<>nil) and bodyRule^.matchesPatternAndReplaces(nil,whileLocation,toReduce,context,recycler) then begin
           if reduceExpression(toReduce.first,context,recycler)=rr_okWithReturn then begin
             returnValue.literal:=P_literal(toReduce.first^.data)^.rereferenced;
-            returnValue.triggeredByReturn:=true;
+            returnValue.reasonForStop:=rr_okWithReturn;
           end;
           recycler.cascadeDisposeToken(toReduce.first);
         end;
@@ -320,7 +320,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while not(returnValue.triggeredByReturn)
+      while (returnValue.reasonForStop=rr_ok)
             and headRule^.evaluateToBoolean(whileLocation,@context,@recycler,true,nil,nil)
             and (context.messages^.continueEvaluation) do evaluateBody;
       first^.txt:='';
@@ -333,7 +333,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       if bodyRule<>nil then
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
-      if returnValue.triggeredByReturn then begin
+      if returnValue.reasonForStop=rr_okWithReturn then begin
         disposeLiteral(first^.data);
         first^.data:=returnValue.literal;
         processReturnStatement;
@@ -428,8 +428,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             end;
           end else begin
             inlineRule:=first^.data;
-            //failing "replaces" for inline rules will raise evaluation error.
-            if not(inlineRule^.matchesPatternAndReplaces(parameterListLiteral,first^.location,replace,context,recycler)) then exit;
+            if not(inlineRule^.matchesPatternAndReplaces(parameterListLiteral,first^.location,replace,context,recycler)) then begin
+              context.raiseCannotApplyError('inline function '+inlineRule^.toString(20),parameterListLiteral,first^.location);
+              exit;
+            end;
           end
         end else begin
           context.raiseError('Trying to apply a rule which is no rule! ('+P_literal(first^.data)^.typeString+')',errorLocation);

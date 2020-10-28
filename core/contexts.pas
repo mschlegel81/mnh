@@ -23,7 +23,6 @@ TYPE
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
   T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging,ect_debuggingAndProfiling,ect_stackTracing{$endif},ect_silent);
-  T_reduceResult            =(rr_fail,rr_ok,rr_okWithReturn);
 
 CONST
   C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
@@ -681,7 +680,7 @@ FUNCTION T_context.reduceExpression(VAR first: P_token; VAR recycler:T_recycler)
 
 FUNCTION T_context.reduceToLiteral(VAR first: P_token; VAR recycler:T_recycler): T_evaluationResult;
   begin
-    result.triggeredByReturn:=reduceExpressionCallback(first,self,recycler)=rr_okWithReturn;
+    result.reasonForStop:=reduceExpressionCallback(first,self,recycler);
     if messages^.continueEvaluation and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
       result.literal:=P_literal(first^.data)^.rereferenced;
       recycler.disposeToken(first);

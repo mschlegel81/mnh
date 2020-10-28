@@ -310,12 +310,12 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       if x.literal<>nil then disposeLiteral(x.literal);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
-      x.triggeredByReturn:=false;
+      x.reasonForStop:=rr_ok;
       for x.literal in iter do if (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) then
         aggregator^.addToAggregation(x,false,location,@context,recycler);
       disposeLiteral(iter);
     end else begin
-      x.triggeredByReturn:=false;
+      x.reasonForStop:=rr_ok;
       x.literal:=input;
       aggregator^.addToAggregation(x,false,location,@context,recycler);
     end;
@@ -493,7 +493,7 @@ FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST
           enterCriticalSection(criticalSection);
         end;
       end;
-      result.triggeredByReturn:=false;
+      result.reasonForStop:=rr_ok;
       if resultValue=nil then result.literal:=newVoidLiteral
                          else result.literal:=resultValue^.rereferenced;
     finally

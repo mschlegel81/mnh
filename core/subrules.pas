@@ -681,15 +681,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       result:=output.last<>nil;
     end else begin
       result:=false;
-      case typ of
-        et_eachBody: begin
-          raise Exception.create('Cannot evaluate each body; '+parameterListTypeString(param));
-        end;
-        et_inline,et_inlineIteratable,et_inlineStateful: begin
-          if param=nil then context.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
-                       else context.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
-        end;
-      end;
+      if typ=et_eachBody
+      then raise Exception.create('Cannot evaluate each body; '+parameterListTypeString(param));
     end;
   end;
 
@@ -1051,21 +1044,24 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
   end;
 
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
-  VAR resultLiteral:P_literal;
+  VAR evResult:T_evaluationResult;
       parameterList:T_listLiteral;
   begin
     parameterList.create(2);
     if a<>nil then parameterList.append(a,true);
     if b<>nil then parameterList.append(b,true);
-    resultLiteral:=evaluate(location,context,recycler,@parameterList).literal;
-    parameterList.destroy;
-    if (resultLiteral<>nil) and (resultLiteral^.literalType=lt_boolean) then begin
-      result:=P_boolLiteral(resultLiteral)^.value;
+    evResult:=evaluate(location,context,recycler,@parameterList);
+    if (evResult.literal<>nil) and (evResult.literal^.literalType=lt_boolean) then begin
+      result:=P_boolLiteral(evResult.literal)^.value;
     end else begin
       result:=false;
-      if allowRaiseError and (resultLiteral<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+resultLiteral^.typeString,location);
+      if allowRaiseError then begin
+        if evResult.reasonForStop=rr_patternMismatch then P_context(context)^.raiseCannotApplyError('filter expression '+toString(50),@parameterList,location)
+        else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+      end;
     end;
-    if resultLiteral<>nil then disposeLiteral(resultLiteral);
+    parameterList.destroy;
+    if evResult.literal<>nil then disposeLiteral(evResult.literal);
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
@@ -1076,7 +1072,7 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
       result:=P_context(context)^.reduceToLiteral(toReduce.first,P_recycler(recycler)^);
     end else begin
       result.literal:=nil;
-      result.triggeredByReturn:=false;
+      result.reasonForStop:=rr_patternMismatch;
     end;
   end;
 
@@ -1112,7 +1108,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
   begin
     {$ifdef fullVersion} P_context(context)^.callStackPush(location,@self,nil); {$endif}
     result.literal:=func(parameters,location,P_context(context)^,P_recycler(recycler)^);
-    result.triggeredByReturn:=false;
+    result.reasonForStop:=rr_ok;
     {$ifdef fullVersion} P_context(context)^.callStackPop(nil); {$endif}
   end;
 
