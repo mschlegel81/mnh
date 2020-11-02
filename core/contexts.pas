@@ -846,9 +846,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
             stopBecauseOfMemoryUsage or //memory panic with more than 1 pool thread running
             (taskQueue.poolThreadsRunning>settings.cpuCount);
       {$ifdef fullVersion}
-      if stopBecauseOfMemoryUsage
-      then postIdeMessage('Worker thread stopped because of memory panic',true)
-      else postIdeMessage('Worker thread stopped',false);
+      if stopBecauseOfMemoryUsage then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
 
       result:=0;

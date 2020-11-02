@@ -26,7 +26,7 @@
       <MajorVersionNr Value="1"/>
       <MinorVersionNr Value="2"/>
       <RevisionNr Value="6"/>
-      <BuildNr Value="411"/>
+      <BuildNr Value="412"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
