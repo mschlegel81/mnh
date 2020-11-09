@@ -844,7 +844,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
             stopBecauseOfMemoryUsage or //memory panic with more than 1 pool thread running
-            (taskQueue.poolThreadsRunning>settings.cpuCount);
+            (taskQueue.poolThreadsRunning+1>settings.cpuCount);
       {$ifdef fullVersion}
       if stopBecauseOfMemoryUsage then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
@@ -987,7 +987,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
         spawnCount:longint=0;
     begin
       if isMemoryInComfortZone
-      then aimPoolThreads:=settings.cpuCount
+      then aimPoolThreads:=settings.cpuCount-1
       else aimPoolThreads:=1;
       while poolThreadsRunning<aimPoolThreads do begin
         spawnCount+=1;
