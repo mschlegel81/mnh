@@ -386,11 +386,13 @@ PROCEDURE TIdeMainForm.miDebuggerVarClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miDecFontSizeClick(Sender: TObject);
   VAR activeType:T_controlType;
   begin
+    BeginFormUpdate;
     activeType:=typeOfFocusedControl;
     case activeType of
       ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]-1;
       ctPlot: TplotForm(mainForm.ActiveControl).miDecFontSizeClick(Sender);
     end;
+    EndFormUpdate;
   end;
 
 PROCEDURE TIdeMainForm.miDockAllClick(Sender: TObject);
@@ -462,11 +464,13 @@ PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miIncFontSizeClick(Sender: TObject);
   VAR activeType:T_controlType;
   begin
+    BeginFormUpdate;
     activeType:=typeOfFocusedControl;
     case activeType of
       ctEditor,ctGeneral,ctTable: SettingsForm.fontSize[activeType]:=SettingsForm.fontSize[activeType]+1;
       ctPlot: TplotForm(mainForm.ActiveControl).miIncFontSizeClick(Sender);
     end;
+    EndFormUpdate;
   end;
 
 PROCEDURE TIdeMainForm.miKeepStackTraceClick(Sender: TObject);

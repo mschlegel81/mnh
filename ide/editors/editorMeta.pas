@@ -489,8 +489,10 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
-      if assistanceData^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then updateLine;
-      result:=true;
+      if assistanceData^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then begin
+        updateLine;
+        result:=true;
+      end;
     end;
     editor.EndUpdate;
   end;

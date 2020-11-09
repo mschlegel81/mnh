@@ -86,6 +86,7 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
     caption:=getCaption;
     registerFontControl(examplesSynEdit,ctEditor);
     registerFontControl(self,ctGeneral);
+
     helpHighlighter:=TMnhOutputSyn.create(self);
     examplesSynEdit.highlighter:=helpHighlighter;
     currentLink:=getDocIndexLinkForBrowser;
@@ -138,11 +139,11 @@ PROCEDURE THelpForm.performFastUpdate;
       result:=TLabel.create(self);
       setLength(temporaryComponents,length(temporaryComponents)+1);
       temporaryComponents[length(temporaryComponents)-1]:=result;
+      result.parent:=parent;
       if italic then begin
         result.Font:=Font;
         result.Font.style:=[fsItalic];
-      end;
-      result.parent:=parent;
+      end else result.ParentFont:=true;
       if neighbor<>nil then begin
         result.Align:=alCustom;
         result.AnchorToNeighbour(akTop ,0,neighbor);
