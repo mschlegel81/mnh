@@ -37,8 +37,9 @@ FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
     writeln(' ?> ', question);
     write(' !> ');
     while (messages^.continueEvaluation) and (PollKeyEvent=0) do sleep(1);
+    doneConsoleAsk;
     if messages^.continueEvaluation
-    then begin doneConsoleAsk; readln(result); end
+    then readln(result)
     else result:='';
   end;
 
