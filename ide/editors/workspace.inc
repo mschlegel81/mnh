@@ -390,7 +390,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
           markIdx     :=oldMarkers[k].markIndex;
           meta^._add_breakpoint_or_bookmark_(oldMarkers[k].location.line,oldMarkers[k].location.column,oldMarkers[k].markIndex);
           //old bookmark should be removed by T_editorMeta.onPlaceBookmark
-          if (oldMarkers[k].location=markLocation) and (oldMarkers[k].markIndex=markIdx) then begin
+          if (k>=0) and (k<length(oldMarkers)) and (oldMarkers[k].location=markLocation) and (oldMarkers[k].markIndex=markIdx) then begin
             oldMarkers[k]:=oldMarkers[length(oldMarkers)-1];
             setLength(oldMarkers,length(oldMarkers)-1);
           end;
