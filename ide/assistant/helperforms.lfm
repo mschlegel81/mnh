@@ -1,12 +1,11 @@
 object HelpForm: THelpForm
   Left = 704
-  Height = 634
+  Height = 507
   Top = 277
-  Width = 609
+  Width = 487
   Caption = 'Help'
-  ClientHeight = 634
-  ClientWidth = 609
-  DesignTimePPI = 120
+  ClientHeight = 507
+  ClientWidth = 487
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -14,31 +13,31 @@ object HelpForm: THelpForm
   LCLVersion = '2.0.10.0'
   object ScrollBox1: TScrollBox
     Left = 0
-    Height = 634
+    Height = 507
     Top = 0
-    Width = 609
-    HorzScrollBar.Page = 605
-    VertScrollBar.Page = 522
+    Width = 487
+    HorzScrollBar.Page = 483
+    VertScrollBar.Page = 416
     Align = alClient
-    ClientHeight = 630
-    ClientWidth = 605
+    ClientHeight = 486
+    ClientWidth = 483
     TabOrder = 0
     object usedAtGroupBox: TGroupBox
-      Left = 5
-      Height = 192
-      Top = 330
-      Width = 600
+      Left = 4
+      Height = 154
+      Top = 262
+      Width = 601
       Align = alTop
-      BorderSpacing.Left = 5
+      BorderSpacing.Left = 4
       Caption = 'Referenced at'
-      ClientHeight = 167
-      ClientWidth = 596
+      ClientHeight = 134
+      ClientWidth = 597
       TabOrder = 0
       object referenceListBox: TListBox
         Left = 0
-        Height = 167
+        Height = 134
         Top = 0
-        Width = 596
+        Width = 597
         Align = alClient
         ItemHeight = 0
         OnKeyDown = referenceListBoxKeyDown
@@ -46,33 +45,28 @@ object HelpForm: THelpForm
       end
     end
     object examplesGroupBox: TGroupBox
-      Left = 5
-      Height = 200
-      Top = 130
-      Width = 600
+      Left = 4
+      Height = 160
+      Top = 102
+      Width = 601
       Align = alTop
       AutoSize = True
-      BorderSpacing.Left = 5
+      BorderSpacing.Left = 4
       Caption = 'Examples'
-      ClientHeight = 175
-      ClientWidth = 596
-      Constraints.MinHeight = 200
+      ClientHeight = 140
+      ClientWidth = 597
+      Constraints.MinHeight = 160
       TabOrder = 1
       inline examplesSynEdit: TSynEdit
         Left = 0
-        Height = 175
+        Height = 140
         Top = 0
-        Width = 596
+        Width = 597
         Align = alClient
-        Font.Height = -13
-        Font.Name = 'Courier New'
-        Font.Pitch = fpFixed
-        Font.Quality = fqNonAntialiased
         ParentColor = False
-        ParentFont = False
         TabOrder = 0
         Gutter.Visible = False
-        Gutter.Width = 68
+        Gutter.Width = 63
         Gutter.MouseActions = <>
         RightGutter.Width = 0
         RightGutter.MouseActions = <>
@@ -523,11 +517,11 @@ object HelpForm: THelpForm
         LineHighlightColor.Foreground = clNone
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterMarks1: TSynGutterMarks
-            Width = 30
+            Width = 24
             MouseActions = <>
           end
           object SynGutterLineNumber1: TSynGutterLineNumber
-            Width = 17
+            Width = 23
             MouseActions = <>
             MarkupInfo.Background = clBtnFace
             MarkupInfo.Foreground = clNone
@@ -537,19 +531,18 @@ object HelpForm: THelpForm
             LeadingZeros = False
           end
           object SynGutterChanges1: TSynGutterChanges
-            Width = 5
+            Width = 4
             MouseActions = <>
             ModifiedColor = 59900
             SavedColor = clGreen
           end
           object SynGutterSeparator1: TSynGutterSeparator
-            Width = 3
+            Width = 2
             MouseActions = <>
             MarkupInfo.Background = clWhite
             MarkupInfo.Foreground = clGray
           end
           object SynGutterCodeFolding1: TSynGutterCodeFolding
-            Width = 13
             MouseActions = <>
             MarkupInfo.Background = clNone
             MarkupInfo.Foreground = clGray
@@ -561,12 +554,12 @@ object HelpForm: THelpForm
     end
     object Panel1: TPanel
       Left = 0
-      Height = 77
+      Height = 60
       Top = 0
       Width = 605
       Align = alTop
       AutoSize = True
-      ClientHeight = 77
+      ClientHeight = 60
       ClientWidth = 605
       TabOrder = 2
       object openHtmlButton: TButton
@@ -575,16 +568,15 @@ object HelpForm: THelpForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = Panel1
         AnchorSideRight.Side = asrBottom
-        Left = 462
-        Height = 30
-        Top = 25
-        Width = 142
+        Left = 490
+        Height = 25
+        Top = 20
+        Width = 114
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
         Caption = 'Show in browser'
         OnClick = openHtmlButtonClick
-        ParentFont = False
         TabOrder = 0
       end
       object shortInfoGroupBox: TGroupBox
@@ -593,23 +585,23 @@ object HelpForm: THelpForm
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = tokenLabel
         AnchorSideRight.Side = asrBottom
-        Left = 6
-        Height = 45
-        Top = 31
-        Width = 456
+        Left = 5
+        Height = 35
+        Top = 24
+        Width = 485
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Top = 5
+        BorderSpacing.Top = 4
         Caption = 'Short info'
-        ClientHeight = 20
-        ClientWidth = 452
+        ClientHeight = 15
+        ClientWidth = 481
         TabOrder = 1
         object shortInfoLabel: TLabel
           Left = 0
-          Height = 20
+          Height = 15
           Top = 0
-          Width = 452
+          Width = 481
           Align = alClient
           Caption = 'shortInfoLabel'
           ParentColor = False
@@ -619,17 +611,16 @@ object HelpForm: THelpForm
         AnchorSideTop.Control = Panel1
         AnchorSideRight.Control = Panel1
         AnchorSideRight.Side = asrBottom
-        Left = 462
-        Height = 24
+        Left = 490
+        Height = 19
         Top = 1
-        Width = 142
+        Width = 114
         Align = alCustom
         Anchors = [akTop, akRight]
         AutoSize = True
         Caption = 'Update for Cursor'
         Checked = True
         OnChange = UpdateToggleBoxChange
-        ParentFont = False
         State = cbChecked
         TabOrder = 2
       end
@@ -637,48 +628,48 @@ object HelpForm: THelpForm
         AnchorSideLeft.Control = Panel1
         AnchorSideTop.Control = Panel1
         AnchorSideRight.Control = UpdateToggleBox
-        Left = 6
-        Height = 20
-        Top = 6
-        Width = 456
+        Left = 5
+        Height = 15
+        Top = 5
+        Width = 485
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 5
-        BorderSpacing.Top = 5
+        BorderSpacing.Left = 4
+        BorderSpacing.Top = 4
         Caption = 'Token: ...'
         ParentColor = False
       end
     end
     object builtinGroupBox: TGroupBox
-      Left = 5
-      Height = 24
-      Top = 106
-      Width = 600
+      Left = 4
+      Height = 19
+      Top = 83
+      Width = 601
       Align = alTop
       AutoSize = True
-      BorderSpacing.Left = 5
+      BorderSpacing.Left = 4
       Caption = 'Bultin function'
       TabOrder = 3
     end
     object subrulesGroupBox: TGroupBox
-      Left = 5
-      Height = 24
-      Top = 82
-      Width = 600
+      Left = 4
+      Height = 19
+      Top = 64
+      Width = 601
       Align = alTop
       AutoSize = True
-      BorderSpacing.Left = 5
-      BorderSpacing.Top = 5
+      BorderSpacing.Left = 4
+      BorderSpacing.Top = 4
       Caption = 'Subrules'
       TabOrder = 4
     end
   end
   object MainMenu1: TMainMenu
-    Left = 392
-    Top = 104
+    Left = 314
+    Top = 83
   end
   object PopupMenu1: TPopupMenu
-    Left = 384
-    Top = 176
+    Left = 307
+    Top = 141
   end
 end

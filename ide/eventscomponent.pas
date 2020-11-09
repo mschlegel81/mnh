@@ -17,6 +17,8 @@ TYPE
     eventsGrid: TStringGrid;
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
+    PROCEDURE eventsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
+      );
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -181,6 +183,11 @@ PROCEDURE TeventsForm.FormCreate(Sender: TObject);
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
     registerFontControl(eventsGrid,ctTable);
+  end;
+
+PROCEDURE TeventsForm.eventsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    tabNextKeyHandling(Sender,key,Shift);
   end;
 
 PROCEDURE TeventsForm.FormDestroy(Sender: TObject);

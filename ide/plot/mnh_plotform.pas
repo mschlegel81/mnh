@@ -314,11 +314,15 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     eTimer.start(fpsSamplingStart);
     initDockMenuItems(MainMenu,nil);
     initDockMenuItems(PopupMenu1,nil);
+    registerFontControl(StatusBar,ctGeneral);
+    registerFontControl(AnimationGroupBox,ctGeneral);
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
   begin
     if relatedPlot<>nil then relatedPlot^.formDestroyed;
+    unregisterFontControl(StatusBar);
+    unregisterFontControl(AnimationGroupBox);
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);

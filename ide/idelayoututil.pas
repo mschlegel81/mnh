@@ -405,17 +405,30 @@ PROCEDURE T_mnhDockSiteModel.fixSize;
 
 PROCEDURE T_mnhDockSiteModel.tabNextKeyHandling(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR step:longint;
-      prevPageIndex:longint;
+      prevPageIndex,PageCount:longint;
+      activePage: TTabSheet;
+      ActiveControl: T_mnhComponentForm;
   begin
     if ((key=33) or (key=34)) and (ssCtrl in Shift) then begin
+      prevPageIndex:=PageControl.activePageIndex;
+      if prevPageIndex<0 then begin
+        prevPageIndex:=0;
+        PageControl.activePageIndex:=0;
+      end;
+      PageCount:=PageControl.PageCount;
       if key=34
       then step:=1
-      else step:=PageControl.PageCount-1;
-      prevPageIndex:=PageControl.activePageIndex;
+      else step:=PageCount-1;
+      if (step<0) or (PageCount=0) then exit;
+
       repeat
-        PageControl.activePageIndex:=(PageControl.activePageIndex+step) mod PageControl.PageCount
-      until (prevPageIndex=PageControl.activePageIndex) or T_mnhComponentForm(PageControl.activePage.Controls[0]).visible;
-      if mainForm<>nil then mainForm.ActiveControl:=T_mnhComponentForm(PageControl.activePage.Controls[0]).getDefaultControl;
+        PageControl.activePageIndex:=(PageControl.activePageIndex+step) mod PageCount;
+        activePage:=PageControl.activePage;
+        if activePage=nil
+        then ActiveControl:=nil
+        else ActiveControl:=T_mnhComponentForm(activePage.Controls[0]);
+      until (prevPageIndex=PageControl.activePageIndex) or (ActiveControl<>nil) and ActiveControl.visible;
+      if mainForm<>nil then mainForm.ActiveControl:=ActiveControl.getDefaultControl;
       key:=0;
     end;
   end;
