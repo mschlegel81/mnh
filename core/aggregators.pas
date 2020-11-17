@@ -417,7 +417,9 @@ PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; C
       disposeLiteral(resultLiteral);
       resultLiteral:=er.literal^.rereferenced;
     end else if er.literal^.literalType<>lt_void then begin
+      inc(context^.callDepth,8); //higher priorization of aggregation : enter
       newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,resultLiteral,er.literal).literal;
+      dec(context^.callDepth,8); //higher priorization of aggregation : exit
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
       if resultLiteral=nil then begin
@@ -433,7 +435,9 @@ PROCEDURE T_unaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CO
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType<>lt_void then begin
+      inc(context^.callDepth,8); //higher priorization of aggregation : enter
       newValue:=aggregator^.evaluateToLiteral(location,context,@recycler,er.literal,nil).literal;
+      dec(context^.callDepth,8); //higher priorization of aggregation : exit
       if newValue=nil then context^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location)
                       else disposeLiteral(newValue);
     end;
