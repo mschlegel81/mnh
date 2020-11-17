@@ -160,10 +160,15 @@ FUNCTION readDatastore_impl intFuncSignature;
   end;
 
 FUNCTION serialize_impl intFuncSignature;
+  VAR void:P_literal;
   begin
     if (params<>nil) and (params^.size=1)
     then result:=newStringLiteral(serialize(arg0,tokenLocation,context.messages))
-    else result:=nil;
+    else if (params=nil) then begin
+      void:=newVoidLiteral;
+      result:=newStringLiteral(serialize(void,tokenLocation,context.messages));
+      disposeLiteral(void);
+    end else result:=nil;
   end;
 
 FUNCTION deserialize_impl intFuncSignature;
