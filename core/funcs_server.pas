@@ -278,7 +278,7 @@ PROCEDURE T_microserver.serve;
     end;
 
   CONST minSleepTime=0;
-        maxSleepTime=100;
+        maxSleepTime=10;
   VAR sleepTime:longint=minSleepTime;
       recycler:T_recycler;
       requestSocket:TSocket;
@@ -290,7 +290,7 @@ PROCEDURE T_microserver.serve;
     lastActivity:=now;
     repeat
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
-      if requestSocket<>0 then begin
+      if requestSocket<>INVALID_SOCKET then begin
         //Protect against memory over-use by request bombing
         while not(isMemoryInComfortZone) do sleep(1000);
         sleepTime:=minSleepTime;

@@ -26,15 +26,15 @@ begin
   Application.initialize;
   SetDefaultLang('en');
   if wantMainLoopAfterParseCmdLine then begin
-    {$ifndef debugMode}
-    hideConsole;
-    {$endif}
     initAskForm;
     if clf_GUI in commandLine.mnhExecutionOptions.flags
     then Application.CreateForm(TreevaluationForm,reevaluationForm)
     else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
     then halt
     else Application.CreateForm(TIdeMainForm, IdeMainForm);
+    {$ifndef debugMode}
+    hideConsole;
+    {$endif}
     Application.run;
     memoryCleaner.stop;
     showConsole;
