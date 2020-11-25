@@ -20,7 +20,7 @@ object plotForm: TplotForm
   object plotImage: TImage
     Cursor = crCross
     Left = 0
-    Height = 208
+    Height = 213
     Top = 45
     Width = 467
     Align = alClient
@@ -31,8 +31,8 @@ object plotForm: TplotForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 28
-    Top = 253
+    Height = 23
+    Top = 258
     Width = 467
     Panels = <>
     ParentFont = False
