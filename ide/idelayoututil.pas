@@ -67,6 +67,7 @@ TYPE
       PROCEDURE defaultDockSite4Click(Sender:TObject);
       PROCEDURE initDockMenuItems(CONST menuToInit:TMenu; CONST dockRoot:TMenuItem);
       PROCEDURE setComponentFormVisible(CONST visible_:boolean);
+      FUNCTION isDocked:boolean;
     public
       lastDock,
       myComponentParent:T_componentParent;
@@ -529,6 +530,11 @@ PROCEDURE T_mnhComponentForm.changeDock(CONST newSite: T_componentParent);
     mainForm.dockSites[prevSite]^.fixSize;
     mainForm.dockSites[newSite ]^.fixSize;
     showComponent(false);
+  end;
+
+FUNCTION T_mnhComponentForm.isDocked:boolean;
+  begin
+    result:=myComponentParent<>cpNone;
   end;
 
 PROCEDURE T_mnhComponentForm.defaultCloseClick(Sender: TObject);

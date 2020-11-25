@@ -3683,7 +3683,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
             lt_stringList,lt_stringSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
             else
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream252(),false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream251(),false);
           end;
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
@@ -3691,8 +3691,8 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           result:=newMapLiteral(0);
           listSize:=stream^.readNaturalNumber;
           for i:=0 to listSize-1 do if stream^.allOkay then begin
-            mapKey  :=literalFromStream252();
-            mapValue:=literalFromStream252();
+            mapKey  :=literalFromStream251();
+            mapValue:=literalFromStream251();
             P_mapLiteral(result)^.dat.put(mapKey,mapValue);
           end;
           result^.literalType:=lt_map;

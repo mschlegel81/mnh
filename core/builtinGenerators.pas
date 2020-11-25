@@ -467,24 +467,26 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
     PROCEDURE appendEvaluated(unmapped:P_literal);
       VAR valueToAppend:P_literal;
       begin
-        if mapExpression=nil
-        then begin
-          queue.append(unmapped);
-          someFetched:=true;
-        end else begin
-          if isNullary
-          then valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,nil     ,nil).literal
-          else valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,unmapped,nil).literal;
-          disposeLiteral(unmapped);
-          if (valueToAppend<>nil) then begin
-            if valueToAppend^.literalType=lt_void
-            then disposeLiteral(valueToAppend)
-            else begin
-              queue.append(valueToAppend);
-              someFetched:=true;
+        if context^.continueEvaluation then begin;
+          if mapExpression=nil
+          then begin
+            queue.append(unmapped);
+            someFetched:=true;
+          end else begin
+            if isNullary
+            then valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,nil     ,nil).literal
+            else valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,unmapped,nil).literal;
+            disposeLiteral(unmapped);
+            if (valueToAppend<>nil) then begin
+              if valueToAppend^.literalType=lt_void
+              then disposeLiteral(valueToAppend)
+              else begin
+                queue.append(valueToAppend);
+                someFetched:=true;
+              end;
             end;
           end;
-        end;
+        end else disposeLiteral(unmapped);
       end;
 
     VAR nextUnmapped:P_literal;
@@ -538,9 +540,9 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
     end;
 
   begin
-    if not(queue.hasNext) then fillQueue;
-    result.reasonForStop:=rr_ok;
-    if not(queue.hasNext)
+    result:=NIL_EVAL_RESULT;
+    if context^.continueEvaluation and not(queue.hasNext) then fillQueue;
+    if not(queue.hasNext) or not(context^.continueEvaluation)
     then result.literal:=newVoidLiteral
     else result.literal:=queue.next;
   end;
@@ -612,7 +614,7 @@ FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONS
       doneFetching:boolean=false;
   begin
     result:=NIL_EVAL_RESULT;
-    repeat
+    if context^.continueEvaluation then repeat
       unmappedList:=newListLiteral(chunkSize);
       repeat
         nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;

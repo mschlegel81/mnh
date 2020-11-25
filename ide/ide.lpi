@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="97">
+    <Units Count="98">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -628,6 +628,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="eventsComponent"/>
       </Unit96>
+      <Unit97>
+        <Filename Value="../core/aggregators.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit97>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

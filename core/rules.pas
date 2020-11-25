@@ -157,12 +157,17 @@ TYPE
       FUNCTION arity:T_arityInfo; virtual;
   end;
 
+  T_variableState=(vs_uninitialized,  //set on construction
+                   vs_initialized,    //set on declaration
+                   vs_modified,       //set on mutate
+                   vs_readFromFile,   //set on datastore read
+                   vs_inSyncWithFile);//set on datastore write
+
   T_variable=object(T_abstractRule)
     private
       varType:T_variableType;
       privateRule:boolean;
-      called,
-      valueChangedAfterDeclaration:boolean;
+      state:T_variableState;
       namedValue:T_namedVariable;
       meta:T_ruleMetaData;
     public
@@ -201,9 +206,8 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; VAR meta_:T_ruleMetaData; CONST datastorePackage:P_objectWithPath; CONST isPrivate:boolean; CONST variableType:T_variableType);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
-      PROCEDURE writeBack(CONST adapters:P_messages);
+      FUNCTION writeBack(CONST adapters:P_messages):boolean;
       PROCEDURE memoryCleanup;
-      FUNCTION isInitialized:boolean;
       FUNCTION getValue(VAR context:T_context; VAR recycler:T_recycler):P_literal; virtual;
   end;
 
@@ -244,7 +248,7 @@ TYPE
       FUNCTION getLocalMain:P_rule;
       FUNCTION getAllLocalRules:T_ruleList;
       PROCEDURE executeAfterRules(VAR context:T_context; VAR recycler:T_recycler);
-      PROCEDURE writeBackDatastores(CONST messages:P_messages);
+      FUNCTION writeBackDatastores(CONST messages:P_messages):boolean;
       FUNCTION getTypeMap:T_typeMap;
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
@@ -701,12 +705,15 @@ PROCEDURE T_ruleMap.executeAfterRules(VAR context: T_context;
     for s in afterRules do s^.evaluate(packageTokenLocation(localPackage),@context,@recycler,nil);
   end;
 
-PROCEDURE T_ruleMap.writeBackDatastores(CONST messages: P_messages);
+FUNCTION T_ruleMap.writeBackDatastores(CONST messages: P_messages):boolean;
   VAR entry:T_ruleMapEntry;
   begin
+    result:=false;
     for entry in valueSet do
     if not(entry.isImported) and (entry.entryType=tt_globalVariable) and (P_variable(entry.value)^.varType in [vt_datastore,vt_plainDatastore])
-    then P_datastore(entry.value)^.writeBack(messages);
+    then begin
+      if P_datastore(entry.value)^.writeBack(messages) then result:=true;
+    end;
   end;
 
 FUNCTION T_ruleMap.getTypeMap: T_typeMap;
@@ -1042,14 +1049,13 @@ CONSTRUCTOR T_typeCheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tok
     typedef:=nil;
   end;
 
-CONSTRUCTOR T_variable.create(CONST ruleId: T_idString;
-  CONST startAt: T_tokenLocation; VAR meta_: T_ruleMetaData;
-  CONST isPrivate: boolean; CONST variableType: T_variableType);
+CONSTRUCTOR T_variable.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; VAR meta_: T_ruleMetaData; CONST isPrivate: boolean; CONST variableType: T_variableType);
   begin
     inherited create(ruleId,startAt,rt_normal);
     varType:=variableType;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
+    state:=vs_uninitialized;
     meta:=meta_;
   end;
 
@@ -1170,7 +1176,7 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
   begin
-    raise Exception.create('Rhis should not be called!');
+    raise Exception.create('This should not be called!');
   end;
 
 PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -1626,15 +1632,12 @@ FUNCTION T_variable.getStructuredInfo:T_structuredRuleInfoList;
   end;
 {$endif}
 
-PROCEDURE T_variable.setMutableValue(CONST value: P_literal;
-  CONST onDeclaration: boolean);
+PROCEDURE T_variable.setMutableValue(CONST value: P_literal; CONST onDeclaration: boolean);
   begin
     namedValue.setValue(value);
     system.enterCriticalSection(namedValue.varCs);
-    if not(onDeclaration) then begin
-      valueChangedAfterDeclaration:=true;
-      called:=true;
-    end;
+    if onDeclaration then state:=vs_initialized
+                     else state:=vs_modified;
     system.leaveCriticalSection(namedValue.varCs);
   end;
 
@@ -1649,14 +1652,14 @@ FUNCTION T_variable.isReportable(OUT value: P_literal): boolean;
 PROCEDURE T_datastore.readDataStore(VAR context:T_context; VAR recycler:T_recycler);
   VAR lit:P_literal;
   begin
-    if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta.fileChangedSinceRead) then begin
+    if (state in [vs_uninitialized,vs_initialized]) or (state=vs_readFromFile) and dataStoreMeta.fileChangedSinceRead then begin
       system.enterCriticalSection(namedValue.varCs);
       lit:=dataStoreMeta.readValue(getLocation,context,recycler);
       if lit<>nil then begin
         namedValue.setValue(lit);
         lit^.unreference;
-        called:=true;
       end;
+      state:=vs_readFromFile;
       system.leaveCriticalSection(namedValue.varCs);
     end;
   end;
@@ -1664,8 +1667,7 @@ PROCEDURE T_datastore.readDataStore(VAR context:T_context; VAR recycler:T_recycl
 FUNCTION T_variable.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler: T_recycler): P_literal;
   begin
     result:=namedValue.mutate(mutation,RHS,location,@context,@recycler);
-    valueChangedAfterDeclaration:=true;
-    called:=true;
+    state:=vs_modified;
   end;
 
 FUNCTION T_datastore.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): P_literal;
@@ -1674,34 +1676,31 @@ FUNCTION T_datastore.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_lite
     result:=inherited mutateInline(mutation,RHS,location,context,recycler);
   end;
 
-PROCEDURE T_datastore.writeBack(CONST adapters:P_messages);
+FUNCTION T_datastore.writeBack(CONST adapters:P_messages):boolean;
   VAR L:P_literal;
   begin
-    if adapters^.continueEvaluation and valueChangedAfterDeclaration then begin
+    if adapters^.continueEvaluation and (state=vs_modified) then begin
       L:=namedValue.getValue;
       dataStoreMeta.writeValue(L,getLocation,adapters,varType=vt_plainDatastore);
       disposeLiteral(L);
-    end;
+      state:=vs_inSyncWithFile;
+      result:=true;
+    end else result:=false;
   end;
 
 PROCEDURE T_datastore.memoryCleanup;
   begin
     enterCriticalSection(namedValue.varCs);
     try
-      if called and not(valueChangedAfterDeclaration) //The store has been read but not modified
+      if (state in [vs_inSyncWithFile,vs_readFromFile]) //The store has been read but not modified
          and (dataStoreMeta.fileExists)               //and the store can be re-read
       then begin
         namedValue.setValue(newVoidLiteral);
-        called:=false;
+        state:=vs_uninitialized;
       end;
     finally
       leaveCriticalSection(namedValue.varCs);
     end;
-  end;
-
-FUNCTION T_datastore.isInitialized:boolean;
-  begin
-    result:=called or valueChangedAfterDeclaration;
   end;
 
 PROCEDURE T_memoizedRule.clearCache;

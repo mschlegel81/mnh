@@ -1,12 +1,11 @@
 object DebuggerForm: TDebuggerForm
   Left = 904
-  Height = 391
+  Height = 313
   Top = 170
-  Width = 400
+  Width = 320
   Caption = 'Debugger'
-  ClientHeight = 391
-  ClientWidth = 400
-  DesignTimePPI = 120
+  ClientHeight = 313
+  ClientWidth = 320
   Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -15,11 +14,11 @@ object DebuggerForm: TDebuggerForm
   LCLVersion = '2.0.10.0'
   inline currentExpressionEdit: TSynEdit
     Left = 0
-    Height = 270
+    Height = 208
     Top = 40
-    Width = 400
+    Width = 320
     Align = alClient
-    Font.Height = -11
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -483,9 +482,9 @@ object DebuggerForm: TDebuggerForm
   end
   object inlineVariablesTreeView: TTreeView
     Left = 0
-    Height = 75
-    Top = 316
-    Width = 400
+    Height = 60
+    Top = 253
+    Width = 320
     Align = alBottom
     ParentFont = False
     PopupMenu = PopupMenu1
@@ -494,9 +493,9 @@ object DebuggerForm: TDebuggerForm
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
-    Height = 6
-    Top = 310
-    Width = 400
+    Height = 5
+    Top = 248
+    Width = 320
     Align = alBottom
     ResizeAnchor = akBottom
   end
@@ -504,12 +503,12 @@ object DebuggerForm: TDebuggerForm
     Left = 0
     Height = 40
     Top = 0
-    Width = 400
+    Width = 320
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
     ClientHeight = 40
-    ClientWidth = 400
+    ClientWidth = 320
     ParentFont = False
     TabOrder = 0
     TabStop = True
@@ -601,8 +600,8 @@ object DebuggerForm: TDebuggerForm
   object DebuggerIcons: TImageList
     Height = 30
     Width = 30
-    Left = 94
-    Top = 39
+    Left = 75
+    Top = 31
     Bitmap = {
       4C690C0000001E0000001E000000F4F4F4E1F2F2F2ECF2F2F2ECF3F3F3ECF4F4
       F4ECF4F4F4ECF3F3F3ECF2F2F2ECF2F2F2ECF0F0F0ECEEEEEEECEDEDEDECE9E9
@@ -1958,11 +1957,11 @@ object DebuggerForm: TDebuggerForm
     }
   end
   object MainMenu1: TMainMenu
-    Left = 95
-    Top = 173
+    Left = 76
+    Top = 138
   end
   object PopupMenu1: TPopupMenu
-    Left = 259
-    Top = 178
+    Left = 207
+    Top = 142
   end
 end
