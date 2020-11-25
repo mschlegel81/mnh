@@ -32,6 +32,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
 IMPLEMENTATION
 USES FileUtil;
 VAR globalDatastoreCs:TRTLCriticalSection;
+CONST TEMP_FILE_SUFFIX='_tmp';
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
   VAR wrapper:T_bufferedInputStreamWrapper;
@@ -72,6 +73,15 @@ FUNCTION T_datastoreMeta.newStoreName:string;
     until not(sysutils.fileExists(result));
   end;
 
+PROCEDURE moveSafely(CONST source,dest:string);
+  begin
+    if not(RenameFile(source,dest))
+    then begin
+      if CopyFile(source,dest,[cffOverwriteFile,cffPreserveTime],false)
+      then DeleteFile(source);
+    end;
+  end;
+
 FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
   VAR allStores:T_arrayOfString=();
       i:longint;
@@ -97,6 +107,7 @@ FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
     result:=false;
     enterCriticalSection(globalDatastoreCs);
     allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
+    sort(allStores);
     for i:=0 to length(allStores)-1 do if fileName='' then begin
       wrapper.createToReadFromFile(allStores[i]);
       if ((wrapper.readAnsiString=ruleId) and wrapper.allOkay) then begin
@@ -113,6 +124,9 @@ FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
     if (fileName='') and createIfMissing then begin
       fileName:=newStoreName;
       result:=true;
+    end else if (fileName<>'') and (copy(fileName,length(fileName)-length(TEMP_FILE_SUFFIX),length(TEMP_FILE_SUFFIX))=TEMP_FILE_SUFFIX) then begin
+      moveSafely(fileName,copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX)));
+      fileName:=copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX));
     end;
     leaveCriticalSection(globalDatastoreCs);
   end;
@@ -192,7 +206,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
   begin
     useTempFile:=not(tryObtainName(true));
     if useTempFile
-    then tempFileName:=newStoreName
+    then tempFileName:=fileName+TEMP_FILE_SUFFIX
     else tempFileName:=fileName;
 
     enterCriticalSection(globalDatastoreCs);
@@ -208,13 +222,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     end;
     leaveCriticalSection(globalDatastoreCs);
 
-    if useTempFile then begin
-      if not(RenameFile(tempFileName,fileName))
-      then begin
-        if CopyFile(tempFileName,fileName,[cffOverwriteFile,cffPreserveTime],false)
-        then DeleteFile(tempFileName);
-      end;
-    end;
+    if useTempFile then moveSafely(tempFileName,fileName);
   end;
 
 INITIALIZATION
