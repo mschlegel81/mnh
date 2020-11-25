@@ -14,6 +14,7 @@ PREFIX_OF_MESSAGE_TYPE:=['el1_note'        =>'Note',
                          'el2_userWarning' =>'Warning',
                          'el3_userDefined' =>'Error',
                          'el3_evalError'   =>'Error',
+                         'el4_systemError' =>'Error',
                          'echo_input'      =>'in>' ,
                          'echo_declaration'=>'in>' ,
                          'echo_output'     =>'out>'].toMap;
