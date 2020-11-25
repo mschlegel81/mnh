@@ -224,14 +224,14 @@ PROCEDURE T_valueScope.attachParent(CONST parent:P_valueScope);
   begin
     assert(parentScope=nil);
     if parent=nil then exit;
-    parentScope:=parent;
     interLockedIncrement(parent^.refCount);
+    parentScope:=parent;
   end;
 
 PROCEDURE T_valueScope.detachParent;
   begin
     if parentScope=nil then exit;
-    interlockedDecrement(parentScope^.refCount);
+    if interlockedDecrement(parentScope^.refCount)=0 then dispose(parentScope,destroy);
     parentScope:=nil;
   end;
 

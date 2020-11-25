@@ -1176,7 +1176,7 @@ FUNCTION T_typeCheckRule.castRuleIsValid:boolean;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
   begin
-    raise Exception.create('Rhis should not be called!');
+    raise Exception.create('This should not be called!');
   end;
 
 PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);

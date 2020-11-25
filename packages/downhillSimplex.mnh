@@ -30,7 +30,7 @@ downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0
 
   options['simplex'].isVoid
   ? begin
-      simplex:=[0..startVector.size].each(i,([0..startVector.size-1]=i).ord*startSpread+startVector).map({[toMinimize($x),$x]}).sort;
+      simplex:=[0..startVector.size].each(i,([0..startVector.size-1]=i).ord*(intRandom(2)*2-1)*startSpread+startVector).map({[toMinimize($x),$x]}).sort;
       simplex.each(i,i[0].isNumeric,AND) ? void : fail('Invalid function toMinimize; must return a numeric scalar');
     end
   : begin
