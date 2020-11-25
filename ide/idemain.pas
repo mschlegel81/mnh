@@ -452,8 +452,9 @@ PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miHaltEvaluationClick(Sender: TObject);
   begin
-    runnerModel.postHalt;
-    stopQuickEvaluation;
+    if isQuickEvaluationRunning
+    then stopQuickEvaluation
+    else runnerModel.postHalt;
   end;
 
 PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
