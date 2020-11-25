@@ -157,7 +157,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     if not(L^.literalType in typeWhitelist) then exit(false);
     result:=true;
     case restrictionType of
-      tt_customTypeCheck:    exit(skipCustomCheck or typeCheckAccept(L,builtinTypeCheck,restrictionIdx) or customTypeCheck^.matchesLiteral(L,location,@context,@recycler));
+      tt_customTypeCheck:    exit(skipCustomCheck and typeCheckAccept(L,builtinTypeCheck,restrictionIdx) or customTypeCheck^.matchesLiteral(L,location,@context,@recycler));
       tt_typeCheck:          exit(typeCheckAccept(L,builtinTypeCheck,restrictionIdx));
       tt_comparatorEq..tt_comparatorListEq,tt_operatorIn:begin
         if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
