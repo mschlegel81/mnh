@@ -276,16 +276,14 @@ FUNCTION inspectAll_imp intFuncSignature;
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.writeDataStores(context.messages,true);
-      result:=newVoidLiteral;
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context.messages,true));
     end else result:=nil;
   end;
 
 FUNCTION writeDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.writeDataStores(context.messages,false);
-      result:=newVoidLiteral;
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context.messages,false));
     end else result:=nil;
   end;
 
@@ -307,8 +305,8 @@ FUNCTION writeDataStores_imp intFuncSignature;
                                                      '//               "'+RUNSCRIPT_KEY_DETERMINISTIC+'" (Boolean, true to enforce determinism of PRGNs)'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.'{$endif});
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'helpOnMain'       ,@helpOnMain_imp        ,ak_nullary{$ifdef fullVersion},'helpOnMain;//Returns help text for the current package''s main method.'{$endif});
 {$endif}
 {$ifdef include_finalization}

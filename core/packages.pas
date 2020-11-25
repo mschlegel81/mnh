@@ -73,7 +73,7 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       {$endif}
-      PROCEDURE writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
+      FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean):boolean;
       public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; VAR recycler:T_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
       private
@@ -1124,11 +1124,11 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     readyForUsecase:=lu_NONE;
   end;
 
-PROCEDURE T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean);
+FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean):boolean;
   VAR i:longint;
   begin
-    ruleMap.writeBackDatastores(messages);
-    if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(messages,recurse);
+    result:=ruleMap.writeBackDatastores(messages);
+    if recurse then for i:=0 to length(packageUses)-1 do if packageUses[i].pack^.writeDataStores(messages,recurse) then result:=true;
   end;
 
 PROCEDURE T_package.finalize(VAR context: T_context; VAR recycler: T_recycler);

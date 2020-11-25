@@ -133,8 +133,8 @@ FUNCTION T_datastoreMeta.fileChangedSinceRead: boolean;
   VAR currentAge:double;
   begin
     tryObtainName(false);
-    if fileName='' then exit(false);
-    if fileReadAt=0 then exit(true);
+    if fileName='' then exit(false); //file is not known -> neither read nor written
+    if fileReadAt=0 then exit(true); //file was never read
     fileAge(fileName,currentAge);
     result:=currentAge<>fileReadAt;
   end;

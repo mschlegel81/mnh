@@ -994,9 +994,9 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
-      {$ifdef fullVersion}
+      {$ifdef fullVersion} {$ifdef debugMode}
       if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
-      {$endif}
+      {$endif} {$endif}
     end;
 
   FUNCTION ensureQueue:P_subQueue;
