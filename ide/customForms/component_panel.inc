@@ -94,6 +94,9 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     if lastControl<>nil then begin
       meta^.getControl.top:=lastControl.top+lastControl.height+10;
     end;
+    meta^.getControl.AnchorToNeighbour(akLeft,0,nil);
+    meta^.getControl.AnchorToNeighbour(akRight,0,nil);
+
     setLength(elements,length(elements)+1);
     elements[length(elements)-1]:=meta;
     lastControl:=meta^.getControl;
