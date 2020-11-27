@@ -1,12 +1,11 @@
 object tableForm: TtableForm
   Left = 355
-  Height = 200
+  Height = 160
   Top = 217
-  Width = 266
+  Width = 213
   Caption = '-'
-  ClientHeight = 175
-  ClientWidth = 266
-  DesignTimePPI = 120
+  ClientHeight = 140
+  ClientWidth = 213
   Menu = tableMenu
   OnClose = FormClose
   OnCreate = FormCreate
@@ -17,9 +16,9 @@ object tableForm: TtableForm
   LCLVersion = '2.0.10.0'
   object stringGrid: TStringGrid
     Left = 0
-    Height = 175
+    Height = 140
     Top = 0
-    Width = 266
+    Width = 213
     Align = alClient
     BorderStyle = bsNone
     FixedCols = 0
@@ -31,8 +30,8 @@ object tableForm: TtableForm
     OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu
-    Left = 56
-    Top = 88
+    Left = 45
+    Top = 70
     object miDockInMain: TMenuItem
       Caption = '&View'
     end
@@ -60,21 +59,27 @@ object tableForm: TtableForm
     object MenuItem2: TMenuItem
       Caption = '&Export'
       object mi_exportCsvSemicolon: TMenuItem
-        Caption = 'Export to ";"-separated csv'
+        Caption = '&Export to ";"-separated CSV'
         OnClick = mi_exportCsvSemicolonClick
       end
       object mi_exportCsvTab: TMenuItem
-        Caption = 'Export to tab-separated csv...'
+        Caption = 'Export to tab-separated &CSV'
         OnClick = mi_exportCsvTabClick
       end
       object mi_exportText: TMenuItem
-        Caption = 'Export to text...'
+        Caption = 'Export to &text'
         OnClick = mi_exportTextClick
+      end
+      object MenuItem3: TMenuItem
+        Caption = '-'
       end
       object mi_exportIncHeader: TMenuItem
         AutoCheck = True
-        Caption = 'Include Header in Export'
-        RadioItem = True
+        Caption = 'Include &Header in Export'
+      end
+      object mi_exportToAnsi: TMenuItem
+        AutoCheck = True
+        Caption = 'Convert to &ANSI encoding'
       end
     end
   end
@@ -82,11 +87,11 @@ object tableForm: TtableForm
     Title = 'Export as'
     Filter = 'All|*.*|CSV|*.csv|Text|*.txt'
     FilterIndex = 2
-    Left = 6
-    Top = 14
+    Left = 5
+    Top = 11
   end
   object PopupMenu1: TPopupMenu
-    Left = 122
-    Top = 53
+    Left = 98
+    Top = 42
   end
 end

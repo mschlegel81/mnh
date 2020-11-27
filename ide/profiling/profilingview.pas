@@ -247,8 +247,8 @@ PROCEDURE TprofilingOutputForm.setProfilingList(CONST list: T_profilingList);
     end;
     fillGrid1;
     grid2Autosized:=false;
-    StringGrid2.RowCount:=1;
-    StringGrid3.RowCount:=1;
+    StringGrid2.rowCount:=1;
+    StringGrid3.rowCount:=1;
     StringGrid1.AutoSizeColumn(1);
     StringGrid1.AutoSizeColumn(2);
     StringGrid1.AutoSizeColumn(3);
@@ -278,7 +278,7 @@ FUNCTION getHeaderText(CONST index:longint; CONST sorting:byte):string;
 PROCEDURE TprofilingOutputForm.fillGrid1;
   VAR i:longint;
   begin
-    StringGrid1.RowCount:=1+length(profilingList);
+    StringGrid1.rowCount:=1+length(profilingList);
     for i:=0 to 4 do StringGrid1.Cells[i,0]:=getHeaderText(i,grid1Sorting);
     for i:=0 to length(profilingList)-1 do begin
       StringGrid1.Cells[0,i+1]:=profilingList[i].id;
@@ -294,7 +294,7 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
   begin
     k:=StringGrid1.selection.top-1;
     if (k>=0) and (k<length(profilingList)) then begin
-      StringGrid2.RowCount:=length(profilingList[k].callers)+1;
+      StringGrid2.rowCount:=length(profilingList[k].callers)+1;
       for i:=0 to 4 do StringGrid2.Cells[i,0]:=getHeaderText(i,grid2Sorting);
       for i:=0 to length(profilingList[k].callers)-1 do begin
         StringGrid2.Cells[0,i+1]:=profilingList[k].callers[i].id;
@@ -304,7 +304,7 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
         StringGrid2.Cells[4,i+1]:=formatFloat('0.000',profilingList[k].callers[i].time.timeSpent_exclusive*1E3)+'ms';
       end;
 
-      StringGrid3.RowCount:=length(profilingList[k].callees)+1;
+      StringGrid3.rowCount:=length(profilingList[k].callees)+1;
       for i:=0 to 4 do StringGrid3.Cells[i,0]:=getHeaderText(i,grid2Sorting);
       for i:=0 to length(profilingList[k].callees)-1 do begin
         StringGrid3.Cells[0,i+1]:=profilingList[k].callees[i].id;
@@ -324,8 +324,8 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
         grid2Autosized:=true;
       end;
     end else begin
-      StringGrid2.RowCount:=1;
-      StringGrid3.RowCount:=1;
+      StringGrid2.rowCount:=1;
+      StringGrid3.rowCount:=1;
     end;
   end;
 

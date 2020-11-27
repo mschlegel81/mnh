@@ -3,7 +3,6 @@ UNIT mnh_tables;
 {$mode objfpc}{$H+}
 
 INTERFACE
-//TODO Add export option: "Convert to ANSI"
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   myGenerics,
@@ -22,6 +21,8 @@ TYPE
   TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    mi_exportToAnsi: TMenuItem;
     miDockInMain: TMenuItem;
     mi_exportIncHeader: TMenuItem;
     miIncreaseFontSize: TMenuItem;
@@ -67,7 +68,7 @@ TYPE
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_:P_tableAdapter);
-    PROCEDURE fillTable(CONST firstFill:boolean);
+    PROCEDURE fillTable(CONST firstFill:boolean; CONST suppressMarker:boolean=false);
   end;
 
   P_tableDisplayRequest=^T_tableDisplayRequest;
@@ -91,7 +92,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES myStringUtil,strutils,math,LCLType;
+USES myStringUtil,strutils,math,LCLType,LazUTF8Classes,LConvEncoding;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
@@ -247,27 +248,51 @@ PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   end;
 
 PROCEDURE TtableForm.exportToCsv(Separator: char);
-  VAR fixedColsBefore:longint;
-      fixedRowsBefore:longint;
-      message:ansistring;
+  VAR message:ansistring='';
+      needFill:boolean=false;
+      i:longint;
+      TheStream: TFileStreamUtf8;
+      memStream: TMemoryStream;
   begin
     if SaveTableDialog.execute then begin
-      fixedColsBefore:=StringGrid.FixedCols;
-      fixedRowsBefore:=StringGrid.FixedRows;
       if mi_exportIncHeader.checked
       then begin
+        needFill:=true;
+        fillTable(false,true);
         StringGrid.FixedRows:=0;
         StringGrid.FixedCols:=0;
       end;
       try
-        StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',false,true);
+        if mi_exportToAnsi.checked then begin
+          memStream:=TMemoryStream.create;
+          try
+            StringGrid.SaveToCSVStream(memStream,Separator,false,true);
+            i:=memStream.size;
+            memStream.Seek(0,soFromBeginning);
+            setLength(message,i);
+            memStream.ReadBuffer(message[1],i);
+            message:=UTF8ToCP1252(message);
+            memStream.clear;
+            memStream.Seek(0,soFromBeginning);
+            memStream.WriteBuffer(message[1],length(message));
+            memStream.saveToFile(SaveTableDialog.fileName);
+          finally
+            memStream.free;
+          end;
+        end else begin
+          TheStream:=TFileStreamUtf8.create(SaveTableDialog.fileName,fmCreate);
+          try
+            StringGrid.SaveToCSVStream(TheStream, Separator, false,true);
+          finally
+            TheStream.free;
+          end;
+        end;
       except
         beep;
         message:='Could not access file '+SaveTableDialog.fileName;
         Application.MessageBox('Export to csv failed',PChar(message),MB_ICONERROR+MB_OK);
       end;
-      StringGrid.FixedCols:=fixedColsBefore;
-      StringGrid.FixedRows:=fixedRowsBefore;
+      if needFill then fillTable(false,false);
     end;
   end;
 
@@ -289,8 +314,8 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
   begin
     if SaveTableDialog.execute then begin
       if mi_exportIncHeader.checked then i0:=0;
-      setLength(content,StringGrid.RowCount-i0);
-      for i:=i0 to StringGrid.RowCount-1 do begin
+      setLength(content,StringGrid.rowCount-i0);
+      for i:=i0 to StringGrid.rowCount-1 do begin
         row:='';
         for j:=0 to StringGrid.colCount-1 do row:=row+StringGrid.Cells[j,i]+C_tabChar;
         content[i-i0]:=row;
@@ -400,7 +425,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
     caption:=newCaption;
   end;
 
-PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
+PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boolean=false);
   VAR dataRows:longint;
       dataColumns:longint=0;
       cellContents:array of T_arrayOfString=();
@@ -412,7 +437,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
   FUNCTION sortMarker(CONST input:string; CONST i:longint):string;
     CONST arrow:array[false..true] of string=(#226#150#188,#226#150#178);
     begin
-      if sorted.byColumn=i then begin
+      if (sorted.byColumn=i) and not(suppressMarker) then begin
         if input='' then result:=arrow[sorted.ascending]
                     else result:=arrow[sorted.ascending]+' '+input+' '+arrow[sorted.ascending];
       end else result:=input;
@@ -470,7 +495,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean);
     if firstFill then begin
       StringGrid.clear;
       if (dataRows=0) or (dataColumns=0) then exit;
-      StringGrid.RowCount:=dataRows   +additionalHeaderRow;
+      StringGrid.rowCount:=dataRows   +additionalHeaderRow;
       StringGrid.colCount:=dataColumns;
       StringGrid.FixedRows:=min(dataRows   ,FixedRows)+additionalHeaderRow;
       StringGrid.FixedCols:=min(dataColumns,fixedColumns);
