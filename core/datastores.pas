@@ -24,7 +24,8 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
       FUNCTION fileExists:boolean;
-      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+      FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; OUT readId:string):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   end;
 
@@ -159,7 +160,7 @@ FUNCTION T_datastoreMeta.fileExists:boolean;
     result:=fileName<>'';
   end;
 
-FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; OUT readId:string): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
       lexer:T_linesLexer;
       fileLines:T_arrayOfString;
@@ -167,12 +168,13 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       stmt:T_enhancedStatement;
       typeMap:T_typeMap;
   begin
+    readId:='';
     tryObtainName(false);
     if fileName='' then exit(nil);
     enterCriticalSection(globalDatastoreCs);
     if fileHasBinaryFormat then begin
       wrapper.createToReadFromFile(fileName);
-      wrapper.readAnsiString;
+      readId:=wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
       if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.messages,typeMap);
@@ -186,6 +188,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       fileLines:=fileWrappers.fileLines(fileName,accessed);
       if not(accessed) then result:=nil
       else begin
+        if length(fileLines)>0 then readId:=copy(fileLines[0],1,length(fileLines[0])-2);
         dropFirst(fileLines,1);
         lexer.create(fileLines,location,P_abstractPackage(location.package));
         stmt:=lexer.getNextStatement(context.messages,recycler);
@@ -196,6 +199,19 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
     end;
     fileAge(fileName,fileReadAt);
     leaveCriticalSection(globalDatastoreCs)
+  end;
+
+FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+  VAR id:string;
+      contentLiteral:P_literal=nil;
+  begin
+    fileName:=fname;
+    if fileExists then contentLiteral:=readValue(location,context,recycler,id);
+    if contentLiteral=nil then exit(newVoidLiteral);
+    result:=newMapLiteral(2)^.put('id',id)^.put('content',contentLiteral,false);
+    //Reset data to ensure consistent behaviour if self is used later.
+    fileName:='';
+    fileReadAt:=0;
   end;
 
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
