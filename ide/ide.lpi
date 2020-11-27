@@ -25,8 +25,8 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
       <MinorVersionNr Value="2"/>
-      <RevisionNr Value="8"/>
-      <BuildNr Value="415"/>
+      <RevisionNr Value="9"/>
+      <BuildNr Value="418"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
@@ -39,7 +39,7 @@
             <Filename Value="mnh"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="../core"/>
+            <IncludeFiles Value="../core;customForms"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
@@ -79,7 +79,7 @@
             <Filename Value="mnh_prof"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="../core"/>
+            <IncludeFiles Value="../core;customForms"/>
             <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="98">
+    <Units Count="99">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -632,6 +632,10 @@
         <Filename Value="../core/aggregators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit97>
+      <Unit98>
+        <Filename Value="customForms/component_grid.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit98>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -640,7 +644,7 @@
       <Filename Value="mnh_debug"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="../core"/>
+      <IncludeFiles Value="../core;customForms"/>
       <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
       <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>

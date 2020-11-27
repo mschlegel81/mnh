@@ -422,10 +422,11 @@ FUNCTION format_imp intFuncSignature;
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(formatLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
-      {$ifdef fullVersion}
-      context.callStackPop(nil);
-      {$endif}
-      if not(context.messages^.continueEvaluation) then exit(nil);
+      if not(context.messages^.continueEvaluation) then begin
+        {$ifdef fullVersion}context.callStackPop(nil);{$endif}
+        try dispose(preparedStatement,destroy); except end;
+        exit(nil);
+      end;
       txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
       dispose(preparedStatement,destroy);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
@@ -433,6 +434,9 @@ FUNCTION format_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(txt[i]);
       end;
+      {$ifdef fullVersion}
+      context.callStackPop(nil);
+      {$endif}
     end;
   end;
 

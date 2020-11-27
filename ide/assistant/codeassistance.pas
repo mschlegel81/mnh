@@ -528,6 +528,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
           leaveCriticalSection(codeAssistanceCs);
           enterCriticalSection(codeAssistanceData[scanIndex]^.cs);
           if not(codeAssistanceData[scanIndex]^.destroying) and
+             not(codeAssistanceData[scanIndex]^.evaluating) and
              codeAssistanceData[scanIndex]^.doCodeAssistanceSynchronouslyInCritialSection(recycler,globals,@adapters)
           then anyScanned:=true;
           leaveCriticalSection(codeAssistanceData[scanIndex]^.cs);

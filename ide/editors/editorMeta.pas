@@ -81,7 +81,6 @@ T_editorMeta=object(T_basicEditorMeta)
 
     //Assistant related
     FUNCTION getOptionalAdditionals:T_arrayOfString;
-    //PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
   public
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
@@ -464,6 +463,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       lineIndex:longint;
       lineTxt:string;
       fileName:string;
+      editorWasThereBefore:boolean;
 
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
@@ -474,15 +474,16 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     end;
 
   begin
+    {$ifdef debugMode}
+    writeln(stdErr,'doRename: ',oldId,'->',newId,' in ',pseudoName);
+    {$endif}
     result:=false;
     if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then begin
       if not(isPseudoFile) then for fileName in workspace.fileHistory.findRelatedScriptsTransitive(fileInfo.filePath) do begin
-        if not(workspace.hasEditorForFile(fileName)) then begin
-          meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
-          if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false))
-          then workspace.closeQuietly(meta);
-        end;
+        editorWasThereBefore:=workspace.hasEditorForFile(fileName);
+        meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
+        if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false)) and not(editorWasThereBefore) then workspace.closeQuietly(meta);
       end;
     end;
 
@@ -490,6 +491,9 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
       if assistanceData^.renameIdentifierInLine(ref,oldId,newId,lineTxt,lineIndex+1) then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'doRename: mofify line #',lineIndex);
+        {$endif}
         updateLine;
         result:=true;
       end;

@@ -1651,10 +1651,11 @@ FUNCTION T_variable.isReportable(OUT value: P_literal): boolean;
 
 PROCEDURE T_datastore.readDataStore(VAR context:T_context; VAR recycler:T_recycler);
   VAR lit:P_literal;
+      readId:string;
   begin
     if (state in [vs_uninitialized,vs_initialized]) or (state=vs_readFromFile) and dataStoreMeta.fileChangedSinceRead then begin
       system.enterCriticalSection(namedValue.varCs);
-      lit:=dataStoreMeta.readValue(getLocation,context,recycler);
+      lit:=dataStoreMeta.readValue(getLocation,context,recycler,readId);
       if lit<>nil then begin
         namedValue.setValue(lit);
         lit^.unreference;

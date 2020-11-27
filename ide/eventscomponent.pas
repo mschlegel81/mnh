@@ -150,7 +150,7 @@ PROCEDURE T_eventsAdapter.drawEventsList;
     enterCriticalSection(adapterCs);
     cleanupEventsList;
     if changedSinceDraw then begin
-      eventsFormSingleton.eventsGrid.RowCount:=1+length(collectedEvents);
+      eventsFormSingleton.eventsGrid.rowCount:=1+length(collectedEvents);
       rowIdx:=length(collectedEvents);
       for i:=0 to length(collectedEvents)-1 do with eventsFormSingleton.eventsGrid do begin
         Cells[TIME_COLUMN_INDEX,rowIdx]:=FormatDateTime('dd.mm.yyyy hh:nn:ss.zzz',collectedEvents[i]^.time);

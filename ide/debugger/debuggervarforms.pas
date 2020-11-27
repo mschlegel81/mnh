@@ -73,7 +73,7 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
   PROCEDURE cleanup;
     begin
       VariablesTree.items.clear;
-      StackGrid.RowCount:=1;
+      StackGrid.rowCount:=1;
     end;
 
   PROCEDURE updateWithCurrentSnapshot;
@@ -81,7 +81,7 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
         j:longint=1;
         firstRow:TGridRect;
     begin
-      StackGrid.RowCount:=1+currentSnapshot^.callStack^.size;
+      StackGrid.rowCount:=1+currentSnapshot^.callStack^.size;
       for i:=currentSnapshot^.callStack^.size-1 downto 0 do begin
         StackGrid.Cells[0,j]:=currentSnapshot^.callStack^[i].callerLocation;
         StackGrid.Cells[1,j]:=currentSnapshot^.callStack^[i].calleeId;
@@ -92,7 +92,7 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
       firstRow.Bottom:=1;
       firstRow.Left:=0;
       firstRow.Right:=1;
-      if StackGrid.RowCount>1 then StackGrid.selection:=firstRow;
+      if StackGrid.rowCount>1 then StackGrid.selection:=firstRow;
       StackGridSelection(nil,0,1);
     end;
 
