@@ -86,7 +86,8 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   begin
     meta:=workspace.currentEditor;
     scriptName:=meta^.pseudoName();
-    if (meta=nil) or (meta^.language<>LANG_MNH) then exit(false);
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.getAssistanceData=nil) or not(meta^.getAssistanceData^.isExecutablePackage) then exit(false);
+
     if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
     with myCustomRunForm.scriptParamEdit do begin
       items.clear;
