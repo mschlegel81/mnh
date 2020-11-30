@@ -202,7 +202,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR 
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
       secondaryCallInfos.create;
-      user.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
+      user.load(lu_forCodeAssistanceSecondary,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
       callAndIdInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;

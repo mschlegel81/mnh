@@ -18,14 +18,14 @@ TYPE
       fileReadAt:double;
       FUNCTION newStoreName:string;
       {Returns true if new name is returned}
-      FUNCTION tryObtainName(CONST createIfMissing:boolean):boolean;
+      FUNCTION tryObtainName(CONST createIfMissing:boolean; CONST enforcedName:string=''):boolean;
     public
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
       FUNCTION fileExists:boolean;
       FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; OUT readId:string):P_literal;
+      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
   end;
 
@@ -83,7 +83,7 @@ PROCEDURE moveSafely(CONST source,dest:string);
     end;
   end;
 
-FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
+FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean; CONST enforcedName:string):boolean;
   VAR allStores:T_arrayOfString=();
       i:longint;
       wrapper:T_bufferedInputStreamWrapper;
@@ -100,34 +100,50 @@ FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean):boolean;
       except
         exit(false);
       end;
-      result:=expectedFirstLine=firstLine;
+      if enforcedName=''
+      then result:=expectedFirstLine=firstLine
+      else begin
+        ruleId:=copy(firstLine,1,length(firstLine)-2);
+        result:=(firstLine=ruleId+':=') and isIdentifier(ruleId,false);
+      end;
     end;
 
   begin
     if fileName<>'' then exit(false);
     result:=false;
     enterCriticalSection(globalDatastoreCs);
-    allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
-    sort(allStores);
+    if enforcedName='' then begin
+      allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
+      sort(allStores);
+    end else allStores:=enforcedName;
     for i:=0 to length(allStores)-1 do if fileName='' then begin
       wrapper.createToReadFromFile(allStores[i]);
-      if ((wrapper.readAnsiString=ruleId) and wrapper.allOkay) then begin
+      if enforcedName='' then begin
+        if (wrapper.readAnsiString<>ruleId)
+        then wrapper.logWrongTypeError;
+      end else begin
+        ruleId:=wrapper.readAnsiString;
+      end;
+      if (wrapper.allOkay) then begin
         fileName:=allStores[i];
         fileHasBinaryFormat:=true;
       end;
       wrapper.destroy;
+
       if (fileName='') and firstLineEquals(allStores[i],ruleId+':=') then begin
         fileName:=allStores[i];
         fileHasBinaryFormat:=false;
       end;
     end;
     setLength(allStores,0);
-    if (fileName='') and createIfMissing then begin
-      fileName:=newStoreName;
-      result:=true;
-    end else if (fileName<>'') and (copy(fileName,length(fileName)-length(TEMP_FILE_SUFFIX),length(TEMP_FILE_SUFFIX))=TEMP_FILE_SUFFIX) then begin
-      moveSafely(fileName,copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX)));
-      fileName:=copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX));
+    if enforcedName='' then begin
+      if (fileName='') and createIfMissing then begin
+        fileName:=newStoreName;
+        result:=true;
+      end else if (fileName<>'') and (copy(fileName,length(fileName)-length(TEMP_FILE_SUFFIX),length(TEMP_FILE_SUFFIX))=TEMP_FILE_SUFFIX) then begin
+        moveSafely(fileName,copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX)));
+        fileName:=copy(fileName,1,length(fileName)-length(TEMP_FILE_SUFFIX));
+      end;
     end;
     leaveCriticalSection(globalDatastoreCs);
   end;
@@ -160,7 +176,7 @@ FUNCTION T_datastoreMeta.fileExists:boolean;
     result:=fileName<>'';
   end;
 
-FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; OUT readId:string): P_literal;
+FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
       lexer:T_linesLexer;
       fileLines:T_arrayOfString;
@@ -168,13 +184,12 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       stmt:T_enhancedStatement;
       typeMap:T_typeMap;
   begin
-    readId:='';
     tryObtainName(false);
     if fileName='' then exit(nil);
     enterCriticalSection(globalDatastoreCs);
     if fileHasBinaryFormat then begin
       wrapper.createToReadFromFile(fileName);
-      readId:=wrapper.readAnsiString;
+      wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
       if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.messages,typeMap);
@@ -188,7 +203,6 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       fileLines:=fileWrappers.fileLines(fileName,accessed);
       if not(accessed) then result:=nil
       else begin
-        if length(fileLines)>0 then readId:=copy(fileLines[0],1,length(fileLines[0])-2);
         dropFirst(fileLines,1);
         lexer.create(fileLines,location,P_abstractPackage(location.package));
         stmt:=lexer.getNextStatement(context.messages,recycler);
@@ -202,16 +216,15 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
   end;
 
 FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-  VAR id:string;
-      contentLiteral:P_literal=nil;
+  VAR contentLiteral:P_literal=nil;
   begin
-    fileName:=fname;
-    if fileExists then contentLiteral:=readValue(location,context,recycler,id);
-    if contentLiteral=nil then exit(newVoidLiteral);
-    result:=newMapLiteral(2)^.put('id',id)^.put('content',contentLiteral,false);
-    //Reset data to ensure consistent behaviour if self is used later.
-    fileName:='';
-    fileReadAt:=0;
+    if sysutils.fileExists(fname) then begin
+      tryObtainName(false,fname);
+      if fileName='' then exit(newVoidLiteral);
+      contentLiteral:=readValue(location,context,recycler);
+      if contentLiteral=nil then exit(newVoidLiteral);
+      result:=newMapLiteral(2)^.put('id',ruleId)^.put('content',contentLiteral,false);
+    end else result:=newVoidLiteral;
   end;
 
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);

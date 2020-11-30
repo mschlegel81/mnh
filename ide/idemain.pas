@@ -453,8 +453,13 @@ PROCEDURE TIdeMainForm.miGotoLineClick(Sender: TObject);
 PROCEDURE TIdeMainForm.miHaltEvaluationClick(Sender: TObject);
   begin
     if isQuickEvaluationRunning
-    then stopQuickEvaluation
-    else runnerModel.postHalt;
+    then begin
+      postIdeMessage('Halting quick evaluation',false);
+      stopQuickEvaluation;
+    end else begin
+      postIdeMessage('Halting evaluation',false);
+      runnerModel.postHalt;
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miHelpClick(Sender: TObject);
@@ -707,6 +712,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       try
         slowUpdating:=true;
         if workspace.savingRequested then begin
+          postIdeMessage('Saving settings',false);
           saveIdeSettings;
         end;
         performSlowUpdates(runnerModel.anyRunning(false));

@@ -111,6 +111,9 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall: boolean);
     end;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
     evaluation.getStdOut^.outputBehavior:=ideSettings.outputBehavior;
+    if mainCall
+    then postIdeMessage('Starting evaluation; script: '+workspace.currentEditor^.pseudoName(true)+'; parameters: '+join(externalRun.mainParameters,' '),false)
+    else postIdeMessage('Starting direct execution of script: '+workspace.currentEditor^.pseudoName(true),false);
     if mainCall then evaluation.callMain(newFixatedFileProxy(workspace.currentEditor^.getPath),externalRun.mainParameters,contextType,executionDir(workspace.currentEditor))
                 else evaluation.evaluate(newFixatedFileProxy(workspace.currentEditor^.getPath),                           contextType,executionDir(workspace.currentEditor));
   end;

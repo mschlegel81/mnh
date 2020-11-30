@@ -35,7 +35,7 @@ USES //my utilities:
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance,lu_usageScan);
+  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance,lu_forCodeAssistanceSecondary,lu_usageScan);
 
   T_packageReference=object
     id,path:ansistring;
@@ -118,13 +118,14 @@ CONST
     interpretInputStatements,
     finalizeWorkers:boolean;
   end=(
- {lu_NONE              }(import_usecase:lu_NONE             ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_beingLoaded       }(import_usecase:lu_NONE             ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_forImport         }(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_forCallingMain    }(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:true ),
- {lu_forDirectExecution}(import_usecase:lu_forImport        ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:true ; finalizeWorkers:true ),
- {lu_forCodeAssistance }(import_usecase:lu_forCodeAssistance;assistanceRun:true ;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_usageScan         }(import_usecase:lu_usageScan        ;assistanceRun:true ;loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false));
+ {lu_NONE                       }(import_usecase:lu_NONE                      ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_beingLoaded                }(import_usecase:lu_NONE                      ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_forImport                  }(import_usecase:lu_forImport                 ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_forCallingMain             }(import_usecase:lu_forImport                 ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:true ),
+ {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;assistanceRun:false;loadUsedPacks:true ;interpretInputStatements:true ; finalizeWorkers:true ),
+ {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistance         ;assistanceRun:true ;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;assistanceRun:true ;loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
+ {lu_usageScan                  }(import_usecase:lu_usageScan                 ;assistanceRun:true ;loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false));
 
 TYPE
   P_sandbox=^T_sandbox;
@@ -933,7 +934,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
                 globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToEcho(statement.token.first,globals.primaryContext.messages^.preferredEchoLineLength));
             end;
           end;
-          lu_forCodeAssistance: if (statement.token.first<>nil) then begin
+          lu_forCodeAssistance,lu_forCodeAssistanceSecondary: if (statement.token.first<>nil) then begin
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
           end
@@ -1064,11 +1065,11 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
     if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
     lexer.destroy;
-    if C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
+    if  C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
       readyForUsecase:=usecase;
       logReady(newCodeHash);
       {$ifdef fullVersion}
-      if usecase=lu_forCodeAssistance then afterLoadForAssistance;
+      if (usecase=lu_forCodeAssistance) and isMain then afterLoadForAssistance;
       {$endif}
       exit;
     end else if globals.primaryContext.messages^.continueEvaluation then begin
