@@ -146,19 +146,18 @@ FUNCTION fileContents_impl intFuncSignature;
 
 FUNCTION readDatastore_impl intFuncSignature;
   VAR meta:T_datastoreMeta;
-      readId:string;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
       meta.create(str0^.value,str1^.value);
-      result:=meta.readValue(tokenLocation,context,recycler,readId);
+      result:=meta.readValue(tokenLocation,context,recycler);
       meta.destroy;
       if (result=nil) and (context.messages^.continueEvaluation) then begin
         result:=newVoidLiteral;
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Datastore for script '+str0^.toString()+' and rule '+str1^.toString()+' does not exist');
       end;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      meta.create('dummyPackage','dummyId');
+      meta.create('dummyPackage','');
       result:=meta.readFromSpecificFileIncludingId(str0^.value,tokenLocation,context,recycler);
       meta.destroy;
     end;
@@ -603,7 +602,7 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'fileExists'     ,@fileExists_impl    ,ak_unary     {$ifdef fullVersion},'fileExists(filename:String);//Returns true if the specified file exists and false otherwise'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,ak_unary     {$ifdef fullVersion},'folderExists(foldername:String);//Returns true if the specified folder exists and false otherwise'{$endif});
   registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,ak_unary     {$ifdef fullVersion},'fileContents(filename:String);//Returns the contents of the specified file as one string'{$endif});
-  registerRule(FILES_BUILTIN_NAMESPACE,'readDatastore'  ,@readDatastore_impl  ,ak_binary   {$ifdef fullVersion},'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist#'+
+  registerRule(FILES_BUILTIN_NAMESPACE,'readDatastore'  ,@readDatastore_impl  ,ak_variadic_1{$ifdef fullVersion},'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist#'+
                                                                                                                 'readDatastore(datastorePath:String);//Tries to read the specified datastore - returns a map with keys "id" and "content"'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   {$ifdef fullVersion},'serialize(x);//Returns a string representing x.'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,ak_unary   {$ifdef fullVersion},'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)'{$endif});
