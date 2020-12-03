@@ -65,13 +65,16 @@ TYPE
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
   T_consoleOutAdapter = object(T_abstractOutAdapter)
+    private
+      messageFormatProvider:P_messageFormatProvider;
+    public
     {$ifdef Windows}
     printHandle,
     otherHandle:text;
     {$else}
     mode:T_consoleOutMode;
     {$endif}
-    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
@@ -129,12 +132,13 @@ TYPE
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
+      messageFormatProvider:P_messageFormatProvider;
       outputFileName:ansistring;
       forceRewrite:boolean;
       lastOutput:double;
       FUNCTION flush:boolean;
     public
-      CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
+      CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
       {$ifdef debugMode}
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
@@ -208,7 +212,7 @@ TYPE
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode):P_consoleOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; VAR formatProvider:T_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -794,14 +798,16 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 
 FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile));
+    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile,nil));
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; VAR formatProvider:T_messageFormatProvider): P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
+      clonedProvider:P_messageFormatProvider;
   begin
-    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode));
+    new(clonedProvider,clone(@formatProvider));
+    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode,clonedProvider));
     addOutAdapter(consoleOutAdapter,true);
     result:=consoleOutAdapter;
   end;
@@ -1002,9 +1008,10 @@ PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_: T
 
 //=========================================================:T_abstractOutAdapter
 //T_consoleOutAdapter:==========================================================
-CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode);
+CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_console,messageTypesToInclude_);
+    messageFormatProvider:=formatProvider;
     {$ifdef Windows}
     case consoleOutMode of
       com_stderr_only:begin
@@ -1028,6 +1035,7 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
 DESTRUCTOR T_consoleOutAdapter.destroy;
   begin
     inherited destroy;
+    dispose(messageFormatProvider,destroy);
   end;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
@@ -1068,7 +1076,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
                 else write(stdErr,messageText[i]);
               end;
               {$endif}                  end;
-          else for s in message^.toString({$ifdef fullVersion}false{$endif}) do
+          else for s in message^.toString(messageFormatProvider) do
             {$ifdef Windows}
             writeln(otherHandle,s);
             {$else}
@@ -1207,7 +1215,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
             case collected[i]^.messageType of
               mt_printline  : for s in collected[i]^.messageText do writeln(handle,s);
               mt_printdirect: for s in collected[i]^.messageText do write  (handle,s);
-              else for s in collected[i]^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
+              else for s in collected[i]^.toString(messageFormatProvider) do writeln(handle,s);
             end;
           end;
           clear;
@@ -1220,9 +1228,15 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
     end;
   end;
 
-CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
+CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_textFile,messageTypesToInclude_);
+    messageFormatProvider:=formatProvider;
+    if messageFormatProvider=nil
+    then begin
+      new(messageFormatProvider,create);
+      messageFormatProvider^.setDefaults(false);
+    end;
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
     lastOutput:=now;
@@ -1245,6 +1259,7 @@ FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin
     flush;
+    dispose(messageFormatProvider,destroy);
     inherited destroy;
   end;
 //=========================================================:T_textFileOutAdapter
