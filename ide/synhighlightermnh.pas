@@ -470,9 +470,9 @@ PROCEDURE TMnhOutputSyn.next;
           exit;
         end;
         SPECIAL_LINE_CASE_ECHO:
-          if startsWith(ECHO_MARKER+getPrefix(mt_echo_input    )) or
-             startsWith(ECHO_MARKER+getPrefix(mt_echo_output   )) or
-             startsWith(ECHO_MARKER+getPrefix(mt_echo_continued)) then begin
+          if startsWith(ECHO_MARKER+getPrefix(mt_echo_input )) or
+             startsWith(ECHO_MARKER+getPrefix(mt_echo_output)) or
+             startsWith(ECHO_MARKER+ECHO_CONTINUED_PREFIX    ) then begin
             run:=8; //3 bytes invisible char + 5 bytes prefix
             fTokenId:=tkOperator;
             exit;

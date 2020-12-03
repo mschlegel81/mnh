@@ -38,7 +38,6 @@ TYPE
                                                                    mt_echo_input,
                                                                    mt_echo_output,
                                                                    mt_echo_declaration,
-                                                                   mt_echo_continued,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
       DESTRUCTOR destroy; virtual;

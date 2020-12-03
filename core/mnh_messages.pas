@@ -54,7 +54,6 @@ TYPE
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
-    mt_echo_continued,
     mt_el1_note,
     mt_el1_userNote,
     mt_el2_warning,
@@ -123,7 +122,6 @@ CONST
 {mt_echo_input        }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
 {mt_echo_declaration  }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
 {mt_echo_output       }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_continued    }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
 {mt_el1_note          }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
 {mt_el1_userNote      }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
 {mt_el2_warning       }  (guiMarker: WARNING_MARKER; level: 2; mClass:mc_warning; systemErrorLevel:0),
@@ -162,6 +160,8 @@ CONST
     [mt_el2_warning,mt_el2_userWarning],
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
+
+  ECHO_CONTINUED_PREFIX='...>';
 
 TYPE
   P_storedMessage=^T_storedMessage;
@@ -234,9 +234,9 @@ IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
     result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
-    if x.echo_input       then result+=[mt_echo_input      ,mt_echo_continued];
-    if x.echo_output      then result+=[mt_echo_output     ,mt_echo_continued];
-    if x.echo_declaration then result+=[mt_echo_declaration,mt_echo_continued];
+    if x.echo_input       then result+=[mt_echo_input      ];
+    if x.echo_output      then result+=[mt_echo_output     ];
+    if x.echo_declaration then result+=[mt_echo_declaration];
     if x.show_timing      then result+=[mt_timing_info];
     if x.show_all_userMessages then result+=[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
     case x.suppressWarningsUnderLevel of
@@ -322,7 +322,6 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
       mt_echo_input,
       mt_echo_declaration:result:=' in>';
       mt_echo_output     :result:='out>';
-      mt_echo_continued  :result:='...>';
       mt_el1_note,
       mt_el1_userNote    :result:='Note ';
       mt_el2_warning,
