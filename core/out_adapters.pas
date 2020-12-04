@@ -212,7 +212,7 @@ TYPE
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; VAR formatProvider:T_messageFormatProvider):P_consoleOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -802,13 +802,10 @@ FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterS
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; VAR formatProvider:T_messageFormatProvider): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
-      clonedProvider:P_messageFormatProvider;
   begin
-    new(clonedProvider,clone(@formatProvider));
-    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode,clonedProvider));
-    addOutAdapter(consoleOutAdapter,true);
+    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode,nil));
     result:=consoleOutAdapter;
   end;
 
@@ -1011,7 +1008,12 @@ PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_: T
 CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_console,messageTypesToInclude_);
-    messageFormatProvider:=formatProvider;
+
+
+    if formatProvider=nil
+    then new(P_defaultConsoleFormatter(messageFormatProvider),create)
+    else messageFormatProvider:=formatProvider^.getClonedInstance;
+
     {$ifdef Windows}
     case consoleOutMode of
       com_stderr_only:begin
@@ -1035,7 +1037,7 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
 DESTRUCTOR T_consoleOutAdapter.destroy;
   begin
     inherited destroy;
-    dispose(messageFormatProvider,destroy);
+    dispose(messageFormatProvider);
   end;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
@@ -1076,7 +1078,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
                 else write(stdErr,messageText[i]);
               end;
               {$endif}                  end;
-          else for s in message^.toString(messageFormatProvider) do
+          else for s in messageFormatProvider^.formatMessage(message) do
             {$ifdef Windows}
             writeln(otherHandle,s);
             {$else}
@@ -1231,6 +1233,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_textFile,messageTypesToInclude_);
+
     messageFormatProvider:=formatProvider;
     if messageFormatProvider=nil
     then begin

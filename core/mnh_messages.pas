@@ -121,29 +121,6 @@ TYPE
 
   T_messageTypeSet=set of T_messageType;
 
-  T_messagePatternElement=record
-    elementType:T_messagePatternElementType;
-    litValue:string;
-  end;
-
-  P_messageFormatProvider=^T_messageFormatProvider;
-  T_messageFormatProvider=object(T_serializable)
-    private
-      formatStrings:array[T_formattableMessageClass,boolean] of array of T_messagePatternElement;
-    public
-      CONSTRUCTOR create;
-      CONSTRUCTOR clone(CONST original:P_messageFormatProvider);
-      DESTRUCTOR destroy;
-      PROCEDURE setDefaults(CONST forGui:boolean);
-      FUNCTION formatMessage(CONST message:T_arrayOfString; CONST msgTime:double; CONST loc:T_searchTokenLocation; CONST formattableMessageClass: T_formattableMessageClass):T_arrayOfString;
-      FUNCTION getMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean):string;
-      PROCEDURE setMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean; CONST format:string);
-
-      FUNCTION getSerialVersion:dword; virtual;
-      FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-      PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
-  end;
-
   T_ideMessageConfig=object(T_serializable)
     echo_input,echo_declaration,echo_output,echo_wrapping,
     show_timing,
@@ -159,6 +136,16 @@ TYPE
 
 CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
+  GUI_MARKER:Array[T_formattableMessageClass] of string=(
+   {fm_NOT_FORMATTABLE}'',
+   {fm_print,         }'',
+   {fm_echoIn,        }ECHO_MARKER,
+   {fm_echoOut,       }ECHO_MARKER,
+   {fm_note,          }NOTE_MARKER,
+   {fm_warn,          }WARNING_MARKER,
+   {fm_error,         }ERROR_MARKER,
+   {fm_stacktrace     }ERROR_MARKER);
+
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messagesSuppressedOnQuietHalt:T_messageTypeSet=[mt_el3_evalError,
                                                     mt_el3_noMatchingMain,
@@ -220,6 +207,9 @@ CONST
 TYPE
   P_storedMessage=^T_storedMessage;
   T_storedMessages=array of P_storedMessage;
+
+  { T_storedMessage }
+
   T_storedMessage=object
     protected
       refCount:longint;
@@ -230,7 +220,6 @@ TYPE
     public
       FUNCTION prefix:shortstring;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
-      FUNCTION toString(CONST messageFormatProvider:P_messageFormatProvider):T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
 
@@ -242,19 +231,69 @@ TYPE
       FUNCTION getMessageTypeName:string;
       PROPERTY getLocation:T_searchTokenLocation read location;
       PROPERTY getRefCount:longint read refCount;
+      FUNCTION isTextMessage:boolean; virtual;
   end;
 
+  T_messagePatternElement=record
+    elementType:T_messagePatternElementType;
+    litValue:string;
+  end;
+
+  P_messageFormatProvider=^T_messageFormatProvider;
+
+  T_messageFormatProvider=object
+    CONSTRUCTOR create;
+    FUNCTION getClonedInstance:P_messageFormatProvider; virtual; abstract;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+  end;
+
+  { T_defaultConsoleFormatter }
+
+  P_defaultConsoleFormatter=^T_defaultConsoleFormatter;
+  T_defaultConsoleFormatter=object(T_messageFormatProvider)
+    CONSTRUCTOR create;
+    FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+  end;
+
+
+
+  //P_messageFormatProvider=^T_messageFormatProvider;
+  //T_messageFormatProvider=object
+  //  private
+  //    formatStrings:array[T_formattableMessageClass,boolean] of array of T_messagePatternElement;
+  //  public
+  //    CONSTRUCTOR create;
+  //    CONSTRUCTOR clone(CONST original:P_messageFormatProvider);
+  //    DESTRUCTOR destroy;
+  //    PROCEDURE setDefaults(CONST forGui:boolean);
+  //    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString;
+  //
+  //    FUNCTION getMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean):string;
+  //    PROCEDURE setMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean; CONST format:string);
+  //
+  //    //FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+  //    //PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
+  //end;
+
+
+
   P_storedMessageWithText=^T_storedMessageWithText;
+
+  { T_storedMessageWithText }
+
   T_storedMessageWithText=object(T_storedMessage)
     protected
       txt:T_arrayOfString;
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString(CONST messageFormatProvider:P_messageFormatProvider):T_arrayOfString; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
       FUNCTION messageText:T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION isTextMessage:boolean; virtual;
   end;
 
   P_errorMessage=^T_errorMessage;
@@ -264,7 +303,6 @@ TYPE
     public
       stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; parameters:string; end;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString(CONST messageFormatProvider:P_messageFormatProvider):T_arrayOfString; virtual;
       FUNCTION messageText:T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
   end;
@@ -314,223 +352,235 @@ PROCEDURE disposeMessage_(message:P_storedMessage);
     message:=nil;
   end;
 
-{ T_messageFormatProvider }
-
-CONSTRUCTOR T_messageFormatProvider.create;
+//------------------------------------------------------------------------------
+constructor T_messageFormatProvider.create; begin end;
+destructor T_messageFormatProvider.destroy; begin end;
+function T_messageFormatProvider.formatMessage(const message: P_storedMessage): T_arrayOfString;
   begin
-    setDefaults(false);
+    if (message=nil) or not(message^.isTextMessage)
+    then result:=C_EMPTY_STRING_ARRAY
+    else result:=P_storedMessageWithText(message)^.txt;
+  end;
+//------------------------------------------------------------------------------
+constructor T_defaultConsoleFormatter.create; begin inherited; end;
+destructor T_defaultConsoleFormatter.destroy; begin inherited; end;
+function T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
+  begin
+    new(P_defaultConsoleFormatter(result),create);
   end;
 
-CONSTRUCTOR T_messageFormatProvider.clone(CONST original: P_messageFormatProvider);
-  VAR mt:T_formattableMessageClass;
-      b :boolean;
+function T_defaultConsoleFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
   begin
-    create;
-    for mt in T_formattableMessageClass do for b in boolean do setMessageFormat(mt,b,original^.getMessageFormat(mt,b));
+    //TODO: Reimplement this!
+    if (message=nil) or not(message^.isTextMessage)
+    then result:=C_EMPTY_STRING_ARRAY
+    else result:=P_storedMessageWithText(message)^.txt;
   end;
 
-DESTRUCTOR T_messageFormatProvider.destroy;
-  VAR mc:T_formattableMessageClass;
-      first:boolean;
-  begin
-    for mc in T_formattableMessageClass do for first:=false to true do setLength(formatStrings[mc,first],0);
-  end;
 
-PROCEDURE T_messageFormatProvider.setDefaults(CONST forGui: boolean);
-  VAR mc:T_formattableMessageClass;
-      first:boolean;
-  PROCEDURE append(CONST t:T_messagePatternElementType; CONST literal:string='');
-    begin
-      setLength(formatStrings[mc,first],length(formatStrings[mc,first])+1);
-      with formatStrings[mc,first,length(formatStrings[mc,first])-1] do begin
-        elementType:=t;
-        litValue:=literal;
-      end;
-    end;
+//CONSTRUCTOR T_messageFormatProvider.clone(CONST original: P_messageFormatProvider);
+//  VAR mt:T_formattableMessageClass;
+//      b :boolean;
+//  begin
+//    create;
+//    for mt in T_formattableMessageClass do for b in boolean do setMessageFormat(mt,b,original^.getMessageFormat(mt,b));
+//  end;
 
-  begin
-    for mc in T_formattableMessageClass do for first:=false to true do setLength(formatStrings[mc,first],0);
-    setMessageFormat(fm_print,true ,'%message%');
-    setMessageFormat(fm_print,false,'%message%');
-    if forGui then begin
-      setMessageFormat(fm_echoIn    ,true ,ECHO_MARKER+' in> %message%');
-      setMessageFormat(fm_echoIn    ,false,ECHO_MARKER+'...> %message%');
-      setMessageFormat(fm_echoOut   ,true ,ECHO_MARKER+'out> %message%');
-      setMessageFormat(fm_echoOut   ,false,ECHO_MARKER+'...> %message%');
-      setMessageFormat(fm_note      ,true ,NOTE_MARKER+'Note %location%%t%%message%');
-      setMessageFormat(fm_note      ,false,NOTE_MARKER+'%t%%message%');
-      setMessageFormat(fm_warn      ,true ,WARNING_MARKER+'Warning %location%%t%%message%');
-      setMessageFormat(fm_warn      ,false,WARNING_MARKER+'%t%%message%');
-      setMessageFormat(fm_error     ,true ,ERROR_MARKER+'Error %location%%t%%message%');
-      setMessageFormat(fm_error     ,false,ERROR_MARKER+'%t%%message%');
-      setMessageFormat(fm_stacktrace,true ,ERROR_MARKER+'%location%%t%%message%');
-    end else begin
-      setMessageFormat(fm_echoIn    ,true ,' in> %message%');
-      setMessageFormat(fm_echoIn    ,false,'...> %message%');
-      setMessageFormat(fm_echoOut   ,true ,'out> %message%');
-      setMessageFormat(fm_echoOut   ,false,'...> %message%');
-      setMessageFormat(fm_note      ,true ,'Note %shortLoc%%t%%message%');
-      setMessageFormat(fm_note      ,false,'%t%%message%');
-      setMessageFormat(fm_warn      ,true ,'Warning %shortLoc%%t%%message%');
-      setMessageFormat(fm_warn      ,false,'%t%%message%');
-      setMessageFormat(fm_error     ,true ,'Error %shortLoc%%t%%message%');
-      setMessageFormat(fm_error     ,false,'%t%%message%');
-      setMessageFormat(fm_stacktrace,true ,'%shortLoc%%t%%message%');
-    end;
-  end;
+//PROCEDURE T_messageFormatProvider.setDefaults(CONST forGui: boolean);
+//  VAR mc:T_formattableMessageClass;
+//      first:boolean;
+//  PROCEDURE append(CONST t:T_messagePatternElementType; CONST literal:string='');
+//    begin
+//      setLength(formatStrings[mc,first],length(formatStrings[mc,first])+1);
+//      with formatStrings[mc,first,length(formatStrings[mc,first])-1] do begin
+//        elementType:=t;
+//        litValue:=literal;
+//      end;
+//    end;
+//
+//  begin
+//    for mc in T_formattableMessageClass do for first:=false to true do setLength(formatStrings[mc,first],0);
+//    setMessageFormat(fm_print,true ,'%message%');
+//    setMessageFormat(fm_print,false,'%message%');
+//    if forGui then begin
+//      setMessageFormat(fm_echoIn    ,true ,ECHO_MARKER+' in> %message%');
+//      setMessageFormat(fm_echoIn    ,false,ECHO_MARKER+'...> %message%');
+//      setMessageFormat(fm_echoOut   ,true ,ECHO_MARKER+'out> %message%');
+//      setMessageFormat(fm_echoOut   ,false,ECHO_MARKER+'...> %message%');
+//      setMessageFormat(fm_note      ,true ,NOTE_MARKER+'Note %location%%t%%message%');
+//      setMessageFormat(fm_note      ,false,NOTE_MARKER+'%t%%message%');
+//      setMessageFormat(fm_warn      ,true ,WARNING_MARKER+'Warning %location%%t%%message%');
+//      setMessageFormat(fm_warn      ,false,WARNING_MARKER+'%t%%message%');
+//      setMessageFormat(fm_error     ,true ,ERROR_MARKER+'Error %location%%t%%message%');
+//      setMessageFormat(fm_error     ,false,ERROR_MARKER+'%t%%message%');
+//      setMessageFormat(fm_stacktrace,true ,ERROR_MARKER+'%location%%t%%message%');
+//    end else begin
+//      setMessageFormat(fm_echoIn    ,true ,' in> %message%');
+//      setMessageFormat(fm_echoIn    ,false,'...> %message%');
+//      setMessageFormat(fm_echoOut   ,true ,'out> %message%');
+//      setMessageFormat(fm_echoOut   ,false,'...> %message%');
+//      setMessageFormat(fm_note      ,true ,'Note %shortLoc%%t%%message%');
+//      setMessageFormat(fm_note      ,false,'%t%%message%');
+//      setMessageFormat(fm_warn      ,true ,'Warning %shortLoc%%t%%message%');
+//      setMessageFormat(fm_warn      ,false,'%t%%message%');
+//      setMessageFormat(fm_error     ,true ,'Error %shortLoc%%t%%message%');
+//      setMessageFormat(fm_error     ,false,'%t%%message%');
+//      setMessageFormat(fm_stacktrace,true ,'%shortLoc%%t%%message%');
+//    end;
+//  end;
 
-FUNCTION T_messageFormatProvider.formatMessage(CONST message: T_arrayOfString;
-  CONST msgTime: double; CONST loc: T_searchTokenLocation;
-  CONST formattableMessageClass: T_formattableMessageClass): T_arrayOfString;
-  FUNCTION getPart(CONST el:T_messagePatternElement; CONST messageLineIndex:longint):string;
-    begin
-      case el.elementType of
-        et_literal :
-          result:=el.litValue;
-        et_lineBreak:
-          result:=C_lineBreakChar;
-        et_tab:
-          result:=C_tabChar;
-        et_message :
-          result:=message[messageLineIndex];
-        et_shortLoc:
-          begin
-            if (loc.fileName='?') and (loc.line=0) and (loc.column=0)
-            then exit('@?')
-            else result:='@'+extractFileName(loc.fileName)+':';
-            if loc.column<0
-            then result+=intToStr(loc.line)+',1'
-            else result+=intToStr(loc.line)+','+intToStr(loc.column);
-          end;
-        et_fullLoc :
-          result:=string(loc);
-        et_time    :
-          result:=FormatDateTime('hh:nn:ss.zzz',msgTime);
-        et_datetime:
-          result:=FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz',msgTime);
-        else raise Exception.create('Missing implementation for element type! '+getEnumName(TypeInfo(T_messagePatternElementType),integer(el.elementType)));
-      end;
-    end;
+//FUNCTION T_messageFormatProvider.formatMessage(CONST message: T_arrayOfString;
+//  CONST msgTime: double; CONST loc: T_searchTokenLocation;
+//  CONST formattableMessageClass: T_formattableMessageClass): T_arrayOfString;
+//  FUNCTION getPart(CONST el:T_messagePatternElement; CONST messageLineIndex:longint):string;
+//    begin
+//      case el.elementType of
+//        et_literal :
+//          result:=el.litValue;
+//        et_lineBreak:
+//          result:=C_lineBreakChar;
+//        et_tab:
+//          result:=C_tabChar;
+//        et_message :
+//          result:=message[messageLineIndex];
+//        et_shortLoc:
+//          begin
+//            if (loc.fileName='?') and (loc.line=0) and (loc.column=0)
+//            then exit('@?')
+//            else result:='@'+extractFileName(loc.fileName)+':';
+//            if loc.column<0
+//            then result+=intToStr(loc.line)+',1'
+//            else result+=intToStr(loc.line)+','+intToStr(loc.column);
+//          end;
+//        et_fullLoc :
+//          result:=string(loc);
+//        et_time    :
+//          result:=FormatDateTime('hh:nn:ss.zzz',msgTime);
+//        et_datetime:
+//          result:=FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz',msgTime);
+//        else raise Exception.create('Missing implementation for element type! '+getEnumName(TypeInfo(T_messagePatternElementType),integer(el.elementType)));
+//      end;
+//    end;
+//
+//  VAR messageLineIndex,i:longint;
+//      resultLine:string;
+//  begin
+//    if (formattableMessageClass=fm_NOT_FORMATTABLE) or (length(formatStrings[formattableMessageClass,true])=0) then exit(message);
+//
+//    setLength(result,0);
+//    for messageLineIndex:=0 to length(message)-1 do begin
+//      resultLine:='';
+//      for i:=0 to length(formatStrings[formattableMessageClass])-1 do
+//        resultLine+=getPart(formatStrings[formattableMessageClass,messageLineIndex=0,i],messageLineIndex);
+//      append(result,resultLine);
+//    end;
+//    result:=formatTabs(result);
+//  end;
 
-  VAR messageLineIndex,i:longint;
-      resultLine:string;
-  begin
-    if (formattableMessageClass=fm_NOT_FORMATTABLE) or (length(formatStrings[formattableMessageClass,true])=0) then exit(message);
-
-    setLength(result,0);
-    for messageLineIndex:=0 to length(message)-1 do begin
-      resultLine:='';
-      for i:=0 to length(formatStrings[formattableMessageClass])-1 do
-        resultLine+=getPart(formatStrings[formattableMessageClass,messageLineIndex=0,i],messageLineIndex);
-      append(result,resultLine);
-    end;
-    result:=formatTabs(result);
-  end;
-
-FUNCTION T_messageFormatProvider.getMessageFormat(CONST messageType: T_formattableMessageClass; CONST firstLine: boolean): string;
-  FUNCTION getPart(CONST el:T_messagePatternElement):string;
-    begin
-      case el.elementType of
-        et_literal :
-          result:=el.litValue;
-        else
-          result:=C_messagePatternElementTypePlaceholder[el.elementType];
-      end;
-    end;
-
-  VAR i:longint;
-  begin
-    result:='';
-    for i:=0 to length(formatStrings[messageType])-1 do
-      result+=getPart(formatStrings[messageType,firstLine,i]);
-  end;
-
-PROCEDURE T_messageFormatProvider.setMessageFormat(CONST messageType: T_formattableMessageClass; CONST firstLine: boolean; CONST format: string);
-  VAR newParts:array of T_messagePatternElement;
-      rest:string;
-      placeholder:T_messagePatternElementType;
-      k:longint;
-      literalValue:boolean;
-
-  FUNCTION appendElement(CONST typ:T_messagePatternElementType):longint;
-    begin
-      result:=length(newParts);
-      setLength(newParts,result+1);
-      newParts[result].elementType:=typ;
-      newParts[result].litValue:='';
-    end;
-
-  begin
-    setLength(newParts,0);
-    rest:=format;
-    while length(rest)>0 do begin
-      literalValue:=true;
-      for placeholder := low(C_messagePatternElementTypePlaceholder) to high(C_messagePatternElementTypePlaceholder)
-      do if startsWith(rest,C_messagePatternElementTypePlaceholder[placeholder]) then begin
-        appendElement(placeholder);
-        rest:=copy(rest,1+length(C_messagePatternElementTypePlaceholder[placeholder]),length(rest));
-        literalValue:=false;
-      end;
-      if literalValue then begin
-        if rest[1]=C_lineBreakChar then begin
-          appendElement(et_lineBreak);
-          rest:=copy(rest,2,length(rest)-1);
-        end else if rest[1]=C_tabChar then begin
-          appendElement(et_tab);
-          rest:=copy(rest,2,length(rest)-1);
-        end else begin
-          k:=length(newParts);
-          if (k>0) and (newParts[k-1].elementType=et_literal)
-          then dec(k)
-          else k:=appendElement(et_literal);
-          newParts[k].litValue+=copy(rest,1,1);
-          rest:=copy(rest,2,length(rest)-1);
-        end;
-      end;
-    end;
-    formatStrings[messageType,firstLine]:=newParts;
-  end;
-
-FUNCTION T_messageFormatProvider.getSerialVersion: dword;
-  begin
-    result:=193864203;
-  end;
-
-FUNCTION T_messageFormatProvider.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
-  VAR fmc:T_formattableMessageClass;
-      b  :boolean;
-      i  :longint;
-      len:longint;
-  begin
-    for fmc in T_formattableMessageClass do
-    for b in boolean do begin
-      len:=stream.readNaturalNumber;
-      setLength(formatStrings[fmc,b],len);
-      for i:=0 to length(formatStrings[fmc,b])-1 do begin
-        formatStrings[fmc,b,i].elementType:=T_messagePatternElementType(stream.readByte([byte(low(T_messagePatternElementType))..byte(high(T_messagePatternElementType))]));
-        if not(stream.allOkay) then exit(false);
-        if formatStrings[fmc,b,i].elementType=et_literal
-        then formatStrings[fmc,b,i].litValue:=stream.readAnsiString;
-      end;
-    end;
-    result:=stream.allOkay;
-  end;
-
-PROCEDURE T_messageFormatProvider.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
-  VAR fmc:T_formattableMessageClass;
-      b  :boolean;
-      i  :longint;
-  begin
-    for fmc in T_formattableMessageClass do
-    for b in boolean do begin
-      stream.writeNaturalNumber(length(formatStrings[fmc,b]));
-      for i:=0 to length(formatStrings[fmc,b])-1 do begin
-        stream.writeByte(byte(formatStrings[fmc,b,i].elementType));
-        if formatStrings[fmc,b,i].elementType=et_literal
-        then stream.writeAnsiString(formatStrings[fmc,b,i].litValue);
-      end;
-    end;
-  end;
+//FUNCTION T_messageFormatProvider.getMessageFormat(CONST messageType: T_formattableMessageClass; CONST firstLine: boolean): string;
+//  FUNCTION getPart(CONST el:T_messagePatternElement):string;
+//    begin
+//      case el.elementType of
+//        et_literal :
+//          result:=el.litValue;
+//        else
+//          result:=C_messagePatternElementTypePlaceholder[el.elementType];
+//      end;
+//    end;
+//
+//  VAR i:longint;
+//  begin
+//    result:='';
+//    for i:=0 to length(formatStrings[messageType,firstLine])-1 do
+//      result+=getPart(formatStrings[messageType,firstLine,i]);
+//  end;
+//
+//PROCEDURE T_messageFormatProvider.setMessageFormat(CONST messageType: T_formattableMessageClass; CONST firstLine: boolean; CONST format: string);
+//  VAR newParts:array of T_messagePatternElement;
+//      rest:string;
+//      placeholder:T_messagePatternElementType;
+//      k:longint;
+//      literalValue:boolean;
+//
+//  FUNCTION appendElement(CONST typ:T_messagePatternElementType):longint;
+//    begin
+//      result:=length(newParts);
+//      setLength(newParts,result+1);
+//      newParts[result].elementType:=typ;
+//      newParts[result].litValue:='';
+//    end;
+//
+//  begin
+//    setLength(newParts,0);
+//    rest:=format;
+//    while length(rest)>0 do begin
+//      literalValue:=true;
+//      for placeholder := low(C_messagePatternElementTypePlaceholder) to high(C_messagePatternElementTypePlaceholder)
+//      do if startsWith(rest,C_messagePatternElementTypePlaceholder[placeholder]) then begin
+//        appendElement(placeholder);
+//        rest:=copy(rest,1+length(C_messagePatternElementTypePlaceholder[placeholder]),length(rest));
+//        literalValue:=false;
+//      end;
+//      if literalValue then begin
+//        if rest[1]=C_lineBreakChar then begin
+//          appendElement(et_lineBreak);
+//          rest:=copy(rest,2,length(rest)-1);
+//        end else if rest[1]=C_tabChar then begin
+//          appendElement(et_tab);
+//          rest:=copy(rest,2,length(rest)-1);
+//        end else begin
+//          k:=length(newParts);
+//          if (k>0) and (newParts[k-1].elementType=et_literal)
+//          then dec(k)
+//          else k:=appendElement(et_literal);
+//          newParts[k].litValue+=copy(rest,1,1);
+//          rest:=copy(rest,2,length(rest)-1);
+//        end;
+//      end;
+//    end;
+//    formatStrings[messageType,firstLine]:=newParts;
+//  end;
+//
+//FUNCTION T_messageFormatProvider.getSerialVersion: dword;
+//  begin
+//    result:=193864203;
+//  end;
+//
+//FUNCTION T_messageFormatProvider.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+//  VAR fmc:T_formattableMessageClass;
+//      b  :boolean;
+//      i  :longint;
+//      len:longint;
+//  begin
+//    for fmc in T_formattableMessageClass do
+//    for b in boolean do begin
+//      len:=stream.readNaturalNumber;
+//      setLength(formatStrings[fmc,b],len);
+//      for i:=0 to length(formatStrings[fmc,b])-1 do begin
+//        formatStrings[fmc,b,i].elementType:=T_messagePatternElementType(stream.readByte([byte(low(T_messagePatternElementType))..byte(high(T_messagePatternElementType))]));
+//        if not(stream.allOkay) then exit(false);
+//        if formatStrings[fmc,b,i].elementType=et_literal
+//        then formatStrings[fmc,b,i].litValue:=stream.readAnsiString;
+//      end;
+//    end;
+//    result:=stream.allOkay;
+//  end;
+//
+//PROCEDURE T_messageFormatProvider.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+//  VAR fmc:T_formattableMessageClass;
+//      b  :boolean;
+//      i  :longint;
+//  begin
+//    for fmc in T_formattableMessageClass do
+//    for b in boolean do begin
+//      stream.writeNaturalNumber(length(formatStrings[fmc,b]));
+//      for i:=0 to length(formatStrings[fmc,b])-1 do begin
+//        stream.writeByte(byte(formatStrings[fmc,b,i].elementType));
+//        if formatStrings[fmc,b,i].elementType=et_literal
+//        then stream.writeAnsiString(formatStrings[fmc,b,i].litValue);
+//      end;
+//    end;
+//  end;
 
 CONSTRUCTOR T_ideMessageConfig.create;
   begin
@@ -584,8 +634,8 @@ PROCEDURE T_ideMessageConfig.saveToStream(VAR stream: T_bufferedOutputStreamWrap
     stream.writeByte(suppressWarningsUnderLevel);
   end;
 
-FUNCTION T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;
-FUNCTION T_storedMessageWithText.internalType: shortstring; begin result:='T_storedMessageWithText'; end;
+function T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;
+function T_storedMessageWithText.internalType: shortstring; begin result:='T_storedMessageWithText'; end;
 FUNCTION T_payloadMessage.internalType: shortstring; begin result:='T_payloadMessage'; end;
 FUNCTION T_errorMessage.internalType: shortstring; begin result:='T_errorMessage'; end;
 
@@ -606,10 +656,11 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
     end;
   end;
 
-FUNCTION T_storedMessage.prefix: shortstring;
+function T_storedMessage.prefix: shortstring;
   begin result:=getPrefix(kind); end;
 
-CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
+constructor T_storedMessageWithText.create(const messageType_: T_messageType;
+  const loc: T_searchTokenLocation; const message: T_arrayOfString);
   begin
     inherited create(messageType_,loc);
     setLength(txt,0);
@@ -622,7 +673,8 @@ CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_
     setLength(stacktrace,0);
   end;
 
-CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation);
+constructor T_storedMessage.create(const messageType_: T_messageType;
+  const loc: T_searchTokenLocation);
   begin
     location:=loc;
     kind:=messageType_;
@@ -636,37 +688,22 @@ CONSTRUCTOR T_payloadMessage.create(CONST messageType_: T_messageType);
     initCriticalSection(messageCs);
   end;
 
-FUNCTION T_storedMessage.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
-  begin
-    result:=C_EMPTY_STRING_ARRAY;
-  end;
-
-FUNCTION T_storedMessageWithText.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
-  begin
-    if kind = mt_printdirect
-    then exit(txt)
-    else result:=messageFormatProvider^.formatMessage(txt,createdAt,location,C_messageTypeMeta[kind].fClass);
-  end;
-
-FUNCTION T_errorMessage.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
-  VAR i:longint;
-  begin
-    result:=messageFormatProvider^.formatMessage(txt,createdAt,location,C_messageTypeMeta[kind].fClass);
-    for i:=0 to length(stacktrace)-1 do
-      append(result,messageFormatProvider^.formatMessage(' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters,createdAt,stacktrace[i].location,fm_stacktrace));
-  end;
-
-DESTRUCTOR T_storedMessage.destroy;
+destructor T_storedMessage.destroy;
   begin
     if refCount<>0 then raise Exception.create('Disposing message with refCount='+intToStr(refCount));
   end;
 
-DESTRUCTOR T_storedMessageWithText.destroy;
+destructor T_storedMessageWithText.destroy;
   VAR i:longint;
   begin
     inherited destroy;
     for i:=0 to length(txt)-1 do txt[i]:='';
     setLength(txt,0);
+  end;
+
+function T_storedMessageWithText.isTextMessage: boolean;
+  begin
+    result:=true;
   end;
 
 DESTRUCTOR T_errorMessage.destroy;
@@ -681,7 +718,7 @@ DESTRUCTOR T_payloadMessage.destroy;
     doneCriticalSection(messageCs);
   end;
 
-FUNCTION T_storedMessage.equals(CONST other: P_storedMessage): boolean;
+function T_storedMessage.equals(const other: P_storedMessage): boolean;
   begin
     result:=(other=@self) or
             (other^.kind=kind) and
@@ -689,7 +726,7 @@ FUNCTION T_storedMessage.equals(CONST other: P_storedMessage): boolean;
             (other^.location=location);
   end;
 
-FUNCTION T_storedMessageWithText.equals(CONST other: P_storedMessage): boolean;
+function T_storedMessageWithText.equals(const other: P_storedMessage): boolean;
   begin
     result:=inherited equals(other) and arrEquals(txt,P_storedMessageWithText(other)^.txt);
   end;
@@ -699,23 +736,23 @@ FUNCTION T_payloadMessage.equals(CONST other: P_storedMessage): boolean;
     result:=other=@self;
   end;
 
-FUNCTION T_storedMessage.unreference: boolean;
+function T_storedMessage.unreference: boolean;
   begin
     result:=interlockedDecrement(refCount)<=0;
   end;
 
-FUNCTION T_storedMessage.rereferenced: P_storedMessage;
+function T_storedMessage.rereferenced: P_storedMessage;
   begin
     interLockedIncrement(refCount);
     result:=@self;
   end;
 
-FUNCTION T_storedMessage.messageClass: T_messageClass;
+function T_storedMessage.messageClass: T_messageClass;
   begin
     result:=C_messageTypeMeta[kind].mClass;
   end;
 
-FUNCTION T_storedMessage.messageText: T_arrayOfString;
+function T_storedMessage.messageText: T_arrayOfString;
   begin
     result:=C_EMPTY_STRING_ARRAY;
   end;
@@ -731,12 +768,17 @@ FUNCTION messageTypeName(CONST m:T_messageType):string;
     result:=messageTypeNames[m];
   end;
 
-FUNCTION T_storedMessage.getMessageTypeName:string;
+function T_storedMessage.getMessageTypeName: string;
   begin
     result:= copy(getEnumName(TypeInfo(kind),ord(kind)),4,1000);
   end;
 
-FUNCTION T_storedMessageWithText.messageText: T_arrayOfString;
+function T_storedMessage.isTextMessage: boolean;
+  begin
+    result:=false;
+  end;
+
+function T_storedMessageWithText.messageText: T_arrayOfString;
   begin
     result:=txt;
   end;
