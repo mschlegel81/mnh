@@ -429,7 +429,9 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       raw:T_rawTokenArray;
       tok:T_rawToken;
       m:P_storedMessage;
+      formatter:T_guiFormatter;
   begin
+    formatter.create(true);
     messages:=sandbox^.execute(input,C_allSideEffects,recycler,i);
     setLength(textOut,0);
     setLength(htmlOut,0);
@@ -454,8 +456,10 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
       end;
       if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-        for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
+        //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
+        append(textOut,formatter.formatMessage(m));
     end;
+    formatter.destroy;
   end;
 {$endif}
 

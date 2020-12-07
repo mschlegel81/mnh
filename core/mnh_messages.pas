@@ -248,14 +248,36 @@ TYPE
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
   end;
 
-  { T_defaultConsoleFormatter }
-
   P_defaultConsoleFormatter=^T_defaultConsoleFormatter;
   T_defaultConsoleFormatter=object(T_messageFormatProvider)
     CONSTRUCTOR create;
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+  end;
+
+  P_logFormatter=^T_logFormatter;
+  T_logFormatter=object(T_messageFormatProvider)
+    private
+      maxLocationLength:longint;
+    public
+      timeFormat:string;
+      fullLocations:boolean;
+      CONSTRUCTOR create;
+      FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+  end;
+
+  P_guiFormatter=^T_guiFormatter;
+  T_guiFormatter=object(T_messageFormatProvider)
+    private
+      formatterForDemos:boolean;
+    public
+      CONSTRUCTOR create(CONST forDemos:boolean);
+      FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
   end;
 
 
@@ -372,6 +394,53 @@ function T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
 function T_defaultConsoleFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
   begin
     //TODO: Reimplement this!
+    assert(false);
+    if (message=nil) or not(message^.isTextMessage)
+    then result:=C_EMPTY_STRING_ARRAY
+    else result:=P_storedMessageWithText(message)^.txt;
+  end;
+//------------------------------------------------------------------------------
+constructor T_logFormatter.create;
+  begin
+    inherited;
+    timeFormat:='hh:nn:ss.zzz';
+    fullLocations:=false;
+    maxLocationLength:=0;
+  end;
+
+destructor T_logFormatter.destroy; begin inherited; end;
+function T_logFormatter.getClonedInstance: P_messageFormatProvider;
+  begin
+    new(P_logFormatter(result),create);
+    P_logFormatter(result)^.timeFormat:=timeFormat;
+    P_logFormatter(result)^.fullLocations:=fullLocations;
+  end;
+
+function T_logFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+  begin
+    //TODO: Reimplement this!
+    assert(false);
+    if (message=nil) or not(message^.isTextMessage)
+    then result:=C_EMPTY_STRING_ARRAY
+    else result:=P_storedMessageWithText(message)^.txt;
+  end;
+//------------------------------------------------------------------------------
+constructor T_guiFormatter.create(const forDemos: boolean);
+  begin
+    inherited create;
+    formatterForDemos:=forDemos;
+  end;
+destructor T_guiFormatter.destroy; begin inherited; end;
+
+function T_guiFormatter.getClonedInstance: P_messageFormatProvider;
+  begin
+    new(P_guiFormatter(result),create(formatterForDemos));
+  end;
+
+function T_guiFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+  begin
+    //TODO: Reimplement this!
+    assert(false);
     if (message=nil) or not(message^.isTextMessage)
     then result:=C_EMPTY_STRING_ARRAY
     else result:=P_storedMessageWithText(message)^.txt;

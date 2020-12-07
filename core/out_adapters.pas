@@ -1009,7 +1009,6 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
   begin
     inherited create(at_console,messageTypesToInclude_);
 
-
     if formatProvider=nil
     then new(P_defaultConsoleFormatter(messageFormatProvider),create)
     else messageFormatProvider:=formatProvider^.getClonedInstance;
@@ -1217,7 +1216,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
             case collected[i]^.messageType of
               mt_printline  : for s in collected[i]^.messageText do writeln(handle,s);
               mt_printdirect: for s in collected[i]^.messageText do write  (handle,s);
-              else for s in collected[i]^.toString(messageFormatProvider) do writeln(handle,s);
+              else for s in messageFormatProvider^.formatMessage(collected[i]) do writeln(handle,s);
             end;
           end;
           clear;
@@ -1234,12 +1233,10 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messag
   begin
     inherited create(at_textFile,messageTypesToInclude_);
 
-    messageFormatProvider:=formatProvider;
-    if messageFormatProvider=nil
-    then begin
-      new(messageFormatProvider,create);
-      messageFormatProvider^.setDefaults(false);
-    end;
+    if formatProvider=nil
+    then new(P_logFormatter(messageFormatProvider),create)
+    else messageFormatProvider:=formatProvider^.getClonedInstance;
+
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
     lastOutput:=now;
