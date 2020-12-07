@@ -65,7 +65,6 @@ TYPE
                                                                    mt_echo_input,
                                                                    mt_echo_output,
                                                                    mt_echo_declaration,
-                                                                   mt_echo_continued,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
   end;
@@ -209,8 +208,8 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       begin
         if length(messageList)<>1 then for message in messageList do begin
           if first
-          then appendInternal(marker+getPrefix(messageType      )+' '+message)
-          else appendInternal(marker+getPrefix(mt_echo_continued)+' '+message);
+          then appendInternal(marker+getPrefix(messageType)+' '+message)
+          else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
           first:=false;
         end else begin
           message:=messageList[0];
@@ -227,14 +226,14 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
                 firstInLine:=false;
               end;
               if first
-              then appendInternal(marker+getPrefix(messageType      )+' '+txt)
-              else appendInternal(marker+getPrefix(mt_echo_continued)+' '+txt);
+              then appendInternal(marker+getPrefix(messageType)+' '+txt)
+              else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+txt);
               first:=false;
             end;
           end else begin
             if first
-            then appendInternal(marker+getPrefix(messageType      )+' '+message)
-            else appendInternal(marker+getPrefix(mt_echo_continued)+' '+message);
+            then appendInternal(marker+getPrefix(messageType)+' '+message)
+            else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
             first:=false;
           end;
         end;

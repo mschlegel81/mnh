@@ -232,6 +232,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
       plainText:T_arrayOfString;
       tempFileName:string;
       useTempFile:boolean;
+      finishedOk :boolean;
   begin
     useTempFile:=not(tryObtainName(true));
     if useTempFile
@@ -243,15 +244,20 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
       plainText:=ruleId+':=';
       append(plainText,serializeToStringList(L,location,threadLocalMessages));
       writeFileLines(tempFileName,plainText,C_lineBreakChar,false);
+      finishedOk:=threadLocalMessages^.continueEvaluation;
     end else begin
       wrapper.createToWriteToFile(tempFileName);
       wrapper.writeAnsiString(ruleId);
       writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
+      finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;
     leaveCriticalSection(globalDatastoreCs);
 
-    if useTempFile then moveSafely(tempFileName,fileName);
+    if finishedOk then begin
+      if useTempFile
+      then moveSafely(tempFileName,fileName);
+    end else DeleteFile(tempFileName);
   end;
 
 INITIALIZATION

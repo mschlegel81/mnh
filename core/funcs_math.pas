@@ -334,7 +334,7 @@ FUNCTION argMax_imp intFuncSignature;
       i,imax:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes) then begin
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes-[lt_emptyList]) then begin
       L:=list0;
       imax:=0;
       xMax:=L^.value[0];
@@ -355,7 +355,7 @@ FUNCTION argMin_imp intFuncSignature;
       i,iMin:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes) then begin
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes-[lt_emptyList]) then begin
       L:=list0;
       iMin:=0;
       xMin:=L^.value[0];
