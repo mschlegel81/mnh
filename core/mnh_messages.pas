@@ -389,8 +389,8 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     case message^.messageClass of
       mc_echo   : begin
         case message^.messageType of
-          mt_echo_declaration: nextLine:='  in> ';
-          mt_echo_input      : nextLine:='decl> ';
+          mt_echo_input      : nextLine:='  in> ';
+          mt_echo_declaration: nextLine:='decl> ';
           mt_echo_output     : nextLine:=' out> ';
         end;
         for s in P_storedMessageWithText(message)^.txt do begin
@@ -412,7 +412,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       end else begin
         result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
         for s in P_storedMessageWithText(message)^.txt do
-          append(result,marker+copy(C_messageClassMeta[message^.messageClass].levelTxt,1,1)+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)-1)+' '+s);
+          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt))+' '+s);
       end
       else result:=P_storedMessageWithText(message)^.txt;
     end;
