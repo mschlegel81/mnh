@@ -40,6 +40,7 @@ TYPE
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
+      FUNCTION getLineLength:longint; virtual; abstract;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
   end;
@@ -67,11 +68,12 @@ TYPE
                                                                    mt_echo_declaration,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
+     FUNCTION getLineLength:longint; virtual;
   end;
 
   P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
   T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
-    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
 
@@ -125,9 +127,14 @@ CONSTRUCTOR T_eagerInitializedOutAdapter.create(CONST synEdit_: TSynEdit; CONST 
     ownerForm:=ownerForm_;
   end;
 
-CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
+FUNCTION T_eagerInitializedOutAdapter.getLineLength:longint;
   begin
-    inherited create(messageTypesToInclude_,consoleMode);
+    result:=SynEdit.charsInWindow;
+  end;
+
+CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
+  begin
+    inherited create(messageTypesToInclude_,consoleMode,formatProvider);
   end;
 
 FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessage): boolean;
@@ -154,6 +161,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       hadDirectPrint:boolean;
       wroteToSyn:boolean;
       SynEdit:TSynEdit=nil;
+      messageFormatter:T_guiFormatter;
 
   PROCEDURE startOutput;
     begin
@@ -196,49 +204,6 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
     end;
 
   FUNCTION singleMessageOut(CONST m: P_storedMessage):boolean;
-    PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
-      {$MACRO ON}
-      {$define marker:=C_messageTypeMeta[messageType].guiMarker}
-      VAR txt:string;
-          tokens:T_arrayOfString;
-          k:longint=0;
-          first:boolean=true;
-          firstInLine:boolean=true;
-          message:string;
-      begin
-        if length(messageList)<>1 then for message in messageList do begin
-          if first
-          then appendInternal(marker+getPrefix(messageType)+' '+message)
-          else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
-          first:=false;
-        end else begin
-          message:=messageList[0];
-          if wrapEcho and (ensureSynEdit.charsInWindow-5<length(message)) then begin
-            if length(messageList)=1
-            then tokens:=tokenSplit(message)
-            else tokens:=message;
-            while k<length(tokens) do begin
-              txt:='';
-              firstInLine:=true;
-              while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=SynEdit.charsInWindow-5)) do begin
-                txt:=txt+tokens[k];
-                inc(k);
-                firstInLine:=false;
-              end;
-              if first
-              then appendInternal(marker+getPrefix(messageType)+' '+txt)
-              else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+txt);
-              first:=false;
-            end;
-          end else begin
-            if first
-            then appendInternal(marker+getPrefix(messageType)+' '+message)
-            else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
-            first:=false;
-          end;
-        end;
-      end;
-
     PROCEDURE clearSynAndBuffer;
       begin
         linesToWrite:=C_EMPTY_STRING_ARRAY;
@@ -305,11 +270,11 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_el3_noMatchingMain,
         mt_el3_userDefined,
         mt_el4_systemError,
-        mt_timing_info: for s in m^.toString(true) do appendInternal(s);
+        mt_timing_info,
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output: writeWrapped(m^.messageType,m^.messageText);
-        mt_endOfEvaluation:ensureSynEdit.enabled:=true;
+        mt_echo_output: for s in messageFormatter.formatMessage(m) do appendInternal(s);
+        mt_endOfEvaluation: ensureSynEdit.enabled:=true;
         else result:=false;
       end;
       if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
@@ -348,6 +313,8 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   VAR i:longint;
   begin
     if not(forceFlush or autoflush) then exit;
+    messageFormatter.create(false);
+    messageFormatter.preferredLineLength:=getLineLength;
     system.enterCriticalSection(adapterCs);
     result:=[];
     startOutput;
@@ -362,6 +329,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
       doneOutput(jumpToEnd);
       system.leaveCriticalSection(adapterCs);
+      messageFormatter.destroy;
     end;
   end;
 

@@ -16,6 +16,7 @@ TYPE
 
   T_messageClass=(mc_echo   ,
                   mc_print  ,
+                  mc_log    ,
                   mc_timing ,
                   mc_note   ,
                   mc_warning,
@@ -34,51 +35,23 @@ CONST
   TIMING_MARKER =#226#129#164;
   TIMING_MARKER2=#226#128#141;
 
-  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; triggeredFlags:T_stateFlags; end=
-    {mc_echo   }((htmlSpan:''     ; triggeredFlags:[]),
-    {mc_print  } (htmlSpan:''     ; triggeredFlags:[]),
-    {mc_timing } (htmlSpan:''     ; triggeredFlags:[]),
-    {mc_note   } (htmlSpan:''     ; triggeredFlags:[]),
-    {mc_warning} (htmlSpan:''     ; triggeredFlags:[]),
-    {mc_error  } (htmlSpan:'error'; triggeredFlags:[FlagError]),
-    {mc_fatal  } (htmlSpan:'error'; triggeredFlags:[FlagFatalError])
+  C_echoPrefixLength=6;
+
+  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; guiMarker:string; levelTxt:string; triggeredFlags:T_stateFlags; end=
+    {mc_echo   }((htmlSpan:''     ; guiMarker:ECHO_MARKER;    levelTxt:'';      triggeredFlags:[]),
+    {mc_print  } (htmlSpan:''     ; guiMarker:'';             levelTxt:'';      triggeredFlags:[]),
+    {mc_log    } (htmlSpan:''     ; guiMarker:'';             levelTxt:'log';   triggeredFlags:[]),
+    {mc_timing } (htmlSpan:''     ; guiMarker:TIMING_MARKER;  levelTxt:'';      triggeredFlags:[]),
+    {mc_note   } (htmlSpan:''     ; guiMarker:NOTE_MARKER;    levelTxt:'Note';  triggeredFlags:[]),
+    {mc_warning} (htmlSpan:''     ; guiMarker:WARNING_MARKER; levelTxt:'Warn';  triggeredFlags:[]),
+    {mc_error  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Error'; triggeredFlags:[FlagError]),
+    {mc_fatal  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
-    {mc_plot   } (htmlSpan:''     ; triggeredFlags:[]),
-    {mc_gui}     (htmlSpan:''     ; triggeredFlags:[])
+    {mc_plot   } (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[]),
+    {mc_gui}     (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[])
     {$endif});
 
-//TODO: Declare pattern doc as constant array[0..?] of string
-
 TYPE
-  T_messagePatternElementType=(et_literal,
-                               et_lineBreak,  //%n%
-                               et_tab,        //%t%
-                               et_message,    //%message%
-                               et_shortLoc,   //%shortLoc%
-                               et_fullLoc,    //%location%
-                               et_time,       //%time%
-                               et_datetime);  //%datetime%
-
-CONST
-  C_messagePatternElementTypePlaceholder:array[et_lineBreak..high(T_messagePatternElementType)] of string=
-   ('%n%'       ,
-    '%t%'       ,
-    '%message%' ,
-    '%shortLoc%',
-    '%location%',
-    '%time%'    ,
-    '%datetime%');
-
-TYPE
-  T_formattableMessageClass=(fm_NOT_FORMATTABLE,
-                             fm_print,
-                             fm_echoIn,
-                             fm_echoOut,
-                             fm_note,
-                             fm_warn,
-                             fm_error,
-                             fm_stacktrace);
-
   T_messageType = (
     mt_clearConsole,
     mt_printline,
@@ -122,7 +95,8 @@ TYPE
   T_messageTypeSet=set of T_messageType;
 
   T_ideMessageConfig=object(T_serializable)
-    echo_input,echo_declaration,echo_output,echo_wrapping,
+    echo_input,echo_declaration,echo_output,
+      echo_wrapping, //TODO: Echo_wrapping might be obsolete by now...
     show_timing,
     show_all_userMessages:boolean;
     suppressWarningsUnderLevel:byte;
@@ -136,16 +110,6 @@ TYPE
 
 CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
-  GUI_MARKER:Array[T_formattableMessageClass] of string=(
-   {fm_NOT_FORMATTABLE}'',
-   {fm_print,         }'',
-   {fm_echoIn,        }ECHO_MARKER,
-   {fm_echoOut,       }ECHO_MARKER,
-   {fm_note,          }NOTE_MARKER,
-   {fm_warn,          }WARNING_MARKER,
-   {fm_error,         }ERROR_MARKER,
-   {fm_stacktrace     }ERROR_MARKER);
-
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messagesSuppressedOnQuietHalt:T_messageTypeSet=[mt_el3_evalError,
                                                     mt_el3_noMatchingMain,
@@ -153,47 +117,46 @@ CONST
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;
     mClass:T_messageClass;
-    fClass:T_formattableMessageClass;
     systemErrorLevel:byte;
   end = (
 
-{mt_clearConsole      }  (level:-2; mClass:mc_print;   fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_printline         }  (level:-2; mClass:mc_print;   fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_print             }  (level:-2; mClass:mc_print;   fClass:fm_print;           systemErrorLevel:0),
-{mt_echo_input        }  (level:-1; mClass:mc_echo;    fClass:fm_echoIn;          systemErrorLevel:0),
-{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    fClass:fm_echoIn;          systemErrorLevel:0),
-{mt_echo_continued    }  (level:-1; mClass:mc_echo;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_el1_note          }  (level: 1; mClass:mc_note;    fClass:fm_note;            systemErrorLevel:0),
-{mt_el1_userNote      }  (level: 1; mClass:mc_note;    fClass:fm_note;            systemErrorLevel:0),
-{mt_el2_warning       }  (level: 2; mClass:mc_warning; fClass:fm_warn;            systemErrorLevel:0),
-{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; fClass:fm_warn;            systemErrorLevel:0),
-{mt_el3_evalError     }  (level: 3; mClass:mc_error;   fClass:fm_error;           systemErrorLevel:3),
-{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   fClass:fm_error;           systemErrorLevel:1),
-{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   fClass:fm_error;           systemErrorLevel:2),
-{mt_el4_systemError   }  (level: 4; mClass:mc_fatal;   fClass:fm_error;           systemErrorLevel:5),
-{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_timing_info       }  (level:-1; mClass:mc_timing;  fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0)
+{mt_clearConsole      }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_printline         }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_print             }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_echo_input        }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_continued    }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_el1_note          }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el1_userNote      }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el2_warning       }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el3_evalError     }  (level: 3; mClass:mc_error;   systemErrorLevel:3),
+{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   systemErrorLevel:1),
+{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   systemErrorLevel:2),
+{mt_el4_systemError   }  (level: 4; mClass:mc_fatal;   systemErrorLevel:5),
+{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    systemErrorLevel:0),
+{mt_timing_info       }  (level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_profile_call_info}   (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_startOfEvaluation}   (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_displayTable}        (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_addText}        (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_addRow}         (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_queryClosedB...}(level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_clear}          (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_clearAnimati...}(level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_guiEditScriptsLoaded}(level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_displayVariableTree} (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0),
-{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     fClass:fm_NOT_FORMATTABLE; systemErrorLevel:0)
+{mt_profile_call_info}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_startOfEvaluation}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayTable}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_plot_addText}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addRow}         (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_queryClosedB...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clear}          (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimati...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_guiEditScriptsLoaded}(level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
@@ -234,11 +197,6 @@ TYPE
       FUNCTION isTextMessage:boolean; virtual;
   end;
 
-  T_messagePatternElement=record
-    elementType:T_messagePatternElementType;
-    litValue:string;
-  end;
-
   P_messageFormatProvider=^T_messageFormatProvider;
 
   T_messageFormatProvider=object
@@ -262,7 +220,6 @@ TYPE
       maxLocationLength:longint;
     public
       timeFormat:string;
-      fullLocations:boolean;
       CONSTRUCTOR create;
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
@@ -274,33 +231,12 @@ TYPE
     private
       formatterForDemos:boolean;
     public
+      preferredLineLength:longint;
       CONSTRUCTOR create(CONST forDemos:boolean);
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
   end;
-
-
-
-  //P_messageFormatProvider=^T_messageFormatProvider;
-  //T_messageFormatProvider=object
-  //  private
-  //    formatStrings:array[T_formattableMessageClass,boolean] of array of T_messagePatternElement;
-  //  public
-  //    CONSTRUCTOR create;
-  //    CONSTRUCTOR clone(CONST original:P_messageFormatProvider);
-  //    DESTRUCTOR destroy;
-  //    PROCEDURE setDefaults(CONST forGui:boolean);
-  //    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString;
-  //
-  //    FUNCTION getMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean):string;
-  //    PROCEDURE setMessageFormat(CONST messageType:T_formattableMessageClass; CONST firstLine:boolean; CONST format:string);
-  //
-  //    //FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-  //    //PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
-  //end;
-
-
 
   P_storedMessageWithText=^T_storedMessageWithText;
 
@@ -375,23 +311,23 @@ PROCEDURE disposeMessage_(message:P_storedMessage);
   end;
 
 //------------------------------------------------------------------------------
-constructor T_messageFormatProvider.create; begin end;
-destructor T_messageFormatProvider.destroy; begin end;
-function T_messageFormatProvider.formatMessage(const message: P_storedMessage): T_arrayOfString;
+CONSTRUCTOR T_messageFormatProvider.create; begin end;
+DESTRUCTOR T_messageFormatProvider.destroy; begin end;
+FUNCTION T_messageFormatProvider.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   begin
     if (message=nil) or not(message^.isTextMessage)
     then result:=C_EMPTY_STRING_ARRAY
     else result:=P_storedMessageWithText(message)^.txt;
   end;
 //------------------------------------------------------------------------------
-constructor T_defaultConsoleFormatter.create; begin inherited; end;
-destructor T_defaultConsoleFormatter.destroy; begin inherited; end;
-function T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
+CONSTRUCTOR T_defaultConsoleFormatter.create; begin inherited; end;
+DESTRUCTOR T_defaultConsoleFormatter.destroy; begin inherited; end;
+FUNCTION T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
   begin
     new(P_defaultConsoleFormatter(result),create);
   end;
 
-function T_defaultConsoleFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   begin
     //TODO: Reimplement this!
     assert(false);
@@ -400,23 +336,22 @@ function T_defaultConsoleFormatter.formatMessage(const message: P_storedMessage)
     else result:=P_storedMessageWithText(message)^.txt;
   end;
 //------------------------------------------------------------------------------
-constructor T_logFormatter.create;
+CONSTRUCTOR T_logFormatter.create;
   begin
     inherited;
     timeFormat:='hh:nn:ss.zzz';
-    fullLocations:=false;
-    maxLocationLength:=0;
+    maxLocationLength:=maxLongint;
   end;
 
-destructor T_logFormatter.destroy; begin inherited; end;
-function T_logFormatter.getClonedInstance: P_messageFormatProvider;
+DESTRUCTOR T_logFormatter.destroy; begin inherited; end;
+FUNCTION T_logFormatter.getClonedInstance: P_messageFormatProvider;
   begin
     new(P_logFormatter(result),create);
     P_logFormatter(result)^.timeFormat:=timeFormat;
-    P_logFormatter(result)^.fullLocations:=fullLocations;
+    P_logFormatter(result)^.maxLocationLength:=maxLocationLength;
   end;
 
-function T_logFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   begin
     //TODO: Reimplement this!
     assert(false);
@@ -425,27 +360,63 @@ function T_logFormatter.formatMessage(const message: P_storedMessage): T_arrayOf
     else result:=P_storedMessageWithText(message)^.txt;
   end;
 //------------------------------------------------------------------------------
-constructor T_guiFormatter.create(const forDemos: boolean);
+CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
   begin
     inherited create;
     formatterForDemos:=forDemos;
+    preferredLineLength:=maxLongint;
   end;
-destructor T_guiFormatter.destroy; begin inherited; end;
+DESTRUCTOR T_guiFormatter.destroy; begin inherited; end;
 
-function T_guiFormatter.getClonedInstance: P_messageFormatProvider;
+FUNCTION T_guiFormatter.getClonedInstance: P_messageFormatProvider;
   begin
     new(P_guiFormatter(result),create(formatterForDemos));
   end;
 
-function T_guiFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  VAR locationPart:string='';
+      marker      :string='';
+      nextLine    :string='';
+      s           :string;
   begin
-    //TODO: Reimplement this!
-    assert(false);
-    if (message=nil) or not(message^.isTextMessage)
-    then result:=C_EMPTY_STRING_ARRAY
-    else result:=P_storedMessageWithText(message)^.txt;
-  end;
+    if (message=nil) or not(message^.isTextMessage) then exit(C_EMPTY_STRING_ARRAY);
+    if not(formatterForDemos)
+    then locationPart:=string(message^.location)+' ';
 
+    marker:=C_messageClassMeta[message^.messageClass].guiMarker;
+    setLength(result,0);
+
+    case message^.messageClass of
+      mc_echo   : begin
+        case message^.messageType of
+          mt_echo_declaration: nextLine:='  in> ';
+          mt_echo_input      : nextLine:='decl> ';
+          mt_echo_output     : nextLine:=' out> ';
+        end;
+        for s in P_storedMessageWithText(message)^.txt do begin
+          if (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
+          then begin
+            append(result,marker+trim(nextLine));
+            nextLine:=' ...> '+s;
+          end else nextLine+=s;
+        end;
+        append(result,marker+trim(nextLine));
+      end;
+      mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,marker+s);
+      mc_log    ,
+      mc_note   ,
+      mc_warning,
+      mc_error  ,
+      mc_fatal  : if length(P_storedMessageWithText(message)^.txt)=1 then begin
+        result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
+      end else begin
+        result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
+        for s in P_storedMessageWithText(message)^.txt do
+          append(result,marker+copy(C_messageClassMeta[message^.messageClass].levelTxt,1,1)+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)-1)+' '+s);
+      end
+      else result:=P_storedMessageWithText(message)^.txt;
+    end;
+  end;
 
 //CONSTRUCTOR T_messageFormatProvider.clone(CONST original: P_messageFormatProvider);
 //  VAR mt:T_formattableMessageClass;
@@ -703,11 +674,12 @@ PROCEDURE T_ideMessageConfig.saveToStream(VAR stream: T_bufferedOutputStreamWrap
     stream.writeByte(suppressWarningsUnderLevel);
   end;
 
-function T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;
-function T_storedMessageWithText.internalType: shortstring; begin result:='T_storedMessageWithText'; end;
+FUNCTION T_storedMessage.internalType: shortstring; begin result:='T_storedMessage'; end;
+FUNCTION T_storedMessageWithText.internalType: shortstring; begin result:='T_storedMessageWithText'; end;
 FUNCTION T_payloadMessage.internalType: shortstring; begin result:='T_payloadMessage'; end;
 FUNCTION T_errorMessage.internalType: shortstring; begin result:='T_errorMessage'; end;
 
+//TOOD Remove this!
 FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
   begin
     case messageType of
@@ -725,11 +697,11 @@ FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
     end;
   end;
 
-function T_storedMessage.prefix: shortstring;
+FUNCTION T_storedMessage.prefix: shortstring;
   begin result:=getPrefix(kind); end;
 
-constructor T_storedMessageWithText.create(const messageType_: T_messageType;
-  const loc: T_searchTokenLocation; const message: T_arrayOfString);
+CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType;
+  CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
   begin
     inherited create(messageType_,loc);
     setLength(txt,0);
@@ -742,8 +714,8 @@ CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_
     setLength(stacktrace,0);
   end;
 
-constructor T_storedMessage.create(const messageType_: T_messageType;
-  const loc: T_searchTokenLocation);
+CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType;
+  CONST loc: T_searchTokenLocation);
   begin
     location:=loc;
     kind:=messageType_;
@@ -757,12 +729,12 @@ CONSTRUCTOR T_payloadMessage.create(CONST messageType_: T_messageType);
     initCriticalSection(messageCs);
   end;
 
-destructor T_storedMessage.destroy;
+DESTRUCTOR T_storedMessage.destroy;
   begin
     if refCount<>0 then raise Exception.create('Disposing message with refCount='+intToStr(refCount));
   end;
 
-destructor T_storedMessageWithText.destroy;
+DESTRUCTOR T_storedMessageWithText.destroy;
   VAR i:longint;
   begin
     inherited destroy;
@@ -770,7 +742,7 @@ destructor T_storedMessageWithText.destroy;
     setLength(txt,0);
   end;
 
-function T_storedMessageWithText.isTextMessage: boolean;
+FUNCTION T_storedMessageWithText.isTextMessage: boolean;
   begin
     result:=true;
   end;
@@ -787,7 +759,7 @@ DESTRUCTOR T_payloadMessage.destroy;
     doneCriticalSection(messageCs);
   end;
 
-function T_storedMessage.equals(const other: P_storedMessage): boolean;
+FUNCTION T_storedMessage.equals(CONST other: P_storedMessage): boolean;
   begin
     result:=(other=@self) or
             (other^.kind=kind) and
@@ -795,7 +767,7 @@ function T_storedMessage.equals(const other: P_storedMessage): boolean;
             (other^.location=location);
   end;
 
-function T_storedMessageWithText.equals(const other: P_storedMessage): boolean;
+FUNCTION T_storedMessageWithText.equals(CONST other: P_storedMessage): boolean;
   begin
     result:=inherited equals(other) and arrEquals(txt,P_storedMessageWithText(other)^.txt);
   end;
@@ -805,23 +777,23 @@ FUNCTION T_payloadMessage.equals(CONST other: P_storedMessage): boolean;
     result:=other=@self;
   end;
 
-function T_storedMessage.unreference: boolean;
+FUNCTION T_storedMessage.unreference: boolean;
   begin
     result:=interlockedDecrement(refCount)<=0;
   end;
 
-function T_storedMessage.rereferenced: P_storedMessage;
+FUNCTION T_storedMessage.rereferenced: P_storedMessage;
   begin
     interLockedIncrement(refCount);
     result:=@self;
   end;
 
-function T_storedMessage.messageClass: T_messageClass;
+FUNCTION T_storedMessage.messageClass: T_messageClass;
   begin
     result:=C_messageTypeMeta[kind].mClass;
   end;
 
-function T_storedMessage.messageText: T_arrayOfString;
+FUNCTION T_storedMessage.messageText: T_arrayOfString;
   begin
     result:=C_EMPTY_STRING_ARRAY;
   end;
@@ -837,17 +809,17 @@ FUNCTION messageTypeName(CONST m:T_messageType):string;
     result:=messageTypeNames[m];
   end;
 
-function T_storedMessage.getMessageTypeName: string;
+FUNCTION T_storedMessage.getMessageTypeName: string;
   begin
     result:= copy(getEnumName(TypeInfo(kind),ord(kind)),4,1000);
   end;
 
-function T_storedMessage.isTextMessage: boolean;
+FUNCTION T_storedMessage.isTextMessage: boolean;
   begin
     result:=false;
   end;
 
-function T_storedMessageWithText.messageText: T_arrayOfString;
+FUNCTION T_storedMessageWithText.messageText: T_arrayOfString;
   begin
     result:=txt;
   end;

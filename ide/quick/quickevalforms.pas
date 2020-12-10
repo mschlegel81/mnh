@@ -34,7 +34,6 @@ TYPE
     quickOutputSynEdit: TSynEdit;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
-    PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoInputClick(Sender: TObject);
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
@@ -48,7 +47,6 @@ TYPE
     quickEvaluation:T_quickEvaluation;
     quickOutput:T_eagerInitializedOutAdapter;
     FUNCTION stateHash:T_hashInt;
-    PROCEDURE updateWordWrap;
   public
 
   end;
@@ -98,7 +96,6 @@ PROCEDURE TQuickEvalForm.miEchoInputClick(Sender: TObject);
     end;
     quickOutput.outputBehavior:=ideSettings.quickOutputBehavior;
     quickOutput.wrapEcho:=ideSettings.quickOutputBehavior.echo_wrapping;
-    updateWordWrap;
   end;
 
 PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
@@ -138,11 +135,6 @@ PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
     inputMeta.destroy;
     unregisterFontControl(quickOutputSynEdit);
     quickOutput.destroy;
-  end;
-
-PROCEDURE TQuickEvalForm.FormResize(Sender: TObject);
-  begin
-    updateWordWrap;
   end;
 
 PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
@@ -196,14 +188,6 @@ FUNCTION TQuickEvalForm.stateHash: T_hashInt;
     if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
     then result:=result xor meta^.stateHash
     else result:=result xor 0;
-  end;
-
-PROCEDURE TQuickEvalForm.updateWordWrap;
-  begin
-    if quickOutput.parentMessages=nil then exit;
-    if ideSettings.quickOutputBehavior.echo_wrapping
-    then quickOutput.parentMessages^.preferredEchoLineLength:=quickOutputSynEdit.charsInWindow-6
-    else quickOutput.parentMessages^.preferredEchoLineLength:=-1;
   end;
 
 end.

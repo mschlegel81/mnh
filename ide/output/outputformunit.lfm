@@ -1,17 +1,15 @@
 object OutputForm: TOutputForm
   Left = 817
-  Height = 300
+  Height = 240
   Top = 165
-  Width = 400
+  Width = 320
   Caption = 'Output'
-  ClientHeight = 275
-  ClientWidth = 400
-  DesignTimePPI = 120
+  ClientHeight = 220
+  ClientWidth = 320
   Menu = MainMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnResize = FormResize
   LCLVersion = '2.0.10.0'
   inline OutputSynEdit: TSynEdit
     AnchorSideLeft.Control = Owner
@@ -22,12 +20,12 @@ object OutputForm: TOutputForm
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 251
-    Top = 24
-    Width = 400
+    Height = 201
+    Top = 19
+    Width = 320
     Align = alCustom
     Anchors = [akTop, akLeft, akRight, akBottom]
-    Font.Height = -11
+    Font.Height = -9
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -36,7 +34,7 @@ object OutputForm: TOutputForm
     PopupMenu = OutputPopupMenu
     TabOrder = 0
     OnKeyUp = OutputSynEditKeyUp
-    Gutter.Width = 15
+    Gutter.Width = 11
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -487,7 +485,7 @@ object OutputForm: TOutputForm
     LineHighlightColor.Foreground = clNone
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 15
+        Width = 11
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -502,12 +500,12 @@ object OutputForm: TOutputForm
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = Owner
     AnchorSideBottom.Control = OutputSynEdit
-    Left = 9
-    Height = 24
+    Left = 7
+    Height = 19
     Top = 0
-    Width = 205
+    Width = 167
     Align = alCustom
-    BorderSpacing.Left = 9
+    BorderSpacing.Left = 7
     Caption = 'Show when output changes'
     Checked = True
     OnChange = cbShowOnOutputChange
@@ -522,10 +520,10 @@ object OutputForm: TOutputForm
     AnchorSideTop.Control = cbShowOnOutput
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 214
-    Height = 24
+    Left = 174
+    Height = 19
     Top = 0
-    Width = 186
+    Width = 146
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Freeze output'
@@ -534,8 +532,8 @@ object OutputForm: TOutputForm
     TabOrder = 2
   end
   object OutputPopupMenu: TPopupMenu
-    Left = 214
-    Top = 156
+    Left = 171
+    Top = 125
     object miEchoInput: TMenuItem
       AutoCheck = True
       Caption = 'Echo &input'
@@ -596,8 +594,8 @@ object OutputForm: TOutputForm
     end
   end
   object MainMenu1: TMainMenu
-    Left = 95
-    Top = 114
+    Left = 76
+    Top = 91
     object miDockMainRoot: TMenuItem
       Caption = '&View'
     end

@@ -165,7 +165,6 @@ TYPE
       userDefinedExitCode:longint;
       CONSTRUCTOR create(); //private, because it is abstract
     public
-      preferredEchoLineLength:longint;
       DESTRUCTOR destroy; virtual;
 
       //Flags
@@ -854,7 +853,6 @@ CONSTRUCTOR T_messages.create();
     initCriticalSection(messagesCs);
     flags:=[];
     userDefinedExitCode:=0;
-    preferredEchoLineLength:=0;
     errorCount:=0;
   end;
 
@@ -1036,7 +1034,7 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
 DESTRUCTOR T_consoleOutAdapter.destroy;
   begin
     inherited destroy;
-    dispose(messageFormatProvider);
+    dispose(messageFormatProvider,destroy);
   end;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;

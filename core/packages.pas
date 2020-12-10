@@ -436,29 +436,30 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     setLength(textOut,0);
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);
-    for i:=0 to length(input)-1 do begin
-      tmp:=trim(input[i]);
-      raw:=rawTokenizeCallback(tmp);
-      for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
-      if startsWith(tmp,COMMENT_PREFIX) then begin
-        append(htmlOut,            StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+toHtmlCode(raw));
-        append(textOut,ECHO_MARKER+StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+tmp);
-      end else begin
-        append(htmlOut,            getPrefix(mt_echo_input)+' '+toHtmlCode(raw));
-        append(textOut,ECHO_MARKER+getPrefix(mt_echo_input)+' '+tmp);
-      end;
-    end;
-    for m in messages do begin
-      case m^.messageType of
-        mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
-        mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
-        mt_echo_output: for tmp in m^.messageText do append(htmlOut,m^.prefix+' '+toHtmlCode(escapeHtml(tmp)));
-        else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
-      end;
-      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-        //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
-        append(textOut,formatter.formatMessage(m));
-    end;
+    //TODO This needs to be fixed!!!
+    //for i:=0 to length(input)-1 do begin
+    //  tmp:=trim(input[i]);
+    //  raw:=rawTokenizeCallback(tmp);
+    //  for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
+    //  if startsWith(tmp,COMMENT_PREFIX) then begin
+    //    append(htmlOut,            StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+toHtmlCode(raw));
+    //    append(textOut,ECHO_MARKER+StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+tmp);
+    //  end else begin
+    //    append(htmlOut,            getPrefix(mt_echo_input)+' '+toHtmlCode(raw));
+    //    append(textOut,ECHO_MARKER+getPrefix(mt_echo_input)+' '+tmp);
+    //  end;
+    //end;
+    //for m in messages do begin
+    //  case m^.messageType of
+    //    mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
+    //    mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
+    //    mt_echo_output: for tmp in m^.messageText do append(htmlOut,m^.prefix+' '+toHtmlCode(escapeHtml(tmp)));
+    //    else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
+    //  end;
+    //  if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
+    //    //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
+    //    append(textOut,formatter.formatMessage(m));
+    //end;
     formatter.destroy;
   end;
 {$endif}
@@ -883,7 +884,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         end;
         predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first,globals.primaryContext.messages^.preferredEchoLineLength));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first));
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -900,7 +901,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         {$endif}
         if profile then globals.timeBaseComponent(pc_declaration);
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first,globals.primaryContext.messages^.preferredEchoLineLength));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first));
         parseDataStore;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -917,7 +918,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             if (statement.token.first=nil) then exit;
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
-            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToEcho(statement.token.first,globals.primaryContext.messages^.preferredEchoLineLength));
+            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToEcho(statement.token.first));
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}
@@ -927,15 +928,13 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
               {$ifdef fullVersion}
               if (statement.token.first<>nil) and
                  (statement.token.first^.next=nil) and
-                 (statement.token.first^.tokType=tt_literal) and
-                 (globals.primaryContext.messages^.preferredEchoLineLength>10) then begin
+                 (statement.token.first^.tokType=tt_literal) then begin
                 globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,
                   serializeToStringList(P_literal(statement.token.first^.data),
                                         statement.token.first^.location,
-                                        nil,
-                                        globals.primaryContext.messages^.preferredEchoLineLength));
+                                        nil));
               end else {$endif}
-                globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToEcho(statement.token.first,globals.primaryContext.messages^.preferredEchoLineLength));
+                globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToEcho(statement.token.first));
             end;
           end;
           lu_forCodeAssistance,lu_forCodeAssistanceSecondary: if (statement.token.first<>nil) then begin

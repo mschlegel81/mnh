@@ -229,7 +229,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     inherited init(ek_normal);
     commandLine.applyAndReturnOk(@messages,true);
     if not(clf_QUIET in commandLine.mnhExecutionOptions.flags) then begin
-      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode));
+      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode,nil));
       messages.addOutAdapter(console,true);
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);
