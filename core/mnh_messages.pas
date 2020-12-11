@@ -49,7 +49,7 @@ CONST
     {mc_fatal  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
     {mc_plot   } (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[]),
-                 (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
+                 (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[]),
     {mc_gui}     (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[])
     {$endif});
 
@@ -163,14 +163,14 @@ CONST
 {mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_guiEditScriptsLoaded}(level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_image_postDisplay}   (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_image_load}          (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_image_replaceImage}  (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_image_close}         (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_image_obtainImage...}(guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_image_obtainDim...}  (guiMarker: ''            ; level:-1; mClass:mc_image;   systemErrorLevel:0),
-{mt_displayVariableTree} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayCustomForm}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0)
+{mt_image_postDisplay}   (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_load}          (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_replaceImage}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_close}         (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainImage...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainDim...}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
