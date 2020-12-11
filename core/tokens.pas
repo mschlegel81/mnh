@@ -65,7 +65,7 @@ VAR patternToString:FUNCTION (CONST pattern:pointer):ansistring=nil;
     clonePattern   :FUNCTION (CONST pattern:pointer):pointer     =nil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
-FUNCTION tokensToEcho(CONST first:P_token; CONST lineLength:longint):T_arrayOfString;
+FUNCTION tokensToEcho(CONST first:P_token):T_arrayOfString;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
 IMPLEMENTATION
@@ -75,19 +75,10 @@ FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
     result:=join(tokensToStrings(first,limit),'');
   end;
 
-FUNCTION tokensToEcho(CONST first:P_token; CONST lineLength:longint):T_arrayOfString;
-  VAR part:string;
-      line:string='';
+FUNCTION tokensToEcho(CONST first:P_token):T_arrayOfString;
   begin
-    if lineLength<10 then exit(tokensToString(first)+';');
-
-    result:=C_EMPTY_STRING_ARRAY;
-    for part in tokensToStrings(first) do
-    if (length(line)>0) and (length(line)+length(part)>lineLength) then begin
-      append(result,trim(line));
-      line:=part;
-    end else line+=part;
-    append(result,trim(line)+';');
+    result:=tokensToStrings(first);
+    append(result,';');
   end;
 
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;

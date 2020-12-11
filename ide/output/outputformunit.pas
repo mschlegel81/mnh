@@ -15,10 +15,6 @@ TYPE
   P_lazyInitializedOutAdapter=^T_lazyInitializedOutAdapter;
   T_lazyInitializedOutAdapter=object(T_abstractSynOutAdapter)
     private
-      //TODO Modify output form:
-      // - Store messages in "raw form" so that jumps to locations are possible
-      // - Do not(!) use highlighting markers (this requires modifying the highlighter)
-      // - Shorten (or omit) locations
       outputForm:TOutputForm;
       formCaption:string;
       running:TIsRunningFunc;
@@ -41,6 +37,7 @@ TYPE
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
       DESTRUCTOR destroy; virtual;
+      FUNCTION getLineLength:longint; virtual;
       FUNCTION ensureOutputForm:TOutputForm;
   end;
 
@@ -68,7 +65,6 @@ TYPE
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
-    PROCEDURE FormResize(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
     PROCEDURE OutputSynEditKeyUp(Sender: TObject; VAR key: word;
@@ -77,7 +73,6 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
-    PROCEDURE updateWordWrap;
     PROCEDURE updateAfterSettingsRestore;
   public
     adapter:P_lazyInitializedOutAdapter;
@@ -127,6 +122,11 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
     result:=outputForm;
   end;
 
+FUNCTION T_lazyInitializedOutAdapter.getLineLength:longint;
+  begin
+    result:=getSynEdit.charsInWindow;
+  end;
+
 PROCEDURE TOutputForm.updateAfterSettingsRestore;
   begin
     with ideSettings.outputBehavior do begin
@@ -163,11 +163,6 @@ PROCEDURE TOutputForm.FormDestroy(Sender: TObject);
     adapter^.jumpToEnd:=true;
   end;
 
-PROCEDURE TOutputForm.FormResize(Sender: TObject);
-  begin
-    updateWordWrap;
-  end;
-
 PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
   begin
     CanClose:=not(adapter^.running());
@@ -181,14 +176,6 @@ PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icOutput;
-  end;
-
-PROCEDURE TOutputForm.updateWordWrap;
-  begin
-    if adapter^.parentMessages=nil then exit;
-    if ideSettings.outputBehavior.echo_wrapping
-    then adapter^.parentMessages^.preferredEchoLineLength:=OutputSynEdit.charsInWindow-6
-    else adapter^.parentMessages^.preferredEchoLineLength:=-1;
   end;
 
 PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
@@ -207,7 +194,6 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
     end;
     adapter^.outputBehavior:=ideSettings.outputBehavior;
     adapter^.wrapEcho:=ideSettings.outputBehavior.echo_wrapping;
-    updateWordWrap;
   end;
 
 PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
