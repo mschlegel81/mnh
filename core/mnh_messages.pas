@@ -165,8 +165,6 @@ CONST
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
 
-  ECHO_CONTINUED_PREFIX='...>';
-
 TYPE
   P_storedMessage=^T_storedMessage;
   T_storedMessages=array of P_storedMessage;
@@ -181,7 +179,6 @@ TYPE
       kind:T_messageType;
       FUNCTION internalType:shortstring; virtual;
     public
-      FUNCTION prefix:shortstring;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
@@ -220,6 +217,7 @@ TYPE
       maxLocationLength:longint;
     public
       timeFormat:string;
+      handlePrintAsLog:boolean;
       CONSTRUCTOR create;
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
@@ -239,9 +237,6 @@ TYPE
   end;
 
   P_storedMessageWithText=^T_storedMessageWithText;
-
-  { T_storedMessageWithText }
-
   T_storedMessageWithText=object(T_storedMessage)
     protected
       txt:T_arrayOfString;
@@ -279,7 +274,6 @@ TYPE
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 PROCEDURE disposeMessage(VAR message:P_storedMessage);
 PROCEDURE disposeMessage_(message:P_storedMessage);
-FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 FUNCTION messageTypeName(CONST m:T_messageType):string;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
@@ -328,12 +322,54 @@ FUNCTION T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
   end;
 
 FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  VAR locationPart:string='';
+      nextLine    :string='';
+      s           :string;
+
+  FUNCTION shortLocationString(CONST x:T_searchTokenLocation):string;
+    begin
+      if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
+      if x.column<0
+      then result:='@'+extractFileName(x.fileName)+':'+intToStr(x.line)+',1'
+      else result:='@'+extractFileName(x.fileName)+':'+intToStr(x.line)+','+intToStr(x.column);
+    end;
+
   begin
-    //TODO: Reimplement this!
-    assert(false);
-    if (message=nil) or not(message^.isTextMessage)
-    then result:=C_EMPTY_STRING_ARRAY
-    else result:=P_storedMessageWithText(message)^.txt;
+    if (message=nil) or not(message^.isTextMessage) then exit(C_EMPTY_STRING_ARRAY);
+    locationPart:=shortLocationString(message^.location)+' ';
+
+    setLength(result,0);
+
+    case message^.messageClass of
+      mc_echo   : begin
+        case message^.messageType of
+          mt_echo_input      : nextLine:='  in> ';
+          mt_echo_declaration: nextLine:='decl> ';
+          mt_echo_output     : nextLine:=' out> ';
+        end;
+        for s in P_storedMessageWithText(message)^.txt do begin
+          if (length(nextLine)>10) and (length(nextLine)+length(s)>100)
+          then begin
+            append(result,trimRight(nextLine));
+            nextLine:=' ...> '+trimLeft(s);
+          end else nextLine+=s;
+        end;
+        append(result,trimRight(nextLine));
+      end;
+      mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,s);
+      mc_log    ,
+      mc_note   ,
+      mc_warning,
+      mc_error  ,
+      mc_fatal  : if length(P_storedMessageWithText(message)^.txt)=1 then begin
+        result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
+      end else begin
+        result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
+        for s in P_storedMessageWithText(message)^.txt do
+          append(result,StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt))+' '+s);
+      end
+      else result:=P_storedMessageWithText(message)^.txt;
+    end;
   end;
 //------------------------------------------------------------------------------
 CONSTRUCTOR T_logFormatter.create;
@@ -341,6 +377,7 @@ CONSTRUCTOR T_logFormatter.create;
     inherited;
     timeFormat:='hh:nn:ss.zzz';
     maxLocationLength:=maxLongint;
+    handlePrintAsLog:=false;
   end;
 
 DESTRUCTOR T_logFormatter.destroy; begin inherited; end;
@@ -352,12 +389,107 @@ FUNCTION T_logFormatter.getClonedInstance: P_messageFormatProvider;
   end;
 
 FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  FUNCTION getTimePart:string;
+    begin
+      if timeFormat<>'' then try
+        result:=FormatDateTime(timeFormat,P_storedMessageWithText(message)^.createdAt)+' ';
+      except
+        result:='--erroneous time format--';
+      end else result:='';
+    end;
+
+  VAR fullLoc:boolean=false;
+  FUNCTION getLocationPart:string;
+    VAR loc:T_searchTokenLocation;
+        s  :string;
+    begin
+      loc:=message^.location;
+      if (maxLocationLength<=1) or (maxLocationLength>1000) then begin
+        fullLoc:=true;
+        result:=loc;
+      end else begin
+        fullLoc:=false;
+        if loc.column<0
+        then s:=':'+intToStr(loc.line)+',1'
+        else s:=':'+intToStr(loc.line)+','+intToStr(loc.column);
+
+        result:=message^.location.fileName;
+        if 1+length(result)+length(s)<=maxLocationLength
+        then result:='@'+result+s
+        else begin
+          result:=extractFileName(message^.location.fileName);
+          if 1+length(result)+length(s)<=maxLocationLength
+          then result:='@'+     result                                 +s
+          else result:='@'+copy(result,1,maxLocationLength-length(s)-1)+s;
+        end;
+        result+=StringOfChar(' ',maxLocationLength-length(result));
+      end;
+    end;
+
+  VAR mc:T_messageClass;
+  FUNCTION getLevelPart:string;
+    begin
+      case message^.messageClass of
+        mc_echo   :
+          case message^.messageType of
+            mt_echo_input      : result:='In    ';
+            mt_echo_declaration: result:='Decl. ';
+            mt_echo_output     : result:='Out   ';
+          end;
+        mc_timing : result:='Time  ';
+        mc_print  : result:='Print ';
+        mc_log    : result:='Log   ';
+        mc_note   : result:='Note  ';
+        mc_warning: result:='Warn  ';
+        mc_error  : result:='Error ';
+        mc_fatal  : result:='FATAL ';
+        else        result:='?     ';
+      end;
+    end;
+
+  VAR locationPart:string;
+      timePart    :string;
+      levelPart   :string;
+
+  VAR nextLine    :string='';
+      s           :string;
+      i           :longint;
   begin
-    //TODO: Reimplement this!
-    assert(false);
-    if (message=nil) or not(message^.isTextMessage)
-    then result:=C_EMPTY_STRING_ARRAY
-    else result:=P_storedMessageWithText(message)^.txt;
+    if (message=nil) or not(message^.isTextMessage) then exit(C_EMPTY_STRING_ARRAY);
+
+    mc:=message^.messageClass;
+    if mc=mc_print then begin
+      if handlePrintAsLog
+      then mc:=mc_log
+      else exit(P_storedMessageWithText(message)^.txt);
+    end;
+    setLength(result,0);
+
+    if mc=mc_echo then begin
+      for s in P_storedMessageWithText(message)^.txt do begin
+        if (length(nextLine)>10) and (length(nextLine)+length(s)>100)
+        then begin
+          append(result,trimRight(nextLine));
+          nextLine:=trimLeft(s);
+        end else nextLine+=s;
+      end;
+      append(result,trimRight(nextLine));
+    end else append(result,P_storedMessageWithText(message)^.txt);
+    if length(result)=0 then append(result,'');
+
+    locationPart:=getLocationPart;
+    timePart    :=getTimePart;
+    levelPart   :=getLevelPart;
+
+    if (length(result)>1) and fullLoc then begin
+      prepend(result,timePart+levelPart+locationPart);
+      s:=StringOfChar(' ',length(timePart)+length(levelPart));
+      for i:=1 to length(result)-1 do result[i]:=s+result[i];
+    end else begin
+      result[0]:=timePart+levelPart+locationPart+' '+result[0];
+      s:=StringOfChar(' ',length(timePart)+length(levelPart)+length(locationPart)+1);
+      for i:=1 to length(result)-1 do result[i]:=s+result[i];
+    end;
   end;
 //------------------------------------------------------------------------------
 CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
@@ -366,6 +498,7 @@ CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
     formatterForDemos:=forDemos;
     preferredLineLength:=maxLongint;
   end;
+
 DESTRUCTOR T_guiFormatter.destroy; begin inherited; end;
 
 FUNCTION T_guiFormatter.getClonedInstance: P_messageFormatProvider;
@@ -396,11 +529,11 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         for s in P_storedMessageWithText(message)^.txt do begin
           if (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
           then begin
-            append(result,marker+trim(nextLine));
-            nextLine:=' ...> '+s;
+            append(result,marker+trimRight(nextLine));
+            nextLine:=' ...> '+trimLeft(s);
           end else nextLine+=s;
         end;
-        append(result,marker+trim(nextLine));
+        append(result,marker+trimRight(nextLine));
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,marker+s);
       mc_log    ,
@@ -678,27 +811,6 @@ FUNCTION T_storedMessage.internalType: shortstring; begin result:='T_storedMessa
 FUNCTION T_storedMessageWithText.internalType: shortstring; begin result:='T_storedMessageWithText'; end;
 FUNCTION T_payloadMessage.internalType: shortstring; begin result:='T_payloadMessage'; end;
 FUNCTION T_errorMessage.internalType: shortstring; begin result:='T_errorMessage'; end;
-
-//TOOD Remove this!
-FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
-  begin
-    case messageType of
-      mt_echo_input,
-      mt_echo_declaration:result:=' in>';
-      mt_echo_output     :result:='out>';
-      mt_el1_note,
-      mt_el1_userNote    :result:='Note ';
-      mt_el2_warning,
-      mt_el2_userWarning :result:='Warning ';
-      mt_el3_evalError,
-      mt_el3_userDefined :result:='Error ';
-      mt_el4_systemError :result:='Fatal ';
-      else result:='';
-    end;
-  end;
-
-FUNCTION T_storedMessage.prefix: shortstring;
-  begin result:=getPrefix(kind); end;
 
 CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType;
   CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);

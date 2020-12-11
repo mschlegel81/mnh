@@ -430,6 +430,12 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       tok:T_rawToken;
       m:P_storedMessage;
       formatter:T_guiFormatter;
+
+  FUNCTION adHocMessage(CONST messageType: T_messageType; CONST messageText: T_arrayOfString):P_storedMessageWithText;
+    begin
+      new(result,create(messageType,C_nilTokenLocation,messageText));
+    end;
+
   begin
     formatter.create(true);
     messages:=sandbox^.execute(input,C_allSideEffects,recycler,i);
@@ -437,29 +443,31 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);
     //TODO This needs to be fixed!!!
-    //for i:=0 to length(input)-1 do begin
-    //  tmp:=trim(input[i]);
-    //  raw:=rawTokenizeCallback(tmp);
-    //  for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
-    //  if startsWith(tmp,COMMENT_PREFIX) then begin
-    //    append(htmlOut,            StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+toHtmlCode(raw));
-    //    append(textOut,ECHO_MARKER+StringOfChar(' ',length(getPrefix(mt_echo_input))+1)+tmp);
-    //  end else begin
-    //    append(htmlOut,            getPrefix(mt_echo_input)+' '+toHtmlCode(raw));
-    //    append(textOut,ECHO_MARKER+getPrefix(mt_echo_input)+' '+tmp);
-    //  end;
-    //end;
-    //for m in messages do begin
-    //  case m^.messageType of
-    //    mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
-    //    mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
-    //    mt_echo_output: for tmp in m^.messageText do append(htmlOut,m^.prefix+' '+toHtmlCode(escapeHtml(tmp)));
-    //    else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
-    //  end;
-    //  if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-    //    //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
-    //    append(textOut,formatter.formatMessage(m));
-    //end;
+    for i:=0 to length(input)-1 do begin
+      tmp:=trim(input[i]);
+      raw:=rawTokenizeCallback(tmp);
+      for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
+      if startsWith(tmp,COMMENT_PREFIX) then begin
+        append(htmlOut,            StringOfChar(' ',C_echoPrefixLength)+toHtmlCode(raw));
+        append(textOut,ECHO_MARKER+StringOfChar(' ',C_echoPrefixLength)+tmp);
+      end else begin
+        append(htmlOut, escapeHtml(' in> ')+toHtmlCode(raw));
+        m:=adHocMessage(mt_echo_input,tmp);
+        append(textOut,formatter.formatMessage(m));
+        disposeMessage(m);
+      end;
+    end;
+    for m in messages do begin
+      case m^.messageType of
+        mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
+        mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
+        mt_echo_output: for tmp in m^.messageText do append(htmlOut,escapeHtml('out> ')+toHtmlCode(tmp));
+        else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,C_messageClassMeta[m^.messageClass].levelTxt+' '+escapeHtml(tmp)));
+      end;
+      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
+        //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
+        append(textOut,formatter.formatMessage(m));
+    end;
     formatter.destroy;
   end;
 {$endif}

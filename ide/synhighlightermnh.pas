@@ -468,10 +468,10 @@ PROCEDURE TMnhOutputSyn.next;
       exit;
     end;
     case ord(blobEnder) of
-      1: if run=3 then begin
+      1: if run<3+C_echoPrefixLength then begin
            fTokenId:=tkOperator;
-           run+=4;
-         end else Inherited next;
+           run:=3+C_echoPrefixLength;
+         end else inherited next;
       else begin
         fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind;
         if fLine[run]=#0 then begin

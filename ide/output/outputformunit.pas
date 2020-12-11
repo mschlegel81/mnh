@@ -15,10 +15,6 @@ TYPE
   P_lazyInitializedOutAdapter=^T_lazyInitializedOutAdapter;
   T_lazyInitializedOutAdapter=object(T_abstractSynOutAdapter)
     private
-      //TODO Modify output form:
-      // - Store messages in "raw form" so that jumps to locations are possible
-      // - Do not(!) use highlighting markers (this requires modifying the highlighter)
-      // - Shorten (or omit) locations
       outputForm:TOutputForm;
       formCaption:string;
       running:TIsRunningFunc;

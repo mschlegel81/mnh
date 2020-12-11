@@ -802,10 +802,9 @@ FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterS
   end;
 
 FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
-  VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
-    new(consoleOutAdapter,create(messageTypesToInclude,consoleMode,nil));
-    result:=consoleOutAdapter;
+    new(result,create(messageTypesToInclude,consoleMode,nil));
+    addOutAdapter(result,true);
   end;
 
 PROCEDURE T_messagesDistributor.removeOutAdapter(CONST p: P_abstractOutAdapter);
