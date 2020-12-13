@@ -475,7 +475,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
@@ -3829,7 +3829,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     reusableMap.destroy;
   end;
 
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
   VAR indent:longint=0;
       prevLines:T_arrayOfString;
       nextLine:ansistring;

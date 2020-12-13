@@ -157,7 +157,7 @@ FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
-USES sysutils,typinfo, FileUtil, Classes
+USES sysutils,typinfo, FileUtil, Classes,messageFormatting
      {$ifdef fullVersion},commandLineParameters{$endif};
 
 VAR sandboxes:array of P_sandbox;
@@ -325,13 +325,17 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
     end;
 
   VAR m:P_storedMessage;
+      messageEntry:P_listLiteral;
   begin
     result:=newListLiteral();
-    for m in messages do if m^.messageType in toInclude then
-      result^.append(
-         headByMessageType(m)^
-        .appendString(ansistring(m^.getLocation))^
-        .appendString(join(m^.messageText,C_lineBreakChar)),false);
+    for m in messages do if m^.messageType in toInclude then begin
+      messageEntry:=P_listLiteral(headByMessageType(m)^.appendString(ansistring(m^.getLocation)));
+      if      m^.isTextMessage              then messageEntry^.appendString(join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
+      else if m^.messageType=mt_echo_output then messageEntry^.append(P_echoOutMessage(m)^.getLiteral,true);
+      if messageEntry^.size=3
+      then result^.append(messageEntry,false)
+      else disposeLiteral(messageEntry);
+    end;
     if ExitCode<>SUPPRESS_EXIT_CODE
     then result^.append(newListLiteral(3)^.appendString('exitCode')^.appendString('')^.appendInt(ExitCode),false);
   end;
@@ -433,7 +437,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 
   FUNCTION adHocMessage(CONST messageType: T_messageType; CONST messageText: T_arrayOfString):P_storedMessageWithText;
     begin
-      new(result,create(messageType,C_nilTokenLocation,messageText));
+      new(result,create(messageType,C_nilSearchTokenLocation,messageText));
     end;
 
   begin
@@ -459,10 +463,10 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     end;
     for m in messages do begin
       case m^.messageType of
-        mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
+        mt_printline:  for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,escapeHtml(tmp));
         mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
-        mt_echo_output: for tmp in m^.messageText do append(htmlOut,escapeHtml('out> ')+toHtmlCode(tmp));
-        else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,C_messageClassMeta[m^.messageClass].levelTxt+' '+escapeHtml(tmp)));
+        mt_echo_output: append(htmlOut,escapeHtml('out> ')+toHtmlCode(P_echoOutMessage(m)^.getLiteral^.toString()));
+        else for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,C_messageClassMeta[m^.messageClass].levelTxt+' '+escapeHtml(tmp)));
       end;
       if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
         //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
@@ -892,7 +896,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         end;
         predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -909,7 +913,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         {$endif}
         if profile then globals.timeBaseComponent(pc_declaration);
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToEcho(statement.token.first));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
         parseDataStore;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -926,24 +930,17 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             if (statement.token.first=nil) then exit;
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
-            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToEcho(statement.token.first));
+            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}
             globals.primaryContext.callStackPop(nil);
             {$endif}
-            if (statement.token.first<>nil) and globals.primaryContext.messages^.isCollecting(mt_echo_output) then begin
-              {$ifdef fullVersion}
-              if (statement.token.first<>nil) and
-                 (statement.token.first^.next=nil) and
-                 (statement.token.first^.tokType=tt_literal) then begin
-                globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,
-                  serializeToStringList(P_literal(statement.token.first^.data),
-                                        statement.token.first^.location,
-                                        nil));
-              end else {$endif}
-                globals.primaryContext.messages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToEcho(statement.token.first));
-            end;
+            if (statement.token.first<>nil) and
+               globals.primaryContext.messages^.isCollecting(mt_echo_output) and
+               (statement.token.first^.next=nil) and
+               (statement.token.first^.tokType=tt_literal)
+            then globals.primaryContext.messages^.postCustomMessage(newEchoMessage(P_literal(statement.token.first^.data),statement.token.first^.location),true);
           end;
           lu_forCodeAssistance,lu_forCodeAssistanceSecondary: if (statement.token.first<>nil) then begin
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
@@ -983,14 +980,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
         if mainRule^.canBeApplied(packageTokenLocation(@self),parametersForMain,t,@globals.primaryContext,recycler)
         then globals.primaryContext.reduceExpression(t.first,recycler)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
-          globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+          globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,split(getHelpOnMain));
           {$ifdef fullVersion}displayedHelp:=true;{$endif}
         end else begin
           globals.primaryContext.raiseCannotApplyError('user defined rule '+mainRule^.getId,
                                         parametersForMain,
                                         mainRule^.getLocation,
                                         C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
-          if (length(mainParameters)=1) and (mainParameters[0]='-h') then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+          if (length(mainParameters)=1) and (mainParameters[0]='-h') then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,split(getHelpOnMain));
         end;
         if profile then globals.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
@@ -1090,14 +1087,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       if usecase=lu_forCallingMain
       then executeMain
       else if isMain and isPlainScript and (length(mainParameters)=1) and (mainParameters[0]='-h')
-      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,split(getHelpOnMain));
     end else begin
       readyForUsecase:=lu_NONE;
       if isMain and
          isPlainScript and
          not(globals.primaryContext.continueEvaluation) and
          not(FlagGUINeeded in globals.primaryContext.messages^.getFlags)
-      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilTokenLocation,split(getHelpOnMain));
+      then globals.primaryContext.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,split(getHelpOnMain));
     end;
 
     if isMain and C_packageLoadUsecaseMeta[usecase].finalizeWorkers then begin

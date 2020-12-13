@@ -105,7 +105,7 @@ PROCEDURE ensureCodeAssistanceThread;
 PROCEDURE forceFullScan;
 PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc;
+USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting;
 
 VAR codeAssistantIsRunning:boolean=false;
     codeAssistantThreadId :TThreadID;

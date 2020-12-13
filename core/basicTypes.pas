@@ -30,7 +30,7 @@ TYPE
   T_structuredRuleInfoList=array of T_structuredRuleInfo;
 
 CONST
-  C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
+  C_nilSearchTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 TYPE
   T_tokenLocation = record
     package:P_objectWithPath;

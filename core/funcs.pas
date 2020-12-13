@@ -223,7 +223,7 @@ FUNCTION clearPrint_imp intFuncSignature;
     CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
-      context.messages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+      context.messages^.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
     finally
       system.leaveCriticalSection(print_cs);
     end;
@@ -266,7 +266,7 @@ FUNCTION print_imp intFuncSignature;
     CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
-      context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
+      context.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     finally
       system.leaveCriticalSection(print_cs);
     end;
@@ -279,7 +279,7 @@ FUNCTION printDirect_imp intFuncSignature;
     CHECK_SIDE;
     system.enterCriticalSection(print_cs);
     try
-      context.messages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
+      context.messages^.postTextMessage(mt_printdirect,C_nilSearchTokenLocation,getStringToPrint(params,ft_never));
     finally
       system.leaveCriticalSection(print_cs);
     end;

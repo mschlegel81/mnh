@@ -456,6 +456,7 @@ PROCEDURE TMnhOutputSyn.next;
     fTokenPos := run;
     //Marker handling...
     if run=0 then begin
+      blobEnder:=#0;
       for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then begin
         blobEnder:=chr(b);
         run:=3;

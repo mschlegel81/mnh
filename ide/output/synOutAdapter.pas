@@ -80,7 +80,7 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES ideLayoutUtil;
+USES ideLayoutUtil,messageFormatting;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -237,15 +237,15 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_clearConsole: clearSynAndBuffer;
         mt_printline:
           begin
-            if (length(m^.messageText)>0) and (m^.messageText[0]=C_formFeedChar) then begin
+            if (length(P_storedMessageWithText(m)^.txt)>0) and (P_storedMessageWithText(m)^.txt[0]=C_formFeedChar) then begin
               clearSynAndBuffer;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
             end else if lastWasDirectPrint then begin
-              if length(m^.messageText)>0 then begin
-                processDirectPrint(m^.messageText[0]);
+              if length(P_storedMessageWithText(m)^.txt)>0 then begin
+                processDirectPrint(P_storedMessageWithText(m)^.txt[0]);
               end;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
-            end else for s in m^.messageText do appendInternal(s);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
+            end else for s in P_storedMessageWithText(m)^.txt do appendInternal(s);
           end;
         mt_printdirect:
           begin
@@ -260,7 +260,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
               SynEdit.executeCommand(ecEditorBottom,' ',nil);
               SynEdit.executeCommand(ecLineStart,' ',nil);
             end;
-            for s in m^.messageText do processDirectPrint(s);
+            for s in P_storedMessageWithText(m)^.txt do processDirectPrint(s);
           end;
         mt_el1_note,
         mt_el1_userNote,
@@ -340,7 +340,7 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
     try
       lastWasDirectPrint:=false;
       clear;
-      new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
+      new(clearMessage,create(mt_clearConsole,C_nilSearchTokenLocation));
       append(clearMessage);
       disposeMessage(clearMessage);
     finally

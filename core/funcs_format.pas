@@ -457,7 +457,7 @@ FUNCTION printf_imp intFuncSignature;
       end;
       system.enterCriticalSection(print_cs);
       try
-        context.messages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
+        context.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
       finally
         system.leaveCriticalSection(print_cs);
       end;

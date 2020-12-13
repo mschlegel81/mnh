@@ -119,6 +119,7 @@ TYPE
     fileName:string;
     verbosityPart:string;
     forceNewFile:boolean;
+    formatter:P_messageFormatProvider;
     private
       messagesToInclude:T_messageTypeSet;
     public
@@ -211,7 +212,7 @@ TYPE
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode):P_consoleOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -418,6 +419,9 @@ FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapte
       other.messagesToInclude+=messagesToInclude;
       //Update verbosity
       other.verbosityPart:=messageTypeSetToString(other.messagesToInclude,globalMessageTypes);
+      //Update formatter
+      dispose(other.formatter,destroy);
+      other.formatter:=formatter^.getClonedInstance;
       result:=true;
     end else result:=false;
   end;
@@ -797,13 +801,13 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 
 FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile,nil));
+    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile,specification.formatter));
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider): P_consoleOutAdapter;
   begin
-    new(result,create(messageTypesToInclude,consoleMode,nil));
+    new(result,create(messageTypesToInclude,consoleMode,formatProvider));
     addOutAdapter(result,true);
   end;
 
@@ -1006,9 +1010,8 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
   begin
     inherited create(at_console,messageTypesToInclude_);
 
-    if formatProvider=nil
-    then new(P_defaultConsoleFormatter(messageFormatProvider),create)
-    else messageFormatProvider:=formatProvider^.getClonedInstance;
+    assert(formatProvider<>nil);
+    messageFormatProvider:=formatProvider^.getClonedInstance;
 
     {$ifdef Windows}
     case consoleOutMode of
@@ -1041,18 +1044,18 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       s:string;
   begin
     result:=message^.messageType in messageTypesToInclude;
-    if result then with message^ do begin
+    if result then begin
       enterCriticalSection(adapterCs);
       try
-        case messageType of
+        case message^.messageType of
           mt_clearConsole: mySys.clearConsole;
           mt_printline: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do begin
-              if messageText[i]=C_formFeedChar
+            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do begin
+              if P_storedMessageWithText(message)^.txt[i]=C_formFeedChar
               then mySys.clearConsole
               {$ifdef Windows}
-              else writeln(printHandle,messageText[i]);
+              else writeln(printHandle,P_storedMessageWithText(message)^.txt[i]);
               {$else}
               else begin
                 if mode in [com_normal,com_stdout_only]
@@ -1064,9 +1067,9 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do
+            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do
               {$ifdef Windows}
-              write(printHandle,messageText[i]);
+              write(printHandle,P_storedMessageWithText(message)^.txt[i]);
               {$else}
               begin
                 if mode in [com_normal,com_stdout_only]
@@ -1211,8 +1214,8 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
             case collected[i]^.messageType of
-              mt_printline  : for s in collected[i]^.messageText do writeln(handle,s);
-              mt_printdirect: for s in collected[i]^.messageText do write  (handle,s);
+              mt_printline  : for s in P_storedMessageWithText(collected[i])^.txt do writeln(handle,s);
+              mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
               else for s in messageFormatProvider^.formatMessage(collected[i]) do writeln(handle,s);
             end;
           end;
@@ -1230,9 +1233,8 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messag
   begin
     inherited create(at_textFile,messageTypesToInclude_);
 
-    if formatProvider=nil
-    then new(P_logFormatter(messageFormatProvider),create)
-    else messageFormatProvider:=formatProvider^.getClonedInstance;
+    assert(formatProvider<>nil);
+    messageFormatProvider:=formatProvider^.getClonedInstance;
 
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;

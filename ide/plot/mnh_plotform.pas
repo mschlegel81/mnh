@@ -740,13 +740,13 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
     if (params=nil) or (params^.size=0) then begin
       if (gui_started=NO) then context.messages^.logGuiNeeded;
       result:=newVoidLiteral;
-      context.messages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
+      context.messages^.postSingal(mt_plot_clearAnimation,C_nilSearchTokenLocation);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
       if (gui_started=NO) then context.messages^.logGuiNeeded;
       result:=newVoidLiteral;
       if bool0^.value
-      then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilTokenLocation)
-      else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilTokenLocation);
+      then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilSearchTokenLocation)
+      else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilSearchTokenLocation);
     end else result:=nil;
   end;
 

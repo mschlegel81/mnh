@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="99">
+    <Units Count="100">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -636,6 +636,10 @@
         <Filename Value="customForms/component_grid.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit98>
+      <Unit99>
+        <Filename Value="../core/messageFormatting.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit99>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

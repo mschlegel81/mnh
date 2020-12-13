@@ -106,7 +106,8 @@ USES sysutils,
      fileWrappers,
      mySys,
      mnh_messages,
-     basicTypes;
+     basicTypes,
+     messageFormatting;
 
 FUNCTION parseShebang(CONST scriptFileName:string):T_arrayOfString;
   VAR firstFileLine:ansistring;
@@ -466,7 +467,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     begin
       if (adapters=nil) or not(adapters^.isCollecting(mt_printline))
       then writeln(s)
-      else adapters^.postTextMessage(mt_printline,C_nilTokenLocation,s);
+      else adapters^.postTextMessage(mt_printline,C_nilSearchTokenLocation,s);
     end;
 
   VAR s:string;
@@ -535,7 +536,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       {$ifdef fullVersion}
       if (clf_PROFILE in mnhExecutionOptions.flags) then include(consoleMessageTypes,mt_profile_call_info);
       {$endif}
-      adapters^.addConsoleOutAdapter(consoleMessageTypes,getConsoleMode);
+      adapters^.addConsoleOutAdapter(consoleMessageTypes,getConsoleMode,@defaultConsoleFormatter);
     end;
     contexts.suppressBeep:=clf_SILENT in mnhExecutionOptions.flags;
 
@@ -549,7 +550,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
     if not(initAdaptersForGui) and (length(parsingState.cmdLineParsingErrors)>0) then begin
       if (clf_SHOW_HELP in mnhExecutionOptions.flags) then displayHelp(adapters);
       if adapters^.isCollecting(mt_el4_systemError)
-      then adapters^.postTextMessage(mt_el4_systemError,C_nilTokenLocation,parsingState.cmdLineParsingErrors)
+      then adapters^.postTextMessage(mt_el4_systemError,C_nilSearchTokenLocation,parsingState.cmdLineParsingErrors)
       else for s in parsingState.cmdLineParsingErrors do writeln(s);
       ExitCode:=1;
       result:=false;

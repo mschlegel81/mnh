@@ -486,7 +486,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       childCount:=0;
     end;
     {$ifdef fullVersion}
-    primaryContext.messages^.postSingal(mt_startOfEvaluation,C_nilTokenLocation);
+    primaryContext.messages^.postSingal(mt_startOfEvaluation,C_nilSearchTokenLocation);
     primaryContext.callStack.clear;
     primaryContext.parentCustomForm:=nil;
     {$endif}
@@ -569,12 +569,12 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
         if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
         append(timingMessage,timeString[cat]);
       end;
-      primaryContext.messages^.postTextMessage(mt_timing_info,C_nilTokenLocation,timingMessage);
+      primaryContext.messages^.postTextMessage(mt_timing_info,C_nilSearchTokenLocation,timingMessage);
     end;
 
   begin
     stopWorkers(recycler);
-    primaryContext.messages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+    primaryContext.messages^.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
     if (primaryContext.messages^.isCollecting(mt_timing_info)) and (wallClock.timer<>nil) then logTimingInfo;
     {$ifdef fullVersion}
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);

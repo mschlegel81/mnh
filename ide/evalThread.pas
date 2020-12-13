@@ -128,6 +128,7 @@ USES mnh_constants,
      mySys,
      profilingView,
      mnh_settings,
+     messageFormatting,
      eventsComponent;
 FUNCTION newPlotAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_plotSystem ;
   begin
@@ -185,7 +186,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
     messages.addOutAdapter(newProfilingAdapter (true)           ,true);
     {$ifdef debugMode}
-    messages.addConsoleOutAdapter(C_textMessages,commandLine.getConsoleMode());
+    messages.addConsoleOutAdapter(C_textMessages,commandLine.getConsoleMode(),@defaultConsoleFormatter);
     {$endif}
   end;
 
@@ -274,7 +275,7 @@ FUNCTION evaluationThread(p:pointer):ptrint;
       then state:=es_stoppedByUser
       else state:=es_finished;
       evalTime:=now-evalTime;
-      messages.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+      messages.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
       leaveCriticalSection(evaluationCs);
     end;
     interlockedDecrement(evaluationThreadsRunning);
@@ -353,7 +354,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       globals.afterEvaluation(recycler);
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))
-      else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
+      else messages.postSingal(mt_guiEditScriptsLoaded,C_nilSearchTokenLocation);
       evalRequest:=nil;
     end;
 
@@ -442,7 +443,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-      messages.postSingal(mt_clearConsole,C_nilTokenLocation);
+      messages.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
       while (globals.primaryContext.messages^.continueEvaluation) and (stmt.token.first<>nil) do begin

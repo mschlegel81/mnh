@@ -52,7 +52,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
       if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
-        consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);
+        consoleAdapters.postTextMessage(mt_printline,C_nilSearchTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
         Exclude(commandLine.mnhExecutionOptions.flags,clf_SHOW_HELP);
         globals.destroy;
