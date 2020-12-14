@@ -336,9 +336,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
       then messageEntry^.appendString(join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
       else if m^.messageType=mt_echo_output
       then messageEntry^.append(P_echoOutMessage(m)^.getLiteral,true);
-      if messageEntry^.size=3
-      then result^.append(messageEntry,false)
-      else disposeLiteral(messageEntry);
+      result^.append(messageEntry,false);
     end;
     if ExitCode<>SUPPRESS_EXIT_CODE
     then result^.append(newListLiteral(3)^.appendString('exitCode')^.appendString('')^.appendInt(ExitCode),false);
@@ -900,7 +898,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         end;
         predigest(assignmentToken^.next,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,statement.token.first^.location,tokensToEcho(statement.token.first));
         parseRule;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -917,7 +915,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         {$endif}
         if profile then globals.timeBaseComponent(pc_declaration);
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
-        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
+        then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,statement.token.first^.location,tokensToEcho(statement.token.first));
         parseDataStore;
         if profile then globals.timeBaseComponent(pc_declaration);
         {$ifdef fullVersion}
@@ -934,7 +932,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             if (statement.token.first=nil) then exit;
             predigest(statement.token.first,@self,globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
-            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,C_nilSearchTokenLocation,tokensToEcho(statement.token.first));
+            then globals.primaryContext.messages^.postTextMessage(mt_echo_input,statement.token.first^.location,tokensToEcho(statement.token.first));
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
             if profile then globals.timeBaseComponent(pc_interpretation);
             {$ifdef fullVersion}

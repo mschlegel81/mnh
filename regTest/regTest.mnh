@@ -33,8 +33,11 @@ processSingleOutput(messageType in ['echo_input','echo_declaration'],
                                        location:String,output       )->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output.replace("\n","").join);
 processSingleOutput(messageType:String,location:String,output:String)->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output);
 
+
 processSandboxOutput(L:List,excludes:List)->
-  L.filter((l)->l[0] not in excludes).map((output)->processSingleOutput@output).split("\n").flatten;
+  L.filter((l)->l[0] not in excludes)
+   .map((output)->output.size=2 ? warn(output) orElse output : output)
+  .map((output)->processSingleOutput@output).split("\n").flatten;
 //   output[0]='printline'
 //  ? output[2]
 //  : output[0] in excludes

@@ -1059,8 +1059,8 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
               {$else}
               else begin
                 if mode in [com_normal,com_stdout_only]
-                then writeln(       messageText[i])
-                else writeln(stdErr,messageText[i]);
+                then writeln(       P_storedMessageWithText(message)^.txt[i])
+                else writeln(stdErr,P_storedMessageWithText(message)^.txt[i]);
               end;
               {$endif}
             end;
@@ -1073,8 +1073,8 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
               {$else}
               begin
                 if mode in [com_normal,com_stdout_only]
-                then write(       messageText[i])
-                else write(stdErr,messageText[i]);
+                then write(       P_storedMessageWithText(message)^.txt[i])
+                else write(stdErr,P_storedMessageWithText(message)^.txt[i]);
               end;
               {$endif}                  end;
           else for s in messageFormatProvider^.formatMessage(message) do
