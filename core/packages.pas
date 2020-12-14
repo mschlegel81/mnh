@@ -330,8 +330,12 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
     result:=newListLiteral();
     for m in messages do if m^.messageType in toInclude then begin
       messageEntry:=P_listLiteral(headByMessageType(m)^.appendString(ansistring(m^.getLocation)));
-      if      m^.isTextMessage              then messageEntry^.appendString(join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
-      else if m^.messageType=mt_echo_output then messageEntry^.append(P_echoOutMessage(m)^.getLiteral,true);
+      if      m^.messageType in [mt_echo_input,mt_echo_declaration]
+      then messageEntry^.appendString(join(P_storedMessageWithText(m)^.txt,''))
+      else if m^.isTextMessage
+      then messageEntry^.appendString(join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
+      else if m^.messageType=mt_echo_output
+      then messageEntry^.append(P_echoOutMessage(m)^.getLiteral,true);
       if messageEntry^.size=3
       then result^.append(messageEntry,false)
       else disposeLiteral(messageEntry);

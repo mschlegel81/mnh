@@ -192,13 +192,16 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
   PROCEDURE addAdapter();
     VAR specification:T_textFileAdapterSpecification;
         i:longint;
-        global:T_messageTypeSet;
+        messageTypesToCollect:T_messageTypeSet;
     begin
-      global:=stringToMessageTypeSet(verbosityString);
+      //Create specification
+      messageTypesToCollect:=stringToMessageTypeSet(verbosityString);
       specification.forceNewFile:=parsingState.parsingState=pst_parsingOutFileRewrite;
-      specification.setFilenameAndOptions(param,global);
-      for i:=0 to length(deferredAdapterCreations)-1 do
-        if specification.canMergeInto(deferredAdapterCreations[i],global) then exit;
+      specification.setFilenameAndOptions(param,messageTypesToCollect);
+      new(P_logFormatter(specification.formatter),create);
+      //Try to merge into existing adapters
+      for i:=0 to length(deferredAdapterCreations)-1 do if specification.canMergeInto(deferredAdapterCreations[i],messageTypesToCollect) then exit;
+      //If merging did not work: create additional adapter
       i:=length(deferredAdapterCreations);
       setLength(deferredAdapterCreations,i+1);
       deferredAdapterCreations[i]:=specification;

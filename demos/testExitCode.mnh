@@ -7,7 +7,7 @@ main(code)->print('Setting exit code ',code.toInt) orElse setExitCode(code.toInt
 runExternally(parameter)->begin
   local output:=executor.exec(['-v1','-stdout','-silent',myPath,parameter],false);
   [format('Calling %s %s',myPath.extractFileName,parameter),
-   output[0].replace(myPath.systemSpecificFilename,'[myPath]'),
+   output[0].replace(myPath.systemSpecificFilename,myPath.extractFileName),
    format('Exit code: %s',output[1])].flatten;
 end;
 
