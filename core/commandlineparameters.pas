@@ -10,6 +10,10 @@ TYPE
     parsingState:(pst_initial,
                   pst_parsingOutFileRewrite,
                   pst_parsingOutFileAppend,
+                  pst_parsingLogFileRewrite,
+                  pst_parsingLogFileAppend,
+                  pst_parsingLogDateFormat,
+                  pst_parsingLogLocationLength,
                   pst_parsingSideEffectProfile,
                   pst_parsingFileToEdit,
                   pst_parsingScriptParameters);
@@ -19,6 +23,8 @@ TYPE
 
   T_mnhExecutionOptions=object(T_serializable)
     verbosityString:string;
+    customLogLocationLength:longint;
+    customDateFormatOrBlank:string;
     flags:set of T_cmdLineFlag;
     executor:string;
     deferredAdapterCreations:array of T_textFileAdapterSpecification;
@@ -84,6 +90,7 @@ CONST
   FLAG_STDOUT       ='-stdout';
   FLAG_STDERR       ='-stderr';
   FLAG_EDIT         ='-edit';
+  FLAG_PRINT_AS_LOG ='-convertPrintToLog';
   FLAG_TEXT:array[T_cmdLineFlag] of string=(FLAG_GUI         ,
                                             FLAG_QUIET       ,
                                             FLAG_SILENT      ,
@@ -95,7 +102,8 @@ CONST
                                             FLAG_EXEC_CMD    ,
                                             FLAG_SHOW_INFO   ,
                                             FLAG_STDOUT,
-                                            FLAG_STDERR);
+                                            FLAG_STDERR,
+                                            FLAG_PRINT_AS_LOG);
 
 PROCEDURE displayHelp(CONST adapters:P_messages);
 IMPLEMENTATION
@@ -196,9 +204,13 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
     begin
       //Create specification
       messageTypesToCollect:=stringToMessageTypeSet(verbosityString);
-      specification.forceNewFile:=parsingState.parsingState=pst_parsingOutFileRewrite;
+      specification.forceNewFile:=parsingState.parsingState in [pst_parsingOutFileRewrite,pst_parsingLogFileRewrite];
       specification.setFilenameAndOptions(param,messageTypesToCollect);
-      new(P_logFormatter(specification.formatter),create);
+
+      if parsingState.parsingState in [pst_parsingLogFileAppend,pst_parsingLogFileRewrite]
+      then new(P_logFormatter           (specification.formatter),create)
+      else new(P_defaultConsoleFormatter(specification.formatter),create);
+
       //Try to merge into existing adapters
       for i:=0 to length(deferredAdapterCreations)-1 do if specification.canMergeInto(deferredAdapterCreations[i],messageTypesToCollect) then exit;
       //If merging did not work: create additional adapter
@@ -235,12 +247,26 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param=FLAG_SHOW_INFO    then begin include(flags,clf_SHOW_INFO   ); exit(true); end;
         if param=FLAG_STDERR       then begin include(flags,clf_FORCE_STDERR); Exclude(flags,clf_FORCE_STDOUT); exit(true); end;
         if param=FLAG_STDOUT       then begin include(flags,clf_FORCE_STDOUT); Exclude(flags,clf_FORCE_STDERR); exit(true); end;
+        if param=FLAG_PRINT_AS_LOG then begin include(flags,clf_TREAT_PRINT_AS_LOG); exit(true); end;
         //state changes:
-        if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite;     exit(true); end;
-        if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;      exit(true); end;
-        if param='-restrict'       then begin parsingState.parsingState:=pst_parsingSideEffectProfile;  exit(true); end;
+        if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite;       exit(true); end;
+        if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;        exit(true); end;
+        if param='-log'            then begin parsingState.parsingState:=pst_parsingLogFileRewrite;       exit(true); end;
+        if param='+log'            then begin parsingState.parsingState:=pst_parsingLogFileAppend;        exit(true); end;
+        if param='-restrict'       then begin parsingState.parsingState:=pst_parsingSideEffectProfile;    exit(true); end;
+        if param='-logDateFmt'     then begin parsingState.parsingState:=pst_parsingLogDateFormat;        exit(true); end;
+        if param='-logLocationLength' then begin parsingState.parsingState:=pst_parsingLogLocationLength; exit(true); end;
       end;
-      pst_parsingOutFileAppend,pst_parsingOutFileRewrite: begin
+      pst_parsingLogDateFormat: begin
+        assert(false);
+        //TODO: Implement me!
+      end;
+      pst_parsingLogLocationLength: begin
+        assert(false);
+        //TODO: Implement me!
+      end;
+      pst_parsingOutFileAppend,pst_parsingOutFileRewrite,
+      pst_parsingLogFileAppend,pst_parsingLogFileRewrite: begin
         addAdapter();
         parsingState.parsingState:=pst_initial;
         exit(true);
