@@ -81,9 +81,9 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
         logAppendCb.enabled:=true;
         logAppendCb.checked:=not(clp.deferredAdapterCreations[0].forceNewFile);
         logNameEdit.enabled:=true;
-        logNameEdit.text:=clp.deferredAdapterCreations[0].fileName;
+        logNameEdit.text:=clp.deferredAdapterCreations[0].getFilename;
         verbosityCombo1.enabled:=true;
-        verbosityCombo1.text:=clp.deferredAdapterCreations[0].verbosityPart;
+        verbosityCombo1.text:=clp.deferredAdapterCreations[0].getVerbosityPart;
       end else begin
         doLogCheckbox.checked:=false;
         logAppendCb.enabled:=false;
@@ -110,7 +110,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
           setLength(clp.deferredAdapterCreations,1);
           clp.deferredAdapterCreations[0].forceNewFile :=not(logAppendCb.checked);
           clp.deferredAdapterCreations[0].fileName     :=logNameEdit.text;
-          clp.deferredAdapterCreations[0].verbosityPart:=verbosityCombo1.text;
+          clp.deferredAdapterCreations[0].setVerbosityPart(verbosityCombo1.text,C_defaultOutputBehavior);
         end else setLength(clp.deferredAdapterCreations,0);
         if hadShebang
         then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),clp.getShebang+LineEnding)

@@ -160,6 +160,8 @@ PROCEDURE T_mnhExecutionOptions.clear;
     setLength(deferredAdapterCreations,0);
     flags:=[];
     executor:=settings.fullFlavourLocation;
+    customDateFormatOrBlank:='';
+    customLogLocationLength:=maxLongint;
     if (executor='') or not(fileExists(executor))
     then executor:=settings.lightFlavourLocation;
   end;
@@ -208,7 +210,12 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
       specification.setFilenameAndOptions(param,messageTypesToCollect);
 
       if parsingState.parsingState in [pst_parsingLogFileAppend,pst_parsingLogFileRewrite]
-      then new(P_logFormatter           (specification.formatter),create)
+      then begin
+        new(P_logFormatter(specification.formatter),create);
+        P_logFormatter(specification.formatter)^.handlePrintAsLog:=clf_TREAT_PRINT_AS_LOG in flags;
+        P_logFormatter(specification.formatter)^.timeFormat:=customDateFormatOrBlank;
+        P_logFormatter(specification.formatter)^.maxLocationLength:=customLogLocationLength;
+      end
       else new(P_defaultConsoleFormatter(specification.formatter),create);
 
       //Try to merge into existing adapters
@@ -217,6 +224,24 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
       i:=length(deferredAdapterCreations);
       setLength(deferredAdapterCreations,i+1);
       deferredAdapterCreations[i]:=specification;
+    end;
+
+  PROCEDURE parseDateFormat;
+    VAR s:string;
+    begin
+      try
+        s:=FormatDateTime(param,now);
+        customDateFormatOrBlank:=param;
+      except
+        parsingState.logCmdLineParsingError('Invalid date/time format "'+param+'"');
+      end;
+    end;
+
+  PROCEDURE parseLogLocationLength;
+    begin
+      customLogLocationLength:=strToIntDef(param,7-maxLongint);
+      if customLogLocationLength=7-maxLongint
+      then parsingState.logCmdLineParsingError('Invalid location length "'+param+'"');
     end;
 
   VAR app:string;
@@ -258,12 +283,14 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param='-logLocationLength' then begin parsingState.parsingState:=pst_parsingLogLocationLength; exit(true); end;
       end;
       pst_parsingLogDateFormat: begin
-        assert(false);
-        //TODO: Implement me!
+        parseDateFormat;
+        parsingState.parsingState:=pst_initial;
+        exit(true);
       end;
       pst_parsingLogLocationLength: begin
-        assert(false);
-        //TODO: Implement me!
+        parseLogLocationLength;
+        parsingState.parsingState:=pst_initial;
+        exit(true);
       end;
       pst_parsingOutFileAppend,pst_parsingOutFileRewrite,
       pst_parsingLogFileAppend,pst_parsingLogFileRewrite: begin

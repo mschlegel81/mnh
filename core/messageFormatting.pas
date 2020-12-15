@@ -25,15 +25,13 @@ TYPE
 
   P_logFormatter=^T_logFormatter;
   T_logFormatter=object(T_messageFormatProvider)
-    private
-      maxLocationLength:longint;
-    public
-      timeFormat:string;
-      handlePrintAsLog:boolean;
-      CONSTRUCTOR create;
-      FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
-      DESTRUCTOR destroy; virtual;
-      FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+    maxLocationLength:longint;
+    timeFormat:string;
+    handlePrintAsLog:boolean;
+    CONSTRUCTOR create;
+    FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
   end;
 
   P_guiFormatter=^T_guiFormatter;
@@ -268,11 +266,16 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       mc_warning,
       mc_error  ,
       mc_fatal  : if length(P_storedMessageWithText(message)^.txt)=1 then begin
-        result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
+        if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
+        then result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0]
+        else begin
+          result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
+          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0]);
+        end;
       end else begin
         result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
         for s in P_storedMessageWithText(message)^.txt do
-          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt))+' '+s);
+          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s);
       end
       else for s in P_storedMessageWithText(message)^.txt do append(result,''+s);
     end;

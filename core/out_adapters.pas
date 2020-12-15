@@ -115,31 +115,37 @@ TYPE
   F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
   {$endif}
 
+  T_textFileCase=(tfc_file,tfc_stdout,tfc_stderr);
   T_textFileAdapterSpecification=object
-    fileName:string;
-    verbosityPart:string;
-    forceNewFile:boolean;
-    formatter:P_messageFormatProvider;
     private
+      verbosityPart:string;
       messagesToInclude:T_messageTypeSet;
+      textFileCase:T_textFileCase;
     public
+      fileName:string;
+      forceNewFile:boolean;
+      formatter:P_messageFormatProvider;
       PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
       FUNCTION  getFilenameAndOptions:string;
       FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
       PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
       PROCEDURE applyScriptName(CONST scriptName:string);
+      PROPERTY getFilename:string read fileName;
+      PROPERTY getVerbosityPart:string read verbosityPart;
+      PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
   end;
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
       messageFormatProvider:P_messageFormatProvider;
+      textFileCase:T_textFileCase;
       outputFileName:ansistring;
       forceRewrite:boolean;
       lastOutput:double;
       FUNCTION flush:boolean;
     public
-      CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
+      CONSTRUCTOR create(CONST fileName:ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
       {$ifdef debugMode}
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
@@ -399,9 +405,20 @@ FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_mes
     if minLevel<5 then result+=intToStr(minLevel);
   end;
 
+PROCEDURE T_textFileAdapterSpecification.setVerbosityPart(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
+  begin
+    verbosityPart:=s;
+    messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
+  end;
+
 PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
   begin
     splitIntoLogNameAndOption(s,fileName,verbosityPart);
+    if uppercase(fileName)='STDOUT'
+    then textFileCase:=tfc_stdout
+    else if uppercase(fileName)='STDOUT'
+    then textFileCase:=tfc_stderr
+    else textFileCase:=tfc_file;
     messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
   end;
 
@@ -410,7 +427,9 @@ FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
     result:=fileName+'('+verbosityPart+')';
   end;
 
-FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
+FUNCTION T_textFileAdapterSpecification.canMergeInto(
+  VAR other: T_textFileAdapterSpecification;
+  CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
     if SameFileName(fileName,other.fileName) then begin
       //In conflict, revert to appending mode
@@ -426,7 +445,8 @@ FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapte
     end else result:=false;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterSpecification);
+PROCEDURE T_textFileAdapterSpecification.copy(
+  CONST original: T_textFileAdapterSpecification);
   begin
     fileName         :=original.fileName         ;
     verbosityPart    :=original.verbosityPart    ;
@@ -434,7 +454,8 @@ PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterS
     messagesToInclude:=original.messagesToInclude;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.applyScriptName(CONST scriptName: string);
+PROCEDURE T_textFileAdapterSpecification.applyScriptName(
+  CONST scriptName: string);
   begin
     fileName:=ansiReplaceStr(fileName,'?',scriptName);
   end;
@@ -801,7 +822,7 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 
 FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile,specification.formatter));
+    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,specification.formatter));
     addOutAdapter(result,true);
   end;
 
@@ -1206,11 +1227,18 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
       if collectedFill>0 then begin
         result:=true;
         try
-          ForceDirectories(extractFilePath(outputFileName));
-          assign(handle,outputFileName);
-          if fileExists(outputFileName) and not(forceRewrite)
-          then system.append(handle)
-          else rewrite(handle);
+          case textFileCase of
+            tfc_file  : begin
+              ForceDirectories(extractFilePath(outputFileName));
+              assign(handle,outputFileName);
+              if fileExists(outputFileName) and not(forceRewrite)
+              then system.append(handle)
+              else rewrite(handle);
+            end;
+            tfc_stdout: handle:=StdOut;
+            tfc_stderr: handle:=stdErr;
+          end;
+
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
             case collected[i]^.messageType of
@@ -1220,7 +1248,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
             end;
           end;
           clear;
-          close(handle);
+          if textFileCase=tfc_file then close(handle);
         except
         end;
       end else result:=false;
@@ -1229,13 +1257,14 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
     end;
   end;
 
-CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
+CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_textFile,messageTypesToInclude_);
 
     assert(formatProvider<>nil);
     messageFormatProvider:=formatProvider^.getClonedInstance;
 
+    textFileCase:=tfc;
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
     lastOutput:=now;
