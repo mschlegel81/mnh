@@ -56,6 +56,7 @@ TYPE
     mt_clearConsole,
     mt_printline,
     mt_printdirect,
+    mt_log,
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
@@ -123,6 +124,7 @@ CONST
 {mt_clearConsole      }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
 {mt_printline         }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
 {mt_print             }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_log               }  (level:-2; mClass:mc_log;     systemErrorLevel:0),
 {mt_echo_input        }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
 {mt_echo_declaration  }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
 {mt_echo_continued    }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
@@ -242,7 +244,7 @@ FUNCTION messageTypeName(CONST m:T_messageType):string;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ];
     if x.echo_output      then result+=[mt_echo_output     ];
     if x.echo_declaration then result+=[mt_echo_declaration];

@@ -37,7 +37,6 @@ TYPE
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
       DESTRUCTOR destroy; virtual;
-      FUNCTION getLineLength:longint; virtual;
       FUNCTION ensureOutputForm:TOutputForm;
   end;
 
@@ -120,11 +119,6 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
       outputForm.showComponent(false);
     end;
     result:=outputForm;
-  end;
-
-FUNCTION T_lazyInitializedOutAdapter.getLineLength:longint;
-  begin
-    result:=getSynEdit.charsInWindow;
   end;
 
 PROCEDURE TOutputForm.updateAfterSettingsRestore;

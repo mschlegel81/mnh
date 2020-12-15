@@ -40,7 +40,6 @@ TYPE
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
-      FUNCTION getLineLength:longint; virtual; abstract;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
   end;
@@ -68,7 +67,6 @@ TYPE
                                                                    mt_echo_declaration,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
-     FUNCTION getLineLength:longint; virtual;
   end;
 
   P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
@@ -125,11 +123,6 @@ CONSTRUCTOR T_eagerInitializedOutAdapter.create(CONST synEdit_: TSynEdit; CONST 
     inherited create(messageTypesToInc);
     SynEdit:=synEdit_;
     ownerForm:=ownerForm_;
-  end;
-
-FUNCTION T_eagerInitializedOutAdapter.getLineLength:longint;
-  begin
-    result:=SynEdit.charsInWindow;
   end;
 
 CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
@@ -314,12 +307,16 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   begin
     if not(forceFlush or autoflush) then exit;
     messageFormatter.create(false);
-    messageFormatter.preferredLineLength:=getLineLength;
     system.enterCriticalSection(adapterCs);
     result:=[];
     startOutput;
     try
       removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+      if collectedFill>0 then begin
+        messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
+        messageFormatter.wrapEcho:=wrapEcho;
+      end;
+
       for i:=0 to collectedFill-1 do begin
         include(result,collected[i]^.messageType);
         singleMessageOut(collected[i]);

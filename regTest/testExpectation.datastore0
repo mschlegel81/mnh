@@ -3837,7 +3837,7 @@ expectations:=
   'strings.upper','strings.utf8ToAnsi','system.ask','system.assert','system.assertGuiStarted','system.async','system.beep',
   'system.callMemoryCleaner','system.changeDirectory','system.clearPrint','system.deserialize','system.driveInfo','system.fail',
   'system.future','system.getCPULoadPercentage','system.getEnv','system.getTaskInfo','system.halt','system.intRandom',
-  'system.intRandomGenerator','system.isGuiStarted','system.isaacRandomGenerator','system.localAsync','system.note',
+  'system.intRandomGenerator','system.isGuiStarted','system.isaacRandomGenerator','system.localAsync','system.log','system.note',
   'system.print','system.printDirect','system.printf','system.random','system.randomGenerator','system.resetRandom',
   'system.scriptTime','system.serialize','system.setExitCode','system.systime','system.time','system.try',
   'system.vanDerCorputGenerator','system.warn','system.writeAllDataStores','system.writeDataStores','typecast.isBoolean',

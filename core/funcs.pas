@@ -54,7 +54,6 @@ OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 VAR builtinRuleMap  :T_builtinRuleMap;
     makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
     intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
-    print_cs        :system.TRTLCriticalSection;
     failFunction    :P_intFuncCallback;
 IMPLEMENTATION
 USES sysutils,Classes,
@@ -221,12 +220,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
 FUNCTION clearPrint_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    system.enterCriticalSection(print_cs);
-    try
-      context.messages^.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
-    finally
-      system.leaveCriticalSection(print_cs);
-    end;
+    context.messages^.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
     result:=newVoidLiteral;
   end;
 
@@ -264,12 +258,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
 FUNCTION print_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    system.enterCriticalSection(print_cs);
-    try
-      context.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
-    finally
-      system.leaveCriticalSection(print_cs);
-    end;
+    context.messages^.postTextMessage(mt_printline,tokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     result:=newVoidLiteral;
   end;
 
@@ -277,12 +266,15 @@ FUNCTION print_imp intFuncSignature;
 FUNCTION printDirect_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    system.enterCriticalSection(print_cs);
-    try
-      context.messages^.postTextMessage(mt_printdirect,C_nilSearchTokenLocation,getStringToPrint(params,ft_never));
-    finally
-      system.leaveCriticalSection(print_cs);
-    end;
+    context.messages^.postTextMessage(mt_printdirect,C_nilSearchTokenLocation,getStringToPrint(params,ft_never));
+    result:=newVoidLiteral;
+  end;
+
+{$define FUNC_ID:='log'}
+FUNCTION log_imp intFuncSignature;
+  begin
+    CHECK_SIDE;
+    context.messages^.postTextMessage(mt_log,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
@@ -370,6 +362,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif},[se_output]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif},[se_output]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif},[se_output]);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'log'          ,@log_imp          ,ak_variadic{$ifdef fullVersion},'log(...);//Logs a message and returns void'{$endif},[se_output]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif},[se_output]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif},[se_output]);
   failFunction:=
@@ -377,11 +370,9 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif},[se_alterContextState]);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
-  system.initCriticalSection(print_cs);
 FINALIZATION
   builtinExpressionMap.destroy;
   builtinMetaMap.destroy;
   builtinRuleMap.destroy;
-  system.doneCriticalSection(print_cs);
 
 end.

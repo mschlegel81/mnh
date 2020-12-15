@@ -227,7 +227,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       marker      :string='';
       nextLine    :string='';
       s           :string;
-      msgTxt      :T_arrayOfString;
+      i           :longint;
   begin
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
     if not(formatterForDemos)
@@ -237,25 +237,30 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     setLength(result,0);
 
     case message^.messageClass of
-      mc_echo   : begin
-        case message^.messageType of
-          mt_echo_input      : begin nextLine:='  in> '; msgTxt:=P_storedMessageWithText(message)^.txt; end;
-          mt_echo_declaration: begin nextLine:='decl> '; msgTxt:=P_storedMessageWithText(message)^.txt; end;
-          mt_echo_output     : begin
-            nextLine:=' out> ';
-            if wrapEcho
-            then msgTxt:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength)
-            else msgTxt:=P_echoOutMessage(message)^.literal^.toString();
+      mc_echo: case message^.messageType of
+        mt_echo_input,
+        mt_echo_declaration: begin
+          if message^.messageType=mt_echo_input
+          then nextLine:='  in> '
+          else nextLine:='decl> ';
+          for s in P_storedMessageWithText(message)^.txt do begin
+            if wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
+            then begin
+              append(result,marker+trimRight(nextLine));
+              nextLine:=' ...> '+trimLeft(s);
+            end else nextLine+=s;
           end;
+          append(result,marker+trimRight(nextLine));
         end;
-        for s in msgTxt do begin
-          if (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
-          then begin
-            append(result,marker+trimRight(nextLine));
-            nextLine:=' ...> '+trimLeft(s);
-          end else nextLine+=s;
+        mt_echo_output: begin
+          if wrapEcho
+          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
+          else result:=P_echoOutMessage(message)^.literal^.toString();
+
+          result[  0]:=marker+' out> '+result[0];
+          for i:=1 to length(result)-1 do
+            result[i]:=marker+' ...> '+result[i];
         end;
-        append(result,marker+trimRight(nextLine));
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,marker+s);
       mc_log    ,
@@ -274,10 +279,11 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
   end;
 
 FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  CONST CONSOLE_OUT_WIDTH=100;
   VAR locationPart:string='';
       nextLine    :string='';
       s           :string;
-      msgTxt      :T_arrayOfString;
+      i           :longint;
 
   FUNCTION shortLocationString(CONST x:T_searchTokenLocation):string;
     begin
@@ -294,23 +300,27 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
     setLength(result,0);
 
     case message^.messageClass of
-      mc_echo   : begin
-        case message^.messageType of
-          mt_echo_input      : begin nextLine:='  in> '; msgTxt:=P_storedMessageWithText(message)^.txt; end;
-          mt_echo_declaration: begin nextLine:='decl> '; msgTxt:=P_storedMessageWithText(message)^.txt; end;
-          mt_echo_output     : begin
-            nextLine:=' out> ';
-            msgTxt:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil)
+      mc_echo: case message^.messageType of
+        mt_echo_input,
+        mt_echo_declaration: begin
+          if message^.messageType=mt_echo_input
+          then nextLine:='  in> '
+          else nextLine:='decl> ';
+          for s in P_storedMessageWithText(message)^.txt do begin
+            if (length(nextLine)>10) and (length(nextLine)+length(s)>CONSOLE_OUT_WIDTH)
+            then begin
+              append(result,trimRight(nextLine));
+              nextLine:=' ...> '+trimLeft(s);
+            end else nextLine+=s;
           end;
+          append(result,trimRight(nextLine));
         end;
-        for s in msgTxt do begin
-          if (length(nextLine)>10) and (length(nextLine)+length(s)>100)
-          then begin
-            append(result,trimRight(nextLine));
-            nextLine:=' ...> '+trimLeft(s);
-          end else nextLine+=s;
+        mt_echo_output: begin
+          result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,CONSOLE_OUT_WIDTH-C_echoPrefixLength);
+          result[  0]:=' out> '+result[0];
+          for i:=1 to length(result)-1 do
+            result[i]:=' ...> '+result[i];
         end;
-        append(result,trimRight(nextLine));
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,s);
       mc_log    ,
