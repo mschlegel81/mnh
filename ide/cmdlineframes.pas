@@ -72,12 +72,12 @@ type
     procedure rbOutputToStdoutClick(Sender: TObject);
     procedure removeOutFileClick(Sender: TObject);
   private
-    execOptions:T_mnhExecutionOptions;
     procedure updateLogPreview;
     procedure updateLogSection;
     procedure initLabels;
     function currentAdapterSpecification:P_textFileAdapterSpecification;
   public
+    execOptions:T_mnhExecutionOptions;
     procedure initFromShebang(CONST s:String; CONST requires: T_sideEffects);
     procedure initFromExecOptions(CONST opt:T_mnhExecutionOptions);
 
@@ -190,44 +190,46 @@ procedure TCmdLineParametersFrame.updateLogPreview;
     end;
 
   VAR s:string;
+      messagesToInclude:T_messageTypeSet;
   begin
     specification:=currentAdapterSpecification;
     formatPreviewMemo.Clear;
     if specification=nil then exit;
 
     formatter:=getFormatterFor(specification^);
+    messagesToInclude:=specification^.getMessageTypes;
 
-    if mt_echo_declaration in specification^.getMessageTypes then
+    if mt_echo_declaration in messagesToInclude then
     for s in formattedLinesFor(mt_echo_declaration,1,'f(x)->2*x+3;') do formatPreviewMemo.Append(s);
 
-    if mt_echo_input in specification^.getMessageTypes then
+    if mt_echo_input in messagesToInclude then
     for s in formattedLinesFor(mt_echo_input,2,'print("f(7)=",f(7));') do formatPreviewMemo.Append(s);
 
-    if mt_printline in specification^.getMessageTypes then
+    if mt_printline in messagesToInclude then
     for s in formattedLinesFor(mt_printline,2,'f(7)=17') do formatPreviewMemo.Append(s);
 
-    if mt_echo_output in specification^.getMessageTypes then
+    if mt_echo_output in messagesToInclude then
     for s in formattedLinesForOutput do formatPreviewMemo.Append(s);
 
-    if mt_log in specification^.getMessageTypes then
+    if mt_log in messagesToInclude then
     for s in formattedLinesFor(mt_log,20,'This is a log message.') do formatPreviewMemo.Append(s);
 
-    if mt_el1_userNote in specification^.getMessageTypes then
+    if mt_el1_userNote in messagesToInclude then
     for s in formattedLinesFor(mt_el1_userNote,21,'This is a (user) note.') do formatPreviewMemo.Append(s);
 
-    if mt_el1_note in specification^.getMessageTypes then
+    if mt_el1_note in messagesToInclude then
     for s in formattedLinesFor(mt_el1_note,22,'This is a builtin note.#Like user notes it may contain multiple lines...') do formatPreviewMemo.Append(s);
 
-    if mt_el2_userWarning in specification^.getMessageTypes then
+    if mt_el2_userWarning in messagesToInclude then
     for s in formattedLinesFor(mt_el2_userWarning,23,'This is a (user) warning message.') do formatPreviewMemo.Append(s);
 
-    if mt_el2_warning in specification^.getMessageTypes then
+    if mt_el2_warning in messagesToInclude then
     for s in formattedLinesFor(mt_el2_warning,24,'This is a builtin warning message.') do formatPreviewMemo.Append(s);
 
-    if mt_el3_evalError in specification^.getMessageTypes then
+    if mt_el3_evalError in messagesToInclude then
     for s in formattedLinesFor(mt_el3_evalError,25,'This is an error!!!#An erromessage may contain multiple lines.') do formatPreviewMemo.Append(s);
 
-    if mt_timing_info in specification^.getMessageTypes then
+    if mt_timing_info in messagesToInclude then
     for s in formattedLinesFor(mt_timing_info,0,'Importing time      802.108ms#Tokenizing time       9.126ms#Declaration time     55.315ms#Interpretation time   0.000ms#Unaccounted for       1.044ms#-----------------------------#Total               867.593ms#') do formatPreviewMemo.Append(s);
     dispose(formatter,destroy);
   end;
