@@ -72,6 +72,7 @@ TYPE
       PROCEDURE initFromIde(CONST scriptName,parameters:string);
       FUNCTION getCommandLineArgumentsArray:T_arrayOfString;
       {$endif}
+      //TODO: We need a destructor here!
     private
       parsingState:T_parsingState;
   end;
@@ -211,12 +212,13 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
 
       if parsingState.parsingState in [pst_parsingLogFileAppend,pst_parsingLogFileRewrite]
       then begin
-        new(P_logFormatter(specification.formatter),create);
-        P_logFormatter(specification.formatter)^.handlePrintAsLog:=clf_TREAT_PRINT_AS_LOG in flags;
-        P_logFormatter(specification.formatter)^.timeFormat:=customDateFormatOrBlank;
-        P_logFormatter(specification.formatter)^.maxLocationLength:=customLogLocationLength;
+        specification.useLogFormatter:=true;
+        specification.handlePrintAsLog:=clf_TREAT_PRINT_AS_LOG in flags;
+        if customDateFormatOrBlank<>''
+        then specification.logDateFormat:=customDateFormatOrBlank;
+        specification.logLocationLen:=customLogLocationLength;
       end
-      else new(P_defaultConsoleFormatter(specification.formatter),create);
+      else specification.useLogFormatter:=false;
 
       //Try to merge into existing adapters
       for i:=0 to length(deferredAdapterCreations)-1 do if specification.canMergeInto(deferredAdapterCreations[i],messageTypesToCollect) then exit;
@@ -227,10 +229,9 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
     end;
 
   PROCEDURE parseDateFormat;
-    VAR s:string;
     begin
       try
-        s:=FormatDateTime(param,now);
+        FormatDateTime(param,now);
         customDateFormatOrBlank:=param;
       except
         parsingState.logCmdLineParsingError('Invalid date/time format "'+param+'"');
@@ -490,6 +491,7 @@ FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
     for f in flags do result+=' '+FLAG_TEXT[f];
     if sideEffectProfile<>0 then result+=' -restrict '+C_sideEffectProfile[sideEffectProfile].name;
     for k:=0 to length(deferredAdapterCreations)-1 do begin
+      //TODO: This needs to be refined!
       if deferredAdapterCreations[k].forceNewFile
       then result+=' -out '
       else result+=' +out ';
@@ -580,6 +582,18 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       scriptFileName:string;
       s:ansistring;
       consoleMessageTypes:T_messageTypeSet;
+  FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
+    begin
+      if deferredAdapterCreation.useLogFormatter then begin
+        new(P_logFormatter(result),create);
+        with P_logFormatter(result)^ do begin
+          timeFormat       :=deferredAdapterCreation.logDateFormat;
+          maxLocationLength:=deferredAdapterCreation.logLocationLen;
+          handlePrintAsLog :=deferredAdapterCreation.handlePrintAsLog;
+        end;
+      end else new(P_defaultConsoleFormatter(result),create);
+    end;
+
   begin
     result:=true;
     if not(initAdaptersForGui) and (clf_SHOW_INFO in mnhExecutionOptions.flags) then begin
@@ -599,7 +613,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
     for i:=0 to length(mnhExecutionOptions.deferredAdapterCreations)-1 do begin
-      mnhExecutionOptions.deferredAdapterCreations[i].applyScriptName(scriptFileName);
+      mnhExecutionOptions.deferredAdapterCreations[i].finalizeBeforeApplication(scriptFileName,getFormatterFor(mnhExecutionOptions.deferredAdapterCreations[i]));
       adapters^.addOutfile(mnhExecutionOptions.deferredAdapterCreations[i]);
     end;
 

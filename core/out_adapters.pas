@@ -121,15 +121,23 @@ TYPE
       verbosityPart:string;
       messagesToInclude:T_messageTypeSet;
       textFileCase:T_textFileCase;
+      messageFormatProvider:P_messageFormatProvider;
     public
-      fileName:string;
-      forceNewFile:boolean;
-      formatter:P_messageFormatProvider;
+      fileName        :string;
+      forceNewFile    :boolean;
+      useLogFormatter :boolean;
+      handlePrintAsLog:boolean;
+      logDateFormat   :string;
+      logLocationLen  :longint;
+
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+
       PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
       FUNCTION  getFilenameAndOptions:string;
       FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
       PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
-      PROCEDURE applyScriptName(CONST scriptName:string);
+      PROCEDURE finalizeBeforeApplication(CONST scriptName:string; CONST formatter:P_messageFormatProvider);
       PROPERTY getFilename:string read fileName;
       PROPERTY getVerbosityPart:string read verbosityPart;
       PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
@@ -411,7 +419,30 @@ PROCEDURE T_textFileAdapterSpecification.setVerbosityPart(CONST s: string; CONST
     messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
   end;
 
-PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
+CONSTRUCTOR T_textFileAdapterSpecification.create;
+  begin
+    verbosityPart        :='';
+    messagesToInclude    :=C_textMessages;
+    textFileCase         :=tfc_stdout;
+    messageFormatProvider:=nil;
+    fileName             :='';
+    forceNewFile         :=false;
+    useLogFormatter      :=false;
+    handlePrintAsLog     :=false;
+    logDateFormat        :='hh.mm.ss.zzz';
+    logLocationLen       :=30;
+  end;
+
+DESTRUCTOR T_textFileAdapterSpecification.destroy;
+  begin
+    if messageFormatProvider<>nil then dispose(messageFormatProvider,destroy);
+    messageFormatProvider:=nil;
+    fileName      :='';
+    verbosityPart:='';
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string;
+  CONST globalMessageTypes: T_messageTypeSet);
   begin
     splitIntoLogNameAndOption(s,fileName,verbosityPart);
     if uppercase(fileName)='STDOUT'
@@ -431,16 +462,18 @@ FUNCTION T_textFileAdapterSpecification.canMergeInto(
   VAR other: T_textFileAdapterSpecification;
   CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
-    if SameFileName(fileName,other.fileName) then begin
+    if SameFileName(fileName,other.fileName) and
+       (useLogFormatter =other.useLogFormatter) and
+       (handlePrintAsLog=other.handlePrintAsLog) and
+       (logDateFormat   =other.logDateFormat) and
+       (logLocationLen  =other.logLocationLen)
+    then begin
       //In conflict, revert to appending mode
       other.forceNewFile:=other.forceNewFile and forceNewFile;
       //Unite message types
       other.messagesToInclude+=messagesToInclude;
       //Update verbosity
       other.verbosityPart:=messageTypeSetToString(other.messagesToInclude,globalMessageTypes);
-      //Update formatter
-      dispose(other.formatter,destroy);
-      other.formatter:=formatter^.getClonedInstance;
       result:=true;
     end else result:=false;
   end;
@@ -454,10 +487,11 @@ PROCEDURE T_textFileAdapterSpecification.copy(
     messagesToInclude:=original.messagesToInclude;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.applyScriptName(
-  CONST scriptName: string);
+PROCEDURE T_textFileAdapterSpecification.finalizeBeforeApplication(
+  CONST scriptName: string; CONST formatter: P_messageFormatProvider);
   begin
     fileName:=ansiReplaceStr(fileName,'?',scriptName);
+    messageFormatProvider:=formatter;
   end;
 
 {$ifdef fullVersion}
@@ -822,7 +856,7 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 
 FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,specification.formatter));
+    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,specification.messageFormatProvider));
     addOutAdapter(result,true);
   end;
 
