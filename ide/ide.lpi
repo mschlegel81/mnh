@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="100">
+    <Units Count="101">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -640,6 +640,14 @@
         <Filename Value="../core/messageFormatting.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit99>
+      <Unit100>
+        <Filename Value="cmdlineframes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="CmdLineParametersFrame"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <UnitName Value="cmdLineFrames"/>
+      </Unit100>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
