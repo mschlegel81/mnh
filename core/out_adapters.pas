@@ -121,7 +121,6 @@ TYPE
       verbosityPart:string;
       messagesToInclude:T_messageTypeSet;
       textFileCase:T_textFileCase;
-      messageFormatProvider:P_messageFormatProvider;
     public
       fileName        :string;
       forceNewFile    :boolean;
@@ -130,14 +129,11 @@ TYPE
       logDateFormat   :string;
       logLocationLen  :longint;
 
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
-
       PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
       FUNCTION  getFilenameAndOptions:string;
       FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
       PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
-      PROCEDURE finalizeBeforeApplication(CONST scriptName:string; CONST formatter:P_messageFormatProvider);
+      PROCEDURE finalizeBeforeApplication(CONST scriptName:string);
       PROPERTY getFilename:string read fileName;
       PROPERTY getVerbosityPart:string read verbosityPart;
       PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
@@ -225,7 +221,7 @@ TYPE
       FUNCTION triggersBeep:boolean;                                                                                                  virtual;
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
+      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider):P_textFileOutAdapter;
       FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -419,28 +415,6 @@ PROCEDURE T_textFileAdapterSpecification.setVerbosityPart(CONST s: string; CONST
     messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
   end;
 
-CONSTRUCTOR T_textFileAdapterSpecification.create;
-  begin
-    verbosityPart        :='';
-    messagesToInclude    :=C_textMessages;
-    textFileCase         :=tfc_stdout;
-    messageFormatProvider:=nil;
-    fileName             :='';
-    forceNewFile         :=false;
-    useLogFormatter      :=false;
-    handlePrintAsLog     :=false;
-    logDateFormat        :='hh.mm.ss.zzz';
-    logLocationLen       :=30;
-  end;
-
-DESTRUCTOR T_textFileAdapterSpecification.destroy;
-  begin
-    if messageFormatProvider<>nil then dispose(messageFormatProvider,destroy);
-    messageFormatProvider:=nil;
-    fileName      :='';
-    verbosityPart:='';
-  end;
-
 PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string;
   CONST globalMessageTypes: T_messageTypeSet);
   begin
@@ -487,11 +461,9 @@ PROCEDURE T_textFileAdapterSpecification.copy(
     messagesToInclude:=original.messagesToInclude;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.finalizeBeforeApplication(
-  CONST scriptName: string; CONST formatter: P_messageFormatProvider);
+PROCEDURE T_textFileAdapterSpecification.finalizeBeforeApplication(CONST scriptName: string);
   begin
     fileName:=ansiReplaceStr(fileName,'?',scriptName);
-    messageFormatProvider:=formatter;
   end;
 
 {$ifdef fullVersion}
@@ -854,9 +826,9 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
     end;
   end;
 
-FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
+FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,specification.messageFormatProvider));
+    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,messageFormatProvider));
     addOutAdapter(result,true);
   end;
 

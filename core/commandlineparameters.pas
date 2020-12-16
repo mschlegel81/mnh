@@ -582,6 +582,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       scriptFileName:string;
       s:ansistring;
       consoleMessageTypes:T_messageTypeSet;
+      tempFormatter:P_messageFormatProvider;
   FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
     begin
       if deferredAdapterCreation.useLogFormatter then begin
@@ -613,8 +614,10 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
     scriptFileName:=getFileToInterpretFromCommandLine;
     if scriptFileName<>'' then scriptFileName:=ChangeFileExt(scriptFileName,'');
     for i:=0 to length(mnhExecutionOptions.deferredAdapterCreations)-1 do begin
-      mnhExecutionOptions.deferredAdapterCreations[i].finalizeBeforeApplication(scriptFileName,getFormatterFor(mnhExecutionOptions.deferredAdapterCreations[i]));
-      adapters^.addOutfile(mnhExecutionOptions.deferredAdapterCreations[i]);
+      mnhExecutionOptions.deferredAdapterCreations[i].finalizeBeforeApplication(scriptFileName);
+      tempFormatter:=getFormatterFor(mnhExecutionOptions.deferredAdapterCreations[i]);
+      adapters^.addOutfile(mnhExecutionOptions.deferredAdapterCreations[i],tempFormatter);
+      dispose(tempFormatter,destroy);
     end;
 
     if not(initAdaptersForGui) and (length(parsingState.cmdLineParsingErrors)>0) then begin
