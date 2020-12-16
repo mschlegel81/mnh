@@ -1,6 +1,6 @@
 UNIT commandLineParameters;
 INTERFACE
-USES myGenerics,mnh_settings,out_adapters,serializationUtil,mnh_constants
+USES myGenerics,mnh_settings,out_adapters,serializationUtil,mnh_constants,mnh_messages
      {$ifdef fullVersion}
      ,funcs
      {$endif};
@@ -21,6 +21,7 @@ TYPE
     PROCEDURE logCmdLineParsingError(CONST s: string);
   end;
 
+  P_mnhExecutionOptions=^T_mnhExecutionOptions;
   T_mnhExecutionOptions=object(T_serializable)
     verbosityString:string;
     customLogLocationLength:longint;
@@ -106,6 +107,7 @@ CONST
                                             FLAG_STDERR,
                                             FLAG_PRINT_AS_LOG);
 
+FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
 PROCEDURE displayHelp(CONST adapters:P_messages);
 IMPLEMENTATION
 USES sysutils,
@@ -114,7 +116,6 @@ USES sysutils,
      funcs_mnh,
      fileWrappers,
      mySys,
-     mnh_messages,
      basicTypes,
      messageFormatting;
 
@@ -577,23 +578,24 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     wl('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
   end;
 
+FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
+  begin
+    if deferredAdapterCreation.useLogFormatter then begin
+      new(P_logFormatter(result),create);
+      with P_logFormatter(result)^ do begin
+        timeFormat       :=deferredAdapterCreation.logDateFormat;
+        maxLocationLength:=deferredAdapterCreation.logLocationLen;
+        handlePrintAsLog :=deferredAdapterCreation.handlePrintAsLog;
+      end;
+    end else new(P_defaultConsoleFormatter(result),create);
+  end;
+
 FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDistributor; CONST initAdaptersForGui: boolean): boolean;
   VAR i:longint;
       scriptFileName:string;
       s:ansistring;
       consoleMessageTypes:T_messageTypeSet;
       tempFormatter:P_messageFormatProvider;
-  FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
-    begin
-      if deferredAdapterCreation.useLogFormatter then begin
-        new(P_logFormatter(result),create);
-        with P_logFormatter(result)^ do begin
-          timeFormat       :=deferredAdapterCreation.logDateFormat;
-          maxLocationLength:=deferredAdapterCreation.logLocationLen;
-          handlePrintAsLog :=deferredAdapterCreation.handlePrintAsLog;
-        end;
-      end else new(P_defaultConsoleFormatter(result),create);
-    end;
 
   begin
     result:=true;

@@ -6,12 +6,16 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  editorMeta;
+  editorMeta, cmdLineFrames;
 
 TYPE
+
+  { TShebangWizard }
+
   TShebangWizard = class(TForm)
     Button1: TButton;
     Button2: TButton;
+    CmdLineParametersFrame1: TCmdLineParametersFrame;
     sideEffectComboBox: TComboBox;
     doLogCheckbox: TCheckBox;
     restrictionsGroupBox: TGroupBox;

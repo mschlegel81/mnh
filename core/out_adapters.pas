@@ -116,12 +116,13 @@ TYPE
   {$endif}
 
   T_textFileCase=(tfc_file,tfc_stdout,tfc_stderr);
+  P_textFileAdapterSpecification=^T_textFileAdapterSpecification;
   T_textFileAdapterSpecification=object
     private
       verbosityPart:string;
       messagesToInclude:T_messageTypeSet;
-      textFileCase:T_textFileCase;
     public
+      textFileCase:T_textFileCase;
       fileName        :string;
       forceNewFile    :boolean;
       useLogFormatter :boolean;
@@ -137,6 +138,7 @@ TYPE
       PROPERTY getFilename:string read fileName;
       PROPERTY getVerbosityPart:string read verbosityPart;
       PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
+      PROPERTY getMessageTypes:T_messageTypeSet read messagesToInclude;
   end;
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
