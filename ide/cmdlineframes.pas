@@ -16,6 +16,7 @@ type
     addOutFile: TButton;
     cbConsoleLikeLog: TCheckBox;
     cbConvertPrintToLog: TCheckBox;
+    cbLogAppend: TCheckBox;
     forceStdErrCb: TCheckBox;
     forceStdOutCb: TCheckBox;
     outputFileComboBox: TComboBox;
@@ -55,12 +56,14 @@ type
     procedure addOutFileClick(Sender: TObject);
     procedure cbConsoleLikeLogClick(Sender: TObject);
     procedure cbConvertPrintToLogClick(Sender: TObject);
+    procedure cbLogAppendClick(Sender: TObject);
     procedure forceStdErrCbClick(Sender: TObject);
     procedure forceStdOutCbClick(Sender: TObject);
     procedure guiFlagCbClick(Sender: TObject);
     procedure headlessFlagCbClick(Sender: TObject);
     procedure anyPage1Change(Sender: TObject);
     procedure lightVersionRbClick(Sender: TObject);
+    procedure logFilenameEditEditingDone(Sender: TObject);
     procedure logLocationLengthEditEditingDone(Sender: TObject);
     procedure outFileVerbosityEditEditingDone(Sender: TObject);
     procedure profileFlagCbClick(Sender: TObject);
@@ -81,7 +84,7 @@ type
   end;
 
 implementation
-
+USES mnh_messages,myGenerics,litVar,basicTypes,myStringUtil;
 {$R *.lfm}
 
 { TCmdLineParametersFrame }
@@ -89,6 +92,14 @@ implementation
 procedure TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
   begin
     guiFlagCb.Checked:=false;
+  end;
+
+procedure TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
+  VAR a:P_textFileAdapterSpecification;
+  begin
+    a:=currentAdapterSpecification;
+    if a=nil then exit;
+    a^.fileName:=logFilenameEdit.Caption;
   end;
 
 procedure TCmdLineParametersFrame.logLocationLengthEditEditingDone(Sender: TObject);
@@ -109,7 +120,7 @@ procedure TCmdLineParametersFrame.outFileVerbosityEditEditingDone(Sender: TObjec
   begin
     a:=currentAdapterSpecification;
     if a<>nil then begin
-      a^.setVerbosityPart(outputFileComboBox.Text);
+      a^.setVerbosityPart(outputFileComboBox.Text,stringToMessageTypeSet(execOptions.verbosityString));
       updateLogPreview;
     end;
   end;
@@ -152,16 +163,33 @@ procedure TCmdLineParametersFrame.updateLogPreview;
   VAR specification:P_textFileAdapterSpecification;
       formatter:P_messageFormatProvider;
   FUNCTION formattedLinesFor(CONST messageType:T_messageType; CONST lineIndex:longint;
-                             CONST txt1:string;
-                             CONST txt2:string;
-                             CONST txt3:string):T_arrayOfString;
- //   VAR message:T_storedMessageWithText;
+                             CONST txt1:string):T_arrayOfString;
+    VAR message:T_storedMessageWithText;
+        location:T_searchTokenLocation;
     begin
-
-
+      location.fileName:='/home/user/scripts/myTestScript.mnh';
+      location.line:=lineIndex;
+      location.column:=1;
+      message.create(messageType,location,split(txt1,'#'));
+      result:=formatter^.formatMessage(@message);
+      message.unreference;
+      message.destroy;
     end;
 
-  VAR line:string;
+  FUNCTION formattedLinesForOutput:T_arrayOfString;
+    VAR message:T_echoOutMessage;
+        location:T_searchTokenLocation;
+    begin
+      location.fileName:='/home/user/scripts/myTestScript.mnh';
+      location.line:=2;
+      location.column:=1;
+      message.create(newVoidLiteral,location);
+      result:=formatter^.formatMessage(@message);
+      message.unreference;
+      message.destroy;
+    end;
+
+  VAR s:string;
   begin
     specification:=currentAdapterSpecification;
     formatPreviewMemo.Clear;
@@ -169,24 +197,39 @@ procedure TCmdLineParametersFrame.updateLogPreview;
 
     formatter:=getFormatterFor(specification^);
 
-
+    if mt_echo_declaration in specification^.getMessageTypes then
     for s in formattedLinesFor(mt_echo_declaration,1,'f(x)->2*x+3;') do formatPreviewMemo.Append(s);
-    for s in formattedLinesFor(mt_echo_input,'2','print("f(7)=",f(7));') do formatPreviewMemo.Append(s);
-    for s in formattedLinesFor(mt_printline,'2','f(7)=17') do formatPreviewMemo.Append(s);
 
+    if mt_echo_input in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_echo_input,2,'print("f(7)=",f(7));') do formatPreviewMemo.Append(s);
 
+    if mt_printline in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_printline,2,'f(7)=17') do formatPreviewMemo.Append(s);
 
-    //TODO Output an echo out message (if collecting...)
+    if mt_echo_output in specification^.getMessageTypes then
+    for s in formattedLinesForOutput do formatPreviewMemo.Append(s);
 
+    if mt_log in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_log,20,'This is a log message.') do formatPreviewMemo.Append(s);
 
+    if mt_el1_userNote in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_el1_userNote,21,'This is a (user) note.') do formatPreviewMemo.Append(s);
+
+    if mt_el1_note in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_el1_note,22,'This is a builtin note.#Like user notes it may contain multiple lines...') do formatPreviewMemo.Append(s);
+
+    if mt_el2_userWarning in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_el2_userWarning,23,'This is a (user) warning message.') do formatPreviewMemo.Append(s);
+
+    if mt_el2_warning in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_el2_warning,24,'This is a builtin warning message.') do formatPreviewMemo.Append(s);
+
+    if mt_el3_evalError in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_el3_evalError,25,'This is an error!!!#An erromessage may contain multiple lines.') do formatPreviewMemo.Append(s);
+
+    if mt_timing_info in specification^.getMessageTypes then
+    for s in formattedLinesFor(mt_timing_info,0,'Importing time      802.108ms#Tokenizing time       9.126ms#Declaration time     55.315ms#Interpretation time   0.000ms#Unaccounted for       1.044ms#-----------------------------#Total               867.593ms#') do formatPreviewMemo.Append(s);
     dispose(formatter,destroy);
-
-
-
-    //TODO Output a log message (if collecting...)
-    //TODO Output a warm message (if collecting...)
-    //TODO Output an error message (if collecting...)
-    //TODO Output an timing message (if collecting...)
   end;
 
 procedure TCmdLineParametersFrame.updateLogSection;
@@ -318,7 +361,7 @@ procedure TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
     with execOptions do begin
       newLogIndex:=length(deferredAdapterCreations);
       setLength(deferredAdapterCreations,newLogIndex+1);
-      deferredAdapterCreations[newLogIndex].setFilenameAndOptions('?.log(1)');
+      deferredAdapterCreations[newLogIndex].setFilenameAndOptions('?.log(1)',stringToMessageTypeSet(verbosityString));
     end;
     outputFileComboBox.Items.Add(IntToStr(newLogIndex+1));
     outputFileComboBox.ItemIndex:=newLogIndex;
@@ -333,6 +376,14 @@ procedure TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
     a^.handlePrintAsLog:=cbConvertPrintToLog.Checked;
     a^.logDateFormat   :=timeFormatEdit.Caption;
     updateLogPreview;
+  end;
+
+procedure TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
+  VAR a:P_textFileAdapterSpecification;
+  begin
+    a:=currentAdapterSpecification;
+    if a=nil then exit;
+    a^.forceNewFile:=not(cbLogAppend.Checked);
   end;
 
 procedure TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
@@ -364,6 +415,8 @@ procedure TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
     if profileFlagCb     .Checked then include(execOptions.flags,clf_PROFILE);
     if quietFlagCb       .Checked then include(execOptions.flags,clf_QUIET);
     if silentFlagCb      .Checked then include(execOptions.flags,clf_SILENT);
+    if forceStdErrCb     .Checked then include(execOptions.flags,clf_FORCE_STDERR);
+    if forceStdOutCb     .Checked then include(execOptions.flags,clf_FORCE_STDOUT);
     execOptions.sideEffectProfile:=sideEffectsComboBox.ItemIndex;
   end;
 
