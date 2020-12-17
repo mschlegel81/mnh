@@ -455,7 +455,7 @@ FUNCTION printf_imp intFuncSignature;
         {$ifdef fullVersion}context.callStackPop(nil);{$endif}
         exit(nil);
       end;
-      context.messages^.postTextMessage(mt_printline,C_nilSearchTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
+      context.messages^.postTextMessage(mt_printline,tokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
       dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}
