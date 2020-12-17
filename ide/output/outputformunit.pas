@@ -137,6 +137,7 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
     end;
     adapter^.outputBehavior:=ideSettings.outputBehavior;
     adapter^.autoflush:=false;
+    adapter^.wrapEcho:=miWrapEcho.checked;
   end;
 
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);

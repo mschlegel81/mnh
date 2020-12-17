@@ -127,6 +127,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     evaluatedFor:=0;
     initDockMenuItems(OutputMainMenu,miDockMenuInMain);
     initDockMenuItems(OutputPopupMenu,nil);
+    quickOutput.wrapEcho:=miWrapEcho.checked;
   end;
 
 PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);

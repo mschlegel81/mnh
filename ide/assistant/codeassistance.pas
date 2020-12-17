@@ -849,8 +849,8 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
         m:P_storedMessage;
     begin
       for m in list do begin
-        hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level> 2);
-        hasWarnings:=hasWarnings or (C_messageTypeMeta[m^.messageType].level<=2);
+        hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level>2);
+        hasWarnings:=hasWarnings or (C_messageTypeMeta[m^.messageType].level=2);
         for s in messageFormatter.formatMessage(m) do edit.lines.append(s);
       end;
     end;
@@ -862,6 +862,7 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
       edit.clearAll;
       edit.lines.clear;
       messageFormatter.preferredLineLength:=edit.charsInWindow;
+      messageFormatter.wrapEcho:=true;
       hasErrors:=false;
       hasWarnings:=false;
       addErrors(localErrors);
