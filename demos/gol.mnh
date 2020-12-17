@@ -20,7 +20,7 @@ printWorld(delay:Numeric,S:WorldSize,world:IntList)->begin
                 end);
     F1.each(f,[f,F2[index] orElse F2[0]]);
   end;
-  local nextPrint:=time;
+  local nextPrint:=scriptTime;
 save;
   sleepUntil(nextPrint+=delay);
   printf("%s","\f"|F12.each(f,M[world[f[0]]+world[f[1]]*2].join));
