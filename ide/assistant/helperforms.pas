@@ -161,7 +161,7 @@ PROCEDURE THelpForm.performFastUpdate;
         then lab.caption:=r.idAndSignature+'->'+r.body
         else lab.caption:=r.idAndSignature;
 
-        if r.location<>C_nilTokenLocation then begin
+        if r.location<>C_nilSearchTokenLocation then begin
           lab.OnClick:=@locationLabelDblClick;
           lab.Tag:=length(tempLocations);
           setLength(tempLocations,length(tempLocations)+1);

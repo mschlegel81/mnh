@@ -106,7 +106,7 @@ FUNCTION addPlot intFuncSignature;
 FUNCTION plot intFuncSignature;
   begin
     if not(context.checkSideEffects('plot',tokenLocation,[se_alterGuiState])) then exit(nil);
-    context.messages^.postSingal(mt_plot_clear,C_nilTokenLocation);
+    context.messages^.postSingal(mt_plot_clear,C_nilSearchTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context,recycler);

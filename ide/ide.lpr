@@ -28,13 +28,16 @@ begin
   if wantMainLoopAfterParseCmdLine then begin
     initAskForm;
     if clf_GUI in commandLine.mnhExecutionOptions.flags
-    then Application.CreateForm(TreevaluationForm,reevaluationForm)
+    then begin
+      hideConsole;
+      Application.CreateForm(TreevaluationForm,reevaluationForm)
+    end
     else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
     then halt
-    else Application.CreateForm(TIdeMainForm, IdeMainForm);
-    {$ifndef debugMode}
-    hideConsole;
-    {$endif}
+    else begin
+      hideConsole;
+      Application.CreateForm(TIdeMainForm, IdeMainForm);
+    end;
     Application.run;
     memoryCleaner.stop;
     showConsole;

@@ -34,17 +34,6 @@ TYPE
   T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_help,msf_debug);
 
-CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tokenKind; end=(
-         (marker:''            ; tokenkind:tkDefault),
-         (marker:ECHO_MARKER   ; tokenkind:tkDefault),
-         (marker:NOTE_MARKER   ; tokenkind:tkNote),
-         (marker:ERROR_MARKER  ; tokenkind:tkError),
-         (marker:WARNING_MARKER; tokenkind:tkWarning),
-         (marker:TIMING_MARKER ; tokenkind:tkTimingNote),
-         (marker:TIMING_MARKER2; tokenkind:tkTimingNote));
-     SPECIAL_LINE_CASE_ECHO=1;
-     SPECIAL_LINE_CASE_TM2 =6;
-
 TYPE
   TAbstractSynMnhSyn = class(TSynCustomHighlighter)
   private
@@ -442,8 +431,16 @@ PROCEDURE TMnhInputSyn.next;
   end;
 
 PROCEDURE TMnhOutputSyn.next;
+  CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tokenKind; end=(
+    (marker:''            ; tokenkind:tkDefault),    //0
+    (marker:ECHO_MARKER   ; tokenkind:tkDefault),    //1
+    (marker:NOTE_MARKER   ; tokenkind:tkNote),       //2
+    (marker:ERROR_MARKER  ; tokenkind:tkError),      //3
+    (marker:WARNING_MARKER; tokenkind:tkWarning),    //4
+    (marker:TIMING_MARKER ; tokenkind:tkTimingNote), //5
+    (marker:TIMING_MARKER2; tokenkind:tkTimingNote));//6
+
   VAR b:byte;
-      specialLineCase:byte;
 
   FUNCTION startsWith(CONST part:shortstring):boolean;
     VAR k:longint;
@@ -457,47 +454,33 @@ PROCEDURE TMnhOutputSyn.next;
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
     fTokenPos := run;
-
-    if (run = 0) then begin
-      specialLineCase:=0;
-      for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then specialLineCase:=b;
-      case specialLineCase of
-        SPECIAL_LINE_CASE_TM2: begin
-          fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
-          fTokenSubId:=skWarn;
-          run:=3; //This is the length of the invisible char
-          while (fLine[run]<>#0) do inc(run);
-          exit;
-        end;
-        SPECIAL_LINE_CASE_ECHO:
-          if startsWith(ECHO_MARKER+getPrefix(mt_echo_input )) or
-             startsWith(ECHO_MARKER+getPrefix(mt_echo_output)) or
-             startsWith(ECHO_MARKER+ECHO_CONTINUED_PREFIX    ) then begin
-            run:=8; //3 bytes invisible char + 5 bytes prefix
-            fTokenId:=tkOperator;
-            exit;
-          end else inc(run,3);
-        else begin
-          fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
-          run:=length(tokenKindByPrefix[specialLineCase].marker)+1; //This is the length of the invisible char
-          while (fLine[run]<>#0) do inc(run);
-          exit;
-        end;
-      end;
-    end;
-
-    if (blobEnder<>#0) then begin
-      if fLine[run]=#0 then begin
-        fTokenId := tkNull;
+    //Marker handling...
+    if run=0 then begin
+      blobEnder:=#0;
+      for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then begin
+        blobEnder:=chr(b);
+        run:=3;
         exit;
       end;
-      while (fLine[run]<>#0) and (fLine[run]<>blobEnder) do inc(run);
-      if fLine[run]=blobEnder then begin
-        blobEnder:=#0;
+      if fLine[run]=#0 then begin
+        fTokenId:=tkNull;
         inc(run);
+      end else while fLine[run]<>#0 do inc(run);
+      exit;
+    end;
+    case ord(blobEnder) of
+      1: if run<3+C_echoPrefixLength then begin
+           fTokenId:=tkOperator;
+           run:=3+C_echoPrefixLength;
+         end else inherited next;
+      else begin
+        fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind;
+        if fLine[run]=#0 then begin
+          fTokenId:=tkNull;
+          inc(run);
+        end else while fLine[run]<>#0 do inc(run);
       end;
-      fTokenId:=tkString;
-    end else inherited next;
+    end;
   end;
 
 PROCEDURE TMnhDebugSyn.next;

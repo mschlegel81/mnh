@@ -1294,9 +1294,9 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     end;
   begin
     result.linkToHelp:=getDocIndexLinkForBrowser;
-    result.location:=C_nilTokenLocation;
-    result.startLoc:=C_nilTokenLocation;
-    result.endLoc  :=C_nilTokenLocation;
+    result.location:=C_nilSearchTokenLocation;
+    result.startLoc:=C_nilSearchTokenLocation;
+    result.endLoc  :=C_nilSearchTokenLocation;
     result.canRename:=false;
     result.mightBeUsedInOtherPackages:=false;
     result.idWithoutIsPrefix:='';

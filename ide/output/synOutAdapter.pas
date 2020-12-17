@@ -71,14 +71,14 @@ TYPE
 
   P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
   T_redirectionAwareConsoleOutAdapter=object(T_consoleOutAdapter)
-    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
 
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES ideLayoutUtil;
+USES ideLayoutUtil,messageFormatting;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -125,9 +125,9 @@ CONSTRUCTOR T_eagerInitializedOutAdapter.create(CONST synEdit_: TSynEdit; CONST 
     ownerForm:=ownerForm_;
   end;
 
-CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode);
+CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
   begin
-    inherited create(messageTypesToInclude_,consoleMode);
+    inherited create(messageTypesToInclude_,consoleMode,formatProvider);
   end;
 
 FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessage): boolean;
@@ -154,6 +154,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       hadDirectPrint:boolean;
       wroteToSyn:boolean;
       SynEdit:TSynEdit=nil;
+      messageFormatter:T_guiFormatter;
 
   PROCEDURE startOutput;
     begin
@@ -196,49 +197,6 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
     end;
 
   FUNCTION singleMessageOut(CONST m: P_storedMessage):boolean;
-    PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
-      {$MACRO ON}
-      {$define marker:=C_messageTypeMeta[messageType].guiMarker}
-      VAR txt:string;
-          tokens:T_arrayOfString;
-          k:longint=0;
-          first:boolean=true;
-          firstInLine:boolean=true;
-          message:string;
-      begin
-        if length(messageList)<>1 then for message in messageList do begin
-          if first
-          then appendInternal(marker+getPrefix(messageType)+' '+message)
-          else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
-          first:=false;
-        end else begin
-          message:=messageList[0];
-          if wrapEcho and (ensureSynEdit.charsInWindow-5<length(message)) then begin
-            if length(messageList)=1
-            then tokens:=tokenSplit(message)
-            else tokens:=message;
-            while k<length(tokens) do begin
-              txt:='';
-              firstInLine:=true;
-              while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=SynEdit.charsInWindow-5)) do begin
-                txt:=txt+tokens[k];
-                inc(k);
-                firstInLine:=false;
-              end;
-              if first
-              then appendInternal(marker+getPrefix(messageType)+' '+txt)
-              else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+txt);
-              first:=false;
-            end;
-          end else begin
-            if first
-            then appendInternal(marker+getPrefix(messageType)+' '+message)
-            else appendInternal(marker+ECHO_CONTINUED_PREFIX +' '+message);
-            first:=false;
-          end;
-        end;
-      end;
-
     PROCEDURE clearSynAndBuffer;
       begin
         linesToWrite:=C_EMPTY_STRING_ARRAY;
@@ -272,15 +230,15 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_clearConsole: clearSynAndBuffer;
         mt_printline:
           begin
-            if (length(m^.messageText)>0) and (m^.messageText[0]=C_formFeedChar) then begin
+            if (length(P_storedMessageWithText(m)^.txt)>0) and (P_storedMessageWithText(m)^.txt[0]=C_formFeedChar) then begin
               clearSynAndBuffer;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
             end else if lastWasDirectPrint then begin
-              if length(m^.messageText)>0 then begin
-                processDirectPrint(m^.messageText[0]);
+              if length(P_storedMessageWithText(m)^.txt)>0 then begin
+                processDirectPrint(P_storedMessageWithText(m)^.txt[0]);
               end;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
-            end else for s in m^.messageText do appendInternal(s);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
+            end else for s in P_storedMessageWithText(m)^.txt do appendInternal(s);
           end;
         mt_printdirect:
           begin
@@ -295,7 +253,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
               SynEdit.executeCommand(ecEditorBottom,' ',nil);
               SynEdit.executeCommand(ecLineStart,' ',nil);
             end;
-            for s in m^.messageText do processDirectPrint(s);
+            for s in P_storedMessageWithText(m)^.txt do processDirectPrint(s);
           end;
         mt_el1_note,
         mt_el1_userNote,
@@ -305,11 +263,11 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_el3_noMatchingMain,
         mt_el3_userDefined,
         mt_el4_systemError,
-        mt_timing_info: for s in m^.toString(true) do appendInternal(s);
+        mt_timing_info,
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output: writeWrapped(m^.messageType,m^.messageText);
-        mt_endOfEvaluation:ensureSynEdit.enabled:=true;
+        mt_echo_output: for s in messageFormatter.formatMessage(m) do appendInternal(s);
+        mt_endOfEvaluation: ensureSynEdit.enabled:=true;
         else result:=false;
       end;
       if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
@@ -348,11 +306,17 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   VAR i:longint;
   begin
     if not(forceFlush or autoflush) then exit;
+    messageFormatter.create(false);
     system.enterCriticalSection(adapterCs);
     result:=[];
     startOutput;
     try
       removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+      if collectedFill>0 then begin
+        messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
+        messageFormatter.wrapEcho:=wrapEcho;
+      end;
+
       for i:=0 to collectedFill-1 do begin
         include(result,collected[i]^.messageType);
         singleMessageOut(collected[i]);
@@ -362,6 +326,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
       if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
       doneOutput(jumpToEnd);
       system.leaveCriticalSection(adapterCs);
+      messageFormatter.destroy;
     end;
   end;
 
@@ -372,7 +337,7 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
     try
       lastWasDirectPrint:=false;
       clear;
-      new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
+      new(clearMessage,create(mt_clearConsole,C_nilSearchTokenLocation));
       append(clearMessage);
       disposeMessage(clearMessage);
     finally

@@ -66,7 +66,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       if preferredToken<>nil then exit(preferredToken           ^.location);
       if first         <>nil then exit(first                    ^.location);
       if stack.topIndex>=0   then exit(stack.dat[stack.topIndex]^.location);
-      result:=C_nilTokenLocation;
+      result:=C_nilSearchTokenLocation;
     end;
 
   PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation; CONST LHS:P_literal);

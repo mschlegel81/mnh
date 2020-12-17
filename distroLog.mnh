@@ -1,7 +1,7 @@
-private plain datastore log;
+private plain datastore LOG;
 private plain datastore versionInfo;
 
-maxLoggedBuildNumber->try({max(log.getInner(1).getInner(0))},0);
+maxLoggedBuildNumber->try({max(LOG.getInner(1).getInner(0))},0);
 
 @SuppressUnusedWarning
 private ensureVersionInfo:=versionInfo.isVoid ? begin
@@ -53,12 +53,12 @@ end;
 
 memoized getBuildNumberAndVersion(codeHash:String)->
   begin
-    isVoid(log)
-    ? log:=[].toMap
+    isVoid(LOG)
+    ? LOG:=[].toMap
     : void;
-    local result:=log[codeHash] orElse begin
+    local result:=LOG[codeHash] orElse begin
       local nextNo:=maxLoggedBuildNumber+1;
-      log[codeHash]:=[nextNo,versionVector];
+      LOG[codeHash]:=[nextNo,versionVector];
       [nextNo,versionVector];
     end;
     updateProjectFiles@result;
@@ -66,15 +66,15 @@ memoized getBuildNumberAndVersion(codeHash:String)->
   end;
 
 //*Show info on logged versions
-main->isVoid(log)
+main->isVoid(LOG)
       ? print('No build version logged')
       : begin
-          log.sort(1).trailing(10).map({$x.join("\t")&($x[0]==mnhInfo['codeVersion'] ? "\t*" : "")}).join("\n").print;
-          log.size<=50
+          LOG.sort(1).trailing(10).map({$x.join("\t")&($x[0]==mnhInfo['codeVersion'] ? "\t*" : "")}).join("\n").print;
+          LOG.size<=50
           ? void
           : begin
-              print('Log has ',log.size,' entries - limiting to last 50');
-              log:=log.sort(1).trailing(50).toMap;
+              print('Log has ',LOG.size,' entries - limiting to last 50');
+              LOG:=LOG.sort(1).trailing(50).toMap;
             end;
           void;
         end

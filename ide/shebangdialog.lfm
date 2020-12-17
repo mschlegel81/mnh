@@ -1,354 +1,46 @@
 object ShebangWizard: TShebangWizard
-  Left = 528
-  Height = 636
-  Top = 163
-  Width = 400
-  AutoSize = True
+  Left = 1152
+  Height = 703
+  Top = 50
+  Width = 442
   Caption = 'Shebang wizard'
-  ClientHeight = 636
-  ClientWidth = 400
-  DesignTimePPI = 120
+  ClientHeight = 703
+  ClientWidth = 442
   OnCreate = FormCreate
-  OnShow = FormShow
-  LCLVersion = '2.0.4.0'
-  object GroupBox1: TGroupBox
-    Left = 0
-    Height = 73
-    Top = 66
-    Width = 400
-    Align = alTop
-    AutoSize = True
-    Caption = 'Executor'
-    ClientHeight = 48
-    ClientWidth = 396
-    ParentFont = False
-    TabOrder = 0
-    object lightVersionRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 0
-      Width = 396
-      Align = alTop
-      Caption = 'lightVersionRb'
-      Checked = True
-      OnClick = lightVersionRbClick
-      ParentFont = False
-      TabOrder = 0
-      TabStop = True
-    end
-    object fullVersionRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 24
-      Width = 396
-      Align = alTop
-      Caption = 'fullVersionRb'
-      ParentFont = False
-      TabOrder = 1
-    end
-  end
-  object GroupBox2: TGroupBox
-    Left = 0
-    Height = 169
-    Top = 139
-    Width = 400
-    Align = alTop
-    AutoSize = True
-    Caption = 'Flags'
-    ClientHeight = 144
-    ClientWidth = 396
-    ParentFont = False
-    TabOrder = 1
-    object guiFlagCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'start in GUI mode'
-      Top = 0
-      Width = 390
-      Align = alTop
-      BorderSpacing.Left = 6
-      Caption = 'guiFlagCb'
-      OnClick = guiFlagCbClick
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 0
-    end
-    object quietFlagCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'disable console output'
-      Top = 48
-      Width = 390
-      Align = alTop
-      BorderSpacing.Left = 6
-      Caption = 'quietFlagCb'
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 2
-    end
-    object silentFlagCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'disable beeps'
-      Top = 72
-      Width = 382
-      Align = alTop
-      BorderSpacing.Left = 6
-      BorderSpacing.Right = 8
-      Caption = 'silentFlagCb'
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 3
-    end
-    object headlessFlagCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'forbid input via ask'
-      Top = 24
-      Width = 390
-      Align = alTop
-      BorderSpacing.Left = 6
-      Caption = 'headlessFlagCb'
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 1
-    end
-    object pauseFlagCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'pause after evaluation'
-      Top = 96
-      Width = 390
-      Align = alTop
-      BorderSpacing.Left = 6
-      Caption = 'pauseFlag'
-      OnClick = pauseFlagCbClick
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 4
-    end
-    object pauseOnErrorCb: TCheckBox
-      Left = 6
-      Height = 24
-      Hint = 'pause after evaluation if an error occurred'
-      Top = 120
-      Width = 390
-      Align = alTop
-      BorderSpacing.Left = 6
-      Caption = 'pauseOnErrorCb'
-      ParentFont = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 5
-    end
-  end
-  object GroupBox3: TGroupBox
-    Left = 0
-    Height = 53
-    Top = 308
-    Width = 400
-    Align = alTop
-    AutoSize = True
-    Caption = 'verbosity'
-    ClientHeight = 28
-    ClientWidth = 396
-    ParentFont = False
-    TabOrder = 2
-    object verbosityCombo: TComboBox
-      Left = 0
-      Height = 28
-      Top = 0
-      Width = 396
-      Align = alClient
-      ItemHeight = 20
-      Items.Strings = (
-        ''
-        'v'
-        '1'
-        '2'
-        '3'
-        't'
-        'd'
-      )
-      ParentFont = False
-      TabOrder = 0
-    end
-  end
-  object GroupBox4: TGroupBox
-    Left = 0
-    Height = 105
-    Top = 414
-    Width = 400
-    Align = alTop
-    AutoSize = True
-    Caption = 'log'
-    ClientHeight = 80
-    ClientWidth = 396
-    ParentFont = False
-    TabOrder = 4
-    object logAppendCb: TCheckBox
-      AnchorSideLeft.Control = doLogCheckbox
-      AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = GroupBox4
-      Left = 76
-      Height = 24
-      Top = 0
-      Width = 174
-      Align = alCustom
-      Caption = 'append to existing log'
-      Enabled = False
-      ParentFont = False
-      TabOrder = 0
-    end
-    object Label1: TLabel
-      AnchorSideLeft.Control = doLogCheckbox
-      AnchorSideTop.Control = logAppendCb
-      AnchorSideTop.Side = asrBottom
-      Left = 0
-      Height = 20
-      Top = 24
-      Width = 63
-      Align = alCustom
-      Caption = 'Filename:'
-      ParentColor = False
-      ParentFont = False
-    end
-    object logNameEdit: TEdit
-      AnchorSideLeft.Control = logAppendCb
-      AnchorSideTop.Control = logAppendCb
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = GroupBox4
-      AnchorSideRight.Side = asrBottom
-      Left = 76
-      Height = 28
-      Top = 24
-      Width = 320
-      Anchors = [akTop, akLeft, akRight]
-      Enabled = False
-      ParentFont = False
-      TabOrder = 1
-      Text = '?.log'
-    end
-    object Label2: TLabel
-      AnchorSideLeft.Control = Label1
-      AnchorSideTop.Control = verbosityCombo1
-      Left = 0
-      Height = 20
-      Top = 52
-      Width = 64
-      Caption = 'Verbosity:'
-      ParentColor = False
-      ParentFont = False
-    end
-    object verbosityCombo1: TComboBox
-      AnchorSideLeft.Control = logNameEdit
-      AnchorSideTop.Control = logNameEdit
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = logNameEdit
-      AnchorSideRight.Side = asrBottom
-      Left = 76
-      Height = 28
-      Top = 52
-      Width = 320
-      Align = alCustom
-      Anchors = [akTop, akLeft, akRight]
-      Enabled = False
-      ItemHeight = 20
-      Items.Strings = (
-        ''
-        'v'
-        '1'
-        '2'
-        '3'
-        't'
-        'd'
-      )
-      ParentFont = False
-      TabOrder = 2
-    end
-    object doLogCheckbox: TCheckBox
-      AnchorSideLeft.Control = GroupBox4
-      AnchorSideTop.Control = GroupBox4
-      Left = 0
-      Height = 24
-      Top = 0
-      Width = 76
-      Caption = 'activate'
-      OnClick = doLogCheckboxClick
-      ParentFont = False
-      TabOrder = 3
-    end
-  end
-  object Button1: TButton
-    AnchorSideLeft.Control = GroupBox4
-    AnchorSideTop.Control = GroupBox4
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Button2
-    Left = 0
-    Height = 31
-    Top = 519
-    Width = 176
-    Align = alCustom
-    Anchors = [akTop, akLeft, akRight]
-    Caption = 'OK'
-    ModalResult = 1
-    ParentFont = False
-    TabOrder = 5
-  end
-  object Button2: TButton
-    AnchorSideLeft.Control = Button1
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = GroupBox4
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = GroupBox4
-    AnchorSideRight.Side = asrBottom
-    Left = 176
-    Height = 31
-    Top = 519
-    Width = 224
-    Anchors = [akTop, akRight]
-    Cancel = True
-    Caption = 'Cancel'
-    ModalResult = 2
-    ParentFont = False
-    TabOrder = 6
-  end
+  LCLVersion = '2.0.10.0'
   object notExecutableHint: TPanel
     Left = 0
-    Height = 66
+    Height = 51
     Top = 0
-    Width = 400
+    Width = 442
     Align = alTop
     AutoSize = True
     BevelColor = clRed
     BevelWidth = 3
-    ClientHeight = 66
-    ClientWidth = 400
+    ClientHeight = 51
+    ClientWidth = 442
     Color = clYellow
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
-    TabOrder = 7
+    TabOrder = 0
     object Label3: TLabel
       Left = 3
-      Height = 40
+      Height = 30
       Top = 3
-      Width = 394
+      Width = 436
       Align = alClient
       Alignment = taCenter
       Caption = 'This script is not executable'#13#10'and therefore should not have a shebang.'
+      Font.Style = [fsBold]
       ParentColor = False
+      ParentFont = False
     end
     object considerErrorsLabel: TLabel
       Left = 3
-      Height = 20
-      Top = 43
-      Width = 394
+      Height = 15
+      Top = 33
+      Width = 436
       Align = alBottom
       Alignment = taCenter
       Caption = 'This might be due to errors in the script.'
@@ -356,28 +48,43 @@ object ShebangWizard: TShebangWizard
       ParentFont = False
     end
   end
-  object restrictionsGroupBox: TGroupBox
+  object Panel1: TPanel
     Left = 0
-    Height = 53
-    Top = 361
-    Width = 400
-    Align = alTop
+    Height = 25
+    Top = 678
+    Width = 442
+    Align = alBottom
     AutoSize = True
-    Caption = 'side effect restriction'
-    ClientHeight = 28
-    ClientWidth = 396
-    TabOrder = 3
-    object sideEffectComboBox: TComboBox
+    BevelOuter = bvNone
+    ClientHeight = 25
+    ClientWidth = 442
+    TabOrder = 1
+    object Button1: TButton
       Left = 0
-      Height = 28
+      Height = 25
       Top = 0
-      Width = 396
+      Width = 380
       Align = alClient
-      AutoComplete = True
-      AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
-      ItemHeight = 20
-      Style = csDropDownList
+      AutoSize = True
+      Caption = 'OK'
+      ModalResult = 1
+      ParentFont = False
       TabOrder = 0
+    end
+    object Button2: TButton
+      AnchorSideLeft.Control = Button1
+      AnchorSideLeft.Side = asrBottom
+      Left = 380
+      Height = 25
+      Top = 0
+      Width = 62
+      Align = alRight
+      AutoSize = True
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      ParentFont = False
+      TabOrder = 1
     end
   end
 end

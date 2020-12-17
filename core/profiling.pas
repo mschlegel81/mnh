@@ -89,7 +89,7 @@ TYPE
       content:T_profilingList;
       CONSTRUCTOR create;
       DESTRUCTOR destroy; virtual;
-      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
+      FUNCTION toString(CONST messageFormatProvider:P_messageFormatProvider):T_arrayOfString; virtual;
   end;
 
 PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
@@ -188,7 +188,7 @@ DESTRUCTOR T_profileMessage.destroy;
     setLength(content,0);
   end;
 
-FUNCTION T_profileMessage.toString(CONST forGui: boolean): T_arrayOfString;
+FUNCTION T_profileMessage.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
   FUNCTION nicestTime(CONST seconds:double):string;
     begin
        result:=formatFloat('0.000',seconds*1E3);

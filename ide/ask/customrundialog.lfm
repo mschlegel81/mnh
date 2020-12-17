@@ -1,331 +1,169 @@
 object CustomRunForm: TCustomRunForm
   Left = 913
-  Height = 448
+  Height = 358
   Top = 150
-  Width = 402
+  Width = 720
   AutoSize = True
   Caption = 'Run externally'
-  ClientHeight = 448
-  ClientWidth = 402
-  DesignTimePPI = 120
+  ClientHeight = 358
+  ClientWidth = 720
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.8.0'
-  object GroupBox1: TGroupBox
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = RunButton
+  LCLVersion = '2.0.10.0'
+  object topPanel: TPanel
     Left = 0
-    Height = 53
+    Height = 62
     Top = 0
-    Width = 346
-    Align = alCustom
-    Anchors = [akTop, akLeft, akRight]
+    Width = 720
+    Align = alTop
     AutoSize = True
-    Caption = 'script parameters'
-    ClientHeight = 28
-    ClientWidth = 342
-    ParentFont = False
+    BevelOuter = bvNone
+    ClientHeight = 62
+    ClientWidth = 720
     TabOrder = 0
-    object ScriptParamEdit: TComboBox
+    object GroupBox1: TGroupBox
+      AnchorSideLeft.Control = topPanel
+      AnchorSideTop.Control = topPanel
+      AnchorSideRight.Control = RunButton
       Left = 0
-      Height = 28
+      Height = 43
       Top = 0
-      Width = 342
-      Align = alClient
-      ItemHeight = 20
-      OnKeyPress = scriptParamEditKeyPress
-      ParentFont = False
-      TabOrder = 0
-    end
-  end
-  object GroupBox2: TGroupBox
-    AnchorSideLeft.Control = GroupBox1
-    AnchorSideTop.Control = flagsByShebangCb
-    AnchorSideTop.Side = asrBottom
-    AnchorSideBottom.Control = GroupBox4
-    AnchorSideBottom.Side = asrBottom
-    Left = 0
-    Height = 173
-    Top = 77
-    Width = 131
-    Align = alCustom
-    Anchors = [akTop, akLeft, akBottom]
-    Caption = 'executable'
-    ClientHeight = 148
-    ClientWidth = 127
-    ParentFont = False
-    TabOrder = 2
-    object fullVersionRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 0
-      Width = 127
-      Align = alTop
-      Caption = 'full version'
-      Checked = True
-      OnChange = fullVersionRbChange
-      ParentFont = False
-      TabOrder = 1
-      TabStop = True
-    end
-    object lightVersionRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 24
-      Width = 127
-      Align = alTop
-      Caption = 'light version'
-      OnChange = fullVersionRbChange
-      ParentFont = False
-      TabOrder = 0
-    end
-  end
-  object GroupBox3: TGroupBox
-    AnchorSideLeft.Control = GroupBox2
-    AnchorSideTop.Control = restrictionsGroupBox
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
-    Left = 0
-    Height = 101
-    Top = 303
-    Width = 402
-    Align = alCustom
-    Anchors = [akTop, akLeft, akRight]
-    AutoSize = True
-    Caption = 'execution folder'
-    ClientHeight = 76
-    ClientWidth = 398
-    ParentFont = False
-    TabOrder = 5
-    object scriptLocRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 0
-      Width = 398
-      Align = alTop
-      Caption = 'script location'
-      Checked = True
-      OnChange = customLocRbChange
-      ParentFont = False
-      TabOrder = 0
-      TabStop = True
-    end
-    object customLocRb: TRadioButton
-      Left = 0
-      Height = 24
-      Top = 24
-      Width = 398
-      Align = alTop
-      Caption = 'custom location'
-      OnChange = customLocRbChange
-      ParentFont = False
-      TabOrder = 1
-    end
-    object DirectoryEdit: TDirectoryEdit
-      Left = 0
-      Height = 28
-      Top = 48
-      Width = 398
-      ShowHidden = False
-      ButtonWidth = 28
-      NumGlyphs = 1
-      Align = alClient
-      Enabled = False
-      MaxLength = 0
-      ParentFont = False
-      TabOrder = 2
-      OnChange = DirectoryEditChange
-    end
-  end
-  object GroupBox4: TGroupBox
-    AnchorSideLeft.Control = GroupBox2
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = flagsByShebangCb
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    Left = 131
-    Height = 173
-    Top = 77
-    Width = 271
-    Align = alCustom
-    Anchors = [akTop, akLeft, akRight]
-    AutoSize = True
-    Caption = 'additional flags'
-    ClientHeight = 148
-    ClientWidth = 267
-    ParentFont = False
-    TabOrder = 3
-    object guiFlagCb: TCheckBox
-      Left = 0
-      Height = 24
-      Top = 0
-      Width = 267
-      Align = alTop
-      Caption = '-GUI'
-      OnChange = guiFlagCbChange
-      ParentFont = False
-      TabOrder = 0
-    end
-    object quietFlagCb: TCheckBox
-      Left = 0
-      Height = 24
-      Top = 24
-      Width = 267
-      Align = alTop
-      Caption = '-quiet (suppress console output)'
-      OnChange = quietFlagCbChange
-      ParentFont = False
-      TabOrder = 1
-    end
-    object silentFlagCb: TCheckBox
-      Left = 0
-      Height = 24
-      Top = 48
-      Width = 267
-      Align = alTop
-      Caption = '-silent (suppress beeps)'
-      OnChange = silentFlagCbChange
-      ParentFont = False
-      TabOrder = 2
-    end
-    object headlessFlagCb: TCheckBox
-      Left = 0
-      Height = 24
-      Top = 72
-      Width = 267
-      Align = alTop
-      Caption = '-headless (forbid input)'
-      OnChange = headlessFlagCbChange
-      ParentFont = False
-      TabOrder = 3
-    end
-    object profileFlagCb: TCheckBox
-      Left = 0
-      Height = 24
-      Top = 96
-      Width = 267
-      Align = alTop
-      Caption = '-profile'
-      OnChange = profileFlagCbChange
-      ParentFont = False
-      TabOrder = 4
-    end
-    object Label1: TLabel
-      AnchorSideLeft.Control = profileFlagCb
-      AnchorSideTop.Control = profileFlagCb
-      AnchorSideTop.Side = asrBottom
-      Left = 0
-      Height = 20
-      Top = 120
-      Width = 64
+      Width = 670
       Align = alCustom
-      Caption = 'Verbosity:'
-      ParentColor = False
+      Anchors = [akTop, akLeft, akRight]
+      AutoSize = True
+      Caption = 'script parameters'
+      ClientHeight = 23
+      ClientWidth = 666
       ParentFont = False
+      TabOrder = 0
+      object ScriptParamEdit: TComboBox
+        Left = 0
+        Height = 23
+        Top = 0
+        Width = 666
+        Align = alClient
+        ItemHeight = 15
+        OnKeyPress = scriptParamEditKeyPress
+        ParentFont = False
+        TabOrder = 0
+      end
     end
-    object verbosityEdit: TEdit
-      AnchorSideLeft.Control = Label1
-      AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = profileFlagCb
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = profileFlagCb
+    object RunButton: TButton
+      AnchorSideRight.Control = topPanel
       AnchorSideRight.Side = asrBottom
-      AnchorSideBottom.Control = GroupBox4
+      AnchorSideBottom.Control = GroupBox1
       AnchorSideBottom.Side = asrBottom
-      Left = 64
-      Height = 28
-      Top = 120
-      Width = 203
+      Left = 670
+      Height = 43
+      Top = 0
+      Width = 50
       Align = alCustom
-      Anchors = [akTop, akLeft, akRight, akBottom]
-      OnChange = verbosityEditChange
+      Anchors = [akTop, akRight, akBottom]
+      AutoSize = True
+      Caption = 'RUN'
+      ModalResult = 1
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 1
+    end
+    object flagsByShebangCb: TCheckBox
+      AnchorSideLeft.Control = topPanel
+      AnchorSideTop.Control = GroupBox1
+      AnchorSideTop.Side = asrBottom
+      Left = 3
+      Height = 19
+      Top = 43
+      Width = 147
+      Align = alCustom
+      BorderSpacing.Left = 3
+      Caption = 'take flags from shebang'
+      OnClick = flagsByShebangCbChange
+      ParentFont = False
+      TabOrder = 2
     end
   end
-  object RunButton: TButton
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = GroupBox1
-    AnchorSideBottom.Side = asrBottom
-    Left = 346
-    Height = 53
-    Top = 0
-    Width = 56
-    Align = alCustom
-    Anchors = [akTop, akRight, akBottom]
-    AutoSize = True
-    Caption = 'RUN'
-    ModalResult = 1
-    ParentFont = False
-    TabOrder = 1
-  end
-  object Button1: TButton
-    AnchorSideTop.Control = GroupBox3
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = GroupBox3
-    AnchorSideRight.Side = asrBottom
-    Left = 334
-    Height = 30
-    Top = 404
-    Width = 68
-    Align = alCustom
-    Anchors = [akTop, akRight]
-    AutoSize = True
-    Cancel = True
-    Caption = 'cancel'
-    ModalResult = 2
-    ParentFont = False
-    TabOrder = 6
-  end
-  object flagsByShebangCb: TCheckBox
-    AnchorSideLeft.Control = GroupBox1
-    AnchorSideTop.Control = GroupBox1
-    AnchorSideTop.Side = asrBottom
-    Left = 4
-    Height = 24
-    Top = 53
-    Width = 184
-    Align = alCustom
-    BorderSpacing.Left = 4
-    Caption = 'take flags from shebang'
-    OnChange = flagsByShebangCbChange
-    TabOrder = 7
-  end
-  object restrictionsGroupBox: TGroupBox
-    AnchorSideLeft.Control = GroupBox2
-    AnchorSideTop.Control = GroupBox2
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
+  object bottomPanel: TPanel
     Left = 0
-    Height = 53
-    Top = 250
-    Width = 402
-    Anchors = [akTop, akLeft, akRight]
+    Height = 296
+    Top = 62
+    Width = 720
+    Align = alClient
     AutoSize = True
-    Caption = 'side effect restriction'
-    ClientHeight = 28
-    ClientWidth = 398
-    TabOrder = 4
-    object sideEffectComboBox: TComboBox
+    BevelOuter = bvNone
+    ClientHeight = 296
+    ClientWidth = 720
+    TabOrder = 1
+    object GroupBox3: TGroupBox
+      AnchorSideBottom.Side = asrBottom
       Left = 0
-      Height = 28
+      Height = 81
       Top = 0
-      Width = 398
-      Align = alClient
-      AutoComplete = True
-      AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
-      ItemHeight = 20
-      Style = csDropDownList
+      Width = 720
+      Align = alTop
+      AutoSize = True
+      Caption = 'execution folder'
+      ClientHeight = 61
+      ClientWidth = 716
+      ParentFont = False
       TabOrder = 0
+      object scriptLocRb: TRadioButton
+        Left = 0
+        Height = 19
+        Top = 0
+        Width = 716
+        Align = alTop
+        Caption = 'script location'
+        Checked = True
+        OnChange = customLocRbChange
+        ParentFont = False
+        TabOrder = 0
+        TabStop = True
+      end
+      object customLocRb: TRadioButton
+        Left = 0
+        Height = 19
+        Top = 19
+        Width = 716
+        Align = alTop
+        Caption = 'custom location'
+        OnChange = customLocRbChange
+        ParentFont = False
+        TabOrder = 1
+      end
+      object DirectoryEdit: TDirectoryEdit
+        Left = 0
+        Height = 23
+        Top = 38
+        Width = 716
+        ShowHidden = False
+        ButtonWidth = 22
+        NumGlyphs = 1
+        Align = alClient
+        Enabled = False
+        MaxLength = 0
+        ParentFont = False
+        TabOrder = 2
+        OnChange = DirectoryEditChange
+      end
+    end
+    object Button1: TButton
+      AnchorSideTop.Control = GroupBox3
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = GroupBox3
+      AnchorSideRight.Side = asrBottom
+      Left = 660
+      Height = 25
+      Top = 81
+      Width = 60
+      Align = alCustom
+      Anchors = [akTop, akRight]
+      AutoSize = True
+      Cancel = True
+      Caption = 'cancel'
+      ModalResult = 2
+      ParentFont = False
+      TabOrder = 1
     end
   end
 end

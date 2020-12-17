@@ -105,7 +105,7 @@ PROCEDURE ensureCodeAssistanceThread;
 PROCEDURE forceFullScan;
 PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc;
+USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting;
 
 VAR codeAssistantIsRunning:boolean=false;
     codeAssistantThreadId :TThreadID;
@@ -244,7 +244,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR 
         package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
         if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                              else loadMessages:=adapters      .storedMessages(true);
-        globals^.afterEvaluation(recycler);
+        globals^.afterEvaluation(recycler,packageTokenLocation(package));
         {$ifdef debugMode}
         writeln('Code assistance end  : ',provider^.getPath);
         {$endif}
@@ -842,60 +842,33 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
   end;
 
 PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
-  VAR lengthLimit:longint;
-
-  PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
-    VAR splitIndex:longint;
-    begin
-      if length(headOrAll)<lengthLimit then begin
-        tail:='';
-        exit;
-      end;
-      splitIndex:=lengthLimit;
-      while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
-      if splitIndex<=dontSplitBefore then begin
-        splitIndex:=lengthLimit;
-        while (splitIndex<=length(headOrAll)) and (headOrAll[splitIndex]<>' ') do inc(splitIndex);
-      end;
-      tail:=copy(headOrAll,splitIndex,length(headOrAll));
-      headOrAll:=copy(headOrAll,1,splitIndex-1);
-    end;
+  VAR messageFormatter:T_guiFormatter;
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
-    VAR s,head,rest:string;
+    VAR s:string;
         m:P_storedMessage;
     begin
       for m in list do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level> 2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[m^.messageType].level<=2);
-        for s in m^.messageText do begin
-          head:=ansistring(m^.getLocation);
-          if length(head)>=lengthLimit-3 then begin
-            edit.lines.append(C_messageTypeMeta[m^.messageType].guiMarker+head);
-            head:='. '+s;
-          end else head:=head+' '+s;
-          repeat
-            splitAtSpace(head,rest,3,lengthLimit);
-            edit.lines.append(C_messageTypeMeta[m^.messageType].guiMarker+head);
-            head:='. '+rest;
-          until rest='';
-        end;
+        for s in messageFormatter.formatMessage(m) do edit.lines.append(s);
       end;
     end;
 
   begin
+    messageFormatter.create(false);
     enterCriticalSection(responseCs);
     try
       edit.clearAll;
       edit.lines.clear;
-      lengthLimit:=edit.charsInWindow;
-      if lengthLimit<20 then lengthLimit:=20;
+      messageFormatter.preferredLineLength:=edit.charsInWindow;
       hasErrors:=false;
       hasWarnings:=false;
       addErrors(localErrors);
       addErrors(externalErrors);
     finally
       leaveCriticalSection(responseCs);
+      messageFormatter.destroy;
     end;
   end;
 

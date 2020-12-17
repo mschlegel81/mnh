@@ -310,7 +310,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_array
     parts:=split(description,'#');
     setLength(result,length(parts));
     for i:=0 to length(result)-1 do begin
-      result[i].location:=C_nilTokenLocation;
+      result[i].location:=C_nilSearchTokenLocation;
       sigAndComment:=split(parts[i],'//');
       result[i].idAndSignature:=sigAndComment[0];
       if length(sigAndComment)>1

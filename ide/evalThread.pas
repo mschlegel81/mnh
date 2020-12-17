@@ -128,6 +128,7 @@ USES mnh_constants,
      mySys,
      profilingView,
      mnh_settings,
+     messageFormatting,
      eventsComponent;
 FUNCTION newPlotAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_plotSystem ;
   begin
@@ -185,7 +186,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
     messages.addOutAdapter(newProfilingAdapter (true)           ,true);
     {$ifdef debugMode}
-    messages.addConsoleOutAdapter(C_textMessages,commandLine.getConsoleMode());
+    messages.addConsoleOutAdapter(C_textMessages,commandLine.getConsoleMode(),@defaultConsoleFormatter);
     {$endif}
   end;
 
@@ -229,7 +230,7 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     inherited init(ek_normal);
     commandLine.applyAndReturnOk(@messages,true);
     if not(clf_QUIET in commandLine.mnhExecutionOptions.flags) then begin
-      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode));
+      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode,nil));
       messages.addOutAdapter(console,true);
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);
@@ -274,7 +275,7 @@ FUNCTION evaluationThread(p:pointer):ptrint;
       then state:=es_stoppedByUser
       else state:=es_finished;
       evalTime:=now-evalTime;
-      messages.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+      messages.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
       leaveCriticalSection(evaluationCs);
     end;
     interlockedDecrement(evaluationThreadsRunning);
@@ -303,7 +304,7 @@ PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
     if commandLine.getFileToInterpretFromCommandLine=''
     then package.load(lu_forDirectExecution,globals,recycler,commandLine.mainParameters)
     else package.load(lu_forCallingMain    ,globals,recycler,commandLine.mainParameters);
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     messages.setExitCode;
   end;
 
@@ -350,10 +351,10 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
   PROCEDURE doneEdit;
     begin
       package.finalize(globals.primaryContext,recycler);
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))
-      else messages.postSingal(mt_guiEditScriptsLoaded,C_nilTokenLocation);
+      else messages.postSingal(mt_guiEditScriptsLoaded,C_nilSearchTokenLocation);
       evalRequest:=nil;
     end;
 
@@ -437,12 +438,12 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end else begin
       package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-      messages.postSingal(mt_clearConsole,C_nilTokenLocation);
+      messages.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
       stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
       while (globals.primaryContext.messages^.continueEvaluation) and (stmt.token.first<>nil) do begin
@@ -451,7 +452,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       end;
       if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
       lexer.destroy;
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end;
   end;
 
@@ -503,7 +504,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
     globals.resetForEvaluation(@package,@package.reportVariables,C_allSideEffects,evalRequest.contextType,evalRequest.parameters,recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     package.clear(true);
   end;
 

@@ -4,7 +4,8 @@ USES sysutils,
      typinfo,
      myGenerics,
      basicTypes,
-     serializationUtil;
+     serializationUtil,
+     myStringUtil;
 
 TYPE
   T_stateFlag=(FlagQuietHalt,
@@ -15,6 +16,7 @@ TYPE
 
   T_messageClass=(mc_echo   ,
                   mc_print  ,
+                  mc_log    ,
                   mc_timing ,
                   mc_note   ,
                   mc_warning,
@@ -33,17 +35,20 @@ CONST
   TIMING_MARKER =#226#129#164;
   TIMING_MARKER2=#226#128#141;
 
-  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; includeLocation:boolean; triggeredFlags:T_stateFlags; end=
-    {mc_echo   }((htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_print  } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_timing } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_note   } (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
-    {mc_warning} (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
-    {mc_error  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagError]),
-    {mc_fatal  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagFatalError])
+  C_echoPrefixLength=6;
+
+  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; guiMarker:string; levelTxt:string; triggeredFlags:T_stateFlags; end=
+    {mc_echo   }((htmlSpan:''     ; guiMarker:ECHO_MARKER;    levelTxt:'';      triggeredFlags:[]),
+    {mc_print  } (htmlSpan:''     ; guiMarker:'';             levelTxt:'';      triggeredFlags:[]),
+    {mc_log    } (htmlSpan:''     ; guiMarker:'';             levelTxt:'log';   triggeredFlags:[]),
+    {mc_timing } (htmlSpan:''     ; guiMarker:TIMING_MARKER;  levelTxt:'';      triggeredFlags:[]),
+    {mc_note   } (htmlSpan:''     ; guiMarker:NOTE_MARKER;    levelTxt:'Note';  triggeredFlags:[]),
+    {mc_warning} (htmlSpan:''     ; guiMarker:WARNING_MARKER; levelTxt:'Warn';  triggeredFlags:[]),
+    {mc_error  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Error'; triggeredFlags:[FlagError]),
+    {mc_fatal  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
-    {mc_plot   } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_gui}     (htmlSpan:''     ; includeLocation:false; triggeredFlags:[])
+    {mc_plot   } (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[]),
+    {mc_gui}     (htmlSpan:''     ; guiMarker:''; levelTxt:''; triggeredFlags:[])
     {$endif});
 
 TYPE
@@ -51,6 +56,7 @@ TYPE
     mt_clearConsole,
     mt_printline,
     mt_printdirect,
+    mt_log,
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
@@ -87,10 +93,11 @@ TYPE
     mt_displayCustomForm
     {$endif});
 
-  { T_ideMessageConfig }
+  T_messageTypeSet=set of T_messageType;
 
   T_ideMessageConfig=object(T_serializable)
-    echo_input,echo_declaration,echo_output,echo_wrapping,
+    echo_input,echo_declaration,echo_output,
+      echo_wrapping, //TODO: Echo_wrapping might be obsolete by now...
     show_timing,
     show_all_userMessages:boolean;
     suppressWarningsUnderLevel:byte;
@@ -102,8 +109,6 @@ TYPE
     PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   end;
 
-  T_messageTypeSet=set of T_messageType;
-
 CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
@@ -111,48 +116,49 @@ CONST
                                                     mt_el3_noMatchingMain,
                                                     mt_el3_userDefined];
   C_messageTypeMeta:array[T_messageType] of record
-    guiMarker:string[3];
     level:shortint;
     mClass:T_messageClass;
     systemErrorLevel:byte;
   end = (
-{mt_clearConsole      }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_printline         }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_print             }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_echo_input        }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_declaration  }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_output       }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_el1_note          }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
-{mt_el1_userNote      }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
-{mt_el2_warning       }  (guiMarker: WARNING_MARKER; level: 2; mClass:mc_warning; systemErrorLevel:0),
-{mt_el2_userWarning   }  (guiMarker: WARNING_MARKER; level: 2; mClass:mc_warning; systemErrorLevel:0),
-{mt_el3_evalError     }  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:3),
-{mt_el3_noMatchingMain}  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:1),
-{mt_el3_userDefined   }  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:2),
-{mt_el4_systemError   }  (guiMarker: ERROR_MARKER  ; level: 4; mClass:mc_fatal;   systemErrorLevel:5),
-{mt_endOfEvaluation   }  (guiMarker: NOTE_MARKER   ; level:-1; mClass:mc_note;    systemErrorLevel:0),
-{mt_timing_info       }  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0)
+
+{mt_clearConsole      }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_printline         }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_print             }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_log               }  (level:-2; mClass:mc_log;     systemErrorLevel:0),
+{mt_echo_input        }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_continued    }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_el1_note          }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el1_userNote      }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el2_warning       }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el3_evalError     }  (level: 3; mClass:mc_error;   systemErrorLevel:3),
+{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   systemErrorLevel:1),
+{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   systemErrorLevel:2),
+{mt_el4_systemError   }  (level: 4; mClass:mc_fatal;   systemErrorLevel:5),
+{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    systemErrorLevel:0),
+{mt_timing_info       }  (level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_profile_call_info}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_startOfEvaluation}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_debugger_breakpoint} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayTable}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_plot_addText}        (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_addRow}         (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_dropRow}        (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_renderRequest}  (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_retrieveOptions}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_setOptions}     (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_queryClosedB...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_clear}          (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_clearAnimation} (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_clearAnimati...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_addAnimation...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_postDisplay}    (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_guiEdit_done}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_guiEditScriptsLoaded}(guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayVariableTree} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayCustomForm}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0)
+{mt_profile_call_info}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_startOfEvaluation}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayTable}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_plot_addText}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addRow}         (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_queryClosedB...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clear}          (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimati...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_guiEditScriptsLoaded}(level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
@@ -161,21 +167,21 @@ CONST
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
 
-  ECHO_CONTINUED_PREFIX='...>';
-
 TYPE
   P_storedMessage=^T_storedMessage;
   T_storedMessages=array of P_storedMessage;
+
+  { T_storedMessage }
+
   T_storedMessage=object
     protected
       refCount:longint;
       location:T_searchTokenLocation;
+      createdAt:double;
       kind:T_messageType;
       FUNCTION internalType:shortstring; virtual;
     public
-      FUNCTION prefix:shortstring;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
-      FUNCTION toString({$WARN 5024 OFF}{$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
 
@@ -183,23 +189,31 @@ TYPE
       FUNCTION rereferenced:P_storedMessage;
       FUNCTION messageClass:T_messageClass;
       PROPERTY messageType:T_messageType read kind;
-      FUNCTION messageText:T_arrayOfString; virtual;
       FUNCTION getMessageTypeName:string;
       PROPERTY getLocation:T_searchTokenLocation read location;
       PROPERTY getRefCount:longint read refCount;
+      FUNCTION isTextMessage:boolean; virtual;
+      PROPERTY getTime:double read createdAt;
+  end;
+
+  P_messageFormatProvider=^T_messageFormatProvider;
+  T_messageFormatProvider=object
+    CONSTRUCTOR create;
+    FUNCTION getClonedInstance:P_messageFormatProvider; virtual; abstract;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
   end;
 
   P_storedMessageWithText=^T_storedMessageWithText;
   T_storedMessageWithText=object(T_storedMessage)
     protected
-      txt:T_arrayOfString;
       FUNCTION internalType:shortstring; virtual;
     public
+      txt:T_arrayOfString;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
-      FUNCTION messageText:T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION isTextMessage:boolean; virtual;
   end;
 
   P_errorMessage=^T_errorMessage;
@@ -209,8 +223,6 @@ TYPE
     public
       stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; parameters:string; end;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
-      FUNCTION messageText:T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -228,12 +240,11 @@ TYPE
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 PROCEDURE disposeMessage(VAR message:P_storedMessage);
 PROCEDURE disposeMessage_(message:P_storedMessage);
-FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 FUNCTION messageTypeName(CONST m:T_messageType):string;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ];
     if x.echo_output      then result+=[mt_echo_output     ];
     if x.echo_declaration then result+=[mt_echo_declaration];
@@ -257,6 +268,16 @@ PROCEDURE disposeMessage_(message:P_storedMessage);
   begin
     if message^.unreference then dispose(message,destroy);
     message:=nil;
+  end;
+
+//------------------------------------------------------------------------------
+CONSTRUCTOR T_messageFormatProvider.create; begin end;
+DESTRUCTOR T_messageFormatProvider.destroy; begin end;
+FUNCTION T_messageFormatProvider.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  begin
+    if (message=nil) or not(message^.isTextMessage)
+    then result:=C_EMPTY_STRING_ARRAY
+    else result:=P_storedMessageWithText(message)^.txt;
   end;
 
 CONSTRUCTOR T_ideMessageConfig.create;
@@ -316,27 +337,8 @@ FUNCTION T_storedMessageWithText.internalType: shortstring; begin result:='T_sto
 FUNCTION T_payloadMessage.internalType: shortstring; begin result:='T_payloadMessage'; end;
 FUNCTION T_errorMessage.internalType: shortstring; begin result:='T_errorMessage'; end;
 
-FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
-  begin
-    case messageType of
-      mt_echo_input,
-      mt_echo_declaration:result:=' in>';
-      mt_echo_output     :result:='out>';
-      mt_el1_note,
-      mt_el1_userNote    :result:='Note ';
-      mt_el2_warning,
-      mt_el2_userWarning :result:='Warning ';
-      mt_el3_evalError,
-      mt_el3_userDefined :result:='Error ';
-      mt_el4_systemError :result:='Fatal ';
-      else result:='';
-    end;
-  end;
-
-FUNCTION T_storedMessage.prefix: shortstring;
-  begin result:=getPrefix(kind); end;
-
-CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
+CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType;
+  CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
   begin
     inherited create(messageType_,loc);
     setLength(txt,0);
@@ -349,52 +351,19 @@ CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_
     setLength(stacktrace,0);
   end;
 
-CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation);
+CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType;
+  CONST loc: T_searchTokenLocation);
   begin
     location:=loc;
     kind:=messageType_;
     refCount:=1;
+    createdAt:=now;
   end;
 
 CONSTRUCTOR T_payloadMessage.create(CONST messageType_: T_messageType);
   begin
-    inherited create(messageType_,C_nilTokenLocation);
+    inherited create(messageType_,C_nilSearchTokenLocation);
     initCriticalSection(messageCs);
-  end;
-
-FUNCTION T_storedMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
-  begin
-    result:=C_EMPTY_STRING_ARRAY;
-  end;
-
-FUNCTION T_storedMessageWithText.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
-  VAR i:longint;
-      loc:string='';
-      marker:string;
-  begin
-    if kind in [mt_printline,mt_printdirect] then exit(txt);
-    {$ifdef fullVersion}if forGui then marker:=C_messageTypeMeta[kind].guiMarker else {$endif} marker:='';
-    setLength(result,length(txt));
-    with C_messageTypeMeta[kind] do begin
-      if C_messageClassMeta[mClass].includeLocation then loc:=ansistring(location)+' ';
-      for i:=0 to length(result)-1 do begin
-        result[i]:=marker+prefix+loc+txt[i];
-        if i=0 then loc:=StringOfChar(' ',length(loc));
-      end;
-    end;
-  end;
-
-FUNCTION T_errorMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
-  VAR i,i0:longint;
-      marker:string;
-  begin
-    result:=inherited toString({$ifdef fullVersion}forGui{$endif});
-    {$ifdef fullVersion}if forGui then marker:=C_messageTypeMeta[kind].guiMarker else {$endif}marker:='';
-    i0:=length(result);
-    setLength(result,i0+length(stacktrace));
-    for i:=0 to length(stacktrace)-1 do begin
-      result[i+i0]:=marker+string(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters;
-    end;
   end;
 
 DESTRUCTOR T_storedMessage.destroy;
@@ -408,6 +377,11 @@ DESTRUCTOR T_storedMessageWithText.destroy;
     inherited destroy;
     for i:=0 to length(txt)-1 do txt[i]:='';
     setLength(txt,0);
+  end;
+
+FUNCTION T_storedMessageWithText.isTextMessage: boolean;
+  begin
+    result:=true;
   end;
 
 DESTRUCTOR T_errorMessage.destroy;
@@ -456,11 +430,6 @@ FUNCTION T_storedMessage.messageClass: T_messageClass;
     result:=C_messageTypeMeta[kind].mClass;
   end;
 
-FUNCTION T_storedMessage.messageText: T_arrayOfString;
-  begin
-    result:=C_EMPTY_STRING_ARRAY;
-  end;
-
 VAR messageTypeNames:array[T_messageType] of string;
 
 FUNCTION messageTypeName(CONST m:T_messageType):string;
@@ -472,19 +441,14 @@ FUNCTION messageTypeName(CONST m:T_messageType):string;
     result:=messageTypeNames[m];
   end;
 
-FUNCTION T_storedMessage.getMessageTypeName:string;
+FUNCTION T_storedMessage.getMessageTypeName: string;
   begin
     result:= copy(getEnumName(TypeInfo(kind),ord(kind)),4,1000);
   end;
 
-FUNCTION T_storedMessageWithText.messageText: T_arrayOfString;
+FUNCTION T_storedMessage.isTextMessage: boolean;
   begin
-    result:=txt;
-  end;
-
-FUNCTION T_errorMessage.messageText: T_arrayOfString;
-  begin
-    result:=txt;
+    result:=false;
   end;
 
 INITIALIZATION
