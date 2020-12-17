@@ -366,7 +366,7 @@ FUNCTION closeImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages^.postSingal(mt_image_close,C_nilTokenLocation);
+      context.messages^.postSingal(mt_image_close,tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -424,7 +424,7 @@ FUNCTION displayImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages^.postSingal(mt_image_postDisplay,C_nilTokenLocation);
+      context.messages^.postSingal(mt_image_postDisplay,tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
