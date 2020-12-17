@@ -56,7 +56,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
       if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
-        consoleAdapters.postTextMessage(mt_printline,C_nilTokenLocation,package^.getHelpOnMain);
+        consoleAdapters.postTextMessage(mt_printline,C_nilSearchTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
         Exclude(commandLine.mnhExecutionOptions.flags,clf_SHOW_HELP);
         globals.destroy;
@@ -66,7 +66,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       end;
       if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
       package^.load(loadMode,globals,recycler,commandLine.mainParameters);
-      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler);
+      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler,packageTokenLocation(package));
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
         include(commandLine.mnhExecutionOptions.flags,clf_GUI);

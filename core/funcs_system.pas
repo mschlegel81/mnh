@@ -168,7 +168,6 @@ FUNCTION getEnv_impl intFuncSignature;
 
 FUNCTION setExitCode_impl intFuncSignature;
   begin
-
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.intValue;
       context.messages^.setUserDefinedExitCode(ExitCode);
@@ -197,11 +196,7 @@ FUNCTION time_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('time',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'time() is deprecated. Use scriptTime instead.');
-      exit(newRealLiteral(context.wallclockTime));
-    end
-    else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(timeLoc),nil);
@@ -297,7 +292,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif},[se_alterContextState]);
   {$ifdef fullVersion}timeLoc:={$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif},[se_readContextState]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic_1{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif},[se_readContextState]);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif},[se_alterContextState]);

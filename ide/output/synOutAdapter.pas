@@ -40,7 +40,6 @@ TYPE
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
-      FUNCTION getLineLength:longint; virtual; abstract;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
   end;
@@ -68,7 +67,6 @@ TYPE
                                                                    mt_echo_declaration,
                                                                    mt_startOfEvaluation,
                                                                    mt_endOfEvaluation]);
-     FUNCTION getLineLength:longint; virtual;
   end;
 
   P_redirectionAwareConsoleOutAdapter=^T_redirectionAwareConsoleOutAdapter;
@@ -80,7 +78,7 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES ideLayoutUtil;
+USES ideLayoutUtil,messageFormatting;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -125,11 +123,6 @@ CONSTRUCTOR T_eagerInitializedOutAdapter.create(CONST synEdit_: TSynEdit; CONST 
     inherited create(messageTypesToInc);
     SynEdit:=synEdit_;
     ownerForm:=ownerForm_;
-  end;
-
-FUNCTION T_eagerInitializedOutAdapter.getLineLength:longint;
-  begin
-    result:=SynEdit.charsInWindow;
   end;
 
 CONSTRUCTOR T_redirectionAwareConsoleOutAdapter.create(CONST messageTypesToInclude_: T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
@@ -237,15 +230,15 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
         mt_clearConsole: clearSynAndBuffer;
         mt_printline:
           begin
-            if (length(m^.messageText)>0) and (m^.messageText[0]=C_formFeedChar) then begin
+            if (length(P_storedMessageWithText(m)^.txt)>0) and (P_storedMessageWithText(m)^.txt[0]=C_formFeedChar) then begin
               clearSynAndBuffer;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
             end else if lastWasDirectPrint then begin
-              if length(m^.messageText)>0 then begin
-                processDirectPrint(m^.messageText[0]);
+              if length(P_storedMessageWithText(m)^.txt)>0 then begin
+                processDirectPrint(P_storedMessageWithText(m)^.txt[0]);
               end;
-              for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
-            end else for s in m^.messageText do appendInternal(s);
+              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
+            end else for s in P_storedMessageWithText(m)^.txt do appendInternal(s);
           end;
         mt_printdirect:
           begin
@@ -260,7 +253,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
               SynEdit.executeCommand(ecEditorBottom,' ',nil);
               SynEdit.executeCommand(ecLineStart,' ',nil);
             end;
-            for s in m^.messageText do processDirectPrint(s);
+            for s in P_storedMessageWithText(m)^.txt do processDirectPrint(s);
           end;
         mt_el1_note,
         mt_el1_userNote,
@@ -314,12 +307,16 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   begin
     if not(forceFlush or autoflush) then exit;
     messageFormatter.create(false);
-    messageFormatter.preferredLineLength:=getLineLength;
     system.enterCriticalSection(adapterCs);
     result:=[];
     startOutput;
     try
       removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+      if collectedFill>0 then begin
+        messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
+        messageFormatter.wrapEcho:=wrapEcho;
+      end;
+
       for i:=0 to collectedFill-1 do begin
         include(result,collected[i]^.messageType);
         singleMessageOut(collected[i]);
@@ -340,7 +337,7 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
     try
       lastWasDirectPrint:=false;
       clear;
-      new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
+      new(clearMessage,create(mt_clearConsole,C_nilSearchTokenLocation));
       append(clearMessage);
       disposeMessage(clearMessage);
     finally

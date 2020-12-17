@@ -105,7 +105,7 @@ PROCEDURE ensureCodeAssistanceThread;
 PROCEDURE forceFullScan;
 PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc;
+USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting;
 
 VAR codeAssistantIsRunning:boolean=false;
     codeAssistantThreadId :TThreadID;
@@ -244,7 +244,7 @@ FUNCTION T_codeAssistanceData.doCodeAssistanceSynchronouslyInCritialSection(VAR 
         package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
         if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                              else loadMessages:=adapters      .storedMessages(true);
-        globals^.afterEvaluation(recycler);
+        globals^.afterEvaluation(recycler,packageTokenLocation(package));
         {$ifdef debugMode}
         writeln('Code assistance end  : ',provider^.getPath);
         {$endif}

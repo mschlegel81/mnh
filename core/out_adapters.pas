@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,
      myGenerics,mySys,
      mnh_messages,
-     mnh_constants, basicTypes;
+     mnh_constants, basicTypes,serializationUtil;
 TYPE
   T_adapterType=(at_console,
                  at_textFile,
@@ -26,7 +26,7 @@ TYPE
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
-    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
+    {at_textFile} [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
     {$ifdef fullVersion}
     {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info,mt_endOfEvaluation],
@@ -117,34 +117,49 @@ TYPE
   F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
   {$endif}
 
+  T_textFileCase=(tfc_file,tfc_stdout,tfc_stderr);
+  P_textFileAdapterSpecification=^T_textFileAdapterSpecification;
   T_textFileAdapterSpecification=object
-    fileName:string;
-    verbosityPart:string;
-    forceNewFile:boolean;
     private
+      verbosityPart:string;
       messagesToInclude:T_messageTypeSet;
     public
+      textFileCase:T_textFileCase;
+      fileName        :string;
+      forceNewFile    :boolean;
+      useLogFormatter :boolean;
+      handlePrintAsLog:boolean;
+      logDateFormat   :string;
+      logLocationLen  :longint;
+
+      PROCEDURE setDefaults;
       PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
       FUNCTION  getFilenameAndOptions:string;
       FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
       PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
-      PROCEDURE applyScriptName(CONST scriptName:string);
+      FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
+      PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
+      PROCEDURE finalizeBeforeApplication(CONST scriptName:string);
+      PROPERTY getFilename:string read fileName;
+      PROPERTY getVerbosityPart:string read verbosityPart;
+      PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
+      PROPERTY getMessageTypes:T_messageTypeSet read messagesToInclude;
+
   end;
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
       messageFormatProvider:P_messageFormatProvider;
+      textFileCase:T_textFileCase;
       outputFileName:ansistring;
       forceRewrite:boolean;
       lastOutput:double;
       FUNCTION flush:boolean;
     public
-      CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
+      CONSTRUCTOR create(CONST fileName:ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
-      {$ifdef debugMode}
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      {$endif}
   end;
 
   T_flaggedAdapter=record
@@ -212,8 +227,8 @@ TYPE
       FUNCTION triggersBeep:boolean;                                                                                                  virtual;
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification):P_textFileOutAdapter;
-      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode):P_consoleOutAdapter;
+      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider):P_textFileOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
@@ -364,7 +379,7 @@ FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSe
     end;
   end;
 
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet):string;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
   VAR toSwitchOn :T_messageTypeSet=[];
       toSwitchOff:T_messageTypeSet=[];
       mt:T_messageType;
@@ -400,20 +415,54 @@ FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_mes
     if minLevel<5 then result+=intToStr(minLevel);
   end;
 
-PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
+PROCEDURE T_textFileAdapterSpecification.setVerbosityPart(CONST s: string; CONST globalMessageTypes: T_messageTypeSet);
+  begin
+    verbosityPart:=s;
+    messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.setDefaults;
+  begin
+    fileName:='?.log';
+    textFileCase:=tfc_file;
+    forceNewFile:=true;
+    useLogFormatter:=true;
+    handlePrintAsLog:=false;
+    verbosityPart:='1';
+    messagesToInclude:=stringToMessageTypeSet('1');
+    logDateFormat:='hh:mm:ss.zzz';
+    logLocationLen:=25;
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string;
+  CONST globalMessageTypes: T_messageTypeSet);
   begin
     splitIntoLogNameAndOption(s,fileName,verbosityPart);
+    if uppercase(fileName)='STDOUT'
+    then textFileCase:=tfc_stdout
+    else if uppercase(fileName)='STDOUT'
+    then textFileCase:=tfc_stderr
+    else textFileCase:=tfc_file;
     messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
   end;
 
 FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
   begin
-    result:=fileName+'('+verbosityPart+')';
+    case textFileCase of
+      tfc_stdout: result:='stdOut('+verbosityPart+')';
+      tfc_stderr: result:='stdErr('+verbosityPart+')';
+      tfc_file  : result:=fileName+'('+verbosityPart+')';
+    end;
   end;
 
 FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
-    if SameFileName(fileName,other.fileName) then begin
+    if SameFileName(fileName,other.fileName) and
+       (useLogFormatter =other.useLogFormatter) and
+       (handlePrintAsLog=other.handlePrintAsLog) and
+       (logDateFormat   =other.logDateFormat) and
+       (logLocationLen  =other.logLocationLen)
+    then begin
       //In conflict, revert to appending mode
       other.forceNewFile:=other.forceNewFile and forceNewFile;
       //Unite message types
@@ -426,13 +475,47 @@ FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapte
 
 PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterSpecification);
   begin
-    fileName         :=original.fileName         ;
     verbosityPart    :=original.verbosityPart    ;
-    forceNewFile     :=original.forceNewFile     ;
     messagesToInclude:=original.messagesToInclude;
+
+    textFileCase     :=original.textFileCase     ;
+    fileName         :=original.fileName         ;
+
+    forceNewFile     :=original.forceNewFile     ;
+    useLogFormatter  :=original.useLogFormatter  ;
+    handlePrintAsLog :=original.handlePrintAsLog ;
+    logDateFormat    :=original.logDateFormat    ;
+    logLocationLen   :=original.logLocationLen   ;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.applyScriptName(CONST scriptName: string);
+FUNCTION T_textFileAdapterSpecification.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
+  begin
+    verbosityPart:=stream.readAnsiString;
+    messagesToInclude:=stringToMessageTypeSet(verbosityPart);
+    textFileCase:=T_textFileCase(stream.readByte([byte(tfc_file),byte(tfc_stderr),byte(tfc_stdout)]));
+    fileName:=stream.readAnsiString;
+    forceNewFile    :=stream.readBoolean   ;
+    useLogFormatter :=stream.readBoolean   ;
+    handlePrintAsLog:=stream.readBoolean   ;
+    logDateFormat   :=stream.readAnsiString;
+    logLocationLen  :=stream.readLongint   ;
+    result:=stream.allOkay;
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
+  begin
+    verbosityPart:=messageTypeSetToString(messagesToInclude);
+    stream.writeAnsiString(verbosityPart);
+    stream.writeByte(byte(textFileCase));
+    stream.writeAnsiString(fileName);
+    stream.writeBoolean(forceNewFile);
+    stream.writeBoolean(useLogFormatter);
+    stream.writeBoolean(handlePrintAsLog);
+    stream.writeAnsiString(logDateFormat);
+    stream.writeLongint(logLocationLen);
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.finalizeBeforeApplication(CONST scriptName: string);
   begin
     fileName:=ansiReplaceStr(fileName,'?',scriptName);
   end;
@@ -798,15 +881,15 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
     end;
   end;
 
-FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification): P_textFileOutAdapter;
+FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider): P_textFileOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.messagesToInclude,specification.forceNewFile,nil));
+    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,messageFormatProvider));
     addOutAdapter(result,true);
   end;
 
-FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode): P_consoleOutAdapter;
+FUNCTION T_messagesDistributor.addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider): P_consoleOutAdapter;
   begin
-    new(result,create(messageTypesToInclude,consoleMode,nil));
+    new(result,create(messageTypesToInclude,consoleMode,formatProvider));
     addOutAdapter(result,true);
   end;
 
@@ -1009,9 +1092,8 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
   begin
     inherited create(at_console,messageTypesToInclude_);
 
-    if formatProvider=nil
-    then new(P_defaultConsoleFormatter(messageFormatProvider),create)
-    else messageFormatProvider:=formatProvider^.getClonedInstance;
+    assert(formatProvider<>nil);
+    messageFormatProvider:=formatProvider^.getClonedInstance;
 
     {$ifdef Windows}
     case consoleOutMode of
@@ -1044,37 +1126,37 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       s:string;
   begin
     result:=message^.messageType in messageTypesToInclude;
-    if result then with message^ do begin
+    if result then begin
       enterCriticalSection(adapterCs);
       try
-        case messageType of
+        case message^.messageType of
           mt_clearConsole: mySys.clearConsole;
           mt_printline: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do begin
-              if messageText[i]=C_formFeedChar
+            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do begin
+              if P_storedMessageWithText(message)^.txt[i]=C_formFeedChar
               then mySys.clearConsole
               {$ifdef Windows}
-              else writeln(printHandle,messageText[i]);
+              else writeln(printHandle,P_storedMessageWithText(message)^.txt[i]);
               {$else}
               else begin
                 if mode in [com_normal,com_stdout_only]
-                then writeln(       messageText[i])
-                else writeln(stdErr,messageText[i]);
+                then writeln(       P_storedMessageWithText(message)^.txt[i])
+                else writeln(stdErr,P_storedMessageWithText(message)^.txt[i]);
               end;
               {$endif}
             end;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(messageText)-1 do
+            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do
               {$ifdef Windows}
-              write(printHandle,messageText[i]);
+              write(printHandle,P_storedMessageWithText(message)^.txt[i]);
               {$else}
               begin
                 if mode in [com_normal,com_stdout_only]
-                then write(       messageText[i])
-                else write(stdErr,messageText[i]);
+                then write(       P_storedMessageWithText(message)^.txt[i])
+                else write(stdErr,P_storedMessageWithText(message)^.txt[i]);
               end;
               {$endif}                  end;
           else for s in messageFormatProvider^.formatMessage(message) do
@@ -1206,21 +1288,28 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
       if collectedFill>0 then begin
         result:=true;
         try
-          ForceDirectories(extractFilePath(outputFileName));
-          assign(handle,outputFileName);
-          if fileExists(outputFileName) and not(forceRewrite)
-          then system.append(handle)
-          else rewrite(handle);
+          case textFileCase of
+            tfc_file  : begin
+              ForceDirectories(extractFilePath(outputFileName));
+              assign(handle,outputFileName);
+              if fileExists(outputFileName) and not(forceRewrite)
+              then system.append(handle)
+              else rewrite(handle);
+            end;
+            tfc_stdout: handle:=StdOut;
+            tfc_stderr: handle:=stdErr;
+          end;
+
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
             case collected[i]^.messageType of
-              mt_printline  : for s in collected[i]^.messageText do writeln(handle,s);
-              mt_printdirect: for s in collected[i]^.messageText do write  (handle,s);
+              mt_clearConsole: if textFileCase<>tfc_file then mySys.clearConsole;
+              mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
               else for s in messageFormatProvider^.formatMessage(collected[i]) do writeln(handle,s);
             end;
           end;
           clear;
-          close(handle);
+          if textFileCase=tfc_file then close(handle);
         except
         end;
       end else result:=false;
@@ -1229,32 +1318,30 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
     end;
   end;
 
-CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
+CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
   begin
     inherited create(at_textFile,messageTypesToInclude_);
 
-    if formatProvider=nil
-    then new(P_logFormatter(messageFormatProvider),create)
-    else messageFormatProvider:=formatProvider^.getClonedInstance;
+    assert(formatProvider<>nil);
+    messageFormatProvider:=formatProvider^.getClonedInstance;
 
+    textFileCase:=tfc;
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
     lastOutput:=now;
   end;
 
-{$ifdef debugMode}
 FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
   begin
     result:=false;
     enterCriticalSection(adapterCs);
     try
       result:=inherited append(message);
-      if collectedFill>100 then flush;
+      if (collectedFill>100) or (textFileCase<>tfc_file) then flush;
     finally
       leaveCriticalSection(adapterCs);
     end;
   end;
-{$endif}
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin
