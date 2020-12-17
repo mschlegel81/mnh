@@ -196,7 +196,7 @@ FUNCTION time_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('time',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(timeLoc),nil);

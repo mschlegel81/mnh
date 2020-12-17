@@ -57,7 +57,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
     note("Collected the following output: \n",output.join("\n"));
     scriptFileName.isSmokeTest
     ? logSmokeTestRunTime(logName,
-                          time-startTime,
+                          scriptTime-startTime,
                           doLog)
     : checkExpectation(
         logName,
