@@ -291,7 +291,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST sideEffectWhiteli
     globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     result:=messages.storedMessages(false);
     ExitCode:=messages.getExitCode;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
@@ -308,7 +308,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; VAR rec
     new(callAndIdInfos,create);
     {$endif}
     packageToInspect.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion},callAndIdInfos{$endif});
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     result:=errorHolder.storedMessages(true);
     for m in result do m^.rereferenced;
     errorHolder.destroy;
@@ -377,7 +377,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       else globals.primaryContext.callDepth:=callerContext^.callDepth+50;
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
     finally
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
       result:=messagesToLiteralForSandbox(messages.storedMessages(false),C_textMessages,messages.getExitCode);
       globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
@@ -421,7 +421,7 @@ FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfStrin
       package.load(lu_usageScan,globals,recycler,C_EMPTY_STRING_ARRAY);
       result:=package.usedAndExtendedPackages;
     except end;
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     package.clear(true);
     globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);

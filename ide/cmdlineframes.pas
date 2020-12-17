@@ -1,25 +1,28 @@
-unit cmdLineFrames;
+UNIT cmdLineFrames;
 
 {$mode objfpc}{$H+}
 
-interface
+INTERFACE
 
-uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, StdCtrls, ExtCtrls,
+USES
+  Classes, sysutils, Forms, Controls, ComCtrls, StdCtrls, ExtCtrls,
   commandLineParameters, mnh_settings,out_adapters,messageFormatting,mnh_constants;
 
-type
+TYPE
 
   { TCmdLineParametersFrame }
 
   TCmdLineParametersFrame = class(TFrame)
-    addOutFile: TButton;
+    addOutfile: TButton;
     cbConsoleLikeLog: TCheckBox;
     cbConvertPrintToLog: TCheckBox;
     cbLogAppend: TCheckBox;
+    cmdLinePreviewEdit: TEdit;
     forceStdErrCb: TCheckBox;
     forceStdOutCb: TCheckBox;
+    Label4: TLabel;
     outputFileComboBox: TComboBox;
+    Panel1: TPanel;
     profileFlagCb: TCheckBox;
     Label3: TLabel;
     logLocationLengthEdit: TEdit;
@@ -53,373 +56,439 @@ type
     fullVersionRb: TRadioButton;
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
-    procedure addOutFileClick(Sender: TObject);
-    procedure cbConsoleLikeLogClick(Sender: TObject);
-    procedure cbConvertPrintToLogClick(Sender: TObject);
-    procedure cbLogAppendClick(Sender: TObject);
-    procedure forceStdErrCbClick(Sender: TObject);
-    procedure forceStdOutCbClick(Sender: TObject);
-    procedure guiFlagCbClick(Sender: TObject);
-    procedure headlessFlagCbClick(Sender: TObject);
-    procedure anyPage1Change(Sender: TObject);
-    procedure lightVersionRbClick(Sender: TObject);
-    procedure logFilenameEditEditingDone(Sender: TObject);
-    procedure logLocationLengthEditEditingDone(Sender: TObject);
-    procedure outFileVerbosityEditEditingDone(Sender: TObject);
-    procedure profileFlagCbClick(Sender: TObject);
-    procedure rbOutputToFileClick(Sender: TObject);
-    procedure rbOutputToStderrClick(Sender: TObject);
-    procedure rbOutputToStdoutClick(Sender: TObject);
-    procedure removeOutFileClick(Sender: TObject);
+    PROCEDURE addOutFileClick(Sender: TObject);
+    PROCEDURE cbConsoleLikeLogClick(Sender: TObject);
+    PROCEDURE cbConvertPrintToLogClick(Sender: TObject);
+    PROCEDURE cbLogAppendClick(Sender: TObject);
+    PROCEDURE forceStdErrCbClick(Sender: TObject);
+    PROCEDURE forceStdOutCbClick(Sender: TObject);
+    PROCEDURE guiFlagCbClick(Sender: TObject);
+    PROCEDURE headlessFlagCbClick(Sender: TObject);
+    PROCEDURE anyPage1Change(Sender: TObject);
+    PROCEDURE lightVersionRbClick(Sender: TObject);
+    PROCEDURE logFilenameEditEditingDone(Sender: TObject);
+    PROCEDURE logLocationLengthEditEditingDone(Sender: TObject);
+    PROCEDURE outFileVerbosityEditEditingDone(Sender: TObject);
+    PROCEDURE pauseFlagCbClick(Sender: TObject);
+    PROCEDURE pauseOnErrorFlagCbClick(Sender: TObject);
+    PROCEDURE profileFlagCbClick(Sender: TObject);
+    PROCEDURE rbOutputToFileClick(Sender: TObject);
+    PROCEDURE rbOutputToStderrClick(Sender: TObject);
+    PROCEDURE rbOutputToStdoutClick(Sender: TObject);
+    PROCEDURE removeOutFileClick(Sender: TObject);
   private
-    procedure updateLogPreview;
-    procedure updateLogSection;
-    procedure initLabels;
-    function currentAdapterSpecification:P_textFileAdapterSpecification;
+    optionsToUpdate:P_mnhExecutionOptions;
+    initializing:boolean;
+    PROCEDURE updateLogPreview;
+    PROCEDURE updateLogSection;
+    PROCEDURE initLabels;
+    FUNCTION currentAdapterSpecification:P_textFileAdapterSpecification;
+    PROCEDURE updateLogComboBox(CONST preferredItemIndex:longint);
   public
-    execOptions:T_mnhExecutionOptions;
-    procedure initFromShebang(CONST s:String; CONST requires: T_sideEffects);
-    procedure initFromExecOptions(CONST opt:T_mnhExecutionOptions);
+    CONSTRUCTOR create(TheOwner: TComponent); override;
+    PROCEDURE initFromExecOptions(CONST opt:P_mnhExecutionOptions);
 
   end;
 
-implementation
+PROCEDURE detachCmdLineParametersFrameInstance;
+FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl; CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
+IMPLEMENTATION
 USES mnh_messages,myGenerics,litVar,basicTypes,myStringUtil;
 {$R *.lfm}
+VAR myFrame:TCmdLineParametersFrame=nil;
+
+PROCEDURE detachCmdLineParametersFrameInstance;
+  begin
+    if myFrame<>nil then myFrame.parent:=nil;
+  end;
+
+FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl; CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
+  begin
+    if myFrame=nil then myFrame:=TCmdLineParametersFrame.create(Application);
+    myFrame.parent:=parent;
+    myFrame.initFromExecOptions(optionsToUpdate);
+  end;
 
 { TCmdLineParametersFrame }
 
-procedure TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
   begin
-    guiFlagCb.Checked:=false;
+    guiFlagCb.checked    :=false;
+    profileFlagCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a=nil then exit;
-    a^.fileName:=logFilenameEdit.Caption;
+    a^.fileName:=logFilenameEdit.caption;
+    updateLogComboBox(outputFileComboBox.ItemIndex);
   end;
 
-procedure TCmdLineParametersFrame.logLocationLengthEditEditingDone(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.logLocationLengthEditEditingDone(Sender: TObject);
   VAR i:longint;
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a=nil then exit;
-    i:=StrToIntDef(logLocationLengthEdit.Text,maxlongint);
-    if i<0 then i:=MaxLongint;
-    logLocationLengthEdit.Text:=IntToStr(i);
+    i:=strToIntDef(logLocationLengthEdit.text,maxLongint);
+    if i<0 then i:=maxLongint;
+    logLocationLengthEdit.text:=intToStr(i);
     a^.logLocationLen:=i;
     updateLogPreview;
+    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.outFileVerbosityEditEditingDone(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.outFileVerbosityEditEditingDone(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a<>nil then begin
-      a^.setVerbosityPart(outputFileComboBox.Text,stringToMessageTypeSet(execOptions.verbosityString));
+      a^.setVerbosityPart(outFileVerbosityEdit.text,stringToMessageTypeSet(optionsToUpdate^.verbosityString));
       updateLogPreview;
+      cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
     end;
   end;
 
-procedure TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
   begin
-    if profileFlagCb.Checked then fullVersionRb.Checked:=True;
+    if pauseFlagCb.checked then headlessFlagCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
+  begin
+    if pauseOnErrorFlagCb.checked then headlessFlagCb.checked:=false;
+  end;
+
+PROCEDURE TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
+  begin
+    if profileFlagCb.checked then fullVersionRb.checked:=true;
+  end;
+
+PROCEDURE TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
-    logFilenameEdit.Enabled:=true;
+    logFilenameEdit.enabled:=true;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_file;
+    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
-    logFilenameEdit.Enabled:=false;
+    logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stderr;
+    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
-    logFilenameEdit.Enabled:=false;
+    logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stdout;
+    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
+  VAR logIdxToDrop:longint;
+      i:longint;
   begin
-
+    logIdxToDrop:=outputFileComboBox.ItemIndex;
+    with optionsToUpdate^ do if (logIdxToDrop>=0) and (logIdxToDrop<length(deferredAdapterCreations)) then begin
+      for i:=logIdxToDrop to length(deferredAdapterCreations)-2 do deferredAdapterCreations[i]:=deferredAdapterCreations[i+1];
+      setLength(deferredAdapterCreations,length(deferredAdapterCreations)-1);
+      updateLogComboBox(logIdxToDrop);
+      updateLogSection;
+    end;
   end;
 
-procedure TCmdLineParametersFrame.updateLogPreview;
+PROCEDURE TCmdLineParametersFrame.updateLogPreview;
   VAR specification:P_textFileAdapterSpecification;
       formatter:P_messageFormatProvider;
-  FUNCTION formattedLinesFor(CONST messageType:T_messageType; CONST lineIndex:longint;
-                             CONST txt1:string):T_arrayOfString;
+  PROCEDURE formattedLinesFor(CONST messageType:T_messageType; CONST lineIndex:longint;
+                             CONST txt1:string);
     VAR message:T_storedMessageWithText;
         location:T_searchTokenLocation;
+        toAppend:T_arrayOfString;
+        line:string;
     begin
       location.fileName:='/home/user/scripts/myTestScript.mnh';
       location.line:=lineIndex;
       location.column:=1;
       message.create(messageType,location,split(txt1,'#'));
-      result:=formatter^.formatMessage(@message);
+      toAppend:=formatter^.formatMessage(@message);
+      for line in toAppend do formatPreviewMemo.append(line);
       message.unreference;
       message.destroy;
     end;
 
-  FUNCTION formattedLinesForOutput:T_arrayOfString;
+  PROCEDURE formattedLinesForOutput;
     VAR message:T_echoOutMessage;
         location:T_searchTokenLocation;
+        toAppend:T_arrayOfString;
+        line:string;
     begin
       location.fileName:='/home/user/scripts/myTestScript.mnh';
       location.line:=2;
       location.column:=1;
       message.create(newVoidLiteral,location);
-      result:=formatter^.formatMessage(@message);
+      toAppend:=formatter^.formatMessage(@message);
+      for line in toAppend do formatPreviewMemo.append(line);
       message.unreference;
       message.destroy;
     end;
 
-  VAR s:string;
-      messagesToInclude:T_messageTypeSet;
+  VAR messagesToInclude:T_messageTypeSet;
   begin
     specification:=currentAdapterSpecification;
-    formatPreviewMemo.Clear;
+    formatPreviewMemo.clear;
     if specification=nil then exit;
 
     formatter:=getFormatterFor(specification^);
     messagesToInclude:=specification^.getMessageTypes;
 
-    if mt_echo_declaration in messagesToInclude then
-    for s in formattedLinesFor(mt_echo_declaration,1,'f(x)->2*x+3;') do formatPreviewMemo.Append(s);
+    if mt_echo_declaration in messagesToInclude
+    then formattedLinesFor(mt_echo_declaration,1,'f(x)->2*x+3;');
 
-    if mt_echo_input in messagesToInclude then
-    for s in formattedLinesFor(mt_echo_input,2,'print("f(7)=",f(7));') do formatPreviewMemo.Append(s);
+    if mt_echo_input in messagesToInclude
+    then formattedLinesFor(mt_echo_input,2,'print("f(7)=",f(7));');
 
-    if mt_printline in messagesToInclude then
-    for s in formattedLinesFor(mt_printline,2,'f(7)=17') do formatPreviewMemo.Append(s);
+    if mt_printline in messagesToInclude
+    then formattedLinesFor(mt_printline,2,'f(7)=17');
 
-    if mt_echo_output in messagesToInclude then
-    for s in formattedLinesForOutput do formatPreviewMemo.Append(s);
+    if mt_echo_output in messagesToInclude
+    then formattedLinesForOutput;
 
-    if mt_log in messagesToInclude then
-    for s in formattedLinesFor(mt_log,20,'This is a log message.') do formatPreviewMemo.Append(s);
+    if mt_log in messagesToInclude
+    then formattedLinesFor(mt_log,20,'This is a log message.');
 
-    if mt_el1_userNote in messagesToInclude then
-    for s in formattedLinesFor(mt_el1_userNote,21,'This is a (user) note.') do formatPreviewMemo.Append(s);
+    if mt_el1_userNote in messagesToInclude
+    then formattedLinesFor(mt_el1_userNote,21,'This is a (user) note.');
 
-    if mt_el1_note in messagesToInclude then
-    for s in formattedLinesFor(mt_el1_note,22,'This is a builtin note.#Like user notes it may contain multiple lines...') do formatPreviewMemo.Append(s);
+    if mt_el1_note in messagesToInclude
+    then formattedLinesFor(mt_el1_note,22,'This is a builtin note.#Like user notes it may contain multiple lines...');
 
-    if mt_el2_userWarning in messagesToInclude then
-    for s in formattedLinesFor(mt_el2_userWarning,23,'This is a (user) warning message.') do formatPreviewMemo.Append(s);
+    if mt_el2_userWarning in messagesToInclude
+    then formattedLinesFor(mt_el2_userWarning,23,'This is a (user) warning message.');
 
-    if mt_el2_warning in messagesToInclude then
-    for s in formattedLinesFor(mt_el2_warning,24,'This is a builtin warning message.') do formatPreviewMemo.Append(s);
+    if mt_el2_warning in messagesToInclude
+    then formattedLinesFor(mt_el2_warning,24,'This is a builtin warning message.');
 
-    if mt_el3_evalError in messagesToInclude then
-    for s in formattedLinesFor(mt_el3_evalError,25,'This is an error!!!#An erromessage may contain multiple lines.') do formatPreviewMemo.Append(s);
+    if mt_el3_evalError in messagesToInclude
+    then formattedLinesFor(mt_el3_evalError,25,'This is an error!!!#An erromessage may contain multiple lines.');
 
-    if mt_timing_info in messagesToInclude then
-    for s in formattedLinesFor(mt_timing_info,0,'Importing time      802.108ms#Tokenizing time       9.126ms#Declaration time     55.315ms#Interpretation time   0.000ms#Unaccounted for       1.044ms#-----------------------------#Total               867.593ms#') do formatPreviewMemo.Append(s);
+    if mt_timing_info in messagesToInclude
+    then formattedLinesFor(mt_timing_info,0,'Importing time      802.108ms#Tokenizing time       9.126ms#Declaration time     55.315ms#Interpretation time   0.000ms#Unaccounted for       1.044ms#-----------------------------#Total               867.593ms#');
     dispose(formatter,destroy);
   end;
 
-procedure TCmdLineParametersFrame.updateLogSection;
+PROCEDURE TCmdLineParametersFrame.updateLogSection;
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
-    GroupBox5        .Enabled:=(a<>nil);
-    verbosityGroupBox.Enabled:=(a<>nil);
-    GroupBox6        .Enabled:=(a<>nil);
+    GroupBox5        .enabled:=(a<>nil);
+    verbosityGroupBox.enabled:=(a<>nil);
+    GroupBox6        .enabled:=(a<>nil);
     if a=nil then exit;
 
-    rbOutputToFile  .Checked:=a^.textFileCase=tfc_file;
-    rbOutputToStderr.Checked:=a^.textFileCase=tfc_stderr;
-    rbOutputToStdout.Checked:=a^.textFileCase=tfc_stdout;
-    logFilenameEdit.Text:=a^.fileName;
+    rbOutputToFile  .checked:=a^.textFileCase=tfc_file;
+    rbOutputToStderr.checked:=a^.textFileCase=tfc_stderr;
+    rbOutputToStdout.checked:=a^.textFileCase=tfc_stdout;
+    logFilenameEdit.text:=a^.fileName;
 
-    outFileVerbosityEdit.Text:=a^.getVerbosityPart;
+    outFileVerbosityEdit.text:=a^.getVerbosityPart;
 
-    cbConsoleLikeLog.Checked:=not(a^.useLogFormatter);
-    cbConvertPrintToLog.Enabled:=a^.useLogFormatter;
-    cbConvertPrintToLog.Checked:=a^.handlePrintAsLog;
-    timeFormatEdit.Enabled:=a^.useLogFormatter;
-    timeFormatEdit.Text   :=a^.logDateFormat;
-    logLocationLengthEdit.Enabled:=a^.useLogFormatter;
-    logLocationLengthEdit.Text   :=intTostr(a^.logLocationLen);
+    cbConsoleLikeLog.checked:=not(a^.useLogFormatter);
+    cbConvertPrintToLog.enabled:=a^.useLogFormatter;
+    cbConvertPrintToLog.checked:=a^.handlePrintAsLog;
+    timeFormatEdit.enabled:=a^.useLogFormatter;
+    timeFormatEdit.text   :=a^.logDateFormat;
+    logLocationLengthEdit.enabled:=a^.useLogFormatter;
+    logLocationLengthEdit.text   :=intToStr(a^.logLocationLen);
     updateLogPreview;
+    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.initLabels;
+PROCEDURE TCmdLineParametersFrame.initLabels;
   VAR i:longint;
   begin
-    lightVersionRb.Caption:=settings.lightFlavourLocation;
-    lightVersionRb.Enabled:=FileExists(settings.lightFlavourLocation);
-    fullVersionRb.Caption :=settings.fullFlavourLocation;
+    lightVersionRb.caption:=settings.lightFlavourLocation;
+    lightVersionRb.enabled:=fileExists(settings.lightFlavourLocation);
+    fullVersionRb.caption :=settings.fullFlavourLocation;
 
-    guiFlagCb.Caption:=FLAG_GUI;
-    headlessFlagCb.Caption:=FLAG_HEADLESS;
-    pauseFlagCb.Caption:=FLAG_PAUSE_ALWAYS;
-    pauseOnErrorFlagCb.Caption:=FLAG_PAUSE_ON_ERR;
+    guiFlagCb.caption:=FLAG_GUI;
+    headlessFlagCb.caption:=FLAG_HEADLESS;
+    pauseFlagCb.caption:=FLAG_PAUSE_ALWAYS;
+    pauseOnErrorFlagCb.caption:=FLAG_PAUSE_ON_ERR;
 
-    quietFlagCb.Caption:=FLAG_QUIET;
-    silentFlagCb.Caption:=FLAG_SILENT;
-    profileFlagCb.Caption:=FLAG_PROFILE;
-    forceStdOutCb.Caption:=FLAG_STDOUT;
-    forceStdErrCb.Caption:=FLAG_STDERR;
+    quietFlagCb.caption:=FLAG_QUIET;
+    silentFlagCb.caption:=FLAG_SILENT;
+    profileFlagCb.caption:=FLAG_PROFILE;
+    forceStdOutCb.caption:=FLAG_STDOUT;
+    forceStdErrCb.caption:=FLAG_STDERR;
 
-    sideEffectsComboBox.Items.Clear;
-    for i:=0 to length(C_sideEffectProfile)-1 do sideEffectsComboBox.Items.Add(C_sideEffectProfile[i].name);
+    sideEffectsComboBox.items.clear;
+    for i:=0 to length(C_sideEffectProfile)-1 do sideEffectsComboBox.items.add(C_sideEffectProfile[i].name);
+    sideEffectsComboBox.ItemIndex:=0;
   end;
 
-function TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
+FUNCTION TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
   begin
-    if (outputFileComboBox.ItemIndex>=0) and (outputFileComboBox.ItemIndex<length(execOptions.deferredAdapterCreations))
-    then result:=@(execOptions.deferredAdapterCreations[outputFileComboBox.ItemIndex])
+    if (outputFileComboBox.ItemIndex>=0) and (outputFileComboBox.ItemIndex<length(optionsToUpdate^.deferredAdapterCreations))
+    then result:=@(optionsToUpdate^.deferredAdapterCreations[outputFileComboBox.ItemIndex])
     else result:=nil;
   end;
 
-procedure TCmdLineParametersFrame.initFromShebang(const s: String; const requires: T_sideEffects);
-  VAR tempOptions:T_mnhExecutionOptions;
-  begin
-    tempOptions.create;
-    tempOptions.initFromShebang(s,requires);
-    initFromExecOptions(tempOptions);
-    tempOptions.destroy;
-  end;
-
-procedure TCmdLineParametersFrame.initFromExecOptions(const opt: T_mnhExecutionOptions);
+PROCEDURE TCmdLineParametersFrame.updateLogComboBox(CONST preferredItemIndex: longint);
   VAR i:longint;
   begin
-    initLabels;
-    execOptions.clear;
-    execOptions.copyFrom(opt);
-
-    lightVersionRb.Checked:=lightVersionRb.Enabled and opt.callLightFlavour;
-    fullVersionRb.Checked:=not(lightVersionRb.Checked);
-
-    guiFlagCb         .Checked:=clf_GUI          in opt.flags;
-    headlessFlagCb    .Checked:=clf_HEADLESS     in opt.flags;
-    pauseFlagCb       .Checked:=clf_PAUSE_ALWAYS in opt.flags;
-    pauseOnErrorFlagCb.Checked:=clf_PAUSE_ON_ERR in opt.flags;
-    quietFlagCb       .Checked:=clf_QUIET        in opt.flags;
-    silentFlagCb      .Checked:=clf_SILENT       in opt.flags;
-    profileFlagCb     .Checked:=clf_PROFILE      in opt.flags;
-    forceStdErrCb     .Checked:=clf_FORCE_STDERR in opt.flags;
-    forceStdOutCb     .Checked:=clf_FORCE_STDOUT in opt.flags;
-    consoleVerbosityEdit.Caption:=opt.verbosityString;
-    sideEffectsComboBox.ItemIndex:=opt.sideEffectProfile;
-
-    outputFileComboBox.Items.Clear;
-    setLength(execOptions.deferredAdapterCreations,length(opt.deferredAdapterCreations));
-    for i:=0 to length(opt.deferredAdapterCreations)-1 do begin
-      execOptions.deferredAdapterCreations[i].copy(opt.deferredAdapterCreations[i]);
-      outputFileComboBox.Items.Add(IntToStr(i+1));
+    outputFileComboBox.items.clear;
+    for i:=0 to length(optionsToUpdate^.deferredAdapterCreations)-1 do begin
+      outputFileComboBox.items.add(intToStr(i+1)+': '+optionsToUpdate^.deferredAdapterCreations[i].fileName);
     end;
-    if length(opt.deferredAdapterCreations)>0
-    then outputFileComboBox.ItemIndex:= 0
+    if length(optionsToUpdate^.deferredAdapterCreations)>0
+    then begin
+      if (preferredItemIndex>=0) and (preferredItemIndex<outputFileComboBox.DropDownCount)
+      then outputFileComboBox.ItemIndex:= preferredItemIndex
+      else outputFileComboBox.ItemIndex:= 0;
+    end
     else outputFileComboBox.ItemIndex:=-1;
-    updateLogSection;
-    updateLogPreview;
   end;
 
-procedure TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
+CONSTRUCTOR TCmdLineParametersFrame.create(TheOwner: TComponent);
+  begin
+    inherited create(TheOwner);
+    optionsToUpdate:=nil;
+    initLabels;
+  end;
+
+PROCEDURE TCmdLineParametersFrame.initFromExecOptions(CONST opt:P_mnhExecutionOptions);
+  VAR i:longint;
+  begin
+    initializing:=true;
+    initLabels;
+    optionsToUpdate:=opt;
+
+    lightVersionRb.checked:=lightVersionRb.enabled and optionsToUpdate^.callLightFlavour;
+    fullVersionRb.checked:=not(lightVersionRb.checked);
+
+    guiFlagCb         .checked:=clf_GUI          in optionsToUpdate^.flags;
+    headlessFlagCb    .checked:=clf_HEADLESS     in optionsToUpdate^.flags;
+    pauseFlagCb       .checked:=clf_PAUSE_ALWAYS in optionsToUpdate^.flags;
+    pauseOnErrorFlagCb.checked:=clf_PAUSE_ON_ERR in optionsToUpdate^.flags;
+    quietFlagCb       .checked:=clf_QUIET        in optionsToUpdate^.flags;
+    silentFlagCb      .checked:=clf_SILENT       in optionsToUpdate^.flags;
+    profileFlagCb     .checked:=clf_PROFILE      in optionsToUpdate^.flags;
+    forceStdErrCb     .checked:=clf_FORCE_STDERR in optionsToUpdate^.flags;
+    forceStdOutCb     .checked:=clf_FORCE_STDOUT in optionsToUpdate^.flags;
+    consoleVerbosityEdit.text:=optionsToUpdate^.verbosityString;
+    sideEffectsComboBox.ItemIndex:=optionsToUpdate^.sideEffectProfile;
+
+    setLength(optionsToUpdate^.deferredAdapterCreations,length(optionsToUpdate^.deferredAdapterCreations));
+    for i:=0 to length(optionsToUpdate^.deferredAdapterCreations)-1 do
+      optionsToUpdate^.deferredAdapterCreations[i].copy(optionsToUpdate^.deferredAdapterCreations[i]);
+
+    updateLogComboBox(0);
+    updateLogSection;
+    updateLogPreview;
+    initializing:=false;
+  end;
+
+PROCEDURE TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
   begin
     if guiFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
-procedure TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
-    if cbConsoleLikeLog.Checked then begin
-      cbConvertPrintToLog  .Enabled:=false;
-      timeFormatEdit       .Enabled:=false;
-      logLocationLengthEdit.Enabled:=False;
+    if cbConsoleLikeLog.checked then begin
+      cbConvertPrintToLog  .enabled:=false;
+      timeFormatEdit       .enabled:=false;
+      logLocationLengthEdit.enabled:=false;
     end else begin
-      cbConvertPrintToLog  .Enabled:=true;
-      timeFormatEdit       .Enabled:=true;
-      logLocationLengthEdit.Enabled:=true;
+      cbConvertPrintToLog  .enabled:=true;
+      timeFormatEdit       .enabled:=true;
+      logLocationLengthEdit.enabled:=true;
     end;
     a:=currentAdapterSpecification;
     if a<>nil then begin
-      a^.useLogFormatter:=not(cbConsoleLikeLog.Checked);
+      a^.useLogFormatter:=not(cbConsoleLikeLog.checked);
       updateLogPreview;
+      cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
     end;
   end;
 
-procedure TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
   VAR newLogIndex:longint;
   begin
-    with execOptions do begin
+    with optionsToUpdate^ do begin
       newLogIndex:=length(deferredAdapterCreations);
       setLength(deferredAdapterCreations,newLogIndex+1);
       deferredAdapterCreations[newLogIndex].setFilenameAndOptions('?.log(1)',stringToMessageTypeSet(verbosityString));
     end;
-    outputFileComboBox.Items.Add(IntToStr(newLogIndex+1));
-    outputFileComboBox.ItemIndex:=newLogIndex;
+    updateLogComboBox(newLogIndex);
     updateLogSection;
   end;
 
-procedure TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a=nil then exit;
-    a^.handlePrintAsLog:=cbConvertPrintToLog.Checked;
-    a^.logDateFormat   :=timeFormatEdit.Caption;
+    a^.handlePrintAsLog:=cbConvertPrintToLog.checked;
+    a^.logDateFormat   :=timeFormatEdit.text;
     updateLogPreview;
+    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a=nil then exit;
-    a^.forceNewFile:=not(cbLogAppend.Checked);
+    a^.forceNewFile:=not(cbLogAppend.checked);
+    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
   end;
 
-procedure TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
   begin
-    if forceStdErrCb.Checked then forceStdOutCb.Checked:=false;
+    if forceStdErrCb.checked then forceStdOutCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
   begin
-    if forceStdOutCb.Checked then forceStdErrCb.Checked:=False;
+    if forceStdOutCb.checked then forceStdErrCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
   begin
-    if headlessFlagCb.Checked then begin
-      pauseFlagCb.Checked:=false;
-      pauseOnErrorFlagCb.Checked:=false;
+    if headlessFlagCb.checked then begin
+      pauseFlagCb.checked:=false;
+      pauseOnErrorFlagCb.checked:=false;
     end;
   end;
 
-procedure TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
   begin
-    execOptions.setCallLightFlavour(lightVersionRb.Checked);
-    execOptions.flags:=[];
-    if guiFlagCb         .Checked then include(execOptions.flags,clf_GUI);
-    if headlessFlagCb    .Checked then include(execOptions.flags,clf_HEADLESS);
-    if pauseFlagCb       .Checked then include(execOptions.flags,clf_PAUSE_ALWAYS);
-    if pauseOnErrorFlagCb.Checked then include(execOptions.flags,clf_PAUSE_ON_ERR);
-    if profileFlagCb     .Checked then include(execOptions.flags,clf_PROFILE);
-    if quietFlagCb       .Checked then include(execOptions.flags,clf_QUIET);
-    if silentFlagCb      .Checked then include(execOptions.flags,clf_SILENT);
-    if forceStdErrCb     .Checked then include(execOptions.flags,clf_FORCE_STDERR);
-    if forceStdOutCb     .Checked then include(execOptions.flags,clf_FORCE_STDOUT);
-    execOptions.sideEffectProfile:=sideEffectsComboBox.ItemIndex;
+    if initializing then exit;
+    optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
+    optionsToUpdate^.flags:=[];
+    if guiFlagCb         .checked then include(optionsToUpdate^.flags,clf_GUI);
+    if headlessFlagCb    .checked then include(optionsToUpdate^.flags,clf_HEADLESS);
+    if pauseFlagCb       .checked then include(optionsToUpdate^.flags,clf_PAUSE_ALWAYS);
+    if pauseOnErrorFlagCb.checked then include(optionsToUpdate^.flags,clf_PAUSE_ON_ERR);
+    if profileFlagCb     .checked then include(optionsToUpdate^.flags,clf_PROFILE);
+    if quietFlagCb       .checked then include(optionsToUpdate^.flags,clf_QUIET);
+    if silentFlagCb      .checked then include(optionsToUpdate^.flags,clf_SILENT);
+    if forceStdErrCb     .checked then include(optionsToUpdate^.flags,clf_FORCE_STDERR);
+    if forceStdOutCb     .checked then include(optionsToUpdate^.flags,clf_FORCE_STDOUT);
+    optionsToUpdate^.sideEffectProfile:=sideEffectsComboBox.ItemIndex;
+    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
   end;
 
 end.

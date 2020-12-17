@@ -304,7 +304,7 @@ PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
     if commandLine.getFileToInterpretFromCommandLine=''
     then package.load(lu_forDirectExecution,globals,recycler,commandLine.mainParameters)
     else package.load(lu_forCallingMain    ,globals,recycler,commandLine.mainParameters);
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     messages.setExitCode;
   end;
 
@@ -351,7 +351,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
   PROCEDURE doneEdit;
     begin
       package.finalize(globals.primaryContext,recycler);
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilSearchTokenLocation);
@@ -438,7 +438,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end else begin
       package.replaceCodeProvider(parentProvider);
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
@@ -452,7 +452,7 @@ PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
       end;
       if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
       lexer.destroy;
-      globals.afterEvaluation(recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end;
   end;
 
@@ -504,7 +504,7 @@ PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
     globals.resetForEvaluation(@package,@package.reportVariables,C_allSideEffects,evalRequest.contextType,evalRequest.parameters,recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
-    globals.afterEvaluation(recycler);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     package.clear(true);
   end;
 

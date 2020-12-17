@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils,
      myGenerics,mySys,
      mnh_messages,
-     mnh_constants, basicTypes;
+     mnh_constants, basicTypes,serializationUtil;
 TYPE
   T_adapterType=(at_console,
                  at_textFile,
@@ -25,7 +25,7 @@ TYPE
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
-    {at_textFile} [mt_printline   ..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
+    {at_textFile} [mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
     {at_textMe...}[mt_clearConsole..mt_el4_systemError,mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}],
     {$ifdef fullVersion}
     {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info,mt_endOfEvaluation],
@@ -130,15 +130,19 @@ TYPE
       logDateFormat   :string;
       logLocationLen  :longint;
 
+      PROCEDURE setDefaults;
       PROCEDURE setFilenameAndOptions(CONST s:string; CONST globalMessageTypes:T_messageTypeSet);
       FUNCTION  getFilenameAndOptions:string;
       FUNCTION canMergeInto(VAR other:T_textFileAdapterSpecification; CONST globalMessageTypes:T_messageTypeSet):boolean;
       PROCEDURE copy(CONST original:T_textFileAdapterSpecification);
+      FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
+      PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       PROCEDURE finalizeBeforeApplication(CONST scriptName:string);
       PROPERTY getFilename:string read fileName;
       PROPERTY getVerbosityPart:string read verbosityPart;
       PROCEDURE setVerbosityPart(CONST s:string; CONST globalMessageTypes: T_messageTypeSet);
       PROPERTY getMessageTypes:T_messageTypeSet read messagesToInclude;
+
   end;
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
@@ -153,9 +157,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
-      {$ifdef debugMode}
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      {$endif}
   end;
 
   T_flaggedAdapter=record
@@ -375,7 +377,7 @@ FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSe
     end;
   end;
 
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet):string;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
   VAR toSwitchOn :T_messageTypeSet=[];
       toSwitchOff:T_messageTypeSet=[];
       mt:T_messageType;
@@ -417,6 +419,19 @@ PROCEDURE T_textFileAdapterSpecification.setVerbosityPart(CONST s: string; CONST
     messagesToInclude:=stringToMessageTypeSet(verbosityPart,globalMessageTypes);
   end;
 
+PROCEDURE T_textFileAdapterSpecification.setDefaults;
+  begin
+    fileName:='?.log';
+    textFileCase:=tfc_file;
+    forceNewFile:=true;
+    useLogFormatter:=true;
+    handlePrintAsLog:=false;
+    verbosityPart:='1';
+    messagesToInclude:=stringToMessageTypeSet('1');
+    logDateFormat:='hh:mm:ss.zzz';
+    logLocationLen:=25;
+  end;
+
 PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string;
   CONST globalMessageTypes: T_messageTypeSet);
   begin
@@ -431,12 +446,14 @@ PROCEDURE T_textFileAdapterSpecification.setFilenameAndOptions(CONST s: string;
 
 FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
   begin
-    result:=fileName+'('+verbosityPart+')';
+    case textFileCase of
+      tfc_stdout: result:='stdOut('+verbosityPart+')';
+      tfc_stderr: result:='stdErr('+verbosityPart+')';
+      tfc_file  : result:=fileName+'('+verbosityPart+')';
+    end;
   end;
 
-FUNCTION T_textFileAdapterSpecification.canMergeInto(
-  VAR other: T_textFileAdapterSpecification;
-  CONST globalMessageTypes: T_messageTypeSet): boolean;
+FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
     if SameFileName(fileName,other.fileName) and
        (useLogFormatter =other.useLogFormatter) and
@@ -454,13 +471,46 @@ FUNCTION T_textFileAdapterSpecification.canMergeInto(
     end else result:=false;
   end;
 
-PROCEDURE T_textFileAdapterSpecification.copy(
-  CONST original: T_textFileAdapterSpecification);
+PROCEDURE T_textFileAdapterSpecification.copy(CONST original: T_textFileAdapterSpecification);
   begin
-    fileName         :=original.fileName         ;
     verbosityPart    :=original.verbosityPart    ;
-    forceNewFile     :=original.forceNewFile     ;
     messagesToInclude:=original.messagesToInclude;
+
+    textFileCase     :=original.textFileCase     ;
+    fileName         :=original.fileName         ;
+
+    forceNewFile     :=original.forceNewFile     ;
+    useLogFormatter  :=original.useLogFormatter  ;
+    handlePrintAsLog :=original.handlePrintAsLog ;
+    logDateFormat    :=original.logDateFormat    ;
+    logLocationLen   :=original.logLocationLen   ;
+  end;
+
+FUNCTION T_textFileAdapterSpecification.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
+  begin
+    verbosityPart:=stream.readAnsiString;
+    messagesToInclude:=stringToMessageTypeSet(verbosityPart);
+    textFileCase:=T_textFileCase(stream.readByte([byte(tfc_file),byte(tfc_stderr),byte(tfc_stdout)]));
+    fileName:=stream.readAnsiString;
+    forceNewFile    :=stream.readBoolean   ;
+    useLogFormatter :=stream.readBoolean   ;
+    handlePrintAsLog:=stream.readBoolean   ;
+    logDateFormat   :=stream.readAnsiString;
+    logLocationLen  :=stream.readLongint   ;
+    result:=stream.allOkay;
+  end;
+
+PROCEDURE T_textFileAdapterSpecification.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
+  begin
+    verbosityPart:=messageTypeSetToString(messagesToInclude);
+    stream.writeAnsiString(verbosityPart);
+    stream.writeByte(byte(textFileCase));
+    stream.writeAnsiString(fileName);
+    stream.writeBoolean(forceNewFile);
+    stream.writeBoolean(useLogFormatter);
+    stream.writeBoolean(handlePrintAsLog);
+    stream.writeAnsiString(logDateFormat);
+    stream.writeLongint(logLocationLen);
   end;
 
 PROCEDURE T_textFileAdapterSpecification.finalizeBeforeApplication(CONST scriptName: string);
@@ -1250,7 +1300,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
             case collected[i]^.messageType of
-              mt_printline  : for s in P_storedMessageWithText(collected[i])^.txt do writeln(handle,s);
+              mt_clearConsole: if textFileCase<>tfc_file then mySys.clearConsole;
               mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
               else for s in messageFormatProvider^.formatMessage(collected[i]) do writeln(handle,s);
             end;
@@ -1278,19 +1328,17 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST tfc:T_
     lastOutput:=now;
   end;
 
-{$ifdef debugMode}
 FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
   begin
     result:=false;
     enterCriticalSection(adapterCs);
     try
       result:=inherited append(message);
-      if collectedFill>100 then flush;
+      if (collectedFill>100) or (textFileCase<>tfc_file) then flush;
     finally
       leaveCriticalSection(adapterCs);
     end;
   end;
-{$endif}
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin

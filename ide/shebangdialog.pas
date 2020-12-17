@@ -15,11 +15,11 @@ TYPE
   TShebangWizard = class(TForm)
     Button1: TButton;
     Button2: TButton;
-    CmdLineParametersFrame: TCmdLineParametersFrame;
     Label3: TLabel;
     considerErrorsLabel: TLabel;
     notExecutableHint: TPanel;
-    procedure FormCreate(Sender: TObject);
+    Panel1: TPanel;
+    PROCEDURE FormCreate(Sender: TObject);
   private
   public
   end;
@@ -32,27 +32,30 @@ VAR ShebangWizard:TShebangWizard=nil;
 
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
   VAR hadShebang,isExecutable:boolean;
+      opt:T_mnhExecutionOptions;
+      CmdLineParametersFrame:TCmdLineParametersFrame;
   begin
     if meta^.language<>LANG_MNH then exit;
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
-      CmdLineParametersFrame.initFromExecOptions(meta^.getParametersFromShebang(hadShebang,isExecutable));
+      opt:=meta^.getParametersFromShebang(hadShebang,isExecutable);
+      CmdLineParametersFrame:=getCmdLineParametersFrameInstance(ShebangWizard,@opt);
+
       notExecutableHint.visible:=not(isExecutable);
       if ShowModal=mrOk then begin
         if hadShebang
-        then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),CmdLineParametersFrame.execOptions.getShebang+LineEnding)
-        else meta^.editor.SetTextBetweenPoints(point(1,1),point(1,1),CmdLineParametersFrame.execOptions.getShebang+LineEnding);
+        then meta^.editor.SetTextBetweenPoints(point(1,1),point(1,2),opt.getShebang+LineEnding)
+        else meta^.editor.SetTextBetweenPoints(point(1,1),point(1,1),opt.getShebang+LineEnding);
       end;
     end;
   end;
 
 { TShebangWizard }
 
-procedure TShebangWizard.FormCreate(Sender: TObject);
+PROCEDURE TShebangWizard.FormCreate(Sender: TObject);
   begin
-    CmdLineParametersFrame:=TCmdLineParametersFrame.Create(self);
-  end;
 
+  end;
 
 end.
 

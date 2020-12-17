@@ -29,7 +29,7 @@ runSandboxed(parameter)->
             : PREFIX_OF_MESSAGE_TYPE[$message.head].isVoid
               ? void
               : format('%s %s %s',PREFIX_OF_MESSAGE_TYPE[$message[0]],
-                                  $message[1].replace(myPath.systemSpecificFilename,myPath.extractFileName),
+                                  $message[1].replace(myPath.systemSpecificFilename,myPath.extractFileNameOnly),
                                   $message[2])})].flatten;
 
 main->

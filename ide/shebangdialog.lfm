@@ -1,73 +1,34 @@
 object ShebangWizard: TShebangWizard
   Left = 1152
-  Height = 879
+  Height = 703
   Top = 50
-  Width = 553
-  AutoSize = True
+  Width = 442
   Caption = 'Shebang wizard'
-  ClientHeight = 879
-  ClientWidth = 553
-  DesignTimePPI = 120
+  ClientHeight = 703
+  ClientWidth = 442
   OnCreate = FormCreate
   LCLVersion = '2.0.10.0'
-  object Button1: TButton
-    AnchorSideTop.Control = Owner
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Button2
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
-    Left = 0
-    Height = 30
-    Top = 849
-    Width = 483
-    Align = alCustom
-    Anchors = [akLeft, akRight, akBottom]
-    AutoSize = True
-    Caption = 'OK'
-    ModalResult = 1
-    ParentFont = False
-    TabOrder = 0
-  end
-  object Button2: TButton
-    AnchorSideLeft.Control = Button1
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
-    Left = 483
-    Height = 30
-    Top = 849
-    Width = 70
-    Anchors = [akRight, akBottom]
-    AutoSize = True
-    Cancel = True
-    Caption = 'Cancel'
-    ModalResult = 2
-    ParentFont = False
-    TabOrder = 1
-  end
   object notExecutableHint: TPanel
     Left = 0
-    Height = 66
+    Height = 51
     Top = 0
-    Width = 553
+    Width = 442
     Align = alTop
     AutoSize = True
     BevelColor = clRed
     BevelWidth = 3
-    ClientHeight = 66
-    ClientWidth = 553
+    ClientHeight = 51
+    ClientWidth = 442
     Color = clYellow
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
-    TabOrder = 2
+    TabOrder = 0
     object Label3: TLabel
       Left = 3
-      Height = 40
+      Height = 30
       Top = 3
-      Width = 547
+      Width = 436
       Align = alClient
       Alignment = taCenter
       Caption = 'This script is not executable'#13#10'and therefore should not have a shebang.'
@@ -77,9 +38,9 @@ object ShebangWizard: TShebangWizard
     end
     object considerErrorsLabel: TLabel
       Left = 3
-      Height = 20
-      Top = 43
-      Width = 547
+      Height = 15
+      Top = 33
+      Width = 436
       Align = alBottom
       Alignment = taCenter
       Caption = 'This might be due to errors in the script.'
@@ -87,74 +48,43 @@ object ShebangWizard: TShebangWizard
       ParentFont = False
     end
   end
-  inline CmdLineParametersFrame1: TCmdLineParametersFrame
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = notExecutableHint
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Button1
-    Height = 783
-    Top = 66
-    Width = 553
-    Align = alCustom
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    ClientHeight = 783
-    ClientWidth = 553
-    TabOrder = 3
-    inherited PageControl1: TPageControl
-      Height = 783
-      Width = 553
-      ActivePage = CmdLineParametersFrame1.TabSheet2
-      TabIndex = 1
-      inherited TabSheet2: TTabSheet
-        ClientHeight = 750
-        ClientWidth = 545
-        inherited addOutFile: TButton
-          Left = 477
-        end
-        inherited removeOutFile: TButton
-          Left = 513
-        end
-        inherited GroupBox5: TGroupBox
-          Width = 441
-          ClientWidth = 437
-          inherited logFilenameEdit: TEdit
-            Width = 392
-          end
-        end
-        inherited verbosityGroupBox: TGroupBox
-          Left = 441
-          inherited outFileVerbosityEdit: TEdit
-            OnEditingDone = nil
-          end
-        end
-        inherited GroupBox6: TGroupBox
-          Height = 623
-          Width = 545
-          ClientHeight = 598
-          ClientWidth = 541
-          inherited cbConvertPrintToLog: TCheckBox
-            Width = 373
-          end
-          inherited timeFormatEdit: TEdit
-            Width = 232
-          end
-          inherited logLocationLengthEdit: TEdit
-            Width = 232
-          end
-          inherited formatPreviewMemo: TMemo
-            Height = 514
-            Width = 541
-            Lines.Strings = (
-              'This is a test output'
-            )
-          end
-        end
-        inherited outputFileComboBox: TComboBox
-          Width = 477
-        end
-      end
+  object Panel1: TPanel
+    Left = 0
+    Height = 25
+    Top = 678
+    Width = 442
+    Align = alBottom
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 25
+    ClientWidth = 442
+    TabOrder = 1
+    object Button1: TButton
+      Left = 0
+      Height = 25
+      Top = 0
+      Width = 380
+      Align = alClient
+      AutoSize = True
+      Caption = 'OK'
+      ModalResult = 1
+      ParentFont = False
+      TabOrder = 0
+    end
+    object Button2: TButton
+      AnchorSideLeft.Control = Button1
+      AnchorSideLeft.Side = asrBottom
+      Left = 380
+      Height = 25
+      Top = 0
+      Width = 62
+      Align = alRight
+      AutoSize = True
+      Cancel = True
+      Caption = 'Cancel'
+      ModalResult = 2
+      ParentFont = False
+      TabOrder = 1
     end
   end
 end

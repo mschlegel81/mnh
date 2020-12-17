@@ -25,7 +25,7 @@ TYPE
   T_mnhExecutionOptions=object(T_serializable)
     verbosityString:string;
     customLogLocationLength:longint;
-    customDateFormatOrBlank:string;
+    customDateFormat:string;
     flags:set of T_cmdLineFlag;
     executor:string;
     deferredAdapterCreations:array of T_textFileAdapterSpecification;
@@ -106,6 +106,13 @@ CONST
                                             FLAG_STDOUT,
                                             FLAG_STDERR,
                                             FLAG_PRINT_AS_LOG);
+  MARK_OUT_APPEND ='+out';
+  MARK_LOG_APPEND ='+log';
+  MARK_OUT_REWRITE='-out';
+  MARK_LOG_REWRITE='-log';
+  MARK_RESTRICT   ='-restrict';
+  MARK_DATE_FMT   ='-logDateFmt';
+  MARK_LOCLEN     ='-logLocationLength';
 
 FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
 PROCEDURE displayHelp(CONST adapters:P_messages);
@@ -162,29 +169,48 @@ PROCEDURE T_mnhExecutionOptions.clear;
     setLength(deferredAdapterCreations,0);
     flags:=[];
     executor:=settings.fullFlavourLocation;
-    customDateFormatOrBlank:='';
+    customDateFormat:='';
     customLogLocationLength:=maxLongint;
     if (executor='') or not(fileExists(executor))
     then executor:=settings.lightFlavourLocation;
   end;
 
 FUNCTION T_mnhExecutionOptions.getSerialVersion:dword;
-  begin result:=23413; end;
+  begin result:=23414; end;
 
 FUNCTION T_mnhExecutionOptions.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+  VAR i:longint;
+      adapterCount:longint;
   begin
     clear;
     stream.read(flags,sizeOf(flags));
     callLightFlavour:=stream.readBoolean;
     verbosityString:=stream.readAnsiString;
+
+    customLogLocationLength:=stream.readLongint   ;
+    customDateFormat:=stream.readAnsiString;
+    sideEffectProfile      :=stream.readLongint   ;
+    adapterCount:=stream.readNaturalNumber;
     result:=stream.allOkay;
+    if result then begin
+      setLength(deferredAdapterCreations,adapterCount);
+      for i:=0 to length(deferredAdapterCreations)-1 do result:=result and deferredAdapterCreations[i].loadFromStream(stream);
+    end;
+    if not(result) then clear;
   end;
 
 PROCEDURE T_mnhExecutionOptions.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
+  VAR i:longint;
   begin
     stream.write(flags,sizeOf(flags));
     stream.writeBoolean(callLightFlavour);
     stream.writeAnsiString(verbosityString);
+
+    stream.writeLongint(customLogLocationLength);
+    stream.writeAnsiString(customDateFormat);
+    stream.writeLongint(sideEffectProfile);
+    stream.writeNaturalNumber(length(deferredAdapterCreations));
+    for i:=0 to length(deferredAdapterCreations)-1 do deferredAdapterCreations[i].saveToStream(stream);
   end;
 
 PROCEDURE T_mnhExecutionOptions.copyFrom(CONST other: T_mnhExecutionOptions);
@@ -194,6 +220,8 @@ PROCEDURE T_mnhExecutionOptions.copyFrom(CONST other: T_mnhExecutionOptions);
     flags:=other.flags;
     executor:=other.executor;
     verbosityString:=other.verbosityString;
+    customLogLocationLength:=other.customLogLocationLength;
+    customDateFormat:=other.customDateFormat;
     sideEffectProfile:=other.sideEffectProfile;
     setLength(deferredAdapterCreations,length(other.deferredAdapterCreations));
     for k:=0 to length(deferredAdapterCreations)-1 do
@@ -208,6 +236,7 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
     begin
       //Create specification
       messageTypesToCollect:=stringToMessageTypeSet(verbosityString);
+      specification.setDefaults;
       specification.forceNewFile:=parsingState.parsingState in [pst_parsingOutFileRewrite,pst_parsingLogFileRewrite];
       specification.setFilenameAndOptions(param,messageTypesToCollect);
 
@@ -215,8 +244,7 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
       then begin
         specification.useLogFormatter:=true;
         specification.handlePrintAsLog:=clf_TREAT_PRINT_AS_LOG in flags;
-        if customDateFormatOrBlank<>''
-        then specification.logDateFormat:=customDateFormatOrBlank;
+        specification.logDateFormat:=customDateFormat;
         specification.logLocationLen:=customLogLocationLength;
       end
       else specification.useLogFormatter:=false;
@@ -233,7 +261,7 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
     begin
       try
         FormatDateTime(param,now);
-        customDateFormatOrBlank:=param;
+        customDateFormat:=param;
       except
         parsingState.logCmdLineParsingError('Invalid date/time format "'+param+'"');
       end;
@@ -276,13 +304,13 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param=FLAG_STDOUT       then begin include(flags,clf_FORCE_STDOUT); Exclude(flags,clf_FORCE_STDERR); exit(true); end;
         if param=FLAG_PRINT_AS_LOG then begin include(flags,clf_TREAT_PRINT_AS_LOG); exit(true); end;
         //state changes:
-        if param='-out'            then begin parsingState.parsingState:=pst_parsingOutFileRewrite;       exit(true); end;
-        if param='+out'            then begin parsingState.parsingState:=pst_parsingOutFileAppend;        exit(true); end;
-        if param='-log'            then begin parsingState.parsingState:=pst_parsingLogFileRewrite;       exit(true); end;
-        if param='+log'            then begin parsingState.parsingState:=pst_parsingLogFileAppend;        exit(true); end;
-        if param='-restrict'       then begin parsingState.parsingState:=pst_parsingSideEffectProfile;    exit(true); end;
-        if param='-logDateFmt'     then begin parsingState.parsingState:=pst_parsingLogDateFormat;        exit(true); end;
-        if param='-logLocationLength' then begin parsingState.parsingState:=pst_parsingLogLocationLength; exit(true); end;
+        if param=MARK_OUT_REWRITE  then begin parsingState.parsingState:=pst_parsingOutFileRewrite;       exit(true); end;
+        if param=MARK_OUT_APPEND   then begin parsingState.parsingState:=pst_parsingOutFileAppend;        exit(true); end;
+        if param=MARK_LOG_REWRITE  then begin parsingState.parsingState:=pst_parsingLogFileRewrite;       exit(true); end;
+        if param=MARK_LOG_APPEND   then begin parsingState.parsingState:=pst_parsingLogFileAppend;        exit(true); end;
+        if param=MARK_RESTRICT     then begin parsingState.parsingState:=pst_parsingSideEffectProfile;    exit(true); end;
+        if param=MARK_DATE_FMT     then begin parsingState.parsingState:=pst_parsingLogDateFormat;        exit(true); end;
+        if param=MARK_LOCLEN       then begin parsingState.parsingState:=pst_parsingLogLocationLength; exit(true); end;
       end;
       pst_parsingLogDateFormat: begin
         parseDateFormat;
@@ -484,98 +512,123 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
   end;
 
 FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
-  VAR k:longint;
-      f:T_cmdLineFlag;
+  VAR s:string;
   begin
     result:='#!'+executor;
-    if verbosityString<>DEF_VERBOSITY_STRING then result+=' -v'+verbosityString;
-    for f in flags do result+=' '+FLAG_TEXT[f];
-    if sideEffectProfile<>0 then result+=' -restrict '+C_sideEffectProfile[sideEffectProfile].name;
-    for k:=0 to length(deferredAdapterCreations)-1 do begin
-      //TODO: This needs to be refined!
-      if deferredAdapterCreations[k].forceNewFile
-      then result+=' -out '
-      else result+=' +out ';
-      result+=deferredAdapterCreations[k].getFilenameAndOptions;
+    for s in getCommandLineArgumentsArray do begin
+      if (pos(' ',s)>=1) or (length(s)=0)
+      then result+=' "'+s+'"'
+      else result+=' ' +s;
     end;
   end;
 
 FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
+  PROCEDURE appendAdapterSpecification(CONST s:T_textFileAdapterSpecification);
+    begin
+      if s.useLogFormatter then begin
+        append(result,MARK_DATE_FMT);
+        if s.logDateFormat=''
+        then append(result,'""')
+        else append(result,s.logDateFormat);
+        append(result,MARK_LOCLEN);
+        append(result,intToStr(s.logLocationLen));
+        if s.forceNewFile
+        then append(result,MARK_LOG_REWRITE)
+        else append(result,MARK_LOG_APPEND);
+      end else begin
+        if s.forceNewFile
+        then append(result,MARK_OUT_REWRITE)
+        else append(result,MARK_OUT_APPEND);
+      end;
+      append(result,s.getFilenameAndOptions);
+    end;
+
   VAR k:longint;
       f:T_cmdLineFlag;
+      anyHandlePrintAsLog:boolean=false;
   begin
     setLength(result,0);
     if verbosityString<>DEF_VERBOSITY_STRING then append(result,'-v'+verbosityString);
-    for f in flags do append(result,FLAG_TEXT[f]);
+    for f in flags do if f<>clf_TREAT_PRINT_AS_LOG then append(result,FLAG_TEXT[f]);
     if sideEffectProfile<>0 then begin
-      append(result,'-restrict ');
+      append(result,MARK_RESTRICT);
       append(result,C_sideEffectProfile[sideEffectProfile].name);
     end;
-    for k:=0 to length(deferredAdapterCreations)-1 do begin
-      if deferredAdapterCreations[k].forceNewFile
-      then append(result,'-out')
-      else append(result,'+out');
-      append(result,deferredAdapterCreations[k].getFilenameAndOptions);
+    for k:=0 to length(deferredAdapterCreations)-1 do
+    if deferredAdapterCreations[k].handlePrintAsLog
+    then anyHandlePrintAsLog:=true
+    else appendAdapterSpecification(deferredAdapterCreations[k]);
+    if anyHandlePrintAsLog then begin
+      append(result,FLAG_PRINT_AS_LOG);
+      for k:=0 to length(deferredAdapterCreations)-1 do
+      if deferredAdapterCreations[k].handlePrintAsLog
+      then appendAdapterSpecification(deferredAdapterCreations[k]);
     end;
   end;
 
 {$endif}
 
 PROCEDURE displayHelp(CONST adapters:P_messages);
-  PROCEDURE wl(CONST s:string);
+  VAR linesToPrint:T_arrayOfString;
+  PROCEDURE printOut;
+    VAR s:string;
     begin
       if (adapters=nil) or not(adapters^.isCollecting(mt_printline))
-      then writeln(s)
-      else adapters^.postTextMessage(mt_printline,C_nilSearchTokenLocation,s);
+      then for s in linesToPrint do writeln(s)
+      else adapters^.postTextMessage(mt_printline,C_nilSearchTokenLocation,linesToPrint);
     end;
-
-  VAR s:string;
-      i:longint;
+  VAR i:longint;
   begin
-    wl('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
-                    {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
-    wl('compiled on: '+{$I %DATE%});
-    wl('         at: '+{$I %TIME%});
-    wl('FPC version: '+{$I %FPCVERSION%});
-    wl('Target CPU : '+{$I %FPCTARGET%});
-    wl('');
-    for s in LOGO do wl(s);
-    wl('');
-    wl('Accepted parameters: ');
-    wl('  [mnh_options] [('+FLAG_EXEC_CMD+' commandToExecute) | (filename [parameters])]');
-    wl('  filename          if present the file is interpreted; parameters are passed if present');
-    wl('  -v[options]       verbosity. options can consist of multiple characters.');
-    wl('                    Lowercase indicates enabling, uppercase indicates disabling.');
-    wl('                       p/P  : print out');
-    wl('                       i/I  : input echo');
-    wl('                       d/D  : declaration echo');
-    wl('                       o/O  : output echo');
-    wl('                       e/E  : all echo; same as ido');
-    wl('                       t/T  : timing info');
-    wl('                       n/N  : notes (error level 1 only)');
-    wl('                       w/W  : warnings (error level 2 only)');
-    wl('                       u/U  : user defined notes, warnings and errors');
-    wl('                       1..4 : override minimum error level');
-    wl('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
-    wl('  '+FLAG_GUI+'              force evaluation with GUI');
-    wl('  '+FLAG_SHOW_HELP+'                display this help or help on the input file if present and quit');
-    wl('  '+FLAG_HEADLESS+'         forbid user input');
-    wl('  '+FLAG_EXEC_CMD+'              directly execute the following command');
-    wl('  '+FLAG_SHOW_INFO+'             show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
-    wl('  '+FLAG_PROFILE+'          do a profiling run - implies -vt');
-    wl('  '+FLAG_EDIT+' <filename>  opens file(s) in editor instead of interpreting directly');
-    wl('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
-    wl('                    if no options are given, the global output settings will be used');
-    wl('  +out <filename>[(options)]  As -out but appending to the file if existing.');
-    wl('  -restrict <profileName>     Restricts the allowed side effects. Available restriction profiles:');
+    linesToPrint:='MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+{$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel';
+    append(linesToPrint,'compiled: '+{$I %DATE%}+' '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%});
+    append(linesToPrint,'');
+    append(linesToPrint,LOGO);
+    append(linesToPrint,'');
+    append(linesToPrint,'Accepted parameters: ');
+    append(linesToPrint,'  [mnh_options] [('+FLAG_EXEC_CMD+' commandToExecute) | (filename [parameters])]');
+    printOut;
+    linesToPrint:=' '+C_tabChar+'filename'+C_tabChar+'if present the file is interpreted; parameters are passed if present';
+    append(linesToPrint,C_tabChar+'-v[options]'+C_tabChar+'verbosity. options can consist of multiple characters.');
+    append(linesToPrint,C_tabChar+C_tabChar+'Lowercase indicates enabling, uppercase indicates disabling.');
+    append(linesToPrint,C_tabChar+C_tabChar+'  p/P  : print out');
+    append(linesToPrint,C_tabChar+C_tabChar+'  i/I  : input echo');
+    append(linesToPrint,C_tabChar+C_tabChar+'  d/D  : declaration echo');
+    append(linesToPrint,C_tabChar+C_tabChar+'  o/O  : output echo');
+    append(linesToPrint,C_tabChar+C_tabChar+'  e/E  : all echo; same as ido');
+    append(linesToPrint,C_tabChar+C_tabChar+'  t/T  : timing info');
+    append(linesToPrint,C_tabChar+C_tabChar+'  n/N  : notes (error level 1 only)');
+    append(linesToPrint,C_tabChar+C_tabChar+'  w/W  : warnings (error level 2 only)');
+    append(linesToPrint,C_tabChar+C_tabChar+'  u/U  : user defined notes, warnings and errors');
+    append(linesToPrint,C_tabChar+C_tabChar+'  1..4 : override minimum error level');
+    append(linesToPrint,C_tabChar+C_tabChar+'  v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
+    append(linesToPrint,C_tabChar+FLAG_GUI      +C_tabChar+'force evaluation with GUI');
+    append(linesToPrint,C_tabChar+FLAG_SHOW_HELP+C_tabChar+'display this help or help on the input file if present and quit');
+    append(linesToPrint,C_tabChar+FLAG_HEADLESS +C_tabChar+'forbid user input');
+    append(linesToPrint,C_tabChar+FLAG_EXEC_CMD +C_tabChar+'directly execute the following command');
+    append(linesToPrint,C_tabChar+FLAG_SHOW_INFO+C_tabChar+'show info; same as '+FLAG_EXEC_CMD+' mnhInfo.print');
+    append(linesToPrint,C_tabChar+FLAG_PROFILE  +C_tabChar+'do a profiling run - implies -vt');
+    append(linesToPrint,C_tabChar+FLAG_EDIT+' <filename>'+C_tabChar+'opens file(s) in editor instead of interpreting directly');
+    append(linesToPrint,C_tabChar+FLAG_QUIET       +C_tabChar+'disable console output');
+    append(linesToPrint,C_tabChar+FLAG_STDOUT      +C_tabChar+'write all console output to stdout');
+    append(linesToPrint,C_tabChar+FLAG_STDERR      +C_tabChar+'write all console output to stderr');
+    append(linesToPrint,C_tabChar+FLAG_SILENT      +C_tabChar+'suppress beeps');
+    append(linesToPrint,C_tabChar+FLAG_PAUSE_ALWAYS+C_tabChar+'pauses after script execution');
+    append(linesToPrint,C_tabChar+FLAG_PAUSE_ON_ERR+C_tabChar+'pauses after script execution if an error ocurred');
+    append(linesToPrint,C_tabChar+MARK_OUT_REWRITE+' <filename>[(options)]'+C_tabChar+'write output to the given file; Options are verbosity options');
+    append(linesToPrint,C_tabChar+MARK_OUT_APPEND +' <filename>[(options)]'+C_tabChar+'as '+MARK_OUT_REWRITE+' but appending to the file if existing.');
+    append(linesToPrint,C_tabChar+MARK_LOG_REWRITE+' <filename>[(options)]'+C_tabChar+'as '+MARK_OUT_REWRITE+' but with a log formatter');
+    append(linesToPrint,C_tabChar+MARK_LOG_APPEND +' <filename>[(options)]'+C_tabChar+'as '+MARK_OUT_APPEND+' but with a log formatter');
+    append(linesToPrint,C_tabChar+C_tabChar+'If "stdOut" or "stdErr" is given as a filename, output will be redirected to the appropriate console.');
+    append(linesToPrint,C_tabChar+FLAG_PRINT_AS_LOG+C_tabChar+'convert all print output to log. Applies to all logs defined afterwards.');
+    append(linesToPrint,C_tabChar+MARK_DATE_FMT+' <dateFormat>'+C_tabChar+'date/time format for log output. Applies to all logs defined afterwards.');
+    append(linesToPrint,C_tabChar+C_tabChar+'Use a date/time format of "" to suppress time output');
+    append(linesToPrint,C_tabChar+MARK_LOCLEN+' <length>'+C_tabChar+'location length for log output. Applies to all logs defined afterwards');
+    append(linesToPrint,C_tabChar+C_tabChar+'A length of zero is interpreted as "full location"');
+    append(linesToPrint,C_tabChar+MARK_RESTRICT+' <profileName>'+C_tabChar+'Restricts the allowed side effects. Available restriction profiles:');
     for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then
-    wl('                                '+C_sideEffectProfile[i].name);
-    wl('  '+FLAG_QUIET+'            disable console output');
-    wl('  '+FLAG_STDOUT+'          write all console output to stdout');
-    wl('  '+FLAG_STDERR+'          write all console output to stderr');
-    wl('  '+FLAG_SILENT+'           suppress beeps');
-    wl('  '+FLAG_PAUSE_ALWAYS+'       pauses after script execution');
-    wl('  '+FLAG_PAUSE_ON_ERR+'     pauses after script execution if an error ocurred');
+    append(linesToPrint,C_tabChar+C_tabChar+'  '+C_sideEffectProfile[i].name);
+    linesToPrint:=formatTabs(linesToPrint);
+    printOut;
   end;
 
 FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;

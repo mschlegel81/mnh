@@ -222,7 +222,7 @@ TYPE
                                   CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
       PROCEDURE startFinalization;
       PROCEDURE stopWorkers(VAR recycler:T_recycler);
-      PROCEDURE afterEvaluation(VAR recycler:T_recycler);
+      PROCEDURE afterEvaluation(VAR recycler:T_recycler; CONST location:T_searchTokenLocation);
       PROPERTY options:T_evaluationContextOptions read globalOptions;
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
@@ -486,7 +486,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       childCount:=0;
     end;
     {$ifdef fullVersion}
-    primaryContext.messages^.postSingal(mt_startOfEvaluation,C_nilSearchTokenLocation);
+    primaryContext.messages^.postSingal(mt_startOfEvaluation,packageTokenLocation(package));
     primaryContext.callStack.clear;
     primaryContext.parentCustomForm:=nil;
     {$endif}
@@ -526,7 +526,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
     end;
   end;
 
-PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
+PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST location:T_searchTokenLocation);
   PROCEDURE logTimingInfo;
     CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
       'Importing time      ',
@@ -569,12 +569,12 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler);
         if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
         append(timingMessage,timeString[cat]);
       end;
-      primaryContext.messages^.postTextMessage(mt_timing_info,C_nilSearchTokenLocation,timingMessage);
+      primaryContext.messages^.postTextMessage(mt_timing_info,location,timingMessage);
     end;
 
   begin
     stopWorkers(recycler);
-    primaryContext.messages^.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
+    primaryContext.messages^.postSingal(mt_endOfEvaluation,location);
     if (primaryContext.messages^.isCollecting(mt_timing_info)) and (wallClock.timer<>nil) then logTimingInfo;
     {$ifdef fullVersion}
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
