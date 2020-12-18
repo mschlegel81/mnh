@@ -33,13 +33,12 @@ VAR ShebangWizard:TShebangWizard=nil;
 PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
   VAR hadShebang,isExecutable:boolean;
       opt:T_mnhExecutionOptions;
-      CmdLineParametersFrame:TCmdLineParametersFrame;
   begin
     if meta^.language<>LANG_MNH then exit;
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
       opt:=meta^.getParametersFromShebang(hadShebang,isExecutable);
-      CmdLineParametersFrame:=getCmdLineParametersFrameInstance(ShebangWizard,@opt);
+      getCmdLineParametersFrameInstance(ShebangWizard,@opt);
 
       notExecutableHint.visible:=not(isExecutable);
       if ShowModal=mrOk then begin

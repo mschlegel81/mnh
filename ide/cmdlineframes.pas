@@ -87,7 +87,6 @@ TYPE
   public
     CONSTRUCTOR create(TheOwner: TComponent); override;
     PROCEDURE initFromExecOptions(CONST opt:P_mnhExecutionOptions);
-
   end;
 
 PROCEDURE detachCmdLineParametersFrameInstance;
@@ -375,6 +374,8 @@ PROCEDURE TCmdLineParametersFrame.initFromExecOptions(CONST opt:P_mnhExecutionOp
 
     lightVersionRb.checked:=lightVersionRb.enabled and optionsToUpdate^.callLightFlavour;
     fullVersionRb.checked:=not(lightVersionRb.checked);
+
+    if not(optionsToUpdate^.callLightFlavour) then optionsToUpdate^.executor:=settings.fullFlavourLocation;
 
     guiFlagCb         .checked:=clf_GUI          in optionsToUpdate^.flags;
     headlessFlagCb    .checked:=clf_HEADLESS     in optionsToUpdate^.flags;
