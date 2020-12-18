@@ -13,12 +13,10 @@ TYPE
   TAssistanceForm = class(T_mnhComponentForm)
     AssistanceEdit: TSynEdit;
     assistanceHighlighter:TMnhOutputSyn;
-    checkImportingFilesCheckbox: TCheckBox;
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
     PROCEDURE AssistanceEditKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
-    PROCEDURE checkImportingFilesCheckboxChange(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     FUNCTION getIdeComponentType:T_ideComponent; override;
@@ -51,12 +49,6 @@ PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
     paintedWithWidth:=0;
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
-    checkImportingFilesCheckbox.checked:=workspace.checkUsingScripts;
-  end;
-
-PROCEDURE TAssistanceForm.checkImportingFilesCheckboxChange(Sender: TObject);
-  begin
-    workspace.checkUsingScripts:=checkImportingFilesCheckbox.checked;
   end;
 
 PROCEDURE TAssistanceForm.AssistanceEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);

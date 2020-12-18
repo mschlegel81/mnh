@@ -29,7 +29,6 @@ T_workspace=object(T_serializable)
     autosaveBeforeEachExecution:boolean;
 
     fileHistory:T_fileHistory;
-    checkUsingScripts:boolean;
     CONSTRUCTOR create(CONST ide:T_mnhIdeForm;
                        CONST pageControlForEditors:TPageControl;
                        CONST breakpointImages,bookmarkImages:TImageList;
@@ -136,7 +135,6 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
   begin
     initCriticalSection(workspaceCs);
     savedAt:=now+1; //= now + 24h
-    checkUsingScripts:=false;
     mainForm:=ide;
     inputPageControl:=pageControlForEditors;
     breakpointsImagesList:=breakpointImages;
@@ -169,7 +167,7 @@ DESTRUCTOR T_workspace.destroy;
 
 FUNCTION T_workspace.getSerialVersion: dword;
   begin
-    result:=2624115;
+    result:=2624116;
   end;
 
 FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -218,7 +216,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
       currentFile:=stream.readAnsiString;
       saveIntervalIdx:=stream.readByte([low(C_SAVE_INTERVAL)..high(C_SAVE_INTERVAL)]);
       autosaveBeforeEachExecution:=stream.readBoolean;
-      checkUsingScripts  :=stream.readBoolean;
       result:=stream.allOkay and
       fileHistory  .loadFromStream(stream);
     end;
@@ -252,7 +249,6 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): b
 
       saveIntervalIdx:=0;
       autosaveBeforeEachExecution:=false;
-      checkUsingScripts:=false;
       {$ifdef debugMode}
       writeln('Loading T_workspace failed @',stream.streamPos);
       {$endif}
@@ -281,7 +277,6 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 
     stream.writeByte(saveIntervalIdx);
     stream.writeBoolean(autosaveBeforeEachExecution);
-    stream.writeBoolean(checkUsingScripts);
 
     fileHistory.saveToStream(stream);
     runnerModel.saveToStream(stream);
