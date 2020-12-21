@@ -415,11 +415,12 @@ FUNCTION format_imp intFuncSignature;
   VAR txt:T_arrayOfString;
       i:longint;
       preparedStatement:P_preparedFormatStatement;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(formatLoc),nil);
+      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(formatLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context.messages^.continueEvaluation) then begin
@@ -448,7 +449,7 @@ FUNCTION printf_imp intFuncSignature;
     if not(context.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(printfLoc),nil);
+      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(printfLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context.messages^.continueEvaluation) then begin
@@ -549,10 +550,10 @@ FUNCTION parseTime_imp intFuncSignature;
 
 INITIALIZATION
   {$ifdef fullVersion}printfLoc:={$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   {$ifdef fullVersion}formatLoc:={$endif}
-  registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif});
-  registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    {$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif});
-  registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    {$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    {$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif});
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    {$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif});
 
 end.

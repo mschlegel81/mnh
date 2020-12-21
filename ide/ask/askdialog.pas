@@ -235,7 +235,7 @@ PROCEDURE initAskForm;
   begin
     doneConsoleAsk;
     askForm:=TaskForm.create(nil);
-    reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@askDialog.ask_impl);
+    builtinFunctionMap.reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@askDialog.ask_impl);
     initialize(cs);
     system.initCriticalSection(cs);
   end;

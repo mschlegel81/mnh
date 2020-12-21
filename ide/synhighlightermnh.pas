@@ -584,7 +584,7 @@ PROCEDURE initLists;
     for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);
     for md in T_modifier do put(rwc_modifier,C_modifierInfo[md].name);
     builtinRules.create;
-    builtinRules.put(builtinRuleMap.keySet);
+    builtinRules.put(builtinFunctionMap.getAllIds);
     listsAreInitialized:=true;
   end;
 

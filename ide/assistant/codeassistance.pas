@@ -623,10 +623,10 @@ PROCEDURE T_codeAssistanceData.doCreateHtmlData;
     end;
 
   FUNCTION relatedBuiltinFunctionNames: T_arrayOfString;
-    VAR b:T_builtinFunctionMetaData;
+    VAR b:P_builtinFunctionMetaData;
     begin
       result:=C_EMPTY_STRING_ARRAY;
-      for b in latestResponse^.callAndIdInfos^.calledBuiltinFunctions do append(result,b.qualifiedId);
+      for b in latestResponse^.callAndIdInfos^.calledBuiltinFunctions do append(result,b^.qualifiedId);
     end;
 
   VAR demoIndex:longint;

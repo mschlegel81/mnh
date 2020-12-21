@@ -58,6 +58,7 @@ TYPE
                          CONST messageTypesToInc:T_messageTypeSet=[mt_clearConsole,
                                                                    mt_printline,
                                                                    mt_printdirect,
+                                                                   mt_log,
                                                                    mt_el1_note,
                                                                    mt_el1_userNote,
                                                                    mt_el2_warning,
@@ -255,6 +256,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
             end;
             for s in P_storedMessageWithText(m)^.txt do processDirectPrint(s);
           end;
+        mt_log,
         mt_el1_note,
         mt_el1_userNote,
         mt_el2_warning,

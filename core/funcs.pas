@@ -18,6 +18,50 @@ TYPE
                ak_variadic_1,
                ak_variadic_2,
                ak_variadic_3);
+
+  P_intFuncCallback=FUNCTION intFuncSignature;
+  P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
+  T_builtinFunctionMetaData=object
+    arityKind      :T_arityKind;
+    namespace      :T_namespace;
+    unqualifiedId  :T_idString;
+    sideEffects    :T_sideEffects;
+    functionPointer:P_intFuncCallback;
+    wrappedFunction:P_expressionLiteral;
+    CONSTRUCTOR create(CONST arityKind_      :T_arityKind;
+                       CONST namespace_      :T_namespace;
+                       CONST unqualifiedId_  :T_idString;
+                       CONST sideEffects_    :T_sideEffects;
+                       CONST functionPointer_:P_intFuncCallback);
+    DESTRUCTOR destroy;
+    FUNCTION qualifiedId:string;
+  end;
+
+  T_builtinFunctionMetaDatas=array of P_builtinFunctionMetaData;
+
+  { T_functionMap }
+
+  T_functionMap=object
+    private
+      functionMapCs:    TRTLCriticalSection;
+      uniqueMetaDatas:  array of P_builtinFunctionMetaData;
+      mapByName:        specialize G_stringKeyMap<P_builtinFunctionMetaData>;
+      mapByFuncPointer: specialize G_pointerKeyMap<P_builtinFunctionMetaData>;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+      FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+      FUNCTION containsFunctionForId(CONST id:string; OUT ptr:P_intFuncCallback):boolean;
+      FUNCTION getFunctionForId(CONST id:string):P_intFuncCallback;
+      FUNCTION getSideEffects(CONST ptr:P_intFuncCallback):T_sideEffects;
+      FUNCTION canGetIntrinsicRuleAsExpression(CONST id:string; OUT wrapped:P_expressionLiteral):boolean;
+      FUNCTION getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback):P_expressionLiteral;
+      FUNCTION getMeta(CONST ptr:P_intFuncCallback):P_builtinFunctionMetaData;
+      FUNCTION containsKey(CONST id:string):boolean;
+      FUNCTION getAllIds:T_arrayOfString;
+  end;
+
 CONST
   C_arityKind:array[T_arityKind] of record fixedParameters:longint; variadic:boolean end=
                           {ak_nullary   }((fixedParameters:0;       variadic:false),
@@ -29,30 +73,12 @@ CONST
                           {ak_variadic_2} (fixedParameters:2;       variadic:true ),
                           {ak_variadic_3} (fixedParameters:3;       variadic:true ));
 
-TYPE
-  P_intFuncCallback=FUNCTION intFuncSignature;
-
-  P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
-  T_builtinFunctionMetaData=object
-    arityKind    :T_arityKind;
-    namespace    :T_namespace;
-    unqualifiedId:T_idString;
-    sideEffects  :T_sideEffects;
-    FUNCTION qualifiedId:string;
-  end;
-  T_builtinFunctionMetaDatas=array of T_builtinFunctionMetaData;
-  T_builtinRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
-
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
-VAR builtinRuleMap  :T_builtinRuleMap;
-    makeBuiltinExpressionCallback:FUNCTION(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
+VAR builtinFunctionMap:T_functionMap;
+    makeBuiltinExpressionCallback:FUNCTION(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
     intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
     failFunction    :P_intFuncCallback;
 IMPLEMENTATION
@@ -60,9 +86,6 @@ USES sysutils,Classes,
      myStringUtil
      {$ifdef fullVersion},
      mnh_doc{$endif};
-VAR
-  builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
-  builtinExpressionMap:specialize G_pointerKeyMap<P_expressionLiteral>;
 
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
   begin
@@ -71,43 +94,199 @@ OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$WARN 5024 OFF}{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-  VAR meta:T_builtinFunctionMetaData;
+CONSTRUCTOR T_functionMap.create;
   begin
-    result:=ptr;
-    if not(fullNameOnly) then
-    builtinRuleMap.put(                                                  name,result);
-    builtinRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
-    meta.arityKind:=aritiyKind;
-    meta.namespace:=namespace;
-    meta.unqualifiedId:=name;
-    meta.sideEffects:=sideEffects;
-    builtinMetaMap.put(ptr,meta);
-    {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
+    initCriticalSection(functionMapCs);
+    setLength(uniqueMetaDatas,0);
+    mapByName.create();
+    mapByFuncPointer.create();
   end;
 
-FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-  VAR meta:T_builtinFunctionMetaData;
-      previous:P_intFuncCallback;
+DESTRUCTOR T_functionMap.destroy;
+  VAR i:longint;
   begin
-    result:=ptr;
-    if builtinRuleMap.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,previous) then begin
-      if builtinMetaMap.containsKey(previous)
-      then meta:=builtinMetaMap.get(previous)
-      else raise Exception.create('Error during cloning meta.');
-      builtinMetaMap.put(ptr,meta);
+    enterCriticalSection(functionMapCs);
+    mapByFuncPointer.destroy;
+    mapByName       .destroy;
+    for i:=0 to length(uniqueMetaDatas)-1 do dispose(uniqueMetaDatas[i],destroy);
+    setLength(uniqueMetaDatas,0);
+    leaveCriticalSection(functionMapCs);
+    doneCriticalSection(functionMapCs);
+  end;
+
+FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind: T_arityKind; {$ifdef fullVersion}CONST explanation:ansistring;{$endif} CONST sideEffects: T_sideEffects; CONST fullNameOnly: boolean): P_intFuncCallback;
+  VAR meta,prevMeta:P_builtinFunctionMetaData;
+      reusingExistingFunction:boolean;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      reusingExistingFunction:=mapByFuncPointer.containsKey(ptr,prevMeta);
+
+      new(meta,create(aritiyKind,namespace,name,sideEffects,ptr));
+      assert(not(mapByName.containsKey(meta^.qualifiedId)));
+      setLength(uniqueMetaDatas,length(uniqueMetaDatas)+1);
+      uniqueMetaDatas[length(uniqueMetaDatas)-1]:=meta;
+
+      if not(fullNameOnly)
+      then mapByName  .put(name             ,meta);
+      mapByName       .put(meta^.qualifiedId,meta);
+      if not(reusingExistingFunction) then mapByFuncPointer.put(ptr,meta);
+      {$ifdef fullVersion}registerDoc(meta^.qualifiedId,explanation,fullNameOnly);{$endif}
+      result:=ptr;
+    finally
+      leaveCriticalSection(functionMapCs);
     end;
-    if not(fullNameOnly) then
-    builtinRuleMap.put(                                                  name,result);
-    builtinRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
   end;
 
-FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
+FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback; CONST fullNameOnly: boolean): P_intFuncCallback; VAR meta:P_builtinFunctionMetaData;
+  VAR metaByPointer:P_builtinFunctionMetaData;
   begin
-    result:=builtinMetaMap.get(p);
+    if mapByName.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,meta) then begin
+      enterCriticalSection(functionMapCs);
+      mapByFuncPointer.containsKey(meta^.functionPointer,metaByPointer);
+
+      {$ifdef debugMode}
+      writeln(stdErr,'reregistering rule '+meta^.qualifiedId+' ('+C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name+') old pointer: '+
+                     IntToHex(ptrint(meta^.functionPointer),32)+' new pointer: ',IntToHex(ptrint(ptr),32));
+      {$endif}
+      assert(meta=metaByPointer);
+      //Entries by name stay unchanged
+      //Entried by pointer must be updated
+      mapByFuncPointer.dropKey(meta^.functionPointer);
+      mapByFuncPointer.put(ptr,meta);
+      meta^.functionPointer:=ptr;
+      leaveCriticalSection(functionMapCs);
+      result:=ptr;
+    end else raise Exception.create('Cannot reregister rule which is not registered yet! Name: '+C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name);
   end;
 
-FUNCTION T_builtinFunctionMetaData.qualifiedId:string;
+FUNCTION T_functionMap.containsFunctionForId(CONST id: string; OUT ptr: P_intFuncCallback): boolean;
+  VAR meta:P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if mapByName.containsKey(id,meta) then begin
+        ptr:=meta^.functionPointer;
+        result:=true;
+      end else begin
+        ptr:=nil;
+        result:=false;
+      end;
+
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.getFunctionForId(CONST id: string): P_intFuncCallback;
+  VAR meta:P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if mapByName.containsKey(id,meta)
+      then result:=meta^.functionPointer
+      else assert(false,'No function available for id '+id);
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.getSideEffects(CONST ptr: P_intFuncCallback): T_sideEffects;
+  VAR meta:P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if mapByFuncPointer.containsKey(ptr,meta)
+      then result:=meta^.sideEffects
+      else result:=[];
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.canGetIntrinsicRuleAsExpression(CONST id: string; OUT wrapped:P_expressionLiteral): boolean;
+  VAR meta:P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if mapByName.containsKey(id,meta)
+      then begin
+        if meta^.wrappedFunction=nil then begin
+          meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
+          meta^.wrappedFunction^.rereference;
+        end;
+        wrapped:=P_expressionLiteral(meta^.wrappedFunction^.rereferenced);
+        result:=true;
+      end else result:=false;
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback):P_expressionLiteral;
+  VAR meta:P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if mapByFuncPointer.containsKey(ptr,meta)
+      then begin
+        if meta^.wrappedFunction=nil then begin
+          meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
+          meta^.wrappedFunction^.rereference;
+        end;
+        result:=P_expressionLiteral(meta^.wrappedFunction^.rereferenced);
+      end else assert(false,'No function available for given pointer '+IntToHex(ptrint(ptr),32));
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.getMeta(CONST ptr:P_intFuncCallback):P_builtinFunctionMetaData;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      if not(mapByFuncPointer.containsKey(ptr,result)) then result:=nil;
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.containsKey(CONST id:string):boolean;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      result:=mapByName.containsKey(id);
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+FUNCTION T_functionMap.getAllIds:T_arrayOfString;
+  begin
+    enterCriticalSection(functionMapCs);
+    try
+      result:=mapByName.keySet;
+    finally
+      leaveCriticalSection(functionMapCs);
+    end;
+  end;
+
+CONSTRUCTOR T_builtinFunctionMetaData.create(CONST arityKind_: T_arityKind; CONST namespace_: T_namespace; CONST unqualifiedId_: T_idString; CONST sideEffects_: T_sideEffects; CONST functionPointer_: P_intFuncCallback);
+  begin
+    arityKind      :=arityKind_;
+    namespace      :=namespace_;
+    unqualifiedId  :=unqualifiedId_;
+    sideEffects    :=sideEffects_;
+    functionPointer:=functionPointer_;
+    wrappedFunction:=nil;
+  end;
+
+DESTRUCTOR T_builtinFunctionMetaData.destroy;
+  begin
+    while wrappedFunction<>nil do disposeLiteral(wrappedFunction);
+  end;
+
+FUNCTION T_builtinFunctionMetaData.qualifiedId: string;
   begin
     result:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
   end;
@@ -174,7 +353,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       exit(P_expressionLiteral(arg0)^.applyBuiltinFunction(functionId,tokenLocation,@context,@recycler));
     for i:=0 to params^.size-1 do checkLength(params^.value[i],i);
     if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
-    if not(builtinRuleMap.containsKey(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
+    if not(builtinFunctionMap.containsFunctionForId(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
     if anyList then begin
       result:=newListLiteral(consensusLength);
       for i:=0 to consensusLength-1 do if allOkay then begin
@@ -334,45 +513,27 @@ FUNCTION halt_impl intFuncSignature;
   end;
 
 FUNCTION allBuiltinFunctions intFuncSignature;
-  VAR id:string;
+  VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=newSetLiteral(builtinRuleMap.size);
-    for id in builtinRuleMap.keySet do if isQualified(id) then setResult^.appendString(id);
-  end;
-
-FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
-  begin
-    if builtinExpressionMap.containsKey(p,result) then exit(P_expressionLiteral(result^.rereferenced));
-    result:=makeBuiltinExpressionCallback(P_intFuncCallback(p),getMeta(p));
-    result^.rereference;
-    builtinExpressionMap.put(p,result);
-  end;
-
-PROCEDURE disposeIdentifiedInternalFunction(VAR p:P_expressionLiteral);
-  begin
-    dispose(p,destroy);
+    result:=newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(meta^.qualifiedId);
   end;
 
 INITIALIZATION
-  builtinRuleMap.create;
-  builtinMetaMap.create;
-  builtinExpressionMap.create(@disposeIdentifiedInternalFunction);
-
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif},[se_output]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif},[se_output]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif},[se_output]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'log'          ,@log_imp          ,ak_variadic{$ifdef fullVersion},'log(...);//Logs a message and returns void'{$endif},[se_output]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif},[se_output]);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif},[se_output]);
+  builtinFunctionMap.create;
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'log'          ,@log_imp          ,ak_variadic{$ifdef fullVersion},'log(...);//Logs a message and returns void'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif},[se_output]);
   failFunction:=
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif},[se_alterContextState]);
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif},[se_alterContextState]);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
 FINALIZATION
-  builtinExpressionMap.destroy;
-  builtinMetaMap.destroy;
-  builtinRuleMap.destroy;
+  builtinFunctionMap.destroy;
 
 end.

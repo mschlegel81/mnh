@@ -212,13 +212,14 @@ TYPE
 P_builtinExpression=^T_builtinExpression;
 T_builtinExpression=object(T_expression)
   private
+    meta:P_builtinFunctionMetaData;
     id:T_idString;
     func:P_intFuncCallback;
     FUNCTION getEquivalentInlineExpression(VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
     FUNCTION getParameterNames:P_listLiteral; virtual;
-    CONSTRUCTOR createSecondaryInstance(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData; CONST internalId:longint);
+    CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
   public
-    CONSTRUCTOR create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
+    CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
     DESTRUCTOR destroy; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
     FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
@@ -502,12 +503,10 @@ DESTRUCTOR T_subruleExpression.destroy;
 
 FUNCTION T_inlineExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=pattern.canApplyToNumberOfParameters(parCount); end;
 FUNCTION T_builtinExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
-  VAR meta:T_builtinFunctionMetaData;
   begin
-    meta:=getMeta(func);
-    result:=(parCount>=C_arityKind[meta.arityKind].fixedParameters) and
-           ((parCount<=C_arityKind[meta.arityKind].fixedParameters) or
-                       C_arityKind[meta.arityKind].variadic);
+    result:=(parCount>=C_arityKind[meta^.arityKind].fixedParameters) and
+           ((parCount<=C_arityKind[meta^.arityKind].fixedParameters) or
+                       C_arityKind[meta^.arityKind].variadic);
   end;
 FUNCTION T_builtinGeneratorExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=parCount=0; end;
 
@@ -901,7 +900,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
     pattern.clone(original^.pattern);
     if intrinsicRuleId<>'' then begin
       setLength(preparedBody,1);
-      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinFunctionMap.getFunctionForId(intrinsicRuleId)); parIdx:=-1; end;
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token,original^.preparedBody[i].parIdx);
@@ -962,12 +961,10 @@ FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST e
   end;
 
 FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_context; VAR recycler:T_recycler): P_inlineExpression;
-  VAR meta:T_builtinFunctionMetaData;
-      first:P_token;
+  VAR first:P_token;
   begin
-    meta:=getMeta(func);
-    first:=recycler.newToken(getLocation,meta.qualifiedId,tt_intrinsicRule,func);
-    first^.next:=getParametersForPseudoFuncPtr(C_arityKind[meta.arityKind].fixedParameters,C_arityKind[meta.arityKind].variadic,getLocation,context,recycler);
+    first:=recycler.newToken(getLocation,meta^.qualifiedId,tt_intrinsicRule,func);
+    first^.next:=getParametersForPseudoFuncPtr(C_arityKind[meta^.arityKind].fixedParameters,C_arityKind[meta^.arityKind].variadic,getLocation,context,recycler);
     new(result,createFromInline(first,context,recycler));
   end;
 
@@ -980,31 +977,33 @@ FUNCTION T_builtinExpression.getParameterNames: P_listLiteral;
 
 FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=newListLiteral(); end;
 
-FUNCTION newBuiltinExpression(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
+FUNCTION newBuiltinExpression(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
   begin
-    new(P_builtinExpression(result),create(f,meta));
+    new(P_builtinExpression(result),create(meta));
   end;
 
-CONSTRUCTOR T_builtinExpression.createSecondaryInstance(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData; CONST internalId:longint);
+CONSTRUCTOR T_builtinExpression.createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
   VAR loc:T_tokenLocation;
   begin
     loc.package:=@MNH_PSEUDO_PACKAGE;
     loc.column:=1;
     loc.line:=internalId;
     inherited create(et_builtin,loc);
-    id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
-    func:=f;
+    meta:=meta_;
+    id  :=meta^.qualifiedId;
+    func:=meta^.functionPointer;
   end;
 
-CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
+CONSTRUCTOR T_builtinExpression.create(CONST meta_:P_builtinFunctionMetaData);
   VAR loc:T_tokenLocation;
   begin
     loc.package:=@MNH_PSEUDO_PACKAGE;
     loc.column:=1;
     loc.line:=interLockedIncrement(identifiedInternalFunctionTally);
     inherited create(et_builtin,loc);
-    id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
-    func:=f;
+    meta:=meta_;
+    id  :=meta^.qualifiedId;
+    func:=meta^.functionPointer;
   end;
 
 DESTRUCTOR T_builtinExpression.destroy;
@@ -1157,7 +1156,7 @@ FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:
 
 FUNCTION T_builtinExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
   begin
-    new(P_builtinExpression(result),createSecondaryInstance(func,getMeta(func),getLocation.line));
+    new(P_builtinExpression(result),createSecondaryInstance(meta,getLocation.line));
   end;
 
 FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
@@ -1228,8 +1227,8 @@ FUNCTION T_inlineExpression.arity: T_arityInfo;
 
 FUNCTION T_builtinExpression.arity: T_arityInfo;
   begin
-    result.minPatternLength:=C_arityKind[getMeta(func).arityKind].fixedParameters;
-    if C_arityKind[getMeta(func).arityKind].variadic
+    result.minPatternLength:=C_arityKind[meta^.arityKind].fixedParameters;
+    if C_arityKind[meta^.arityKind].variadic
     then result.maxPatternLength:=maxLongint
     else result.maxPatternLength:=result.minPatternLength;
   end;
@@ -1510,7 +1509,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
                 token.tokType:=tt_literal;
               end;
             end;
-            tt_intrinsicRule: meta.sideEffects+=getMeta(token.data).sideEffects;
+            tt_intrinsicRule: meta.sideEffects+=builtinFunctionMap.getSideEffects(P_intFuncCallback(token.data));
           end;
         end;
       end;
@@ -1920,9 +1919,7 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
       et_builtin          :
         begin
           builtinId:=stream^.readAnsiString;
-          if builtinRuleMap.containsKey(builtinId,builtinPtr) then
-            result:=getIntrinsicRuleAsExpression(builtinPtr)
-          else begin
+          if not(builtinFunctionMap.canGetIntrinsicRuleAsExpression(builtinId,result)) then begin
             if adapters<>nil
             then adapters^.raiseSimpleError('Cannot deserialize builtin function: '+builtinId,location)
             else raise Exception.create    ('Cannot deserialize builtin function: '+builtinId);
@@ -1992,14 +1989,14 @@ INITIALIZATION
   litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary
     {$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary
     {$ifdef fullVersion},'parameterNames(e:expression);//Returns the IDs of named parameters of e'{$endif});
-  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1
     {$ifdef fullVersion},'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>'{$endif});
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary
     {$ifdef fullVersion},'toExpression(S);//Returns an expression parsed from string or list S'{$endif});
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary
     {$ifdef fullVersion},'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.'{$endif});
 end.
