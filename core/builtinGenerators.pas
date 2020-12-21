@@ -684,7 +684,6 @@ TYPE
         fill:longint;
       end;
       outputQueue : specialize G_queue<P_literal>;
-      globals:P_evaluationGlobals;
       PROCEDURE canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
       PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
     public
@@ -762,7 +761,6 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -799,7 +797,6 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -887,13 +884,18 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
 
 DESTRUCTOR T_parallelMapGenerator.destroy;
   VAR literal:P_literal;
-      recycler:T_recycler;
+      toAggregate:P_mapTask;
+      timeout:double;
   begin
     if firstToAggregate<>nil then begin
       firstToAggregate^.cancelAllInAggregationChain;
-      recycler.initRecycler;
-      while (firstToAggregate<>nil) do canAggregate(true,globals^.primaryContext,recycler);
-      recycler.cleanup;
+      timeout:=now+1/(24*60*60);
+      while (now<timeout) and (firstToAggregate<>nil) do begin
+        toAggregate:=P_mapTask(firstToAggregate); firstToAggregate:=firstToAggregate^.nextToAggregate;
+        while (now<timeout) and not(toAggregate^.canGetResult) do sleep(1);
+        if toAggregate^.mapTaskResult<>nil then disposeLiteral(toAggregate^.mapTaskResult);
+        dispose(toAggregate,destroy);
+      end;
     end;
     with recycling do while fill>0 do begin
       dec(fill);

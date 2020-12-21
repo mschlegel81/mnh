@@ -171,6 +171,9 @@ PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
   begin
     if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)>0 then begin
+      {$ifdef debugmode}
+      writeln('Scope ',IntToHex(ptrint(scope),32),' still has ',scope^.refCount,' references - not disposed');
+      {$endif}
       scope:=nil;
       exit;
     end;
@@ -218,6 +221,9 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
     if scope=nil then exit;
     newScope:=scope^.parentScope;
     if interlockedDecrement(scope^.refCount)>0 then begin
+      {$ifdef debugmode}
+      writeln('Scope ',IntToHex(ptrint(scope),32),' still has ',scope^.refCount,' references - not disposed');
+      {$endif}
       scope:=newScope;
       exit;
     end;

@@ -154,14 +154,19 @@ CONSTRUCTOR T_abstractEvaluation.init(CONST kind: T_evaluationKind);
   end;
 
 DESTRUCTOR T_abstractEvaluation.destroy;
+  VAR timeout:double;
+      enteredCs:boolean=false;
   begin
     haltEvaluation;
-    enterCriticalSection(evaluationCs);
+    timeout:=now+1/(24*60*60); //one second timeout
+    while (now<timeout) and not(enteredCs) do enteredCs:=enteredCs or (TryEnterCriticalSection(evaluationCs)=0);
     package.destroy;
     globals.destroy;
     messages.destroy;
-    leaveCriticalSection(evaluationCs);
-    doneCriticalSection(evaluationCs);
+    if enteredCs then begin
+      leaveCriticalSection(evaluationCs);
+      doneCriticalSection(evaluationCs);
+    end;
   end;
 
 DESTRUCTOR T_quickEvaluation.destroy;
