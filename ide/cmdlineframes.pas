@@ -106,6 +106,7 @@ FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl; CONST optio
     if myFrame=nil then myFrame:=TCmdLineParametersFrame.create(Application);
     myFrame.parent:=parent;
     myFrame.initFromExecOptions(optionsToUpdate);
+    result:=myFrame;
   end;
 
 { TCmdLineParametersFrame }

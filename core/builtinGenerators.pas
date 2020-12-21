@@ -684,7 +684,6 @@ TYPE
         fill:longint;
       end;
       outputQueue : specialize G_queue<P_literal>;
-      globals:P_evaluationGlobals;
       PROCEDURE canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
       PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
     public
@@ -694,6 +693,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
@@ -762,7 +762,6 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -799,7 +798,6 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    globals:=context.getGlobals;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
@@ -885,15 +883,27 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
     end;
   end;
 
+FUNCTION T_parallelMapGenerator.mustBeDroppedBeforePop:boolean;
+  begin
+    result:=true;
+  end;
+
 DESTRUCTOR T_parallelMapGenerator.destroy;
   VAR literal:P_literal;
-      recycler:T_recycler;
+      toAggregate:P_mapTask;
+      timeout:double;
   begin
     if firstToAggregate<>nil then begin
       firstToAggregate^.cancelAllInAggregationChain;
-      recycler.initRecycler;
-      while (firstToAggregate<>nil) do canAggregate(true,globals^.primaryContext,recycler);
-      recycler.cleanup;
+      timeout:=now+1/(24*60*60);
+      while (now<timeout) and (firstToAggregate<>nil) do begin
+        toAggregate:=P_mapTask(firstToAggregate); firstToAggregate:=firstToAggregate^.nextToAggregate;
+        while (now<timeout) and not(toAggregate^.canGetResult) do sleep(1);
+        if toAggregate^.canGetResult then begin
+          if toAggregate^.mapTaskResult<>nil then outputQueue.append(toAggregate^.mapTaskResult);
+          dispose(toAggregate,destroy);
+        end;
+      end;
     end;
     with recycling do while fill>0 do begin
       dec(fill);
@@ -1789,21 +1799,21 @@ FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST locatio
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
   newGeneratorFromStreamCallback:=@newGeneratorFromStream;
-  registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif});
-  registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif});
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
-  registerRule(LIST_NAMESPACE,'flatMap', @flatMap_imp ,ak_variadic_1{$ifdef fullVersion},'flatMap(L,f:Expression(1));//flattens L and applies f#flatMap(L);#//Note that the mapping function (if present) is applied AFTER flattening!#//Always returns an iteratable expression'{$endif});
-  registerRule(LIST_NAMESPACE,'chunkMap',@chunkMap_imp,ak_variadic_1{$ifdef fullVersion},'chunkMap(L,chunkSize>0,f:Expression(1));//joins L in chunks of the specified size and applies f#chunkMap(L,chunkSize>0);#//Note that the mapping function (if present) is applied AFTER chunking!#//Always returns an iteratable expression'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'flatMap', @flatMap_imp ,ak_variadic_1{$ifdef fullVersion},'flatMap(L,f:Expression(1));//flattens L and applies f#flatMap(L);#//Note that the mapping function (if present) is applied AFTER flattening!#//Always returns an iteratable expression'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'chunkMap',@chunkMap_imp,ak_variadic_1{$ifdef fullVersion},'chunkMap(L,chunkSize>0,f:Expression(1));//joins L in chunks of the specified size and applies f#chunkMap(L,chunkSize>0);#//Note that the mapping function (if present) is applied AFTER chunking!#//Always returns an iteratable expression'{$endif});
   BUILTIN_PMAP:=
-  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
-  registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
-  registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_variadic_1{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif},[se_readFile]);
-  registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
-  registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary{$ifdef fullVersion},'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary{$ifdef fullVersion},'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary{$ifdef fullVersion},'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'vanDerCorputGenerator',@vanDerCorputGenerator_impl,ak_unary{$ifdef fullVersion},'vanDerCorputGenerator(base>=2);//returns a Van der Corput generator for the given base'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_variadic_1{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif},[se_readFile]);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary{$ifdef fullVersion},'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary{$ifdef fullVersion},'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary{$ifdef fullVersion},'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'vanDerCorputGenerator',@vanDerCorputGenerator_impl,ak_unary{$ifdef fullVersion},'vanDerCorputGenerator(base>=2);//returns a Van der Corput generator for the given base'{$endif});
   listProcessing.newIterator:=@newIterator;
 end.

@@ -147,8 +147,8 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 
     scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
 
-    reregisterRule(GUI_NAMESPACE,'editors'       ,@editors_impl);
-    reregisterRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl);
+    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
+    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
     packages.newCodeProvider:=@newFileProxy;
     clearDebugLine;
   end;
@@ -826,9 +826,5 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
     end;
   end;
 
-{$endif}
-{$ifdef includeInitialization}
-  registerRule(GUI_NAMESPACE,'editors'       ,failFunction,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
-  registerRule(GUI_NAMESPACE,'editorContent' ,failFunction,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
 {$endif}
 

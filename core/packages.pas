@@ -1286,10 +1286,10 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
 
   {$ifdef fullVersion}
   FUNCTION builtinCallList:P_listLiteral;
-    VAR builtin:T_builtinFunctionMetaData;
+    VAR builtin:P_builtinFunctionMetaData;
     begin
       result:=newListLiteral();
-      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin.qualifiedId);
+      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin^.qualifiedId);
     end;
   {$endif}
 
@@ -1345,7 +1345,7 @@ PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages
       token.data   :=entry.value;
       exit;
     end;
-    if builtinRuleMap.containsKey(token.txt,intrinsicFuncPtr) then begin
+    if builtinFunctionMap.containsFunctionForId(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;

@@ -77,9 +77,8 @@ TYPE
       tableContent:P_listLiteral;
       tableCaption:string;
       FixedRows,fixedColumns:longint;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint);
       DESTRUCTOR destroy; virtual;
   end;
@@ -511,7 +510,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#'+
+  builtinFunctionMap.registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#'+
     'showTable(L:list,caption:string);//Shows L in a table with given caption.#'+
     'showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.#'+
     'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns',[se_alterGuiState]);

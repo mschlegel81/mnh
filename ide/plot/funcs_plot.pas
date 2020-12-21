@@ -388,7 +388,7 @@ FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSi
 FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
-  funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
@@ -418,29 +418,29 @@ INITIALIZATION
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]'+
     '#Transparency Index:'+'  #  TI$;// with an integer $',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
     'getOptions;//returns plot options as a key-value-list.',[se_readGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
     'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
     'setOptions(key:string,value);//Sets a single plot option',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
     'resetOptions;//Sets the default plot options',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_ternary,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_ternary,
     'renderToFile(filename<>'',width>=1,height>=1]);//Renders the current plot to a file.',[se_writeFile,se_readGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
     'renderToString(width,height);//Renders the current plot to a string.',[se_readGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'removeText',@removeText_imp, ak_variadic,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removeText',@removeText_imp, ak_variadic,
     'removeText;//Removes the last custom text from the plot#removeText(n>=1);//Removed the last n custom texts from the plot',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
     'drawText(x,y,text);//Draws custom text#'+
     'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
-  funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
     'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
     'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
 end.

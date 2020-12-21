@@ -164,6 +164,6 @@ FUNCTION getScreenSize_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary,'Returns the current screen size');
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary,'Returns the current screen size');
 
 end.

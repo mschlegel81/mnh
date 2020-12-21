@@ -266,8 +266,8 @@ USES mySys, operators,fileWrappers;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
   begin
-    if      tok^.tokType in C_operators   then result:=getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType])
-    else if tok^.tokType=tt_intrinsicRule then result:=getIntrinsicRuleAsExpression(                   tok^.data    )
+    if      tok^.tokType in C_operators   then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType],true)
+    else if tok^.tokType=tt_intrinsicRule then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(P_intFuncCallback (tok^.data)   ,true)
     else begin
       result:=nil;
       assert(false);
@@ -322,7 +322,7 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
         if earlierEntry.isImportedOrDelegateWithoutLocal then put(id,entry);
       end;
     end else begin
-      if builtinRuleMap.containsKey(id) and not(isOperatorName(id)) then begin
+      if builtinFunctionMap.containsKey(id) and not(isOperatorName(id)) then begin
         new(delegator,create(id,localPackage));
         if entry.isImported then begin
           //An imported rule is converted to a locally declared delegator
@@ -466,7 +466,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
         exit(false);
       end;
 
-      if builtinRuleMap.containsKey(ruleId,builtinRuleBeingOverridden) and (metaType<>tt_userRule) then begin
+      if builtinFunctionMap.containsFunctionForId(ruleId,builtinRuleBeingOverridden) and (metaType<>tt_userRule) then begin
         //You can only overload builtin rules, not hide them altogether
         context.raiseError('Declaration of '+BoolToStr(metaType=tt_globalVariable,'variable','type')+' would hide a builtin rule of the same name',ruleDeclarationStart);
         exit(false);
@@ -960,7 +960,7 @@ FUNCTION T_ruleWithSubrules.isPure:boolean;
 FUNCTION T_delegatorRule.isPure:boolean;
   VAR i:longint;
   begin
-    result:=((hiddenRule=nil) or (getMeta(hiddenRule).sideEffects=[])
+    result:=((hiddenRule=nil) or (builtinFunctionMap.getMeta(hiddenRule)^.sideEffects=[])
         and  (localRule=nil)  or (localRule^.isPure));
     if result then for i:=0 to length(imported)-1 do if not(imported[i]^.isPure) then exit(false);
   end;
@@ -1018,7 +1018,7 @@ CONSTRUCTOR T_delegatorRule.create(CONST id:T_idString; CONST declaredInPackage:
     intOperator:=tt_userRule;
     for op in overridableOperators do if id=C_tokenDefaultId[op] then intOperator:=op;
     isUnary:=intOperator in unaryOperators;
-    if (intOperator=tt_userRule) and not(builtinRuleMap.containsKey(id,hiddenRule)) then hiddenRule:=nil;
+    if (intOperator=tt_userRule) and not(builtinFunctionMap.containsFunctionForId(id,hiddenRule)) then hiddenRule:=nil;
   end;
 
 CONSTRUCTOR T_protectedRuleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
@@ -1538,7 +1538,7 @@ FUNCTION T_delegatorRule.getFunctionPointer(VAR context: T_context; VAR recycler
       tempToken            :=recycler.newToken(location,getId,tt_userRule,@self);
       tempToken^.next      :=getParametersForPseudoFuncPtr(arityInfo.minPatternLength,arityInfo.maxPatternLength<>arityInfo.minPatternLength,location,context,recycler);
       new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
-    end else result:=getIntrinsicRuleAsExpression(intFuncForOperator[intOperator]);
+    end else result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[intOperator],true);
   end;
 
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral;

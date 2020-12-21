@@ -4,8 +4,7 @@ USES sysutils,
      typinfo,
      myGenerics,
      basicTypes,
-     serializationUtil,
-     myStringUtil;
+     serializationUtil;
 
 TYPE
   T_stateFlag=(FlagQuietHalt,
@@ -193,8 +192,8 @@ TYPE
       location:T_searchTokenLocation;
       createdAt:double;
       kind:T_messageType;
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
@@ -220,10 +219,9 @@ TYPE
 
   P_storedMessageWithText=^T_storedMessageWithText;
   T_storedMessageWithText=object(T_storedMessage)
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
       txt:T_arrayOfString;
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
       DESTRUCTOR destroy; virtual;
@@ -232,10 +230,9 @@ TYPE
 
   P_errorMessage=^T_errorMessage;
   T_errorMessage=object(T_storedMessageWithText)
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
       stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; parameters:string; end;
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
       DESTRUCTOR destroy; virtual;
   end;
@@ -244,8 +241,8 @@ TYPE
   T_payloadMessage=object(T_storedMessage)
     protected
       messageCs:TRTLCriticalSection;
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST messageType_:T_messageType);
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
       DESTRUCTOR destroy; virtual;
@@ -258,12 +255,12 @@ FUNCTION messageTypeName(CONST m:T_messageType):string;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
   begin
-    result:=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
+    result:=[mt_clearConsole,mt_printline,mt_log,mt_printdirect,mt_endOfEvaluation{$ifdef fullVersion},mt_startOfEvaluation{$endif},mt_el4_systemError,mt_el3_noMatchingMain];
     if x.echo_input       then result+=[mt_echo_input      ];
     if x.echo_output      then result+=[mt_echo_output     ];
     if x.echo_declaration then result+=[mt_echo_declaration];
     if x.show_timing      then result+=[mt_timing_info];
-    if x.show_all_userMessages then result+=[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
+    if x.show_all_userMessages then result+=[mt_log,mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
     case x.suppressWarningsUnderLevel of
         4: begin end;
         3: result+=[mt_el3_evalError,mt_el3_userDefined];

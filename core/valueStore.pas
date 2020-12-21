@@ -49,6 +49,7 @@ TYPE
     {$endif}
     PROCEDURE attachParent(CONST parent:P_valueScope);
     PROCEDURE detachParent;
+    FUNCTION checkVariablesOnPop(CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
   end;
 
 IMPLEMENTATION
@@ -233,6 +234,19 @@ PROCEDURE T_valueScope.detachParent;
     if parentScope=nil then exit;
     if interlockedDecrement(parentScope^.refCount)=0 then dispose(parentScope,destroy);
     parentScope:=nil;
+  end;
+
+FUNCTION T_valueScope.checkVariablesOnPop(CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
+  VAR i:longint;
+  begin
+    result:=true;
+    for i:=0 to varFill-1 do
+      if (variables[i]^.value^.literalType=lt_expression) and
+         (P_expressionLiteral(variables[i]^.value)^.mustBeDroppedBeforePop)
+      then begin
+        result:=false;
+        context^.raiseError('Invalid entry in value scope on pop: '+variables[i]^.id+'='+variables[i]^.getValue^.toString(20)+' - set value to void before end!',location);
+      end;
   end;
 
 {$ifdef fullVersion}

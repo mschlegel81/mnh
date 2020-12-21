@@ -83,13 +83,11 @@ TYPE
 
   P_profileMessage=^T_profileMessage;
   T_profileMessage=object(T_payloadMessage)
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
       content:T_profilingList;
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create;
       DESTRUCTOR destroy; virtual;
-      FUNCTION toString(CONST messageFormatProvider:P_messageFormatProvider):T_arrayOfString; virtual;
   end;
 
 PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
@@ -99,7 +97,6 @@ PROCEDURE sortCallerList(VAR list:T_callerList; CONST sortIndex:byte);
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 VAR mnhSysPseudopackagePrefix :string='';
 IMPLEMENTATION
-{$ifdef fullVersion}USES myStringUtil;{$endif}
 CONST categoryText:array[T_profileCategory] of string=(':importing',':tokenizing',':declarations',':evaluation',':unknown',':total');
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;
@@ -188,46 +185,48 @@ DESTRUCTOR T_profileMessage.destroy;
     setLength(content,0);
   end;
 
-FUNCTION T_profileMessage.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
-  FUNCTION nicestTime(CONST seconds:double):string;
-    begin
-       result:=formatFloat('0.000',seconds*1E3);
-    end;
+//TODO: Profile-Message to string must be moved to message formatters
 
-  FUNCTION profiledLocation(CONST location:string):string;
-    begin
-      if startsWith(location,mnhSysPseudopackagePrefix)
-      then result:='(builtin)'
-      else result:=location;
-    end;
-
-  VAR j,k:longint;
-      shortId:string;
-  begin
-    for k:=0 to length(content)-1 do sortCallerList(content[k].callers,4);
-    sortProfilingList(content,6);
-    result:='id'          +C_tabChar+
-            'location'    +C_tabChar+
-            'count'       +C_tabChar+
-            'inclusive ms'+C_tabChar+
-            'exclusive ms';
-    for k:=0 to length(content)-1 do with content[k] do begin
-      if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
-      append(result,shortId                         +C_tabChar+
-                    profiledLocation(calleeLocation)+C_tabChar+
-                    intToStr  (aggTime.callCount)           +C_tabChar+
-                    nicestTime(aggTime.timeSpent_inclusive) +C_tabChar+
-                    nicestTime(aggTime.timeSpent_exclusive));
-      for j:=0 to length(callers)-1 do begin
-        append(result,BoolToStr(j=0,C_shiftInChar+'called at',' ')+C_tabChar+
-                  profiledLocation(callers[j].location)           +C_tabChar+
-                  intToStr  (callers[j].time.callCount)           +C_tabChar+
-                  nicestTime(callers[j].time.timeSpent_inclusive) +C_tabChar+
-                  nicestTime(callers[j].time.timeSpent_exclusive));
-      end;
-    end;
-    formatTabs(result);
-  end;
+//FUNCTION T_profileMessage.toString(CONST messageFormatProvider:P_messageFormatProvider): T_arrayOfString;
+//  FUNCTION nicestTime(CONST seconds:double):string;
+//    begin
+//       result:=formatFloat('0.000',seconds*1E3);
+//    end;
+//
+//  FUNCTION profiledLocation(CONST location:string):string;
+//    begin
+//      if startsWith(location,mnhSysPseudopackagePrefix)
+//      then result:='(builtin)'
+//      else result:=location;
+//    end;
+//
+//  VAR j,k:longint;
+//      shortId:string;
+//  begin
+//    for k:=0 to length(content)-1 do sortCallerList(content[k].callers,4);
+//    sortProfilingList(content,6);
+//    result:='id'          +C_tabChar+
+//            'location'    +C_tabChar+
+//            'count'       +C_tabChar+
+//            'inclusive ms'+C_tabChar+
+//            'exclusive ms';
+//    for k:=0 to length(content)-1 do with content[k] do begin
+//      if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
+//      append(result,shortId                         +C_tabChar+
+//                    profiledLocation(calleeLocation)+C_tabChar+
+//                    intToStr  (aggTime.callCount)           +C_tabChar+
+//                    nicestTime(aggTime.timeSpent_inclusive) +C_tabChar+
+//                    nicestTime(aggTime.timeSpent_exclusive));
+//      for j:=0 to length(callers)-1 do begin
+//        append(result,BoolToStr(j=0,C_shiftInChar+'called at',' ')+C_tabChar+
+//                  profiledLocation(callers[j].location)           +C_tabChar+
+//                  intToStr  (callers[j].time.callCount)           +C_tabChar+
+//                  nicestTime(callers[j].time.timeSpent_inclusive) +C_tabChar+
+//                  nicestTime(callers[j].time.timeSpent_exclusive));
+//      end;
+//    end;
+//    formatTabs(result);
+//  end;
 
 PROCEDURE disposeEntry(VAR entry:P_calleeEntry);
   begin

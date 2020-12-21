@@ -514,13 +514,13 @@ PROCEDURE T_evaluationGlobals.startFinalization;
   end;
 
 PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
-  CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
+  CONST TIME_OUT_AFTER=1/(24*60*60); //=1 second
   VAR timeout:double;
   begin
     timeout:=now+TIME_OUT_AFTER;
     primaryContext.messages^.setStopFlag;
     while (now<timeout) and ((primaryContext.related.childCount>0) or (length(taskQueue.subQueue)>0)) do begin
-      while taskQueue.activeDeqeue(recycler) do begin end;
+      while (now<timeout) and taskQueue.activeDeqeue(recycler) do begin end;
       ThreadSwitch;
       sleep(1);
     end;
@@ -580,7 +580,10 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST loc
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
-    while primaryContext.valueScope<>nil do recycler.scopePop(primaryContext.valueScope);
+    while primaryContext.valueScope<>nil do begin
+      primaryContext.valueScope^.checkVariablesOnPop(location,@primaryContext);
+      recycler.scopePop(primaryContext.valueScope);
+    end;
     primaryContext.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -719,10 +722,12 @@ PROCEDURE T_context.reattachToParent(VAR recycler:T_recycler);
   end;
 
 PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
+  VAR timeout:double;
   begin
     enterCriticalSection(contextCS);
     with related do if childCount>0 then begin
-      while childCount>0 do begin
+      timeout:=now+1/(24*60*60);
+      while (now<timeout) and (childCount>0) do begin
         leaveCriticalSection(contextCS);
         ThreadSwitch; sleep(1);
         enterCriticalSection(contextCS);
@@ -734,6 +739,7 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(C_nilSearchTokenLocation,@self);
       if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
                            else recyclerOrNil^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
@@ -936,9 +942,11 @@ CONSTRUCTOR T_taskQueue.create;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
+  VAR timeout:double;
   begin
     memoryCleaner.unregisterObjectForCleanup(@cleanupQueues);
-    while poolThreadsRunning>0 do begin
+    timeout:=now+1/(24*60*60);
+    while (now<timeout) and (poolThreadsRunning>0) do begin
       destructionPending:=true;
       sleep(1);
       ThreadSwitch;

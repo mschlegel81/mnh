@@ -98,6 +98,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
+              context.valueScope^.checkVariablesOnPop(first^.location,@context);
               recycler.scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
@@ -106,6 +107,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
             if stack.topType=C_compatibleBegin[first^.     tokType]
             then begin
               {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
+              context.valueScope^.checkVariablesOnPop(first^.location,@context);
               recycler.scopePop(context.valueScope);
               stack.popDestroy(recycler);
               first:=recycler.disposeToken(first);
@@ -394,7 +396,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           {$endif}
           {$ifdef fullVersion}
           if tco_stackTrace in context.threadOptions then begin
-            context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),newCallParametersNode(parameterListLiteral));
+            context.callStackPush(first^.location,builtinFunctionMap.getIntrinsicRuleAsExpression(P_intFuncCallback(first^.data),false),newCallParametersNode(parameterListLiteral));
             newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context,recycler);
             context.callStackPop(nil);
           end else
@@ -902,7 +904,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         ruleToken^.tokType:=tt_literal;
         first:=ruleToken;
       end else begin
-        exRule:=getIntrinsicRuleAsExpression(ruleToken^.data);
+        exRule:=builtinFunctionMap.getIntrinsicRuleAsExpression(P_intFuncCallback(ruleToken^.data),true);
         recycler.disposeToken(ruleToken);
         first:=recycler.newToken(location,'',tt_literal,exRule); // {f@$params}
       end;
@@ -967,6 +969,7 @@ if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
       {$endif}
     end;
     stack.popDestroy(recycler);
+    context.valueScope^.checkVariablesOnPop(first^.location,@context);
     first^.next:=recycler.disposeToken(first^.next);
     first^.next:=recycler.disposeToken(first^.next);
     recycler.scopePop(context.valueScope);
@@ -1078,6 +1081,7 @@ end}
  {cT[-1]=}tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
               stack.popDestroy(recycler);
+              context.valueScope^.checkVariablesOnPop(first^.location,@context);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
               recycler.scopePop(context.valueScope);
@@ -1100,6 +1104,7 @@ end}
                 context.callStackPop(first);
                 {$endif}
               end;
+              context.valueScope^.checkVariablesOnPop(first^.location,@context);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
               recycler.scopePop(context.valueScope);
@@ -1397,13 +1402,13 @@ FUNCTION future_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1{$ifdef fullVersion},
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1{$ifdef fullVersion},
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1{$ifdef fullVersion},
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1{$ifdef fullVersion},
                'localAsync(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1{$ifdef fullVersion},
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1{$ifdef fullVersion},
                'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif});
 end.

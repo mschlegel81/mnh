@@ -990,16 +990,16 @@ FUNCTION T_callAndIdInfos.calledBuiltinFunctions: T_builtinFunctionMetaDatas;
   begin
     setLength(result,usedBuiltins.size);
     for func in usedBuiltins.values do begin
-      result[k]:=getMeta(func);
+      result[k]:=builtinFunctionMap.getMeta(P_intFuncCallback(func));
       inc(k);
     end;
   end;
 
 FUNCTION T_callAndIdInfos.getBuiltinSideEffects:T_sideEffects;
-  VAR meta:T_builtinFunctionMetaData;
+  VAR meta:P_builtinFunctionMetaData;
   begin
     result:=[];
-    for meta in calledBuiltinFunctions do result+=meta.sideEffects;
+    for meta in calledBuiltinFunctions do result+=meta^.sideEffects;
   end;
 
 FUNCTION T_callAndIdInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation): T_searchTokenLocations;
@@ -1360,7 +1360,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       end;
       tt_userRule, tt_globalVariable: begin
         result.userDefRuleInfo:=P_abstractRule(token^.data)^.getStructuredInfo;
-        if builtinRuleMap.containsKey(result.tokenText) then getBuiltinRuleInfo(result.linkToHelp);
+        if builtinFunctionMap.containsKey(result.tokenText) then getBuiltinRuleInfo(result.linkToHelp);
       end;
       tt_customType, tt_customTypeCheck: begin
         if P_typedef(token^.data)^.isDucktyping
@@ -1801,8 +1801,7 @@ FUNCTION T_abstractPackage.isImportedOrBuiltinPackage(CONST id: string): boolean
     result:=false;
   end;
 
-FUNCTION T_extendedPackage.isImportedOrBuiltinPackage(CONST id: string
-  ): boolean;
+FUNCTION T_extendedPackage.isImportedOrBuiltinPackage(CONST id: string): boolean;
   begin
     result:=extender^.isImportedOrBuiltinPackage(id);
   end;
@@ -1812,7 +1811,7 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
       ruleId:T_idString;
   begin
     ruleId   :=token.txt;
-    if builtinRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+    if builtinFunctionMap.containsFunctionForId(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
