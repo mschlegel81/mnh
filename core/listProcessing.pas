@@ -432,7 +432,6 @@ PROCEDURE T_chainTask.cancelAllInAggregationChain;
     enterCriticalSection(taskCs);
     current:=@self;
     while current<>nil do begin
-      current^.context^.messages^.setStopFlag;
       current^.isCancelled:=true;
       current:=current^.nextToAggregate;
     end;

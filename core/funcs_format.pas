@@ -420,7 +420,7 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(formatLoc),nil);
+      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(formatLoc,false),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context.messages^.continueEvaluation) then begin
@@ -449,7 +449,7 @@ FUNCTION printf_imp intFuncSignature;
     if not(context.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(printfLoc),nil);
+      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(printfLoc,false),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context.messages^.continueEvaluation) then begin

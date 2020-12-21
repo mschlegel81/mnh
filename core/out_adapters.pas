@@ -450,6 +450,10 @@ FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
       tfc_stdout: result:='stdOut('+verbosityPart+')';
       tfc_stderr: result:='stdErr('+verbosityPart+')';
       tfc_file  : result:=fileName+'('+verbosityPart+')';
+      else begin
+        result:='';
+        assert(false);
+      end;
     end;
   end;
 

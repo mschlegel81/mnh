@@ -39,9 +39,8 @@ TYPE
     private
       treeContent:P_literal;
       treeCaption:string;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST L:P_literal; CONST newCaption:string);
       DESTRUCTOR destroy; virtual;
   end;

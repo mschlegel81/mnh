@@ -580,7 +580,10 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST loc
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
-    while primaryContext.valueScope<>nil do recycler.scopePop(primaryContext.valueScope);
+    while primaryContext.valueScope<>nil do begin
+      primaryContext.valueScope^.checkVariablesOnPop(location,@primaryContext);
+      recycler.scopePop(primaryContext.valueScope);
+    end;
     primaryContext.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -736,6 +739,7 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(C_nilSearchTokenLocation,@self);
       if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
                            else recyclerOrNil^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
@@ -941,8 +945,8 @@ DESTRUCTOR T_taskQueue.destroy;
   VAR timeout:double;
   begin
     memoryCleaner.unregisterObjectForCleanup(@cleanupQueues);
-    timeout:=Now+1/(24*60*60);
-    while (now<timeOut) and (poolThreadsRunning>0) do begin
+    timeout:=now+1/(24*60*60);
+    while (now<timeout) and (poolThreadsRunning>0) do begin
       destructionPending:=true;
       sleep(1);
       ThreadSwitch;

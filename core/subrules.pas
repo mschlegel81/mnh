@@ -1910,7 +1910,6 @@ FUNCTION interpret_imp intFuncSignature;
 FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
   VAR expressionType:T_expressionType;
       builtinId :string;
-      builtinPtr:P_intFuncCallback;
       inlineEx :P_inlineExpression;
   begin
     expressionType:=T_expressionType(stream^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));

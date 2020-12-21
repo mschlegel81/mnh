@@ -119,9 +119,8 @@ TYPE
       setupLocation:T_tokenLocation;
 
       createdForm: TscriptedForm;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST title:string; CONST definition:P_literal; CONST context:P_context; CONST errorLocation:T_tokenLocation);
       FUNCTION getCreatedForm(CONST messages:P_messages):TscriptedForm;
       PROCEDURE setCreatedForm(form:TscriptedForm);

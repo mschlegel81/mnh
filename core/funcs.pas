@@ -51,12 +51,12 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-      FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+      FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback):P_intFuncCallback;
       FUNCTION containsFunctionForId(CONST id:string; OUT ptr:P_intFuncCallback):boolean;
       FUNCTION getFunctionForId(CONST id:string):P_intFuncCallback;
       FUNCTION getSideEffects(CONST ptr:P_intFuncCallback):T_sideEffects;
       FUNCTION canGetIntrinsicRuleAsExpression(CONST id:string; OUT wrapped:P_expressionLiteral):boolean;
-      FUNCTION getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback):P_expressionLiteral;
+      FUNCTION getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback; CONST doRereference:boolean):P_expressionLiteral;
       FUNCTION getMeta(CONST ptr:P_intFuncCallback):P_builtinFunctionMetaData;
       FUNCTION containsKey(CONST id:string):boolean;
       FUNCTION getAllIds:T_arrayOfString;
@@ -138,7 +138,7 @@ FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_
     end;
   end;
 
-FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback; CONST fullNameOnly: boolean): P_intFuncCallback; VAR meta:P_builtinFunctionMetaData;
+FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback): P_intFuncCallback; VAR meta:P_builtinFunctionMetaData;
   VAR metaByPointer:P_builtinFunctionMetaData;
   begin
     if mapByName.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,meta) then begin
@@ -211,10 +211,8 @@ FUNCTION T_functionMap.canGetIntrinsicRuleAsExpression(CONST id: string; OUT wra
     try
       if mapByName.containsKey(id,meta)
       then begin
-        if meta^.wrappedFunction=nil then begin
-          meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
-          meta^.wrappedFunction^.rereference;
-        end;
+        if meta^.wrappedFunction=nil
+        then meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
         wrapped:=P_expressionLiteral(meta^.wrappedFunction^.rereferenced);
         result:=true;
       end else result:=false;
@@ -223,18 +221,17 @@ FUNCTION T_functionMap.canGetIntrinsicRuleAsExpression(CONST id: string; OUT wra
     end;
   end;
 
-FUNCTION T_functionMap.getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback):P_expressionLiteral;
+FUNCTION T_functionMap.getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback; CONST doRereference:boolean):P_expressionLiteral;
   VAR meta:P_builtinFunctionMetaData;
   begin
     enterCriticalSection(functionMapCs);
     try
       if mapByFuncPointer.containsKey(ptr,meta)
       then begin
-        if meta^.wrappedFunction=nil then begin
-          meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
-          meta^.wrappedFunction^.rereference;
-        end;
-        result:=P_expressionLiteral(meta^.wrappedFunction^.rereferenced);
+        if meta^.wrappedFunction=nil
+        then meta^.wrappedFunction:=makeBuiltinExpressionCallback(meta);
+        result:=meta^.wrappedFunction;
+        if doRereference then result^.rereference;
       end else assert(false,'No function available for given pointer '+IntToHex(ptrint(ptr),32));
     finally
       leaveCriticalSection(functionMapCs);

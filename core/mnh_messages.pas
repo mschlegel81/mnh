@@ -4,8 +4,7 @@ USES sysutils,
      typinfo,
      myGenerics,
      basicTypes,
-     serializationUtil,
-     myStringUtil;
+     serializationUtil;
 
 TYPE
   T_stateFlag=(FlagQuietHalt,

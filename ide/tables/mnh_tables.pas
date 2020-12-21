@@ -77,9 +77,8 @@ TYPE
       tableContent:P_listLiteral;
       tableCaption:string;
       FixedRows,fixedColumns:longint;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint);
       DESTRUCTOR destroy; virtual;
   end;

@@ -20,9 +20,8 @@ TYPE
     private
       response:boolean;
       retrieved:boolean;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR createRetrieveRequest;
       PROCEDURE setResponse(CONST r:boolean);
       FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages):boolean;

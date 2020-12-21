@@ -141,6 +141,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
             mt_echo_input      : result:='In    ';
             mt_echo_declaration: result:='Decl. ';
             mt_echo_output     : result:='Out   ';
+            else                 result:='?echo?';
           end;
         mc_timing : result:='Time  ';
         mc_print  : result:='Print ';

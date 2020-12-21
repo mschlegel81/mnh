@@ -23,21 +23,18 @@ TYPE
 
   P_addRowMessage=^T_addRowMessage;
   T_addRowMessage=object(T_payloadMessage)
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
       styleOptions: string;
       rowData:T_dataRow;
       used:boolean;
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST styleOptions_: string; CONST rowData_:T_dataRow);
   end;
 
   P_addTextMessage=^T_addTextMessage;
   T_addTextMessage=object(T_payloadMessage)
-    protected
-      FUNCTION internalType:shortstring; virtual;
-    public
       customText:P_customText;
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST cText:P_customText);
   end;
 
@@ -47,9 +44,8 @@ TYPE
       options:T_scalingOptions;
       modified:T_scalingOptionElements;
       retrieved:boolean;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR createRetrieveRequest;
       CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions; CONST m:T_scalingOptionElements);
       PROCEDURE setOptions(CONST o:T_scalingOptions);
@@ -64,9 +60,8 @@ TYPE
       width,height:longint;
       retrieved:boolean;
       outputString:string;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint);
       CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint);
       PROCEDURE setString(CONST s:string);
@@ -79,9 +74,8 @@ TYPE
     private
       count:longint;
       dropRows:boolean;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST numberOfRowsToDrop:longint; CONST dropRows_:boolean);
   end;
 
@@ -89,9 +83,8 @@ TYPE
   T_plotDisplayRequest=object(T_payloadMessage)
     private
       displayExecuted:boolean;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create();
       PROCEDURE waitForExecution(CONST errorFlagProvider:P_messages);
       PROCEDURE markExecuted;
@@ -101,9 +94,8 @@ TYPE
   T_plotAddAnimationFrameRequest=object(T_payloadMessage)
     private
       propSleep:double;
-    protected
-      FUNCTION internalType:shortstring; virtual;
     public
+      FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create();
       FUNCTION getProposedSleepTime(CONST errorFlagProvider:P_messages):double;
       PROCEDURE markExecuted(CONST proposedSleepTime:double);

@@ -693,6 +693,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
@@ -882,6 +883,11 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
     end;
   end;
 
+FUNCTION T_parallelMapGenerator.mustBeDroppedBeforePop:boolean;
+  begin
+    result:=true;
+  end;
+
 DESTRUCTOR T_parallelMapGenerator.destroy;
   VAR literal:P_literal;
       toAggregate:P_mapTask;
@@ -893,8 +899,10 @@ DESTRUCTOR T_parallelMapGenerator.destroy;
       while (now<timeout) and (firstToAggregate<>nil) do begin
         toAggregate:=P_mapTask(firstToAggregate); firstToAggregate:=firstToAggregate^.nextToAggregate;
         while (now<timeout) and not(toAggregate^.canGetResult) do sleep(1);
-        if toAggregate^.mapTaskResult<>nil then disposeLiteral(toAggregate^.mapTaskResult);
-        dispose(toAggregate,destroy);
+        if toAggregate^.canGetResult then begin
+          if toAggregate^.mapTaskResult<>nil then outputQueue.append(toAggregate^.mapTaskResult);
+          dispose(toAggregate,destroy);
+        end;
       end;
     end;
     with recycling do while fill>0 do begin

@@ -266,8 +266,8 @@ USES mySys, operators,fileWrappers;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_context):P_expressionLiteral;
   begin
-    if      tok^.tokType in C_operators   then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType])
-    else if tok^.tokType=tt_intrinsicRule then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(P_intFuncCallback (tok^.data)   )
+    if      tok^.tokType in C_operators   then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType],true)
+    else if tok^.tokType=tt_intrinsicRule then result:=builtinFunctionMap.getIntrinsicRuleAsExpression(P_intFuncCallback (tok^.data)   ,true)
     else begin
       result:=nil;
       assert(false);
@@ -1538,7 +1538,7 @@ FUNCTION T_delegatorRule.getFunctionPointer(VAR context: T_context; VAR recycler
       tempToken            :=recycler.newToken(location,getId,tt_userRule,@self);
       tempToken^.next      :=getParametersForPseudoFuncPtr(arityInfo.minPatternLength,arityInfo.maxPatternLength<>arityInfo.minPatternLength,location,context,recycler);
       new(P_inlineExpression(result),createFromInline(tempToken,context,recycler,C_tokenDefaultId[tt_pseudoFuncPointer]+getId));
-    end else result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[intOperator]);
+    end else result:=builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[intOperator],true);
   end;
 
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context:T_context; VAR recycler:T_recycler; CONST location:T_tokenLocation):P_expressionLiteral;

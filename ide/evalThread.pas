@@ -159,7 +159,7 @@ DESTRUCTOR T_abstractEvaluation.destroy;
   begin
     haltEvaluation;
     timeout:=now+1/(24*60*60); //one second timeout
-    while (now<timeout) and not(enteredCs) do enteredCs:=enteredCs or (TryEnterCriticalSection(evaluationCs)=0);
+    while (now<timeout) and not(enteredCs) do enteredCs:=enteredCs or (tryEnterCriticalsection(evaluationCs)=0);
     package.destroy;
     globals.destroy;
     messages.destroy;
@@ -231,11 +231,14 @@ DESTRUCTOR T_ideScriptEvaluation.destroy;
 CONSTRUCTOR T_reevaluationWithGui.create();
   VAR plot:P_guiPlotSystem;
       console:P_redirectionAwareConsoleOutAdapter;
+      defaultConsoleFormatter:P_defaultConsoleFormatter;
   begin
     inherited init(ek_normal);
     commandLine.applyAndReturnOk(@messages,true);
     if not(clf_QUIET in commandLine.mnhExecutionOptions.flags) then begin
-      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode,nil));
+      new(defaultConsoleFormatter,create);
+      new(console,create(stringToMessageTypeSet(commandLine.mnhExecutionOptions.verbosityString),commandLine.getConsoleMode,defaultConsoleFormatter));
+      dispose(defaultConsoleFormatter,destroy);
       messages.addOutAdapter(console,true);
       //Do not show profiling info as text; is shown as GUI component
       console^.enableMessageType(false,[mt_profile_call_info]);

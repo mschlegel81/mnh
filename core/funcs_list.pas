@@ -148,7 +148,7 @@ FUNCTION sort_imp intFuncSignature;
       then cloneOrCopyList0
       else result:=compound0^.toList;
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(sortLoc),nil);
+      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(sortLoc,false),nil);
       {$endif}
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,@recycler);
       {$ifdef fullVersion}
@@ -565,7 +565,7 @@ FUNCTION group_imp intFuncSignature;
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;
       {$ifdef fullVersion}
-      if (aggregator<>nil) then context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(groupLoc),nil);
+      if (aggregator<>nil) then context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(groupLoc,false),nil);
       {$endif}
       groupMap.create(100);
       for inputIndex:=0 to length(keyList)-1 do if context.messages^.continueEvaluation then
