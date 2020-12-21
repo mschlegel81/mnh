@@ -107,11 +107,9 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     end;
 
   VAR fullLoc:boolean=false;
-  FUNCTION getLocationPart:string;
-    VAR loc:T_searchTokenLocation;
-        s  :string;
+  FUNCTION getLocationPart(CONST loc:T_searchTokenLocation):string;
+    VAR s  :string;
     begin
-      loc:=message^.getLocation;
       if (maxLocationLength<=1) or (maxLocationLength>1000) then begin
         fullLoc:=true;
         result:=loc;
@@ -189,7 +187,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     end else append(result,P_storedMessageWithText(message)^.txt);
     if length(result)=0 then append(result,'');
 
-    locationPart:=getLocationPart;
+    locationPart:=getLocationPart(message^.getLocation);
     timePart    :=getTimePart;
     levelPart   :=getLevelPart;
 
@@ -201,6 +199,11 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       result[0]:=timePart+levelPart+locationPart+' '+result[0];
       s:=StringOfChar(' ',length(timePart)+length(levelPart)+length(locationPart)+1);
       for i:=1 to length(result)-1 do result[i]:=s+result[i];
+    end;
+    if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
+      s:=StringOfChar(' ',length(timePart)+length(levelPart));
+      for i:=0 to length(stacktrace)-1 do
+        append(result,s+getLocationPart(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
     end;
   end;
 //------------------------------------------------------------------------------
@@ -266,17 +269,24 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       mc_note   ,
       mc_warning,
       mc_error  ,
-      mc_fatal  : if length(P_storedMessageWithText(message)^.txt)=1 then begin
-        if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
-        then result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0]
-        else begin
+      mc_fatal  : begin
+        if length(P_storedMessageWithText(message)^.txt)=1 then begin
+          if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
+          then result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0]
+          else begin
+            result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
+            append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0]);
+          end;
+        end else begin
           result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
-          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0]);
+          for s in P_storedMessageWithText(message)^.txt do
+            append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s);
         end;
-      end else begin
-        result:=marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
-        for s in P_storedMessageWithText(message)^.txt do
-          append(result,marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s);
+        if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
+          marker+=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);
+          for i:=0 to length(stacktrace)-1 do
+            append(result,marker+string(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
+        end;
       end
       else for s in P_storedMessageWithText(message)^.txt do append(result,''+s);
     end;
@@ -331,12 +341,19 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
       mc_note   ,
       mc_warning,
       mc_error  ,
-      mc_fatal  : if length(P_storedMessageWithText(message)^.txt)=1 then begin
-        result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
-      end else begin
-        result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
-        for s in P_storedMessageWithText(message)^.txt do
-          append(result,StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt))+' '+s);
+      mc_fatal  : begin
+        if length(P_storedMessageWithText(message)^.txt)=1 then begin
+          result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
+        end else begin
+          result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
+          for s in P_storedMessageWithText(message)^.txt do
+            append(result,StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s);
+        end;
+        if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
+          s:=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);
+          for i:=0 to length(stacktrace)-1 do
+            append(result,s+shortLocationString(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
+        end;
       end
       else result:=P_storedMessageWithText(message)^.txt;
     end;

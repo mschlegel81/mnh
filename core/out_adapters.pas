@@ -296,8 +296,8 @@ TYPE
 CONST
   C_defaultOutputBehavior:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation];
   C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
-  messageSubset_user    :T_messageTypeSet=[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
-  messageSubset_print   :T_messageTypeSet=[mt_printline,mt_printdirect,mt_clearConsole];
+  messageSubset_user    :T_messageTypeSet=[mt_log,mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
+  messageSubset_print   :T_messageTypeSet=[mt_printline,mt_printdirect,mt_clearConsole,mt_log];
   messageSubset_echo    :T_messageTypeSet=[mt_echo_input,mt_echo_declaration,mt_echo_output];
   messageSubset_timing  :T_messageTypeSet=[mt_timing_info{$ifdef fullVersion},mt_profile_call_info{$endif}];
   messageSubset_notes   :T_messageTypeSet=[mt_el1_note,mt_el1_userNote];
