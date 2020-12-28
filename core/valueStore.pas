@@ -53,6 +53,7 @@ TYPE
   end;
 
 IMPLEMENTATION
+USES mnh_messages,myGenerics;
 CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
     initCriticalSection(varCs);
@@ -245,7 +246,9 @@ FUNCTION T_valueScope.checkVariablesOnPop(CONST location:T_searchTokenLocation; 
          (P_expressionLiteral(variables[i]^.value)^.mustBeDroppedBeforePop)
       then begin
         result:=false;
-        context^.raiseError('Invalid entry in value scope on pop: '+variables[i]^.id+'='+variables[i]^.getValue^.toString(20)+' - set value to void before end!',location);
+        context^.messages^.postTextMessage(mt_el2_warning,location,'Invalid entry in value scope on pop: '+variables[i]^.id+'='+variables[i]^.getValue^.toString(20)+' - set value to void before end!');
+        variables[i]^.readonly:=False;
+        variables[i]^.setValue(newVoidLiteral);
       end;
   end;
 
