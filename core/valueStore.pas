@@ -247,7 +247,7 @@ FUNCTION T_valueScope.checkVariablesOnPop(CONST location:T_searchTokenLocation; 
       then begin
         result:=false;
         context^.messages^.postTextMessage(mt_el2_warning,location,'Invalid entry in value scope on pop: '+variables[i]^.id+'='+variables[i]^.getValue^.toString(20)+' - set value to void before end!');
-        variables[i]^.readonly:=False;
+        variables[i]^.readonly:=false;
         variables[i]^.setValue(newVoidLiteral);
       end;
   end;
