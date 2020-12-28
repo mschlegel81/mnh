@@ -416,8 +416,7 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
 PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
 
-PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction
-  );
+PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR m:P_guiElementMeta;
 
   begin

@@ -167,13 +167,14 @@ TYPE
     doDispose:boolean;
   end;
 
+  P_messages=^T_messages;
   P_abstractContext=^T_abstractContext;
   T_abstractContext=object
+    messages:P_messages;
     PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual; abstract;
     FUNCTION continueEvaluation:boolean; virtual; abstract;
   end;
 
-  P_messages=^T_messages;
   T_messages=object
     private
       messagesCs:TRTLCriticalSection;

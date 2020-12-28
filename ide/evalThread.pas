@@ -167,7 +167,8 @@ DESTRUCTOR T_abstractEvaluation.destroy;
   begin
     haltEvaluation;
     timeout:=now+1/(24*60*60); //one second timeout
-    while (now<timeout) and not(enteredCs) do enteredCs:=enteredCs or (tryEnterCriticalsection(evaluationCs)=0);
+    while (now<timeout) and not(enteredCs) do enteredCs:=enteredCs or (tryEnterCriticalsection(evaluationCs)<>0);
+    assert(enteredCs);
     package.destroy;
     globals.destroy;
     messages.destroy;
@@ -266,19 +267,22 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     end;
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);
-    if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
-    then evalRequest.contextType:=ect_profiling
-    else evalRequest.contextType:=ect_normal;
-    if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags)
-    then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
-    evalRequest.callMain:=true;
-    evalRequest.parameters:=commandLine.mainParameters;
-    if commandLine.getFileToInterpretFromCommandLine<>''
-    then package.replaceCodeProvider(newFileCodeProvider(commandLine.getFileToInterpretFromCommandLine))
-    else package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,commandLine.getCommandToInterpretFromCommandLine));
-    state:=es_pending;
-    executeInNewThread(false);
-    system.leaveCriticalSection(evaluationCs);
+    try
+      if (clf_PROFILE in commandLine.mnhExecutionOptions.flags)
+      then evalRequest.contextType:=ect_profiling
+      else evalRequest.contextType:=ect_normal;
+      if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags)
+      then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
+      evalRequest.callMain:=true;
+      evalRequest.parameters:=commandLine.mainParameters;
+      if commandLine.getFileToInterpretFromCommandLine<>''
+      then package.replaceCodeProvider(newFileCodeProvider(commandLine.getFileToInterpretFromCommandLine))
+      else package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,commandLine.getCommandToInterpretFromCommandLine));
+      state:=es_pending;
+      executeInNewThread(false);
+    finally
+      system.leaveCriticalSection(evaluationCs);
+    end;
   end;
 
 VAR evaluationThreadsRunning:longint=0;
@@ -291,12 +295,15 @@ FUNCTION evaluationThread(p:pointer):ptrint;
       execute(recycler);
       recycler.cleanup;
       enterCriticalSection(evaluationCs);
-      if stoppedByUser
-      then state:=es_stoppedByUser
-      else state:=es_finished;
-      evalTime:=now-evalTime;
-      messages.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
-      leaveCriticalSection(evaluationCs);
+      try
+        if stoppedByUser
+        then state:=es_stoppedByUser
+        else state:=es_finished;
+        evalTime:=now-evalTime;
+        messages.postSingal(mt_endOfEvaluation,C_nilSearchTokenLocation);
+      finally
+        leaveCriticalSection(evaluationCs);
+      end;
     end;
     interlockedDecrement(evaluationThreadsRunning);
     result:=0;

@@ -82,7 +82,6 @@ TYPE
     public
       state:T_taskState;
       callDepth:longint;
-      messages:P_messages;
       valueScope:P_valueScope;
       {$ifdef fullVersion}
       parentCustomForm:pointer;
