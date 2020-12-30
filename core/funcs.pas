@@ -118,31 +118,25 @@ FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_
   VAR meta,prevMeta:P_builtinFunctionMetaData;
       reusingExistingFunction:boolean;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      reusingExistingFunction:=mapByFuncPointer.containsKey(ptr,prevMeta);
+    reusingExistingFunction:=mapByFuncPointer.containsKey(ptr,prevMeta);
 
-      new(meta,create(aritiyKind,namespace,name,sideEffects,ptr));
-      assert(not(mapByName.containsKey(meta^.qualifiedId)));
-      setLength(uniqueMetaDatas,length(uniqueMetaDatas)+1);
-      uniqueMetaDatas[length(uniqueMetaDatas)-1]:=meta;
+    new(meta,create(aritiyKind,namespace,name,sideEffects,ptr));
+    assert(not(mapByName.containsKey(meta^.qualifiedId)));
+    setLength(uniqueMetaDatas,length(uniqueMetaDatas)+1);
+    uniqueMetaDatas[length(uniqueMetaDatas)-1]:=meta;
 
-      if not(fullNameOnly)
-      then mapByName  .put(name             ,meta);
-      mapByName       .put(meta^.qualifiedId,meta);
-      if not(reusingExistingFunction) then mapByFuncPointer.put(ptr,meta);
-      {$ifdef fullVersion}registerDoc(meta^.qualifiedId,explanation,fullNameOnly);{$endif}
-      result:=ptr;
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    if not(fullNameOnly)
+    then mapByName  .put(name             ,meta);
+    mapByName       .put(meta^.qualifiedId,meta);
+    if not(reusingExistingFunction) then mapByFuncPointer.put(ptr,meta);
+    {$ifdef fullVersion}registerDoc(meta^.qualifiedId,explanation,fullNameOnly);{$endif}
+    result:=ptr;
   end;
 
 FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback): P_intFuncCallback; VAR meta:P_builtinFunctionMetaData;
   VAR metaByPointer:P_builtinFunctionMetaData;
   begin
     if mapByName.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,meta) then begin
-      enterCriticalSection(functionMapCs);
       mapByFuncPointer.containsKey(meta^.functionPointer,metaByPointer);
 
       {$ifdef debugMode}
@@ -155,7 +149,6 @@ FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: 
       mapByFuncPointer.dropKey(meta^.functionPointer);
       mapByFuncPointer.put(ptr,meta);
       meta^.functionPointer:=ptr;
-      leaveCriticalSection(functionMapCs);
       result:=ptr;
     end else raise Exception.create('Cannot reregister rule which is not registered yet! Name: '+C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name);
   end;
@@ -163,45 +156,29 @@ FUNCTION T_functionMap.reregisterRule(CONST namespace: T_namespace; CONST name: 
 FUNCTION T_functionMap.containsFunctionForId(CONST id: string; OUT ptr: P_intFuncCallback): boolean;
   VAR meta:P_builtinFunctionMetaData;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      if mapByName.containsKey(id,meta) then begin
-        ptr:=meta^.functionPointer;
-        result:=true;
-      end else begin
-        ptr:=nil;
-        result:=false;
-      end;
-
-    finally
-      leaveCriticalSection(functionMapCs);
+    if mapByName.containsKey(id,meta) then begin
+      ptr:=meta^.functionPointer;
+      result:=true;
+    end else begin
+      ptr:=nil;
+      result:=false;
     end;
   end;
 
 FUNCTION T_functionMap.getFunctionForId(CONST id: string): P_intFuncCallback;
   VAR meta:P_builtinFunctionMetaData;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      if mapByName.containsKey(id,meta)
-      then result:=meta^.functionPointer
-      else assert(false,'No function available for id '+id);
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    if mapByName.containsKey(id,meta)
+    then result:=meta^.functionPointer
+    else assert(false,'No function available for id '+id);
   end;
 
 FUNCTION T_functionMap.getSideEffects(CONST ptr: P_intFuncCallback): T_sideEffects;
   VAR meta:P_builtinFunctionMetaData;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      if mapByFuncPointer.containsKey(ptr,meta)
-      then result:=meta^.sideEffects
-      else result:=[];
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    if mapByFuncPointer.containsKey(ptr,meta)
+    then result:=meta^.sideEffects
+    else result:=[];
   end;
 
 FUNCTION T_functionMap.canGetIntrinsicRuleAsExpression(CONST id: string; OUT wrapped:P_expressionLiteral): boolean;
@@ -240,32 +217,17 @@ FUNCTION T_functionMap.getIntrinsicRuleAsExpression(CONST ptr:P_intFuncCallback;
 
 FUNCTION T_functionMap.getMeta(CONST ptr:P_intFuncCallback):P_builtinFunctionMetaData;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      if not(mapByFuncPointer.containsKey(ptr,result)) then result:=nil;
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    if not(mapByFuncPointer.containsKey(ptr,result)) then result:=nil;
   end;
 
 FUNCTION T_functionMap.containsKey(CONST id:string):boolean;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      result:=mapByName.containsKey(id);
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    result:=mapByName.containsKey(id);
   end;
 
 FUNCTION T_functionMap.getAllIds:T_arrayOfString;
   begin
-    enterCriticalSection(functionMapCs);
-    try
-      result:=mapByName.keySet;
-    finally
-      leaveCriticalSection(functionMapCs);
-    end;
+    result:=mapByName.keySet;
   end;
 
 CONSTRUCTOR T_builtinFunctionMetaData.create(CONST arityKind_: T_arityKind; CONST namespace_: T_namespace; CONST unqualifiedId_: T_idString; CONST sideEffects_: T_sideEffects; CONST functionPointer_: P_intFuncCallback);
