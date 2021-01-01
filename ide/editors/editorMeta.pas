@@ -660,7 +660,7 @@ PROCEDURE T_editorMeta.activate;
         editor.highlighter:=fileTypeMeta[language].highlighter;
       end;
       completionLogic.assignEditor(editor_,nil);
-      editor.readonly       :=runnerModel.areEditorsLocked;
+      editor.readonly       :=runnerModel.areEditorsLocked or strictlyReadOnly;
       mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
   end;
