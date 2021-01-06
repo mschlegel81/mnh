@@ -295,7 +295,7 @@ TYPE
   end;
 
 CONST
-  C_defaultOutputBehavior:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation];
+  C_defaultOutputBehavior:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation];
   C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
   messageSubset_user    :T_messageTypeSet=[mt_log,mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
   messageSubset_print   :T_messageTypeSet=[mt_printline,mt_printdirect,mt_clearConsole,mt_log];
@@ -306,8 +306,8 @@ CONST
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
 {$ifdef fullVersion}VAR{$else}CONST{$endif}
   gui_started:(NO,ide,REEVALUATION)=NO;
-FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
+FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
 USES myStringUtil,strutils,fileWrappers;
 VAR globalAdaptersCs:TRTLCriticalSection;
@@ -342,7 +342,7 @@ PROCEDURE ensureFileFlushThread;
     leaveCriticalSection(globalAdaptersCs);
   end;
 
-FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
+FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
   VAR i,level:longint;
       mt:T_messageType;
   begin
@@ -378,7 +378,7 @@ FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSe
     end;
   end;
 
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation]):string;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
   VAR toSwitchOn :T_messageTypeSet=[];
       toSwitchOff:T_messageTypeSet=[];
       mt:T_messageType;
