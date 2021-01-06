@@ -480,6 +480,7 @@ PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
     if initializing then exit;
     optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
     optionsToUpdate^.flags:=[];
+    optionsToUpdate^.verbosityString:=consoleVerbosityEdit.text;
     if guiFlagCb         .checked then include(optionsToUpdate^.flags,clf_GUI);
     if headlessFlagCb    .checked then include(optionsToUpdate^.flags,clf_HEADLESS);
     if pauseFlagCb       .checked then include(optionsToUpdate^.flags,clf_PAUSE_ALWAYS);
