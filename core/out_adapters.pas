@@ -460,18 +460,20 @@ FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
 
 FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
-    if SameFileName(fileName,other.fileName) and
-       (useLogFormatter =other.useLogFormatter) and
-       (handlePrintAsLog=other.handlePrintAsLog) and
-       (logDateFormat   =other.logDateFormat) and
-       (logLocationLen  =other.logLocationLen)
-    then begin
+    if SameFileName(fileName,other.fileName) or (textFileCase in [tfc_stderr,tfc_stdout]) and (other.textFileCase=textFileCase) then begin
       //In conflict, revert to appending mode
       other.forceNewFile:=other.forceNewFile and forceNewFile;
+      //In conflict: use log formatter
+      other.useLogFormatter:=other.useLogFormatter or useLogFormatter;
       //Unite message types
       other.messagesToInclude+=messagesToInclude;
       //Update verbosity
       other.verbosityPart:=messageTypeSetToString(other.messagesToInclude,globalMessageTypes);
+      //In doubt: convert print to log
+      other.handlePrintAsLog:=other.handlePrintAsLog or handlePrintAsLog;
+      //Use the longer time format for logging
+      if length(logDateFormat)>length(other.logDateFormat) then other.logDateFormat:=logDateFormat;
+      if logLocationLen>other.logLocationLen then other.logLocationLen:=logLocationLen;
       result:=true;
     end else result:=false;
   end;
