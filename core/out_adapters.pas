@@ -1286,6 +1286,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
   VAR handle:text;
       s:string;
       i:longint;
+      consoleHidden:boolean=false;
   begin
     enterCriticalSection(adapterCs);
     try
@@ -1300,12 +1301,12 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
               then system.append(handle)
               else rewrite(handle);
             end;
-            tfc_stdout: handle:=StdOut;
-            tfc_stderr: handle:=stdErr;
+            tfc_stdout: begin handle:=StdOut; consoleHidden:=not mySys.isConsoleShowing; end;
+            tfc_stderr: begin handle:=stdErr; consoleHidden:=not mySys.isConsoleShowing; end;
           end;
-
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
+            if (collected[i]^.messageType<>mt_clearConsole) and consoleHidden then mySys.showConsole;
             case collected[i]^.messageType of
               mt_clearConsole: if textFileCase<>tfc_file then mySys.clearConsole;
               mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
