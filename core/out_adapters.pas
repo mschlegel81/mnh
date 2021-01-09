@@ -462,18 +462,20 @@ FUNCTION T_textFileAdapterSpecification.getFilenameAndOptions: string;
 
 FUNCTION T_textFileAdapterSpecification.canMergeInto(VAR other: T_textFileAdapterSpecification; CONST globalMessageTypes: T_messageTypeSet): boolean;
   begin
-    if SameFileName(fileName,other.fileName) and
-       (useLogFormatter =other.useLogFormatter) and
-       (handlePrintAsLog=other.handlePrintAsLog) and
-       (logDateFormat   =other.logDateFormat) and
-       (logLocationLen  =other.logLocationLen)
-    then begin
+    if SameFileName(fileName,other.fileName) or (textFileCase in [tfc_stderr,tfc_stdout]) and (other.textFileCase=textFileCase) then begin
       //In conflict, revert to appending mode
       other.forceNewFile:=other.forceNewFile and forceNewFile;
+      //In conflict: use log formatter
+      other.useLogFormatter:=other.useLogFormatter or useLogFormatter;
       //Unite message types
       other.messagesToInclude+=messagesToInclude;
       //Update verbosity
       other.verbosityPart:=messageTypeSetToString(other.messagesToInclude,globalMessageTypes);
+      //In doubt: convert print to log
+      other.handlePrintAsLog:=other.handlePrintAsLog or handlePrintAsLog;
+      //Use the longer time format for logging
+      if length(logDateFormat)>length(other.logDateFormat) then other.logDateFormat:=logDateFormat;
+      if logLocationLen>other.logLocationLen then other.logLocationLen:=logLocationLen;
       result:=true;
     end else result:=false;
   end;
@@ -1287,6 +1289,7 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
   VAR handle:text;
       s:string;
       i:longint;
+      consoleHidden:boolean=false;
   begin
     enterCriticalSection(adapterCs);
     try
@@ -1301,12 +1304,12 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
               then system.append(handle)
               else rewrite(handle);
             end;
-            tfc_stdout: handle:=StdOut;
-            tfc_stderr: handle:=stdErr;
+            tfc_stdout: begin handle:=StdOut; consoleHidden:=not mySys.isConsoleShowing; end;
+            tfc_stderr: begin handle:=stdErr; consoleHidden:=not mySys.isConsoleShowing; end;
           end;
-
           forceRewrite:=false;
           for i:=0 to collectedFill-1 do begin
+            if (collected[i]^.messageType<>mt_clearConsole) and consoleHidden then mySys.showConsole;
             case collected[i]^.messageType of
               mt_clearConsole: if textFileCase<>tfc_file then mySys.clearConsole;
               mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
