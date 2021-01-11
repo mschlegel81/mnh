@@ -170,8 +170,10 @@ CONSTRUCTOR TAbstractSynMnhSyn.create(AOwner: TComponent; CONST flav: T_mnhSynFl
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
       styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
     end;
-    styleTable[tkTimingNote,skWarn].style:=[];
-    styleTable[tkTimingNote,skWarn].background:=$00F6F6F6;
+    styleTable[tkTimingNote,skWarn ].style:=[];
+    styleTable[tkTimingNote,skWarn ].background:=$00F6F6F6;
+    styleTable[tkTimingNote,skError].style:=[fsBold];
+    styleTable[tkTimingNote,skError].background:=$00FFFFFF;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       if flav=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
@@ -179,12 +181,13 @@ CONSTRUCTOR TAbstractSynMnhSyn.create(AOwner: TComponent; CONST flav: T_mnhSynFl
         styleTable[t,skWarn].FrameColor:=clRed;
         styleTable[t,skWarn].FrameStyle:=slsWaved;
         styleTable[t,skWarn].FrameEdges:=sfeBottom;
+
+        styleTable[t,skError].style:=styleTable[t,skError].style+[fsBold];
+        styleTable[t,skError].background:=$0000FFFF;
+        styleTable[t,skError].FrameColor:=clRed;
+        styleTable[t,skError].FrameStyle:=slsWaved;
+        styleTable[t,skError].FrameEdges:=sfeBottom;
       end;
-      styleTable[t,skError].style:=styleTable[t,skError].style+[fsBold];
-      styleTable[t,skError].background:=$0000FFFF;
-      styleTable[t,skError].FrameColor:=clRed;
-      styleTable[t,skError].FrameStyle:=slsWaved;
-      styleTable[t,skError].FrameEdges:=sfeBottom;
     end;
   end; { Create }
 
@@ -360,7 +363,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
         end;
         handleId(localId,lineIndex+1,run);
       end;
-      '@': if fTokenPos=0 then begin
+      '@': if (fTokenPos=0) or ((fTokenPos=3) and (blobEnder=chr(1))) then begin
              fTokenId:=tkSpecialComment;
              while fLine[run]<>#0 do inc(run);
            end else begin
@@ -431,6 +434,7 @@ PROCEDURE TMnhInputSyn.next;
   end;
 
 PROCEDURE TMnhOutputSyn.next;
+  CONST SECTION_HEAD_IDX=6;
   CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tokenKind; end=(
     (marker:''            ; tokenkind:tkDefault),    //0
     (marker:ECHO_MARKER   ; tokenkind:tkDefault),    //1
@@ -438,7 +442,7 @@ PROCEDURE TMnhOutputSyn.next;
     (marker:ERROR_MARKER  ; tokenkind:tkError),      //3
     (marker:WARNING_MARKER; tokenkind:tkWarning),    //4
     (marker:TIMING_MARKER ; tokenkind:tkTimingNote), //5
-    (marker:TIMING_MARKER2; tokenkind:tkTimingNote));//6
+    (marker:SECTION_MARKER; tokenkind:tkTimingNote));//6=SECTION_HEAD_IDX
 
   VAR b:byte;
 
@@ -469,12 +473,18 @@ PROCEDURE TMnhOutputSyn.next;
       exit;
     end;
     case ord(blobEnder) of
-      1: if run<3+C_echoPrefixLength then begin
+      1: if (run<3+C_echoPrefixLength) and (
+           startsWith(ECHO_MARKER+C_echoOutInfix) or
+           startsWith(ECHO_MARKER+C_echoInInfix) or
+           startsWith(ECHO_MARKER+C_echoDeclInfix) or
+           startsWith(ECHO_MARKER+C_echoContdInfix))
+         then begin
            fTokenId:=tkOperator;
            run:=3+C_echoPrefixLength;
          end else inherited next;
       else begin
         fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind;
+        if blobEnder=chr(SECTION_HEAD_IDX) then fTokenSubId:=skError;
         if fLine[run]=#0 then begin
           fTokenId:=tkNull;
           inc(run);
