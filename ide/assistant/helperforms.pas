@@ -11,21 +11,16 @@ USES
 
 TYPE
   THelpForm = class(T_mnhComponentForm)
-    builtinGroupBox: TGroupBox;
-    examplesGroupBox: TGroupBox;
-    referenceListBox: TListBox;
-    Panel1: TPanel;
-    examplesSynEdit: TSynEdit;
-    ScrollBox1: TScrollBox;
-    usedAtGroupBox: TGroupBox;
-    subrulesGroupBox: TGroupBox;
-    shortInfoLabel: TLabel;
-    shortInfoGroupBox: TGroupBox;
-    tokenLabel: TLabel;
-    MainMenu1: TMainMenu;
     openHtmlButton: TButton;
+    Panel1: TPanel;
+    ScrollBox1: TScrollBox;
+    MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
     helpHighlighter:TMnhOutputSyn;
+    shortInfoGroupBox: TGroupBox;
+    shortInfoLabel: TLabel;
+    SynEdit1: TSynEdit;
+    tokenLabel: TLabel;
     UpdateToggleBox: TToggleBox;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -33,16 +28,11 @@ TYPE
     PROCEDURE openHtmlButtonClick(Sender: TObject);
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
-    PROCEDURE referenceListBoxKeyDown(Sender: TObject; VAR key: word;
-      Shift: TShiftState);
     PROCEDURE SynEdit1KeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE UpdateToggleBoxChange(Sender: TObject);
     PROCEDURE dockChanged; override;
-    PROCEDURE locationLabelDblClick(Sender: TObject);
   private
-    temporaryComponents:array of TControl;
     currentLink:string;
-    tempLocations:array of T_searchTokenLocation;
     PROCEDURE toggleUpdate(CONST force:boolean=false; CONST enable:boolean=false);
   public
 
@@ -50,7 +40,8 @@ TYPE
 
 PROCEDURE ensureHelpForm;
 IMPLEMENTATION
-USES editorMetaBase, lclintf,ComCtrls,Graphics;
+USES editorMetaBase, lclintf,ComCtrls,Graphics,mnh_messages,myStringUtil,myGenerics;
+CONST H_LINE=#226#148#128;
 
 PROCEDURE ensureHelpForm;
   VAR helperForm:T_mnhComponentForm;
@@ -84,20 +75,19 @@ PROCEDURE ensureHelpForm;
 PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
     caption:=getCaption;
-    registerFontControl(examplesSynEdit,ctEditor);
+    registerFontControl(SynEdit1,ctEditor);
     registerFontControl(self,ctGeneral);
 
     helpHighlighter:=TMnhOutputSyn.create(self);
-    examplesSynEdit.highlighter:=helpHighlighter;
+    SynEdit1.highlighter:=helpHighlighter;
     currentLink:=getDocIndexLinkForBrowser;
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
-    setLength(temporaryComponents,0);
   end;
 
 PROCEDURE THelpForm.FormDestroy(Sender: TObject);
   begin
-    unregisterFontControl(examplesSynEdit);
+    unregisterFontControl(SynEdit1);
     unregisterFontControl(self);
   end;
 
@@ -119,56 +109,10 @@ PROCEDURE THelpForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 PROCEDURE THelpForm.performFastUpdate;
   VAR meta:P_editorMeta;
       info:T_tokenInfo;
-      ruleInfo:T_structuredRuleInfo;
+
       textLine:string;
       i:longint;
 
-  PROCEDURE clearTemporaryComponents;
-    VAR c:TComponent;
-    begin
-      for c in temporaryComponents do c.free;
-      setLength(temporaryComponents,0);
-      setLength(tempLocations,0);
-    end;
-
-  FUNCTION getNewLabel(CONST italic:boolean; CONST parent:TWinControl):TLabel;
-    VAR c       :TControl;
-        neighbor:TControl=nil;
-    begin
-      for c in temporaryComponents do if c.parent=parent then neighbor:=c;
-      result:=TLabel.create(self);
-      setLength(temporaryComponents,length(temporaryComponents)+1);
-      temporaryComponents[length(temporaryComponents)-1]:=result;
-      result.parent:=parent;
-      if italic then begin
-        result.Font:=Font;
-        result.Font.style:=[fsItalic];
-      end else result.ParentFont:=true;
-      if neighbor<>nil then begin
-        result.Align:=alCustom;
-        result.AnchorToNeighbour(akTop ,0,neighbor);
-        result.AnchorParallel   (akLeft,0,neighbor);
-      end else result.Align:=alTop;
-    end;
-
-  PROCEDURE addRuleInfo(CONST r:T_structuredRuleInfo; CONST box:TWinControl);
-    VAR lab:TLabel;
-    begin
-      if length(r.comment)>0 then getNewLabel(true,box).caption:=r.comment;
-      if length(r.idAndSignature)>0 then begin
-        lab:=getNewLabel(false,box);
-        if length(r.body)>0
-        then lab.caption:=r.idAndSignature+'->'+r.body
-        else lab.caption:=r.idAndSignature;
-
-        if r.location<>C_nilSearchTokenLocation then begin
-          lab.OnClick:=@locationLabelDblClick;
-          lab.Tag:=length(tempLocations);
-          setLength(tempLocations,length(tempLocations)+1);
-          tempLocations[length(tempLocations)-1]:=r.location;
-        end;
-      end;
-    end;
 
   FUNCTION isActiveInTabSheet:boolean;
     VAR
@@ -180,53 +124,108 @@ PROCEDURE THelpForm.performFastUpdate;
       result:=PageControl.activePage=page;
     end;
 
+  VAR separatorLine:string='';
+  PROCEDURE writeSectionHeader(CONST headerText:ansistring);
+    VAR i:longint;
+    begin
+      if separatorLine='' then begin
+        for i:=1 to SynEdit1.CharsInWindow-1 do separatorLine+=H_LINE;
+      end;
+      SynEdit1.Append(separatorLine);
+      SynEdit1.Append(SECTION_MARKER+headerText);
+      SynEdit1.Append(separatorLine);
+    end;
+
+  PROCEDURE addSubrulesSection;
+    VAR ruleInfo:T_structuredRuleInfo;
+        line:String;
+    begin
+      if length(info.userDefRuleInfo)<=0 then exit;
+      //Section header:
+      writeSectionHeader('Subrules:');
+
+      for ruleInfo in info.userDefRuleInfo do begin
+        for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.Append(line);
+        SynEdit1.Append(ruleInfo.location);
+        SynEdit1.Append(ECHO_MARKER+ruleInfo.idAndSignature+'->'+ruleInfo.body);
+      end;
+    end;
+
+  PROCEDURE addBuiltinSection;
+    VAR ruleInfo:T_structuredRuleInfo;
+        line:String;
+
+    begin
+     if length(info.builtinRuleInfo)<=0 then exit;
+     if (length(info.userDefRuleInfo)>0)
+     then writeSectionHeader('Overloads builtin function')
+     else writeSectionHeader('Builtin function');
+
+     for ruleInfo in info.builtinRuleInfo do begin
+       for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.Append(ECHO_MARKER+'//'+line);
+       SynEdit1.Append(ECHO_MARKER+ruleInfo.idAndSignature);
+     end;
+    end;
+
+  PROCEDURE addReferencedSection;
+    VAR loc:T_searchTokenLocation;
+    begin
+      if length(info.referencedAt)=0 then exit;
+      writeSectionHeader('References:');
+      for loc in info.referencedAt do begin
+        SynEdit1.Append(string(loc));
+        SynEdit1.append(ECHO_MARKER+workspace.getSourceLine(loc));
+      end;
+    end;
+
+  PROCEDURE addExamplesSection;
+    VAR line:String;
+    begin
+      if length(info.exampleText)=0 then exit;
+      writeSectionHeader('Examples:');
+      for line in info.exampleText do SynEdit1.Append(line);
+    end;
+
   begin
-    if not(isActiveInTabSheet and UpdateToggleBox.checked) or examplesSynEdit.Focused then exit;
+    if not(isActiveInTabSheet and UpdateToggleBox.checked) or SynEdit1.Focused then exit;
     meta:=workspace.currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
     if meta^.setUnderCursor(false,true)
     then begin
       BeginFormUpdate;
-      clearTemporaryComponents;
+      SynEdit1.ClearAll;
       info :=getCurrentTokenInfo;
       currentLink:=info.linkToHelp;
       tokenLabel.caption:='Token: '+info.tokenText;
       shortInfoGroupBox.visible:=info.shortInfo<>'';
       shortInfoLabel.caption:=info.shortInfo;
 
-      subrulesGroupBox.visible:=length(info.userDefRuleInfo)>0;
-      for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
+      addSubrulesSection;
+      addBuiltinSection;
+      addReferencedSection;
+      addExamplesSection;
 
-      builtinGroupBox.visible:=length(info.builtinRuleInfo)>0;
-      for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinGroupBox);
-      builtinGroupBox.Constraints.MaxHeight:=ClientHeight;
 
-      if (length(info.userDefRuleInfo)>0) and (length(info.builtinRuleInfo)>0)
-      then builtinGroupBox.caption:='Overloads builtin function'
-      else builtinGroupBox.caption:='Builtin function';
-
-      examplesGroupBox.visible:=length(info.exampleText)>0;
-      examplesSynEdit.lines.clear;
-      for textLine in info.exampleText do examplesSynEdit.lines.append(textLine);
-
-      usedAtGroupBox.visible:=length(info.referencedAt)>0;
-      referenceListBox.items.clear;
-      for i:=0 to length(info.referencedAt)-1 do referenceListBox.items.append(info.referencedAt[i]);
+      //subrulesGroupBox.visible:=length(info.userDefRuleInfo)>0;
+      //for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
+      //
+      //builtinGroupBox.visible:=length(info.builtinRuleInfo)>0;
+      //for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinGroupBox);
+      //builtinGroupBox.Constraints.MaxHeight:=ClientHeight;
+      //
+      //if (length(info.userDefRuleInfo)>0) and (length(info.builtinRuleInfo)>0)
+      //then builtinGroupBox.caption:='Overloads builtin function'
+      //else builtinGroupBox.caption:='Builtin function';
+      //
+      //examplesGroupBox.visible:=length(info.exampleText)>0;
+      //examplesSynEdit.lines.clear;
+      //for textLine in info.exampleText do examplesSynEdit.lines.append(textLine);
+      //
+      //usedAtGroupBox.visible:=length(info.referencedAt)>0;
+      //referenceListBox.items.clear;
+      //for i:=0 to length(info.referencedAt)-1 do referenceListBox.items.append(info.referencedAt[i]);
       EndFormUpdate;
     end;
-  end;
-
-PROCEDURE THelpForm.referenceListBoxKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-  begin
-    if key=13 then begin
-      workspace.openLocation(guessLocationFromString(referenceListBox.items[referenceListBox.ItemIndex],false));
-    end;
-  end;
-
-PROCEDURE THelpForm.locationLabelDblClick(Sender: TObject);
-  begin
-    if (TComponent(Sender).Tag>=0) and (TComponent(Sender).Tag<length(tempLocations))
-    then workspace.openLocation(tempLocations[TComponent(Sender).Tag]);
   end;
 
 PROCEDURE THelpForm.SynEdit1KeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);

@@ -33,14 +33,19 @@ CONST
   ERROR_MARKER  =#226#129#162;
   WARNING_MARKER=#226#129#163;
   TIMING_MARKER =#226#129#164;
-  TIMING_MARKER2=#226#128#141;
+  SECTION_MARKER=#226#128#141;
 
   C_echoPrefixLength=6;
+  C_echoOutInfix  =' out> ';
+  C_echoInInfix   ='  in> ';
+  C_echoDeclInfix ='decl> ';
+  C_echoContdInfix=' ...> ';
+
 
   C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; guiMarker:string; levelTxt:string; triggeredFlags:T_stateFlags; end=
     {mc_echo   }((htmlSpan:''     ; guiMarker:ECHO_MARKER;    levelTxt:'';      triggeredFlags:[]),
     {mc_print  } (htmlSpan:''     ; guiMarker:'';             levelTxt:'';      triggeredFlags:[]),
-    {mc_log    } (htmlSpan:''     ; guiMarker:'';             levelTxt:'log';   triggeredFlags:[]),
+    {mc_log    } (htmlSpan:''     ; guiMarker:'';             levelTxt:'Log';   triggeredFlags:[]),
     {mc_timing } (htmlSpan:''     ; guiMarker:TIMING_MARKER;  levelTxt:'';      triggeredFlags:[]),
     {mc_note   } (htmlSpan:''     ; guiMarker:NOTE_MARKER;    levelTxt:'Note';  triggeredFlags:[]),
     {mc_warning} (htmlSpan:''     ; guiMarker:WARNING_MARKER; levelTxt:'Warn';  triggeredFlags:[]),

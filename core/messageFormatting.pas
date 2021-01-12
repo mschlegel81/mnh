@@ -244,13 +244,13 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         mt_echo_input,
         mt_echo_declaration: begin
           if message^.messageType=mt_echo_input
-          then nextLine:='  in> '
-          else nextLine:='decl> ';
+          then nextLine:=C_echoInInfix
+          else nextLine:=C_echoDeclInfix;
           for s in P_storedMessageWithText(message)^.txt do begin
             if wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
             then begin
               append(result,marker+trimRight(nextLine));
-              nextLine:=' ...> '+trimLeft(s);
+              nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
           end;
           append(result,marker+trimRight(nextLine));
@@ -260,9 +260,9 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
           then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
           else result:=P_echoOutMessage(message)^.literal^.toString();
 
-          result[  0]:=marker+' out> '+result[0];
+          result[  0]:=marker+C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
-            result[i]:=marker+' ...> '+result[i];
+            result[i]:=marker+C_echoContdInfix+result[i];
         end;
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,marker+s);
@@ -319,22 +319,22 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
         mt_echo_input,
         mt_echo_declaration: begin
           if message^.messageType=mt_echo_input
-          then nextLine:='  in> '
-          else nextLine:='decl> ';
+          then nextLine:=C_echoInInfix
+          else nextLine:=C_echoDeclInfix;
           for s in P_storedMessageWithText(message)^.txt do begin
             if (length(nextLine)>10) and (length(nextLine)+length(s)>CONSOLE_OUT_WIDTH)
             then begin
               append(result,trimRight(nextLine));
-              nextLine:=' ...> '+trimLeft(s);
+              nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
           end;
           append(result,trimRight(nextLine));
         end;
         mt_echo_output: begin
           result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,CONSOLE_OUT_WIDTH-C_echoPrefixLength);
-          result[  0]:=' out> '+result[0];
+          result[  0]:=C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
-            result[i]:=' ...> '+result[i];
+            result[i]:=C_echoContdInfix+result[i];
         end;
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,s);
