@@ -72,6 +72,7 @@ T_workspace=object(T_serializable)
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
     PROCEDURE checkForFileChanges;
+    FUNCTION getSourceLine(CONST location:T_searchTokenLocation):string;
 
     FUNCTION getMainFormCaption:string;
 
@@ -742,6 +743,31 @@ PROCEDURE T_workspace.checkForFileChanges;
         end;
       end;
       inc(metaIndex);
+    end;
+  end;
+
+FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation):string;
+  VAR meta:P_editorMeta;
+      lines:T_arrayOfString;
+      hasResult:boolean=false;
+  begin
+    EnterCriticalSection(workspaceCs);
+    try
+      for meta in metas do if not(hasResult) and (meta^.pseudoName=location.fileName) then begin
+        lines:=meta^.getLines;
+        if (location.line>=1) and (location.line<=length(lines))
+        then result:=lines[location.line-1]
+        else result:='';
+        hasResult:=true;
+      end;
+      if not(hasResult) then begin
+        lines:=fileLines(location.fileName,hasResult);
+        if hasResult and (location.line>=1) and (location.line<=length(lines))
+        then result:=lines[location.line-1]
+        else result:='';
+      end;
+    finally
+      LeaveCriticalSection(workspaceCs);
     end;
   end;
 

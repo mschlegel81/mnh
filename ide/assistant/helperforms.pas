@@ -174,7 +174,7 @@ PROCEDURE THelpForm.performFastUpdate;
       writeSectionHeader('References:');
       for loc in info.referencedAt do begin
         SynEdit1.Append(string(loc));
-        //TODO: Also insert corresponding input line!
+        SynEdit1.append(ECHO_MARKER+workspace.getSourceLine(loc));
       end;
     end;
 
