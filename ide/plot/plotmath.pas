@@ -95,6 +95,7 @@ TYPE
       PROCEDURE zoom(CONST screenCoordinate:longint; CONST zoomFactor:double);
       PROCEDURE pan(CONST screenDelta:longint);
       FUNCTION sampleIsInRange(CONST x:double):boolean;
+      FUNCTION equals(CONST other:T_axisTrafo):boolean;
   end;
 
   T_sampleRow = object
@@ -127,6 +128,7 @@ TYPE
     FUNCTION getOptionString:string;
     FUNCTION getOptionDiffString(CONST before:T_scalingOptions):string;
     PROCEDURE modifyOptions(CONST o:T_scalingOptions; CONST modified:T_scalingOptionElements);
+    FUNCTION equals(CONST other:T_scalingOptions):boolean;
   end;
 
   T_customTextAnchor=(cta_topLeft   ,cta_top   ,cta_topRight   ,
@@ -1239,6 +1241,18 @@ PROCEDURE T_scalingOptions.modifyOptions(CONST o:T_scalingOptions; CONST modifie
     if soe_strict          in modified then strictInput             :=o.strictInput;
   end;
 
+FUNCTION T_scalingOptions.equals(CONST other:T_scalingOptions):boolean;
+  begin
+    result:=(preserveAspect=other.preserveAspect) and
+            (strictInput   =other.strictInput) and
+            (relativeFontSize=other.relativeFontSize) and
+            (autoscaleFactor=other.autoscaleFactor) and
+            (axisTrafo['x'].equals(other.axisTrafo['x'])) and
+            (axisTrafo['y'].equals(other.axisTrafo['y'])) and
+            (axisStyle['x']=other.axisStyle['x']) and
+            (axisStyle['y']=other.axisStyle['y']);
+  end;
+
 CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
   begin
     style.init();
@@ -1426,6 +1440,14 @@ PROCEDURE T_axisTrafo.pan(CONST screenDelta: longint);
 FUNCTION T_axisTrafo.sampleIsInRange(CONST x: double): boolean;
   begin
     result:=not(isNan(x)) and (x>=rangeByAutosize[0]) and (x<=rangeByAutosize[1]);
+  end;
+
+FUNCTION T_axisTrafo.equals(CONST other:T_axisTrafo):boolean;
+  begin
+    result:=(autoscale = other.autoscale) and
+            (logs=other.logs) and
+            (rangeByUser[0]=other.rangeByUser[0]) and
+            (rangeByUser[1]=other.rangeByUser[1]);
   end;
 
 INITIALIZATION

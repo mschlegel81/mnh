@@ -101,6 +101,8 @@ TYPE
       PROCEDURE markExecuted(CONST proposedSleepTime:double);
   end;
 
+  T_frameCacheMode=(fcm_none,fcm_retainImage,fcm_inMemoryPng,fcm_tempFile);
+
   P_plot =^T_plot;
   T_plot = object
     private
@@ -109,6 +111,24 @@ TYPE
       row: array of T_sampleRow;
       virtualRowIndex:longint;
       customText:array of P_customText;
+
+      cachedImage:record
+        image:TImage;
+        dumpIsUpToDate:boolean;
+        dumpName:string;
+        inMemoryDump:TMemoryStream;
+        renderedWidth  ,
+        renderedHeight :longint;
+      end;
+
+      backgroundProcessing:record
+        backgroundPreparationRunning:boolean;
+        postedWidth  ,
+        postedHeight :longint;
+        postedFileName:string;
+        renderToFilePosted:boolean;
+      end;
+
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
       PROCEDURE drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
@@ -120,6 +140,8 @@ TYPE
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
       PROCEDURE removeCustomText(CONST numberOfEntriesToRemove:longint);
+
+      PROCEDURE performPostedPreparation;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -133,36 +155,13 @@ TYPE
 
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint);
+      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint);
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
       FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       FUNCTION getRowStatementCount:longint;
-  end;
 
-  T_frameCacheMode=(fcm_none,fcm_retainImage,fcm_inMemoryPng,fcm_tempFile);
-
-  P_plotSeriesFrame=^T_plotSeriesFrame;
-  T_plotSeriesFrame=object
-    private
-      backgroundPreparation:boolean;
-
-      cachedImage:record
-        image:TImage;
-        dumpIsUpToDate:boolean;
-        dumpName:string;
-        inMemoryDump:TMemoryStream;
-        renderedWidth  ,
-        renderedHeight :longint;
-      end;
-
-      postedWidth  ,
-      postedHeight :longint;
-      plotData:T_plot;
-      PROCEDURE performPostedPreparation;
-    public
-      CONSTRUCTOR create(VAR currentPlot:T_plot);
-      DESTRUCTOR destroy;
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
       PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint);
@@ -174,8 +173,8 @@ TYPE
 
   T_plotSeries=object
     private
-      frame:array of P_plotSeriesFrame;
-      framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
+      frame:array of P_plot;
+      framesWithImagesAllocated:array[0..7] of P_plot;
       seriesCs:TRTLCriticalSection;
       weHadAMemoryPanic:boolean;
       volatile:boolean;
@@ -300,36 +299,9 @@ PROCEDURE T_timedPlotExecution.wait;
     if timeout-timer.elapsed>0   then sleep(round(1000*(timeout-timer.elapsed))    );
   end;
 
-CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
+PROCEDURE T_plot.doneImage(CONST cacheMode:T_frameCacheMode);
   begin
-    with cachedImage do begin
-      image:=nil;
-      dumpIsUpToDate:=false;
-      dumpName:='';
-      inMemoryDump:=nil;
-      renderedWidth :=-1;
-      renderedHeight:=-1;
-    end;
-    backgroundPreparation:=false;
-    plotData.createWithDefaults;
-    plotData.copyFrom(currentPlot);
-  end;
-
-DESTRUCTOR T_plotSeriesFrame.destroy;
-  begin
-    enterCriticalSection(plotData.cs);
-    try
-      doneImage(fcm_none);
-      if cachedImage.dumpName<>'' then DeleteFile(cachedImage.dumpName);
-    finally
-      leaveCriticalSection(plotData.cs);
-      plotData.destroy;
-    end;
-  end;
-
-PROCEDURE T_plotSeriesFrame.doneImage(CONST cacheMode:T_frameCacheMode);
-  begin
-    enterCriticalSection(plotData.cs);
+    enterCriticalSection(cs);
     try
       with cachedImage do case cacheMode of
         fcm_none       : begin
@@ -373,14 +345,14 @@ PROCEDURE T_plotSeriesFrame.doneImage(CONST cacheMode:T_frameCacheMode);
         end;
       end;
     finally
-      leaveCriticalSection(plotData.cs);
+      leaveCriticalSection(cs);
     end;
   end;
 
-PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint);
+PROCEDURE T_plot.prepareImage(CONST width,height:longint);
   VAR imageIsPrepared:boolean=false;
   begin
-    enterCriticalSection(plotData.cs);
+    enterCriticalSection(cs);
     try
       if (cachedImage.renderedWidth  =width  ) and
          (cachedImage.renderedHeight =height ) then begin
@@ -401,88 +373,95 @@ PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint);
         end;
       end;
       if not(imageIsPrepared) then begin
-        enterCriticalSection(globalTextRenderingCs);
         if cachedImage.image<>nil then FreeAndNil(cachedImage.image);
-        leaveCriticalSection(globalTextRenderingCs);
-        cachedImage.image:=plotData.obtainPlot(width,height);
+        cachedImage.image:=obtainPlot(width,height);
         cachedImage.dumpIsUpToDate:=false;
         cachedImage.renderedHeight :=height;
         cachedImage.renderedWidth  :=width;
       end;
     finally
-      leaveCriticalSection(plotData.cs);
+      leaveCriticalSection(cs);
     end;
   end;
 
-PROCEDURE T_plotSeriesFrame.performPostedPreparation;
+PROCEDURE T_plot.performPostedPreparation;
   begin
     try
-      enterCriticalSection(plotData.cs);
+      enterCriticalSection(cs);
     except
-      backgroundPreparation:=false;
+      backgroundProcessing.backgroundPreparationRunning:=false;
       exit;
     end;
     try
-      prepareImage(postedWidth,postedHeight);
+      with backgroundProcessing do begin
+        prepareImage(postedWidth,postedHeight);
+        if renderToFilePosted then begin
+          renderToFile(postedFileName,postedWidth,postedHeight);
+          doneImage(fcm_none);
+        end;
+      end;
     finally
-      backgroundPreparation:=false;
-      leaveCriticalSection(plotData.cs);
+      backgroundProcessing.backgroundPreparationRunning:=false;
+      leaveCriticalSection(cs);
     end;
   end;
 
 VAR preparationThreadsRunning:longint=0;
 FUNCTION preparationThread(p:pointer):ptrint;
   begin
-    P_plotSeriesFrame(p)^.performPostedPreparation;
+    P_plot(p)^.performPostedPreparation;
     interlockedDecrement(preparationThreadsRunning);
     result:=0
   end;
 
-PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint);
+PROCEDURE T_plot.postPreparation(CONST width,height:longint);
   begin
-    if backgroundPreparation or isImagePreparedForResolution(width,height) then exit;
-    enterCriticalSection(plotData.cs);
-    if backgroundPreparation or isImagePreparedForResolution(width,height) then begin
-      leaveCriticalSection(plotData.cs);
+    if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then exit;
+    enterCriticalSection(cs);
+    if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then begin
+      leaveCriticalSection(cs);
       exit;
     end;
     try
-      backgroundPreparation:=true;
-      postedHeight:=height;
-      postedWidth:=width;
+      with backgroundProcessing do begin
+        backgroundPreparationRunning:=true;
+        postedHeight:=height;
+        postedWidth:=width;
+        renderToFilePosted:=false;
+      end;
       interLockedIncrement(preparationThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
-      leaveCriticalSection(plotData.cs);
+      leaveCriticalSection(cs);
     end;
   end;
 
-FUNCTION T_plotSeriesFrame.isImagePreparedForResolution(CONST width,height:longint):boolean;
+FUNCTION T_plot.isImagePreparedForResolution(CONST width,height:longint):boolean;
   begin
-    enterCriticalSection(plotData.cs);
+    enterCriticalSection(cs);
     result:=(cachedImage.renderedWidth=width) and
             (cachedImage.renderedHeight=height) and
             (cachedImage.image<>nil);
-    leaveCriticalSection(plotData.cs);
+    leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plotSeriesFrame.hasResolution(CONST width,height:longint):boolean;
+FUNCTION T_plot.hasResolution(CONST width,height:longint):boolean;
   begin
-    enterCriticalSection(plotData.cs);
+    enterCriticalSection(cs);
     result:=(cachedImage.renderedWidth=width) and
             (cachedImage.renderedHeight=height);
-    leaveCriticalSection(plotData.cs);
+    leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
+PROCEDURE T_plot.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
   begin
-    enterCriticalSection(plotData.cs);
+    enterCriticalSection(cs);
     try
       prepareImage(target.width,target.height);
       timing.wait;
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
     finally
-      leaveCriticalSection(plotData.cs);
+      leaveCriticalSection(cs);
     end;
   end;
 
@@ -641,15 +620,14 @@ CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: 
 FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
   begin
     enterCriticalSection(seriesCs);
-    result:=frame[index]^.plotData.scalingOptions;
+    result:=frame[index]^.scalingOptions;
     leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOptions);
   begin
     enterCriticalSection(seriesCs);
-    frame[index]^.plotData.scalingOptions:=value;
-    frame[index]^.doneImage(fcm_none);
+    frame[index]^.setScalingOptions(value);
     leaveCriticalSection(seriesCs);
   end;
 
@@ -716,7 +694,7 @@ FUNCTION T_plotSeries.frameCount: longint;
   end;
 
 PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST timing:T_timedPlotExecution);
-  VAR current:P_plotSeriesFrame;
+  VAR current:P_plot;
 
   PROCEDURE handleImagesToFree;
     VAR k,j:longint;
@@ -742,7 +720,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       //shift
       move(framesWithImagesAllocated[0],
            framesWithImagesAllocated[1],
-           (length(framesWithImagesAllocated)-1)*sizeOf(P_plotSeriesFrame));
+           (length(framesWithImagesAllocated)-1)*sizeOf(P_plot));
       //insert
       framesWithImagesAllocated[0]:=current;
     end;
@@ -773,23 +751,25 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     end;
     try
       {$ifndef unix}
-      if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height);
+      if exportingAll
+      then frame[index]^.postRenderToFile(fileName,width,height)
+      else begin
       {$endif}
-
-      storeImage:=TImage.create(nil);
-      storeImage.SetInitialBounds(0,0,width,height);
-      frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
-      try
-        storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
-      except
-        beep;
-        message:='Could not access file '+fileName;
-        Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+        storeImage:=TImage.create(nil);
+        storeImage.SetInitialBounds(0,0,width,height);
+        frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
+        try
+          storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+        except
+          beep;
+          message:='Could not access file '+fileName;
+          Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+        end;
+        storeImage.destroy;
+        frame[index]^.doneImage(fcm_none);
+      {$ifndef unix}
       end;
-      enterCriticalSection(globalTextRenderingCs);
-      storeImage.destroy;
-      leaveCriticalSection(globalTextRenderingCs);
-      frame[index]^.doneImage(fcm_none);
+      {$endif}
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -802,7 +782,8 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
     try
       k:=length(frame);
       setLength(frame,k+1);
-      new(frame[k],create(plot));
+      new(frame[k],createWithDefaults);
+      frame[k]^.copyFrom(plot);
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -880,6 +861,16 @@ CONSTRUCTOR T_plot.createWithDefaults;
   begin
     system.initCriticalSection(cs);
     setDefaults;
+
+    with cachedImage do begin
+      image:=nil;
+      dumpIsUpToDate:=false;
+      dumpName:='';
+      inMemoryDump:=nil;
+      renderedWidth :=-1;
+      renderedHeight:=-1;
+    end;
+    backgroundProcessing.backgroundPreparationRunning:=false;
   end;
 
 PROCEDURE T_plot.setDefaults;
@@ -897,6 +888,8 @@ DESTRUCTOR T_plot.destroy;
   begin
     system.enterCriticalSection(cs);
     try
+      doneImage(fcm_none);
+      if cachedImage.dumpName<>'' then DeleteFile(cachedImage.dumpName);
       clear;
     finally
       system.leaveCriticalSection(cs);
@@ -990,6 +983,7 @@ PROCEDURE T_plot.removeCustomText(CONST numberOfEntriesToRemove:longint);
 PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
   begin
     system.enterCriticalSection(cs);
+    if not(scalingOptions.equals(value)) then doneImage(fcm_none);
     scalingOptions:=value;
     system.leaveCriticalSection(cs);
   end;
@@ -1470,54 +1464,56 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
-    enterCriticalSection(globalTextRenderingCs);
-    try
-      target.Font.height:=scalingOptions.absoluteFontSize(target.width,target.height);
-      target.Font.color:=clBlack;
-      cSysX:=scalingOptions.axisTrafo['x'].screenMin;
-      cSysY:=scalingOptions.axisTrafo['y'].screenMin;
-      //clear border:-----------------------------------------------------------
-      target.Brush.style:=bsSolid;
-      target.Brush.BGRAColor.FromRGB(255,255,255);
-      target.Pen.style:=psClear;
-      target.Pen.width:=1;
-      target.Pen.EndCap:=pecSquare;
-      target.FillRect(0,0,cSysX,target.height);
-      target.FillRect(cSysX,cSysY,target.width,target.height);
-      //-----------------------------------------------------------:clear border
-      //coordinate system:======================================================
-      //axis:-------------------------------------------------------------------
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor.FromRGB(0,0,0);
-      target.Pen.width:=1;
-      if (scalingOptions.axisStyle['y']<>[]) then begin
-        target.MoveTo(cSysX, 0);
-        target.LineTo(cSysX, cSysY);
-      end;
-      if (scalingOptions.axisStyle['x']<>[]) then begin
-        target.MoveTo(target.width, cSysY);
-        target.LineTo(cSysX        , cSysY);
-      end;
-      //-------------------------------------------------------------------:axis
-      //tics:-------------------------------------------------------------------
-      if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
-        y:=round(pos);
-        target.MoveTo(cSysX-5, y);
-        target.LineTo(cSysX  , y);
-        target.textOut(cSysX-5-target.textWidth(txt),
-                            y-target.textHeight(txt) shr 1, txt);
-      end;
-      if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
-        x:=round(pos);
-        target.MoveTo(x, cSysY+5);
-        target.LineTo(x, cSysY);
-        target.textOut(x-target.textWidth(txt) shr 1, cSysY+5, txt);
-      end;
-      //-------------------------------------------------------------------:tics
-      //======================================================:coordinate system
-    finally
-      leaveCriticalSection(globalTextRenderingCs);
+    cSysX:=scalingOptions.axisTrafo['x'].screenMin;
+    cSysY:=scalingOptions.axisTrafo['y'].screenMin;
+    //clear border:-----------------------------------------------------------
+    target.Brush.style:=bsSolid;
+    target.Brush.BGRAColor.FromRGB(255,255,255);
+    target.Pen.style:=psClear;
+    target.Pen.width:=1;
+    target.Pen.EndCap:=pecSquare;
+    target.FillRect(0,0,cSysX,target.height);
+    target.FillRect(cSysX,cSysY,target.width,target.height);
+    //-----------------------------------------------------------:clear border
+    //coordinate system:======================================================
+    //axis:-------------------------------------------------------------------
+    target.Pen.style:=psSolid;
+    target.Pen.BGRAColor.FromRGB(0,0,0);
+    target.Pen.width:=1;
+    if (scalingOptions.axisStyle['y']<>[]) then begin
+      target.MoveTo(cSysX, 0);
+      target.LineTo(cSysX, cSysY);
     end;
+    if (scalingOptions.axisStyle['x']<>[]) then begin
+      target.MoveTo(target.width, cSysY);
+      target.LineTo(cSysX        , cSysY);
+    end;
+    //-------------------------------------------------------------------:axis
+    //tics:-------------------------------------------------------------------
+    if (gse_tics in scalingOptions.axisStyle['y']) or (gse_tics in scalingOptions.axisStyle['x']) then begin
+      try
+        enterCriticalSection(globalTextRenderingCs);
+        target.Font.height:=scalingOptions.absoluteFontSize(target.width,target.height);
+        target.Font.color:=clBlack;
+        if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
+          y:=round(pos);
+          target.MoveTo(cSysX-5, y);
+          target.LineTo(cSysX  , y);
+          target.textOut(cSysX-5-target.textWidth(txt),
+                              y-target.textHeight(txt) shr 1, txt);
+        end;
+        if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
+          x:=round(pos);
+          target.MoveTo(x, cSysY+5);
+          target.LineTo(x, cSysY);
+          target.textOut(x-target.textWidth(txt) shr 1, cSysY+5, txt);
+        end;
+      finally
+        leaveCriticalSection(globalTextRenderingCs);
+      end;
+    end;
+    //-------------------------------------------------------------------:tics
+    //======================================================:coordinate system
   end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
@@ -1571,10 +1567,30 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
       message:='Could not access file '+fileName;
       Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
     end;
-
-    enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
-    leaveCriticalSection(globalTextRenderingCs);
+  end;
+
+PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint);
+  begin
+    enterCriticalSection(cs);
+    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
+      renderToFile(fileName,width,height);
+      leaveCriticalSection(cs);
+      exit;
+    end;
+    try
+      with backgroundProcessing do begin
+        backgroundPreparationRunning:=true;
+        postedHeight:=height;
+        postedWidth:=width;
+        renderToFilePosted:=true;
+        postedFileName:=fileName;
+      end;
+      interLockedIncrement(preparationThreadsRunning);
+      beginThread(@preparationThread,@self);
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
@@ -1587,9 +1603,7 @@ FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
     memStream.position:=0;
     result:=memStream.DataString;
     memStream.free;
-    enterCriticalSection(globalTextRenderingCs);
     storeImage.destroy;
-    leaveCriticalSection(globalTextRenderingCs);
   end;
 
 PROCEDURE T_plot.copyFrom(VAR p: T_plot);
@@ -1744,19 +1758,19 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       prevOptions.setDefaults;
       if animation.frameCount>0 then begin
         if frameIndexOrNegativeIfAll<0 then begin
-          for i:=0 to length(animation.frame)-1 do stepsTotal+=animation.frame[i]^.plotData.getRowStatementCount;
+          for i:=0 to length(animation.frame)-1 do stepsTotal+=animation.frame[i]^.getRowStatementCount;
           progress.max:=stepsTotal*2;
           progress.position:=0;
           Application.ProcessMessages;
           for i:=0 to length(animation.frame)-1 do begin
-            myGenerics.append(commands,animation.frame[i]^.plotData.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
-            prevOptions:=animation.frame[i]^.plotData.scalingOptions;
+            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
+            prevOptions:=animation.frame[i]^.scalingOptions;
             myGenerics.append(commands,'addAnimationFrame;');
           end;
         end else begin
-          progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatementCount*2;
+          progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.getRowStatementCount*2;
           Application.ProcessMessages;
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.plotData.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
         progress.max:=currentPlot.getRowStatementCount*2;
