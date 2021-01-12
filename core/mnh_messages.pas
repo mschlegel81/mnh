@@ -40,7 +40,6 @@ CONST
   C_echoDeclInfix ='decl> ';
   C_echoContdInfix=' ...> ';
 
-
   C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; guiMarker:string; levelTxt:string; triggeredFlags:T_stateFlags; end=
     {mc_echo   }((htmlSpan:''     ; guiMarker:ECHO_MARKER;    levelTxt:'';      triggeredFlags:[]),
     {mc_print  } (htmlSpan:''     ; guiMarker:'';             levelTxt:'';      triggeredFlags:[]),

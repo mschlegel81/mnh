@@ -113,7 +113,6 @@ PROCEDURE THelpForm.performFastUpdate;
       textLine:string;
       i:longint;
 
-
   FUNCTION isActiveInTabSheet:boolean;
     VAR
       PageControl: TPageControl;
@@ -129,31 +128,31 @@ PROCEDURE THelpForm.performFastUpdate;
     VAR i:longint;
     begin
       if separatorLine='' then begin
-        for i:=1 to SynEdit1.CharsInWindow-1 do separatorLine+=H_LINE;
+        for i:=1 to SynEdit1.charsInWindow-1 do separatorLine+=H_LINE;
       end;
-      SynEdit1.Append(separatorLine);
-      SynEdit1.Append(SECTION_MARKER+headerText);
-      SynEdit1.Append(separatorLine);
+      SynEdit1.append(separatorLine);
+      SynEdit1.append(SECTION_MARKER+headerText);
+      SynEdit1.append(separatorLine);
     end;
 
   PROCEDURE addSubrulesSection;
     VAR ruleInfo:T_structuredRuleInfo;
-        line:String;
+        line:string;
     begin
       if length(info.userDefRuleInfo)<=0 then exit;
       //Section header:
       writeSectionHeader('Subrules:');
 
       for ruleInfo in info.userDefRuleInfo do begin
-        for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.Append(line);
-        SynEdit1.Append(ruleInfo.location);
-        SynEdit1.Append(ECHO_MARKER+ruleInfo.idAndSignature+'->'+ruleInfo.body);
+        for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.append(line);
+        SynEdit1.append(ruleInfo.location);
+        SynEdit1.append(ECHO_MARKER+ruleInfo.idAndSignature+'->'+ruleInfo.body);
       end;
     end;
 
   PROCEDURE addBuiltinSection;
     VAR ruleInfo:T_structuredRuleInfo;
-        line:String;
+        line:string;
 
     begin
      if length(info.builtinRuleInfo)<=0 then exit;
@@ -162,8 +161,8 @@ PROCEDURE THelpForm.performFastUpdate;
      else writeSectionHeader('Builtin function');
 
      for ruleInfo in info.builtinRuleInfo do begin
-       for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.Append(ECHO_MARKER+'//'+line);
-       SynEdit1.Append(ECHO_MARKER+ruleInfo.idAndSignature);
+       for line in split(ruleInfo.comment,C_lineBreakChar) do SynEdit1.append(ECHO_MARKER+'//'+line);
+       SynEdit1.append(ECHO_MARKER+ruleInfo.idAndSignature);
      end;
     end;
 
@@ -173,17 +172,17 @@ PROCEDURE THelpForm.performFastUpdate;
       if length(info.referencedAt)=0 then exit;
       writeSectionHeader('References:');
       for loc in info.referencedAt do begin
-        SynEdit1.Append(string(loc));
+        SynEdit1.append(string(loc));
         SynEdit1.append(ECHO_MARKER+workspace.getSourceLine(loc));
       end;
     end;
 
   PROCEDURE addExamplesSection;
-    VAR line:String;
+    VAR line:string;
     begin
       if length(info.exampleText)=0 then exit;
       writeSectionHeader('Examples:');
-      for line in info.exampleText do SynEdit1.Append(line);
+      for line in info.exampleText do SynEdit1.append(line);
     end;
 
   begin
@@ -193,7 +192,7 @@ PROCEDURE THelpForm.performFastUpdate;
     if meta^.setUnderCursor(false,true)
     then begin
       BeginFormUpdate;
-      SynEdit1.ClearAll;
+      SynEdit1.clearAll;
       info :=getCurrentTokenInfo;
       currentLink:=info.linkToHelp;
       tokenLabel.caption:='Token: '+info.tokenText;
@@ -204,7 +203,6 @@ PROCEDURE THelpForm.performFastUpdate;
       addBuiltinSection;
       addReferencedSection;
       addExamplesSection;
-
 
       //subrulesGroupBox.visible:=length(info.userDefRuleInfo)>0;
       //for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
