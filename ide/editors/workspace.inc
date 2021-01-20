@@ -751,7 +751,7 @@ FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation):string;
       lines:T_arrayOfString;
       hasResult:boolean=false;
   begin
-    EnterCriticalSection(workspaceCs);
+    enterCriticalSection(workspaceCs);
     try
       for meta in metas do if not(hasResult) and (meta^.pseudoName=location.fileName) then begin
         lines:=meta^.getLines;
@@ -767,7 +767,7 @@ FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation):string;
         else result:='';
       end;
     finally
-      LeaveCriticalSection(workspaceCs);
+      leaveCriticalSection(workspaceCs);
     end;
   end;
 
