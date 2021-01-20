@@ -584,6 +584,77 @@ FUNCTION group_imp intFuncSignature;
     end;
   end;
 
+FUNCTION groupToList_imp intFuncSignature;
+  VAR valueList   :T_arrayOfLiteral;
+      keyList     :T_arrayOfLiteral;
+      defaultValue:P_literal;
+      aggregator  :P_expressionLiteral;
+
+      temp        :P_literal;
+      resultValues:T_arrayOfLiteral;
+      i,j0,j,key  :longint;
+      allOkay     :boolean=true;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=4) and (params^.size<=5) and
+       (arg0^.literalType in C_listTypes) and
+       (arg1^.literalType in [lt_emptyList,lt_intList]) and
+       (list1^.size=list0^.size) and
+       (arg3^.literalType=lt_expression) and
+       ((params^.size=4) or (params^.value[4]^.literalType=lt_smallint) and (P_smallIntLiteral(params^.value[4])^.value>=0))
+    then begin
+
+      valueList   :=list0^.iteratableList;
+      keyList     :=list1^.iteratableList;
+      defaultValue:=arg2;
+      aggregator  :=P_expressionLiteral(arg3);
+
+      if params^.size<=4
+      then setLength(resultValues,0)
+      else begin
+        setLength(resultValues,P_smallIntLiteral(params^.value[4])^.value);
+        for i:=0 to length(resultValues)-1 do resultValues[i]:=nil;
+      end;
+
+      for i:=0 to length(valueList)-1 do if allOkay then begin
+        key:=P_abstractIntLiteral(keyList[i])^.intValue;
+        if (key>=0) and (key<maxLongint) then begin
+          if key>=length(resultValues) then begin
+            j0:=length(resultValues);
+            setLength(resultValues,key+1);
+            for j:=j0 to key-1 do resultValues[j]:=nil;
+            resultValues[key]:=valueList[i]^.rereferenced;
+          end else begin
+            if resultValues[key]=nil then resultValues[key]:=valueList[i]^.rereferenced
+            else begin
+              temp:=aggregator^.evaluateToLiteral(tokenLocation,@context,@recycler,resultValues[key],valueList[i]).literal;
+              if temp<>nil then begin
+                disposeLiteral(resultValues[key]);
+                resultValues[key]:=temp;
+              end else begin
+                context.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+                allOkay:=false;
+              end;
+            end;
+          end;
+        end else begin
+          context.raiseError('Index out of bounds in groupToList: '+keyList[i]^.toString,tokenLocation);
+          allOkay:=false;
+        end;
+      end;
+      if allOkay then begin
+        result:=newListLiteral(length(resultValues));
+        for temp in resultValues do
+          if temp=nil
+          then listResult^.append(defaultValue,true)
+          else listResult^.append(temp,false);
+      end;
+      setLength(resultValues,0);
+      disposeLiteral(valueList);
+      disposeLiteral(keyList);
+    end;
+  end;
+
 FUNCTION toGenerator_imp intFuncSignature;
   begin
     result:=nil;
@@ -631,7 +702,9 @@ INITIALIZATION
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2{$ifdef fullVersion},'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)'{$endif});
   {$ifdef fullVersion}groupLoc:={$endif}
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
-                              'group',  @group_imp ,ak_variadic_2{$ifdef fullVersion},'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif});
+                              'group',  @group_imp ,ak_variadic_2{$ifdef fullVersion},'group(list,grouping);//Re-groups list to a map by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif});
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
+                              'groupToList',  @groupToList_imp ,ak_variadic_4{$ifdef fullVersion},'groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2));//Groups values by indexes to a list, using defaultValue where no value is given and aggregating using the aggregator#groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2),initialSize>=0);//As above but with a predefined initial result list size'{$endif});
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
                                                                             ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});

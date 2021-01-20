@@ -14,10 +14,12 @@ TYPE
                ak_unary,
                ak_binary,
                ak_ternary,
+               ak_quartary,
                ak_variadic,
                ak_variadic_1,
                ak_variadic_2,
-               ak_variadic_3);
+               ak_variadic_3,
+               ak_variadic_4);
 
   P_intFuncCallback=FUNCTION intFuncSignature;
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
@@ -68,10 +70,12 @@ CONST
                           {ak_unary     } (fixedParameters:1;       variadic:false),
                           {ak_binary    } (fixedParameters:2;       variadic:false),
                           {ak_ternary   } (fixedParameters:3;       variadic:false),
+                          {ak_quartary  } (fixedParameters:4;       variadic:false),
                           {ak_variadic  } (fixedParameters:0;       variadic:true ),
                           {ak_variadic_1} (fixedParameters:1;       variadic:true ),
                           {ak_variadic_2} (fixedParameters:2;       variadic:true ),
-                          {ak_variadic_3} (fixedParameters:3;       variadic:true ));
+                          {ak_variadic_3} (fixedParameters:3;       variadic:true ),
+                          {ak_variadic_4} (fixedParameters:4;       variadic:true ));
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
