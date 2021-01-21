@@ -240,6 +240,7 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     {$ifdef fullVersion}
     postIdeMessage:PROCEDURE (CONST messageText:string; CONST warn:boolean);
     {$endif}
+    globalThreadsRunning:longint=0;
 IMPLEMENTATION
 CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
   VAR myContext: T_context);
@@ -849,13 +850,14 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
             stopBecauseOfMemoryUsage or //memory panic with more than 1 pool thread running
-            (taskQueue.poolThreadsRunning+1>settings.cpuCount);
+            (globalThreadsRunning>settings.cpuCount);
       {$ifdef fullVersion}
       if stopBecauseOfMemoryUsage then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
 
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
+      interlockedDecrement(globalThreadsRunning);
     end;
     recycler.cleanup;
   end;
@@ -996,9 +998,10 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
       if isMemoryInComfortZone
       then aimPoolThreads:=settings.cpuCount-1
       else aimPoolThreads:=1;
-      while poolThreadsRunning<aimPoolThreads do begin
+      while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or (globalThreadsRunning<settings.cpuCount)) do begin
         spawnCount+=1;
         interLockedIncrement(poolThreadsRunning);
+        interlockedDecrement(globalThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
       {$ifdef fullVersion} {$ifdef debugMode}

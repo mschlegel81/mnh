@@ -215,6 +215,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
+      FUNCTION flushSingleMessage:boolean;
       PROCEDURE logPlotDone;
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
@@ -231,7 +232,8 @@ USES FPReadPNG,
      FPWritePNG,
      IntfGraphics,
      myStringUtil,
-     commandLineParameters;
+     commandLineParameters,
+     contexts;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -411,6 +413,7 @@ FUNCTION preparationThread(p:pointer):ptrint;
   begin
     P_plot(p)^.performPostedPreparation;
     interlockedDecrement(preparationThreadsRunning);
+    interlockedDecrement(globalThreadsRunning);
     result:=0
   end;
 
@@ -430,6 +433,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         renderToFilePosted:=false;
       end;
       interLockedIncrement(preparationThreadsRunning);
+      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);
@@ -1587,6 +1591,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         postedFileName:=fileName;
       end;
       interLockedIncrement(preparationThreadsRunning);
+      interlockedDecrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);
@@ -1883,11 +1888,35 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
     end;
   end;
 
+FUNCTION T_plotSystem.flushSingleMessage:boolean;
+  VAR i:longint;
+      m:P_storedMessage;
+  begin
+    enterCriticalSection(adapterCs);
+    try
+      //process one message
+      if collectedFill>0 then begin
+        m:=collected[0];
+        processMessage(m);
+        for i:=0 to length(collected)-2 do collected[i]:=collected[i+1];
+        disposeMessage(m);
+        dec(collectedFill);
+        result:=true;
+      end else result:=false;
+    finally
+      leaveCriticalSection(adapterCs);
+    end;
+  end;
+
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
       m:P_storedMessage;
   begin
+    if not(forceFlush) then begin
+      flushSingleMessage;
+      exit([]);
+    end;
     enterCriticalSection(adapterCs);
     try
       result:=[];
