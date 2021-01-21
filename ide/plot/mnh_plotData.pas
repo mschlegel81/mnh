@@ -1889,7 +1889,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
 
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR lastDisplayIndex:longint;
-      i,j:longint;
+      i:longint;
       m:P_storedMessage;
   begin
     enterCriticalSection(adapterCs);
