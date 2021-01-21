@@ -121,6 +121,7 @@ TYPE
     secondsPerFrameOverhead:double;
     secondsPerFrame:double;
     eTimer:TEpikTimer;
+
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
@@ -529,8 +530,7 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
 PROCEDURE TplotForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
     if relatedPlot=nil then exit;
-    if relatedPlot^.isPlotChanged then doPlot
-    else if not(animateCheckBox.checked) then relatedPlot^.flushToGui(true);
+    if relatedPlot^.isPlotChanged then doPlot;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
@@ -546,12 +546,9 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
-           //tick interval is 10ms; Try to plot if next frame is less than 100ms ahead
-           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.1) and
-           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
+           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height) and
+           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.05)
         then begin
-          while (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.01) and relatedPlot^.flushSingleMessage do;
-
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval-secondsPerFrameOverhead));
           eTimer.clear;
           eTimer.start;
