@@ -33,20 +33,35 @@ private rungeKuttaStepper(Tableau:ERK_ButcherTableau)->begin
                 summationStageCode(summationStage,false)|';'|'end').toExpression;
 end;
 
-private YComb(embed:Expression(5))->((y0,F:Expression(1),dt>0.0,errorTolerance>=1E-10)->embed(y0,F,dt,errorTolerance,embed));
-
 //*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
 private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   local intermediate   :=Tableau.leading(2);
   local summationStages:=Tableau.trailing(2);
-  local code:=['(y0,f,dt,errorTolerance,RK)->begin'             ,rkCodeStart       (intermediate),
-                   'local result:=',summationStageCode(summationStages[0],false),';',
-  '(local subSteps:=ceil((absNorm(',summationStageCode(summationStages[1],false),'-result)/errorTolerance)^',1/order,'))<=1 ? result : ',
-  'begin','local dtSub:=dt/subSteps',';','local y:=y0; [1..subSteps].each(step,','begin',
-  'y:=RK(y,f,dtSub,errorTolerance,RK)',';','void',';',
-  'end)',';','y',';','end',';','end'].flatten;
-  code.toExpression.YComb;
+  local code:=['(y0_,f,dt_,errorTolerance)->begin local microStep:=(y0,dt)->begin'             ,rkCodeStart       (intermediate),
+                   '[local result:=',summationStageCode(summationStages[0],false),',',
+                                '((',summationStageCode(summationStages[1],false),'-result).flatten.abs.max/errorTolerance)^',1/order,']; end; local subSteps:=1; save;'&//!~
+  local errorEstimate:=Inf;
+  local y:=y0_;
+  while(errorEstimate>1,begin
+    errorEstimate:=0;
+    y:=y0_;
+    local dtSub:=dt_/subSteps;
+    [1..subSteps].each(step,begin
+      local y_:=microStep(y,dtSub);
+      errorEstimate:=max(errorEstimate,y_[1]);
+      y:=y_[0];
+    end);
+    errorEstimate>1
+    ? subSteps:=ceil(errorEstimate*1.1*subSteps)
+    : void;
+  end);
+
+  (errorEstimate<0.6*(subSteps-1)/subSteps)
+  ? subSteps-=1
+  : void;
+  y; end;~].flatten;
+  code.toExpression;
 end;
 
 //*Explicit Runge-Kutta Method RK4, a.k.a. "The" Runge-Kutta Method
@@ -68,7 +83,7 @@ memoized RK4b->rungeKuttaStepper(
 //*Explicit Runge-Kutta Method RK32 (3-stage 2nd order)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
 memoized RK32->rungeKuttaStepper(
-  [[ 1         ],
+  [[1/2        ],
    [1/2,1/2    ],
    [1/3,1/3,1/3]].toERK_ButcherTableau);
 
@@ -105,6 +120,14 @@ memoized BOGACKI_SHAMPINE->embeddedRungeKuttaStepper(
    [2/9 ,1/3,4/9     ],
    [2/9 ,1/3,4/9     ],
    [7/24,1/4,1/3,1/8]].toERK_ButcherTableau,3);
+
+//*RK3-3/2 embedded explicit Runge-Kutta Method (Order 3)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+memoized SCHLEGEL->embeddedRungeKuttaStepper(
+  [[ 1          ],
+   [1/4 ,1/4    ],
+   [1/6 ,1/6,2/3],
+   [1/3 ,1/3,1/3]].toERK_ButcherTableau,3);
 
 //*Fehlberg embedded explicit Runge-Kutta Method (Order 5)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)

@@ -121,6 +121,7 @@ TYPE
     secondsPerFrameOverhead:double;
     secondsPerFrame:double;
     eTimer:TEpikTimer;
+
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
@@ -528,7 +529,8 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
 
 PROCEDURE TplotForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
-    if (relatedPlot<>nil) and (relatedPlot^.isPlotChanged) then doPlot;
+    if relatedPlot=nil then exit;
+    if relatedPlot^.isPlotChanged then doPlot;
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
@@ -537,7 +539,6 @@ PROCEDURE TplotForm.performFastUpdate;
     begin
       result:=intendedSecPerFrame[animationSpeedTrackbar.position];
     end;
-
   begin
     if relatedPlot=nil then exit;
     relatedPlot^.startGuiInteraction;
@@ -545,9 +546,8 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
-           //tick interval is 10ms; Try to plot if next frame is less than 20ms ahead
-           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.02) and
-           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
+           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height) and
+           (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.05)
         then begin
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval-secondsPerFrameOverhead));
           eTimer.clear;
@@ -564,9 +564,12 @@ PROCEDURE TplotForm.performFastUpdate;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
         frameTrackBar.position:=animationFrameIndex;
         frameIndexLabel.caption:=intToStr(animationFrameIndex);
-        if frameTrackBar.max>90 then frameTrackBar.frequency:=10 else
-        if frameTrackBar.max>20 then frameTrackBar.frequency:= 5
-                                else frameTrackBar.frequency:= 1;
+        if frameTrackBar.max>5000 then frameTrackBar.frequency:=500 else
+        if frameTrackBar.max>1000 then frameTrackBar.frequency:=100 else
+        if frameTrackBar.max> 500 then frameTrackBar.frequency:= 50 else
+        if frameTrackBar.max> 100 then frameTrackBar.frequency:= 10 else
+        if frameTrackBar.max>  50 then frameTrackBar.frequency:=  5
+                                  else frameTrackBar.frequency:=  1;
       end;
     finally
       relatedPlot^.doneGuiInteraction;
