@@ -1000,7 +1000,6 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
     case LHS^.literalType of
       defaultLHScases;
       lt_list..lt_emptyList: case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
         lt_error:      exit(RHS^.rereferenced)
         else
         exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
@@ -1008,7 +1007,6 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
              .append(RHS,true,true));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
         lt_error:      exit(RHS^.rereferenced)
         else exit(newSetLiteral(P_setLiteral(LHS)^.size)^
              .appendAll(P_setLiteral(LHS))^
