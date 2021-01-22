@@ -489,7 +489,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
         globals.primaryContext.raiseError('Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
         exit;
       end;
-      for i:=0 to length(secondaryPackages)-1 do
+      for i:=0 to length(secondaryPackages)-1 do begin
         if secondaryPackages[i]^.getCodeProvider^.id = id then begin
           if  (secondaryPackages[i]^.readyForUsecase<>lu_NONE) and
               (secondaryPackages[i]^.codeChanged)
@@ -504,6 +504,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
             exit;
           end;
         end;
+      end;
       new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
@@ -1010,7 +1011,6 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
 
   VAR lexer:T_linesLexer;
       stmt :T_enhancedStatement;
-      newCodeHash:T_hashInt;
 
   FUNCTION isPlainScriptStatement:boolean;
     begin
@@ -1049,10 +1049,10 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     clear(false);
     readyForUsecase:=lu_beingLoaded;
+    logReady(getCodeProvider^.stateHash);
 
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
-    newCodeHash:=getCodeProvider^.stateHash;
     if profile then globals.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
     isPlainScript:=isPlainScriptStatement;
@@ -1077,7 +1077,6 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     lexer.destroy;
     if  C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
       readyForUsecase:=usecase;
-      logReady(newCodeHash);
       {$ifdef fullVersion}
       if (usecase=lu_forCodeAssistance) and isMain then afterLoadForAssistance;
       {$endif}
@@ -1085,7 +1084,6 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end else if globals.primaryContext.messages^.continueEvaluation then begin
       customOperatorRules:=ruleMap.getOperators;
       readyForUsecase:=usecase;
-      logReady(newCodeHash);
       if usecase=lu_forCallingMain
       then executeMain
       else if isMain and isPlainScript and (length(mainParameters)=1) and (mainParameters[0]='-h')
