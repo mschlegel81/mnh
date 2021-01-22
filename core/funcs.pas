@@ -102,8 +102,8 @@ CONSTRUCTOR T_functionMap.create;
   begin
     initCriticalSection(functionMapCs);
     setLength(uniqueMetaDatas,0);
-    mapByName.create();
-    mapByFuncPointer.create();
+    mapByName.create(2);
+    mapByFuncPointer.create(2);
   end;
 
 DESTRUCTOR T_functionMap.destroy;
