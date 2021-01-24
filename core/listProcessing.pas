@@ -57,6 +57,8 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; {$WARN 5024 OFF}CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE executeInContext(CONST context:P_context; VAR recycler:T_recycler);
+      PROPERTY isFuture:boolean read isBlocking;
+      FUNCTION isDone:boolean;
   end;
 
 PROCEDURE processListSerial  (CONST input:P_literal; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
@@ -445,7 +447,7 @@ FUNCTION T_chainTask.canGetResult: boolean;
 
 CONSTRUCTOR T_futureLiteral.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
   begin
-    inherited create(loc,et_builtinFuture);
+    inherited create(loc,et_builtinAsyncOrFuture);
     initCriticalSection(criticalSection);
     isBlocking:=blocking;
     func :=func_;                      func ^.rereference;
@@ -517,6 +519,13 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_context; VAR recycler
 
     enterCriticalSection(criticalSection);
     state:=fls_done;
+    leaveCriticalSection(criticalSection);
+  end;
+
+FUNCTION T_futureLiteral.isDone:boolean;
+  begin
+    enterCriticalSection(criticalSection);
+    result:=(state=fls_done);
     leaveCriticalSection(criticalSection);
   end;
 
