@@ -1400,6 +1400,17 @@ FUNCTION future_imp intFuncSignature;
     end;
   end;
 
+FUNCTION peekFuture_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params^.size=1) and
+       (arg0^.literalType=lt_expression) and
+       (P_expressionLiteral(arg0)^.typ=et_builtinAsyncOrFuture) and
+       (P_futureLiteral(arg0)^.isFuture) then begin
+      result:=newBoolLiteral(P_futureLiteral(arg0)^.isDone);
+    end;
+  end;
+
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1{$ifdef fullVersion},
@@ -1411,4 +1422,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1{$ifdef fullVersion},
                'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'peekFuture',@peekFuture_imp,ak_unary{$ifdef fullVersion},
+               'peekFuture(F:Future);//peeks (nonblocking) the future F and returns true if its evaluation is finished, false otherwise'{$endif});
 end.

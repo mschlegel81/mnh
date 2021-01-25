@@ -23,6 +23,7 @@ T_workspace=object(T_serializable)
    end;
 
    metas:array of P_editorMeta;
+   closingFile:boolean;
 
   public
     saveIntervalIdx:byte;
@@ -151,6 +152,7 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     builtinFunctionMap.registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
     builtinFunctionMap.registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
     packages.newCodeProvider:=@newFileProxy;
+    closingFile:=false;
     clearDebugLine;
   end;
 
@@ -556,6 +558,7 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
       mark:TSynEditMark;
   begin
     enterCriticalSection(workspaceCs);
+    closingFile:=true;
     try
       //Editor shall be closed
       if not(toClose^.isPseudoFile) then begin
@@ -584,6 +587,7 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
       newCurrent:=currentEditor;
       if newCurrent<>nil then newCurrent^.activate;
     finally
+      closingFile:=false;
       leaveCriticalSection(workspaceCs);
     end;
   end;

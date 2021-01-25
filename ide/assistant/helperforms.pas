@@ -110,9 +110,6 @@ PROCEDURE THelpForm.performFastUpdate;
   VAR meta:P_editorMeta;
       info:T_tokenInfo;
 
-      textLine:string;
-      i:longint;
-
   FUNCTION isActiveInTabSheet:boolean;
     VAR
       PageControl: TPageControl;

@@ -1926,7 +1926,7 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
           end;
         end;
       et_builtinIteratable,
-      et_builtinFuture    :
+      et_builtinAsyncOrFuture    :
         result:=newGeneratorFromStreamCallback(stream,location,adapters,typeMap);
       et_subrule          ,
       et_inline           ,

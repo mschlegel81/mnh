@@ -11,7 +11,7 @@ CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
       HASH_SHRINK_THRESHOLD_FACTOR=0.5;
 TYPE T_expressionType=(et_builtin          ,
                        et_builtinIteratable,
-                       et_builtinFuture    ,
+                       et_builtinAsyncOrFuture    ,
                        et_subrule          ,
                        et_inline           ,
                        et_subruleIteratable,
@@ -21,10 +21,10 @@ TYPE T_expressionType=(et_builtin          ,
                        et_eachBody         ,
                        et_whileBody        );
 
-CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIteratable,et_builtinFuture];
+CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIteratable,et_builtinAsyncOrFuture];
       C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
       C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
-      C_statefulExpressionTypes:set of T_expressionType=[et_builtinIteratable,et_builtinFuture,
+      C_statefulExpressionTypes:set of T_expressionType=[et_builtinIteratable,et_builtinAsyncOrFuture,
                                                          et_subruleIteratable,et_subruleStateful,
                                                          et_inlineIteratable ,et_inlineStateful];
       C_iteratableExpressionTypes:set of T_expressionType=[et_builtinIteratable,
@@ -870,7 +870,7 @@ FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral; CONST location: T_tok
     result:=nil;
     case L^.literalType of
       lt_expression: begin
-        if P_expressionLiteral(l)^.typ in [et_builtin,et_builtinFuture,et_builtinIteratable] then begin
+        if P_expressionLiteral(l)^.typ in [et_builtin,et_builtinAsyncOrFuture,et_builtinIteratable] then begin
           result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
         end else begin
           if L^.numberOfReferences<=1
