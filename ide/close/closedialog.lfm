@@ -1,24 +1,24 @@
 object closeDialogForm: TcloseDialogForm
   Left = 420
-  Height = 187
+  Height = 150
   Top = 240
-  Width = 478
+  Width = 382
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'The current file has been changed'
-  ClientHeight = 187
-  ClientWidth = 478
-  DesignTimePPI = 120
+  ClientHeight = 150
+  ClientWidth = 382
+  Constraints.MinHeight = 100
+  Constraints.MinWidth = 200
   OnShow = FormShow
   Position = poOwnerFormCenter
   LCLVersion = '2.0.10.0'
   object ButtonPanel1: TButtonPanel
-    Left = 8
-    Height = 91
-    Top = 88
-    Width = 462
+    Left = 6
+    Height = 74
+    Top = 70
+    Width = 370
     Align = alClient
-    BorderSpacing.Around = 8
     OKButton.Name = 'OKButton'
     OKButton.DefaultCaption = True
     HelpButton.Name = 'HelpButton'
@@ -32,17 +32,18 @@ object closeDialogForm: TcloseDialogForm
   end
   object Memo1: TMemo
     Left = 0
-    Height = 75
-    Top = 5
-    Width = 478
+    Height = 60
+    Top = 4
+    Width = 382
     Align = alTop
     Alignment = taCenter
-    BorderSpacing.Top = 5
+    BorderSpacing.Top = 4
     BorderStyle = bsNone
     Color = clBtnFace
     Lines.Strings = (
       'Memo1 45kj4bt 2jb23k4jbfkj23jlqe 2j3b4k2j3b4kj23b42j3j 34j32h4jhwefjb2kjbkj2nl34nr 2j34kb524khtbf3k'
     )
+    ParentFont = False
     ReadOnly = True
     TabOrder = 1
   end

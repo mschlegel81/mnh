@@ -54,7 +54,7 @@ TYPE
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
 VAR runParameterHistory:T_runParameterHistory;
 IMPLEMENTATION
-USES editorMetaBase,mnh_constants;
+USES editorMetaBase,mnh_constants,closeDialog;
 VAR myCustomRunForm:TCustomRunForm=nil;
 
 FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
@@ -67,7 +67,16 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
   begin
     meta:=workspace.currentEditor;
     scriptName:=meta^.pseudoName();
-    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.getAssistanceData=nil) or not(meta^.getAssistanceData^.isExecutablePackage) then exit(false);
+
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.getAssistanceData=nil) or not(meta^.getAssistanceData^.isExecutablePackage) then begin
+      closeDialogForm.showOnExecute(scriptName,externalRun,'it is not an executable package.');
+      exit(false);
+    end;
+
+    if meta^.isPseudoFile and externalRun then begin
+      closeDialogForm.showOnExecute(scriptName,true,'has never been saved.');
+      exit(false);
+    end;
 
     if myCustomRunForm=nil then myCustomRunForm:=TCustomRunForm.create(Application);
     with myCustomRunForm.scriptParamEdit do begin

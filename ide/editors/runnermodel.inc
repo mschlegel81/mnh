@@ -20,7 +20,7 @@ T_runnerModel=object(T_serializable)
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
     FUNCTION isMainEvaluationPaused:boolean;
-    FUNCTION canRunMain:boolean;
+    FUNCTION canRunMain(CONST notifyOnFail:boolean=false):boolean;
     FUNCTION canRunScript:boolean;
     PROCEDURE customRun(CONST mainCall:boolean);
     PROCEDURE runExternally();
@@ -79,12 +79,16 @@ FUNCTION T_runnerModel.isMainEvaluationPaused:boolean;
     result:=evaluation.isPaused;
   end;
 
-FUNCTION T_runnerModel.canRunMain: boolean;
+FUNCTION T_runnerModel.canRunMain(CONST notifyOnFail:boolean=false): boolean;
   VAR meta:P_editorMeta;
   begin
-    if evaluation.isRunning then exit(false);
     meta:=workspace.currentEditor;
+    if evaluation.isRunning then begin
+      if notifyOnFail then closeDialogForm.showOnExecute(meta^.pseudoName(true),false,'another evaluation is running');
+      exit(false);
+    end;
     result:=(meta<>nil) and (meta^.language=LANG_MNH);
+    if notifyOnFail and not(result) then closeDialogForm.showOnExecute(meta^.pseudoName(true),false,'it is not an MNH script');
   end;
 
 FUNCTION T_runnerModel.canRunScript:boolean;
