@@ -46,5 +46,50 @@ count(i:IteratableExpression)->begin
   while(!isVoid(i()),result+=1);
   result;
 end;
+
 //*The fallback for other literals is size
 count(i)->i.size;
+
+//*Reurns an "out-of-order-map"
+//*Behaves mostly like pMap but returns the elements in the order
+//*  their calculation is finished, not in enqueue-order.
+outOfOrderMap(parameters:Collection,f:Expression(1))->{begin
+  local pending:=map(parameters,(parameter)->future(f,[parameter]));
+save;
+  pending.size=0
+  ? return void
+  : void;
+  local firstDone:=pending.each(task,task.peekFuture ? index : void,orElse);
+  local maxSleepTime:=1E-4;
+  while(firstDone.isVoid,begin
+    sleep(random*(maxSleepTime*=2));
+    firstDone:=pending.each(task,task.peekFuture ? index : void,orElse);
+  end);
+  local result:=pending[firstDone]();
+  pending[firstDone]:=void;
+  result;
+end}.toIteratableExpression;
+
+//*Wraps iterator in a new IteratableExpression which removes duplicates
+deduplicate(iterator:IteratableExpression)->{begin
+  local seen:=[].toSet;
+save;
+  local next:=iterator();
+  while(!next.isVoid AND next in seen,next:=iterator());
+  seen||=next;
+  next;
+end}.toIteratableExpression;
+
+//*Wraps iterator in a new IteratableExpression which removes duplicates
+//*Terminates when more than maxDuplicates duplicates have been encountered or the underlying iterator terminates
+deduplicate(iterator:IteratableExpression,maxDuplicates>=1)->{begin
+  local seen:=[].toSet;
+  local duplicatesCounted:=0;
+save;
+  local next:=iterator();
+  while(!next.isVoid AND next in seen AND (duplicatesCounted+=1)<=maxDuplicates,next:=iterator());
+  seen||=next;
+  duplicatesCounted>maxDuplicates
+  ? void
+  : next;
+end}.toIteratableExpression;
