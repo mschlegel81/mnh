@@ -566,13 +566,13 @@ PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   begin
-    runnerModel.customRun(false);
+    if runnerModel.canRunMain(true) then runnerModel.customRun(false);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
   begin
     ensureTimerSuspend;
-    if showCustomRunForm(false) then runnerModel.customRun(true);
+    if runnerModel.canRunMain(true) and showCustomRunForm(false) then runnerModel.customRun(true);
     timer.enabled:=true;
   end;
 
@@ -736,13 +736,9 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
   PROCEDURE fastUpdates;
     PROCEDURE enableItems;
       VAR unlocked:boolean;
-          canRun:boolean;
       begin
         miHaltEvaluation.enabled:=runnerModel.anyRunning();
-        canRun:=runnerModel.canRunMain;
         unlocked:=not(runnerModel.areEditorsLocked);
-        miRunDirect.enabled:=canRun;
-        miRunScript.enabled:=canRun;
         miSave     .enabled:=unlocked;
         miSaveAs   .enabled:=unlocked;
         miRestore  .enabled:=unlocked;
@@ -767,7 +763,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         if (edit<>nil) then begin
           openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
           edit^.pollAssistanceResult;
-          miRunScriptExternally.enabled:=not(edit^.isPseudoFile);
           if edit^.isPseudoFile
           then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
           else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();

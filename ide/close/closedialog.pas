@@ -41,6 +41,7 @@ TYPE
     FUNCTION showOnQuitWhileEvaluating:T_closeDialogAnswer;
     {OK: cda_continueUninstall, Canel:cda_cancel, Close:-}
     FUNCTION showOnUninstall:T_closeDialogAnswer;
+    FUNCTION showOnExecute(CONST scriptName:string; CONST isExternalCall:boolean; CONST issueText:string):T_closeDialogAnswer;
   end;
 
 FUNCTION closeDialogForm:TcloseDialogForm;
@@ -71,6 +72,7 @@ FUNCTION TcloseDialogForm.showFor(CONST okAnswer, cancelAnswer, closeAnswer: T_c
     ButtonPanel1.CancelButton.caption := C_answerText[cancelAnswer];
     ButtonPanel1.CancelButton.enabled:=(cancelAnswer<>cda_noneOrInvalid);
     ButtonPanel1.CancelButton.visible:=(cancelAnswer<>cda_noneOrInvalid);
+    ButtonPanel1.CancelButton.Cancel:=true;
     ButtonPanel1.CloseButton .caption := C_answerText[closeAnswer ];
     ButtonPanel1.CloseButton .enabled:=(closeAnswer <>cda_noneOrInvalid);
     ButtonPanel1.CloseButton .visible:=(closeAnswer <>cda_noneOrInvalid);
@@ -128,6 +130,13 @@ FUNCTION TcloseDialogForm.showOnUninstall:T_closeDialogAnswer;
     caption:='Do you really want to uninstall MNH?';
     memo1.text:='Do you really want to uninstall MNH?';
     result:=showFor(cda_continueUninstall,cda_cancel,cda_noneOrInvalid);
+  end;
+
+FUNCTION TcloseDialogForm.showOnExecute(CONST scriptName:string; CONST isExternalCall:boolean; CONST issueText:string):T_closeDialogAnswer;
+  begin
+    caption:='Script '+scriptName+' cannot be executed';
+    memo1.text:='Script '+scriptName+' cannot be executed'+BoolToStr(isExternalCall,' externally','')+' because '+issueText;
+    result:=showFor(cda_noneOrInvalid,cda_cancel,cda_noneOrInvalid);
   end;
 
 end.
