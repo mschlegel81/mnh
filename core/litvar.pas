@@ -1020,25 +1020,6 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
     if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
-//PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
-//  VAR targetSize:longint;
-//      i:longint;
-//  begin
-//    if fill=0 then begin
-//      i:=length(bin);
-//      targetSize:=i;
-//      while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
-//      setLength(bin,targetSize);
-//      while (i<length(bin)) do begin
-//        with bin[i] do begin
-//          binFill:=0;
-//          setLength(arr,2);
-//        end;
-//        inc(i);
-//      end;
-//    end else while expectedFill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
-//  end;
-//
 FUNCTION G_literalKeyMap.putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
   VAR j:longint=0;
   begin
@@ -1792,8 +1773,8 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$R-} result:=val;                                                        result:=result xor T_hashInt(lt_bigint); {$R+} end;
-FUNCTION T_bigIntLiteral  .hash: T_hashInt; begin {$R-} result:=val.lowDigit; if val.isNegative then result:=not(result)+1; result:=result xor T_hashInt(lt_bigint); {$R+} end;
+FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$Q-}{$R-} result:=(val*11+5) shr 3 xor val; {$R+}{$Q+} end;
+FUNCTION T_bigIntLiteral  .hash: T_hashInt; begin result:=val.hash; end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
