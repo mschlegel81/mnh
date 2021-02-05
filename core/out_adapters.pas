@@ -149,7 +149,6 @@ TYPE
   T_textFileOutAdapter = object(T_collectingOutAdapter)
     protected
       messageFormatProvider:P_messageFormatProvider;
-      textFileCase:T_textFileCase;
       outputFileName:ansistring;
       forceRewrite:boolean;
       lastOutput:double;
@@ -157,7 +156,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
-      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
   end;
 
   T_flaggedAdapter=record
@@ -226,7 +224,7 @@ TYPE
       FUNCTION triggersBeep:boolean;                                                                                                  virtual;
       //adapters:
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider):P_textFileOutAdapter;
+      FUNCTION addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider):P_abstractOutAdapter;
       FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -885,9 +883,13 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
     end;
   end;
 
-FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider): P_textFileOutAdapter;
+FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterSpecification; CONST messageFormatProvider:P_messageFormatProvider): P_abstractOutAdapter;
   begin
-    new(result,create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,messageFormatProvider));
+    case specification.textFileCase of
+      tfc_file  : new(P_textFileOutAdapter(result),create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,messageFormatProvider));
+      tfc_stdout: new(P_consoleOutAdapter(result),create(specification.messagesToInclude,com_stdout_only,messageFormatProvider));
+      tfc_stderr: new(P_consoleOutAdapter(result),create(specification.messagesToInclude,com_stderr_only,messageFormatProvider));
+    end;
     addOutAdapter(result,true);
   end;
 
@@ -1126,8 +1128,7 @@ DESTRUCTOR T_consoleOutAdapter.destroy;
   end;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
-  VAR i:longint;
-      s:string;
+  VAR s:string;
   begin
     result:=message^.messageType in messageTypesToInclude;
     if result then begin
@@ -1137,32 +1138,33 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
           mt_clearConsole: mySys.clearConsole;
           mt_printline: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do begin
-              if P_storedMessageWithText(message)^.txt[i]=C_formFeedChar
+            for s in messageFormatProvider^.formatMessage(message) do begin
+              if s=C_formFeedChar
               then mySys.clearConsole
               {$ifdef Windows}
-              else writeln(printHandle,P_storedMessageWithText(message)^.txt[i]);
+              else writeln(printHandle,s);
               {$else}
               else begin
                 if mode in [com_normal,com_stdout_only]
-                then writeln(       P_storedMessageWithText(message)^.txt[i])
-                else writeln(stdErr,P_storedMessageWithText(message)^.txt[i]);
+                then writeln(       s)
+                else writeln(stdErr,s);
               end;
               {$endif}
             end;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for i:=0 to length(P_storedMessageWithText(message)^.txt)-1 do
+            for s in P_storedMessageWithText(message)^.txt do
               {$ifdef Windows}
-              write(printHandle,P_storedMessageWithText(message)^.txt[i]);
+              write(printHandle,s);
               {$else}
               begin
                 if mode in [com_normal,com_stdout_only]
-                then write(       P_storedMessageWithText(message)^.txt[i])
-                else write(stdErr,P_storedMessageWithText(message)^.txt[i]);
+                then write(       s)
+                else write(stdErr,s);
               end;
-              {$endif}                  end;
+              {$endif}
+          end;
           else for s in messageFormatProvider^.formatMessage(message) do
             {$ifdef Windows}
             writeln(otherHandle,s);
@@ -1286,41 +1288,36 @@ FUNCTION T_textFileOutAdapter.flush:boolean;
   VAR handle:text;
       s:string;
       i:longint;
-      consoleHidden:boolean=false;
+      messages:T_storedMessages;
   begin
     enterCriticalSection(adapterCs);
-    try
-      if collectedFill>0 then begin
-        result:=true;
-        try
-          case textFileCase of
-            tfc_file  : begin
-              ForceDirectories(extractFilePath(outputFileName));
-              assign(handle,outputFileName);
-              if fileExists(outputFileName) and not(forceRewrite)
-              then system.append(handle)
-              else rewrite(handle);
-            end;
-            tfc_stdout: begin handle:=StdOut; consoleHidden:=not mySys.isConsoleShowing; end;
-            tfc_stderr: begin handle:=stdErr; consoleHidden:=not mySys.isConsoleShowing; end;
+    setLength(messages,collectedFill);
+    for i:=0 to collectedFill-1 do messages[i]:=collected[i];
+    collectedFill:=0;
+    clear;
+    leaveCriticalSection(adapterCs);
+
+    if length(messages)>0 then begin
+      result:=true;
+      try
+        ForceDirectories(extractFilePath(outputFileName));
+        assign(handle,outputFileName);
+        if fileExists(outputFileName) and not(forceRewrite)
+        then system.append(handle)
+        else rewrite(handle);
+
+        forceRewrite:=false;
+        for i:=0 to length(messages)-1 do begin
+          case messages[i]^.messageType of
+            mt_printdirect: for s in P_storedMessageWithText(messages[i])^.txt do write  (handle,s);
+            else for s in messageFormatProvider^.formatMessage(messages[i]) do writeln(handle,s);
           end;
-          forceRewrite:=false;
-          for i:=0 to collectedFill-1 do begin
-            if (collected[i]^.messageType<>mt_clearConsole) and consoleHidden then mySys.showConsole;
-            case collected[i]^.messageType of
-              mt_clearConsole: if textFileCase<>tfc_file then mySys.clearConsole;
-              mt_printdirect: for s in P_storedMessageWithText(collected[i])^.txt do write  (handle,s);
-              else for s in messageFormatProvider^.formatMessage(collected[i]) do writeln(handle,s);
-            end;
-          end;
-          clear;
-          if textFileCase=tfc_file then close(handle);
-        except
+          disposeMessage(messages[i]);
         end;
-      end else result:=false;
-    finally
-      leaveCriticalSection(adapterCs);
-    end;
+        close(handle);
+      except
+      end;
+    end else result:=false;
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
@@ -1330,22 +1327,10 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST tfc:T_
     assert(formatProvider<>nil);
     messageFormatProvider:=formatProvider^.getClonedInstance;
 
-    textFileCase:=tfc;
+    assert(tfc=tfc_file);
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
     lastOutput:=now;
-  end;
-
-FUNCTION T_textFileOutAdapter.append(CONST message:P_storedMessage):boolean;
-  begin
-    result:=false;
-    enterCriticalSection(adapterCs);
-    try
-      result:=inherited append(message);
-      if (collectedFill>100) or (textFileCase<>tfc_file) then flush;
-    finally
-      leaveCriticalSection(adapterCs);
-    end;
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
