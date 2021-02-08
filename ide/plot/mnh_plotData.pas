@@ -1890,29 +1890,32 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
+      toProcessInThisRun:T_storedMessages;
       m:P_storedMessage;
   begin
     enterCriticalSection(adapterCs);
-    try
-      result:=[];
-      //it does not make sense to render multiple plots in one run
-      //Lookup the last display request;
-      lastDisplayIndex:=-1;
-      for i:=0 to collectedFill-1 do if collected[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
-      //process messages
-      for i:=0 to collectedFill-1 do begin
-        m:=collected[i];
-        include(result,m^.messageType);
-        if m^.messageType=mt_plot_postDisplay
-        then begin
-          if i=lastDisplayIndex
-          then processMessage(m)
-          else P_plotDisplayRequest(m)^.markExecuted;
-        end else processMessage(m);
-      end;
-      clear;
-    finally
-      leaveCriticalSection(adapterCs);
+    setLength(toProcessInThisRun,collectedFill);
+    for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
+    collectedFill:=0;
+    clear;
+    leaveCriticalSection(adapterCs);
+
+    result:=[];
+    //it does not make sense to render multiple plots in one run
+    //Lookup the last display request;
+    lastDisplayIndex:=-1;
+    for i:=0 to length(toProcessInThisRun)-1 do if toProcessInThisRun[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
+    //process messages
+    for i:=0 to length(toProcessInThisRun)-1 do begin
+      m:=toProcessInThisRun[i];
+      include(result,m^.messageType);
+      if m^.messageType=mt_plot_postDisplay
+      then begin
+        if i=lastDisplayIndex
+        then processMessage(m)
+        else P_plotDisplayRequest(m)^.markExecuted;
+      end else processMessage(m);
+      disposeMessage(m);
     end;
   end;
 
