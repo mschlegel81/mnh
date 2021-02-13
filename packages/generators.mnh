@@ -50,7 +50,7 @@ end;
 //*The fallback for other literals is size
 count(i)->i.size;
 
-//*Reurns an "out-of-order-map"
+//*Returns an "out-of-order-map"
 //*Behaves mostly like pMap but returns the elements in the order
 //*  their calculation is finished, not in enqueue-order.
 outOfOrderMap(parameters:Collection,f:Expression(1))->{begin
@@ -59,12 +59,13 @@ save;
   pending.size=0
   ? return void
   : void;
-  local firstDone:=pending.each(task,task.peekFuture ? index : void,orElse);
-  local maxSleepTime:=1E-4;
-  while(firstDone.isVoid,begin
-    sleep(random*(maxSleepTime*=2));
-    firstDone:=pending.each(task,task.peekFuture ? index : void,orElse);
-  end);
+  local firstDone:=void;
+  local sleepTime:=1E-4;
+  while(firstDone.isVoid,
+    firstDone:=pending.each(task,task.peekFuture
+                                 ? index
+                                 : void,orElse)
+    orElse sleep(sleepTime:=min(sleepTime*1.2,1))); //sleep not longer than one second
   local result:=pending[firstDone]();
   pending[firstDone]:=void;
   result;
@@ -92,4 +93,21 @@ save;
   duplicatesCounted>maxDuplicates
   ? void
   : next;
+end}.toIteratableExpression;
+
+//*Creates a co-iterator from multiple iterators/iteratables
+//*Requires at least two arguments as input
+coIterator(...)->
+assert(size(...)>1,'coIterator requires at least two iteratables as input') orElse
+{begin
+  local iterators:=(...).each(i,i.isIteratableExpression
+                                ? i
+                                : i.isIteratable
+                                  ? i.toIteratableExpression
+                                  : fail('Non iteratable argument: ',i));
+save;
+  iterators.each(iterator,begin
+    local fromIterator:=iterator();
+    fromIterator.isVoid ? return void : fromIterator;
+  end);
 end}.toIteratableExpression;
