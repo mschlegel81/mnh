@@ -23,7 +23,6 @@ CONST
                                               mt_el4_systemError,
                                               mt_timing_info];
 TYPE
-  //TODO Enhance output by setting line context in highlighter instead of highlighting depending on invisible marker
   P_abstractSynOutAdapter=^T_abstractSynOutAdapter;
   T_abstractSynOutAdapter=object(T_abstractGuiOutAdapter)
     private
@@ -33,7 +32,6 @@ TYPE
       FUNCTION getSynEdit:TSynEdit; virtual; abstract;
       FUNCTION getOwnerForm:TForm;  virtual; abstract;
     public
-      parentMessages:P_messages;
 
       wrapEcho:boolean;
       jumpToEnd:boolean;
@@ -307,6 +305,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
 
   VAR i:longint;
   begin
+    //TODO: copy before flushing; stay in adapterCS for less time!
     if not(forceFlush or autoflush) then exit;
     messageFormatter.create(false);
     system.enterCriticalSection(adapterCs);

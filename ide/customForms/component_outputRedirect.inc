@@ -20,7 +20,6 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     synMeta.setLanguageWithFallback(state_hlLang,synMeta.language);
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);
     new(synOutAdapter,create(synMeta.editor,parent^.containedInForm));
-    synOutAdapter^.parentMessages:=adaptersHoldingCollector;
   end;
 
 FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;

@@ -200,7 +200,7 @@ TYPE
         lastCorrection:double;
       end;
       globalOptions :T_evaluationContextOptions;
-      globalMessages:P_messages;
+      globalMessages:P_messagesDistributor;
       mainParameters:T_arrayOfString;
       {$ifdef fullVersion}
       profiler:P_profiler;
@@ -214,7 +214,7 @@ TYPE
       primaryContext:T_context;
       taskQueue:T_taskQueue;
       prng:T_xosPrng;
-      CONSTRUCTOR create(CONST outAdapters:P_messages);
+      CONSTRUCTOR create(CONST outAdapters:P_messagesDistributor);
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
                                   CONST sideEffectProfile:T_sideEffects;
@@ -380,7 +380,7 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
     end;
   end;
 
-CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messages);
+CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messagesDistributor);
   begin
     with detached do begin
       initCriticalSection(access);
@@ -585,6 +585,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST loc
       recycler.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+    primaryContext.messages^.awaitAllFlushed(0.2);
   end;
 
 {$ifdef fullVersion}
