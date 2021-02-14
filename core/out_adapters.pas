@@ -1312,9 +1312,7 @@ FUNCTION T_collectingOutAdapter.getStoredMessages:T_storedMessages;
 
 FUNCTION T_collectingOutAdapter.isDoneFlushing:boolean;
   begin
-    system.enterCriticalSection(adapterCs);
-    result:=collectedFill<=0;
-    system.leaveCriticalSection(adapterCs);
+    result:=true;
   end;
 //=======================================================:T_collectingOutAdapter
 //T_textFileOutAdapter:=========================================================
