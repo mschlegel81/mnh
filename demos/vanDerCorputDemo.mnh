@@ -1,0 +1,34 @@
+USE generators;
+
+BITS:=2^[4..0];
+binary(i:Int)->ord((i and BITS)>0).join&'_2';
+
+ternary(i:Int)->begin
+  local r:=i.digits(3);
+  while(r.size<5,r:=0|r);
+  r.join&'_3';
+end;
+
+printTable(L:List)->L.map((row)->row.join("\t|\t")).join("\n").print;
+printTable(iteratable:IteratableExpression)->iteratable.head(100).printTable;
+
+//*Demonstrates the behavior of Van-der-Corput numbers
+main->begin
+  ['Index' | [0..5,10..13,17..32],
+   'Van-der-Corput (10)' | vanDerCorputGenerator(10).head(33)[[0..5,10..13,17..32]]].transpose.printTable;
+  print;
+  print('Index        | Van-der-Corput (2)');
+  print('   | binary  | dec.   | binary');
+  print('---+---------+--------+-----------');
+  coIterator([0..12],vanDerCorputGenerator(2))
+  .map((x)->[x[0],x[0].binary,x[1],'0.'&round(32*x[1]).binary ])
+  .printTable;
+
+  print;
+  print('Index        | Van-der-Corput (3)');
+  print('   | ternary | decimal  | ternary');
+  print('---+---------+----------+-----------');
+  coIterator([0..12],vanDerCorputGenerator(3))
+  .map((x)->[x[0],x[0].ternary,format('%0.8d',x[1]),'0.'&round(3^5*x[1]).ternary ])
+  .printTable;
+end;

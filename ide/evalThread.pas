@@ -190,7 +190,6 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_normal);
     stdOutAdapter:=newStdOutAdapter('',@isRunning,C_textMessages);
-    stdOutAdapter^.parentMessages:=@messages;
     messages.addOutAdapter(stdOutAdapter,true);
     plot:=P_guiPlotSystem(newPlotAdapter      (''));
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
@@ -210,7 +209,6 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_eagerInitializedOutAdap
   begin
     inherited init(ek_quick);
     messages.addOutAdapter(quickStdout,false);
-    quickStdout^.parentMessages:=@messages;
     plot:=P_guiPlotSystem(newPlotAdapter      ('Quick plot'));
     messages.addOutAdapter(newCustomFormAdapter(                  plot),true);
     messages.addOutAdapter(                                       plot ,true);
@@ -224,7 +222,6 @@ CONSTRUCTOR T_ideScriptEvaluation.create(CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_editScript);
     stdOutAdapter:=newStdOutAdapter('Output (GUI script)',@isRunning,C_messagesForwardedToOutput);
-    stdOutAdapter^.parentMessages:=@messages;
     messages.addOutAdapter(stdOutAdapter,true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)              ,true);
     package.replaceCodeProvider(newFileCodeProvider(utilityScriptFileName));

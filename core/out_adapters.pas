@@ -46,11 +46,13 @@ CONST
   {$endif}
 
 TYPE
+  P_messages=^T_messages;
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
     protected
       adapterCs:TRTLCriticalSection;
       messageTypesToInclude:T_messageTypeSet;
+      parentMessage:P_messages;
     private
       PROCEDURE setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
     public
@@ -63,6 +65,7 @@ TYPE
     PROCEDURE clear; virtual;
     PROPERTY outputBehavior:T_messageTypeSet read messageTypesToInclude write setOutputBehavior;
     PROCEDURE enableMessageType(CONST enabled:boolean; CONST mt:T_messageTypeSet);
+    FUNCTION isDoneFlushing:boolean; virtual; abstract;
   end;
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
@@ -79,6 +82,7 @@ TYPE
     CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+    FUNCTION isDoneFlushing:boolean; virtual;
   end;
 
   P_collectingOutAdapter = ^T_collectingOutAdapter;
@@ -95,6 +99,7 @@ TYPE
       FUNCTION typesOfStoredMessages:T_messageTypeSet;
       FUNCTION getStoredMessages:T_storedMessages;
       PROPERTY fill:longint read collectedFill;
+      FUNCTION isDoneFlushing:boolean; virtual;
   end;
 
   {$ifdef fullVersion}
@@ -165,7 +170,6 @@ TYPE
     doDispose:boolean;
   end;
 
-  P_messages=^T_messages;
   P_abstractContext=^T_abstractContext;
   T_abstractContext=object
     messages:P_messages;
@@ -206,6 +210,7 @@ TYPE
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;                                                                 virtual; abstract;
       FUNCTION collectedMessageTypes:T_messageTypeSet;                                                                                virtual; abstract;
       FUNCTION triggersBeep:boolean;                                                                                                  virtual; abstract;
+      PROCEDURE awaitAllFlushed(CONST timeOutInSeconds:double); virtual;
   end;
 
   P_messagesDistributor=^T_messagesDistributor;
@@ -230,6 +235,7 @@ TYPE
       FUNCTION addConsoleOutAdapter(CONST messageTypesToInclude:T_messageTypeSet; CONST consoleMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
+      PROCEDURE awaitAllFlushed(CONST timeOutInSeconds:double); virtual;
   end;
 
   {$ifdef fullVersion}
@@ -662,6 +668,12 @@ PROCEDURE T_messages.clear(CONST clearAllAdapters: boolean);
     end;
   end;
 
+PROCEDURE T_messages.awaitAllFlushed(CONST timeOutInSeconds:double);
+  begin
+    enterCriticalSection(messagesCs);
+    leaveCriticalSection(messagesCs);
+  end;
+
 FUNCTION T_messagesRedirector.isCollecting(CONST messageType: T_messageType): boolean;
   begin result:=true; end;
 
@@ -869,6 +881,7 @@ PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CON
         adapters[length(adapters)-1].doDispose:=destroyIt;
         collecting:=collecting+p^.messageTypesToInclude;
         if p^.adapterType=at_textFile then ensureFileFlushThread;
+        p^.parentMessage:=@self;
       end;
     finally
       leaveCriticalSection(messagesCs);
@@ -920,6 +933,18 @@ PROCEDURE T_messagesDistributor.removeOutAdapter(CONST p: P_abstractOutAdapter);
 FUNCTION T_messagesDistributor.getAdapter(CONST index:longint):P_abstractOutAdapter;
   begin
     result:=adapters[index].adapter;
+  end;
+
+PROCEDURE T_messagesDistributor.awaitAllFlushed(CONST timeOutInSeconds:double);
+  VAR allFlushed:boolean;
+      fa:T_flaggedAdapter;
+      timeOutAt:double;
+  begin
+    timeOutAt:=now+timeOutInSeconds*ONE_SECOND;
+    repeat
+      allFlushed:=true;
+      for fa in adapters do allFlushed:=allFlushed and fa.adapter^.isDoneFlushing;
+    until allFlushed or (now>=timeOutAt);
   end;
 
 CONSTRUCTOR T_messagesErrorHolder.createErrorHolder(CONST parent: P_messages;
@@ -1184,6 +1209,8 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       end;
     end;
   end;
+
+FUNCTION T_consoleOutAdapter.isDoneFlushing:boolean; begin result:=true; end;
 //==========================================================:T_consoleOutAdapter
 //T_collectingOutAdapter:=======================================================
 CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
@@ -1284,6 +1311,11 @@ FUNCTION T_collectingOutAdapter.getStoredMessages:T_storedMessages;
     finally
       system.leaveCriticalSection(adapterCs);
     end;
+  end;
+
+FUNCTION T_collectingOutAdapter.isDoneFlushing:boolean;
+  begin
+    result:=true;
   end;
 //=======================================================:T_collectingOutAdapter
 //T_textFileOutAdapter:=========================================================

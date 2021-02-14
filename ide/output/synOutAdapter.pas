@@ -23,17 +23,16 @@ CONST
                                               mt_el4_systemError,
                                               mt_timing_info];
 TYPE
-  //TODO Enhance output by setting line context in highlighter instead of highlighting depending on invisible marker
   P_abstractSynOutAdapter=^T_abstractSynOutAdapter;
   T_abstractSynOutAdapter=object(T_abstractGuiOutAdapter)
     private
       lastWasDirectPrint:boolean;
+      currentlyFlushing:boolean;
     protected
       outputLinesLimit:longint;
       FUNCTION getSynEdit:TSynEdit; virtual; abstract;
       FUNCTION getOwnerForm:TForm;  virtual; abstract;
     public
-      parentMessages:P_messages;
 
       wrapEcho:boolean;
       jumpToEnd:boolean;
@@ -42,6 +41,7 @@ TYPE
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
+      FUNCTION isDoneFlushing:boolean; virtual;
   end;
 
   P_eagerInitializedOutAdapter=^T_eagerInitializedOutAdapter;
@@ -141,6 +141,7 @@ FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessa
 CONSTRUCTOR T_abstractSynOutAdapter.create(CONST messageTypesToInc:T_messageTypeSet);
   begin
     inherited create(at_guiSynOutput,messageTypesToInc);
+    currentlyFlushing:=false;
     autoflush:=true;
     jumpToEnd:=true;
     wrapEcho:=false;
@@ -159,6 +160,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
 
   PROCEDURE startOutput;
     begin
+      currentlyFlushing:=true;
       setLength(linesToWrite,0);
       outputLinesLimit:=ideSettings.outputLinesLimit;
       bufferOffset:=0;
@@ -278,6 +280,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   PROCEDURE doneOutput(CONST jumpDown:boolean);
     VAR synOwnerForm:TForm;
     begin
+      currentlyFlushing:=false;
       if wroteToSyn then begin
         flushBuffer;
         synOwnerForm:=getOwnerForm;
@@ -306,30 +309,33 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
     end;
 
   VAR i:longint;
+      toProcessInThisRun:T_storedMessages;
   begin
     if not(forceFlush or autoflush) then exit;
-    messageFormatter.create(false);
-    system.enterCriticalSection(adapterCs);
+    enterCriticalSection(adapterCs);
+    removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+    setLength(toProcessInThisRun,collectedFill);
+    for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
     result:=[];
     startOutput;
-    try
-      removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
-      if collectedFill>0 then begin
-        messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
-        messageFormatter.wrapEcho:=wrapEcho;
-      end;
+    collectedFill:=0;
+    clear;
+    leaveCriticalSection(adapterCs);
+    messageFormatter.create(false);
 
-      for i:=0 to collectedFill-1 do begin
-        include(result,collected[i]^.messageType);
-        singleMessageOut(collected[i]);
-      end;
-      clear;
-    finally
-      if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
-      doneOutput(jumpToEnd);
-      system.leaveCriticalSection(adapterCs);
-      messageFormatter.destroy;
+    if length(toProcessInThisRun)>0 then begin
+      messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
+      messageFormatter.wrapEcho:=wrapEcho;
     end;
+
+    for i:=0 to length(toProcessInThisRun)-1 do begin
+      include(result,toProcessInThisRun[i]^.messageType);
+      singleMessageOut(toProcessInThisRun[i]);
+      disposeMessage(toProcessInThisRun[i]);
+    end;
+    if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
+    doneOutput(jumpToEnd);
+    messageFormatter.destroy;
   end;
 
 PROCEDURE T_abstractSynOutAdapter.flushClear;
@@ -345,6 +351,11 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
     finally
       system.leaveCriticalSection(adapterCs);
     end;
+  end;
+
+FUNCTION T_abstractSynOutAdapter.isDoneFlushing:boolean;
+  begin
+    result:=not(currentlyFlushing) and (collectedFill<=0);
   end;
 
 INITIALIZATION
