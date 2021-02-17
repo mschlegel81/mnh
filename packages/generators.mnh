@@ -111,3 +111,30 @@ save;
     fromIterator.isVoid ? return void : fromIterator;
   end);
 end}.toIteratableExpression;
+
+//*Performs a dovetailing iteration over g1 and g2
+//*E.g. to iterate over all rational numbers r with 0<r<1 use:
+//*  dovetail(rangeGenerator(1),rangeGenerator(1))
+//*  .filter((i)->i.agg(<) AND gcd@i=1);
+dovetail(g1:IteratableExpression,g2:IteratableExpression)->{begin
+  local l1:=[g1()];
+  local l2:=[g2()];
+  local k:=0;
+  local i:=-1;
+save;
+  while(true,begin
+    (k-i<=0)
+    ? begin
+        k+=1;
+        l1||=g1();
+        l2||=g2();
+        k>l1.size+l2.size-2
+        ? return void
+        : i:=-1;
+      end
+    : void;
+    local a:=l1[i+=1];
+    local b:=l2[k-i];
+    a.isVoid OR b.isVoid ? void : return [a,b];
+  end);
+end}.toIteratableExpression;
