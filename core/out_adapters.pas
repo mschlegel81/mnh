@@ -1312,7 +1312,10 @@ FUNCTION T_collectingOutAdapter.getStoredMessages:T_storedMessages;
 
 FUNCTION T_collectingOutAdapter.isDoneFlushing:boolean;
   begin
-    result:=true;
+    if gui_started=ide then exit(true);
+    enterCriticalSection(adapterCs);
+    result:=collectedFill=0;
+    leaveCriticalSection(adapterCs);
   end;
 //=======================================================:T_collectingOutAdapter
 //T_textFileOutAdapter:=========================================================
