@@ -73,6 +73,7 @@ TYPE
       PROCEDURE initFromIde(CONST scriptName,parameters:string);
       FUNCTION getCommandLineArgumentsArray:T_arrayOfString;
       {$endif}
+
       //TODO: We need a destructor here!
     private
       parsingState:T_parsingState;

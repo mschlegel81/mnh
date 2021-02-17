@@ -100,7 +100,7 @@ TYPE
 
   T_ideMessageConfig=object(T_serializable)
     echo_input,echo_declaration,echo_output,
-      echo_wrapping, //TODO: Echo_wrapping might be obsolete by now...
+    echo_wrapping,
     show_timing,
     show_all_userMessages:boolean;
     suppressWarningsUnderLevel:byte;
