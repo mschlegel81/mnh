@@ -145,12 +145,16 @@ PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 PROCEDURE TQuickEvalForm.performFastUpdate;
   VAR meta:P_editorMeta;
       proxy:P_editorMetaProxy;
+      assistanceData:P_codeAssistanceResponse;
   begin
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
     if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
-    then inputMeta.updateAssistanceResponse(meta^.getAssistanceData)
-    else inputMeta.updateAssistanceResponse(nil);
+    then begin
+      assistanceData:=meta^.getAssistanceResponse;
+      inputMeta.updateAssistanceResponse(assistanceData);
+      disposeMessage(assistanceData);
+    end else inputMeta.updateAssistanceResponse(nil);
 
     quickEvaluation.flushMessages;
     if evaluatedFor<>stateHash then begin

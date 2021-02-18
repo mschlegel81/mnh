@@ -69,7 +69,7 @@ TYPE
 
 PROCEDURE ensureOutlineForm;
 IMPLEMENTATION
-USES tokenArray;
+USES tokenArray, mnh_messages;
 PROCEDURE ensureOutlineForm;
   begin
     if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(nil));
@@ -271,7 +271,7 @@ PROCEDURE TOutlineForm.FormDestroy(Sender: TObject);
   begin
     for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
     setLength(packageNodes,0);
-    if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
+    if caResponse<>nil then disposeMessage(caResponse);
     unregisterFontControl(outlineTreeView);
   end;
 
@@ -344,10 +344,10 @@ PROCEDURE TOutlineForm.performFastUpdate;
   begin
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
     if (codeAssistanceResponse<>caResponse) then begin
-      if caResponse<>nil then disposeCodeAssistanceResponse(caResponse);
+      if caResponse<>nil then disposeMessage(caResponse);
       caResponse:=codeAssistanceResponse;
       updateOutlineTree;
-    end else disposeCodeAssistanceResponse(codeAssistanceResponse);
+    end else disposeMessage(codeAssistanceResponse);
     setComponentFormVisible(caResponse<>nil);
   end;
 

@@ -32,6 +32,7 @@ TYPE
 
 PROCEDURE ensureAssistanceForm;
 IMPLEMENTATION
+USES mnh_messages;
 
 {$R *.lfm}
 PROCEDURE ensureAssistanceForm;
@@ -91,7 +92,7 @@ PROCEDURE TAssistanceForm.performFastUpdate;
         paintedWithWidth:=AssistanceEdit.charsInWindow;
       end;
     finally
-      try disposeCodeAssistanceResponse(codeAssistanceResponse); except end;
+      if codeAssistanceResponse<>nil then try disposeMessage(codeAssistanceResponse); except end;
     end;
   end;
 

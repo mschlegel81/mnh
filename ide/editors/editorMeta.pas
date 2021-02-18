@@ -61,7 +61,7 @@ T_editorMeta=object(T_basicEditorMeta)
     end;
     strictlyReadOnly:boolean;
     tabsheet    : TTabSheet;
-    assistanceData:P_codeAssistanceData;
+    currentAssistResponse:P_codeAssistanceResponse;
   protected
     PROCEDURE setLanguage(CONST languageIndex:T_language); virtual;
   private
@@ -110,10 +110,10 @@ T_editorMeta=object(T_basicEditorMeta)
     //Misc. queries
     FUNCTION pseudoName(CONST short:boolean=false):ansistring;
     PROCEDURE reloadFile();
-    PROPERTY getAssistanceData:P_codeAssistanceData read assistanceData;
+    FUNCTION getAssistanceResponse:P_codeAssistanceResponse;
 
     //Externally triggered actions
-    PROCEDURE pollAssistanceResult;
+    PROCEDURE setNewAssistanceResponse(newOne:P_codeAssistanceResponse; CONST isActiveMeta:boolean);
 
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION getParametersFromShebang(OUT hasShebangLine,isExecutable:boolean):T_mnhExecutionOptions;
@@ -208,14 +208,8 @@ FUNCTION T_editorMetaProxy.fixate: P_editorMetaProxy;
 PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
   begin
     inherited;
-    if languageIndex=LANG_MNH then begin
-      if assistanceData=nil then new(assistanceData,create(@self));
-    end else begin
-      if assistanceData<>nil then begin
-        dispose(assistanceData,destroy);
-        assistanceData:=nil;
-      end;
-    end;
+    if languageIndex=LANG_MNH then InputEditChange(nil)
+    else if currentAssistResponse<>nil then disposeMessage(currentAssistResponse);
   end;
 
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
@@ -234,7 +228,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
     metaIndex:=mIdx;
     tabsheet:=TTabSheet.create(workspace.inputPageControl);
     tabsheet.PageControl:=workspace.inputPageControl;
-    assistanceData:=nil;
+    currentAssistResponse:=nil;
     createWithParent(tabsheet,workspace.bookmarkImagesList);
 
     editor_.Gutter.MarksPart.width:=workspace.breakpointsImagesList.width+workspace.bookmarkImagesList.width+10;
@@ -453,8 +447,8 @@ FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean;
       for m in workspace.metas do m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
-    if forHelpOrJump and (assistanceData<>nil)
-    then with editor do result:=assistanceData^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
+    if forHelpOrJump and (currentAssistResponse<>nil)
+    then with editor do result:=currentAssistResponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
     else result:=false;
   end;
 
@@ -464,7 +458,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       lineTxt:string;
       fileName:string;
       editorWasThereBefore:boolean;
-
+      assistanceData:P_codeAssistanceResponse;
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
     begin
@@ -487,6 +481,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       end;
     end;
 
+    assistanceData:=getAssistanceResponse;
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to editor.lines.count-1 do begin
       lineTxt:=lines[lineIndex];
@@ -499,6 +494,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       end;
     end;
     editor.EndUpdate;
+    disposeMessage(assistanceData);
   end;
 
 FUNCTION T_editorMeta.setFile(CONST fileName: string):boolean;
@@ -576,7 +572,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     if workspace.debugLine.editor=editor_ then workspace.clearDebugLine;
     updateSheetCaption;
-    ensureCodeAssistanceThread;
+    if language=LANG_MNH then postAssistanceRequest(@self,getOptionalAdditionals);
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
@@ -624,7 +620,7 @@ PROCEDURE T_editorMeta.editorMouseDown(Sender: TObject; button: TMouseButton; Sh
 DESTRUCTOR T_editorMeta.destroy;
   begin
     language:=LANG_TXT;
-    if assistanceData<>nil then dispose(assistanceData,destroy);
+    if currentAssistResponse<>nil then disposeMessage(currentAssistResponse);
     inherited destroy;
     fileInfo.filePath:='';
   end;
@@ -655,11 +651,11 @@ PROCEDURE T_editorMeta.activate;
     try
       if language=LANG_MNH then begin
         editor.highlighter:=highlighter;
-        assistanceData^.setAddidionalScripts(getOptionalAdditionals,true);
+        InputEditChange(nil);
       end else begin
         editor.highlighter:=fileTypeMeta[language].highlighter;
       end;
-      completionLogic.assignEditor(editor_,nil);
+      completionLogic.assignEditor(editor_,currentAssistResponse);
       editor.readonly       :=runnerModel.areEditorsLocked or strictlyReadOnly;
       mainForm.ActiveControl:=editor_;
     except end; //catch and ignore all exceptions
@@ -673,16 +669,24 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
     end else result:='<new '+intToStr(metaIndex)+'>';
   end;
 
-PROCEDURE T_editorMeta.pollAssistanceResult;
+PROCEDURE T_editorMeta.setNewAssistanceResponse(newOne:P_codeAssistanceResponse; CONST isActiveMeta:boolean);
+  VAR changed:boolean;
   begin
-    if language<>LANG_MNH then exit;
-    if assistanceData=nil then exit;
-    completionLogic.assignEditor(editor_,assistanceData);
-    if assistanceData^.needRepaint then begin
-      assistanceData^.updateHighlightingData(highlighter.highlightingData);
+    if language<>LANG_MNH then begin
+      disposeMessage(currentAssistResponse);
+      exit;
+    end;
+    if newOne=nil then exit;
+    changed:=(currentAssistResponse=nil) or
+             (currentAssistResponse^.stateHash<>newOne^.stateHash);
+    if currentAssistResponse<>nil then disposeMessage(currentAssistResponse);
+    currentAssistResponse:=newOne;
+    if changed then begin
+      if isActiveMeta then completionLogic.assignEditor(editor_,currentAssistResponse);
+      currentAssistResponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
-      if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,assistanceData^.usedAndExtendedPackages);
+      if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,currentAssistResponse^.usedAndExtendedPackages);
     end;
   end;
 
@@ -702,6 +706,15 @@ PROCEDURE T_editorMeta.reloadFile;
     end;
   end;
 
+FUNCTION T_editorMeta.getAssistanceResponse:P_codeAssistanceResponse;
+  begin
+    if currentAssistResponse<>nil
+    then exit(P_codeAssistanceResponse(currentAssistResponse^.rereferenced))
+    else if language=LANG_MNH
+    then result:=getAssistanceResponseSync(@self,getOptionalAdditionals)
+    else result:=nil;
+  end;
+
 PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_listLiteral);
   VAR concatenatedText:ansistring='';
       i:longint;
@@ -715,14 +728,17 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.SelectAll;
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
-    ensureCodeAssistanceThread;
+    InputEditChange(nil);
   end;
 
 FUNCTION T_editorMeta.getParametersFromShebang(OUT hasShebangLine,isExecutable: boolean): T_mnhExecutionOptions;
   VAR requires:T_sideEffects;
+      assistanceData:P_codeAssistanceResponse;
   begin
+    assistanceData:=getAssistanceResponse;
     requires:=assistanceData^.getBuiltinSideEffects;
     isExecutable:=assistanceData^.isExecutablePackage;
+    disposeMessage(assistanceData);
     result.create;
     if (editor.lines.count>0) and (startsWith(editor.lines[0],'#!')) then begin
       hasShebangLine:=true;

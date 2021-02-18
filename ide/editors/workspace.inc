@@ -23,6 +23,8 @@ T_workspace=object(T_serializable)
    end;
 
    metas:array of P_editorMeta;
+
+   //TODO: This crappy thing must go away!
    closingFile:boolean;
 
   public
@@ -83,6 +85,8 @@ T_workspace=object(T_serializable)
     //Scripts:
     PROCEDURE miRunCustomUtilScript(Sender: TObject);
     PROCEDURE processEditScriptMessage(CONST message:P_storedMessage);
+
+    PROCEDURE processPendingMessagesInMainThread;
   end;
 
 CONST
@@ -597,9 +601,7 @@ PROCEDURE T_workspace.onFileScanFinished;
   begin
     enterCriticalSection(workspaceCs);
     try
-      for m in metas do begin
-        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals,false);
-      end;
+      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m,m^.getOptionalAdditionals);
     finally
       leaveCriticalSection(workspaceCs);
     end;
@@ -663,12 +665,17 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
 PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
   VAR meta:P_editorMeta;
       filesToOpen:T_arrayOfString;
+      assistanceResponse:P_codeAssistanceResponse;
   begin
     meta:=currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) or (openMask=0) then exit;
     setLength(filesToOpen,0);
     if (openMask and 1)>0
-    then append(filesToOpen,meta^.assistanceData^.usedAndExtendedPackages);
+    then begin
+      assistanceResponse:=meta^.getAssistanceResponse;
+      append(filesToOpen,assistanceResponse^.usedAndExtendedPackages);
+      disposeMessage(assistanceResponse);
+    end;
     if (openMask and 2)>0
     then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
     sortUnique(filesToOpen);
@@ -701,11 +708,11 @@ PROCEDURE T_workspace.renameWordUnderCursor;
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
     then begin
       meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
-      if scanOther then forceFullScan;
     end;
   end;
 
 PROCEDURE T_workspace.checkForFileChanges;
+  //TODO: Put this in a separate thread, store findings in a queue...
   VAR metaIndex:longint=0;
       m:P_editorMeta;
   FUNCTION fileIsModifiedOnFileSystem: boolean;
@@ -798,9 +805,9 @@ FUNCTION T_workspace.getCurrentAssistanceResponse: P_codeAssistanceResponse;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
-    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.assistanceData=nil)
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.currentAssistResponse=nil)
     then result:=nil
-    else result:=meta^.assistanceData^.getAssistanceResponseRereferenced;
+    else result:=P_codeAssistanceResponse(meta^.currentAssistResponse^.rereferenced);
   end;
 
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
@@ -854,6 +861,26 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
       mt_guiEdit_done: processEditScriptResponse(P_editScriptTask(message));
       else raise Exception.create('Invalid message type handed to workspace.processEditScriptMessage()');
     end;
+  end;
+
+PROCEDURE T_workspace.processPendingMessagesInMainThread;
+  VAR responses:array of P_codeAssistanceResponse;
+      response :P_codeAssistanceResponse;
+      i:longint;
+      meta:P_editorMeta;
+      Assigned:boolean;
+  begin
+    responses:=preparedResponses.getAll;
+    for i:=0 to length(responses)-1 do begin
+      response:=responses[i];
+      Assigned:=false;
+      for meta in metas do if not(Assigned) and (meta^.getPath=response^.package^.getPath) then begin
+        meta^.setNewAssistanceResponse(response,meta^.tabsheet=inputPageControl.activePage);
+        Assigned:=true;
+      end;
+      if not(Assigned) then disposeMessage(response);
+    end;
+    setLength(responses,0);
   end;
 
 {$endif}
