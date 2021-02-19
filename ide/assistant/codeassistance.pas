@@ -68,7 +68,7 @@ TYPE
 
 PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
-PROCEDURE postAssistanceRequest    (CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+PROCEDURE postAssistanceRequest    (CONST scriptPath:string; CONST additionals:T_arrayOfString);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString):P_codeAssistanceResponse;
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
@@ -79,11 +79,13 @@ TYPE
     private
       //Input:
       scriptPath             :string;
+      provider              :P_codeProvider;
       additionalScriptsToScan:T_arrayOfString;
 
       FUNCTION execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
     public
-      CONSTRUCTOR create(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+      CONSTRUCTOR createWithProvider(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+      CONSTRUCTOR create(CONST path:string; CONST additionals:T_arrayOfString);
       DESTRUCTOR destroy;
   end;
 
@@ -133,7 +135,9 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
     {$ifdef debugMode}
     writeln('Code assistance start: ',scriptPath);
     {$endif}
-    codeProvider:=newCodeProvider(scriptPath);
+    if provider=nil
+    then codeProvider:=newCodeProvider(scriptPath)
+    else codeProvider:=provider;
 
     new(package,create(codeProvider,nil));
 
@@ -295,9 +299,10 @@ FUNCTION T_codeAssistanceResponse.isExecutablePackage: boolean;
   end;
 
 FUNCTION codeAssistanceThread(p:pointer):ptrint;
-  CONST SLEEP_BETWEEN_RUNS_MILLIS =500;
+  CONST MAX_SLEEP_BETWEEN_RUNS_MILLIS =500;
 
-  VAR globals:P_evaluationGlobals;
+  VAR sleepBetweenRunsMillis:longint=1;
+      globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
       recycler:T_recycler;
 
@@ -309,7 +314,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       response: P_codeAssistanceResponse;
   begin
     {$ifdef debugMode}
-    writeln(stdErr,'  codeAssistanceThread started');
+    writeln('  codeAssistanceThread started');
     {$endif}
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
@@ -319,17 +324,23 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     repeat
       requests:=pendingRequests.getAll;
       if length(requests)=0
-      then sleep(SLEEP_BETWEEN_RUNS_MILLIS)
+      then begin
+        sleepBetweenRunsMillis+=1;
+        sleep(sleepBetweenRunsMillis);
+      end
       else begin
+        sleepBetweenRunsMillis:=1;
         {$ifdef debugMode}
-        writeln(stdErr,'  processing ',length(requests),' code assistance requests');
+        writeln('  processing ',length(requests),' code assistance requests');
         {$endif}
         for i:=0 to length(requests)-1 do begin
           isLatest:=not(shuttingDown);
           for j:=i+1 to length(requests)-1 do isLatest:=isLatest and (requests[i]^.scriptPath<>requests[j]^.scriptPath);
           if isLatest then begin
             response:=requests[i]^.execute(recycler,globals,@adapters);
-            writeln(stdErr,'  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
+            {$ifdef debugMode}
+            writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
+            {$endif}
             preparedResponses.append(response);
             recycler.cleanup;
           end;
@@ -340,7 +351,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
       enterCriticalSection(codeAssistanceCs);
       isLatest:=shuttingDown;
       leaveCriticalSection(codeAssistanceCs);
-    until isLatest;
+    until isLatest or (sleepBetweenRunsMillis>=MAX_SLEEP_BETWEEN_RUNS_MILLIS);
     //shutdown:
     dispose(globals,destroy);
     adapters.destroy;
@@ -351,7 +362,7 @@ FUNCTION codeAssistanceThread(p:pointer):ptrint;
     recycler.cleanup;
     //:shutdown
     {$ifdef debugMode}
-    writeln(stdErr,'  codeAssistanceThread stopped');
+    writeln('  codeAssistanceThread stopped');
     {$endif}
   end;
 
@@ -369,10 +380,13 @@ PROCEDURE ensureCodeAssistanceThread;
     end;
   end;
 
-PROCEDURE postAssistanceRequest(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+PROCEDURE postAssistanceRequest(CONST scriptPath:string; CONST additionals:T_arrayOfString);
   VAR request:P_codeAssistanceRequest;
   begin
-    new(request,create(editorMeta,additionals));
+    new(request,create(scriptPath,additionals));
+    {$ifdef debugMode}
+    writeln('  assistance request posted for ',scriptPath);
+    {$endif}
     pendingRequests.append(request);
     ensureCodeAssistanceThread;
   end;
@@ -381,7 +395,7 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST additi
   VAR request:P_codeAssistanceRequest;
       recycler:T_recycler;
   begin
-    new(request,create(editorMeta,additionals));
+    new(request,createWithProvider(editorMeta,additionals));
     recycler.initRecycler;
     result:=request^.execute(recycler);
     recycler.cleanup;
@@ -452,12 +466,9 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
 
   PROCEDURE postScan(CONST index:longint);
     VAR fileName:string;
-       codeProvider:P_codeProvider;
     begin
       fileName:=baseDir+DEFAULT_FILES[index,0];
-      codeProvider:=newFileCodeProvider(fileName);
-      postAssistanceRequest(codeProvider,C_EMPTY_STRING_ARRAY);
-      dispose(codeProvider,destroy);
+      postAssistanceRequest(fileName,C_EMPTY_STRING_ARRAY);
     end;
 
   PROCEDURE createNextHtmlPart();
@@ -491,9 +502,17 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
     end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
 
-CONSTRUCTOR T_codeAssistanceRequest.create(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+CONSTRUCTOR T_codeAssistanceRequest.createWithProvider(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
   begin
-    scriptPath             :=editorMeta^.getPath;
+    scriptPath:=editorMeta^.getPath;
+    provider:=editorMeta;
+    additionalScriptsToScan:=additionals;;
+  end;
+
+CONSTRUCTOR T_codeAssistanceRequest.create(CONST path:string; CONST additionals:T_arrayOfString);
+  begin
+    scriptPath             :=path;
+    provider:=nil;
     additionalScriptsToScan:=additionals;;
   end;
 

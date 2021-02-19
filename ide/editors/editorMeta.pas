@@ -572,7 +572,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     if workspace.debugLine.editor=editor_ then workspace.clearDebugLine;
     updateSheetCaption;
-    if language=LANG_MNH then postAssistanceRequest(@self,getOptionalAdditionals);
+    if language=LANG_MNH then postAssistanceRequest(getPath,getOptionalAdditionals);
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);

@@ -601,7 +601,7 @@ PROCEDURE T_workspace.onFileScanFinished;
   begin
     enterCriticalSection(workspaceCs);
     try
-      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m,m^.getOptionalAdditionals);
+      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m^.getPath,m^.getOptionalAdditionals);
     finally
       leaveCriticalSection(workspaceCs);
     end;
@@ -879,6 +879,7 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
         Assigned:=true;
       end;
       if not(Assigned) then disposeMessage(response);
+      responses[i]:=nil;
     end;
     setLength(responses,0);
   end;
