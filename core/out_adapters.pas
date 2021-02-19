@@ -163,6 +163,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST tfc:T_textFileCase; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean; CONST formatProvider:P_messageFormatProvider);
       DESTRUCTOR destroy; virtual;
+      FUNCTION isDoneFlushing: boolean; virtual;
   end;
 
   T_flaggedAdapter=record
@@ -1317,6 +1318,15 @@ FUNCTION T_collectingOutAdapter.isDoneFlushing:boolean;
   begin
     result:=true;
   end;
+
+FUNCTION T_textFileOutAdapter.isDoneFlushing:boolean;
+  begin
+    if gui_started=ide then exit(true);
+    enterCriticalSection(adapterCs);
+    result:=collectedFill=0;
+    leaveCriticalSection(adapterCs);
+  end;
+
 //=======================================================:T_collectingOutAdapter
 //T_textFileOutAdapter:=========================================================
 FUNCTION T_textFileOutAdapter.flush:boolean;

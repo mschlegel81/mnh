@@ -18,13 +18,13 @@ T_completionLogic=object
     editor:TSynEdit;
     SynCompletion:TSynCompletion;
     completionStart:longint;
-    assistanceData:P_codeAssistanceData;
+    assistanceData:P_codeAssistanceResponse;
     quickEdit:boolean;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData; CONST isQuickEdit:boolean=false);
+    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse; CONST isQuickEdit:boolean=false);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
     FUNCTION fillFilteredItems(CONST part:string):longint;
     PROCEDURE SynCompletionExecute(Sender: TObject);
@@ -32,7 +32,7 @@ T_completionLogic=object
 end;
 
 IMPLEMENTATION
-USES strutils;
+USES strutils, mnh_messages;
 VAR intrinsicRulesForCompletion:T_setOfString;
     intrinsicRulesForCompletion_ready:boolean=false;
 PROCEDURE initIntrinsicRuleList;
@@ -129,12 +129,14 @@ DESTRUCTOR T_completionLogic.destroy;
     SynCompletion.destroy;
   end;
 
-PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData;  CONST isQuickEdit:boolean=false);
+PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse;  CONST isQuickEdit:boolean=false);
   begin
     quickEdit:=isQuickEdit;
     if (edit=editor) and (ad=assistanceData) then exit;
     editor:=edit;
+    if assistanceData<>nil then disposeMessage(assistanceData);
     assistanceData:=ad;
+    if ad<>nil then ad^.rereferenced;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
   end;

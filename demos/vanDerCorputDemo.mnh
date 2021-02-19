@@ -14,8 +14,9 @@ printTable(iteratable:IteratableExpression)->iteratable.head(100).printTable;
 
 //*Demonstrates the behavior of Van-der-Corput numbers
 main->begin
-  ['Index' | [0..5,10..13,17..32],
-   'Van-der-Corput (10)' | vanDerCorputGenerator(10).head(33)[[0..5,10..13,17..32]]].transpose.printTable;
+  local indexes:=[0..5,10..13,17..32,1234];
+  ['Index' | indexes,
+   'Van-der-Corput (10)' | vanDerCorputGenerator(10).head(indexes.max+1)[indexes].map({format('%6.4f',$0)})].transpose.printTable;
   print;
   print('Index        | Van-der-Corput (2)');
   print('   | binary  | dec.   | binary');

@@ -101,14 +101,15 @@ TYPE
     mt_image_obtainImageData, //dedicated type
     mt_image_obtainDimensions,//dedicated type
     mt_displayVariableTree,
-    mt_displayCustomForm
+    mt_displayCustomForm,
+    mt_ide_codeAssistanceResponse
     {$endif});
 
   T_messageTypeSet=set of T_messageType;
 
   T_ideMessageConfig=object(T_serializable)
     echo_input,echo_declaration,echo_output,
-      echo_wrapping, //TODO: Echo_wrapping might be obsolete by now...
+    echo_wrapping,
     show_timing,
     show_all_userMessages:boolean;
     suppressWarningsUnderLevel:byte;
@@ -175,7 +176,8 @@ CONST
 {mt_image_obtainImage...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_obtainDim...}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_ide_codeAssistanc...}(level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
@@ -275,7 +277,12 @@ OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 
 PROCEDURE disposeMessage(VAR message:P_storedMessage);
   begin
+    try
     if message^.unreference then dispose(message,destroy);
+
+    except
+      writeln('WHAAAT?!?');
+    end;
     message:=nil;
   end;
 
@@ -431,7 +438,11 @@ FUNCTION T_payloadMessage.equals(CONST other: P_storedMessage): boolean;
 
 FUNCTION T_storedMessage.unreference: boolean;
   begin
-    result:=interlockedDecrement(refCount)<=0;
+    try
+      result:=interlockedDecrement(refCount)<=0;
+    except
+      writeln('?!?!?!?');
+    end;
   end;
 
 FUNCTION T_storedMessage.rereferenced: P_storedMessage;

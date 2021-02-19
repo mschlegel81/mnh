@@ -981,6 +981,7 @@ PROCEDURE T_callAndIdInfos.cleanup;
     usageInfoFill:=length(newDat);
     setLength(usageInfos,usageInfoFill);
     for k:=0 to length(usageInfos)-1 do usageInfos[k]:=newDat[k];
+    setLength(newDat,0);
     temporary.destroy;
   end;
 

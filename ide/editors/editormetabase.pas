@@ -95,7 +95,7 @@ TYPE T_language=(LANG_MNH   = 0,
     public
       CONSTRUCTOR create(CONST existingEditor:TSynEdit);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceData);
+      PROCEDURE updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceResponse);
   end;
 
 PROCEDURE setupEditorMetaBase(CONST languageMenuRoot :TMenuItem);
@@ -279,14 +279,14 @@ DESTRUCTOR T_quickEvalEditorMeta.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceData);
+PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceResponse);
   begin
     completionLogic.assignEditor(editor_,assistanceDataFromEditorUsedAsInput,true);
     if (assistanceDataFromEditorUsedAsInput= nil) and (paintedWithStateHash<>0) or
-       (assistanceDataFromEditorUsedAsInput<>nil) and (paintedWithStateHash<>assistanceDataFromEditorUsedAsInput^.assistanceStateHash) then begin
+       (assistanceDataFromEditorUsedAsInput<>nil) and (paintedWithStateHash<>assistanceDataFromEditorUsedAsInput^.stateHash) then begin
       if assistanceDataFromEditorUsedAsInput=nil
       then paintedWithStateHash:=0
-      else paintedWithStateHash:=assistanceDataFromEditorUsedAsInput^.assistanceStateHash;
+      else paintedWithStateHash:=assistanceDataFromEditorUsedAsInput^.stateHash;
       if assistanceDataFromEditorUsedAsInput=nil
       then highlighter.highlightingData.clear
       else begin

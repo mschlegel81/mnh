@@ -200,25 +200,6 @@ PROCEDURE THelpForm.performFastUpdate;
       addBuiltinSection;
       addReferencedSection;
       addExamplesSection;
-
-      //subrulesGroupBox.visible:=length(info.userDefRuleInfo)>0;
-      //for ruleInfo in info.userDefRuleInfo do addRuleInfo(ruleInfo,subrulesGroupBox);
-      //
-      //builtinGroupBox.visible:=length(info.builtinRuleInfo)>0;
-      //for ruleInfo in info.builtinRuleInfo do addRuleInfo(ruleInfo,builtinGroupBox);
-      //builtinGroupBox.Constraints.MaxHeight:=ClientHeight;
-      //
-      //if (length(info.userDefRuleInfo)>0) and (length(info.builtinRuleInfo)>0)
-      //then builtinGroupBox.caption:='Overloads builtin function'
-      //else builtinGroupBox.caption:='Builtin function';
-      //
-      //examplesGroupBox.visible:=length(info.exampleText)>0;
-      //examplesSynEdit.lines.clear;
-      //for textLine in info.exampleText do examplesSynEdit.lines.append(textLine);
-      //
-      //usedAtGroupBox.visible:=length(info.referencedAt)>0;
-      //referenceListBox.items.clear;
-      //for i:=0 to length(info.referencedAt)-1 do referenceListBox.items.append(info.referencedAt[i]);
       EndFormUpdate;
     end;
   end;

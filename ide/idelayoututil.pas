@@ -865,17 +865,17 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
     VAR lineData:T_arrayOfString;
         k:longint;
         provider:P_virtualFileCodeProvider;
-        codeAssistanceData:T_codeAssistanceData;
+        codeAssistanceData:P_codeAssistanceResponse;
 
     begin
       setLength(lineData,list0^.size);
       for k:=0 to length(lineData)-1 do lineData[k]:=P_stringLiteral(list0^.value[k])^.value;
 
       provider:=newVirtualFileCodeProvider(name,lineData);
-      codeAssistanceData.create(provider);
+      codeAssistanceData:=getAssistanceResponseSync(provider,C_EMPTY_STRING_ARRAY);
       highlighter:=TMnhInputSyn.create(nil);
-      codeAssistanceData.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
-      codeAssistanceData.destroy;
+      codeAssistanceData^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
+      disposeMessage(codeAssistanceData);
     end;
 
   begin

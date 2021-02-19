@@ -1,4 +1,10 @@
 {$ifdef includeInterface}
+T_fileChangedMessage=record
+  filePath:string;
+  modified:boolean;
+  deleted :boolean;
+end;
+
 T_workspace=object(T_serializable)
   private
     workspaceCs:TRTLCriticalSection;
@@ -23,7 +29,8 @@ T_workspace=object(T_serializable)
    end;
 
    metas:array of P_editorMeta;
-   closingFile:boolean;
+
+   changedFilesQueue:specialize G_threadsafeQueue<T_fileChangedMessage>;
 
   public
     saveIntervalIdx:byte;
@@ -72,7 +79,6 @@ T_workspace=object(T_serializable)
     PROCEDURE openDependenciesForCurrentScript(CONST openMask:byte);
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
-    PROCEDURE checkForFileChanges;
     FUNCTION getSourceLine(CONST location:T_searchTokenLocation):string;
 
     FUNCTION getMainFormCaption:string;
@@ -83,6 +89,8 @@ T_workspace=object(T_serializable)
     //Scripts:
     PROCEDURE miRunCustomUtilScript(Sender: TObject);
     PROCEDURE processEditScriptMessage(CONST message:P_storedMessage);
+
+    PROCEDURE processPendingMessagesInMainThread;
   end;
 
 CONST
@@ -133,6 +141,40 @@ FUNCTION editorContent_impl intFuncSignature;
     end;
   end;
 
+FUNCTION checkFilesThread(p:pointer):ptrint;
+  VAR metaIndex:longint=0;
+      m:P_editorMeta;
+      message:T_fileChangedMessage;
+  FUNCTION fileIsModifiedOnFileSystem: boolean;
+    VAR currentFileAge:double;
+    begin
+      if (m^.fileInfo.filePath='') or (m^.editor.modified) or (m^.fileInfo.isChanged) then exit(false);
+      fileAge(m^.fileInfo.filePath,currentFileAge);
+      result:=currentFileAge<>m^.fileInfo.fileAccessAge;
+    end;
+
+  begin
+    repeat
+      metaIndex:=0;
+      while (metaIndex>=0) and (metaIndex<length(workspace.metas)) do begin
+        m:=workspace.metas[metaIndex];
+        with m^ do
+        if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
+          message.filePath:=fileInfo.filePath;
+          message.deleted :=true;
+          message.modified:=false;
+          workspace.changedFilesQueue.append(message);
+        end else if fileIsModifiedOnFileSystem then begin
+          message.filePath:=fileInfo.filePath;
+          message.modified:=true;
+          message.deleted :=false;
+        end;
+        inc(metaIndex);
+      end;
+      sleep(2000);
+    until false;
+  end;
+
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
   begin
     initCriticalSection(workspaceCs);
@@ -152,8 +194,9 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     builtinFunctionMap.registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
     builtinFunctionMap.registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
     packages.newCodeProvider:=@newFileProxy;
-    closingFile:=false;
     clearDebugLine;
+    changedFilesQueue.create;
+    beginThread(@checkFilesThread)
   end;
 
 DESTRUCTOR T_workspace.destroy;
@@ -166,6 +209,7 @@ DESTRUCTOR T_workspace.destroy;
     scriptMenu.destroy;
     leaveCriticalSection(workspaceCs);
     doneCriticalSection(workspaceCs);
+    changedFilesQueue.destroy;
   end;
 
 FUNCTION T_workspace.getSerialVersion: dword;
@@ -558,7 +602,6 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
       mark:TSynEditMark;
   begin
     enterCriticalSection(workspaceCs);
-    closingFile:=true;
     try
       //Editor shall be closed
       if not(toClose^.isPseudoFile) then begin
@@ -587,7 +630,6 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
       newCurrent:=currentEditor;
       if newCurrent<>nil then newCurrent^.activate;
     finally
-      closingFile:=false;
       leaveCriticalSection(workspaceCs);
     end;
   end;
@@ -597,9 +639,7 @@ PROCEDURE T_workspace.onFileScanFinished;
   begin
     enterCriticalSection(workspaceCs);
     try
-      for m in metas do begin
-        if (m^.language=LANG_MNH) then m^.assistanceData^.setAddidionalScripts(m^.getOptionalAdditionals,false);
-      end;
+      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m^.getPath,m^.getOptionalAdditionals);
     finally
       leaveCriticalSection(workspaceCs);
     end;
@@ -663,12 +703,17 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
 PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
   VAR meta:P_editorMeta;
       filesToOpen:T_arrayOfString;
+      assistanceResponse:P_codeAssistanceResponse;
   begin
     meta:=currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) or (openMask=0) then exit;
     setLength(filesToOpen,0);
     if (openMask and 1)>0
-    then append(filesToOpen,meta^.assistanceData^.usedAndExtendedPackages);
+    then begin
+      assistanceResponse:=meta^.getAssistanceResponse;
+      append(filesToOpen,assistanceResponse^.usedAndExtendedPackages);
+      disposeMessage(assistanceResponse);
+    end;
     if (openMask and 2)>0
     then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
     sortUnique(filesToOpen);
@@ -701,52 +746,6 @@ PROCEDURE T_workspace.renameWordUnderCursor;
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
     then begin
       meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
-      if scanOther then forceFullScan;
-    end;
-  end;
-
-PROCEDURE T_workspace.checkForFileChanges;
-  VAR metaIndex:longint=0;
-      m:P_editorMeta;
-  FUNCTION fileIsModifiedOnFileSystem: boolean;
-    VAR currentFileAge:double;
-    begin
-      if (m^.fileInfo.filePath='') or (m^.editor.modified) or (m^.fileInfo.isChanged) then exit(false);
-      fileAge(m^.fileInfo.filePath,currentFileAge);
-      result:=currentFileAge<>m^.fileInfo.fileAccessAge;
-    end;
-
-  begin
-    while (metaIndex>=0) and (metaIndex<length(metas)) do begin
-      m:=metas[metaIndex];
-      with m^ do
-      if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
-        case closeDialogForm.showOnDeleted(fileInfo.filePath) of
-          cda_close        : begin
-            closeQuietly(m);
-            dec(metaIndex);
-          end;
-          cda_ignoreChanges: begin
-            if not(saveCurrentFile(false,m))
-            then fileInfo.isChanged:=true;
-          end;
-          cda_overwrite    : begin
-            fileInfo.ignoreDeleted:=true;
-            fileInfo.isChanged:=true;
-            updateSheetCaption;
-          end;
-        end;
-      end else if fileIsModifiedOnFileSystem then begin
-        case closeDialogForm.showOnOutOfSync(fileInfo.filePath) of
-          cda_reload:
-            reloadFile();
-          cda_ignoreChanges:
-            fileInfo.isChanged:=true;
-          cda_overwrite:
-            if not(saveCurrentFile(false,m)) then fileInfo.isChanged:=true;
-        end;
-      end;
-      inc(metaIndex);
     end;
   end;
 
@@ -798,9 +797,9 @@ FUNCTION T_workspace.getCurrentAssistanceResponse: P_codeAssistanceResponse;
   VAR meta:P_editorMeta;
   begin
     meta:=currentEditor;
-    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.assistanceData=nil)
+    if (meta=nil) or (meta^.language<>LANG_MNH) or (meta^.currentAssistResponse=nil)
     then result:=nil
-    else result:=meta^.assistanceData^.getAssistanceResponseRereferenced;
+    else result:=P_codeAssistanceResponse(meta^.currentAssistResponse^.rereferenced);
   end;
 
 PROCEDURE T_workspace.miRunCustomUtilScript(Sender: TObject);
@@ -856,5 +855,65 @@ PROCEDURE T_workspace.processEditScriptMessage(CONST message: P_storedMessage);
     end;
   end;
 
-{$endif}
+PROCEDURE T_workspace.processPendingMessagesInMainThread;
+  VAR responses:array of P_codeAssistanceResponse;
+      response :P_codeAssistanceResponse;
+      i:longint;
+      meta:P_editorMeta;
+      Assigned:boolean;
 
+      fileChange:T_fileChangedMessage;
+  begin
+    responses:=preparedResponses.getAll;
+    for i:=0 to length(responses)-1 do begin
+      response:=responses[i];
+      Assigned:=false;
+      for meta in metas do if not(Assigned) and (meta^.getPath=response^.package^.getPath) then begin
+        meta^.setNewAssistanceResponse(response,meta^.tabsheet=inputPageControl.activePage);
+        Assigned:=true;
+      end;
+      if not(Assigned) then disposeMessage(response);
+      responses[i]:=nil;
+    end;
+    setLength(responses,0);
+
+    for fileChange in changedFilesQueue.getAll do begin
+      Assigned:=false;
+
+      for i:=0 to length(metas)-1 do if not(Assigned) and (metas[i]^.getPath=fileChange.filePath) then begin
+        meta:=metas[i];
+        Assigned:=true;
+        if fileChange.deleted then begin
+          case closeDialogForm.showOnDeleted(fileChange.filePath) of
+            cda_close        : begin
+              closeQuietly(meta);
+            end;
+            cda_ignoreChanges: begin
+              if not(saveCurrentFile(false,meta))
+              then meta^.fileInfo.isChanged:=true;
+            end;
+            cda_overwrite    : begin
+              meta^.fileInfo.ignoreDeleted:=true;
+              meta^.fileInfo.isChanged:=true;
+              meta^.updateSheetCaption;
+            end;
+          end;
+        end else if fileChange.modified then begin
+          case closeDialogForm.showOnOutOfSync(meta^.fileInfo.filePath) of
+            cda_reload:
+              meta^.reloadFile();
+            cda_ignoreChanges:
+              meta^.fileInfo.isChanged:=true;
+            cda_overwrite:
+              if not(saveCurrentFile(false,meta)) then meta^.fileInfo.isChanged:=true;
+          end;
+        end;
+      end;
+    end;
+
+  end;
+
+{$endif}
+{$ifdef includeInitialization}
+
+{$endif}

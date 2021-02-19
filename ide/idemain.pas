@@ -210,8 +210,8 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      smScripts);
     runParameterHistory.create;
 
-    firstStart:=splashOnStartup;
     gui_started:=ide;
+    firstStart:=splashOnStartup;
     FormResize(self);
     miDebug         .checked:=runnerModel.debugMode;
     miProfile       .checked:=runnerModel.profiling;
@@ -725,7 +725,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           slowUpdating:=false;
           close;
         end else begin
-          workspace.checkForFileChanges;
           workspace.fileHistory.postUsageScan();
         end;
       finally
@@ -762,7 +761,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         edit:=workspace.currentEditor;
         if (edit<>nil) then begin
           openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
-          edit^.pollAssistanceResult;
+          workspace.processPendingMessagesInMainThread;
           if edit^.isPseudoFile
           then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
           else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
