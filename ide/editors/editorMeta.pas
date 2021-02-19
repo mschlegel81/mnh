@@ -154,7 +154,6 @@ FUNCTION T_editorMetaProxy.getLines: T_arrayOfString;
   VAR meta:P_editorMeta;
       accessed:boolean;
   begin
-    if fixated or workspace.closingFile then exit(lines);
     enterCriticalSection(workspace.workspaceCs);
     try
       meta:=workspace.getExistingEditorForPath(filePath);

@@ -725,7 +725,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           slowUpdating:=false;
           close;
         end else begin
-          workspace.checkForFileChanges;
           workspace.fileHistory.postUsageScan();
         end;
       finally
