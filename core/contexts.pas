@@ -1002,7 +1002,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
       while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or (globalThreadsRunning<settings.cpuCount)) do begin
         spawnCount+=1;
         interLockedIncrement(poolThreadsRunning);
-        interlockedDecrement(globalThreadsRunning);
+        interLockedIncrement(globalThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
       {$ifdef fullVersion} {$ifdef debugMode}
