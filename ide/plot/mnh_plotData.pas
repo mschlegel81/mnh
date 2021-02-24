@@ -1576,7 +1576,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint);
   begin
     enterCriticalSection(cs);
-    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
+    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(cs);
       exit;
@@ -1590,7 +1590,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         postedFileName:=fileName;
       end;
       interLockedIncrement(preparationThreadsRunning);
-      interlockedDecrement(globalThreadsRunning);
+      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);
