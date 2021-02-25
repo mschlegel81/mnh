@@ -311,7 +311,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
   VAR i:longint;
       toProcessInThisRun:T_storedMessages;
   begin
-    if not(forceFlush or autoflush) then exit;
+    if not(forceFlush or autoflush) then exit([]);
     enterCriticalSection(adapterCs);
     removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
     setLength(toProcessInThisRun,collectedFill);

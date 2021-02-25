@@ -904,8 +904,9 @@ FUNCTION T_messagesDistributor.addOutfile(CONST specification:T_textFileAdapterS
   begin
     case specification.textFileCase of
       tfc_file  : new(P_textFileOutAdapter(result),create(specification.fileName,specification.textFileCase,specification.messagesToInclude,specification.forceNewFile,messageFormatProvider));
-      tfc_stdout: new(P_consoleOutAdapter(result),create(specification.messagesToInclude,com_stdout_only,messageFormatProvider));
-      tfc_stderr: new(P_consoleOutAdapter(result),create(specification.messagesToInclude,com_stderr_only,messageFormatProvider));
+      tfc_stdout: new(P_consoleOutAdapter (result),create(specification.messagesToInclude,com_stdout_only,messageFormatProvider));
+      tfc_stderr: new(P_consoleOutAdapter (result),create(specification.messagesToInclude,com_stderr_only,messageFormatProvider));
+      else result:=nil;
     end;
     addOutAdapter(result,true);
   end;

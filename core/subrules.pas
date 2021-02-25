@@ -87,7 +87,7 @@ TYPE
       PROCEDURE updatePatternForInline;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
-      FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
+      FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
       {Calling with intrinsicTuleId='' means the original is cloned}
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
       FUNCTION getParameterNames:P_listLiteral; virtual;
@@ -409,17 +409,27 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; 
     constructExpression(rep,context,recycler,eachLocation);
   end;
 
-FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint): boolean;
+FUNCTION T_inlineExpression.needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
   VAR i:longint;
       level:longint=0;
+
+      lrInner,lrOuter:byte;
   begin
+    if appliedFromLeft then begin
+      lrInner:=0;
+      lrOuter:=1;
+    end else begin
+      lrInner:=1;
+      lrOuter:=0;
+    end;
     if length(preparedBody)<=1 then exit(false);
     level:=0;
     i:=length(preparedBody)-1;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType,0]>outerPrecedence) then exit(true);
+      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType,lrInner]>
+                                                          C_opPrecedence[outerOperator                ,lrOuter]) then exit(true);
     end;
     result:=false;
   end;
@@ -765,7 +775,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
         r:=P_inlineExpression(LHS);
         if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
         if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
-        embrace:=r^.needEmbrace(C_opPrecedence[op,0]);
+        embrace:=r^.needEmbrace(op,false);
         if embrace then appendToExpression(tt_braceOpen);
         for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
         if embrace then appendToExpression(tt_braceClose);
@@ -777,7 +787,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
       if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
       if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
       embrace:=ignoreLHS and (length(r^.preparedBody)>1) or
-          not(ignoreLHS) and r^.needEmbrace(C_opPrecedence[op,0]-1);
+          not(ignoreLHS) and r^.needEmbrace(op,true);
       if embrace then appendToExpression(tt_braceOpen);
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
       if embrace then appendToExpression(tt_braceClose);

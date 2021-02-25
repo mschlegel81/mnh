@@ -172,6 +172,7 @@ FUNCTION T_functionMap.containsFunctionForId(CONST id: string; OUT ptr: P_intFun
 FUNCTION T_functionMap.getFunctionForId(CONST id: string): P_intFuncCallback;
   VAR meta:P_builtinFunctionMetaData;
   begin
+    result:=nil;
     if mapByName.containsKey(id,meta)
     then result:=meta^.functionPointer
     else assert(false,'No function available for id '+id);

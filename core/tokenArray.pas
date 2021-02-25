@@ -295,7 +295,7 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,strutils,math,subrules,profiling,typinfo,patterns;
+USES sysutils,{$ifdef fullVersion}strutils,{$endif}math,subrules,profiling,typinfo,patterns;
 
 TYPE
 T_scopeType=(sc_block,sc_each,sc_bracketOnly);
@@ -832,13 +832,17 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
         tokenInLambda:P_token;
         bracketLevel:longint=0;
         parameterIds: T_patternElementLocations;
+        {$ifdef fullVersion}
         lastLocation:T_tokenLocation;
+        {$endif}
     begin
       parameterIds:=pattern^.getNamedParameters;
       for parameterId in parameterIds do appendIfNew(uniqueIds,parameterId.id);
 
       tokenInLambda:=t;
+      {$ifdef fullVersion}
       lastLocation:=tokenInLambda^.location;
+      {$endif}
       while (tokenInLambda<>nil) and (bracketLevel>=0) do begin
         if      tokenInLambda^.tokType in C_openingBrackets then inc(bracketLevel)
         else if tokenInLambda^.tokType in C_closingBrackets then dec(bracketLevel)
@@ -846,12 +850,13 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
         if (tokenInLambda^.tokType in [tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule]) and
            arrContains(uniqueIds,tokenInLambda^.txt)
         then tokenInLambda^.tokType:=tt_parameterIdentifier;
+        {$ifdef fullVersion}
         lastLocation:=tokenInLambda^.location;
+        {$endif}
         tokenInLambda:=tokenInLambda^.next;
       end;
-      if tokenInLambda<>nil
-      then lastLocation:=tokenInLambda^.location;
       {$ifdef fullVersion}
+      if tokenInLambda<>nil then lastLocation:=tokenInLambda^.location;
       if callAndIdInfos<>nil then
       for parameterId in parameterIds do callAndIdInfos^.addLocalIdInfo(parameterId.id,parameterId.location,lastLocation,tt_parameterIdentifier);
       {$endif}
