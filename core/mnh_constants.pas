@@ -28,7 +28,7 @@ CONST
   '|   \    /   |   \     |    _    | |___  \',
   '|   |\  /|   |   |\    |   | |   |  ___)  |',
   '|___| \/ |___|___| \___|___| |___| |_____/',
-  '             (c) Martin Schlegel, 2010-2020',
+  '             (c) Martin Schlegel, 2010-2021',
   '',
   'This program is distributed in the hope that it will be useful,',
   'but WITHOUT ANY WARRANTY; without even the implied warranty of',
