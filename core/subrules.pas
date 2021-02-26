@@ -410,26 +410,60 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; 
   end;
 
 FUNCTION T_inlineExpression.needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
+  FUNCTION bracketsNeededFor(CONST innerOperator:T_tokenType):boolean;
+    begin
+      result:=appliedFromLeft and
+              ((outerOperator = tt_operatorConcat) and (innerOperator in [tt_operatorConcatAlt]) or
+               (outerOperator = tt_operatorMinus) and not(innerOperator in [tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorMod) and not(innerOperator in [tt_operatorPot]) or
+               (outerOperator = tt_operatorDivReal) and not(innerOperator in [tt_operatorPot]) or
+               (outerOperator = tt_comparatorGeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorOr) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorOr,tt_operatorPot,tt_operatorAnd,tt_operatorPlus,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_operatorPot) and not(innerOperator in [tt_operatorPot]) or
+               (outerOperator = tt_operatorAnd) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivInt,tt_operatorPot,tt_operatorAnd,tt_operatorMult]) or
+               (outerOperator = tt_comparatorLeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorGrt) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorPlus) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorNeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorConcatAlt) or
+               (outerOperator = tt_operatorXor) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorPot,tt_operatorAnd,tt_operatorPlus,tt_operatorXor,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_operatorDivInt) and not(innerOperator in [tt_operatorPot]) or
+               (outerOperator = tt_operatorStrConcat) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorPot,tt_operatorPlus,tt_operatorStrConcat,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_comparatorLss) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorEq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorMult) and not(innerOperator in [tt_operatorPot,tt_operatorMult])) or
+              not(appliedFromLeft) and
+              ((outerOperator = tt_operatorConcat) and (innerOperator in [tt_operatorConcatAlt]) or
+               (outerOperator = tt_operatorMinus) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorMod) and not(innerOperator in [tt_operatorMod,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorDivReal) and not(innerOperator in [tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorGeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorOr) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorOr,tt_operatorPot,tt_operatorAnd,tt_operatorPlus,tt_operatorXor,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_operatorPot) or
+               (outerOperator = tt_operatorAnd) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivInt,tt_operatorPot,tt_operatorAnd,tt_operatorMult]) or
+               (outerOperator = tt_comparatorLeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorGrt) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorPlus) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorNeq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorConcatAlt) and not(innerOperator in [tt_operatorConcat]) or
+               (outerOperator = tt_operatorXor) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorOr,tt_operatorPot,tt_operatorAnd,tt_operatorPlus,tt_operatorXor,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_operatorDivInt) and not(innerOperator in [tt_operatorMod,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorStrConcat) and not(innerOperator in [tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorPot,tt_operatorPlus,tt_operatorStrConcat,tt_operatorDivInt,tt_operatorMult]) or
+               (outerOperator = tt_comparatorLss) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_comparatorEq) and not(innerOperator in [tt_operatorPlus,tt_operatorMinus,tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]) or
+               (outerOperator = tt_operatorMult) and not(innerOperator in [tt_operatorMod,tt_operatorDivReal,tt_operatorDivInt,tt_operatorPot,tt_operatorMult]));
+    end;
+
   VAR i:longint;
       level:longint=0;
-
-      lrInner,lrOuter:byte;
   begin
-    if appliedFromLeft then begin
-      lrInner:=0;
-      lrOuter:=1;
-    end else begin
-      lrInner:=1;
-      lrOuter:=0;
-    end;
     if length(preparedBody)<=1 then exit(false);
     level:=0;
     i:=length(preparedBody)-1;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType,lrInner]>
-                                                          C_opPrecedence[outerOperator                ,lrOuter]) then exit(true);
+      else if (tokType in C_operators) and (level=0) and (bracketsNeededFor(preparedBody[i].token.tokType)) then exit(true);
     end;
     result:=false;
   end;

@@ -170,7 +170,6 @@ PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
       enterCriticalSection(historyCs);
       prepend(fileItems,canonicalFileName(fileName));
       logFolder(ExtractFileDir(fileName));
-      polishHistory;
       updateHistoryMenu;
     finally
       leaveCriticalSection(historyCs);
