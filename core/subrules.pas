@@ -410,7 +410,7 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; 
   end;
 
 FUNCTION T_inlineExpression.needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
-  FUNCTION bracketsNeededFor(CONST innerOperator:T_TokenType):boolean;
+  FUNCTION bracketsNeededFor(CONST innerOperator:T_tokenType):boolean;
     begin
       result:=appliedFromLeft and
               ((outerOperator = tt_operatorConcat) and (innerOperator in [tt_operatorConcatAlt]) or
