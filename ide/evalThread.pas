@@ -302,8 +302,7 @@ FUNCTION evaluationThread(p:pointer):ptrint;
         leaveCriticalSection(evaluationCs);
       end;
     end;
-    interlockedDecrement(evaluationThreadsRunning);
-    interlockedDecrement(globalThreadsRunning);
+    logThreadStopped();
     result:=0;
   end;
 
@@ -315,8 +314,7 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
         stoppedByUser:=false;
         if debugging then state:=es_debugRunning
                      else state:=es_running;
-        interLockedIncrement(evaluationThreadsRunning);
-        interLockedIncrement(globalThreadsRunning);
+        logThreadStarted();
         beginThread(@evaluationThread,@self);
       end;
     finally

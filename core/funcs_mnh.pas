@@ -46,6 +46,7 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
 PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;
   VAR sleepUntil:double=0;
       sleepInt:longint;
+      longSleep:boolean;
   begin
     if argIsEndTime then sleepUntil:=0 else sleepUntil:=context.wallclockTime;
     case argument^.literalType of
@@ -53,11 +54,17 @@ PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; V
       lt_bigint  : sleepUntil+=P_bigIntLiteral  (argument)^.value.toFloat;
       lt_real    : sleepUntil+=P_realLiteral    (argument)^.value;
     end;
+
+    longSleep:=(sleepUntil-context.wallclockTime)>1;
+    if longSleep then logThreadSleepingAllowingSpawning(context);
+
     while (context.wallclockTime<sleepUntil) and (context.messages^.continueEvaluation) do begin
       sleepInt:=round(900*(sleepUntil-context.wallclockTime));
       if sleepInt>1000 then sleepInt:=1000;
       if (sleepInt>0) then sleep(sleepInt);
     end;
+
+    if longSleep then logSleepingThreadResumed;
   end;
 
 FUNCTION sleep_imp intFuncSignature;
@@ -187,7 +194,7 @@ FUNCTION getMnhInfo:T_arrayOfString;
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  {$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void'{$endif},[se_sleep]);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  {$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void#;sleeps >1s may trigger spawning of worker threads'{$endif},[se_sleep]);
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  {$ifdef fullVersion},'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value'{$endif},[se_sleep]);
   BUILTIN_MYPATH:=
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary{$ifdef fullVersion},'myPath;//returns the path to the current package'{$endif});

@@ -167,10 +167,12 @@ TYPE
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
+      parent:P_evaluationGlobals;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
+      PROCEDURE ensurePoolThreads;
     public
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST inGlobals:P_evaluationGlobals);
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
@@ -240,8 +242,50 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     {$ifdef fullVersion}
     postIdeMessage:PROCEDURE (CONST messageText:string; CONST warn:boolean);
     {$endif}
-    globalThreadsRunning:longint=0;
+
+PROCEDURE logThreadStarted(CONST queue:P_taskQueue=nil);
+PROCEDURE logThreadStopped(CONST queue:P_taskQueue=nil);
+PROCEDURE logThreadSleepingAllowingSpawning(VAR context:T_context);
+PROCEDURE logSleepingThreadResumed;
+FUNCTION threadLimitReached:boolean;
 IMPLEMENTATION
+VAR globalRunningThreads :longint=0;
+    globalSleepingThreads:longint=0;
+CONST strictThreadLimit=256;
+PROCEDURE logThreadStarted(CONST queue: P_taskQueue);
+  begin
+    if queue<>nil then
+    interLockedIncrement(queue^.poolThreadsRunning);
+    interLockedIncrement(globalRunningThreads);
+  end;
+
+PROCEDURE logThreadStopped(CONST queue: P_taskQueue);
+  begin
+    if queue<>nil then
+    interlockedDecrement(queue^.poolThreadsRunning);
+    interlockedDecrement(globalRunningThreads);
+  end;
+
+PROCEDURE logThreadSleepingAllowingSpawning(VAR context:T_context);
+  VAR spawn:boolean=false;
+  begin
+    if interlockedDecrement(globalRunningThreads)<settings.cpuCount then spawn:=true;
+    if interLockedIncrement(globalSleepingThreads)+globalRunningThreads>=strictThreadLimit then spawn:=false;
+    if spawn then context.getGlobals^.taskQueue.ensurePoolThreads;
+  end;
+
+PROCEDURE logSleepingThreadResumed;
+  begin
+    interLockedIncrement(globalRunningThreads);
+    interlockedDecrement(globalSleepingThreads);
+  end;
+
+FUNCTION threadLimitReached:boolean;
+  begin
+    result:=(globalRunningThreads>=settings.cpuCount) or
+            (globalRunningThreads+globalSleepingThreads>=strictThreadLimit);
+  end;
+
 CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
   VAR myContext: T_context);
   begin
@@ -397,7 +441,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messagesDistributor);
     profiler:=nil;
     debuggingStepper:=nil;
     {$endif}
-    taskQueue.create;
+    taskQueue.create(@self);
 
     primaryContext.related.evaluation:=@self;
     primaryContext.related.parent:=nil;
@@ -851,14 +895,13 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
             stopBecauseOfMemoryUsage or //memory panic with more than 1 pool thread running
-            (globalThreadsRunning>settings.cpuCount);
+            threadLimitReached;
       {$ifdef fullVersion}
       if stopBecauseOfMemoryUsage then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
 
       result:=0;
-      interlockedDecrement(taskQueue.poolThreadsRunning);
-      interlockedDecrement(globalThreadsRunning);
+      logThreadStopped(@taskQueue);
     end;
     recycler.cleanup;
   end;
@@ -935,10 +978,11 @@ DESTRUCTOR T_queueTask.destroy;
     doneCriticalSection(taskCs);
   end;
 
-CONSTRUCTOR T_taskQueue.create;
+CONSTRUCTOR T_taskQueue.create(CONST inGlobals:P_evaluationGlobals);
   begin
     system.initCriticalSection(cs);
     memoryCleaner.registerObjectForCleanup(@cleanupQueues);
+    parent:=inGlobals;
     destructionPending:=false;
     setLength(subQueue,0);
   end;
@@ -991,25 +1035,24 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
     isEmptyAfter:=(queuedCount=0) or (first=nil);
   end;
 
-PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
-  PROCEDURE ensurePoolThreads();
-    VAR aimPoolThreads:longint;
-        spawnCount:longint=0;
-    begin
-      if isMemoryInComfortZone
-      then aimPoolThreads:=settings.cpuCount-1
-      else aimPoolThreads:=1;
-      while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or (globalThreadsRunning<settings.cpuCount)) do begin
-        spawnCount+=1;
-        interLockedIncrement(poolThreadsRunning);
-        interLockedIncrement(globalThreadsRunning);
-        beginThread(@threadPoolThread,context^.related.evaluation);
-      end;
-      {$ifdef fullVersion} {$ifdef debugMode}
-      if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
-      {$endif} {$endif}
+PROCEDURE T_taskQueue.ensurePoolThreads();
+  VAR aimPoolThreads:longint;
+      spawnCount:longint=0;
+  begin
+    if isMemoryInComfortZone
+    then aimPoolThreads:=settings.cpuCount-1
+    else aimPoolThreads:=1;
+    while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or not(threadLimitReached)) do begin
+      spawnCount+=1;
+      logThreadStarted(@self);
+      beginThread(@threadPoolThread,parent);
     end;
+    {$ifdef fullVersion} {$ifdef debugMode}
+    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
+    {$endif} {$endif}
+  end;
 
+PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   FUNCTION ensureQueue:P_subQueue;
     VAR i:longint;
         s:P_subQueue;
