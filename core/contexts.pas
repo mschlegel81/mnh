@@ -1040,7 +1040,7 @@ PROCEDURE T_taskQueue.ensurePoolThreads();
       spawnCount:longint=0;
   begin
     if isMemoryInComfortZone
-    then aimPoolThreads:=settings.cpuCount-1
+    then aimPoolThreads:=settings.cpuCount
     else aimPoolThreads:=1;
     while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or not(threadLimitReached)) do begin
       spawnCount+=1;

@@ -1773,7 +1773,7 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$Q-}{$R-} result:=(val*11+5) shr 3 xor val; {$R+}{$Q+} end;
+FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$Q-}{$R-} result:=(T_hashInt(val)*T_hashInt(11)) shr 3 xor T_hashInt(val); {$R+}{$Q+} end;
 FUNCTION T_bigIntLiteral  .hash: T_hashInt; begin result:=val.hash; end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
