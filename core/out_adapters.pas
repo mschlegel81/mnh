@@ -342,6 +342,7 @@ PROCEDURE ensureFileFlushThread;
     enterCriticalSection(globalAdaptersCs);
     if flushThreadsRunning=0 then begin;
       interLockedIncrement(flushThreadsRunning);
+      //TODO: Encapsulate all threads in descendants of T_basicThread
       beginThread(@fileFlushThread);
     end;
     leaveCriticalSection(globalAdaptersCs);

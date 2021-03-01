@@ -377,6 +377,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
           then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
           else begin
             new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages,context.getGlobals));
+            //TODO: Encapsulate all threads in descendants of T_basicThread
             beginThread(@ipcServerThread,markerServer);
             result:=newVoidLiteral;
           end;
@@ -402,6 +403,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
         childContext:=context.getNewAsyncContext(recycler,false);
         if childContext<>nil then begin
           new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context.getGlobals));
+          //TODO: Encapsulate all threads in descendants of T_basicThread
           beginThread(@ipcServerThread,ipcServer);
           result:=newVoidLiteral;
         end else context.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);

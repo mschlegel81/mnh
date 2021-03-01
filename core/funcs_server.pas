@@ -132,6 +132,7 @@ FUNCTION startServer_impl intFuncSignature;
       if childContext<>nil then begin
         new(microserver,create(str0^.value,servingExpression,MAX_CONNECTIONS,timeout,tokenLocation,childContext));
         if microserver^.httpListener.getLastListenerSocketError=0 then begin
+          //TODO: Encapsulate all threads in descendants of T_basicThread
           beginThread(@microserverListenerThread,microserver);
           repeat ThreadSwitch; sleep(1); until microserver^.up;
         end else begin
@@ -296,6 +297,7 @@ PROCEDURE T_microserver.serve;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         new(request,createMicroserverRequest(requestSocket,@self));
+        //TODO: Encapsulate all threads in descendants of T_basicThread
         beginThread(@executeMicroserverRequest,request);
       end else begin
         inc(sleepTime);

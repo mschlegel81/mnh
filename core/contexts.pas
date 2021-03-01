@@ -1003,6 +1003,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
         spawnCount+=1;
         interLockedIncrement(poolThreadsRunning);
         interLockedIncrement(globalThreadsRunning);
+        //TODO: Encapsulate all threads in descendants of T_basicThread
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
       {$ifdef fullVersion} {$ifdef debugMode}

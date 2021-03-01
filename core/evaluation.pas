@@ -1369,6 +1369,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           getMem(task,sizeOf(T_asyncTask));
           task^.myContext:=childContext;
           task^.payload  :=payload;
+          //TODO: Encapsulate all threads in descendants of T_basicThread
           beginThread(@doAsync,task);
           result:=payload^.rereferenced;
         end else begin
