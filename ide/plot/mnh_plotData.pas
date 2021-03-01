@@ -407,10 +407,12 @@ PROCEDURE T_plot.performPostedPreparation;
     end;
   end;
 
+VAR preparationThreadsRunning:longint=0;
 FUNCTION preparationThread(p:pointer):ptrint;
   begin
     P_plot(p)^.performPostedPreparation;
-    logThreadStopped();
+    interlockedDecrement(preparationThreadsRunning);
+    interlockedDecrement(globalThreadsRunning);
     result:=0
   end;
 
@@ -429,7 +431,8 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         postedWidth:=width;
         renderToFilePosted:=false;
       end;
-      logThreadStarted();
+      interLockedIncrement(preparationThreadsRunning);
+      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);
@@ -836,7 +839,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
             if (lastToPrepare>=length(frame)) and not(cycle) then lastToPrepare:=length(frame)-1;
           end;
           for toPrepare:=frameIndex+1 to lastToPrepare do
-            if not(threadLimitReached) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
+            if (preparationThreadsRunning<settings.cpuCount) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
         end;
         {$endif}
       end;
@@ -1573,7 +1576,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint);
   begin
     enterCriticalSection(cs);
-    if backgroundProcessing.backgroundPreparationRunning or (threadLimitReached) or isImagePreparedForResolution(width,height) then begin
+    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(cs);
       exit;
@@ -1586,7 +1589,8 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         renderToFilePosted:=true;
         postedFileName:=fileName;
       end;
-      logThreadStarted();
+      interLockedIncrement(preparationThreadsRunning);
+      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);

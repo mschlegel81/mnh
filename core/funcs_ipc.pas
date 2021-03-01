@@ -180,7 +180,6 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     result:=true;
   end;
 
-//TODO Process requests in separate threads (like in funcs_server)?
 FUNCTION ipcServerThread(p:pointer):ptrint;
   VAR sleepTime:longint=0;
       //Caution: Server must be started and stopped in the same thread!
@@ -212,9 +211,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       enterCriticalSection(serverCs);
       try
         if (localRequest<>nil) and (localResponse=nil) then begin
-          logSleepingThreadResumed;
           localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,localRequest,nil).literal;
-          logThreadSleepingAllowingSpawning(servingContextOrNil^);
           result:=true;
         end;
       finally
@@ -228,9 +225,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          logSleepingThreadResumed;
           response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload,nil).literal;
-          logThreadSleepingAllowingSpawning(servingContextOrNil^);
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
@@ -286,7 +281,6 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     dispose(P_myIpcServer(p),destroy);
     result:=0;
     recycler.cleanup;
-
   end;
 
 CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages; CONST globals_:P_evaluationGlobals);
@@ -383,8 +377,6 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
           then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
           else begin
             new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages,context.getGlobals));
-            logThreadStarted();
-            logThreadSleepingAllowingSpawning(context);
             beginThread(@ipcServerThread,markerServer);
             result:=newVoidLiteral;
           end;
@@ -410,8 +402,6 @@ FUNCTION startIpcServer_impl intFuncSignature;
         childContext:=context.getNewAsyncContext(recycler,false);
         if childContext<>nil then begin
           new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context.getGlobals));
-          logThreadStarted();
-          logThreadSleepingAllowingSpawning(context);
           beginThread(@ipcServerThread,ipcServer);
           result:=newVoidLiteral;
         end else context.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);

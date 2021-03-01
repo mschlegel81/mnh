@@ -132,7 +132,6 @@ FUNCTION startServer_impl intFuncSignature;
       if childContext<>nil then begin
         new(microserver,create(str0^.value,servingExpression,MAX_CONNECTIONS,timeout,tokenLocation,childContext));
         if microserver^.httpListener.getLastListenerSocketError=0 then begin
-          logThreadStarted();
           beginThread(@microserverListenerThread,microserver);
           repeat ThreadSwitch; sleep(1); until microserver^.up;
         end else begin
@@ -251,7 +250,6 @@ FUNCTION executeMicroserverRequest(p:pointer):ptrint;
   begin
     P_microserverRequest(p)^.execute;
     dispose(P_microserverRequest(p),destroy);
-    logThreadStopped();
     result:=0;
   end;
 
@@ -290,7 +288,6 @@ PROCEDURE T_microserver.serve;
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
     up:=true;
     lastActivity:=now;
-    logThreadSleepingAllowingSpawning(context^);
     repeat
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
       if requestSocket<>INVALID_SOCKET then begin
@@ -299,7 +296,6 @@ PROCEDURE T_microserver.serve;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         new(request,createMicroserverRequest(requestSocket,@self));
-        logThreadStarted();
         beginThread(@executeMicroserverRequest,request);
       end else begin
         inc(sleepTime);
@@ -309,8 +305,6 @@ PROCEDURE T_microserver.serve;
     postShutdownMessage;
     up:=false;
     recycler.cleanup;
-    logSleepingThreadResumed;
-    logThreadStopped();
   end;
 
 PROCEDURE T_microserver.killQuickly;
