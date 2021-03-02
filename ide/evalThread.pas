@@ -270,11 +270,19 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     end;
   end;
 
-VAR evaluationThreadsRunning:longint=0;
-FUNCTION evaluationThread(p:pointer):ptrint;
+TYPE
+  T_evaluationThread=class(T_basicThread)
+    protected
+      eval:P_abstractEvaluation;
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create(CONST evaluation:P_abstractEvaluation);
+  end;
+
+PROCEDURE T_evaluationThread.execute;
   VAR recycler:T_recycler;
   begin
-    with P_abstractEvaluation(p)^ do begin
+    with eval^ do begin
       evalTime:=now;
       recycler.initRecycler;
       execute(recycler);
@@ -290,8 +298,12 @@ FUNCTION evaluationThread(p:pointer):ptrint;
         leaveCriticalSection(evaluationCs);
       end;
     end;
-    interlockedDecrement(evaluationThreadsRunning);
-    result:=0;
+  end;
+
+CONSTRUCTOR T_evaluationThread.create(CONST evaluation: P_abstractEvaluation);
+  begin
+    eval:=evaluation;
+    inherited create();
   end;
 
 PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
@@ -302,8 +314,7 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
         stoppedByUser:=false;
         if debugging then state:=es_debugRunning
                      else state:=es_running;
-        interLockedIncrement(evaluationThreadsRunning);
-        beginThread(@evaluationThread,@self);
+        T_evaluationThread.create(@self);
       end;
     finally
       leaveCriticalSection(evaluationCs);
