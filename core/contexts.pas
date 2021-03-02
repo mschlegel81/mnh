@@ -833,7 +833,7 @@ TYPE
   end;
 
 PROCEDURE T_workerThread.execute;
-  CONST MS_IDLE_BEFORE_QUIT=500;
+  CONST MS_IDLE_BEFORE_QUIT=1000;
   VAR sleepCount:longint;
       currentTask:P_queueTask;
       recycler:T_recycler;

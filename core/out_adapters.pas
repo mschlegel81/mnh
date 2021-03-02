@@ -314,37 +314,46 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
-USES myStringUtil,strutils,fileWrappers;
+USES myStringUtil,strutils,fileWrappers,Classes;
 VAR globalAdaptersCs:TRTLCriticalSection;
     allConnectors:array of P_messagesDistributor;
-    finalizing:longint=0;
-    flushThreadsRunning:longint=0;
+TYPE
+  T_fileFlushThread=class(T_basicThread)
+    protected
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create();
+  end;
 
-FUNCTION fileFlushThread(p:pointer):ptrint;
+VAR fileFlushThread:T_fileFlushThread=nil;
+PROCEDURE T_fileFlushThread.execute;
   VAR messageConnector:P_messagesDistributor;
       k   :longint=0;
   begin
-    while finalizing=0 do begin
+    while not(Terminated) do begin
       if k>=10 then begin
         enterCriticalSection(globalAdaptersCs);
         for messageConnector in allConnectors do messageConnector^.flushAllFiles;
         leaveCriticalSection(globalAdaptersCs);
         k:=0;
       end else inc(k);
-      sleep(100);
+      sleep(10);
     end;
+    enterCriticalSection(globalAdaptersCs);
     for messageConnector in allConnectors do messageConnector^.flushAllFiles;
-    result:=interlockedDecrement(flushThreadsRunning);
+    leaveCriticalSection(globalAdaptersCs);
+    fileFlushThread:=nil;
+  end;
+
+CONSTRUCTOR T_fileFlushThread.create();
+  begin
+    inherited create(tpLower);
   end;
 
 PROCEDURE ensureFileFlushThread;
   begin
     enterCriticalSection(globalAdaptersCs);
-    if flushThreadsRunning=0 then begin;
-      interLockedIncrement(flushThreadsRunning);
-      //TODO: Encapsulate all threads in descendants of T_basicThread
-      beginThread(@fileFlushThread);
-    end;
+    if fileFlushThread=nil then fileFlushThread:=T_fileFlushThread.create();
     leaveCriticalSection(globalAdaptersCs);
   end;
 
@@ -1390,7 +1399,6 @@ INITIALIZATION
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);
 FINALIZATION
-  interLockedIncrement(finalizing);
-  while flushThreadsRunning>0 do sleep(1);
+  while fileFlushThread<>nil do fileFlushThread.Terminate;
   doneCriticalSection(globalAdaptersCs);
 end.
