@@ -21,7 +21,6 @@ begin
       end;
     end else displayHelp(nil);
   end;
-  memoryCleaner.Terminate;
   commandLine.pauseIfConfigured(ExitCode<>0);
 end.
 
