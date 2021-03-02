@@ -223,6 +223,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     FormDropFiles(Sender,commandLine.filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
     miFocusEditorClick(Sender);
+    threadStartsSleeping; //IDE thread is mainly idle
     timer.enabled:=true;
   end;
 

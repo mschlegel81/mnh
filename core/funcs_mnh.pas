@@ -53,11 +53,14 @@ PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; V
       lt_bigint  : sleepUntil+=P_bigIntLiteral  (argument)^.value.toFloat;
       lt_real    : sleepUntil+=P_realLiteral    (argument)^.value;
     end;
+    threadStartsSleeping;
+    if getGlobalRunningThreads<settings.cpuCount then context.getGlobals^.taskQueue.ensurePoolThreads();
     while (context.wallclockTime<sleepUntil) and (context.messages^.continueEvaluation) do begin
       sleepInt:=round(900*(sleepUntil-context.wallclockTime));
       if sleepInt>1000 then sleepInt:=1000;
       if (sleepInt>0) then sleep(sleepInt);
     end;
+    threadStopsSleeping;
   end;
 
 FUNCTION sleep_imp intFuncSignature;

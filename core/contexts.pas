@@ -167,23 +167,23 @@ TYPE
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
+      parent:P_evaluationGlobals;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
-      CONSTRUCTOR create;
+      PROCEDURE ensurePoolThreads();
+      CONSTRUCTOR create(CONST parent_:P_evaluationGlobals);
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
   end;
 
-  P_detachedEvaluationPart=^T_detachedEvaluationPart;
-  T_detachedEvaluationPart=object
+  T_detachedEvaluationPart=class(T_basicThread)
     protected
       globals:P_evaluationGlobals;
     public
-      CONSTRUCTOR create(CONST evaluation:P_evaluationGlobals; CONST location:T_tokenLocation);
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE stopOnFinalization; virtual; abstract;
+      CONSTRUCTOR create(CONST evaluation:P_evaluationGlobals; CONST location:T_tokenLocation; CONST createSuspended:boolean);
+      DESTRUCTOR destroy; override;
   end;
 
   T_evaluationGlobals=object
@@ -241,6 +241,7 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; 
     postIdeMessage:PROCEDURE (CONST messageText:string; CONST warn:boolean);
     {$endif}
 IMPLEMENTATION
+USES Classes;
 CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
   VAR myContext: T_context);
   begin
@@ -270,24 +271,25 @@ PROCEDURE T_taskChain.flush;
     queuedCount:=0;
   end;
 
-CONSTRUCTOR T_detachedEvaluationPart.create(CONST evaluation: P_evaluationGlobals; CONST location:T_tokenLocation);
+CONSTRUCTOR T_detachedEvaluationPart.create(CONST evaluation: P_evaluationGlobals; CONST location:T_tokenLocation; CONST createSuspended:boolean);
   begin
     globals:=evaluation;
     enterCriticalSection(globals^.detached.access);
     try
       if globals^.detached.finalizing
       then globals^.primaryContext.raiseError('Forbidden in @after rule.',location,mt_el3_evalError)
-      else globals^.detached.parts.put(@self);
+      else globals^.detached.parts.put(self);
     finally
       leaveCriticalSection(globals^.detached.access);
     end;
+    inherited create(tpNormal,createSuspended);
   end;
 
 DESTRUCTOR T_detachedEvaluationPart.destroy;
   begin
     enterCriticalSection(globals^.detached.access);
     try
-      globals^.detached.parts.drop(@self);
+      globals^.detached.parts.drop(self);
     finally
       leaveCriticalSection(globals^.detached.access);
     end;
@@ -396,7 +398,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messagesDistributor);
     profiler:=nil;
     debuggingStepper:=nil;
     {$endif}
-    taskQueue.create;
+    taskQueue.create(@self);
 
     primaryContext.related.evaluation:=@self;
     primaryContext.related.parent:=nil;
@@ -499,7 +501,7 @@ PROCEDURE T_evaluationGlobals.startFinalization;
       enterCriticalSection(access);
       try
         finalizing:=true;
-        for p in parts.values do P_detachedEvaluationPart(p)^.stopOnFinalization;
+        for p in parts.values do T_detachedEvaluationPart(p).Terminate;
         while (parts.size>0) do begin
           leaveCriticalSection(access);
           sleep(1);
@@ -954,10 +956,11 @@ DESTRUCTOR T_queueTask.destroy;
     doneCriticalSection(taskCs);
   end;
 
-CONSTRUCTOR T_taskQueue.create;
+CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
   begin
     system.initCriticalSection(cs);
     memoryCleaner.registerObjectForCleanup(@cleanupQueues);
+    parent:=parent_;
     destructionPending:=false;
     setLength(subQueue,0);
   end;
@@ -1010,21 +1013,21 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
     isEmptyAfter:=(queuedCount=0) or (first=nil);
   end;
 
-PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
-  PROCEDURE ensurePoolThreads();
-    VAR aimPoolThreads:longint;
-        spawnCount:longint=0;
-    begin
-      while (getGlobalRunningThreads<settings.cpuCount) and
-            (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
-        spawnCount+=1;
-        T_workerThread.create(context^.related.evaluation);
-      end;
-      {$ifdef fullVersion} {$ifdef debugMode}
-      if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
-      {$endif} {$endif}
+PROCEDURE T_taskQueue.ensurePoolThreads();
+  VAR aimPoolThreads:longint;
+      spawnCount:longint=0;
+  begin
+    while (getGlobalRunningThreads<settings.cpuCount) and
+          (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
+      spawnCount+=1;
+      T_workerThread.create(parent);
     end;
+    {$ifdef fullVersion} {$ifdef debugMode}
+    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
+    {$endif} {$endif}
+  end;
 
+PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   FUNCTION ensureQueue:P_subQueue;
     VAR i:longint;
         s:P_subQueue;

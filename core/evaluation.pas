@@ -1372,8 +1372,10 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
-       context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
-      try
+        context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
+      if getGlobalThreads>=GLOBAL_THREAD_LIMIT
+      then context.raiseError('Cannot create any more threads.',tokenLocation)
+      else try
         childContext:=context.getNewAsyncContext(recycler,local);
         if childContext<>nil then begin
           if params^.size=2 then parameters:=list1;
