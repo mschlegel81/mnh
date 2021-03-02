@@ -412,7 +412,6 @@ FUNCTION preparationThread(p:pointer):ptrint;
   begin
     P_plot(p)^.performPostedPreparation;
     interlockedDecrement(preparationThreadsRunning);
-    interlockedDecrement(globalThreadsRunning);
     result:=0
   end;
 
@@ -432,7 +431,6 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         renderToFilePosted:=false;
       end;
       interLockedIncrement(preparationThreadsRunning);
-      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);
@@ -1590,7 +1588,6 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         postedFileName:=fileName;
       end;
       interLockedIncrement(preparationThreadsRunning);
-      interLockedIncrement(globalThreadsRunning);
       beginThread(@preparationThread,@self);
     finally
       leaveCriticalSection(cs);

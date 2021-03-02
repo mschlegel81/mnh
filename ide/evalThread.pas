@@ -291,7 +291,6 @@ FUNCTION evaluationThread(p:pointer):ptrint;
       end;
     end;
     interlockedDecrement(evaluationThreadsRunning);
-    interlockedDecrement(globalThreadsRunning);
     result:=0;
   end;
 
@@ -304,7 +303,6 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
         if debugging then state:=es_debugRunning
                      else state:=es_running;
         interLockedIncrement(evaluationThreadsRunning);
-        interLockedIncrement(globalThreadsRunning);
         beginThread(@evaluationThread,@self);
       end;
     finally
