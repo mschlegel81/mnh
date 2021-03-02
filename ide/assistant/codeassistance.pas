@@ -694,8 +694,8 @@ PROCEDURE finalizeCodeAssistance;
   begin
     enterCriticalSection(codeAssistanceCs);
     shuttingDown:=true;
-    codeAssistanceThread.Terminate;
     for i:=0 to 99 do if codeAssistantIsRunning then begin
+      codeAssistanceThread.Terminate;
       leaveCriticalSection(codeAssistanceCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
