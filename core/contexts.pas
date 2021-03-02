@@ -846,7 +846,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           end;
           sleepCount:=0;
         end;
-        stopBecauseOfMemoryUsage:=(not(isMemoryInComfortZone) and (taskQueue.poolThreadsRunning>1));
+        stopBecauseOfMemoryUsage:=(not(memoryCleaner.isMemoryInComfortZone) and (taskQueue.poolThreadsRunning>1));
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (taskQueue.destructionPending) or
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
@@ -919,7 +919,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean; CONST newEnvironment:P_co
 PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
   begin
     nextToEvaluate  :=nil;
-    if not(isVolatile) and not(isMemoryInComfortZone)
+    if not(isVolatile) and not(memoryCleaner.isMemoryInComfortZone)
     then evaluate(recycler)
     else context^.related.evaluation^.taskQueue.enqueue(@self,context);
   end;
@@ -996,7 +996,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     VAR aimPoolThreads:longint;
         spawnCount:longint=0;
     begin
-      if isMemoryInComfortZone
+      if memoryCleaner.isMemoryInComfortZone
       then aimPoolThreads:=settings.cpuCount-1
       else aimPoolThreads:=1;
       while (poolThreadsRunning<aimPoolThreads) and ((poolThreadsRunning=0) or (globalThreadsRunning<settings.cpuCount)) do begin

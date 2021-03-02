@@ -39,7 +39,7 @@ begin
       Application.CreateForm(TIdeMainForm, IdeMainForm);
     end;
     Application.run;
-    memoryCleaner.stop;
+    memoryCleaner.Terminate;
     showConsole;
     commandLine.pauseIfConfigured(ExitCode<>0);
   end;

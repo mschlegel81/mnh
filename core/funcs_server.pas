@@ -293,7 +293,7 @@ PROCEDURE T_microserver.serve;
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
       if requestSocket<>INVALID_SOCKET then begin
         //Protect against memory over-use by request bombing
-        while not(isMemoryInComfortZone) do sleep(1000);
+        while not(memoryCleaner.isMemoryInComfortZone) do sleep(1000);
         sleepTime:=minSleepTime;
         lastActivity:=now;
         new(request,createMicroserverRequest(requestSocket,@self));

@@ -714,7 +714,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
       if ideSettings.cacheAnimationFrames then begin
-        if not(isMemoryInComfortZone) then weHadAMemoryPanic:=true;
+        if not(memoryCleaner.isMemoryInComfortZone) then weHadAMemoryPanic:=true;
         if weHadAMemoryPanic
         then cacheMode:=fcm_inMemoryPng
         else cacheMode:=fcm_retainImage;
@@ -831,7 +831,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          if not(weHadAMemoryPanic) and isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
+          if not(weHadAMemoryPanic) and memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin

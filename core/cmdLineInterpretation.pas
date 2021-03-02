@@ -94,9 +94,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     consoleAdapters.createDistributor();
     commandLine.initFromCommandLine;
     //-----------------------------------------------------
+    memoryCleaner.memoryComfortThreshold:=settings.memoryLimit;
     if commandLine.applyAndReturnOk(@consoleAdapters) then begin
       if (commandLine.fileOrCommandToInterpret<>'') and not(clf_GUI in commandLine.mnhExecutionOptions.flags) then begin
-         startMemChecker(settings.memoryLimit);
          memCheckerStarted:=true;
          if commandLine.mnhExecutionOptions.executeCommand
          then executeCommand
@@ -111,7 +111,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         {$ifdef fullVersion}and (length(commandLine.filesToOpenInEditor)=0) {$endif}
         and not(clf_GUI in commandLine.mnhExecutionOptions.flags);
       result:=not(quitImmediate);
-      if result and not(memCheckerStarted) then startMemChecker(settings.memoryLimit);
     end else result:=false;
     consoleAdapters.destroy;
   end;

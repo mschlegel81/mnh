@@ -87,7 +87,7 @@ PROCEDURE ensureEventsForm;
 PROCEDURE memoryCleanerCallback;
   VAR dummy:double;
   begin
-    postIdeMessage('Cleaning memory; '+mySys.getMemoryUsedAsString(dummy)+' used = '+intToStr(round(dummy*100))+'% of threshold value',dummy>1);
+    postIdeMessage('Cleaning memory; '+memoryCleaner.getMemoryUsedAsString(dummy)+' used = '+intToStr(round(dummy*100))+'% of threshold value',dummy>1);
   end;
 
 PROCEDURE setupEventsComponentOnIdeStartup;

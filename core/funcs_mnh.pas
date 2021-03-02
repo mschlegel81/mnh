@@ -166,7 +166,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('lightVersionPath',settings.lightFlavourLocation)^
       .put('configured_cpus',settings.cpuCount)^
       .put('configured_mem' ,settings.memoryLimit)^
-      .put('used_mem'       ,mySys.getMemoryUsedInBytes)^
+      .put('used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^
       .put('PID'            ,GetProcessID)
     else result:=nil;
   end;

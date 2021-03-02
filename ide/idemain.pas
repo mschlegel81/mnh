@@ -697,7 +697,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       VAR fraction:double;
 
       begin
-        MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
+        MemoryUsageLabel.caption:=memoryCleaner.getMemoryUsedAsString(fraction);
         if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
         if fraction<0 then fraction:=0;
 

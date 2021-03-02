@@ -294,7 +294,7 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
 PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
   begin
     settings.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
-    startMemChecker(settings.memoryLimit);
+    memoryCleaner.memoryComfortThreshold:=settings.memoryLimit;
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
   end;
 

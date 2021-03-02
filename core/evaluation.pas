@@ -229,7 +229,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
          ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
          not(tco_spawnWorker in context.threadOptions) or
          (settings.cpuCount<=1) or
-         not(isMemoryInComfortZone))
+         not(memoryCleaner.isMemoryInComfortZone))
       then eachType:=tt_each;
       eachLocation:=first^.next^.location;
       initialize(bodyRule);
@@ -1323,7 +1323,7 @@ end}
       cleanupStackAndExpression;
     end;
     stack.destroy;
-    if not(isMemoryInComfortZone) then recycler.cleanup;
+    if not(memoryCleaner.isMemoryInComfortZone) then recycler.cleanup;
   end;
 
 TYPE
