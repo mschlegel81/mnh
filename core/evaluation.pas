@@ -1327,33 +1327,45 @@ end}
   end;
 
 TYPE
-  P_asyncTask=^T_asyncTask;
-  T_asyncTask=record
-    payload:P_futureLiteral;
-    myContext:P_context;
+  T_asyncTask=class(T_basicThread)
+    private
+      payload:P_futureLiteral;
+      myContext:P_context;
+    protected
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create(CONST payload_:P_futureLiteral; CONST context_:P_context);
+      DESTRUCTOR destroy; override;
   end;
 
-FUNCTION doAsync(p:pointer):ptrint;
+PROCEDURE T_asyncTask.execute;
   VAR recycler:T_recycler;
   begin
     recycler.initRecycler;
-    result:=0;
-    with P_asyncTask(p)^ do begin
-      payload^.executeInContext(myContext,recycler);
-      myContext^.finalizeTaskAndDetachFromParent(@recycler);
-
-      disposeLiteral(payload);
-      contextPool.disposeContext(myContext);
-      myContext:=nil;
-    end;
+    payload^.executeInContext(myContext,recycler);
+    myContext^.finalizeTaskAndDetachFromParent(@recycler);
     recycler.cleanup;
-    freeMem(p,sizeOf(T_asyncTask));
+    Terminate;
+  end;
+
+CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: P_context);
+  begin
+    payload:=payload_;
+    myContext:=context_;
+    inherited create();
+    FreeOnTerminate:=true;
+  end;
+
+DESTRUCTOR T_asyncTask.destroy;
+  begin
+    disposeLiteral(payload);
+    contextPool.disposeContext(myContext);
+    inherited destroy;
   end;
 
 {$i func_defines.inc}
 FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
   VAR payload:P_futureLiteral;
-      task:P_asyncTask;
       childContext:P_context;
       parameters:P_listLiteral=nil;
   begin
@@ -1366,12 +1378,8 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
         if childContext<>nil then begin
           if params^.size=2 then parameters:=list1;
           new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
-          getMem(task,sizeOf(T_asyncTask));
-          task^.myContext:=childContext;
-          task^.payload  :=payload;
-          //TODO: Encapsulate all threads in descendants of T_basicThread
-          beginThread(@doAsync,task);
           result:=payload^.rereferenced;
+          T_asyncTask.create(payload,childContext);
         end else begin
           context.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
