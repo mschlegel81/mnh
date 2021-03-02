@@ -72,7 +72,7 @@ PROCEDURE postAssistanceRequest    (CONST scriptPath:string; CONST additionals:T
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString):P_codeAssistanceResponse;
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting;
+USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting,mySys;
 TYPE
   P_codeAssistanceRequest=^T_codeAssistanceRequest;
   T_codeAssistanceRequest=object
@@ -89,12 +89,92 @@ TYPE
       DESTRUCTOR destroy;
   end;
 
+  T_codeAssistanceThread=class(T_basicThread)
+    protected
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create;
+  end;
+
 VAR codeAssistanceCs:TRTLCriticalSection;
+    codeAssistanceThread:T_codeAssistanceThread=nil;
     codeAssistantIsRunning:boolean=false;
-    codeAssistantThreadId :TThreadID;
     shuttingDown          :boolean=false;
     pendingRequests       :specialize G_threadsafeQueue<P_codeAssistanceRequest>;
     isFinalized:boolean=false;
+
+PROCEDURE T_codeAssistanceThread.execute;
+  CONST MAX_SLEEP_BETWEEN_RUNS_MILLIS =500;
+
+  VAR sleepBetweenRunsMillis:longint=1;
+      globals:P_evaluationGlobals;
+      adapters:T_messagesErrorHolder;
+      recycler:T_recycler;
+
+      requests:array of P_codeAssistanceRequest;
+
+      isLatest:boolean;
+      i,j:longint;
+
+      response: P_codeAssistanceResponse;
+  begin
+    {$ifdef debugMode}
+    writeln('  codeAssistanceThread started');
+    {$endif}
+    //setup:
+    adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
+    new(globals,create(@adapters));
+    recycler.initRecycler;
+    //:setup
+    repeat
+      requests:=pendingRequests.getAll;
+      if length(requests)=0
+      then begin
+        sleepBetweenRunsMillis+=1;
+        threadSleepMillis(sleepBetweenRunsMillis);
+      end
+      else begin
+        sleepBetweenRunsMillis:=1;
+        {$ifdef debugMode}
+        writeln('  processing ',length(requests),' code assistance requests');
+        {$endif}
+        for i:=0 to length(requests)-1 do begin
+          isLatest:=not(shuttingDown);
+          for j:=i+1 to length(requests)-1 do isLatest:=isLatest and (requests[i]^.scriptPath<>requests[j]^.scriptPath);
+          if isLatest then begin
+            response:=requests[i]^.execute(recycler,globals,@adapters);
+            {$ifdef debugMode}
+            writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
+            {$endif}
+            preparedResponses.append(response);
+            recycler.cleanup;
+          end;
+          dispose(requests[i],destroy);
+        end;
+        setLength(requests,0);
+      end;
+      enterCriticalSection(codeAssistanceCs);
+      isLatest:=shuttingDown;
+      leaveCriticalSection(codeAssistanceCs);
+    until isLatest or (sleepBetweenRunsMillis>=MAX_SLEEP_BETWEEN_RUNS_MILLIS) or Terminated;
+    //shutdown:
+    dispose(globals,destroy);
+    adapters.destroy;
+    enterCriticalSection(codeAssistanceCs);
+    codeAssistantIsRunning:=false;
+    leaveCriticalSection(codeAssistanceCs);
+    recycler.cleanup;
+    //:shutdown
+    {$ifdef debugMode}
+    writeln('  codeAssistanceThread stopped');
+    {$endif}
+    Terminate;
+  end;
+
+CONSTRUCTOR T_codeAssistanceThread.create;
+  begin
+    inherited create(tpLower);
+  end;
 
 DESTRUCTOR T_codeAssistanceRequest.destroy;
   begin
@@ -298,74 +378,6 @@ FUNCTION T_codeAssistanceResponse.isExecutablePackage: boolean;
     result:=package^.isExecutable;
   end;
 
-FUNCTION codeAssistanceThread(p:pointer):ptrint;
-  CONST MAX_SLEEP_BETWEEN_RUNS_MILLIS =500;
-
-  VAR sleepBetweenRunsMillis:longint=1;
-      globals:P_evaluationGlobals;
-      adapters:T_messagesErrorHolder;
-      recycler:T_recycler;
-
-      requests:array of P_codeAssistanceRequest;
-
-      isLatest:boolean;
-      i,j:longint;
-
-      response: P_codeAssistanceResponse;
-  begin
-    {$ifdef debugMode}
-    writeln('  codeAssistanceThread started');
-    {$endif}
-    //setup:
-    adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
-    new(globals,create(@adapters));
-    recycler.initRecycler;
-    //:setup
-    repeat
-      requests:=pendingRequests.getAll;
-      if length(requests)=0
-      then begin
-        sleepBetweenRunsMillis+=1;
-        sleep(sleepBetweenRunsMillis);
-      end
-      else begin
-        sleepBetweenRunsMillis:=1;
-        {$ifdef debugMode}
-        writeln('  processing ',length(requests),' code assistance requests');
-        {$endif}
-        for i:=0 to length(requests)-1 do begin
-          isLatest:=not(shuttingDown);
-          for j:=i+1 to length(requests)-1 do isLatest:=isLatest and (requests[i]^.scriptPath<>requests[j]^.scriptPath);
-          if isLatest then begin
-            response:=requests[i]^.execute(recycler,globals,@adapters);
-            {$ifdef debugMode}
-            writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
-            {$endif}
-            preparedResponses.append(response);
-            recycler.cleanup;
-          end;
-          dispose(requests[i],destroy);
-        end;
-        setLength(requests,0);
-      end;
-      enterCriticalSection(codeAssistanceCs);
-      isLatest:=shuttingDown;
-      leaveCriticalSection(codeAssistanceCs);
-    until isLatest or (sleepBetweenRunsMillis>=MAX_SLEEP_BETWEEN_RUNS_MILLIS);
-    //shutdown:
-    dispose(globals,destroy);
-    adapters.destroy;
-    enterCriticalSection(codeAssistanceCs);
-    codeAssistantIsRunning:=false;
-    leaveCriticalSection(codeAssistanceCs);
-    result:=0;
-    recycler.cleanup;
-    //:shutdown
-    {$ifdef debugMode}
-    writeln('  codeAssistanceThread stopped');
-    {$endif}
-  end;
-
 PROCEDURE ensureCodeAssistanceThread;
   begin
     if (gui_started<>ide) or isFinalized then exit;
@@ -373,7 +385,7 @@ PROCEDURE ensureCodeAssistanceThread;
     try
       if not(codeAssistantIsRunning) then begin
         codeAssistantIsRunning:=true;
-        codeAssistantThreadId:=beginThread(@codeAssistanceThread);
+        codeAssistanceThread:=T_codeAssistanceThread.create;
       end;
     finally
       leaveCriticalSection(codeAssistanceCs);
@@ -682,14 +694,14 @@ PROCEDURE finalizeCodeAssistance;
   begin
     enterCriticalSection(codeAssistanceCs);
     shuttingDown:=true;
+    codeAssistanceThread.Terminate;
     for i:=0 to 99 do if codeAssistantIsRunning then begin
       leaveCriticalSection(codeAssistanceCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
     end;
-    if codeAssistantIsRunning
-    then KillThread(codeAssistantThreadId)
-    else doneCriticalSection(codeAssistanceCs);
+    if not(codeAssistantIsRunning)
+    then doneCriticalSection(codeAssistanceCs);
     pendingRequests.destroy;
     while preparedResponses.canGetNext(response) do disposeMessage(response);
     preparedResponses.destroy;
