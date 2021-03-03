@@ -49,7 +49,7 @@ TYPE
       package:P_package;
       DESTRUCTOR destroy; virtual;
       PROPERTY  stateHash:T_hashInt read responseStateHash;
-      PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
+      PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false);
       //Highlighter related:
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       //Rename/Help:
@@ -68,24 +68,35 @@ TYPE
 
 PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
-PROCEDURE postAssistanceRequest    (CONST scriptPath:string; CONST additionals:T_arrayOfString);
-FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString):P_codeAssistanceResponse;
+PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
+FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
+
+PROCEDURE postUsageScan            (CONST folderToScan:string);
+FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
+FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
+
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
-USES sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting,mySys;
+USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting,mySys;
+TYPE T_usagePair=record usedScript,usingScript:string; end;
+VAR scriptUsage:record
+      dat:array of T_usagePair;
+      foldersScanned:T_arrayOfString;
+      scanning:boolean;
+    end;
+
 TYPE
   P_codeAssistanceRequest=^T_codeAssistanceRequest;
   T_codeAssistanceRequest=object
     private
       //Input:
       scriptPath             :string;
-      provider              :P_codeProvider;
-      additionalScriptsToScan:T_arrayOfString;
+      provider               :P_codeProvider;
 
-      FUNCTION execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+      FUNCTION execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse; virtual;
     public
-      CONSTRUCTOR createWithProvider(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
-      CONSTRUCTOR create(CONST path:string; CONST additionals:T_arrayOfString);
+      CONSTRUCTOR createWithProvider(CONST editorMeta:P_codeProvider);
+      CONSTRUCTOR create(CONST path:string);
       DESTRUCTOR destroy;
   end;
 
@@ -101,12 +112,53 @@ VAR codeAssistanceCs:TRTLCriticalSection;
     codeAssistantIsRunning:boolean=false;
     shuttingDown          :boolean=false;
     pendingRequests       :specialize G_threadsafeQueue<P_codeAssistanceRequest>;
+    pendingUsageScans     :specialize G_threadsafeQueue<string>;
     isFinalized:boolean=false;
+
+FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
+  VAR i:longint;
+  begin
+    enterCriticalSection(codeAssistanceCs);
+    try
+      with scriptUsage do begin
+        setLength(result,0);
+        for i:=0 to length(dat)-1 do if dat[i].usedScript=scriptName then appendIfNew(result,dat[i].usingScript);
+      end;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
+    end;
+  end;
+
+FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
+  VAR i:longint;
+      countBefore:longint=0;
+      script:string;
+  begin
+    enterCriticalSection(codeAssistanceCs);
+    try
+      with scriptUsage do begin
+        result:=scriptName;
+        repeat
+          countBefore:=length(result);
+          for script in result do
+          for i:=0 to length(dat)-1 do
+            if dat[i].usedScript=script
+            then appendIfNew(result,dat[i].usingScript)
+            else if dat[i].usingScript=script
+            then appendIfNew(result,dat[i].usedScript);
+        until countBefore=length(result);
+        dropValues(result,scriptName);
+        sortUnique(result);
+      end;
+    finally
+      leaveCriticalSection(codeAssistanceCs);
+    end;
+  end;
 
 PROCEDURE T_codeAssistanceThread.execute;
   CONST MAX_SLEEP_BETWEEN_RUNS_MILLIS =500;
 
-  VAR sleepBetweenRunsMillis:longint=1;
+  VAR sleepBetweenRunsMillis:longint=0;
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
       recycler:T_recycler;
@@ -115,8 +167,61 @@ PROCEDURE T_codeAssistanceThread.execute;
 
       isLatest:boolean;
       i,j:longint;
-
+      folderToScan:string;
       response: P_codeAssistanceResponse;
+
+  PROCEDURE updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
+    VAR i,j:longint;
+        canonicalScriptName:string;
+    begin
+      canonicalScriptName:=canonicalFileName(scriptName);
+      try
+        enterCriticalSection(codeAssistanceCs);
+        with scriptUsage do begin
+          j:=0;
+          for i:=0 to length(dat)-1 do if dat[i].usingScript<>canonicalScriptName
+          then begin
+            if j<>i then dat[j]:=dat[i];
+            inc(j);
+          end;
+          setLength(dat,j+length(allUses));
+          for i:=0 to length(allUses)-1 do begin
+            dat[j+i].usingScript:=canonicalScriptName;
+            dat[j+i].usedScript:=canonicalFileName(allUses[i]);
+          end;
+        end;
+      finally
+        leaveCriticalSection(codeAssistanceCs);
+      end;
+    end;
+
+  PROCEDURE scanFolder(CONST folder:string);
+    VAR scriptsInThisFolder:TStringList;
+        alreadyScannedFolder:string;
+        script:string;
+    begin
+      enterCriticalSection(codeAssistanceCs);
+      for alreadyScannedFolder in scriptUsage.foldersScanned do if folder=alreadyScannedFolder then begin
+        leaveCriticalSection(codeAssistanceCs);
+        exit;
+      end;
+      leaveCriticalSection(codeAssistanceCs);
+
+      scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
+      //Load scripts
+      for script in scriptsInThisFolder do if not Terminated then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'T_codeAssistanceThread/scanFolder: scanning ',script);
+        {$endif}
+        updateScriptUsage(script,sandbox^.usedAndExtendedPackages(script))
+      end;
+      scriptsInThisFolder.free;
+
+      enterCriticalSection(codeAssistanceCs);
+      append(scriptUsage.foldersScanned,folder);
+      leaveCriticalSection(codeAssistanceCs);
+    end;
+
   begin
     {$ifdef debugMode}
     writeln('  codeAssistanceThread started');
@@ -130,11 +235,16 @@ PROCEDURE T_codeAssistanceThread.execute;
       requests:=pendingRequests.getAll;
       if length(requests)=0
       then begin
-        sleepBetweenRunsMillis+=1;
-        threadSleepMillis(sleepBetweenRunsMillis);
+        if pendingUsageScans.canGetNext(folderToScan) then begin
+          scanFolder(canonicalFileName(folderToScan));
+          sleepBetweenRunsMillis:=0;
+        end else begin
+          sleepBetweenRunsMillis+=1;
+          threadSleepMillis(sleepBetweenRunsMillis);
+        end;
       end
       else begin
-        sleepBetweenRunsMillis:=1;
+        sleepBetweenRunsMillis:=0;
         {$ifdef debugMode}
         writeln('  processing ',length(requests),' code assistance requests');
         {$endif}
@@ -146,6 +256,7 @@ PROCEDURE T_codeAssistanceThread.execute;
             {$ifdef debugMode}
             writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
             {$endif}
+            updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
             preparedResponses.append(response);
             recycler.cleanup;
           end;
@@ -178,7 +289,6 @@ CONSTRUCTOR T_codeAssistanceThread.create;
 
 DESTRUCTOR T_codeAssistanceRequest.destroy;
   begin
-    setLength(additionalScriptsToScan,0);
   end;
 
 FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
@@ -211,6 +321,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
 
   VAR s,script:ansistring;
       codeProvider:P_codeProvider;
+      additionalScriptsToScan:T_arrayOfString;
   begin
     {$ifdef debugMode}
     writeln('Code assistance start: ',scriptPath);
@@ -222,6 +333,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
     new(package,create(codeProvider,nil));
 
     {$Q-}{$R-}
+    additionalScriptsToScan:=findScriptsUsing(scriptPath);
     initialStateHash:=codeProvider^.stateHash+length(additionalScriptsToScan)*127;
     for s in additionalScriptsToScan do initialStateHash:=initialStateHash*31+hashOfAnsiString(s);
     {$Q+}{$R+}
@@ -392,10 +504,10 @@ PROCEDURE ensureCodeAssistanceThread;
     end;
   end;
 
-PROCEDURE postAssistanceRequest(CONST scriptPath:string; CONST additionals:T_arrayOfString);
+PROCEDURE postAssistanceRequest(CONST scriptPath:string);
   VAR request:P_codeAssistanceRequest;
   begin
-    new(request,create(scriptPath,additionals));
+    new(request,create(scriptPath));
     {$ifdef debugMode}
     writeln('  assistance request posted for ',scriptPath);
     {$endif}
@@ -403,11 +515,16 @@ PROCEDURE postAssistanceRequest(CONST scriptPath:string; CONST additionals:T_arr
     ensureCodeAssistanceThread;
   end;
 
-FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString):P_codeAssistanceResponse;
+PROCEDURE postUsageScan(CONST folderToScan: string);
+  begin
+    pendingUsageScans.append(folderToScan);
+  end;
+
+FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
   VAR request:P_codeAssistanceRequest;
       recycler:T_recycler;
   begin
-    new(request,createWithProvider(editorMeta,additionals));
+    new(request,createWithProvider(editorMeta));
     recycler.initRecycler;
     result:=request^.execute(recycler);
     recycler.cleanup;
@@ -480,7 +597,7 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
     VAR fileName:string;
     begin
       fileName:=baseDir+DEFAULT_FILES[index,0];
-      postAssistanceRequest(fileName,C_EMPTY_STRING_ARRAY);
+      postAssistanceRequest(fileName);
     end;
 
   PROCEDURE createNextHtmlPart();
@@ -514,18 +631,16 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
     end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
 
-CONSTRUCTOR T_codeAssistanceRequest.createWithProvider(CONST editorMeta:P_codeProvider; CONST additionals:T_arrayOfString);
+CONSTRUCTOR T_codeAssistanceRequest.createWithProvider(CONST editorMeta:P_codeProvider);
   begin
     scriptPath:=editorMeta^.getPath;
     provider:=editorMeta;
-    additionalScriptsToScan:=additionals;;
   end;
 
-CONSTRUCTOR T_codeAssistanceRequest.create(CONST path:string; CONST additionals:T_arrayOfString);
+CONSTRUCTOR T_codeAssistanceRequest.create(CONST path:string);
   begin
-    scriptPath             :=path;
+    scriptPath:=path;
     provider:=nil;
-    additionalScriptsToScan:=additionals;;
   end;
 
 CONSTRUCTOR T_highlightingData.create;
@@ -656,7 +771,7 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
+PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false);
   VAR messageFormatter:T_guiFormatter;
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
@@ -674,8 +789,10 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
     messageFormatter.create(false);
     enterCriticalSection(messageCs);
     try
-      edit.clearAll;
-      edit.lines.clear;
+      if not(appendMode) then begin
+        edit.clearAll;
+        edit.lines.clear;
+      end;
       messageFormatter.preferredLineLength:=edit.charsInWindow;
       messageFormatter.wrapEcho:=true;
       hasErrors:=false;
@@ -703,6 +820,7 @@ PROCEDURE finalizeCodeAssistance;
     if not(codeAssistantIsRunning)
     then doneCriticalSection(codeAssistanceCs);
     pendingRequests.destroy;
+    pendingUsageScans.destroy;
     while preparedResponses.canGetNext(response) do disposeMessage(response);
     preparedResponses.destroy;
     isFinalized:=true;
@@ -711,7 +829,14 @@ PROCEDURE finalizeCodeAssistance;
 INITIALIZATION
   initialize(codeAssistanceCs);
   initCriticalSection(codeAssistanceCs);
+  initialize(scriptUsage);
+  with scriptUsage do begin
+    setLength(dat,0);
+    setLength(foldersScanned,0);
+    scanning:=false;
+  end;
   pendingRequests.create;
+  pendingUsageScans.create;
   preparedResponses.create;
 
 FINALIZATION

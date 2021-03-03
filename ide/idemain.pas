@@ -725,8 +725,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           OnCloseQuery:=nil;
           slowUpdating:=false;
           close;
-        end else begin
-          workspace.fileHistory.postUsageScan();
         end;
       finally
         slowUpdating:=false;

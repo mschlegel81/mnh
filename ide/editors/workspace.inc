@@ -72,7 +72,6 @@ T_workspace=object(T_serializable)
     PROCEDURE removeBreakpoint(CONST loc:T_searchTokenLocation);
   private
     PROCEDURE closeQuietly(CONST toClose:P_editorMeta);
-    PROCEDURE onFileScanFinished;
   public
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
@@ -634,17 +633,6 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
     end;
   end;
 
-PROCEDURE T_workspace.onFileScanFinished;
-  VAR m:P_editorMeta;
-  begin
-    enterCriticalSection(workspaceCs);
-    try
-      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m^.getPath,m^.getOptionalAdditionals);
-    finally
-      leaveCriticalSection(workspaceCs);
-    end;
-  end;
-
 PROCEDURE T_workspace.closeCurrentFile;
   VAR toClose:P_editorMeta;
   begin
@@ -715,7 +703,7 @@ PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
       disposeMessage(assistanceResponse);
     end;
     if (openMask and 2)>0
-    then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
+    then append(filesToOpen,findScriptsUsing(meta^.getPath));
     sortUnique(filesToOpen);
     addOrGetEditorMetaForFiles(filesToOpen,false,false);
   end;

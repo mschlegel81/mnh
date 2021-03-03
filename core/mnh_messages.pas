@@ -263,12 +263,7 @@ OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
 
 PROCEDURE disposeMessage(VAR message:P_storedMessage);
   begin
-    try
     if message^.unreference then dispose(message,destroy);
-
-    except
-      writeln('WHAAAT?!?');
-    end;
     message:=nil;
   end;
 
