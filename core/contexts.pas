@@ -293,6 +293,7 @@ DESTRUCTOR T_detachedEvaluationPart.destroy;
     finally
       leaveCriticalSection(globals^.detached.access);
     end;
+    inherited destroy;
   end;
 
 CONSTRUCTOR T_contextRecycler.create;

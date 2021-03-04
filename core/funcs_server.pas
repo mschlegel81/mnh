@@ -271,6 +271,10 @@ PROCEDURE T_microserver.execute;
     repeat
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
       if requestSocket<>INVALID_SOCKET then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'Recieved HTTP request at ',ip,'; globalRunningThreads: ',getGlobalRunningThreads,'; memory in comfort zone: ',memoryCleaner.isMemoryInComfortZone);
+        {$endif}
+
         //Protect against memory over-use by request bombing
         while not(memoryCleaner.isMemoryInComfortZone) or
               (getGlobalRunningThreads>=GLOBAL_THREAD_LIMIT) do sleep(10);
@@ -287,6 +291,7 @@ PROCEDURE T_microserver.execute;
     postShutdownMessage;
     up:=false;
     recycler.cleanup;
+    threadStopsSleeping;
     Terminate;
   end;
 
