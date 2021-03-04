@@ -446,7 +446,7 @@ FUNCTION cross_impl intFuncSignature;
         l:P_literal;
         k:longint;
     begin
-      if not(isMemoryInComfortZone) or memoryPanic then begin
+      if not(memoryCleaner.isMemoryInComfortZone) or memoryPanic then begin
         memoryPanic:=true;
         disposeLiteral(resultList);
         exit;

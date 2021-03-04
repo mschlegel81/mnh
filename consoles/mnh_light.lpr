@@ -21,7 +21,6 @@ begin
       end;
     end else displayHelp(nil);
   end;
-  memoryCleaner.stop;
   commandLine.pauseIfConfigured(ExitCode<>0);
 end.
 

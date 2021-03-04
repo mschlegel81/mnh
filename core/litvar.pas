@@ -1773,14 +1773,13 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$Q-}{$R-} result:=(val*11+5) shr 3 xor val; {$R+}{$Q+} end;
+FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$Q-}{$R-} result:=T_hashInt((T_hashInt(val)*T_hashInt(31))) shr 3; {$R+}{$Q+} end;
 FUNCTION T_bigIntLiteral  .hash: T_hashInt; begin result:=val.hash; end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
     result:=0;
     move(val, result, sizeOf(result));
-    result:=result xor longint(lt_real);
     {$Q+}{$R+}
   end;
 
@@ -1788,7 +1787,7 @@ FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}{$R-}
-    result:=T_hashInt(lt_string)+T_hashInt(length(val));
+    result:=T_hashInt(length(val));
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     {$Q+}{$R+}
   end;
@@ -1800,11 +1799,11 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     s:= toString;
-    result:=T_hashInt(lt_expression)+T_hashInt(length(s))+T_hashInt(customType);
+    result:=T_hashInt(length(s))+T_hashInt(customType);
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}{$R+}
     if result=0 then result:=1;
-    myHash:=result;
+    if not(expressionType in C_statefulExpressionTypes) then myHash:=result;
   end;
 
 FUNCTION T_listLiteral.hash: T_hashInt;
@@ -1812,7 +1811,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_list)+T_hashInt(fill)+T_hashInt(customType);
+    result:=T_hashInt(fill)+T_hashInt(customType);
     for i:=0 to fill-1 do result:=result*31+dat[i]^.hash;
     {$Q+}{$R+}
     if result=0 then result:=1;
@@ -1824,7 +1823,7 @@ FUNCTION T_setLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_set)+T_hashInt(dat.fill)+T_hashInt(customType);
+    result:=T_hashInt(dat.fill)+T_hashInt(customType);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash;
     {$Q+}{$R+}
@@ -1837,7 +1836,7 @@ FUNCTION T_mapLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_map)+T_hashInt(dat.fill)+T_hashInt(customType);
+    result:=T_hashInt(dat.fill)+T_hashInt(customType);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash+entry.value^.hash*37;
     {$Q+}{$R+}

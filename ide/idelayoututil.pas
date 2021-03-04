@@ -872,7 +872,7 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
       for k:=0 to length(lineData)-1 do lineData[k]:=P_stringLiteral(list0^.value[k])^.value;
 
       provider:=newVirtualFileCodeProvider(name,lineData);
-      codeAssistanceData:=getAssistanceResponseSync(provider,C_EMPTY_STRING_ARRAY);
+      codeAssistanceData:=getAssistanceResponseSync(provider);
       highlighter:=TMnhInputSyn.create(nil);
       codeAssistanceData^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
       disposeMessage(codeAssistanceData);

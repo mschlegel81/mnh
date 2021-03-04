@@ -62,7 +62,6 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
 FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
-
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 

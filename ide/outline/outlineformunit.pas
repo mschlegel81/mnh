@@ -347,7 +347,7 @@ PROCEDURE TOutlineForm.performFastUpdate;
       if caResponse<>nil then disposeMessage(caResponse);
       caResponse:=codeAssistanceResponse;
       updateOutlineTree;
-    end else disposeMessage(codeAssistanceResponse);
+    end else if codeAssistanceResponse<>nil then disposeMessage(codeAssistanceResponse);
     setComponentFormVisible(caResponse<>nil);
   end;
 

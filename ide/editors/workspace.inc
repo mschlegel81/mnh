@@ -5,6 +5,13 @@ T_fileChangedMessage=record
   deleted :boolean;
 end;
 
+T_checkFilesThread=class(T_basicThread)
+  protected
+    PROCEDURE execute; override;
+  public
+    CONSTRUCTOR create();
+end;
+
 T_workspace=object(T_serializable)
   private
     workspaceCs:TRTLCriticalSection;
@@ -31,7 +38,7 @@ T_workspace=object(T_serializable)
    metas:array of P_editorMeta;
 
    changedFilesQueue:specialize G_threadsafeQueue<T_fileChangedMessage>;
-
+   checkFilesThread:T_checkFilesThread;
   public
     saveIntervalIdx:byte;
     autosaveBeforeEachExecution:boolean;
@@ -72,7 +79,6 @@ T_workspace=object(T_serializable)
     PROCEDURE removeBreakpoint(CONST loc:T_searchTokenLocation);
   private
     PROCEDURE closeQuietly(CONST toClose:P_editorMeta);
-    PROCEDURE onFileScanFinished;
   public
     PROCEDURE closeCurrentFile;
     FUNCTION saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil):boolean;
@@ -141,10 +147,12 @@ FUNCTION editorContent_impl intFuncSignature;
     end;
   end;
 
-FUNCTION checkFilesThread(p:pointer):ptrint;
+PROCEDURE T_checkFilesThread.execute;
   VAR metaIndex:longint=0;
       m:P_editorMeta;
       message:T_fileChangedMessage;
+      i:longint;
+
   FUNCTION fileIsModifiedOnFileSystem: boolean;
     VAR currentFileAge:double;
     begin
@@ -154,6 +162,7 @@ FUNCTION checkFilesThread(p:pointer):ptrint;
     end;
 
   begin
+    for i:=1 to 50 do threadSleepMillis(100);
     repeat
       metaIndex:=0;
       while (metaIndex>=0) and (metaIndex<length(workspace.metas)) do begin
@@ -171,8 +180,15 @@ FUNCTION checkFilesThread(p:pointer):ptrint;
         end;
         inc(metaIndex);
       end;
-      sleep(2000);
-    until false;
+
+      for i:=1 to 20 do threadSleepMillis(100);
+    until Terminated;
+    Terminate;
+  end;
+
+CONSTRUCTOR T_checkFilesThread.create();
+  begin
+    inherited create(tpLower);
   end;
 
 CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEditors: TPageControl; CONST breakpointImages,bookmarkImages: TImageList; CONST historyRootItem,scriptMenuRootItem:TMenuItem);
@@ -196,12 +212,13 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     packages.newCodeProvider:=@newFileProxy;
     clearDebugLine;
     changedFilesQueue.create;
-    beginThread(@checkFilesThread)
+    checkFilesThread:=T_checkFilesThread.create();
   end;
 
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
+    checkFilesThread.Terminate;
     fileHistory.destroy;
     enterCriticalSection(workspaceCs);
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
@@ -634,17 +651,6 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
     end;
   end;
 
-PROCEDURE T_workspace.onFileScanFinished;
-  VAR m:P_editorMeta;
-  begin
-    enterCriticalSection(workspaceCs);
-    try
-      for m in metas do if (m^.language=LANG_MNH) then postAssistanceRequest(m^.getPath,m^.getOptionalAdditionals);
-    finally
-      leaveCriticalSection(workspaceCs);
-    end;
-  end;
-
 PROCEDURE T_workspace.closeCurrentFile;
   VAR toClose:P_editorMeta;
   begin
@@ -715,7 +721,7 @@ PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
       disposeMessage(assistanceResponse);
     end;
     if (openMask and 2)>0
-    then append(filesToOpen,fileHistory.findScriptsUsing(meta^.getPath));
+    then append(filesToOpen,findScriptsUsing(meta^.getPath));
     sortUnique(filesToOpen);
     addOrGetEditorMetaForFiles(filesToOpen,false,false);
   end;

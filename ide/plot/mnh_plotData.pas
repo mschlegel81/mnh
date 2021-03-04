@@ -140,8 +140,6 @@ TYPE
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
       PROCEDURE removeCustomText(CONST numberOfEntriesToRemove:longint);
-
-      PROCEDURE performPostedPreparation;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -233,6 +231,30 @@ USES FPReadPNG,
      myStringUtil,
      commandLineParameters,
      contexts;
+VAR preparationThreadsRunning:longint=0;
+TYPE
+T_plotPreparationThread=class(T_basicThread)
+  protected
+    plot:P_plot;
+    PROCEDURE execute; override;
+  public
+    CONSTRUCTOR create(CONST plot_:P_plot);
+    DESTRUCTOR destroy; override;
+  end;
+
+CONSTRUCTOR T_plotPreparationThread.create(CONST plot_: P_plot);
+  begin
+    plot:=plot_;
+    inherited create(tpHigher);
+    interLockedIncrement(preparationThreadsRunning);
+  end;
+
+DESTRUCTOR T_plotPreparationThread.destroy;
+  begin
+    inherited destroy;
+    interlockedDecrement(preparationThreadsRunning);
+  end;
+
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -385,33 +407,28 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
     end;
   end;
 
-PROCEDURE T_plot.performPostedPreparation;
+PROCEDURE T_plotPreparationThread.execute;
   begin
     try
-      enterCriticalSection(cs);
+      enterCriticalSection(plot^.cs);
     except
-      backgroundProcessing.backgroundPreparationRunning:=false;
+      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      Terminate;
       exit;
     end;
     try
-      with backgroundProcessing do begin
-        prepareImage(postedWidth,postedHeight);
+      with plot^.backgroundProcessing do begin
+        plot^.prepareImage(postedWidth,postedHeight);
         if renderToFilePosted then begin
-          renderToFile(postedFileName,postedWidth,postedHeight);
-          doneImage(fcm_none);
+          plot^.renderToFile(postedFileName,postedWidth,postedHeight);
+          plot^.doneImage(fcm_none);
         end;
       end;
     finally
-      backgroundProcessing.backgroundPreparationRunning:=false;
-      leaveCriticalSection(cs);
+      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      leaveCriticalSection(plot^.cs);
     end;
-  end;
-
-FUNCTION preparationThread(p:pointer):ptrint;
-  begin
-    P_plot(p)^.performPostedPreparation;
-    logThreadStopped();
-    result:=0
+    Terminate;
   end;
 
 PROCEDURE T_plot.postPreparation(CONST width,height:longint);
@@ -429,8 +446,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         postedWidth:=width;
         renderToFilePosted:=false;
       end;
-      logThreadStarted();
-      beginThread(@preparationThread,@self);
+      T_plotPreparationThread.create(@self);
     finally
       leaveCriticalSection(cs);
     end;
@@ -711,7 +727,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
       if ideSettings.cacheAnimationFrames then begin
-        if not(isMemoryInComfortZone) then weHadAMemoryPanic:=true;
+        if not(memoryCleaner.isMemoryInComfortZone) then weHadAMemoryPanic:=true;
         if weHadAMemoryPanic
         then cacheMode:=fcm_inMemoryPng
         else cacheMode:=fcm_retainImage;
@@ -828,7 +844,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifndef unix}
         if result then begin
-          if not(weHadAMemoryPanic) and isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
+          if not(weHadAMemoryPanic) and memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin
@@ -836,7 +852,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
             if (lastToPrepare>=length(frame)) and not(cycle) then lastToPrepare:=length(frame)-1;
           end;
           for toPrepare:=frameIndex+1 to lastToPrepare do
-            if not(threadLimitReached) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
+            if (preparationThreadsRunning<settings.cpuCount) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
         end;
         {$endif}
       end;
@@ -1573,7 +1589,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint);
   begin
     enterCriticalSection(cs);
-    if backgroundProcessing.backgroundPreparationRunning or (threadLimitReached) or isImagePreparedForResolution(width,height) then begin
+    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(cs);
       exit;
@@ -1586,8 +1602,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         renderToFilePosted:=true;
         postedFileName:=fileName;
       end;
-      logThreadStarted();
-      beginThread(@preparationThread,@self);
+      T_plotPreparationThread.create(@self);
     finally
       leaveCriticalSection(cs);
     end;

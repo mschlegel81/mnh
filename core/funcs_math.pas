@@ -398,7 +398,7 @@ FUNCTION subSets_impl intFuncSignature;
         newSet:P_collectionLiteral;
         i:longint;
     begin
-      if not(isMemoryInComfortZone) or memoryPanic then begin
+      if not(memoryCleaner .isMemoryInComfortZone) or memoryPanic then begin
         memoryPanic:=true;
         exit;
       end;
@@ -494,7 +494,7 @@ FUNCTION permutations_impl intFuncSignature;
         newList:P_listLiteral;
         i,j,k:longint;
     begin
-      if memoryPanic or not(isMemoryInComfortZone) then begin
+      if memoryPanic or not(memoryCleaner.isMemoryInComfortZone) then begin
         memoryPanic:=true;
         exit;
       end;

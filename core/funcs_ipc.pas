@@ -14,33 +14,28 @@ USES sysutils, Classes, simpleipc, //RTL
      recyclers,
      funcs;
 TYPE
-  P_myIpcServer=^T_myIpcServer;
-  T_myIpcServer=object(T_detachedEvaluationPart)
-    serverCs:TRTLCriticalSection;
-    localRequest: P_literal;
-    localResponse: P_literal;
+  T_myIpcServer=class(T_detachedEvaluationPart)
+    private
+      serverCs:TRTLCriticalSection;
+      localRequest: P_literal;
+      localResponse: P_literal;
 
-    serverId:string;
-    feedbackLocation:T_tokenLocation;
-    servingExpressionOrNil:P_expressionLiteral;
-    servingContextOrNil   :P_context;
-    ipcMessageConnector   :P_messages;
-    hasKillRequest:boolean;
-    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages; CONST globals_:P_evaluationGlobals);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE stopOnFinalization; virtual;
-    FUNCTION processLocally(CONST request:P_literal):P_literal;
+      serverId:string;
+      feedbackLocation:T_tokenLocation;
+      servingExpressionOrNil:P_expressionLiteral;
+      servingContextOrNil   :P_context;
+      ipcMessageConnector   :P_messages;
+    protected
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_context; CONST ipcMessageConnect:P_messages; CONST globals_:P_evaluationGlobals);
+      DESTRUCTOR destroy; override;
+      FUNCTION processLocally(CONST request:P_literal):P_literal;
   end;
 
 VAR checkingClient:TSimpleIPCClient=nil;
     localServerCs:TRTLCriticalSection;
-    localServers:specialize G_stringKeyMap<P_myIpcServer>;
-
-FUNCTION serverIsAssociatedWithPackage(s:P_myIpcServer; package:pointer):boolean;
-  begin
-    result:=s^.feedbackLocation.package=package;
-    if result then s^.hasKillRequest:=true;
-  end;
+    localServers:specialize G_stringKeyMap<T_myIpcServer>;
 
 FUNCTION cleanPath(CONST s:string):string;
   begin
@@ -180,8 +175,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     result:=true;
   end;
 
-//TODO Process requests in separate threads (like in funcs_server)?
-FUNCTION ipcServerThread(p:pointer):ptrint;
+PROCEDURE T_myIpcServer.execute;
   VAR sleepTime:longint=0;
       //Caution: Server must be started and stopped in the same thread!
       server:TSimpleIPCServer;
@@ -205,16 +199,14 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
           payload:P_literal;
           messageHash:T_hashInt;
         end;
-    begin with P_myIpcServer(p)^ do begin
+    begin
       if (servingContextOrNil=nil) or (servingExpressionOrNil=nil) then exit(false);
       result:=false;
       request.payload:=nil;
       enterCriticalSection(serverCs);
       try
         if (localRequest<>nil) and (localResponse=nil) then begin
-          logSleepingThreadResumed;
           localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,localRequest,nil).literal;
-          logThreadSleepingAllowingSpawning(servingContextOrNil^);
           result:=true;
         end;
       finally
@@ -228,9 +220,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          logSleepingThreadResumed;
           response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload,nil).literal;
-          logThreadSleepingAllowingSpawning(servingContextOrNil^);
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
@@ -251,47 +241,45 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         if request.payload<>nil then disposeLiteral(request.payload);
         result:=false;
       end;
-    end; end;
+    end;
+
   VAR serverCreated:boolean=false;
   begin
     recycler.initRecycler;
-    with P_myIpcServer(p)^ do begin
-      for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
-      recentRequestOffset:=0;
-      try
-        server:=newServer(serverId);
-        if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId);
-        serverCreated:=true;
-      except on e:Exception do
-        begin
-          ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
-          serverCreated:=false;
-          hasKillRequest:=true;
-        end;
-      end;
-      while not(hasKillRequest) and (ipcMessageConnector^.continueEvaluation) do begin
-        if serve then sleepTime:=0
-                 else begin
-                   if sleepTime<500 then inc(sleepTime);
-                   sleep(sleepTime shr 2);
-                 end;
-      end;
-      if serverCreated then try
-        disposeServer(server);
-      except on e:Exception do
-        ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
-      end;
-      if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
-    end;
-    dispose(P_myIpcServer(p),destroy);
-    result:=0;
-    recycler.cleanup;
 
+    for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
+    recentRequestOffset:=0;
+    try
+      server:=newServer(serverId);
+      if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId);
+      serverCreated:=true;
+    except on e:Exception do
+      begin
+        ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
+        serverCreated:=false;
+        Terminate;
+      end;
+    end;
+    while not(Terminated) and (ipcMessageConnector^.continueEvaluation) do begin
+      if serve then sleepTime:=0
+               else begin
+                 if sleepTime<500 then inc(sleepTime);
+                 threadSleepMillis(sleepTime shr 2);
+               end;
+    end;
+    if serverCreated then try
+      disposeServer(server);
+    except on e:Exception do
+      ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
+    end;
+    if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
+    recycler.cleanup;
+    Terminate;
   end;
 
-CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect:P_messages; CONST globals_:P_evaluationGlobals);
+CONSTRUCTOR T_myIpcServer.create(CONST serverId_: string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_context; CONST ipcMessageConnect: P_messages; CONST globals_: P_evaluationGlobals);
   begin
-    inherited create(globals_,location);
+    inherited create(globals_,location,false);
     initCriticalSection(serverCs);
     serverId:=serverId_;
     feedbackLocation:=location;
@@ -299,9 +287,9 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_token
     servingContextOrNil:=context;
     ipcMessageConnector:=ipcMessageConnect;
     enterCriticalSection(localServerCs);
-    localServers.put(serverId,@self);
+    localServers.put(serverId,self);
     leaveCriticalSection(localServerCs);
-    hasKillRequest:=false;
+    FreeOnTerminate:=true;
     localRequest:=nil;
     localResponse:=nil;
   end;
@@ -328,15 +316,10 @@ DESTRUCTOR T_myIpcServer.destroy;
     end;
   end;
 
-PROCEDURE T_myIpcServer.stopOnFinalization;
-  begin
-    hasKillRequest:=true;
-  end;
-
-FUNCTION T_myIpcServer.processLocally(CONST request:P_literal):P_literal;
+FUNCTION T_myIpcServer.processLocally(CONST request: P_literal): P_literal;
   FUNCTION aliveAndWell:boolean; inline;
     begin
-      result:=not(hasKillRequest) and
+      result:=not(Terminated) and
               (servingContextOrNil<>nil) and
               (servingContextOrNil^.continueEvaluation);
     end;
@@ -366,7 +349,7 @@ FUNCTION T_myIpcServer.processLocally(CONST request:P_literal):P_literal;
 {$i func_defines.inc}
 
 FUNCTION assertUniqueInstance_impl intFuncSignature;
-  VAR markerServer:P_myIpcServer;
+  VAR markerServer:T_myIpcServer;
       normalizedPath:string;
   begin
     result:=nil;
@@ -375,17 +358,14 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       try
         normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
         if localServers.containsKey(normalizedPath,markerServer) then begin
-          if (markerServer^.feedbackLocation.package=tokenLocation.package)
+          if (markerServer.feedbackLocation.package=tokenLocation.package)
           then result:=newVoidLiteral
           else context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation);
         end else begin
           if isServerRunning(normalizedPath)
           then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
           else begin
-            new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages,context.getGlobals));
-            logThreadStarted();
-            logThreadSleepingAllowingSpawning(context);
-            beginThread(@ipcServerThread,markerServer);
+            markerServer:=T_myIpcServer.create(normalizedPath,tokenLocation,nil,nil,context.messages,context.getGlobals);
             result:=newVoidLiteral;
           end;
         end;
@@ -397,8 +377,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
   end;
 
 FUNCTION startIpcServer_impl intFuncSignature;
-  VAR ipcServer:P_myIpcServer;
-      childContext:P_context;
+  VAR childContext:P_context;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and
@@ -409,10 +388,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       end else begin
         childContext:=context.getNewAsyncContext(recycler,false);
         if childContext<>nil then begin
-          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context.getGlobals));
-          logThreadStarted();
-          logThreadSleepingAllowingSpawning(context);
-          beginThread(@ipcServerThread,ipcServer);
+          T_myIpcServer.create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context.getGlobals);
           result:=newVoidLiteral;
         end else context.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
       end;
@@ -423,7 +399,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
   VAR temporaryReceiver:TSimpleIPCServer;
       fetchedResult:boolean;
       aliveCheckCounter:longint=0;
-      localServer:P_myIpcServer;
+      localServer:T_myIpcServer;
       isLocal:boolean;
       response:record
         senderId:string;
@@ -440,7 +416,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       isLocal:=localServers.containsKey(str0^.value,localServer);
       leaveCriticalSection(localServerCs);
       if isLocal
-      then result:=localServer^.processLocally(arg1)
+      then result:=localServer.processLocally(arg1)
       else begin
         temporaryReceiver:=newServer();
         sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);

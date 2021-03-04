@@ -29,7 +29,8 @@ USES  //basic classes
   synOutAdapter,
   menuUtil,
   mnh_messages,
-  commandLineParameters;
+  commandLineParameters,
+  mySys;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -80,7 +81,6 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE toggleBreakpoint;
 
     //Assistant related
-    FUNCTION getOptionalAdditionals:T_arrayOfString;
     FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
   public
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
@@ -138,6 +138,7 @@ USES renameDialog,
      strutils,
      eventsComponent;
 VAR underCursor:T_tokenInfo;
+
 CONSTRUCTOR T_editorMetaProxy.create(CONST path: ansistring);
   begin
     filePath:=path;
@@ -409,13 +410,6 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
     runnerModel.evaluation.stepper^.setBreakpoints(workspace.getAllBreakpoints);
   end;
 
-FUNCTION T_editorMeta.getOptionalAdditionals: T_arrayOfString;
-  begin
-    if (language=LANG_MNH) and not(isPseudoFile)
-    then result:=workspace.fileHistory.findScriptsUsing(fileInfo.filePath)
-    else result:=C_EMPTY_STRING_ARRAY;
-  end;
-
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
                                            OUT tokTyp: T_tokenType;
                                            OUT ref: T_searchTokenLocation;
@@ -473,7 +467,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     result:=false;
     if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then begin
-      if not(isPseudoFile) then for fileName in workspace.fileHistory.findRelatedScriptsTransitive(fileInfo.filePath) do begin
+      if not(isPseudoFile) then for fileName in findRelatedScriptsTransitive(fileInfo.filePath) do begin
         editorWasThereBefore:=workspace.hasEditorForFile(fileName);
         meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
         if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false)) and not(editorWasThereBefore) then workspace.closeQuietly(meta);
@@ -571,7 +565,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     if workspace.debugLine.editor=editor_ then workspace.clearDebugLine;
     updateSheetCaption;
-    if language=LANG_MNH then postAssistanceRequest(getPath,getOptionalAdditionals);
+    if language=LANG_MNH then postAssistanceRequest(getPath);
   end;
 
 PROCEDURE T_editorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
@@ -685,7 +679,6 @@ PROCEDURE T_editorMeta.setNewAssistanceResponse(newOne:P_codeAssistanceResponse;
       currentAssistResponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
-      if not(isPseudoFile) then workspace.fileHistory.updateScriptUsage(fileInfo.filePath,currentAssistResponse^.usedAndExtendedPackages);
     end;
   end;
 
@@ -710,7 +703,7 @@ FUNCTION T_editorMeta.getAssistanceResponse:P_codeAssistanceResponse;
     if currentAssistResponse<>nil
     then exit(P_codeAssistanceResponse(currentAssistResponse^.rereferenced))
     else if language=LANG_MNH
-    then result:=getAssistanceResponseSync(@self,getOptionalAdditionals)
+    then result:=getAssistanceResponseSync(@self)
     else result:=nil;
   end;
 

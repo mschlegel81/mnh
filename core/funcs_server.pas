@@ -17,49 +17,47 @@ USES sysutils,math,fphttpclient,lclintf,
 IMPLEMENTATION
 USES strutils,mySys;
 TYPE
-  P_microserverRequest=^T_microserverRequest;
-  P_microserver=^T_microserver;
-  T_microserver=object(T_detachedEvaluationPart)
-    serverCs:TRTLCriticalSection;
-    ip:ansistring;
-    timeout:double;
-    servingExpression:P_expressionLiteral;
-    feedbackLocation:T_tokenLocation;
-    hasKillRequest:boolean;
-    up:boolean;
-    context:P_context;
-    httpListener:T_httpListener;
+  T_microserver=class(T_detachedEvaluationPart)
+    protected
+      serverCs:TRTLCriticalSection;
+      ip:ansistring;
+      timeout:double;
+      servingExpression:P_expressionLiteral;
+      feedbackLocation:T_tokenLocation;
+      up:boolean;
+      context:P_context;
+      httpListener:T_httpListener;
 
-    log:record
-      creationTime,serveTime,execTime:double;
-      requestCount:longint;
-    end;
-
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST maxConnections:longint; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE stopOnFinalization; virtual;
-    PROCEDURE serve;
-    PROCEDURE killQuickly;
-    PROCEDURE logExecution(CONST totalTime,execTime:double);
+      log:record
+        creationTime,serveTime,execTime:double;
+        requestCount:longint;
+      end;
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_context);
+      DESTRUCTOR destroy; override;
+      PROCEDURE logExecution(CONST totalTime,execTime:double);
   end;
 
-  T_microserverRequest=object
-    connection:T_httpConnectionForRequest;
-    context:P_context;
-    servingExpression:P_expressionLiteral;
-    feedbackLocation:T_tokenLocation;
-    recycler:T_recycler;
-    myParent:P_microserver;
-    creationTime:double;
-    CONSTRUCTOR createMicroserverRequest(CONST conn:TSocket; CONST parent:P_microserver);
-    PROCEDURE execute;
-    DESTRUCTOR destroy; virtual;
+  T_microserverRequest=class(T_detachedEvaluationPart)
+    protected
+      connection:T_httpConnectionForRequest;
+      context:P_context;
+      servingExpression:P_expressionLiteral;
+      feedbackLocation:T_tokenLocation;
+      recycler:T_recycler;
+      myParent:T_microserver;
+      creationTime:double;
+      PROCEDURE execute; override;
+    public
+      CONSTRUCTOR createMicroserverRequest(CONST conn:TSocket; CONST parent:T_microserver);
+      DESTRUCTOR destroy; override;
   end;
 
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
 
 VAR localServerCs:TRTLCriticalSection;
-    localServers:specialize G_stringKeyMap<P_microserver>;
+    localServers:specialize G_stringKeyMap<T_microserver>;
 
 {$i func_defines.inc}
 
@@ -103,16 +101,8 @@ FUNCTION httpError_impl intFuncSignature;
     else result:=nil;
   end;
 
-FUNCTION microserverListenerThread(p:pointer):ptrint;
-  begin
-    P_microserver(p)^.serve;
-    dispose(P_microserver(p),destroy);
-    result:=0;
-  end;
-
 FUNCTION startServer_impl intFuncSignature;
-  CONST MAX_CONNECTIONS=256;
-  VAR microserver:P_microserver;
+  VAR microserver:T_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
       childContext:P_context;
@@ -130,29 +120,29 @@ FUNCTION startServer_impl intFuncSignature;
       servingExpression^.rereference;
       childContext:=context.getNewAsyncContext(recycler,false);
       if childContext<>nil then begin
-        new(microserver,create(str0^.value,servingExpression,MAX_CONNECTIONS,timeout,tokenLocation,childContext));
-        if microserver^.httpListener.getLastListenerSocketError=0 then begin
-          logThreadStarted();
-          beginThread(@microserverListenerThread,microserver);
-          repeat ThreadSwitch; sleep(1); until microserver^.up;
-        end else begin
-          context.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
-          dispose(microserver,destroy);
+        microserver:=T_microserver.create(str0^.value,servingExpression,timeout,tokenLocation,childContext);
+        if microserver.httpListener.getLastListenerSocketError=0
+        then microserver.start
+        else begin
+          context.raiseError('Error in socket creation ('+microserver.ip+')',tokenLocation);
+          FreeAndNil(microserver);
           exit(nil);
         end;
-        result:=newStringLiteral(microserver^.ip);
+        result:=newStringLiteral(microserver.ip);
       end else context.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
 
-CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; CONST parent: P_microserver);
+CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; CONST parent: T_microserver);
   begin
-    creationTime:=parent^.context^.wallclockTime;
-    servingExpression:=P_expressionLiteral(parent^.servingExpression^.rereferenced);
-    feedbackLocation:=parent^.feedbackLocation;
-    connection.create(conn,@(parent^.httpListener));
-    context:=parent^.context^.getNewAsyncContext(recycler,true);
+    creationTime:=parent.context^.wallclockTime;
+    servingExpression:=P_expressionLiteral(parent.servingExpression^.rereferenced);
+    feedbackLocation:=parent.feedbackLocation;
+    connection.create(conn,@(parent.httpListener));
+    context:=parent.context^.getNewAsyncContext(recycler,true);
     myParent:=parent;
+    FreeOnTerminate:=true;
+    inherited create(parent.context^.getGlobals,feedbackLocation,false);
   end;
 
 PROCEDURE T_microserverRequest.execute;
@@ -192,17 +182,19 @@ PROCEDURE T_microserverRequest.execute;
     end;
     context^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(context);
-    myParent^.logExecution(myParent^.context^.wallclockTime-creationTime,executionTime);
+    myParent.logExecution(myParent.context^.wallclockTime-creationTime,executionTime);
     connection.destroy;
+    Terminate;
   end;
 
 DESTRUCTOR T_microserverRequest.destroy;
   begin
     disposeLiteral(servingExpression);
     recycler.cleanup;
+    inherited destroy;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST maxConnections:longint; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
     with log do begin
       creationTime:=context_^.wallclockTime;
@@ -211,7 +203,7 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
       requestCount:=0;
     end;
     initCriticalSection(serverCs);
-    inherited create(context_^.getGlobals,feedbackLocation_);
+    inherited create(context_^.getGlobals,feedbackLocation_,true);
     ip:=cleanIp(ip_);
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
     then timeout:=0
@@ -219,10 +211,9 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     servingExpression:=servingExpression_;
     feedbackLocation:=feedbackLocation_;
     context:=context_;
-    hasKillRequest:=false;
-    httpListener.create(ip,maxConnections);
+    httpListener.create(ip,GLOBAL_THREAD_LIMIT);
     enterCriticalSection(localServerCs);
-    localServers.put(ip,@self);
+    localServers.put(ip,self);
     leaveCriticalSection(localServerCs);
   end;
 
@@ -242,25 +233,11 @@ DESTRUCTOR T_microserver.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_microserver.stopOnFinalization;
-  begin
-    hasKillRequest:=true;
-  end;
-
-FUNCTION executeMicroserverRequest(p:pointer):ptrint;
-  begin
-    P_microserverRequest(p)^.execute;
-    dispose(P_microserverRequest(p),destroy);
-    logThreadStopped();
-    result:=0;
-  end;
-
-PROCEDURE T_microserver.serve;
+PROCEDURE T_microserver.execute;
   VAR lastActivity:double;
   FUNCTION timedOut:boolean;
     begin
-      result:=(timeout> 0) and (now-lastActivity>timeout) or
-              (timeout<=0) and hasKillRequest;
+      result:=(timeout> 0) and (now-lastActivity>timeout);
     end;
 
   PROCEDURE postShutdownMessage;
@@ -284,40 +261,33 @@ PROCEDURE T_microserver.serve;
   VAR sleepTime:longint=minSleepTime;
       recycler:T_recycler;
       requestSocket:TSocket;
-      request:P_microserverRequest=nil;
   begin
+    FreeOnTerminate:=true;
     recycler.initRecycler;
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
     up:=true;
     lastActivity:=now;
-    logThreadSleepingAllowingSpawning(context^);
+    threadStartsSleeping;
     repeat
       requestSocket:=httpListener.getRawRequestSocket(sleepTime);
       if requestSocket<>INVALID_SOCKET then begin
         //Protect against memory over-use by request bombing
-        while not(isMemoryInComfortZone) do sleep(1000);
+        while not(memoryCleaner.isMemoryInComfortZone) or
+              (getGlobalRunningThreads>=GLOBAL_THREAD_LIMIT) do sleep(10);
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        new(request,createMicroserverRequest(requestSocket,@self));
-        logThreadStarted();
-        beginThread(@executeMicroserverRequest,request);
+        threadStopsSleeping;
+        T_microserverRequest.createMicroserverRequest(requestSocket,self);
+        threadStartsSleeping;
       end else begin
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
-    until timedOut or hasKillRequest or not(context^.messages^.continueEvaluation);
+    until timedOut or Terminated or not(context^.messages^.continueEvaluation);
     postShutdownMessage;
     up:=false;
     recycler.cleanup;
-    logSleepingThreadResumed;
-    logThreadStopped();
-  end;
-
-PROCEDURE T_microserver.killQuickly;
-  begin
-    timeout:=0;
-    hasKillRequest:=true;
-    while up do sleep(1);
+    Terminate;
   end;
 
 PROCEDURE T_microserver.logExecution(CONST totalTime,execTime:double);

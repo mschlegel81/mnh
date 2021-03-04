@@ -223,6 +223,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     FormDropFiles(Sender,commandLine.filesToOpenInEditor);
     searchReplaceModel.create(FindDialog1,ReplaceDialog1);
     miFocusEditorClick(Sender);
+    threadStartsSleeping; //IDE thread is mainly idle
     timer.enabled:=true;
   end;
 
@@ -697,7 +698,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       VAR fraction:double;
 
       begin
-        MemoryUsageLabel.caption:=getMemoryUsedAsString(fraction);
+        MemoryUsageLabel.caption:=memoryCleaner.getMemoryUsedAsString(fraction);
         if isNan(fraction) or isInfinite(fraction) or (fraction>1) then fraction:=1;
         if fraction<0 then fraction:=0;
 
@@ -724,8 +725,6 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           OnCloseQuery:=nil;
           slowUpdating:=false;
           close;
-        end else begin
-          workspace.fileHistory.postUsageScan();
         end;
       finally
         slowUpdating:=false;

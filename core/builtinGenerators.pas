@@ -951,7 +951,7 @@ FUNCTION pMap_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
+      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
       then begin
         new(mapGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         mapGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
@@ -969,7 +969,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and isMemoryInComfortZone
+      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
       then begin
         new(filterGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         filterGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
