@@ -140,8 +140,6 @@ TYPE
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
       PROCEDURE removeCustomText(CONST numberOfEntriesToRemove:longint);
-
-      PROCEDURE performPostedPreparation;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -233,6 +231,30 @@ USES FPReadPNG,
      myStringUtil,
      commandLineParameters,
      contexts;
+VAR preparationThreadsRunning:longint=0;
+TYPE
+T_plotPreparationThread=class(T_basicThread)
+  protected
+    plot:P_plot;
+    PROCEDURE execute; override;
+  public
+    CONSTRUCTOR create(CONST plot_:P_plot);
+    DESTRUCTOR destroy; override;
+  end;
+
+CONSTRUCTOR T_plotPreparationThread.create(CONST plot_: P_plot);
+  begin
+    plot:=plot_;
+    inherited create(tpHigher);
+    interLockedIncrement(preparationThreadsRunning);
+  end;
+
+DESTRUCTOR T_plotPreparationThread.destroy;
+  begin
+    inherited destroy;
+    interlockedDecrement(preparationThreadsRunning);
+  end;
+
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
     result.timer:=timer;
@@ -385,34 +407,28 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
     end;
   end;
 
-PROCEDURE T_plot.performPostedPreparation;
+PROCEDURE T_plotPreparationThread.execute;
   begin
     try
-      enterCriticalSection(cs);
+      enterCriticalSection(plot^.cs);
     except
-      backgroundProcessing.backgroundPreparationRunning:=false;
+      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      Terminate;
       exit;
     end;
     try
-      with backgroundProcessing do begin
-        prepareImage(postedWidth,postedHeight);
+      with plot^.backgroundProcessing do begin
+        plot^.prepareImage(postedWidth,postedHeight);
         if renderToFilePosted then begin
-          renderToFile(postedFileName,postedWidth,postedHeight);
-          doneImage(fcm_none);
+          plot^.renderToFile(postedFileName,postedWidth,postedHeight);
+          plot^.doneImage(fcm_none);
         end;
       end;
     finally
-      backgroundProcessing.backgroundPreparationRunning:=false;
-      leaveCriticalSection(cs);
+      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      leaveCriticalSection(plot^.cs);
     end;
-  end;
-
-VAR preparationThreadsRunning:longint=0;
-FUNCTION preparationThread(p:pointer):ptrint;
-  begin
-    P_plot(p)^.performPostedPreparation;
-    interlockedDecrement(preparationThreadsRunning);
-    result:=0
+    Terminate;
   end;
 
 PROCEDURE T_plot.postPreparation(CONST width,height:longint);
@@ -430,8 +446,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         postedWidth:=width;
         renderToFilePosted:=false;
       end;
-      interLockedIncrement(preparationThreadsRunning);
-      beginThread(@preparationThread,@self);
+      T_plotPreparationThread.create(@self);
     finally
       leaveCriticalSection(cs);
     end;
@@ -1587,8 +1602,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         renderToFilePosted:=true;
         postedFileName:=fileName;
       end;
-      interLockedIncrement(preparationThreadsRunning);
-      beginThread(@preparationThread,@self);
+      T_plotPreparationThread.create(@self);
     finally
       leaveCriticalSection(cs);
     end;
