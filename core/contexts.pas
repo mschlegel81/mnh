@@ -176,6 +176,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
+      FUNCTION queuedCount:longint;
   end;
 
   T_detachedEvaluationPart=class(T_basicThread)
@@ -1105,6 +1106,18 @@ PROCEDURE T_taskQueue.cleanupQueues;
         dispose(subQueue[k],destroy);
         setLength(subQueue,k);
       end;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_taskQueue.queuedCount:longint;
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    try
+      result:=0;
+      for i:=0 to length(subQueue)-1 do result+=subQueue[i]^.queuedCount;
     finally
       system.leaveCriticalSection(cs);
     end;
