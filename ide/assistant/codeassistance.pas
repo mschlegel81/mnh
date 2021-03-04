@@ -226,6 +226,8 @@ PROCEDURE T_codeAssistanceThread.execute;
     {$ifdef debugMode}
     writeln('  codeAssistanceThread started');
     {$endif}
+    threadStartsSleeping; //low prio thread
+    postIdeMessage('Code assistance started',false);
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
     new(globals,create(@adapters));
@@ -240,7 +242,7 @@ PROCEDURE T_codeAssistanceThread.execute;
           sleepBetweenRunsMillis:=0;
         end else begin
           sleepBetweenRunsMillis+=1;
-          threadSleepMillis(sleepBetweenRunsMillis);
+          sleep(sleepBetweenRunsMillis);
         end;
       end
       else begin
@@ -276,6 +278,8 @@ PROCEDURE T_codeAssistanceThread.execute;
     leaveCriticalSection(codeAssistanceCs);
     recycler.cleanup;
     //:shutdown
+    threadStopsSleeping;
+    postIdeMessage('Code assistance stopped',false);
     {$ifdef debugMode}
     writeln('  codeAssistanceThread stopped');
     {$endif}

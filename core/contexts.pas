@@ -835,12 +835,11 @@ TYPE
 
 PROCEDURE T_workerThread.execute;
   CONST MS_IDLE_BEFORE_QUIT=1000;
-  VAR sleepCount:longint;
+  VAR sleepCount:longint=0;
       currentTask:P_queueTask;
       recycler:T_recycler;
   begin
     recycler.initRecycler;
-    sleepCount:=0;
     with globals^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
@@ -862,7 +861,9 @@ PROCEDURE T_workerThread.execute;
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
             (getGlobalRunningThreads>settings.cpuCount);
       {$ifdef fullVersion}
-      if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
+      if Terminated then postIdeMessage('Worker thread stopped because of memory panic (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
+      else if sleepCount>=MS_IDLE_BEFORE_QUIT then postIdeMessage('Worker thread stopped because it has nothing to do (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
+      else postIdeMessage('Worker thread stopped (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
       {$endif}
     end;
     recycler.cleanup;
@@ -875,7 +876,6 @@ CONSTRUCTOR T_workerThread.create(evaluationGlobals:P_evaluationGlobals);
     interLockedIncrement(globals^.taskQueue.poolThreadsRunning);
     memoryCleaner.registerObjectForCleanup(@Terminate);
     inherited create();
-    FreeOnTerminate:=true;
   end;
 
 DESTRUCTOR T_workerThread.destroy;
@@ -1015,8 +1015,7 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
   end;
 
 PROCEDURE T_taskQueue.ensurePoolThreads();
-  VAR aimPoolThreads:longint;
-      spawnCount:longint=0;
+  VAR spawnCount:longint=0;
   begin
     while (getGlobalRunningThreads<settings.cpuCount) and
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
@@ -1024,7 +1023,7 @@ PROCEDURE T_taskQueue.ensurePoolThreads();
       T_workerThread.create(parent);
     end;
     {$ifdef fullVersion} {$ifdef debugMode}
-    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
+    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false);
     {$endif} {$endif}
   end;
 

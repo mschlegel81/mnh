@@ -706,7 +706,7 @@ TYPE
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
-CONST TASKS_TO_QUEUE_PER_CPU=4;
+CONST TASKS_TO_QUEUE_PER_CPU=16;
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
