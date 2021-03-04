@@ -232,14 +232,13 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       end;
       if isValid then begin
         enterCriticalSection(workflowCs);
-        while (workflowsActive>0) and not(isMemoryInComfortZone) do begin
+        while (workflowsActive>0) and not(memoryCleaner.isMemoryInComfortZone) do begin
           leaveCriticalSection(workflowCs);
           if not(hasDelayMessage) then begin
             hasDelayMessage:=true;
             context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
           end;
-          sleep(random(WORKFLOW_START_INTERVAL_MILLISECONDS));
-          ThreadSwitch;
+          threadSleepMillis(random(WORKFLOW_START_INTERVAL_MILLISECONDS));
           enterCriticalSection(workflowCs);
         end;
         inc(workflowsActive);
@@ -259,8 +258,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod);
           while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
             pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
-            ThreadSwitch;
-            sleep(sleepTime);
+            threadSleepMillis(sleepTime);
             if sleepTime<1000 then inc(sleepTime);
           end;
           if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
@@ -303,8 +301,7 @@ FUNCTION executeTodo_imp intFuncSignature;
         leaveCriticalSection(workflowCs);
         while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
           pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
-          ThreadSwitch;
-          sleep(sleepTime);
+          threadSleepMillis(sleepTime);
           if sleepTime<1000 then inc(sleepTime);
         end;
         if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
@@ -540,12 +537,14 @@ CONSTRUCTOR T_imageDimensionsMessage.createGetSizeRequest;
 
 FUNCTION T_imageDimensionsMessage.getSizeWaiting(CONST errorFlagProvider:P_messages):T_imageDimensions;
   begin
+    threadStartsSleeping;
     enterCriticalSection(messageCs);
     while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
+    threadStopsSleeping;
     result.width:=newWidth;
     result.height:=newHeight;
     leaveCriticalSection(messageCs);
@@ -576,12 +575,14 @@ CONSTRUCTOR T_replaceImageMessage.createGetImageRequest;
 
 FUNCTION T_replaceImageMessage.getImageWaiting(CONST errorFlagProvider:P_messages): P_rawImage;
   begin
+    threadStartsSleeping;
     enterCriticalSection(messageCs);
     while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
+    threadStopsSleeping;
     result:=newImage;
     leaveCriticalSection(messageCs);
   end;
