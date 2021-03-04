@@ -678,7 +678,6 @@ TYPE
       sourceGenerator    :P_expressionLiteral;
       mapExpression      :P_expressionLiteral;
       doneFetching       :boolean;
-      pendingCount       :longint;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_chainTask;
         fill:longint;
@@ -706,11 +705,9 @@ TYPE
       FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
-CONST TASKS_TO_QUEUE_PER_CPU=16;
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
-    pendingCount:=0;
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
@@ -737,7 +734,6 @@ PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; VAR 
     while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
       assert(firstToAggregate^.getContext<>nil);
       assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
-      dec(pendingCount);
       toAggregate:=firstToAggregate;
       firstToAggregate:=firstToAggregate^.nextToAggregate;
       if P_mapTask(toAggregate)^.mapTaskResult<>nil then begin
@@ -762,8 +758,8 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
-    repeat
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context.getGlobals^.taskQueue.queuedCount,context);
+    if taskChain.handDownThreshold>1 then repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
@@ -783,7 +779,6 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
           lastToAggregate^.nextToAggregate:=task;
           lastToAggregate:=task;
         end;
-        inc(pendingCount);
         if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true;
       end;
     until doneFetching or doneQueuing or not(context.continueEvaluation);
@@ -798,8 +793,8 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
   begin
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context.continueEvaluation) then exit;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-pendingCount,context);
-    repeat
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context.getGlobals^.taskQueue.queuedCount,context);
+    if taskChain.handDownThreshold>1 then repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
@@ -817,7 +812,6 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
           lastToAggregate^.nextToAggregate:=task;
           lastToAggregate:=task;
         end;
-        inc(pendingCount);
         if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true;
       end;
     until doneFetching or doneQueuing or not(context.continueEvaluation);
@@ -845,7 +839,7 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
     result.reasonForStop:=rr_ok;
     result.literal:=nil;
     if outputQueue.hasNext then begin
-      if pendingCount<settings.cpuCount*TASKS_TO_QUEUE_PER_CPU then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
+      doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
       result.literal:=outputQueue.next;
     end else begin
       if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);

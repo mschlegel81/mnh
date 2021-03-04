@@ -142,7 +142,7 @@ TYPE
     private
       first,last:P_queueTask;
       queuedCount,depth:longint;
-      FUNCTION  enqueue(CONST task:P_queueTask):boolean;
+      FUNCTION  enqueue(CONST task:P_queueTask):longint;
       FUNCTION  dequeue(OUT isEmptyAfter:boolean):P_queueTask;
     public
       CONSTRUCTOR create(CONST level:longint);
@@ -168,6 +168,7 @@ TYPE
       destructionPending:boolean;
       poolThreadsRunning:longint;
       parent:P_evaluationGlobals;
+      queued:longint;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
@@ -176,7 +177,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
-      FUNCTION queuedCount:longint;
+      PROPERTY queuedCount:longint read queued;
   end;
 
   T_detachedEvaluationPart=class(T_basicThread)
@@ -234,6 +235,7 @@ TYPE
       {$endif}
   end;
 
+CONST TASKS_TO_QUEUE_PER_CPU=16;
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; VAR recycler:T_recycler):T_reduceResult;
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
     suppressBeep:boolean=false;
@@ -862,9 +864,7 @@ PROCEDURE T_workerThread.execute;
             not(primaryContext.messages^.continueEvaluation) or //error ocurred
             (getGlobalRunningThreads>settings.cpuCount);
       {$ifdef fullVersion}
-      if Terminated then postIdeMessage('Worker thread stopped because of memory panic (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
-      else if sleepCount>=MS_IDLE_BEFORE_QUIT then postIdeMessage('Worker thread stopped because it has nothing to do (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
-      else postIdeMessage('Worker thread stopped (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false)
+      if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
     end;
     recycler.cleanup;
@@ -965,6 +965,7 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     parent:=parent_;
     destructionPending:=false;
     setLength(subQueue,0);
+    queued:=0;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
@@ -993,18 +994,19 @@ DESTRUCTOR T_subQueue.destroy;
   begin
   end;
 
-FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):boolean;
+FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):longint;
   begin
     inc(queuedCount);
+    result:=0;
     if first=nil
     then first:=task
     else last^.nextToEvaluate:=task;
     last:=task;
     while last^.nextToEvaluate<>nil do begin
       inc(queuedCount);
+      inc(result);
       last:=last^.nextToEvaluate;
     end;
-    result:=true;
   end;
 
 FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
@@ -1051,7 +1053,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   begin
     system.enterCriticalSection(cs);
     try
-      ensureQueue^.enqueue(task);
+      queued+=ensureQueue^.enqueue(task);
       ensurePoolThreads();
     finally
       system.leaveCriticalSection(cs);
@@ -1067,13 +1069,13 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
       result:=nil;
       k:=length(subQueue)-1;
       while (k>=0) and (subQueue[k]^.queuedCount=0) do dec(k);
-      if (k<0)
-      then begin
+      if (k<0) then begin
         result:=nil;
         for k:=0 to length(subQueue)-1 do dispose(subQueue[k],destroy);
         setLength(subQueue,0);
       end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
+        dec(queued);
       end;
     finally
       system.leaveCriticalSection(cs);
@@ -1106,18 +1108,7 @@ PROCEDURE T_taskQueue.cleanupQueues;
         dispose(subQueue[k],destroy);
         setLength(subQueue,k);
       end;
-    finally
-      system.leaveCriticalSection(cs);
-    end;
-  end;
-
-FUNCTION T_taskQueue.queuedCount:longint;
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    try
-      result:=0;
-      for i:=0 to length(subQueue)-1 do result+=subQueue[i]^.queuedCount;
+      queued:=0;
     finally
       system.leaveCriticalSection(cs);
     end;
