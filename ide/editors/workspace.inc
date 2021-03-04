@@ -162,8 +162,9 @@ PROCEDURE T_checkFilesThread.execute;
     end;
 
   begin
-    for i:=1 to 50 do threadSleepMillis(100);
-    repeat
+    threadStartsSleeping; //considered idle
+    for i:=1 to 50 do if not Terminated then sleep(100);
+    while not Terminated do begin
       metaIndex:=0;
       while (metaIndex>=0) and (metaIndex<length(workspace.metas)) do begin
         m:=workspace.metas[metaIndex];
@@ -181,8 +182,9 @@ PROCEDURE T_checkFilesThread.execute;
         inc(metaIndex);
       end;
 
-      for i:=1 to 20 do threadSleepMillis(100);
-    until Terminated;
+      for i:=1 to 20 do if not Terminated then sleep(100);
+    end;
+    threadStopsSleeping;
     Terminate;
   end;
 

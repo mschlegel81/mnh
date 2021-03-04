@@ -142,7 +142,7 @@ TYPE
     private
       first,last:P_queueTask;
       queuedCount,depth:longint;
-      FUNCTION  enqueue(CONST task:P_queueTask):boolean;
+      FUNCTION  enqueue(CONST task:P_queueTask):longint;
       FUNCTION  dequeue(OUT isEmptyAfter:boolean):P_queueTask;
     public
       CONSTRUCTOR create(CONST level:longint);
@@ -168,6 +168,7 @@ TYPE
       destructionPending:boolean;
       poolThreadsRunning:longint;
       parent:P_evaluationGlobals;
+      queued:longint;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
@@ -176,6 +177,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
+      PROPERTY queuedCount:longint read queued;
   end;
 
   T_detachedEvaluationPart=class(T_basicThread)
@@ -233,6 +235,7 @@ TYPE
       {$endif}
   end;
 
+CONST TASKS_TO_QUEUE_PER_CPU=16;
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; VAR recycler:T_recycler):T_reduceResult;
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
     suppressBeep:boolean=false;
@@ -835,12 +838,11 @@ TYPE
 
 PROCEDURE T_workerThread.execute;
   CONST MS_IDLE_BEFORE_QUIT=1000;
-  VAR sleepCount:longint;
+  VAR sleepCount:longint=0;
       currentTask:P_queueTask;
       recycler:T_recycler;
   begin
     recycler.initRecycler;
-    sleepCount:=0;
     with globals^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
@@ -875,7 +877,6 @@ CONSTRUCTOR T_workerThread.create(evaluationGlobals:P_evaluationGlobals);
     interLockedIncrement(globals^.taskQueue.poolThreadsRunning);
     memoryCleaner.registerObjectForCleanup(@Terminate);
     inherited create();
-    FreeOnTerminate:=true;
   end;
 
 DESTRUCTOR T_workerThread.destroy;
@@ -964,6 +965,7 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     parent:=parent_;
     destructionPending:=false;
     setLength(subQueue,0);
+    queued:=0;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
@@ -992,18 +994,19 @@ DESTRUCTOR T_subQueue.destroy;
   begin
   end;
 
-FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):boolean;
+FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):longint;
   begin
     inc(queuedCount);
+    result:=0;
     if first=nil
     then first:=task
     else last^.nextToEvaluate:=task;
     last:=task;
     while last^.nextToEvaluate<>nil do begin
       inc(queuedCount);
+      inc(result);
       last:=last^.nextToEvaluate;
     end;
-    result:=true;
   end;
 
 FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
@@ -1015,8 +1018,7 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
   end;
 
 PROCEDURE T_taskQueue.ensurePoolThreads();
-  VAR aimPoolThreads:longint;
-      spawnCount:longint=0;
+  VAR spawnCount:longint=0;
   begin
     while (getGlobalRunningThreads<settings.cpuCount) and
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
@@ -1024,7 +1026,7 @@ PROCEDURE T_taskQueue.ensurePoolThreads();
       T_workerThread.create(parent);
     end;
     {$ifdef fullVersion} {$ifdef debugMode}
-    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s)',false);
+    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false);
     {$endif} {$endif}
   end;
 
@@ -1051,7 +1053,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   begin
     system.enterCriticalSection(cs);
     try
-      ensureQueue^.enqueue(task);
+      queued+=ensureQueue^.enqueue(task);
       ensurePoolThreads();
     finally
       system.leaveCriticalSection(cs);
@@ -1067,13 +1069,13 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
       result:=nil;
       k:=length(subQueue)-1;
       while (k>=0) and (subQueue[k]^.queuedCount=0) do dec(k);
-      if (k<0)
-      then begin
+      if (k<0) then begin
         result:=nil;
         for k:=0 to length(subQueue)-1 do dispose(subQueue[k],destroy);
         setLength(subQueue,0);
       end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
+        dec(queued);
       end;
     finally
       system.leaveCriticalSection(cs);
@@ -1106,6 +1108,7 @@ PROCEDURE T_taskQueue.cleanupQueues;
         dispose(subQueue[k],destroy);
         setLength(subQueue,k);
       end;
+      queued:=0;
     finally
       system.leaveCriticalSection(cs);
     end;

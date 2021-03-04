@@ -176,6 +176,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
   PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR nextToEnqueue:T_eachPayload;
         newTask:P_eachTask;
+        limit:longint;
     begin
       with nextToEnqueue do begin
         eachIndex    :=idx;
@@ -192,7 +193,12 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       then firstToAggregate:=newTask
       else lastToAggregate^.nextToAggregate:=newTask;
       lastToAggregate:=newTask;
-      if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then taskChain.handDownThreshold:=round(canAggregate*1.2);
+      if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then begin
+        taskChain.handDownThreshold:=round(canAggregate*1.2);
+        limit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-context.getGlobals^.taskQueue.queuedCount;
+        if limit<1 then limit:=1;
+        if taskChain.handDownThreshold>limit then taskChain.handDownThreshold:=limit;
+      end;
     end;
 
   VAR rule:P_expressionLiteral;

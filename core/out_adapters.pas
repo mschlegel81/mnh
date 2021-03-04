@@ -341,15 +341,13 @@ PROCEDURE T_fileFlushThread.execute;
       end else inc(k);
       sleep(10);
     end;
-    enterCriticalSection(globalAdaptersCs);
-    for messageConnector in allConnectors do messageConnector^.flushAllFiles;
-    leaveCriticalSection(globalAdaptersCs);
-    fileFlushThread:=nil;
+    Terminate;
   end;
 
 CONSTRUCTOR T_fileFlushThread.create();
   begin
     inherited create(tpLower);
+    FreeOnTerminate:=false;
   end;
 
 PROCEDURE ensureFileFlushThread;
@@ -1402,6 +1400,9 @@ INITIALIZATION
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);
 FINALIZATION
-  while fileFlushThread<>nil do fileFlushThread.Terminate;
+  if (fileFlushThread<>nil) then begin
+    while not(fileFlushThread.Finished) do fileFlushThread.Terminate;
+    FreeAndNil(fileFlushThread);
+  end;
   doneCriticalSection(globalAdaptersCs);
 end.
