@@ -429,6 +429,7 @@ FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfStrin
     recycler.cleanup;
   end;
 
+//TODO: Move this routine inside sandbox - formatting may require that the related package is still alive
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
   VAR messages:T_storedMessages;
       i:longint;

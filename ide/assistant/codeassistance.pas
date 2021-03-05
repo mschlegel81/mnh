@@ -597,23 +597,11 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       end;
     end;
 
-  PROCEDURE postScan(CONST index:longint);
-    VAR fileName:string;
-    begin
-      fileName:=baseDir+DEFAULT_FILES[index,0];
-      postAssistanceRequest(fileName);
-    end;
-
-  PROCEDURE createNextHtmlPart();
+  PROCEDURE createHtmlData(CONST index:longint);
     VAR response:P_codeAssistanceResponse;
-        fileName:string;
-        i:longint;
     begin
-      repeat sleep(1) until preparedResponses.canGetNext(response);
-      fileName:=response^.package^.getPath;
-      i:=0;
-      while (i<length(DEFAULT_FILES)) and (fileName<>baseDir+DEFAULT_FILES[i,0]) do inc(i);
-      if i<length(DEFAULT_FILES) then response^.doCreateHtmlData;
+      response:=getAssistanceResponseSync(newFileCodeProvider(baseDir+DEFAULT_FILES[index,0]));
+      response^.doCreateHtmlData;
       disposeMessage(response);
     end;
 
@@ -628,9 +616,8 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       ensureFile(i);
       if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
     end;
-    for i:=0 to length(DEFAULT_FILES)-1 do postScan(i);
     if createHtmlDat then for i:=0 to length(DEFAULT_FILES)-1 do begin
-      createNextHtmlPart();
+      createHtmlData(i);
       if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
     end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
