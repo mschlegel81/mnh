@@ -1329,6 +1329,7 @@ end}
 TYPE
   T_asyncTask=class(T_basicThread)
     private
+      recycler:T_recycler;
       payload:P_futureLiteral;
       myContext:P_context;
     protected
@@ -1339,12 +1340,8 @@ TYPE
   end;
 
 PROCEDURE T_asyncTask.execute;
-  VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
-    payload^.executeInContext(myContext,recycler);
-    myContext^.finalizeTaskAndDetachFromParent(@recycler);
-    recycler.cleanup;
+    if not(Terminated) then payload^.executeInContext(myContext,recycler);
     Terminate;
   end;
 
@@ -1352,15 +1349,17 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
   begin
     payload:=payload_;
     myContext:=context_;
+    recycler.initRecycler;
     inherited create();
-    FreeOnTerminate:=true;
   end;
 
 DESTRUCTOR T_asyncTask.destroy;
   begin
-    disposeLiteral(payload);
-    contextPool.disposeContext(myContext);
     inherited destroy;
+    disposeLiteral(payload);
+    myContext^.finalizeTaskAndDetachFromParent(@recycler);
+    contextPool.disposeContext(myContext);
+    recycler.cleanup;
   end;
 
 {$i func_defines.inc}

@@ -101,8 +101,8 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText: string; CONST warn: boolean);
   VAR message:P_ideMessage;
   begin
+    if eventsAdapterSingleton=nil then exit;
     new(message,create(warn,messageText));
-    if eventsAdapterSingleton=nil then setupEventsComponentOnIdeStartup;
     eventsAdapterSingleton^.append(message);
   end;
 

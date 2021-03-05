@@ -148,7 +148,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE runInstallScript(CONST associateFullVersion:boolean);
       PROCEDURE runUninstallScript;
-      FUNCTION  usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
+      PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; VAR recycler:T_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
       {$endif}
   end;
 
@@ -412,40 +412,34 @@ PROCEDURE T_sandbox.runUninstallScript;
       exitDummy:longint;
   begin recycler.initRecycler; execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler,exitDummy); recycler.cleanup; end;
 
-FUNCTION T_sandbox.usedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
-  VAR recycler:T_recycler;
-  begin
-    try
-      recycler.initRecycler;
-      package.replaceCodeProvider(newCodeProvider(fileName));
-      globals.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      package.load(lu_usageScan,globals,recycler,C_EMPTY_STRING_ARRAY);
-      result:=package.usedAndExtendedPackages;
-    except end;
-    globals.afterEvaluation(recycler,packageTokenLocation(@package));
-    package.clear(true);
-    globals.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-    recycler.cleanup;
-  end;
-
-PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
-  VAR messages:T_storedMessages;
-      i:longint;
-      tmp:ansistring;
-      raw:T_rawTokenArray;
-      tok:T_rawToken;
-      m:P_storedMessage;
-      formatter:T_guiFormatter;
+PROCEDURE T_sandbox.demoCallToHtml(CONST input:T_arrayOfString; VAR recycler:T_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
+  FUNCTION executeInternally:T_storedMessages;
+    begin
+      messages.clear;
+      messages.setupMessageRedirection(nil,[]);
+      package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
+      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      globals.prng.resetSeed(1);
+      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
+      result:=messages.storedMessages(false);
+    end;
 
   FUNCTION adHocMessage(CONST messageType: T_messageType; CONST messageText: T_arrayOfString):P_storedMessageWithText;
     begin
       new(result,create(messageType,C_nilSearchTokenLocation,messageText));
     end;
 
+  VAR storedMessages:T_storedMessages;
+      i:longint;
+      tmp:ansistring;
+      raw:T_rawTokenArray;
+      tok:T_rawToken;
+      m:P_storedMessage;
+      formatter:T_guiFormatter;
   begin
+    storedMessages:=executeInternally;
     formatter.create(true);
-    messages:=sandbox^.execute(input,C_allSideEffects,recycler,i);
     setLength(textOut,0);
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);
@@ -464,19 +458,21 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         disposeMessage(m);
       end;
     end;
-    for m in messages do begin
+    for m in storedMessages do begin
       case m^.messageType of
         mt_printline:  for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,escapeHtml(tmp));
         mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
         mt_echo_output: append(htmlOut,escapeHtml('out> ')+toHtmlCode(P_echoOutMessage(m)^.getLiteral^.toString()));
         else for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,C_messageClassMeta[m^.messageClass].levelTxt+' '+escapeHtml(tmp)));
       end;
-      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-        //for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
-        append(textOut,formatter.formatMessage(m));
+      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then append(textOut,formatter.formatMessage(m));
     end;
     formatter.destroy;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
+
+PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; VAR recycler:T_recycler);
+  begin sandbox^.demoCallToHtml(input,recycler,textOut,htmlOut,usedBuiltinIDs); end;
 {$endif}
 
 {$define include_implementation}

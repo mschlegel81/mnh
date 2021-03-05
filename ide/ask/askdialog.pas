@@ -63,13 +63,10 @@ PROCEDURE initAskForm;
 FUNCTION ask_impl intFuncSignature;
 VAR askForm:TaskForm;
 IMPLEMENTATION
-USES consoleAsk;
+USES consoleAsk,mySys;
 VAR cs:TRTLCriticalSection;
 
 {$R *.lfm}
-
-{ TaskForm }
-
 PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if key=27 then begin
@@ -245,6 +242,7 @@ FUNCTION ask_impl intFuncSignature;
       i: longint;
   begin
     if not(context.checkSideEffects('ask',tokenLocation,[se_input])) then exit(nil);
+    threadStartsSleeping;
     result := nil;
     if (params<>nil) and (params^.size = 1) and
       (arg0^.literalType = lt_string) then begin
@@ -270,6 +268,7 @@ FUNCTION ask_impl intFuncSignature;
         system.leaveCriticalSection(cs);
       end;
     end;
+    threadStopsSleeping;
   end;
 
 FINALIZATION
