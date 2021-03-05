@@ -12,6 +12,7 @@ USES sysutils,
 PROCEDURE doneConsoleAsk;
 PROCEDURE initConsoleAsk;
 IMPLEMENTATION
+USES mySys;
 VAR keyboardIsUp:boolean=false;
     cs:TRTLCriticalSection;
 PROCEDURE initConsoleAsk;
@@ -33,6 +34,7 @@ PROCEDURE doneConsoleAsk;
 {$i func_defines.inc}
 FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
   begin
+    threadStartsSleeping;
     initConsoleAsk;
     writeln(' ?> ', question);
     write(' !> ');
@@ -41,6 +43,7 @@ FUNCTION ask(CONST question: ansistring; CONST messages:P_messages): ansistring;
     if messages^.continueEvaluation
     then readln(result)
     else result:='';
+    threadStopsSleeping;
   end;
 
 FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST messages:P_messages): ansistring;
@@ -67,8 +70,9 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST m
   VAR questionLines:T_arrayOfString;
       keyEvent:TKeyEvent;
   begin
-    initConsoleAsk;
     if length(options) = 0 then exit('');
+    threadStartsSleeping;
+    initConsoleAsk;
     questionLines:=formatTabs(split(question));
     for i:=0 to length(questionLines)-1 do writeln(' ?> ',questionLines[i]);
     for i:=0 to length(options)-1 do if i<=9 then writeln('  [', i,                '] ', options [i])
@@ -77,6 +81,11 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST m
       write(' !> ');
       repeat
         while (messages^.continueEvaluation) and (PollKeyEvent=0) do sleep(1);
+        if not(messages^.continueEvaluation) then begin
+          doneConsoleAsk;
+          threadStopsSleeping;
+          exit('');
+        end;
         keyEvent:=TranslateKeyEvent(GetKeyEvent);
       until (kbASCII=GetKeyEventFlags(keyEvent)) or not(messages^.continueEvaluation);
       if kbASCII=GetKeyEventFlags(keyEvent)
@@ -84,6 +93,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString; CONST m
       if i<0 then writeln('Invalid anwer. Please give one of the options above.');
     until (i>=0) or not(messages^.continueEvaluation);
     doneConsoleAsk;
+    threadStopsSleeping;
     result:=options[i];
   end;
 
