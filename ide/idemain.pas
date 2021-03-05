@@ -188,6 +188,7 @@ PROCEDURE TIdeMainForm.FormKeyPress(Sender: TObject; VAR key: char);
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
   begin
     initIpcServer(self);
+    setupEventsComponentOnIdeStartup;
     new(dockSites[cpNone        ],create(cpNone        ,nil         ));
     new(dockSites[cpPageControl1],create(cpPageControl1,PageControl1));
     new(dockSites[cpPageControl2],create(cpPageControl2,PageControl2));
