@@ -170,6 +170,23 @@ PROCEDURE T_codeAssistanceThread.execute;
       folderToScan:string;
       response: P_codeAssistanceResponse;
 
+  FUNCTION findUsedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
+    VAR recycler:T_recycler;
+        package:T_package;
+    begin
+      try
+        recycler.initRecycler;
+        package.create(newCodeProvider(fileName),nil);
+        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+        package.load(lu_usageScan,globals^,recycler,C_EMPTY_STRING_ARRAY);
+        result:=package.usedAndExtendedPackages;
+      except end;
+      globals^.afterEvaluation(recycler,packageTokenLocation(@package));
+      globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+      package.destroy;
+      recycler.cleanup;
+    end;
+
   PROCEDURE updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
     VAR i,j:longint;
         canonicalScriptName:string;
@@ -213,7 +230,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         {$ifdef debugMode}
         writeln(stdErr,'T_codeAssistanceThread/scanFolder: scanning ',script);
         {$endif}
-        updateScriptUsage(script,sandbox^.usedAndExtendedPackages(script))
+        updateScriptUsage(script,findUsedAndExtendedPackages(script))
       end;
       scriptsInThisFolder.free;
 
