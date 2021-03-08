@@ -23,6 +23,7 @@ TYPE
         dat:array[0..63] of P_valueScope;
       end;
     public
+      literalRecycler:T_literalRecycler;
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
 
@@ -80,6 +81,7 @@ PROCEDURE T_recycler.initRecycler;
   begin
     tokens.fill:=0;
     scopeRecycler.fill:=0;
+    literalRecycler.initRecycler;
   end;
 
 PROCEDURE T_recycler.cleanup;
@@ -102,6 +104,7 @@ PROCEDURE T_recycler.cleanup;
         end;
       end;
     end;
+    literalRecycler.cleanup;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
