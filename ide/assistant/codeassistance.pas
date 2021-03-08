@@ -20,6 +20,9 @@ USES
   Forms,
   ComCtrls;
 
+CONST
+  MARKER_USAGE_SCAN_END='#';
+
 TYPE
   T_highlightingData=object
     private
@@ -168,7 +171,6 @@ PROCEDURE T_codeAssistanceThread.execute;
       isLatest:boolean;
       i,j:longint;
       folderToScan:string;
-      response: P_codeAssistanceResponse;
 
   FUNCTION findUsedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
     VAR recycler:T_recycler;
@@ -239,10 +241,25 @@ PROCEDURE T_codeAssistanceThread.execute;
       leaveCriticalSection(codeAssistanceCs);
     end;
 
+  VAR scriptsToScanAfterFileScanFinished:T_arrayOfString;
+  PROCEDURE scanScript(CONST request:P_codeAssistanceRequest);
+    VAR response: P_codeAssistanceResponse;
+    begin
+      appendIfNew(scriptsToScanAfterFileScanFinished,request^.scriptPath);
+      response:=request^.execute(recycler,globals,@adapters);
+      {$ifdef debugMode}
+      writeln('  response for ',request^.scriptPath,' is ',response^.stateHash);
+      {$endif}
+      updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
+      preparedResponses.append(response);
+      recycler.cleanup;
+    end;
+
   begin
     {$ifdef debugMode}
     writeln('  codeAssistanceThread started');
     {$endif}
+    setLength(scriptsToScanAfterFileScanFinished,0);
     threadStartsSleeping; //low prio thread
     postIdeMessage('Code assistance started',false);
     //setup:
@@ -255,7 +272,21 @@ PROCEDURE T_codeAssistanceThread.execute;
       if length(requests)=0
       then begin
         if pendingUsageScans.canGetNext(folderToScan) then begin
-          scanFolder(canonicalFileName(folderToScan));
+          if folderToScan=MARKER_USAGE_SCAN_END
+          then begin
+            //rescan all scripts after folders have been scanned
+            for folderToScan in scriptsToScanAfterFileScanFinished do postAssistanceRequest(folderToScan);
+            setLength(scriptsToScanAfterFileScanFinished,0);
+
+            //clean up pending folder scans
+            scriptsToScanAfterFileScanFinished:=pendingUsageScans.getAll;
+            dropValues(scriptsToScanAfterFileScanFinished,MARKER_USAGE_SCAN_END);
+            sortUnique(scriptsToScanAfterFileScanFinished);
+            for folderToScan in scriptsToScanAfterFileScanFinished do pendingUsageScans.append(folderToScan);
+            if length(scriptsToScanAfterFileScanFinished)>0 then pendingUsageScans.append(MARKER_USAGE_SCAN_END);
+            setLength(scriptsToScanAfterFileScanFinished,0);
+          end
+          else scanFolder(canonicalFileName(folderToScan));
           sleepBetweenRunsMillis:=0;
         end else begin
           sleepBetweenRunsMillis+=1;
@@ -270,15 +301,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         for i:=0 to length(requests)-1 do begin
           isLatest:=not(shuttingDown);
           for j:=i+1 to length(requests)-1 do isLatest:=isLatest and (requests[i]^.scriptPath<>requests[j]^.scriptPath);
-          if isLatest then begin
-            response:=requests[i]^.execute(recycler,globals,@adapters);
-            {$ifdef debugMode}
-            writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
-            {$endif}
-            updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
-            preparedResponses.append(response);
-            recycler.cleanup;
-          end;
+          if isLatest then scanScript(requests[i]);
           dispose(requests[i],destroy);
         end;
         setLength(requests,0);

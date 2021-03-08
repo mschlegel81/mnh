@@ -73,6 +73,7 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     if readArray(fileItems) and readArray(folderItems)
     then begin
       for s in folderItems do postUsageScan(s);
+      postUsageScan(MARKER_USAGE_SCAN_END);
       result:=true;
     end else begin
       setLength(fileItems,0);
@@ -149,6 +150,7 @@ PROCEDURE T_fileHistory.logFolder(CONST folderName:string);
       enterCriticalSection(historyCs);
       appendIfNew(folderItems,canonicalFileName(folderName));
       postUsageScan(canonicalFileName(folderName));
+      postUsageScan(MARKER_USAGE_SCAN_END);
     finally
       leaveCriticalSection(historyCs);
     end;
