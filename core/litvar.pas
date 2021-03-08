@@ -70,7 +70,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION typeString:string; virtual;
 
@@ -100,7 +100,7 @@ TYPE
     //from T_literal:
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
   P_numericLiteral=^T_numericLiteral;
@@ -129,7 +129,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION intValue:int64;                                              virtual;
     FUNCTION floatValue:T_myFloat;                                        virtual;
     FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual;
@@ -149,7 +149,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION intValue:int64;                                              virtual;
     FUNCTION floatValue:T_myFloat;                                        virtual;
     FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual;
@@ -170,7 +170,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION floatValue:T_myFloat;                           virtual;
   end;
 
@@ -184,13 +184,13 @@ TYPE
     DESTRUCTOR destroy; virtual;
     PROPERTY value:ansistring read val;
     FUNCTION softCast(CONST literalRecycler:P_literalRecycler): P_literal;
-    FUNCTION trim(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-    FUNCTION trimLeft: P_stringLiteral;
-    FUNCTION trimRight: P_stringLiteral;
-    FUNCTION upper: P_stringLiteral;
-    FUNCTION lower: P_stringLiteral;
-    FUNCTION unbrace: P_stringLiteral;
-    FUNCTION escape: P_stringLiteral;
+    //FUNCTION trim(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+    //FUNCTION trimLeft: P_stringLiteral;
+    //FUNCTION trimRight: P_stringLiteral;
+    //FUNCTION upper: P_stringLiteral;
+    //FUNCTION lower: P_stringLiteral;
+    //FUNCTION unbrace: P_stringLiteral;
+    //FUNCTION escape: P_stringLiteral;
     FUNCTION getEncoding: T_stringEncoding;
     PROCEDURE append(CONST suffix:ansistring);
     //from T_scalarLiteral:
@@ -199,7 +199,7 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
   end;
 
@@ -247,7 +247,7 @@ TYPE
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual; abstract;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual; abstract;
       FUNCTION referencesAnyUserPackage:boolean; virtual; abstract;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
@@ -261,13 +261,13 @@ TYPE
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
       alwaysTrue:boolean;
-      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
+      FUNCTION cloneLiteral(CONST literalRecycler:P_literalRecycler; CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_typableLiteral;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):boolean;
-      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST literalRecycler:P_literalRecycler; CONST recycler:pointer):P_typableLiteral;
-      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages; CONST recycler:pointer):P_literal;
+      FUNCTION cast(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext;  CONST recycler:pointer):P_typableLiteral;
+      FUNCTION uncast(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:P_abstractContext; CONST adapters:P_messages; CONST recycler:pointer):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
       PROPERTY builtinTypeCheck:T_typeCheck read builtinsuper;
@@ -326,17 +326,16 @@ TYPE
     private
       myHash:T_hashInt;
     public
-    FUNCTION toSet :P_setLiteral;
-    FUNCTION toList:P_listLiteral;
-    FUNCTION toMap(CONST location:T_tokenLocation; CONST context:P_abstractContext):P_mapLiteral;
+    FUNCTION toSet (CONST literalRecycler:P_literalRecycler):P_setLiteral;
+    FUNCTION toList(CONST literalRecycler:P_literalRecycler):P_listLiteral;
+    FUNCTION toMap (CONST literalRecycler:P_literalRecycler; CONST location:T_tokenLocation; CONST context:P_abstractContext):P_mapLiteral;
     FUNCTION get     (CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION getInner(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION typeString:string; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION size:longint;                        virtual; abstract;
     FUNCTION contains(CONST L:P_literal):boolean; virtual; abstract;
-    FUNCTION clone:P_compoundLiteral; virtual; abstract;
-    FUNCTION iteratableList:T_arrayOfLiteral; virtual; abstract;
+    FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual; abstract;
   end;
 
   P_collectionLiteral=^T_collectionLiteral;
@@ -346,12 +345,14 @@ TYPE
     public
     FUNCTION isKeyValueCollection:boolean; virtual; abstract;
     FUNCTION newOfSameType(CONST literalRecycler:P_literalRecycler; CONST initSize:boolean):P_collectionLiteral; virtual; abstract;
-    FUNCTION appendAll   (CONST L:P_compoundLiteral                ):P_collectionLiteral; virtual;
-    FUNCTION append      (CONST L:P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual; abstract;
+    FUNCTION appendAll   (CONST literalRecycler:P_literalRecycler; CONST L:P_collectionLiteral):P_collectionLiteral; virtual;
+    FUNCTION appendMap   (CONST literalRecycler:P_literalRecycler; CONST L:P_mapLiteral):P_collectionLiteral; virtual;
+    FUNCTION append      (CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual; abstract;
     FUNCTION appendString(CONST literalRecycler:P_literalRecycler; CONST s:ansistring):P_collectionLiteral;
-    FUNCTION appendBool  (                                         CONST b:boolean   ):P_collectionLiteral;
+    FUNCTION appendBool  (CONST literalRecycler:P_literalRecycler; CONST b:boolean   ):P_collectionLiteral;
     FUNCTION appendInt   (CONST literalRecycler:P_literalRecycler; CONST i:int64     ):P_collectionLiteral;
     FUNCTION appendReal  (CONST literalRecycler:P_literalRecycler; CONST r:T_myFloat ):P_collectionLiteral;
+    FUNCTION iteratableList:T_arrayOfLiteral; virtual; abstract;
   end;
 
   T_listLiteral=object(T_collectionLiteral)
@@ -363,7 +364,7 @@ TYPE
       PROPERTY value:T_arrayOfLiteral read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
       DESTRUCTOR destroy; virtual;
-      FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+      FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -375,16 +376,16 @@ TYPE
       FUNCTION listConstructorToString(CONST lengthLimit:longint=maxLongint):string;
       FUNCTION get     (CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
-      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
-      FUNCTION clone:P_compoundLiteral; virtual;
+      FUNCTION appendConstructing(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
+      FUNCTION append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
+      FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
 
       PROCEDURE sort;
       PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; CONST context:P_abstractContext);
       PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
-      FUNCTION  sortPerm: P_listLiteral;
-      PROCEDURE unique;
+      FUNCTION  sortPerm(CONST literalRecycler:P_literalRecycler): P_listLiteral;
+      PROCEDURE unique(CONST literalRecycler:P_literalRecycler);
 
       FUNCTION head:    P_literal;
       FUNCTION head(CONST literalRecycler:P_literalRecycler; CONST headSize : longint):P_listLiteral;
@@ -407,7 +408,7 @@ TYPE
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
-      FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+      FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -416,11 +417,11 @@ TYPE
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
-      FUNCTION appendAll(CONST L:P_compoundLiteral              ):P_collectionLiteral; virtual;
-      FUNCTION clone:P_compoundLiteral; virtual;
+      FUNCTION append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
+      FUNCTION appendAll(CONST literalRecycler:P_literalRecycler; CONST L:P_collectionLiteral):P_collectionLiteral; virtual;
+      FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
-      PROCEDURE drop(CONST L:P_literal);
+      PROCEDURE drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     end;
 
@@ -431,7 +432,7 @@ TYPE
       CONSTRUCTOR createClone(VAR original:T_mapLiteral);
     public
       DESTRUCTOR destroy; virtual;
-      FUNCTION leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean; virtual;
+      FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -439,20 +440,19 @@ TYPE
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION clone:P_compoundLiteral; virtual;
-      FUNCTION iteratableList:T_arrayOfLiteral; virtual;
+      FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
       FUNCTION entryList:T_arrayOfKeyValuePair;
       FUNCTION keyIteratableList:T_arrayOfLiteral;
 
-      PROCEDURE drop(CONST L:P_literal);
-      FUNCTION put(CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
-      FUNCTION put(CONST key,                  newValue:ansistring                      ):P_mapLiteral;
-      FUNCTION put(CONST key:ansistring; CONST newValue:int64                           ):P_mapLiteral;
-      FUNCTION put(CONST key:ansistring; CONST newValue:T_myFloat                       ):P_mapLiteral;
-      FUNCTION put(CONST key:ansistring; CONST newValue:boolean                         ):P_mapLiteral;
-      FUNCTION put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
-      FUNCTION put(CONST key:P_literal;  CONST newValue:int64    ; CONST incRefs:boolean):P_mapLiteral;
-      FUNCTION putAll(CONST map:P_mapLiteral):P_mapLiteral;
+      PROCEDURE drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key,                  newValue:ansistring                      ):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:int64                           ):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:T_myFloat                       ):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:boolean                         ):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
+      FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key:P_literal;  CONST newValue:int64    ; CONST incRefs:boolean):P_mapLiteral;
+      FUNCTION putAll(CONST literalRecycler:P_literalRecycler; CONST map:P_mapLiteral):P_mapLiteral;
       FUNCTION transpose(CONST literalRecycler:P_literalRecycler): P_listLiteral;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
   end;
@@ -500,21 +500,21 @@ FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; VAR literalRecycler:T_literalRecycler; OUT parsedLength: longint): P_literal; inline;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
-PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION newLiteralFromStream(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
+PROCEDURE writeLiteralToStream(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
+FUNCTION serializeToStringList(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
+FUNCTION serialize(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
+FUNCTION deserialize(VAR literalRecycler:T_literalRecycler; CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 
-FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
-FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
-FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
-FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
-FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral; VAR literalRecycler:T_literalRecycler):P_numericLiteral;
+FUNCTION setUnion    (VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
+FUNCTION setIntersect(VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
+FUNCTION setMinus    (VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
+FUNCTION mapMerge    (VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
+FUNCTION mutateVariable(VAR literalRecycler:T_literalRecycler; VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+FUNCTION divideInts(VAR literalRecycler:T_literalRecycler; CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
 
 VAR emptyStringSingleton: T_stringLiteral;
@@ -561,7 +561,7 @@ FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; 
     end;
   end;
 
-FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral; VAR literalRecycler:T_literalRecycler):P_numericLiteral;
+FUNCTION divideInts(VAR literalRecycler:T_literalRecycler; CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
   VAR bigRHS,quotient,rest:T_bigInt;
   begin
     if RHS^.literalType=lt_bigint then begin
@@ -968,8 +968,8 @@ FUNCTION T_literalRecycler.newListLiteral(CONST a: P_literal; CONST b: P_literal
       setLength(result^.dat,initialSize);
       result^.fill:=0;
     end else new(result,create(initialSize));
-                   result^.append(a,true);
-    if b<>nil then result^.append(b,true);
+                   result^.append(@self,a,true);
+    if b<>nil then result^.append(@self,b,true);
   end;
 
 FUNCTION newVoidLiteral                           : P_voidLiteral; begin result:=P_voidLiteral(voidLit       .rereferenced); end;
@@ -1037,7 +1037,7 @@ FUNCTION T_typedef.matchesLiteral(CONST L: P_literal;
     if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil));
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST literalRecycler:P_literalRecycler; CONST L: P_typableLiteral; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
@@ -1053,12 +1053,12 @@ FUNCTION T_typedef.cloneLiteral(CONST L: P_typableLiteral; CONST location: T_tok
       lt_list..lt_emptyMap: begin
         if L^.numberOfReferences<=1
         then result:=P_typableLiteral(L^.rereferenced)
-        else result:=P_compoundLiteral(L)^.clone;
+        else result:=P_compoundLiteral(L)^.clone(literalRecycler);
       end;
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST literalRecycler:P_literalRecycler; CONST recycler: pointer): P_typableLiteral;
+FUNCTION T_typedef.cast(CONST literalRecycler:P_literalRecycler;CONST L: P_literal; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_typableLiteral;
   begin
     result:=nil;
     if not(L^.literalType in C_typables) then begin
@@ -1067,10 +1067,10 @@ FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation; CON
     end;
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
     if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,L,nil) then begin
-      result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
+      result:=cloneLiteral(literalRecycler,P_typableLiteral(L),location,threadContext,recycler);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
-      result:=super^.cast(L,location,threadContext,literalRecycler,recycler);
+      result:=super^.cast(literalRecycler,L,location,threadContext,recycler);
       if (result<>nil) then begin
         if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,recycler,false,result,nil)
         then result^.customType:=@self
@@ -1080,12 +1080,10 @@ FUNCTION T_typedef.cast(CONST L: P_literal; CONST location: T_tokenLocation; CON
     if (result=nil) then threadContext^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
-FUNCTION T_typedef.uncast(CONST L: P_literal; CONST location: T_tokenLocation;
-  CONST threadContext: P_abstractContext; CONST adapters: P_messages;
-  CONST recycler: pointer): P_literal;
+FUNCTION T_typedef.uncast(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location: T_tokenLocation; CONST threadContext: P_abstractContext; CONST adapters: P_messages; CONST recycler: pointer): P_literal;
   begin
     if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
-    result:=cloneLiteral(P_typableLiteral(L),location,threadContext,recycler);
+    result:=cloneLiteral(literalRecycler,P_typableLiteral(L),location,threadContext,recycler);
     if result<>nil then P_typableLiteral(result)^.customType:=nil;
   end;
 
@@ -1500,18 +1498,30 @@ PROCEDURE T_mapLiteral.cleanup(CONST literalRecycler:P_literalRecycler);
   end;
 
 //==================================================================:DESTRUCTORS
-FUNCTION T_collectionLiteral.appendString(CONST literalRecycler:P_literalRecycler;CONST s: ansistring): P_collectionLiteral; begin result:=P_collectionLiteral(append(literalRecycler^.newStringLiteral(s),false)); end;
-FUNCTION T_collectionLiteral.appendBool  (CONST b: boolean   ): P_collectionLiteral; begin result:=P_collectionLiteral(append(boolLit[b].rereferenced,false)); end;
-FUNCTION T_collectionLiteral.appendInt   (CONST literalRecycler:P_literalRecycler; CONST i: int64     ): P_collectionLiteral; begin result:=P_collectionLiteral(append(literalRecycler^.newIntLiteral   (i),false)); end;
-FUNCTION T_collectionLiteral.appendReal  (CONST literalRecycler:P_literalRecycler; CONST r: T_myFloat ): P_collectionLiteral; begin result:=P_collectionLiteral(append(literalRecycler^.newRealLiteral  (r),false)); end;
-FUNCTION T_collectionLiteral.appendAll   (CONST L: P_compoundLiteral): P_collectionLiteral;
+FUNCTION T_collectionLiteral.appendString(CONST literalRecycler:P_literalRecycler; CONST s: ansistring): P_collectionLiteral; begin result:=P_collectionLiteral(append(@literalRecycler,literalRecycler^.newStringLiteral(s),false)); end;
+FUNCTION T_collectionLiteral.appendBool  (CONST literalRecycler:P_literalRecycler; CONST b: boolean   ): P_collectionLiteral; begin result:=P_collectionLiteral(append(@literalRecycler,boolLit[b].rereferenced,false)); end;
+FUNCTION T_collectionLiteral.appendInt   (CONST literalRecycler:P_literalRecycler; CONST i: int64     ): P_collectionLiteral; begin result:=P_collectionLiteral(append(@literalRecycler,literalRecycler^.newIntLiteral   (i),false)); end;
+FUNCTION T_collectionLiteral.appendReal  (CONST literalRecycler:P_literalRecycler; CONST r: T_myFloat ): P_collectionLiteral; begin result:=P_collectionLiteral(append(@literalRecycler,literalRecycler^.newRealLiteral  (r),false)); end;
+FUNCTION T_collectionLiteral.appendAll   (CONST literalRecycler:P_literalRecycler; CONST L: P_collectionLiteral): P_collectionLiteral;
   VAR x:P_literal;
   begin
-    for x in L^.iteratableList do append(x,false);
+    for x in L^.iteratableList do append(literalRecycler,x,false);
     result:=@self
   end;
 
-FUNCTION T_setLiteral.appendAll(CONST L:P_compoundLiteral):P_collectionLiteral;
+FUNCTION T_collectionLiteral.appendMap(CONST literalRecycler:P_literalRecycler; CONST L:P_mapLiteral):P_collectionLiteral;
+  VAR entry:T_keyValuePair;
+  begin
+    for entry in L^.entryList do begin
+      append(@literalRecycler,
+             literalRecycler^.newListLiteral(2)^
+               .append(@literalRecycler,entry.key,false)^
+               .append(@literalRecycler,entry.value,false),false);
+    end;
+    result:=@self
+  end;
+
+FUNCTION T_setLiteral.appendAll(CONST literalRecycler:P_literalRecycler; CONST L:P_collectionLiteral):P_collectionLiteral;
   VAR x:P_literal;
       E:T_literalKeyBooleanValueMap.CACHE_ENTRY;
       prevBool:boolean; //dummy
@@ -1522,7 +1532,7 @@ FUNCTION T_setLiteral.appendAll(CONST L:P_compoundLiteral):P_collectionLiteral;
         E.key^.rereference;
         modifyType(E.key);
       end;
-    end else for x in L^.iteratableList do append(x,false);
+    end else for x in L^.iteratableList do append(literalRecycler,x,false);
     result:=@self;
   end;
 
@@ -1546,7 +1556,7 @@ FUNCTION T_listLiteral.head(CONST literalRecycler:P_literalRecycler; CONST headS
     if imax>fill then imax:=fill;
     if imax<0 then imax:=0;
     result:=literalRecycler^.newListLiteral(imax);
-    for i:=0 to imax-1 do result^.append(dat[i],true);
+    for i:=0 to imax-1 do result^.append(literalRecycler,dat[i],true);
   end;
 
 FUNCTION T_listLiteral.tail(CONST literalRecycler:P_literalRecycler): P_listLiteral;
@@ -1559,7 +1569,7 @@ FUNCTION T_listLiteral.tail(CONST literalRecycler:P_literalRecycler; CONST headS
     if iMin>fill then iMin:=fill
     else if iMin<0 then iMin:=0;
     result:=literalRecycler^.newListLiteral(fill-iMin);
-    for i:=iMin to fill-1 do result^.append(dat[i],true);
+    for i:=iMin to fill-1 do result^.append(literalRecycler,dat[i],true);
   end;
 
 FUNCTION T_listLiteral.trailing: P_literal;
@@ -1599,21 +1609,21 @@ FUNCTION T_listLiteral.transpose(CONST literalRecycler:P_literalRecycler; CONST 
         doneRow:=false;
         for j:=0 to fill-1 do if not(containsError) then begin
           if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i) then
-          begin innerList^.append(P_listLiteral(dat[j])^.dat[i],true); containsError:=doneRow or containsError; end
+          begin innerList^.append(literalRecycler,P_listLiteral(dat[j])^.dat[i],true); containsError:=doneRow or containsError; end
           else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then
-          begin innerList^.append(              dat[j]         ,true); containsError:=doneRow or containsError; end
+          begin innerList^.append(literalRecycler,              dat[j]         ,true); containsError:=doneRow or containsError; end
           else doneRow:=true;
         end;
       end else begin
         innerList:=literalRecycler^.newListLiteral(fill);
         for j:=0 to fill-1 do if not(containsError) then begin
           if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i)
-          then                                                          innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
-          else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
-          else                                                          innerList^.append(filler                       ,true);
+          then                                                          innerList^.append(literalRecycler,P_listLiteral(dat[j])^.dat[i],true)
+          else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(literalRecycler,              dat[j]         ,true)
+          else                                                          innerList^.append(literalRecycler,filler                       ,true);
         end;
       end;
-      result^.append(innerList,false);
+      result^.append(literalRecycler,innerList,false);
     end;
     if containsError then literalRecycler^.disposeLiteral(result);
   end;
@@ -1625,10 +1635,12 @@ FUNCTION T_mapLiteral.transpose(CONST literalRecycler:P_literalRecycler): P_list
     keyList  :=literalRecycler^.newListLiteral(dat.fill);
     valueList:=literalRecycler^.newListLiteral(dat.fill);
     for entry in dat.keyValueList do begin
-      keyList  ^.append(entry.key  ,true);
-      valueList^.append(entry.value,true);
+      keyList  ^.append(literalRecycler,entry.key  ,true);
+      valueList^.append(literalRecycler,entry.value,true);
     end;
-    result:=P_listLiteral(literalRecycler^.newListLiteral(2)^.append(keyList,false)^.append(valueList,false));
+    result:=P_listLiteral(literalRecycler^.newListLiteral(2)^
+      .append(literalRecycler,keyList,false)^
+      .append(literalRecycler,valueList,false));
   end;
 
 CONST listType:array[false..true,false..true,false..true,false..true] of T_literalType=
@@ -2236,8 +2248,8 @@ FUNCTION T_listLiteral.get(CONST literalRecycler:P_literalRecycler; CONST access
       lt_intList, lt_emptyList: begin
         result:=literalRecycler^.newListLiteral(P_listLiteral(accessor)^.fill);
         for j:=0 to P_listLiteral(accessor)^.fill-1 do begin
-          if                                     P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.isBetween(0,fill-1)
-          then P_listLiteral(result)^.append(dat[P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.intValue],true);
+          if                                                     P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.isBetween(0,fill-1)
+          then P_listLiteral(result)^.append(literalRecycler,dat[P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.intValue],true);
         end;
         exit(result);
       end;
@@ -2245,15 +2257,15 @@ FUNCTION T_listLiteral.get(CONST literalRecycler:P_literalRecycler; CONST access
         result:=literalRecycler^.newSetLiteral(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.iteratableList;
         for idx in iter do begin
-          if                                    P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
-          then P_setLiteral(result)^.append(dat[P_abstractIntLiteral(idx)^.intValue],true);
+          if                                                    P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
+          then P_setLiteral(result)^.append(literalRecycler,dat[P_abstractIntLiteral(idx)^.intValue],true);
         end;
         literalRecycler^.disposeLiteral(iter);
         exit(result);
       end;
       lt_booleanList: if (P_listLiteral(accessor)^.fill=fill) then begin
         result:=literalRecycler^.newListLiteral(fill);
-        for i:=0 to fill-1 do if P_boolLiteral(P_listLiteral(accessor)^.dat[i])^.val then P_listLiteral(result)^.append(dat[i],true);
+        for i:=0 to fill-1 do if P_boolLiteral(P_listLiteral(accessor)^.dat[i])^.val then P_listLiteral(result)^.append(literalRecycler,dat[i],true);
         exit(result);
       end;
     end;
@@ -2292,7 +2304,7 @@ FUNCTION T_listLiteral.getInner(CONST literalRecycler:P_literalRecycler; CONST a
     if literalType=lt_list then
     for i:=0 to fill-1 do
     if dat[i]^.literalType in C_compoundTypes
-    then P_listLiteral(result)^.append(P_compoundLiteral(dat[i])^.get(literalRecycler,accessor),false)
+    then P_listLiteral(result)^.append(literalRecycler,P_compoundLiteral(dat[i])^.get(literalRecycler,accessor),false)
     else begin
       literalRecycler^.disposeLiteral(result);
       exit(nil);
@@ -2306,7 +2318,7 @@ FUNCTION T_setLiteral.getInner(CONST literalRecycler:P_literalRecycler; CONST ac
     iter:=iteratableList;
     result:=literalRecycler^.newSetLiteral(length(iter));
     for sub in iter do if sub^.literalType in C_compoundTypes
-    then P_setLiteral(result)^.append(P_compoundLiteral(sub)^.get(literalRecycler,accessor),false)
+    then P_setLiteral(result)^.append(literalRecycler,P_compoundLiteral(sub)^.get(literalRecycler,accessor),false)
     else begin
       literalRecycler^.disposeLiteral(result);
       literalRecycler^.disposeLiteral(iter);
@@ -2354,36 +2366,36 @@ FUNCTION T_mapLiteral.getInner(CONST literalRecycler:P_literalRecycler; CONST ac
           result:=literalRecycler^.newListLiteral(dat.fill);
           if subAsSet then sub:=literalRecycler^.newSetLiteral(2)
                       else sub:=literalRecycler^.newListLiteral(2);
-          sub^.append(entry.key  ,true);
-          sub^.append(entry.value,true);
-          P_listLiteral(result)^.append(sub,false);
+          sub^.append(literalRecycler,entry.key  ,true);
+          sub^.append(literalRecycler,entry.value,true);
+          P_listLiteral(result)^.append(literalRecycler,sub,false);
         end else begin
           result:=literalRecycler^.newSetLiteral(dat.fill);
-          for entry in dat.keyValueList do P_setLiteral(result)^.append(entry.key,true);
+          for entry in dat.keyValueList do P_setLiteral(result)^.append(literalRecycler,entry.key,true);
         end;
       end else if wantValues then begin
         result:=literalRecycler^.newListLiteral(dat.fill);
         for entry in dat.keyValueList do
-        P_listLiteral(result)^.append(entry.value,true);
+        P_listLiteral(result)^.append(literalRecycler,entry.value,true);
       end else result:=literalRecycler^.newListLiteral();
     end;
   end;
 //?.leqForSorting:==============================================================
-FUNCTION T_literal.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType = lt_expression)
     then result:=toString<=other^.toString
     else result:=literalType<=other^.literalType;
   end;
 
-FUNCTION T_boolLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if other^.literalType = lt_boolean
     then result:=value<=P_boolLiteral(other)^.value
     else result:=(literalType<=other^.literalType);
   end;
 
-FUNCTION T_smallIntLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_smallIntLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_real    : result:=not(isNan(  P_realLiteral    (other)^.val)) and
@@ -2393,7 +2405,7 @@ FUNCTION T_smallIntLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler
     else result:=(literalType<=other^.literalType); end;
   end;
 
-FUNCTION T_bigIntLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_bigIntLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_real    : result:=not(isNan(  P_realLiteral    (other)^.val)) and
@@ -2403,7 +2415,7 @@ FUNCTION T_bigIntLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; 
     else result:=(literalType<=other^.literalType); end;
   end;
 
-FUNCTION T_realLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_bigint  : result:=P_bigIntLiteral(other)^.val.compare(val) in [CR_EQUAL,CR_GREATER];
@@ -2414,7 +2426,7 @@ FUNCTION T_realLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CO
     else result:=(literalType<=other^.literalType);  end;
   end;
 
-FUNCTION T_stringLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType = lt_string)
     then result:=val<=P_stringLiteral(other)^.val
@@ -2427,47 +2439,50 @@ PROCEDURE T_stringLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
     enc:=se_testPending;
   end;
 
-FUNCTION T_listLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
+FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
   VAR i: longint;
   begin
     if (other^.literalType in C_listTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
-      else for i:=0 to size-1 do if value[i]^.leqForSorting(literalRecycler,P_listLiteral(other)^.value[i]) then begin
-        if not(P_listLiteral(other)^.value[i]^.leqForSorting(literalRecycler,value[i])) then exit(true);
+      else for i:=0 to size-1 do if value[i]^.leqForSorting(P_listLiteral(other)^.value[i]) then begin
+        if not(P_listLiteral(other)^.value[i]^.leqForSorting(value[i])) then exit(true);
       end else exit(false);
       exit(true);
     end else result:=literalType<=other^.literalType;
   end;
 
-FUNCTION T_setLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
-  VAR myList,otherList:P_listLiteral;
+FUNCTION T_setLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType in C_setTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
       else begin
-        myList   :=                     toList; myList   ^.sort;
-        otherList:=P_setLiteral(other)^.toList; otherList^.sort;
-        result:=myList^.leqForSorting(literalRecycler,otherList);
-        literalRecycler^.disposeLiteral(myList);
-        literalRecycler^.disposeLiteral(otherList);
+        result:=false;
+        //TODO: Is there a nice solution?
+
+        //myList   :=                     toList; myList   ^.sort;
+        //otherList:=P_setLiteral(other)^.toList; otherList^.sort;
+        //result:=myList^.leqForSorting(literalRecycler,otherList);
+        //literalRecycler^.disposeLiteral(myList);
+        //literalRecycler^.disposeLiteral(otherList);
       end;
     end else result:=literalType<=other^.literalType;
   end;
 
-FUNCTION T_mapLiteral.leqForSorting(CONST literalRecycler:P_literalRecycler; CONST other: P_literal): boolean;
-  VAR myList,otherList:P_listLiteral;
+FUNCTION T_mapLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType in C_mapTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
       else begin
-        myList   :=                     toList; myList   ^.sort;
-        otherList:=P_mapLiteral(other)^.toList; otherList^.sort;
-        result:=myList^.leqForSorting(literalRecycler,otherList);
-        literalRecycler^.disposeLiteral(myList);
-        literalRecycler^.disposeLiteral(otherList);
+        //TODO: Is there a nice solution?
+
+        //myList   :=                     toList; myList   ^.sort;
+        //otherList:=P_mapLiteral(other)^.toList; otherList^.sort;
+        //result:=myList^.leqForSorting(literalRecycler,otherList);
+        //literalRecycler^.disposeLiteral(myList);
+        //literalRecycler^.disposeLiteral(otherList);
       end;
     end else result:=literalType<=other^.literalType;
   end;
@@ -2512,71 +2527,71 @@ FUNCTION T_stringLiteral.softCast(CONST literalRecycler:P_literalRecycler): P_li
     rereference;
   end;
 
-FUNCTION T_stringLiteral.trim(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: ansistring;
-  begin
-    rs:=sysutils.trim(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler^.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.trimLeft(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: ansistring;
-  begin
-    rs:=sysutils.trimLeft(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler^.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.trimRight(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: ansistring;
-  begin
-    rs:=sysutils.trimRight(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler^.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.upper(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: string;
-  begin
-    rs:=UTF8UpperCase(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler^.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.lower(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: string;
-  begin
-    rs:=UTF8LowerCase(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler^.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.unbrace(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-  VAR rs: string;
-  begin
-    rs:=myStringUtil.unbrace(val);
-    if rs = val then begin
-      result:=@self;
-      rereference;
-    end else result:=literalRecycler.newStringLiteral(rs);
-  end;
-
-FUNCTION T_stringLiteral.escape: P_stringLiteral;
-  VAR dummy:boolean;
-  begin
-    result:=literalRecycler.newStringLiteral(escapeString(val,es_pickShortest,getEncoding,dummy));
-  end;
+//FUNCTION T_stringLiteral.trim(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: ansistring;
+//  begin
+//    rs:=sysutils.trim(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler^.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.trimLeft(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: ansistring;
+//  begin
+//    rs:=sysutils.trimLeft(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler^.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.trimRight(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: ansistring;
+//  begin
+//    rs:=sysutils.trimRight(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler^.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.upper(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: string;
+//  begin
+//    rs:=UTF8UpperCase(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler^.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.lower(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: string;
+//  begin
+//    rs:=UTF8LowerCase(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler^.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.unbrace(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
+//  VAR rs: string;
+//  begin
+//    rs:=myStringUtil.unbrace(val);
+//    if rs = val then begin
+//      result:=@self;
+//      rereference;
+//    end else result:=literalRecycler.newStringLiteral(rs);
+//  end;
+//
+//FUNCTION T_stringLiteral.escape: P_stringLiteral;
+//  VAR dummy:boolean;
+//  begin
+//    result:=literalRecycler.newStringLiteral(escapeString(val,es_pickShortest,getEncoding,dummy));
+//  end;
 
 FUNCTION T_stringLiteral.getEncoding: T_stringEncoding;
   begin
@@ -2625,39 +2640,40 @@ PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
     myHash:=0;
   end;
 
-FUNCTION T_compoundLiteral.toSet: P_setLiteral;
+FUNCTION T_compoundLiteral.toSet(CONST literalRecycler:P_literalRecycler): P_setLiteral;
   begin
     if literalType in C_setTypes then exit(P_setLiteral(rereferenced));
-    result:=P_setLiteral(literalRecycler.newSetLiteral(size)^.appendAll(@self));
+    result:=P_setLiteral(literalRecycler^.newSetLiteral(size)^.appendAll(literalRecycler,@self));
   end;
 
-FUNCTION T_compoundLiteral.toList: P_listLiteral;
+FUNCTION T_compoundLiteral.toList(CONST literalRecycler:P_literalRecycler): P_listLiteral;
   begin
     if literalType in C_listTypes then exit(P_listLiteral(rereferenced));
-    result:=P_listLiteral(literalRecycler.newListLiteral^.appendAll(@self));
+    result:=P_listLiteral(literalRecycler^.newListLiteral^.appendAll(literalRecycler,@self));
   end;
 
-FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; CONST context:P_abstractContext): P_mapLiteral;
+FUNCTION T_compoundLiteral.toMap(CONST literalRecycler:P_literalRecycler; CONST location:T_tokenLocation; CONST context:P_abstractContext): P_mapLiteral;
   VAR iter:T_arrayOfLiteral;
       pair:P_literal;
   begin
     if literalType in C_mapTypes then exit(P_mapLiteral(rereferenced));
-    iter:=iteratableList;
-    result:=literalRecycler.newMapLiteral(length(iter));
+    iter:=P_collectionLiteral(@self)^.iteratableList;
+    result:=literalRecycler^.newMapLiteral(length(iter));
     for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
-      result^.put(P_listLiteral(pair)^.value[0],
+      result^.put(literalRecycler,
+                  P_listLiteral(pair)^.value[0],
                   P_listLiteral(pair)^.value[1],true);
     end else begin
       context^.raiseError('Literal of type '+pair^.typeString+' cannot be interpreted as key-value-pair',location);
-      literalRecycler.disposeLiteral(result);
+      literalRecycler^.disposeLiteral(result);
       result:=nil;
       break;
     end;
-    literalRecycler.disposeLiteral(iter);
-    if result=nil then result:=literalRecycler.newMapLiteral(0);
+    literalRecycler^.disposeLiteral(iter);
+    if result=nil then result:=literalRecycler^.newMapLiteral(0);
   end;
 
-FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
+FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
   VAR last: P_literal;
       i0, i1: int64;
       c0, c1: char;
@@ -2665,7 +2681,7 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
   begin
     result:=@self;
     if not(doRangeAppend) then begin
-      append(L, true);
+      append(literalRecycler,L, true);
       exit;
     end;
     if fill=0 then begin
@@ -2681,11 +2697,11 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       if newLen>length(dat) then setLength(dat,newLen);
       while (i0<i1) do begin
         inc(i0);
-        appendInt(i0);
+        appendInt(literalRecycler,i0);
       end;
       while (i0>i1) do begin
         dec(i0);
-        appendInt(i0);
+        appendInt(literalRecycler,i0);
       end;
     end else if (last^.literalType = lt_string) and
       (length(P_stringLiteral(last)^.val) = 1) and (L^.literalType = lt_string) and
@@ -2696,11 +2712,11 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       if newLen>length(dat) then setLength(dat,newLen);
       while c0<c1 do begin
         inc(c0);
-        appendString(c0);
+        appendString(literalRecycler,c0);
       end;
       while c0>c1 do begin
         dec(c0);
-        appendString(c0);
+        appendString(literalRecycler,c0);
       end;
     end else begin
       literalType:=lt_list;
@@ -2708,7 +2724,7 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
     end;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
+FUNCTION T_listLiteral.append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
   begin
     result:=@self;
     if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
@@ -2719,7 +2735,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
     modifyType(L);
   end;
 
-FUNCTION T_setLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
+FUNCTION T_setLiteral.append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
   VAR prevBool:boolean;
       temp:P_literal;
   begin
@@ -2730,42 +2746,44 @@ FUNCTION T_setLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST f
       modifyType(L);
     end else if not(incRefs) then begin
       temp:=L;
-      literalRecycler.disposeLiteral(temp);
+      literalRecycler^.disposeLiteral(temp);
     end;
   end;
 
-FUNCTION T_mapLiteral.put(CONST key,newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key,newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   VAR prevValue:P_literal;
   begin
     if dat.putNew(key,newValue,prevValue) then begin
       if incRefs then key^.rereference;
       literalType:=lt_map;
     end else begin
-      literalRecycler.disposeLiteral(prevValue);
+      literalRecycler^.disposeLiteral(prevValue);
     end;
     if incRefs then newValue^.rereference;
     result:=@self;
   end;
 
-FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(newSingletonString(key), literalRecycler.newStringLiteral(newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newSingletonString(key), literalRecycler.newIntLiteral   (newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newSingletonString(key), literalRecycler.newRealLiteral  (newValue),false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newSingletonString(key), boolLit[newValue].rereferenced,false); end;
-FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(literalRecycler,newSingletonString(key), literalRecycler^.newStringLiteral(newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(literalRecycler,newSingletonString(key), literalRecycler^.newIntLiteral   (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(literalRecycler,newSingletonString(key), literalRecycler^.newRealLiteral  (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(literalRecycler,newSingletonString(key), boolLit[newValue].rereferenced,false); end;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   begin
     if incRefs then newValue^.rereference;
-    result:=put(newSingletonString(key),
+    result:=put(literalRecycler,
+                newSingletonString(key),
                 newValue,false);
   end;
 
-FUNCTION T_mapLiteral.put(CONST key:P_literal; CONST newValue:int64; CONST incRefs:boolean):P_mapLiteral;
+FUNCTION T_mapLiteral.put(CONST literalRecycler:P_literalRecycler; CONST key:P_literal; CONST newValue:int64; CONST incRefs:boolean):P_mapLiteral;
   begin
     if incRefs then key^.rereference;
-    result:=put(key,
-                literalRecycler.newIntLiteral(newValue),false);
+    result:=put(literalRecycler,
+                key,
+                literalRecycler^.newIntLiteral(newValue),false);
   end;
 
-FUNCTION T_mapLiteral.putAll(CONST map:P_mapLiteral):P_mapLiteral;
+FUNCTION T_mapLiteral.putAll(CONST literalRecycler:P_literalRecycler; CONST map:P_mapLiteral):P_mapLiteral;
   VAR prevValue:P_literal;
       E:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
@@ -2774,24 +2792,24 @@ FUNCTION T_mapLiteral.putAll(CONST map:P_mapLiteral):P_mapLiteral;
         E.key^.rereference;
         literalType:=lt_map;
       end else begin
-        literalRecycler.disposeLiteral(prevValue);
+        literalRecycler^.disposeLiteral(prevValue);
       end;
       E.value^.rereference;
     end;
     result:=@self;
   end;
 
-PROCEDURE T_mapLiteral.drop(CONST L: P_literal);
+PROCEDURE T_mapLiteral.drop(CONST literalRecycler:P_literalRecycler; CONST L: P_literal);
   VAR dropped:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
     dropped:=dat.drop(L);
     if dropped.key=nil then exit;
-    literalRecycler.disposeLiteral(dropped.key);
-    literalRecycler.disposeLiteral(dropped.value);
+    literalRecycler^.disposeLiteral(dropped.key);
+    literalRecycler^.disposeLiteral(dropped.value);
     if dat.fill<=0 then literalType:=lt_map;
   end;
 
-PROCEDURE T_setLiteral.drop(CONST L:P_literal);
+PROCEDURE T_setLiteral.drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
   VAR dropped:T_literalKeyBooleanValueMap.CACHE_ENTRY;
   CONST setType:array[false..true,false..true,false..true,false..true] of T_literalType=
                 ((((lt_emptySet  ,lt_stringSet),    //                     + string?
@@ -2805,7 +2823,7 @@ PROCEDURE T_setLiteral.drop(CONST L:P_literal);
   begin
     dropped:=dat.drop(L);
     if dropped.key=nil then exit;
-    literalRecycler.disposeLiteral(dropped.key);
+    literalRecycler^.disposeLiteral(dropped.key);
     case L^.literalType of
       lt_boolean: dec(booleans);
       lt_smallint,
@@ -2973,7 +2991,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
     setLength(temp, 0);
   end;
 
-FUNCTION T_listLiteral.sortPerm: P_listLiteral;
+FUNCTION T_listLiteral.sortPerm(CONST literalRecycler:P_literalRecycler): P_listLiteral;
   VAR temp1, temp2: array of record
         v: P_literal;
         index: longint;
@@ -2981,7 +2999,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
       scale: longint;
       i,j0,j1,k: longint;
   begin
-    if fill = 0 then exit(literalRecycler.newListLiteral);
+    if fill = 0 then exit(literalRecycler^.newListLiteral);
     myHash:=0;
     setLength(temp1, fill);
     setLength(temp2, fill);
@@ -3020,12 +3038,12 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
       end else for k:=0 to length(temp1)-1 do temp1[k]:=temp2[k];
     end;
     setLength(temp2, 0);
-    result:=literalRecycler.newListLiteral(length(temp1));
-    for i:=0 to length(temp1)-1 do result^.appendInt(temp1[i].index);
+    result:=literalRecycler^.newListLiteral(length(temp1));
+    for i:=0 to length(temp1)-1 do result^.appendInt(literalRecycler,temp1[i].index);
     setLength(temp1, 0);
   end;
 
-PROCEDURE T_listLiteral.unique;
+PROCEDURE T_listLiteral.unique(CONST literalRecycler:P_literalRecycler);
   VAR i,j:longint;
   begin
     if fill<=0 then exit;
@@ -3034,7 +3052,7 @@ PROCEDURE T_listLiteral.unique;
     j:=0;
     for i:=1 to fill-1 do
     if dat[i]^.equals(dat[j]) then begin
-      literalRecycler.disposeLiteral(dat[i]);
+      literalRecycler^.disposeLiteral(dat[i]);
     end else begin
       inc(j);
       dat[j]:=dat[i];
@@ -3042,10 +3060,10 @@ PROCEDURE T_listLiteral.unique;
     fill:=j+1;
   end;
 
-FUNCTION T_listLiteral.clone: P_compoundLiteral;
+FUNCTION T_listLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
   VAR i:longint;
   begin
-    result:=literalRecycler.newListLiteral(fill);
+    result:=literalRecycler^.newListLiteral(fill);
     for i:=0 to fill-1 do P_listLiteral(result)^.dat[i]:=dat[i]^.rereferenced;
     P_listLiteral(result)^.fill       :=fill;
     P_listLiteral(result)^.literalType:=literalType;
@@ -3056,13 +3074,15 @@ FUNCTION T_listLiteral.clone: P_compoundLiteral;
     P_listLiteral(result)^.others     :=others  ;
   end;
 
-FUNCTION T_setLiteral.clone: P_compoundLiteral;
+FUNCTION T_setLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
   begin
+    //TODO: Take from recycler
     new(P_setLiteral(result),createClone(self));
   end;
 
-FUNCTION T_mapLiteral.clone: P_compoundLiteral;
+FUNCTION T_mapLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
   begin
+    //TODO: Take from recycler
     new(P_mapLiteral(result),createClone(self));
   end;
 
@@ -3078,15 +3098,6 @@ FUNCTION T_setLiteral.iteratableList: T_arrayOfLiteral;
   begin
     result:=dat.keySet;
     for L in result do L^.rereference;
-  end;
-
-FUNCTION T_mapLiteral.iteratableList: T_arrayOfLiteral;
-  VAR e:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
-      i:longint;
-  begin
-    e:=dat.keyValueList;
-    setLength(result,length(e));
-    for i:=0 to length(e)-1 do result[i]:=literalRecycler.newListLiteral(2)^.append(e[i].key,true)^.append(e[i].value,true);
   end;
 
 FUNCTION T_mapLiteral.entryList:T_arrayOfKeyValuePair;
@@ -3108,18 +3119,26 @@ FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
     for L in result do L^.rereference;
   end;
 
-FUNCTION setUnion(CONST params:P_listLiteral):P_setLiteral;
+FUNCTION setUnion(VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
   VAR i:longint;
       expectedSetSize:longint=0;
+      part:P_compoundLiteral;
   begin
     if not((params<>nil) and (params^.size>=1)) then exit(nil);
     for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil) else inc(expectedSetSize,P_compoundLiteral(params^.value[i])^.size);
-    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet());
+    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet(@literalRecycler));
     result:=literalRecycler.newSetLiteral(expectedSetSize);
-    for i:=0 to params^.size-1 do result^.appendAll(P_compoundLiteral(params^.value[i]));
+    for i:=0 to params^.size-1 do begin
+      part:=P_compoundLiteral(params^.value[i]);
+      case part^.literalType of
+        lt_emptyList,lt_emptyMap,lt_emptySet: begin end;
+        lt_set: result^.appendMap(@literalRecycler,P_mapLiteral       (part));
+        else    result^.appendAll(@literalRecycler,P_collectionLiteral(part));
+      end;
+    end;
   end;
 
-FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
+FUNCTION setIntersect(VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
   TYPE T_occurenceCount=specialize G_literalKeyMap<word>;
   CONST bit:array[0..15] of word=(1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768);
   VAR counterSet:T_occurenceCount;
@@ -3140,16 +3159,16 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       outerCallParam:=literalRecycler.newListLiteral();
       innerCallParam:=literalRecycler.newListLiteral(16);
       for i:=0 to params^.size-1 do begin
-        innerCallParam^.append(params^.dat[i],true);
+        innerCallParam^.append(@literalRecycler,params^.dat[i],true);
         if innerCallParam^.size>=16 then begin
-          outerCallParam^.append(setIntersect(innerCallParam),false);
+          outerCallParam^.append(@literalRecycler,setIntersect(literalRecycler,innerCallParam),false);
           literalRecycler.disposeLiteral(innerCallParam);
           innerCallParam:=literalRecycler.newListLiteral(16);
         end;
       end;
-      if innerCallParam^.size>=1 then outerCallParam^.append(setIntersect(innerCallParam),false);
+      if innerCallParam^.size>=1 then outerCallParam^.append(@literalRecycler,setIntersect(literalRecycler,innerCallParam),false);
       literalRecycler.disposeLiteral(innerCallParam);
-      result:=setIntersect(outerCallParam);
+      result:=setIntersect(literalRecycler,outerCallParam);
       literalRecycler.disposeLiteral(outerCallParam);
     end;
 
@@ -3164,55 +3183,55 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       for elem in iter do begin
         inAll:=true;
         for k:=0 to params^.size-1 do inAll:=inAll and ((k=smallestSetIndex) or P_setLiteral(params^.value[k])^.contains(elem));
-        if inAll then result^.append(elem,true);
+        if inAll then result^.append(@literalRecycler,elem,true);
       end;
       literalRecycler.disposeLiteral(iter);
     end;
 
   begin
     if not((params<>nil) and (params^.size>=1))                                            then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil) else begin
+    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_collectionTypes) then exit(nil) else begin
       allSets:=allSets and (params^.value[i]^.literalType in C_setTypes);
       if P_compoundLiteral(params^.value[i])^.size<P_compoundLiteral(params^.value[smallestSetIndex])^.size
       then smallestSetIndex:=i;
       if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
     end;
-    if params^.size=1  then exit(P_compoundLiteral(params^.value[0])^.toSet());
+    if params^.size=1  then exit(P_compoundLiteral(params^.value[0])^.toSet(@literalRecycler));
     if allSets then exit(resultByContains);
     if params^.size>16 then exit(resultByRecursion);
 
     counterSet.create(maxSubsetSize div 2);
     for i:=0 to params^.size-1 do begin
-      iter:=P_compoundLiteral(params^.value[i])^.iteratableList;
+      iter:=P_collectionLiteral(params^.value[i])^.iteratableList;
       for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
       literalRecycler.disposeLiteral(iter);
       inc(acceptMask,bit[i]);
     end;
     result:=literalRecycler.newSetLiteral(maxSubsetSize);
-    for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(entry.key,true);
+    for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(@literalRecycler,entry.key,true);
     counterSet.destroy;
   end;
 
-FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
+FUNCTION setMinus(VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
   VAR L:P_literal;
       iter:T_arrayOfLiteral;
       s:P_setLiteral;
   begin
     if not((params<>nil) and
            (params^.size=2) and
-           (params^.value[0]^.literalType in C_compoundTypes) and
-           (params^.value[1]^.literalType in C_compoundTypes))
+           (params^.value[0]^.literalType in C_collectionTypes) and
+           (params^.value[1]^.literalType in C_collectionTypes))
     then exit(nil);
-    iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
+    iter:=P_collectionLiteral(params^.value[0])^.iteratableList;
     result:=literalRecycler.newSetLiteral(length(iter));
     if params^.value[1]^.literalType in C_setTypes then begin
       s:=P_setLiteral(params^.value[1]);
-      for L in iter do if not(s^.contains(L)) then result^.append(L,true);
+      for L in iter do if not(s^.contains(L)) then result^.append(@literalRecycler,L,true);
       literalRecycler.disposeLiteral(iter);
     end else begin
       for L in iter do result^.dat.put(L,true);
       literalRecycler.disposeLiteral(iter);
-      iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
+      iter:=P_collectionLiteral(params^.value[1])^.iteratableList;
       for L in iter do result^.dat.drop(L);
       literalRecycler.disposeLiteral(iter);
       for L in result^.dat.keySet do begin
@@ -3222,7 +3241,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     end;
   end;
 
-FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
+FUNCTION mapMerge(VAR literalRecycler:T_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
   VAR map1,map2:P_mapLiteral;
       merger:P_expressionLiteral;
       entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
@@ -3261,7 +3280,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
                           else result^.literalType:=lt_emptyMap;
   end;
 
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+FUNCTION mutateVariable(VAR literalRecycler:T_literalRecycler; VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
   VAR returnValue:P_literal=nil;
   PROCEDURE return(CONST L:P_literal); inline;
     begin
@@ -3304,8 +3323,10 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
     begin
       if (toMutate^.literalType in C_setTypes+C_listTypes) and (toMutate^.numberOfReferences=1) then begin
         if (RHS^.literalType in C_scalarTypes) or (alt)
-        then P_collectionLiteral(toMutate)^.append(RHS, true)
-        else P_collectionLiteral(toMutate)^.appendAll(P_compoundLiteral(RHS));
+        then P_collectionLiteral(toMutate)^.append(@literalRecycler,RHS, true)
+        else if RHS^.literalType in C_collectionTypes
+        then P_collectionLiteral(toMutate)^.appendAll(@literalRecycler,P_collectionLiteral(RHS))
+        else P_collectionLiteral(toMutate)^.appendMap(@literalRecycler,P_mapLiteral       (RHS));
         result:=false;
       end else if alt then result:=simpleMutate(toMutate,tt_operatorConcatAlt,RHS)
                       else result:=simpleMutate(toMutate,tt_operatorConcat   ,RHS);
@@ -3320,7 +3341,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         exit;
       end;
       old:=toMutate;
-      toMutate:=old^.clone;
+      toMutate:=old^.clone(@literalRecycler);
       old^.unreference;
     end;
 
@@ -3329,13 +3350,13 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       result:=false;
       if (toMutate^.literalType in C_setTypes) then begin
         ensureExclusiveAccess(P_setLiteral(toMutate));
-        P_setLiteral(toMutate)^.drop(RHS);
+        P_setLiteral(toMutate)^.drop(@literalRecycler,RHS);
       end else if (toMutate^.literalType in C_mapTypes) then begin
         ensureExclusiveAccess(P_mapLiteral(toMutate));
-        P_mapLiteral(toMutate)^.drop(RHS);
+        P_mapLiteral(toMutate)^.drop(@literalRecycler,RHS);
       end else if (toMutate^.literalType in C_listTypes) and (RHS^.literalType in [lt_bigint,lt_smallint]) then begin
         ensureExclusiveAccess(P_listLiteral(toMutate));
-        P_listLiteral(toMutate)^.removeElement(P_abstractIntLiteral(RHS)^.intValue);
+        P_listLiteral(toMutate)^.removeElement(@literalRecycler,P_abstractIntLiteral(RHS)^.intValue);
       end else context^.raiseError('Cannot drop from literal of type '+toMutate^.typeString,location);
       return(newVoidLiteral);
     end;
@@ -3358,7 +3379,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         tt_mut_nestedAppendAlt: exit(mutateListAppend  (toMutate,                   RHS,true));
         tt_mut_nestedDrop     : exit(mutateDrop        (toMutate,                   RHS));
       end;
-      accessorTail:=accessor^.tail;
+      accessorTail:=accessor^.tail(@literalRecycler);
       result:=false;
       if toMutate^.literalType in C_listTypes then begin
         if accessor^.value[0]^.literalType in [lt_bigint,lt_smallint] then begin
@@ -3393,7 +3414,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
             ensureExclusiveAccess(P_listLiteral(toMutate));
             elementToMutate:=newVoidLiteral;
             mutateNested(elementToMutate,nestedMutation,accessorTail,RHS);
-            P_listLiteral(toMutate)^.append(elementToMutate,false);
+            P_listLiteral(toMutate)^.append(@literalRecycler,elementToMutate,false);
           end else context^.raiseError('List index out of bounds',location)
         end else context^.raiseError('List elements must be qualified by their index',location);
       end else if toMutate^.literalType in C_mapTypes then begin
@@ -3404,7 +3425,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         end else begin
           elementToMutate:=newVoidLiteral;
           mutateNested(elementToMutate,nestedMutation,accessorTail,RHS);
-          P_mapLiteral(toMutate)^.put(accessor^.value[0]^.rereferenced,elementToMutate,false);
+          P_mapLiteral(toMutate)^.put(@literalRecycler,accessor^.value[0]^.rereferenced,elementToMutate,false);
         end;
       end else context^.raiseError('Cannot apply nested mutation to literal of type '+toMutate^.typeString,location);
       literalRecycler.disposeLiteral(accessorTail);
@@ -3415,7 +3436,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         RHS:P_literal;
         temp:P_listLiteral;
     begin
-      accessor:=P_listLiteral(parameters)^.leading;
+      accessor:=P_listLiteral(parameters)^.leading(@literalRecycler);
       RHS     :=P_listLiteral(parameters)^.trailing;
       if (RHS^.literalType=lt_void) then begin
         if mutation=tt_mut_nested_assign then begin
@@ -3427,7 +3448,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
           else begin
             literalRecycler.disposeLiteral(RHS);
             temp:=accessor;
-            accessor:=temp^.leading;
+            accessor:=temp^.leading(@literalRecycler);
             RHS:=temp^.trailing;
             literalRecycler.disposeLiteral(temp);
             mutateNested(toMutate,tt_mut_nestedDrop,accessor,RHS);
@@ -3474,7 +3495,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
     result:=returnValue;
   end;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
+FUNCTION newLiteralFromStream(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
   VAR reusableLiterals:PP_literal;
       reusableFill:longint=0;
       encodingMethod:byte=0;
@@ -3566,18 +3587,18 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           else result:=literalRecycler.newListLiteral(listSize);
           case literalType of
             lt_booleanList,lt_booleanSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(@literalRecycler,stream^.readBoolean);
             lt_intList,lt_intSet:
               for i:=0 to listSize-1 do if stream^.allOkay then begin
                 tempInt.readFromStream(stream);
-                P_collectionLiteral(result)^.append(literalRecycler.newBigIntLiteral(tempInt),false);
+                P_collectionLiteral(result)^.append(@literalRecycler,literalRecycler.newBigIntLiteral(tempInt),false);
               end;
             lt_realList,lt_realSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(@literalRecycler,stream^.readDouble);
             lt_stringList,lt_stringSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(@literalRecycler,stream^.readAnsiString);
             else
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream254(),false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,literalFromStream254(),false);
           end;
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
@@ -3691,18 +3712,18 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           else result:=literalRecycler.newListLiteral(listSize);
           case literalType of
             lt_booleanList,lt_booleanSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(@literalRecycler,stream^.readBoolean);
             lt_intList,lt_intSet:
               for i:=0 to listSize-1 do if stream^.allOkay then begin
                 tempInt.readFromStream(stream);
-                P_collectionLiteral(result)^.append(literalRecycler.newBigIntLiteral(tempInt),false);
+                P_collectionLiteral(result)^.append(@literalRecycler,literalRecycler.newBigIntLiteral(tempInt),false);
               end;
             lt_realList,lt_realSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(@literalRecycler,stream^.readDouble);
             lt_stringList,lt_stringSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(@literalRecycler,stream^.readAnsiString);
             else
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream253(),false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,literalFromStream253(),false);
           end;
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
@@ -3804,15 +3825,15 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           else result:=literalRecycler.newListLiteral(listSize);
           case literalType of
             lt_booleanList,lt_booleanSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(@literalRecycler,stream^.readBoolean);
             lt_intList,lt_intSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(nextIntFromStream,false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,nextIntFromStream,false);
             lt_realList,lt_realSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(@literalRecycler,stream^.readDouble);
             lt_stringList,lt_stringSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(@literalRecycler,stream^.readAnsiString);
             else
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream252(),false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,literalFromStream252(),false);
           end;
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
@@ -3899,15 +3920,15 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           else result:=literalRecycler.newListLiteral(listSize);
           case literalType of
             lt_booleanList,lt_booleanSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(@literalRecycler,stream^.readBoolean);
             lt_intList,lt_intSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(nextIntFromStream,false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,nextIntFromStream,false);
             lt_realList,lt_realSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(@literalRecycler,stream^.readDouble);
             lt_stringList,lt_stringSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(@literalRecycler,stream^.readAnsiString);
             else
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream251(),false);
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(@literalRecycler,literalFromStream251(),false);
           end;
           if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
         end;
@@ -3963,7 +3984,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
     freeMem(reusableLiterals,sizeOf(P_literal)*2097151);
   end;
 
-PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
+PROCEDURE writeLiteralToStream(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
       previousMapValueDummy:longint;
       mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
@@ -3994,25 +4015,25 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_string: stream^.writeAnsiString(P_stringLiteral(L)^.val);
         lt_booleanList,lt_booleanSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          iter:=P_collectionLiteral(L)^.iteratableList;
           for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeBoolean(P_boolLiteral(x)^.val);
           literalRecycler.disposeLiteral(iter);
         end;
         lt_intList,lt_intSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          iter:=P_collectionLiteral(L)^.iteratableList;
           for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then P_abstractIntLiteral(x)^.writeToStream(stream);
           literalRecycler.disposeLiteral(iter);
         end;
         lt_realList,lt_realSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          iter:=P_collectionLiteral(L)^.iteratableList;
           for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeDouble(P_realLiteral(x)^.val);
           literalRecycler.disposeLiteral(iter);
         end;
         lt_stringList,lt_stringSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          iter:=P_collectionLiteral(L)^.iteratableList;
           for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeAnsiString(P_stringLiteral(x)^.val);
           literalRecycler.disposeLiteral(iter);
         end;
@@ -4020,7 +4041,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_list,lt_set,
         lt_numList,lt_numSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          iter:=P_collectionLiteral(L)^.iteratableList;
           for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
           literalRecycler.disposeLiteral(iter);
         end;
@@ -4053,7 +4074,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     reusableMap.destroy;
   end;
 
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION serializeToStringList(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
   VAR indent:longint=0;
       prevLines:T_arrayOfString;
       nextLine:ansistring;
@@ -4093,11 +4114,11 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           appendPart('[');
           inc(indent);
           if L^.literalType in [lt_set..lt_emptySet,lt_map..lt_emptyMap] then begin
-            sortedTemp:=P_compoundLiteral(L)^.toList;
+            sortedTemp:=P_compoundLiteral(L)^.toList(@literalRecycler);
             sortedTemp^.sort;
             iter:=sortedTemp^.iteratableList;
             literalRecycler.disposeLiteral(sortedTemp);
-          end else iter:=P_compoundLiteral(L)^.iteratableList;
+          end else iter:=P_collectionLiteral(L)^.iteratableList;
           for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.continueEvaluation) then begin
             ser(iter[k],k);
             if k<length(iter)-1 then appendSeparator;
@@ -4118,7 +4139,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           end;
           appendPart('[');
           inc(indent);
-          sortedTemp:=P_compoundLiteral(L)^.toList;
+          sortedTemp:=P_compoundLiteral(L)^.toList(@literalRecycler);
           sortedTemp^.sort;
           iter:=sortedTemp^.iteratableList;
           literalRecycler.disposeLiteral(sortedTemp);
@@ -4150,32 +4171,31 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
     result:=prevLines;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
+FUNCTION serialize(VAR literalRecycler:T_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
   VAR wrapper:T_outputStreamWrapper;
       stream:TStringStream;
   begin
     stream:= TStringStream.create('');
     wrapper.create(stream);
-    writeLiteralToStream(L,@wrapper,location,adapters);
+    writeLiteralToStream(literalRecycler,L,@wrapper,location,adapters);
     stream.position:=0;
     result:=stream.DataString;
     wrapper.destroy; //implicitly destroys stream
   end;
 
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
+FUNCTION deserialize(VAR literalRecycler:T_literalRecycler; CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
   VAR wrapper:T_inputStreamWrapper;
       stream:TStringStream;
   begin
     stream:=TStringStream.create(source);
     wrapper.create(stream);
     stream.position:=0;
-    result:=newLiteralFromStream(@wrapper,location,adapters,typeMap);
+    result:=newLiteralFromStream(literalRecycler,@wrapper,location,adapters,typeMap);
     wrapper.destroy; //implicitly destroys stream
   end;
 
 VAR i: longint;
 INITIALIZATION
-  literalRecycler.create;
   initialize(boolLit);
   boolLit[false].create(false);
   boolLit[true ].create(true);
@@ -4205,5 +4225,4 @@ FINALIZATION
   for i:=0 to length(stringSingletons)-1 do dispose(stringSingletons[i],destroy);
   leaveCriticalSection(stringSingletonsCs);
   doneCriticalSection(stringSingletonsCs);
-  literalRecycler.destroy;
 end.

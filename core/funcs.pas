@@ -35,6 +35,7 @@ TYPE
                        CONST unqualifiedId_  :T_idString;
                        CONST sideEffects_    :T_sideEffects;
                        CONST functionPointer_:P_intFuncCallback);
+    PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
     DESTRUCTOR destroy;
     FUNCTION qualifiedId:string;
   end;
@@ -245,9 +246,15 @@ CONSTRUCTOR T_builtinFunctionMetaData.create(CONST arityKind_: T_arityKind; CONS
     wrappedFunction:=nil;
   end;
 
+PROCEDURE T_builtinFunctionMetaData.cleanup(VAR literalRecycler:T_literalRecycler);
+  begin
+    wrappedFunction^.cleanup(@literalRecycler);
+    while wrappedFunction<>nil do literalRecycler.disposeLiteral(wrappedFunction);
+  end;
+
 DESTRUCTOR T_builtinFunctionMetaData.destroy;
   begin
-    while wrappedFunction<>nil do literalRecycler.disposeLiteral(wrappedFunction);
+    assert(wrappedFunction=nil);
   end;
 
 FUNCTION T_builtinFunctionMetaData.qualifiedId: string;
@@ -288,12 +295,12 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     VAR k:longint;
         x:P_literal;
     begin
-      result:=literalRecycler.newListLiteral(params^.size);
+      result:=recycler.literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do begin
         x:=params^.value[k];
         if x^.literalType in C_listTypes
-        then result^.append(P_listLiteral(x)^.value[index],true)
-        else result^.append(x                             ,true);
+        then result^.append(@recycler.literalRecycler,P_listLiteral(x)^.value[index],true)
+        else result^.append(@recycler.literalRecycler,x                             ,true);
       end;
     end;
 
@@ -301,10 +308,10 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
   FUNCTION getSetSubParameters(CONST index:longint):P_listLiteral; inline;
     VAR k:longint;
     begin
-      result:=literalRecycler.newListLiteral(params^.size);
+      result:=recycler.literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do
-      if k=firstSet then result^.append(setIter  [index],true)
-                    else result^.append(params^.value[k],true);
+      if k=firstSet then result^.append(@recycler.literalRecycler,setIter  [index],true)
+                    else result^.append(@recycler.literalRecycler,params^.value[k],true);
     end;
 
   VAR i:longint;
@@ -319,40 +326,40 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
     if not(builtinFunctionMap.containsFunctionForId(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
     if anyList then begin
-      result:=literalRecycler.newListLiteral(consensusLength);
+      result:=recycler.literalRecycler.newListLiteral(consensusLength);
       for i:=0 to consensusLength-1 do if allOkay then begin
         p:=getListSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        literalRecycler.disposeLiteral(p);
+        recycler.literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
         else if not(context.continueEvaluation) then begin
           allOkay:=false;
-          literalRecycler.disposeLiteral(fp);
-        end else P_listLiteral(result)^.append(fp,false);
+          recycler.literalRecycler.disposeLiteral(fp);
+        end else P_listLiteral(result)^.append(@recycler.literalRecycler,fp,false);
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
-      result:=literalRecycler.newSetLiteral(length(setIter));
+      result:=recycler.literalRecycler.newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        literalRecycler.disposeLiteral(p);
+        recycler.literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
         else if not(context.continueEvaluation) then begin
           allOkay:=false;
-          literalRecycler.disposeLiteral(fp);
+          recycler.literalRecycler.disposeLiteral(fp);
         end else begin
-          if fp^.literalType in (C_setTypes+C_listTypes)
+          if fp^.literalType in (C_collectionTypes)
           then begin
-            P_setLiteral(result)^.appendAll(P_compoundLiteral(fp));
-            literalRecycler.disposeLiteral(fp);
-          end else P_setLiteral(result)^.append(fp,false);
+            P_setLiteral(result)^.appendAll(@recycler.literalRecycler,P_collectionLiteral(fp));
+            recycler.literalRecycler.disposeLiteral(fp);
+          end else P_setLiteral(result)^.append(@recycler.literalRecycler,fp,false);
         end;
       end;
-      literalRecycler.disposeLiteral(setIter);
+      recycler.literalRecycler.disposeLiteral(setIter);
     end else result:=nil;
     if not(allOkay) then begin
-      literalRecycler.disposeLiteral(result);
+      recycler.literalRecycler.disposeLiteral(result);
       result:=nil;
     end;
   end;
@@ -453,9 +460,9 @@ FUNCTION assert_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_boolean) then begin
       if not(bool0^.value) then begin
-        failParam:=params^.tail;
+        failParam:=params^.tail(@recycler.literalRecycler);
         result:=fail_impl(failParam,tokenLocation,context,recycler);
-        literalRecycler.disposeLiteral(failParam);
+        recycler.literalRecycler.disposeLiteral(failParam);
       end else result:=newVoidLiteral;
     end;
   end;
@@ -480,8 +487,8 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
-    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(meta^.qualifiedId);
+    result:=recycler.literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(@recycler.literalRecycler,meta^.qualifiedId);
   end;
 
 INITIALIZATION

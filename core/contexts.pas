@@ -103,7 +103,7 @@ TYPE
       FUNCTION getNewAsyncContext(VAR recycler:T_recycler; CONST local:boolean):P_context;
       PROCEDURE beginEvaluation;
       PROCEDURE reattachToParent(VAR recycler:T_recycler);
-      PROCEDURE finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
+      PROCEDURE finalizeTaskAndDetachFromParent(VAR recycler:T_recycler);
 
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
@@ -227,7 +227,7 @@ TYPE
       PROPERTY options:T_evaluationContextOptions read globalOptions;
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
-      PROCEDURE resolveMainParameter(VAR first:P_token);
+      PROCEDURE resolveMainParameter(VAR first:P_token; VAR recycler:T_recycler);
 
       {$ifdef fullVersion}
       FUNCTION stepper:P_debuggingStepper;
@@ -586,10 +586,10 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST loc
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do begin
-      primaryContext.valueScope^.checkVariablesOnPop(location,@primaryContext);
+      primaryContext.valueScope^.checkVariablesOnPop(recycler.literalRecycler, location,@primaryContext);
       recycler.scopePop(primaryContext.valueScope);
     end;
-    primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+    primaryContext.finalizeTaskAndDetachFromParent(recycler);
     primaryContext.messages^.awaitAllFlushed(0.2);
   end;
 
@@ -727,7 +727,7 @@ PROCEDURE T_context.reattachToParent(VAR recycler:T_recycler);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycler);
+PROCEDURE T_context.finalizeTaskAndDetachFromParent(VAR recycler:T_recycler);
   VAR timeout:double;
   begin
     enterCriticalSection(contextCS);
@@ -745,9 +745,8 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recyclerOrNil:P_recycl
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
-      if valueScope<>nil then valueScope^.checkVariablesOnPop(C_nilSearchTokenLocation,@self);
-      if recyclerOrNil=nil then     noRecycler_disposeScope(valueScope)
-                           else recyclerOrNil^.disposeScope(valueScope);
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler.literalRecycler,C_nilSearchTokenLocation,@self);
+      recycler.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
       state:=fts_finished;
     finally
@@ -772,7 +771,7 @@ FUNCTION T_context.continueEvaluation: boolean;
     result:=messages^.continueEvaluation;
   end;
 
-PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
+PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; VAR recycler:T_recycler);
   VAR parameterIndex:longint;
       s:string;
       newValue:P_literal=nil;
@@ -782,17 +781,17 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
         parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
         if parameterIndex<0 then begin
           if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-            newValue:=literalRecycler.newListLiteral(length(mainParameters)+1);
-            P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
-            for s in mainParameters do P_listLiteral(newValue)^.appendString(s);
+            newValue:=recycler.literalRecycler.newListLiteral(length(mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(@recycler.literalRecycler,first^.location.package^.getPath);
+            for s in mainParameters do P_listLiteral(newValue)^.appendString(@recycler.literalRecycler,s);
           end else begin
             primaryContext.raiseError('Invalid parameter identifier',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
-          newValue:=literalRecycler.newStringLiteral(first^.location.package^.getPath)
+          newValue:=recycler.literalRecycler.newStringLiteral(first^.location.package^.getPath)
         else if parameterIndex<=length(mainParameters) then
-          newValue:=literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
+          newValue:=recycler.literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
         else
           newValue:=newVoidLiteral;
         first^.data:=newValue;

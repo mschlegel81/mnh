@@ -38,9 +38,10 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
         if raiseErrors then context.raiseError('Invalid side effect name '+seId^.toString(),location);
         result:=false;
       end;
+      seId^.unreference;
     end;
     if result then sideEffects:=preliminary;
-    literalRecycler.disposeLiteral(iter);
+    setLength(iter,0);
   end;
 
 PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;
@@ -85,8 +86,8 @@ FUNCTION myPath_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if tokenLocation.package=nil then result:=literalRecycler.newStringLiteral('<Unknown>')
-                                   else result:=literalRecycler.newStringLiteral(tokenLocation.package^.getPath);
+      if tokenLocation.package=nil then result:=recycler.literalRecycler.newStringLiteral('<Unknown>')
+                                   else result:=recycler.literalRecycler.newStringLiteral(tokenLocation.package^.getPath);
     end;
   end;
 
@@ -94,22 +95,22 @@ FUNCTION executor_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=literalRecycler.newStringLiteral(paramStr(0));
+    then result:=recycler.literalRecycler.newStringLiteral(paramStr(0));
   end;
 
 FUNCTION hash_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=literalRecycler.newIntLiteral(arg0^.hash);
+    then result:=recycler.literalRecycler.newIntLiteral(arg0^.hash);
   end;
 
 FUNCTION listSideEffects_imp intFuncSignature;
   VAR se:T_sideEffect;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=literalRecycler.newListLiteral();
-      for se in T_sideEffect do listResult^.appendString(C_sideEffectName[se]);
+      result:=recycler.literalRecycler.newListLiteral();
+      for se in T_sideEffect do listResult^.appendString(@recycler.literalRecycler, C_sideEffectName[se]);
     end else result:=nil;
   end;
 
@@ -120,24 +121,24 @@ FUNCTION ord_imp intFuncSignature;
     begin
       case x^.literalType of
         lt_boolean: if P_boolLiteral(x)^.value
-                    then exit(literalRecycler.newIntLiteral(1))
-                    else exit(literalRecycler.newIntLiteral(0));
+                    then exit(recycler.literalRecycler.newIntLiteral(1))
+                    else exit(recycler.literalRecycler.newIntLiteral(0));
         lt_smallint,lt_bigint: exit(x^.rereferenced);
         lt_string : if length(P_stringLiteral(x)^.value)=1
-                    then exit(literalRecycler.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
-                    else exit(literalRecycler.newIntLiteral(-1));
+                    then exit(recycler.literalRecycler.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
+                    else exit(recycler.literalRecycler.newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context,@recycler);
         lt_error,lt_void, lt_real: begin
           context.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
-          then result:=literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
-          else result:=literalRecycler.newSetLiteral (P_compoundLiteral(x)^.size);
-          iter:=P_compoundLiteral(x)^.iteratableList;
+          then result:=recycler.literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
+          else result:=recycler.literalRecycler.newSetLiteral (P_compoundLiteral(x)^.size);
+          iter:=P_listLiteral(x)^.iteratableList;
           for sub in iter do if context.messages^.continueEvaluation then
-            collResult^.append(recurse(sub),false);
-          literalRecycler.disposeLiteral(iter);
+            collResult^.append(@recycler.literalRecycler,recurse(sub),false);
+          recycler.literalRecycler.disposeLiteral(iter);
         end;
       end;
     end;
@@ -152,25 +153,25 @@ FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
-    result:=literalRecycler.newMapLiteral(17)^
-      .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
-      .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
-      .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
-      .put('compileTime'    ,{$I %DATE%}+' '+{$I %TIME%})^
-      .put('compilerVersion',{$I %FPCVERSION%}          )^
-      .put('targetCpu'      ,{$I %FPCTARGET%}           )^
-      .put('targetOs'       ,{$I %FPCTargetOS%}         )^
-      .put('version'        ,VERSION                    )^
-      .put('codeVersion'    ,CODE_HASH                  )^
-      .put('build'          ,BUILD_NUMBER               )^
-      .put('flavour'        ,FLAVOUR_STRING             )^
-      .put('configDir'      ,configDir                  )^
-      .put('fullVersionPath' ,settings.fullFlavourLocation)^
-      .put('lightVersionPath',settings.lightFlavourLocation)^
-      .put('configured_cpus',settings.cpuCount)^
-      .put('configured_mem' ,settings.memoryLimit)^
-      .put('used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^
-      .put('PID'            ,GetProcessID)
+    result:=recycler.literalRecycler.newMapLiteral(17)^
+      .put(@recycler.literalRecycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
+      .put(@recycler.literalRecycler,'isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
+      .put(@recycler.literalRecycler,'is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
+      .put(@recycler.literalRecycler,'compileTime'    ,{$I %DATE%}+' '+{$I %TIME%})^
+      .put(@recycler.literalRecycler,'compilerVersion',{$I %FPCVERSION%}          )^
+      .put(@recycler.literalRecycler,'targetCpu'      ,{$I %FPCTARGET%}           )^
+      .put(@recycler.literalRecycler,'targetOs'       ,{$I %FPCTargetOS%}         )^
+      .put(@recycler.literalRecycler,'version'        ,VERSION                    )^
+      .put(@recycler.literalRecycler,'codeVersion'    ,CODE_HASH                  )^
+      .put(@recycler.literalRecycler,'build'          ,BUILD_NUMBER               )^
+      .put(@recycler.literalRecycler,'flavour'        ,FLAVOUR_STRING             )^
+      .put(@recycler.literalRecycler,'configDir'      ,configDir                  )^
+      .put(@recycler.literalRecycler,'fullVersionPath' ,settings.fullFlavourLocation)^
+      .put(@recycler.literalRecycler,'lightVersionPath',settings.lightFlavourLocation)^
+      .put(@recycler.literalRecycler,'configured_cpus',settings.cpuCount)^
+      .put(@recycler.literalRecycler,'configured_mem' ,settings.memoryLimit)^
+      .put(@recycler.literalRecycler,'used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^
+      .put(@recycler.literalRecycler,'PID'            ,GetProcessID)
     else result:=nil;
   end;
 
@@ -183,8 +184,8 @@ FUNCTION getMnhInfo:T_arrayOfString;
     recycler.initRecycler;
     globals.create(nil);
     L:=mnhInfo_imp(nil,pseudoLoc,globals.primaryContext,recycler);
-    result:=serializeToStringList(L,pseudoLoc,nil);
-    literalRecycler.disposeLiteral(L);
+    result:=serializeToStringList(recycler.literalRecycler,L,pseudoLoc,nil);
+    recycler.literalRecycler.disposeLiteral(L);
     globals.destroy;
     recycler.cleanup;
   end;

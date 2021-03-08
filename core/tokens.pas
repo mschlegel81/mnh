@@ -32,8 +32,8 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
-    PROCEDURE define(CONST original:T_token); {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
-    PROCEDURE undefine; {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
+    PROCEDURE define(CONST original:T_token; VAR literalRecycler:T_literalRecycler); {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
+    PROCEDURE undefine(VAR literalRecycler:T_literalRecycler); {$ifndef debugMode}{$ifndef profilingFlavour}inline;{$endif}{$endif}
     FUNCTION last:P_token;
     FUNCTION getCount:longint;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
@@ -53,8 +53,8 @@ TYPE
     FUNCTION getModifier:T_modifier;
     PROCEDURE setModifier(CONST modifier:T_modifier);
 
-    FUNCTION serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
-    PROCEDURE deserializeSingleToken(CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
+    FUNCTION serializeSingleToken(VAR literalRecycler:T_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+    PROCEDURE deserializeSingleToken(VAR literalRecycler:T_literalRecycler; CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
   end;
 
   T_bodyParts=array of T_tokenRange;
@@ -164,7 +164,7 @@ CONSTRUCTOR T_token.create;
 
 DESTRUCTOR T_token.destroy;
   begin
-    undefine;
+    assert(data=nil,'Call undefine before destroy!');
   end;
 
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: T_idString; CONST tokenType: T_tokenType; CONST ptr: pointer);
@@ -182,7 +182,7 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
     {$endif}
   end;
 
-PROCEDURE T_token.define(CONST original: T_token);
+PROCEDURE T_token.define(CONST original: T_token; VAR literalRecycler:T_literalRecycler);
   {$ifdef debugMode}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=original.location;
@@ -192,7 +192,7 @@ PROCEDURE T_token.define(CONST original: T_token);
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
       tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
-      tt_list_constructor,tt_parList_constructor: if data=nil then data:=literalRecycler.newListLiteral else data:=P_listLiteral(original.data)^.clone;
+      tt_list_constructor,tt_parList_constructor: if data=nil then data:=literalRecycler.newListLiteral else data:=P_listLiteral(original.data)^.clone(@literalRecycler);
       tt_functionPattern: data:=clonePattern(original.data);
     end;
     {$ifdef debugMode}
@@ -201,7 +201,7 @@ PROCEDURE T_token.define(CONST original: T_token);
     {$endif}
   end;
 
-PROCEDURE T_token.undefine;
+PROCEDURE T_token.undefine(VAR literalRecycler:T_literalRecycler);
   begin
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: literalRecycler.disposeLiteral(data);
@@ -400,7 +400,7 @@ PROCEDURE T_token.setModifier(CONST modifier: T_modifier);
     tokType:=tt_modifier;
   end;
 
-FUNCTION T_token.serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_token.serializeSingleToken(VAR literalRecycler:T_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_outputStreamWrapper): boolean;
   PROCEDURE writeType; begin stream^.writeByte(byte(tokType)); end;
   PROCEDURE writeTxt;  begin stream^.writeAnsiString(txt); end;
 
@@ -409,7 +409,7 @@ FUNCTION T_token.serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocat
       tt_literal:
         try
           writeType;
-          writeLiteralToStream(P_literal(data),stream,locationOfSerializeCall,adapters);
+          writeLiteralToStream(literalRecycler,P_literal(data),stream,locationOfSerializeCall,adapters);
           result:=stream^.allOkay;
         except
           result:=false
@@ -518,13 +518,13 @@ FUNCTION T_token.serializeSingleToken(CONST locationOfSerializeCall:T_tokenLocat
     end;
   end;
 
-PROCEDURE T_token.deserializeSingleToken(CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
+PROCEDURE T_token.deserializeSingleToken(VAR literalRecycler:T_literalRecycler; CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
   begin
     location:=locationOfDeserializeCall;
     tokType:=T_tokenType(stream^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
     if stream^.allOkay then case tokType of
       tt_literal:
-        data:=newLiteralFromStream(stream,locationOfDeserializeCall,adapters,typeMap);
+        data:=newLiteralFromStream(literalRecycler,stream,locationOfDeserializeCall,adapters,typeMap);
       tt_intrinsicRule:
         begin
           //TODO: This is a workaround; it would be nicer if the intrinsic rule map could be used

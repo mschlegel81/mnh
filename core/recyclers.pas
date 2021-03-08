@@ -117,10 +117,10 @@ FUNCTION T_recycler.disposeToken(p: P_token): P_token;
       {$endif}
 
       result:=p^.next;
+      p^.undefine(literalRecycler);
       with tokens do if (fill>=length(dat))
       then dispose(p,destroy)
       else begin
-        p^.undefine;
         dat[fill]:=p;
         inc(fill);
       end;
@@ -144,14 +144,14 @@ FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation;
 FUNCTION T_recycler.newToken(CONST original: T_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original);
+    result^.define(original,literalRecycler);
     result^.next:=nil;
   end;
 
 FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original^);
+    result^.define(original^,literalRecycler);
     result^.next:=nil;
   end;
 
@@ -280,8 +280,8 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
   VAR parList:P_listLiteral;
       rep:T_tokenRange;
   begin
-    new(parList,create(1));
-    parList^.append(singleParameter,true);
+    parList:=recycler.literalRecycler.newListLiteral(1);
+    parList^.append(@recycler.literalRecycler,singleParameter,true);
     if canBeApplied(callLocation,parList,rep,context,recycler)
     then begin
       result:=(rep.first<>     nil          ) and
@@ -290,7 +290,7 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
               (rep.first^.data=@boolLit[true]);
       recycler.cascadeDisposeToken(rep.first);
     end else result:=false;
-    literalRecycler.disposeLiteral(parList);
+    recycler.literalRecycler.disposeLiteral(parList);
   end;
 
 FUNCTION T_abstractRule.getTypedef: P_typedef;
