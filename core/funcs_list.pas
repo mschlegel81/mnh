@@ -352,12 +352,14 @@ FUNCTION get_imp intFuncSignature;
       tmpPar.append(arg0,true)^
             .append(arg1,true);
       result:=get_imp(@tmpPar,tokenLocation,context,recycler);
+      tmpPar.cleanup(@literalRecycler);
       tmpPar.destroy;
       if (result=nil) or (result^.literalType=lt_void) then exit(result);
       tmpPar.create(params^.size-1);
       tmpPar.append(result,false);
       for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
       result:=get_imp(@tmpPar,tokenLocation,context,recycler);
+      tmpPar.cleanup(@literalRecycler);
       tmpPar.destroy;
     end
     else result:=nil;
@@ -409,12 +411,14 @@ FUNCTION getInner_imp intFuncSignature;
       tmpPar.append(arg0,true)^
             .append(arg1,true);
       result:=getInner_imp(@tmpPar,tokenLocation,context,recycler);
+      tmpPar.cleanup(@literalRecycler);
       tmpPar.destroy;
       if result<>nil then begin
         tmpPar.create(params^.size-1);
         tmpPar.append(result,false);
         for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
         result:=getInner_imp(@tmpPar,tokenLocation,context,recycler);
+        tmpPar.cleanup(@literalRecycler);
         tmpPar.destroy;
       end;
     end

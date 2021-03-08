@@ -1103,6 +1103,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
         else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
       end;
     end;
+    parameterList.cleanup(@literalRecycler);
     parameterList.destroy;
     if evResult.literal<>nil then literalRecycler.disposeLiteral(evResult.literal);
   end;
@@ -1172,6 +1173,7 @@ FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST c
       if b<>nil then parameterList.append(b,true);
       result:=evaluate(location,context,recycler,@parameterList);
       if (result.literal=nil) and context^.continueEvaluation then context^.raiseError('An error ocurred when trying to evaluate function '+toString(50),location);
+      parameterList.cleanup(@literalRecycler);
       parameterList.destroy;
     end else result:=evaluate(location,context,recycler,nil);
   end;
@@ -1629,6 +1631,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       params.create(1);
       params.append(TList,true);
       temp:=f^.evaluate(location,@context,@recycler,@params).literal;
+      params.cleanup(@literalRecycler);
       params.destroy;
       result:=context.messages^.continueEvaluation and
               (temp<>nil) and
