@@ -77,7 +77,7 @@ FUNCTION T_editMeta.leftLabelOrNil:TLabel;
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key<>13) then exit;
-    if config.action<>nil then postAction(newStringLiteral(TEdit(Sender).text));
+    if config.action<>nil then postAction(literalRecycler.newStringLiteral(TEdit(Sender).text));
   end;
 
 PROCEDURE T_editMeta.OnChange(Sender: TObject);

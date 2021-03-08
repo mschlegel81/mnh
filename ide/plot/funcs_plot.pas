@@ -118,7 +118,7 @@ FUNCTION getOptions intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       opt:=getOptionsViaAdapters(context.messages);
-      result:=newMapLiteral(14)^
+      result:=literalRecycler.newMapLiteral(14)^
         .put('x0'             ,opt.axisTrafo['x'].worldMin)^
         .put('x1'             ,opt.axisTrafo['x'].worldMax)^
         .put('y0'             ,opt.axisTrafo['y'].worldMin)^
@@ -218,12 +218,12 @@ FUNCTION setOptions intFuncSignature;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       iter:=compound0^.iteratableList;
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
-        disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
         exit(nil);
       end;
       for pair in iter do
         matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_listLiteral(pair)^.value[1]);
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_smallint,lt_bigint,lt_boolean]) then begin
       matchKey(str0^.value,arg1);
@@ -293,7 +293,7 @@ FUNCTION renderToString_impl intFuncSignature;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height));
       context.messages^.postCustomMessage(renderRequest^.rereferenced,true);
-      result:=newStringLiteral(renderRequest^.getStringWaiting(context.messages));
+      result:=literalRecycler.newStringLiteral(renderRequest^.getStringWaiting(context.messages));
       renderRequest^.setString('');
       disposeMessage(renderRequest);
     end;

@@ -121,9 +121,9 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditF
     script:=script_;
     inputEditName:=inputEditFile;
     if script^.scriptType=st_edit then begin
-      input:=newListLiteral(length(input_));
+      input:=literalRecycler.newListLiteral(length(input_));
       for s in input_ do P_listLiteral(input)^.appendString(s);
-    end else input:=newStringLiteral(inputEditFile);
+    end else input:=literalRecycler.newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
     if outputLanguage='' then begin
@@ -144,24 +144,24 @@ CONSTRUCTOR T_editScriptTask.createForNewEditor(CONST editLines:T_arrayOfString;
     outputLanguage:=language;
     done:=true;
     succeeded:=true;
-    output:=newListLiteral(length(editLines));
+    output:=literalRecycler.newListLiteral(length(editLines));
     for s in editLines do P_listLiteral(output)^.appendString(s);
     done:=false;
   end;
 
 DESTRUCTOR T_editScriptTask.destroy;
   begin
-    if output<>nil then disposeLiteral(output);
+    if output<>nil then literalRecycler.disposeLiteral(output);
     inherited destroy;
   end;
 
 PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; VAR recycler:T_recycler);
   begin
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,@recycler,input,nil).literal;
-    disposeLiteral(input);
+    literalRecycler.disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       globals.primaryContext.messages^.raiseSimpleError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
-      disposeLiteral(output);
+      literalRecycler.disposeLiteral(output);
     end;
     done:=true;
   end;

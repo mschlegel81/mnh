@@ -30,7 +30,7 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
         lt_stringList,
         lt_emptyList: begin
           state_items :=P_listLiteral(tmp)^;
-          disposeLiteral(tmp);
+          literalRecycler.disposeLiteral(tmp);
         end
         else context.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
       end;
@@ -101,7 +101,7 @@ PROCEDURE T_comboboxMeta.update;
 
 PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
   begin
-    if config.action<>nil then postAction(newStringLiteral(combobox.text));
+    if config.action<>nil then postAction(literalRecycler.newStringLiteral(combobox.text));
   end;
 
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
@@ -128,7 +128,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
           if tmp^.literalType in [lt_stringList,lt_emptyList]
           then state_items:=P_listLiteral(tmp)^
           else context.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
-          disposeLiteral(tmp);
+          literalRecycler.disposeLiteral(tmp);
         end;
         result:=result or not(arrEquals(oldItems,state_items));
       end;
@@ -145,7 +145,7 @@ FUNCTION T_comboboxMeta.getName:string;
 DESTRUCTOR T_comboboxMeta.destroy;
   begin
     inherited destroy;
-    if config_items<>nil then disposeLiteral(config_items);
+    if config_items<>nil then literalRecycler.disposeLiteral(config_items);
     setLength(state_items,0);
   end;
 

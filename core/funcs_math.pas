@@ -28,18 +28,18 @@ FUNCTION sqrt_imp intFuncSignature;
         fltRoot:=sqrt(P_smallIntLiteral(arg0)^.value);
         intRoot:=trunc(fltRoot);
         isSquare:=P_smallIntLiteral(arg0)^.value=intRoot*intRoot;
-        if isSquare then result:=newIntLiteral (intRoot)
-                    else result:=newRealLiteral(fltRoot);
+        if isSquare then result:=literalRecycler.newIntLiteral (intRoot)
+                    else result:=literalRecycler.newRealLiteral(fltRoot);
       end;
       lt_bigint: begin
         bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(false,RM_DOWN,isSquare);
-        if isSquare then result:=newIntLiteral(bigRoot)
+        if isSquare then result:=literalRecycler.newIntLiteral(bigRoot)
         else begin
           bigRoot.clear;
-          result:=newRealLiteral(sqrt(P_bigIntLiteral(arg0)^.floatValue));
+          result:=literalRecycler.newRealLiteral(sqrt(P_bigIntLiteral(arg0)^.floatValue));
         end;
       end;
-      lt_real: result:=newRealLiteral(sqrt(P_realLiteral(arg0)^.value))
+      lt_real: result:=literalRecycler.newRealLiteral(sqrt(P_realLiteral(arg0)^.value))
       else result:=genericVectorization('sqrt',params,tokenLocation,context,recycler);
     end else result:=nil;
   end;
@@ -52,11 +52,11 @@ FUNCTION isqrt_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
       lt_smallint:begin
         intRoot:=trunc(sqrt(P_smallIntLiteral(arg0)^.value));
-        result:=newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
+        result:=literalRecycler.newListLiteral(2)^.appendInt(intRoot)^.appendBool(P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
       end;
       lt_bigint: begin
         bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,RM_DOWN,isSquare);
-        result:=newListLiteral(2)^.append(newIntLiteral(bigRoot),false)^.appendBool(isSquare);
+        result:=literalRecycler.newListLiteral(2)^.append(literalRecycler.newIntLiteral(bigRoot),false)^.appendBool(isSquare);
       end;
       else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
     end else result:=nil;
@@ -65,49 +65,49 @@ FUNCTION isqrt_imp intFuncSignature;
 FUNCTION sin_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(sin(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(sin(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('sin',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION arcsin_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(arcsin(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(arcsin(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('arcsin',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION cos_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(cos(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(cos(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('cos',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION arccos_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(arccos(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(arccos(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('arccos',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION tan_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(tan(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(tan(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('tan',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION arctan_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(arctan(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(arctan(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('arctan',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION exp_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=newRealLiteral(exp(P_numericLiteral(arg0)^.floatValue))
+    then result:=literalRecycler.newRealLiteral(exp(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('exp',params,tokenLocation,context,recycler);
   end;
 
@@ -117,19 +117,19 @@ FUNCTION ln_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_smallint: result:=newRealLiteral(ln(P_smallIntLiteral(arg0)^.value));
-      lt_real    : result:=newRealLiteral(ln(real0^.value));
+      lt_smallint: result:=literalRecycler.newRealLiteral(ln(P_smallIntLiteral(arg0)^.value));
+      lt_real    : result:=literalRecycler.newRealLiteral(ln(real0^.value));
       lt_bigint  : begin
         if P_bigIntLiteral(arg0)^.value.isNegative
         then result:=nanLit.rereferenced
         else begin
           r:=P_bigIntLiteral(arg0)^.value.relevantBits-512;
           if r<0
-          then result:=newRealLiteral(ln(P_bigIntLiteral(arg0)^.value.toFloat))
+          then result:=literalRecycler.newRealLiteral(ln(P_bigIntLiteral(arg0)^.value.toFloat))
           else begin
             x.create(P_bigIntLiteral(arg0)^.value);
             x.shiftRight(r);
-            result:=newRealLiteral(ln(x.toFloat)+ln(2)*r);
+            result:=literalRecycler.newRealLiteral(ln(x.toFloat)+ln(2)*r);
             x.clear;
           end;
         end;
@@ -144,13 +144,13 @@ FUNCTION abs_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then
     case arg0^.literalType of
       lt_smallint: if P_smallIntLiteral(arg0)^.value<0
-                   then result:=newIntLiteral(-P_smallIntLiteral(arg0)^.value)
+                   then result:=literalRecycler.newIntLiteral(-P_smallIntLiteral(arg0)^.value)
                    else result:=arg0^.rereferenced;
       lt_bigint : if P_bigIntLiteral(arg0)^.value.isNegative
-                  then result:=newIntLiteral(P_bigIntLiteral(arg0)^.value.negated)
+                  then result:=literalRecycler.newIntLiteral(P_bigIntLiteral(arg0)^.value.negated)
                   else result:=arg0^.rereferenced;
       lt_real: if P_realLiteral(arg0)^.value<0
-               then result:=newRealLiteral(-P_realLiteral(arg0)^.value)
+               then result:=literalRecycler.newRealLiteral(-P_realLiteral(arg0)^.value)
                else result:=arg0^.rereferenced;
       else result:=genericVectorization('abs',params,tokenLocation,context,recycler);
     end;
@@ -161,10 +161,10 @@ FUNCTION sqr_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then case arg0^.literalType of
-      lt_smallint : result:=newIntLiteral(sqr(int64(P_smallIntLiteral (arg0)^.value)));
-      lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(arg0)^.value*
+      lt_smallint : result:=literalRecycler.newIntLiteral(sqr(int64(P_smallIntLiteral (arg0)^.value)));
+      lt_bigint   : result:=literalRecycler.newIntLiteral(P_bigIntLiteral(arg0)^.value*
                                           P_bigIntLiteral(arg0)^.value);
-      lt_real: result:=newRealLiteral(sqr(P_realLiteral(arg0)^.value));
+      lt_real: result:=literalRecycler.newRealLiteral(sqr(P_realLiteral(arg0)^.value));
       else result:=genericVectorization('sqr',params,tokenLocation,context,recycler);
     end;
   end;
@@ -186,9 +186,9 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       while (i<y) and (i< 20) do begin pot:=pot*10;  inc(i); end;
       while (i>y) and (i>-20) do begin pot:=pot*0.1; dec(i); end;
       case roundingMode of
-        RM_DEFAULT: result:=newRealLiteral(round  (x*pot)/pot);
-        RM_UP     : result:=newRealLiteral(ceil64 (x*pot)/pot);
-        RM_DOWN   : result:=newRealLiteral(floor64(x*pot)/pot);
+        RM_DEFAULT: result:=literalRecycler.newRealLiteral(round  (x*pot)/pot);
+        RM_UP     : result:=literalRecycler.newRealLiteral(ceil64 (x*pot)/pot);
+        RM_DOWN   : result:=literalRecycler.newRealLiteral(floor64(x*pot)/pot);
       end;
     end;
 
@@ -204,7 +204,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         exit(nil);
       end;
       xv:=x^.intValue;
-      result:=newIntLiteral((xv div pot) * pot);
+      result:=literalRecycler.newIntLiteral((xv div pot) * pot);
     end;
 
   VAR big:T_bigInt;
@@ -221,12 +221,12 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
                    f:=P_realLiteral(x)^.value;
                    if (-2147483646.0<f) and (f<2147483646.0)
                    then case roundingMode of
-                     RM_DEFAULT: result:=newIntLiteral(round  (f));
-                     RM_UP     : result:=newIntLiteral(ceil64 (f));
-                     RM_DOWN   : result:=newIntLiteral(floor64(f));
+                     RM_DEFAULT: result:=literalRecycler.newIntLiteral(round  (f));
+                     RM_UP     : result:=literalRecycler.newIntLiteral(ceil64 (f));
+                     RM_DOWN   : result:=literalRecycler.newIntLiteral(floor64(f));
                    end else begin
                      big.fromFloat(P_realLiteral(x)^.value,roundingMode);
-                     result:=newIntLiteral(big);
+                     result:=literalRecycler.newIntLiteral(big);
                    end;
                  end;
         else raiseNotApplicableError(funcName[roundingMode],x,location,context);
@@ -278,18 +278,18 @@ FUNCTION sign_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint: result:=newIntLiteral(P_bigIntLiteral (arg0)^.value.sign);
+      lt_bigint: result:=literalRecycler.newIntLiteral(P_bigIntLiteral (arg0)^.value.sign);
       lt_smallint: if P_smallIntLiteral(arg0)^.value=0 then result:=arg0^.rereferenced
-                   else if P_smallIntLiteral(arg0)^.value>0 then result:=newIntLiteral(1)
-                   else result:=newIntLiteral(-1);
-      lt_real: result:=newIntLiteral(sign(P_realLiteral(arg0)^.value));
+                   else if P_smallIntLiteral(arg0)^.value>0 then result:=literalRecycler.newIntLiteral(1)
+                   else result:=literalRecycler.newIntLiteral(-1);
+      lt_real: result:=literalRecycler.newIntLiteral(sign(P_realLiteral(arg0)^.value));
       else result:=genericVectorization('sign',params,tokenLocation,context,recycler);
     end;
   end;
 
 FUNCTION pi_imp intFuncSignature;
   begin
-    if (params=nil) or (params^.size=0) then result:=newRealLiteral(pi) else result:=nil;
+    if (params=nil) or (params^.size=0) then result:=literalRecycler.newRealLiteral(pi) else result:=nil;
   end;
 
 FUNCTION max_imp intFuncSignature;
@@ -307,7 +307,7 @@ FUNCTION max_imp intFuncSignature;
     result:=it[0];
     for x in it do if not(x^.leqForSorting(result)) then result:=x;
     result^.rereference;
-    disposeLiteral(it);
+    literalRecycler.disposeLiteral(it);
   end;
 
 FUNCTION min_imp intFuncSignature;
@@ -325,7 +325,7 @@ FUNCTION min_imp intFuncSignature;
     result:=it[0];
     for x in it do if x^.leqForSorting(result) then result:=x;
     result^.rereference;
-    disposeLiteral(it);
+    literalRecycler.disposeLiteral(it);
   end;
 
 FUNCTION argMax_imp intFuncSignature;
@@ -345,7 +345,7 @@ FUNCTION argMax_imp intFuncSignature;
           xMax:=x;
         end;
       end;
-      result:=newIntLiteral(imax);
+      result:=literalRecycler.newIntLiteral(imax);
     end;
   end;
 
@@ -366,7 +366,7 @@ FUNCTION argMin_imp intFuncSignature;
           xMin:=x;
         end;
       end;
-      result:=newIntLiteral(iMin);
+      result:=literalRecycler.newIntLiteral(iMin);
     end;
   end;
 
@@ -416,8 +416,8 @@ FUNCTION subSets_impl intFuncSignature;
       end else begin
         if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
         if arg0^.literalType in C_setTypes
-        then newSet:=newSetLiteral (length(mustContain))
-        else newSet:=newListLiteral(length(mustContain));
+        then newSet:=literalRecycler.newSetLiteral (length(mustContain))
+        else newSet:=literalRecycler.newListLiteral(length(mustContain));
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
         resultSets^.append(newSet,false);
       end;
@@ -457,7 +457,7 @@ FUNCTION subSets_impl intFuncSignature;
         mightContain[i].value:=iter[i];
         mightContain[i].multiplicity:=1;
       end;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end;
 
   VAR mustContain :T_arrayOfLiteral;
@@ -472,15 +472,16 @@ FUNCTION subSets_impl intFuncSignature;
         then buildFreqMap(list0)
         else buildFreqMap(set0);
 
-        resultSets:=newListLiteral();
+        resultSets:=literalRecycler.newListLiteral();
         recurseBuildSets(mustContain,mightContain);
         if memoryPanic then begin
-          if resultSets<>nil then disposeLiteral(resultSets);
+          if resultSets<>nil then literalRecycler.disposeLiteral(resultSets);
           result:=nil;
         end else result:=resultSets;
       end else begin
-        result:=newListLiteral^.append(newListLiteral                   ,false)
-                              ^.append(newListLiteral^.append(arg0,true),false);
+        result:=literalRecycler.newListLiteral
+                  ^.append(literalRecycler.newListLiteral                   ,false)
+                  ^.append(literalRecycler.newListLiteral^.append(arg0,true),false);
       end;
     end;
   end;
@@ -513,7 +514,7 @@ FUNCTION permutations_impl intFuncSignature;
         setLength(newMust,0);
         setLength(newMight,0);
       end else begin
-        newList:=newListLiteral(length(mustContain));
+        newList:=literalRecycler.newListLiteral(length(mustContain));
         for i:=0 to length(mustContain)-1 do newList^.append(mustContain[i],true);
         setResult^.append(newList,false);
       end;
@@ -526,11 +527,11 @@ FUNCTION permutations_impl intFuncSignature;
       iter:=compound0^.iteratableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
-      result:=newSetLiteral(length(iter));
+      result:=literalRecycler.newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
       if memoryPanic then begin
-        disposeLiteral(result);
+        literalRecycler.disposeLiteral(result);
         result:=nil;
       end;
     end;
@@ -549,9 +550,9 @@ FUNCTION factorize_impl intFuncSignature;
       end else begin
         factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value,@context.continueEvaluation);
       end;
-      result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
+      result:=literalRecycler.newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
-      for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
+      for i:=0 to length(factors.bigFactors)-1 do listResult^.append(literalRecycler.newIntLiteral(factors.bigFactors[i]),false);
       setLength(factors.smallFactors,0);
       setLength(factors.bigFactors,0);
       listResult^.sort;
@@ -574,7 +575,7 @@ FUNCTION primes_impl intFuncSignature;
     VAR isPrime:array of boolean;
         i,p:longint;
     begin
-      if (pMax<2) or (pMax>2147117569) then exit(newListLiteral);
+      if (pMax<2) or (pMax>2147117569) then exit(literalRecycler.newListLiteral);
       setLength(isPrime,pMax+1);
       isPrime[0]:=false;
       isPrime[1]:=false;
@@ -590,7 +591,7 @@ FUNCTION primes_impl intFuncSignature;
         inc(p);
         while (p<length(isPrime)) and not(isPrime[p]) do inc(p);
       end;
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       for i:=2 to length(isPrime)-1 do if isPrime[i] then result^.appendInt(i);
       setLength(isPrime,0);
     end;
@@ -610,7 +611,7 @@ FUNCTION digits_impl intFuncSignature;
         k:longint;
     begin
       digits:=i.getDigits(smallBase);
-      result:=newListLiteral(length(digits));
+      result:=literalRecycler.newListLiteral(length(digits));
       for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
       setLength(digits,0);
     end;
@@ -620,7 +621,7 @@ FUNCTION digits_impl intFuncSignature;
         digit:longint;
         k:longint=0;
     begin
-      if i=0 then exit(P_listLiteral(newListLiteral(1)^.appendInt(0)));
+      if i=0 then exit(P_listLiteral(literalRecycler.newListLiteral(1)^.appendInt(0)));
       if i<0 then i:=-i;
       setLength(digits,32);
       while (i>0) do begin
@@ -630,7 +631,7 @@ FUNCTION digits_impl intFuncSignature;
         inc(k);
       end;
       setLength(digits,k);
-      result:=newListLiteral(k);
+      result:=literalRecycler.newListLiteral(k);
       for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
       setLength(digits,0);
     end;
@@ -640,8 +641,8 @@ FUNCTION digits_impl intFuncSignature;
         k:longint;
     begin
       digits:=bigDigits(i,bigBase);
-      result:=newListLiteral(length(digits));
-      for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
+      result:=literalRecycler.newListLiteral(length(digits));
+      for k:=length(digits)-1 downto 0 do result^.append(literalRecycler.newIntLiteral(digits[k]),false);
       setLength(digits,0);
     end;
 
@@ -676,7 +677,7 @@ FUNCTION digits_impl intFuncSignature;
         lt_bigint  : result:=smallDigitsOf(P_bigIntLiteral  (arg0)^.value);
         lt_emptyList: result:=arg0^.rereferenced;
         lt_intList: begin
-          result:=newListLiteral(list0^.size);
+          result:=literalRecycler.newListLiteral(list0^.size);
           for i:=0 to list0^.size-1 do case list0^.value[i]^.literalType of
             lt_bigint  : listResult^.append(smallDigitsOf(P_bigIntLiteral  (list0^.value[i])^.value),false);
             lt_smallint: listResult^.append(smallDigitsOf(P_smallIntLiteral(list0^.value[i])^.value),false);
@@ -691,7 +692,7 @@ FUNCTION digits_impl intFuncSignature;
         end;
         lt_emptyList: result:=arg0^.rereferenced;
         lt_intList: begin
-          result:=newListLiteral(list0^.size);
+          result:=literalRecycler.newListLiteral(list0^.size);
           for i:=0 to list0^.size-1 do case list0^.value[i]^.literalType of
             lt_bigint  : listResult^.append(digitsOf(P_bigIntLiteral  (list0^.value[i])^.value),false);
             lt_smallint: begin
@@ -764,7 +765,7 @@ FUNCTION composeDigits_imp intFuncSignature;
       end;
       if arg0^.literalType=lt_emptyList then begin
         clearGarbage;
-        exit(newIntLiteral(0));
+        exit(literalRecycler.newIntLiteral(0));
       end;
 
       if list0^.size>Shift then begin
@@ -786,9 +787,9 @@ FUNCTION composeDigits_imp intFuncSignature;
           if k>=0 then fracPart+=P_abstractIntLiteral(list0^.value[k])^.floatValue;
           fracPart*=invFloatBase;
         end;
-        result:=newRealLiteral(intPart.toFloat+fracPart);
+        result:=literalRecycler.newRealLiteral(intPart.toFloat+fracPart);
         intPart.clear;
-      end else result:=newIntLiteral(intPart);
+      end else result:=literalRecycler.newIntLiteral(intPart);
       clearGarbage;
     end;
   end;
@@ -798,7 +799,7 @@ FUNCTION arctan2_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType in [lt_smallint,lt_bigint,lt_real]) and
        (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
-      result:=newRealLiteral(arctan2(P_numericLiteral(arg0)^.floatValue,P_numericLiteral(arg1)^.floatValue));
+      result:=literalRecycler.newRealLiteral(arctan2(P_numericLiteral(arg0)^.floatValue,P_numericLiteral(arg1)^.floatValue));
     end else result:=genericVectorization('arctan2',params,tokenLocation,context,recycler);
   end;
 
@@ -849,8 +850,8 @@ FUNCTION gcd_impl intFuncSignature;
           workingSmall:=true;
         end;
       end;
-      if workingSmall then result:=newIntLiteral(r)
-                      else result:=newIntLiteral(bigR);
+      if workingSmall then result:=literalRecycler.newIntLiteral(r)
+                      else result:=literalRecycler.newIntLiteral(bigR);
     end;
   end;
 
@@ -860,14 +861,14 @@ FUNCTION hammingWeight_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_bigint: result:=newIntLiteral(P_bigIntLiteral(arg0)^.value.hammingWeight);
+      lt_bigint: result:=literalRecycler.newIntLiteral(P_bigIntLiteral(arg0)^.value.hammingWeight);
       lt_smallint: begin
         i:=P_smallIntLiteral(arg0)^.value;
         while i>0 do begin
           if odd(i) then inc(r);
           i:=i shr 1;
         end;
-        result:=newIntLiteral(r);
+        result:=literalRecycler.newIntLiteral(r);
       end;
       else result:=genericVectorization('hammingWeight',params,tokenLocation,context,recycler);
     end;
@@ -920,13 +921,13 @@ FUNCTION powMod_impl intFuncSignature;
       if (arg0^.literalType=lt_smallint) and
          (arg1^.literalType=lt_smallint) and
          (arg2^.literalType=lt_smallint)
-      then exit(newIntLiteral(smallPowMod(P_smallIntLiteral(arg0)^.value,
+      then exit(literalRecycler.newIntLiteral(smallPowMod(P_smallIntLiteral(arg0)^.value,
                                           P_smallIntLiteral(arg1)^.value,
                                           P_smallIntLiteral(arg2)^.value)));
       ensure(arg0,bx,ux);
       ensure(arg1,by,uy);
       ensure(arg2,bz,uz);
-      result:=newIntLiteral(bx.powMod(by,bz));
+      result:=literalRecycler.newIntLiteral(bx.powMod(by,bz));
       if ux then bx.clear;
       if uy then by.clear;
       if uz then bz.clear;
@@ -947,10 +948,10 @@ FUNCTION modularInverse_impl intFuncSignature;
       ensure(arg1,by,uy);
       intResult:=bx.modularInverse(by,validResult);
       if validResult
-      then result:=newIntLiteral(intResult)
+      then result:=literalRecycler.newIntLiteral(intResult)
       else begin
         intResult.clear;
-        result:=newRealLiteral(Nan);
+        result:=literalRecycler.newRealLiteral(Nan);
       end;
       if ux then bx.clear;
       if uy then by.clear;
@@ -966,7 +967,7 @@ FUNCTION bitShift_impl intFuncSignature;
       then res.create (P_bigIntLiteral  (arg0)^.value)
       else res.fromInt(P_smallIntLiteral(arg0)^.value);
       res.shiftRight(int1^.intValue);
-      result:=newIntLiteral(res);
+      result:=literalRecycler.newIntLiteral(res);
     end else result:=genericVectorization('shiftRight',params,tokenLocation,context,recycler);
   end;
 
@@ -978,34 +979,34 @@ FUNCTION divMod_impl intFuncSignature;
     case arg1^.literalType of
       lt_smallint: begin
         if P_smallIntLiteral(arg1)^.value=0
-        then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
+        then exit(literalRecycler.newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
         case arg0^.literalType of
           lt_smallint:
-            exit(newListLiteral(2)^.appendInt(int0^.intValue div int1^.intValue)
+            exit(literalRecycler.newListLiteral(2)^.appendInt(int0^.intValue div int1^.intValue)
                                   ^.appendInt(int0^.intValue mod int1^.intValue));
           lt_bigint: begin
             temp.fromInt(P_smallIntLiteral(arg1)^.value);
             P_bigIntLiteral(arg0)^.value.divMod(temp,q,r);
             temp.clear;
-            exit(newListLiteral(2)^.append(newIntLiteral(q),false)
-                                  ^.append(newIntLiteral(r),false));
+            exit(literalRecycler.newListLiteral(2)^.append(literalRecycler.newIntLiteral(q),false)
+                                  ^.append(literalRecycler.newIntLiteral(r),false));
           end;
         end;
       end;
       lt_bigint: begin
         if P_bigIntLiteral(arg1)^.value.isZero
-        then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
+        then exit(literalRecycler.newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
         case arg0^.literalType of
           lt_smallint: begin
             temp.fromInt(P_smallIntLiteral(arg0)^.value);
             temp.divMod(P_bigIntLiteral(arg1)^.value,q,r);
-            exit(newListLiteral(2)^.append(newIntLiteral(q),false)
-                                  ^.append(newIntLiteral(r),false));
+            exit(literalRecycler.newListLiteral(2)^.append(literalRecycler.newIntLiteral(q),false)
+                                  ^.append(literalRecycler.newIntLiteral(r),false));
           end;
           lt_bigint: begin
             P_bigIntLiteral(arg0)^.value.divMod(P_bigIntLiteral(arg1)^.value,q,r);
-            exit(newListLiteral(2)^.append(newIntLiteral(q),false)
-                                  ^.append(newIntLiteral(r),false));
+            exit(literalRecycler.newListLiteral(2)^.append(literalRecycler.newIntLiteral(q),false)
+                                  ^.append(literalRecycler.newIntLiteral(r),false));
           end;
         end;
       end;
@@ -1021,7 +1022,7 @@ FUNCTION euklideanNorm_impl intFuncSignature;
       case arg0^.literalType of
         lt_numList,lt_intList,lt_realList:begin
           for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
-          result:=newRealLiteral(sqrt(total));
+          result:=literalRecycler.newRealLiteral(sqrt(total));
         end;
         lt_smallint,lt_bigint,lt_real: result:=abs_imp(params,tokenLocation,context,recycler);
         else result:=genericVectorization('euklideanNorm',params,tokenLocation,context,recycler);

@@ -32,16 +32,16 @@ PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
       if (config.bindingTo<>'') then begin
-        if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
-        newLit:=newStringLiteral(changeValue);
+        if state.bindingValue<>nil then literalRecycler.disposeLiteral(state.bindingValue);
+        newLit:=literalRecycler.newStringLiteral(changeValue);
         state.bindingValue:=newLit;
         propagateCursor(getCustomForm,crHourGlass);
       end;
       if config_onChange<>nil then begin
         state_changeTriggered:=true;
-        if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
+        if state_onChangeParam<>nil then literalRecycler.disposeLiteral(state_onChangeParam);
         if newLit<>nil then state_onChangeParam:=newLit^.rereferenced
-                       else state_onChangeParam:=newStringLiteral(changeValue);
+                       else state_onChangeParam:=literalRecycler.newStringLiteral(changeValue);
       end;
     finally
       leaveCriticalSection(elementCs);
@@ -51,8 +51,8 @@ PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
 DESTRUCTOR T_changeListeningMeta.destroy;
   begin
     inherited destroy;
-    if config_onChange<>nil then disposeLiteral(config_onChange);
-    if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
+    if config_onChange<>nil then literalRecycler.disposeLiteral(config_onChange);
+    if state_onChangeParam<>nil then literalRecycler.disposeLiteral(state_onChangeParam);
   end;
 
 FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
@@ -66,8 +66,8 @@ FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR cont
         if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
         then tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,state_onChangeParam,nil).literal
         else tmp:=config_onChange^.evaluateToLiteral(location,@context,@recycler,nil                ,nil).literal;
-        if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
-        if tmp<>nil then disposeLiteral(tmp);
+        if state_onChangeParam<>nil then literalRecycler.disposeLiteral(state_onChangeParam);
+        if tmp<>nil then literalRecycler.disposeLiteral(tmp);
         state_changeTriggered:=false;
         result:=true;
       end;

@@ -35,7 +35,7 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
         lt_expression: config_hlLang:=P_expressionLiteral(langLit^.rereferenced);
         else context.raiseError('highlighter is: '+langLit^.typeString+'; must be string or expression',location);
       end;
-      disposeLiteral(langLit);
+      literalRecycler.disposeLiteral(langLit);
     end else synMeta.language:=LANG_TXT;
     parent^.add(@self);
   end;
@@ -82,7 +82,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             state_hlLang:=P_stringLiteral(tmp)^.value;
             result:=result or (oldLang<>state_hlLang);
           end else context.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
-          disposeLiteral(tmp);
+          literalRecycler.disposeLiteral(tmp);
         end;
       end;
     finally
@@ -94,6 +94,6 @@ DESTRUCTOR T_outputMemoMeta.destroy;
   begin
     inherited destroy;
     synMeta.destroy;
-    if config_hlLang<>nil then disposeLiteral(config_hlLang);
+    if config_hlLang<>nil then literalRecycler.disposeLiteral(config_hlLang);
   end;
 

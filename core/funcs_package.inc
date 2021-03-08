@@ -35,7 +35,7 @@ FUNCTION try_imp intFuncSignature;
 
       result:=toTry^.evaluate(tokenLocation,@context,@recycler,toTryParameters).literal;
       if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
-        if (result<>nil) then disposeLiteral(result);
+        if (result<>nil) then literalRecycler.disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin
           tryMessages.clear;
@@ -46,7 +46,7 @@ FUNCTION try_imp intFuncSignature;
             tryMessages.clear;
             context.messages:=oldMessages;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral,nil).literal;
-            disposeLiteral(messagesLiteral);
+            literalRecycler.disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
             context.messages:=oldMessages;
@@ -162,7 +162,7 @@ FUNCTION runScript_imp intFuncSignature;
           context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
         end else context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
       end;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
 
       if scriptName='' then context.raiseError('No script name given.',tokenLocation);
 
@@ -182,7 +182,7 @@ FUNCTION runScript_imp intFuncSignature;
 FUNCTION helpOnMain_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0)
-    then result:=newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
+    then result:=literalRecycler.newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
     else result:=nil;
   end;
 
@@ -246,7 +246,7 @@ FUNCTION inspect_imp intFuncSignature;
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         if inspectedPackageIsTemporary
         then dispose(tempPackage,destroy);
-      end else result:=newListLiteral;
+      end else result:=literalRecycler.newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
@@ -266,7 +266,7 @@ FUNCTION inspectAll_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       main:=P_package(tokenLocation.package)^.mainPackage;
-      result:=newMapLiteral(0);
+      result:=literalRecycler.newMapLiteral(0);
       for p in main^.secondaryPackages do
       mapResult^.put(p   ^.getPath,p   ^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
       mapResult^.put(main^.getPath,main^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);

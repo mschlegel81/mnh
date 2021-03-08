@@ -1764,7 +1764,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
   begin
     enterCriticalSection(adapterCs);
     try
-      globalRowData:=newListLiteral();
+      globalRowData:=literalRecycler.newListLiteral();
       result:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
       myGenerics.append(result,'plain script;');
 
@@ -1822,7 +1822,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       myGenerics.append(result,'display;');
       setLength(commands,0);
     finally
-      disposeLiteral(globalRowData);
+      literalRecycler.disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
     end;
   end;

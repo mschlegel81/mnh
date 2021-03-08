@@ -262,7 +262,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
-      disposeLiteral(input);
+      literalRecycler.disposeLiteral(input);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=context.continueEvaluation;
@@ -336,7 +336,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
       if returnValue.reasonForStop=rr_okWithReturn then begin
-        disposeLiteral(first^.data);
+        literalRecycler.disposeLiteral(first^.data);
         first^.data:=returnValue.literal;
         processReturnStatement;
       end;
@@ -503,7 +503,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       stack.push(first);
       if first^.tokType=tt_braceOpen then begin
         first^.tokType:=tt_parList_constructor;
-        first^.data:=newListLiteral;
+        first^.data:=literalRecycler.newListLiteral;
       end;
       stack.push(first);
       didSubstitution:=true;
@@ -536,14 +536,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
           newValue:=context.valueScope^.mutateVariableValue(first^.txt,kind,newValue,first^.location,@context,@recycler);
           if context.messages^.continueEvaluation then begin
             first:=recycler.disposeToken(first);
-            disposeLiteral(first^.data);
+            literalRecycler.disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
           newValue:=P_variable(first^.data)^.mutateInline(kind,newValue,first^.location,context,recycler);
           if context.messages^.continueEvaluation then begin
             first:=recycler.disposeToken(first);
-            disposeLiteral(first^.data);
+            literalRecycler.disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end;
@@ -596,7 +596,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       end;
       if ruleIdResolved then begin
         //resolved rule ID mutate x . y -> y(x)
-        newParameterListToken:=recycler.newToken(first^.next^.next^.location,'',tt_parList,newListLiteral(1)^.append(first^.data,false));
+        newParameterListToken:=recycler.newToken(first^.next^.next^.location,'',tt_parList,literalRecycler.newListLiteral(1)^.append(first^.data,false));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
                                //Disposing from:   <Lit> . func ...
@@ -628,7 +628,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
                               stack.dat[stack.topIndex]^.location,
                               @context,@recycler);
       //LHS literal is now result of first comparison (still a literal)
-      disposeLiteral(stack.dat[stack.topIndex-1]^.data);
+      literalRecycler.disposeLiteral(stack.dat[stack.topIndex-1]^.data);
       stack.dat[stack.topIndex-1]^.data:=newLit;
       stack.dat[stack.topIndex-1]^.location:=stack.dat[stack.topIndex]^.location;
       //applied comparator is replaced by operator 'and'
@@ -643,10 +643,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       assert(cTokType[0]=tt_literal);
       assert(cTokType[1] in [tt_pow2,tt_pow3]);
       if cTokType[1]=tt_pow2
-      then power:=newIntLiteral(2)
-      else power:=newIntLiteral(3);
+      then power:=literalRecycler.newIntLiteral(2)
+      else power:=literalRecycler.newIntLiteral(3);
       newLit:=resolveOperator(first^.data,tt_operatorPot,power,first^.next^.location,@context,@recycler);
-      disposeLiteral(power);
+      literalRecycler.disposeLiteral(power);
       first:=recycler.disposeToken(first);
       first^.data:=newLit;
       first^.tokType:=tt_literal;
@@ -670,7 +670,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
                                            stack.dat[stack.topIndex]^.location,
                                            @context,@recycler);
             end;
-            disposeLiteral(first^.data);
+            literalRecycler.disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
             stack.popDestroy(recycler); //pop operator from stack
@@ -697,7 +697,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
                                            stack.dat[stack.topIndex]^.location,
                                            @context,@recycler);
             end;
-            disposeLiteral(first^.data);
+            literalRecycler.disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
             stack.popDestroy(recycler); //pop operator from stack
@@ -812,11 +812,11 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 
   PROCEDURE resolveElementAccess;
     begin
-      newLit:=newListLiteral;
+      newLit:=literalRecycler.newListLiteral;
       P_listLiteral(newLit)^
       .append(first^.data,false)^
       .appendAll(first^.next^.data);
-      disposeLiteral(first^.next^.data);
+      literalRecycler.disposeLiteral(first^.next^.data);
       first^.tokType:=tt_intrinsicRule;
       first^.data:=BUILTIN_GET;
       first^.txt:='get';
@@ -924,7 +924,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
     begin
       stack.popDestroy(recycler);
       stack.popLink(first);
-      first^.data:=newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
+      first^.data:=literalRecycler.newListLiteral(2)^.append(first^.data,false)^.append(first^.next^.data,true);
       first^.next:=recycler.disposeToken(first^.next);
       didSubstitution:=true;
     end;
@@ -933,7 +933,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
 {$define COMMON_CASES:=
 tt_pow2,tt_pow3: process_pow2_pow3;
 tt_listBraceOpen: begin
-  first^.next^.data:=newListLiteral;
+  first^.next^.data:=literalRecycler.newListLiteral;
   first^.next^.tokType:=tt_list_constructor;
   stack.push(first);
   didSubstitution:=true;
@@ -1128,8 +1128,8 @@ end}
           end;
  {cT[-1]=}tt_nameOf: begin
             stack.popDestroy(recycler);
-            newLit:=newStringLiteral(P_literal(first^.data)^.getId);
-            disposeLiteral(first^.data);
+            newLit:=literalRecycler.newStringLiteral(P_literal(first^.data)^.getId);
+            literalRecycler.disposeLiteral(first^.data);
             first^.data:=newLit;
             didSubstitution:=true;
           end;
@@ -1152,7 +1152,7 @@ end}
         end;
 {cT[0]=}tt_globalVariable:
         if cTokType[-1]=tt_nameOf then begin
-          first^.data:=newStringLiteral(first^.txt);
+          first^.data:=literalRecycler.newStringLiteral(first^.txt);
           first^.tokType:=tt_literal;
           stack.popDestroy(recycler);
           didSubstitution:=true;
@@ -1170,7 +1170,7 @@ end}
         end;
 {cT[0]=}tt_blockLocalVariable:
         if cTokType[-1]=tt_nameOf then begin
-          first^.data:=newStringLiteral(first^.txt);
+          first^.data:=literalRecycler.newStringLiteral(first^.txt);
           first^.tokType:=tt_literal;
           stack.popDestroy(recycler);
           didSubstitution:=true;
@@ -1210,12 +1210,12 @@ end}
         end;
 {cT[0]=}tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
           //empty list
-          first^.data:=newListLiteral;
+          first^.data:=literalRecycler.newListLiteral;
           first^.tokType:=tt_literal;
           first^.next:=recycler.disposeToken(first^.next);
           didSubstitution:=true;
         end else begin
-          first^.data:=newListLiteral;
+          first^.data:=literalRecycler.newListLiteral;
           first^.tokType:=tt_list_constructor;
           stack.push(first);
           didSubstitution:=true;
@@ -1287,7 +1287,7 @@ end}
             didSubstitution:=true;
           end;
           tt_blockLocalVariable: begin
-            first^.data:=newStringLiteral(first^.next^.txt);
+            first^.data:=literalRecycler.newStringLiteral(first^.next^.txt);
             first^.tokType:=tt_literal;
             first^.next:=recycler.disposeToken(first^.next);
             didSubstitution:=true;
@@ -1356,7 +1356,7 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
 DESTRUCTOR T_asyncTask.destroy;
   begin
     inherited destroy;
-    disposeLiteral(payload);
+    literalRecycler.disposeLiteral(payload);
     myContext^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(myContext);
     recycler.cleanup;

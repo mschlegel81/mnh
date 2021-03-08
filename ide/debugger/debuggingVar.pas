@@ -211,7 +211,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
         iter:=P_compoundLiteral(value)^.iteratableList;
         setLength(preparedChildren,length(iter));
         for i:=0 to length(iter)-1 do new(preparedChildren[i],create(iter[i],value^.literalType in C_mapTypes));
-        disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
       end;
     end;
     setLength(result,length(preparedChildren));
@@ -223,7 +223,7 @@ DESTRUCTOR T_variableTreeEntryAnonymousValue.destroy;
   begin
     for i:=0 to length(preparedChildren)-1 do dispose(preparedChildren[i],destroy);
     setLength(preparedChildren,0);
-    disposeLiteral(value);
+    literalRecycler.disposeLiteral(value);
   end;
 
 DESTRUCTOR T_variableTreeEntryNamedValue.destroy;

@@ -72,8 +72,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
         if plotConfig.mouseMoved^.canApplyToNumberOfParameters(2)
         then tmp:=plotConfig.mouseMoved^.evaluate(location,@context,@recycler,plotState.mouseMovedParam).literal
         else tmp:=plotConfig.mouseMoved^.evaluate(location,@context,@recycler,nil).literal;
-        if tmp<>nil then disposeLiteral(tmp);
-        disposeLiteral(plotState.mouseMovedParam);
+        if tmp<>nil then literalRecycler.disposeLiteral(tmp);
+        literalRecycler.disposeLiteral(plotState.mouseMovedParam);
         result:=true;
       end;
 
@@ -81,8 +81,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
         if plotConfig.mouseClicked^.canApplyToNumberOfParameters(2)
         then tmp:=plotConfig.mouseClicked^.evaluate(location,@context,@recycler,plotState.mouseClickedParam).literal
         else tmp:=plotConfig.mouseClicked^.evaluate(location,@context,@recycler,nil).literal;
-        if tmp<>nil then disposeLiteral(tmp);
-        disposeLiteral(plotState.mouseClickedParam);
+        if tmp<>nil then literalRecycler.disposeLiteral(tmp);
+        literalRecycler.disposeLiteral(plotState.mouseClickedParam);
         result:=true;
       end;
     finally
@@ -100,8 +100,8 @@ PROCEDURE T_plotConnectorMeta.plotMouseMoved(CONST realPoint:T_point);
     if (plotConfig.mouseMoved=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     try
       with plotState do begin
-        if mouseMovedParam<>nil then disposeLiteral(mouseMovedParam);
-        mouseMovedParam:=newListLiteral(2);
+        if mouseMovedParam<>nil then literalRecycler.disposeLiteral(mouseMovedParam);
+        mouseMovedParam:=literalRecycler.newListLiteral(2);
         mouseMovedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
       end;
     finally
@@ -114,8 +114,8 @@ PROCEDURE T_plotConnectorMeta.plotMouseClicked(CONST realPoint:T_point);
     if (plotConfig.mouseClicked=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     try
       with plotState do begin
-        if mouseClickedParam<>nil then disposeLiteral(mouseClickedParam);
-        mouseClickedParam:=newListLiteral(2);
+        if mouseClickedParam<>nil then literalRecycler.disposeLiteral(mouseClickedParam);
+        mouseClickedParam:=literalRecycler.newListLiteral(2);
         mouseClickedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
       end;
     finally
@@ -158,12 +158,12 @@ DESTRUCTOR T_plotConnectorMeta.destroy;
     disconnect;
     inherited destroy;
     with plotConfig do begin
-      if mouseMoved  <>nil then disposeLiteral(mouseMoved  );
-      if mouseClicked<>nil then disposeLiteral(mouseClicked);
+      if mouseMoved  <>nil then literalRecycler.disposeLiteral(mouseMoved  );
+      if mouseClicked<>nil then literalRecycler.disposeLiteral(mouseClicked);
     end;
     with plotState do begin
-      if mouseMovedParam  <>nil then disposeLiteral(mouseMovedParam  );
-      if mouseClickedParam<>nil then disposeLiteral(mouseClickedParam);
+      if mouseMovedParam  <>nil then literalRecycler.disposeLiteral(mouseMovedParam  );
+      if mouseClickedParam<>nil then literalRecycler.disposeLiteral(mouseClickedParam);
     end;
   end;
 

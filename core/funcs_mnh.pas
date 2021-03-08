@@ -40,7 +40,7 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
       end;
     end;
     if result then sideEffects:=preliminary;
-    disposeLiteral(iter);
+    literalRecycler.disposeLiteral(iter);
   end;
 
 PROCEDURE mySleep(CONST argument:P_numericLiteral; CONST argIsEndTime:boolean; VAR context:T_context); inline;
@@ -85,8 +85,8 @@ FUNCTION myPath_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if tokenLocation.package=nil then result:=newStringLiteral('<Unknown>')
-                                   else result:=newStringLiteral(tokenLocation.package^.getPath);
+      if tokenLocation.package=nil then result:=literalRecycler.newStringLiteral('<Unknown>')
+                                   else result:=literalRecycler.newStringLiteral(tokenLocation.package^.getPath);
     end;
   end;
 
@@ -94,21 +94,21 @@ FUNCTION executor_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=newStringLiteral(paramStr(0));
+    then result:=literalRecycler.newStringLiteral(paramStr(0));
   end;
 
 FUNCTION hash_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=newIntLiteral(arg0^.hash);
+    then result:=literalRecycler.newIntLiteral(arg0^.hash);
   end;
 
 FUNCTION listSideEffects_imp intFuncSignature;
   VAR se:T_sideEffect;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=newListLiteral();
+      result:=literalRecycler.newListLiteral();
       for se in T_sideEffect do listResult^.appendString(C_sideEffectName[se]);
     end else result:=nil;
   end;
@@ -120,24 +120,24 @@ FUNCTION ord_imp intFuncSignature;
     begin
       case x^.literalType of
         lt_boolean: if P_boolLiteral(x)^.value
-                    then exit(newIntLiteral(1))
-                    else exit(newIntLiteral(0));
+                    then exit(literalRecycler.newIntLiteral(1))
+                    else exit(literalRecycler.newIntLiteral(0));
         lt_smallint,lt_bigint: exit(x^.rereferenced);
         lt_string : if length(P_stringLiteral(x)^.value)=1
-                    then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
-                    else exit(newIntLiteral(-1));
+                    then exit(literalRecycler.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
+                    else exit(literalRecycler.newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context,@recycler);
         lt_error,lt_void, lt_real: begin
           context.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
-          then result:=newListLiteral(P_compoundLiteral(x)^.size)
-          else result:=newSetLiteral (P_compoundLiteral(x)^.size);
+          then result:=literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
+          else result:=literalRecycler.newSetLiteral (P_compoundLiteral(x)^.size);
           iter:=P_compoundLiteral(x)^.iteratableList;
           for sub in iter do if context.messages^.continueEvaluation then
             collResult^.append(recurse(sub),false);
-          disposeLiteral(iter);
+          literalRecycler.disposeLiteral(iter);
         end;
       end;
     end;
@@ -152,7 +152,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
-    result:=newMapLiteral(17)^
+    result:=literalRecycler.newMapLiteral(17)^
       .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
@@ -184,7 +184,7 @@ FUNCTION getMnhInfo:T_arrayOfString;
     globals.create(nil);
     L:=mnhInfo_imp(nil,pseudoLoc,globals.primaryContext,recycler);
     result:=serializeToStringList(L,pseudoLoc,nil);
-    disposeLiteral(L);
+    literalRecycler.disposeLiteral(L);
     globals.destroy;
     recycler.cleanup;
   end;

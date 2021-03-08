@@ -24,7 +24,7 @@ FUNCTION filenameResult(s:string):string;
 
 FUNCTION filenameResultLiteral(s:string):P_stringLiteral;
   begin
-    result:=newStringLiteral(filenameResult(s));
+    result:=literalRecycler.newStringLiteral(filenameResult(s));
   end;
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders,recurseSubDirs:boolean):P_listLiteral;
@@ -39,7 +39,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end;
 
   begin
-    result:=newListLiteral;
+    result:=literalRecycler.newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(searchString(0),filesAndNotFolders,recurseSubDirs);
       if recurseSubDirs and DirectoryExists(P_stringLiteral(pathOrPathList)^.value)
@@ -95,7 +95,7 @@ FUNCTION allFiles_impl intFuncSignature;
         if arg2^.literalType<>lt_boolean then exit(nil);
         recurse:=P_boolLiteral(arg2)^.value;
       end;
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       if arg0^.literalType=lt_string
       then searchInRoot(str0^.value)
       else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^.value[i])^.value);
@@ -135,11 +135,11 @@ FUNCTION fileContents_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('fileContents',tokenLocation,[se_readFile]) then begin
-      result:=newStringLiteral(fileContent(str0^.value,accessed));
+      result:=literalRecycler.newStringLiteral(fileContent(str0^.value,accessed));
       if not(accessed) then begin
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
-        disposeLiteral(result);
-        result:=newStringLiteral('');
+        literalRecycler.disposeLiteral(result);
+        result:=literalRecycler.newStringLiteral('');
       end;
     end;
   end;
@@ -167,11 +167,11 @@ FUNCTION serialize_impl intFuncSignature;
   VAR void:P_literal;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.messages))
+    then result:=literalRecycler.newStringLiteral(serialize(arg0,tokenLocation,context.messages))
     else if (params=nil) then begin
       void:=newVoidLiteral;
-      result:=newStringLiteral(serialize(void,tokenLocation,context.messages));
-      disposeLiteral(void);
+      result:=literalRecycler.newStringLiteral(serialize(void,tokenLocation,context.messages));
+      literalRecycler.disposeLiteral(void);
     end else result:=nil;
   end;
 
@@ -194,12 +194,12 @@ FUNCTION fileLines_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('fileLines',tokenLocation,[se_readFile]) then begin
       L:=fileLines(str0^.value,accessed);
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       for i:=0 to length(L)-1 do listResult^.appendString(L[i]);
       if not(accessed) then begin
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
-        disposeLiteral(result);
-        result:=newListLiteral;
+        literalRecycler.disposeLiteral(result);
+        result:=literalRecycler.newListLiteral;
       end;
     end;
   end;
@@ -274,10 +274,10 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         then setLength(teebuffer,length(teebuffer)-1);
         if teeRoutine=nil then writeln(teebuffer)
         else begin
-          wrappedTeeBuffer:=newStringLiteral(teebuffer);
+          wrappedTeeBuffer:=literalRecycler.newStringLiteral(teebuffer);
           teeCallResult:=teeRoutine^.evaluateToLiteral(tokenLocation,@context,@recycler,wrappedTeeBuffer,nil);
-          if teeCallResult.literal<>nil then disposeLiteral(teeCallResult.literal);
-          disposeLiteral(wrappedTeeBuffer);
+          if teeCallResult.literal<>nil then literalRecycler.disposeLiteral(teeCallResult.literal);
+          literalRecycler.disposeLiteral(wrappedTeeBuffer);
         end;
         teebuffer:='';
       end;
@@ -371,9 +371,9 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
       if tee and (teeRoutine=nil) then showConsole;
       processExitCode:=runCommand(executable,cmdLinePar,output);
-      outputLit:=newListLiteral(output.count);
+      outputLit:=literalRecycler.newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
-      result:=newListLiteral(2)^.append(outputLit,false)^.appendInt(processExitCode);
+      result:=literalRecycler.newListLiteral(2)^.append(outputLit,false)^.appendInt(processExitCode);
       output.free;
     end;
   end;
@@ -401,8 +401,8 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch,i);
       if doAsynch
-      then result:=newIntLiteral(i)
-      else result:=newIntLiteral(processExitCode);
+      then result:=literalRecycler.newIntLiteral(i)
+      else result:=literalRecycler.newIntLiteral(processExitCode);
       hideConsole;
     end;
   end;
@@ -463,9 +463,9 @@ FUNCTION fileInfo_imp intFuncSignature;
       VAR a:P_setLiteral;
           att:T_fileAttrib;
       begin
-        a:=newSetLiteral(4);
+        a:=literalRecycler.newSetLiteral(4);
         for att in info.attributes do a^.appendString(C_fileAttribName[att]);
-        result:=newMapLiteral(4)^
+        result:=literalRecycler.newMapLiteral(4)^
                 .put('path'      ,info.filePath)^
                 .put('time'      ,info.time)^
                 .put('size'      ,info.size)^
@@ -476,7 +476,7 @@ FUNCTION fileInfo_imp intFuncSignature;
     begin
       result:=nil;
       if containsPlaceholder(s) then begin
-        result:=newListLiteral(0);
+        result:=literalRecycler.newListLiteral(0);
         for info in findFileInfo(s) do listResult^.append(infoToLiteral(info),false);
       end else for info in findFileInfo(s) do exit(infoToLiteral(info));
     end; //infoForSearch
@@ -491,10 +491,10 @@ FUNCTION fileInfo_imp intFuncSignature;
         result:=collection0^.newOfSameType(true);
         iter  :=collection0^.iteratableList;
         for sub in iter do collResult^.append(infoForSearch(P_stringLiteral(sub)^.value),false);
-        disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
       end;
-      lt_emptyList: result:=newListLiteral(0);
-      lt_emptySet : result:=newSetLiteral(0);
+      lt_emptyList: result:=literalRecycler.newListLiteral(0);
+      lt_emptySet : result:=literalRecycler.newSetLiteral(0);
     end;
   end; //fileInfo_imp
 
@@ -511,7 +511,7 @@ FUNCTION fileStats_imp intFuncSignature;
       setLength(sha256Digits,length(sha256Digest));
       for i:=0 to length(sha256Digest)-1 do sha256Digits[i]:=sha256Digest[i];
       sha256Int.createFromDigits(256,sha256Digits);
-      result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.append(newIntLiteral(sha256Int),false);
+      result:=literalRecycler.newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.append(literalRecycler.newIntLiteral(sha256Int),false);
     end else result:=genericVectorization('fileStats',params,tokenLocation,context,recycler)
   end;
 
@@ -533,7 +533,7 @@ FUNCTION extractFileDirectory_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(internal(str0^.value))
+    then result:=literalRecycler.newStringLiteral(internal(str0^.value))
     else result:=genericVectorization('extractFileDirectory',params,tokenLocation,context,recycler);
   end;
 
@@ -565,7 +565,7 @@ FUNCTION changeFileExtension_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
-    then result:=newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
+    then result:=literalRecycler.newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
   end;
 
 FUNCTION relativeFilename_impl intFuncSignature;
@@ -583,7 +583,7 @@ FUNCTION systemSpecificFilename_impl intFuncSignature;
     begin
       if DirectorySeparator='/'
       then exit(filenameResultLiteral(s^.value))
-      else exit(newStringLiteral(ansiReplaceStr(filenameResult(s^.value),'/',DirectorySeparator)));
+      else exit(literalRecycler.newStringLiteral(ansiReplaceStr(filenameResult(s^.value),'/',DirectorySeparator)));
     end;
   begin
     result:=nil;

@@ -320,14 +320,14 @@ CONST SUPPRESS_EXIT_CODE=maxLongint-159; //just some large, reasonably improbabl
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
   FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
     begin
-      result:=newListLiteral(3);
+      result:=literalRecycler.newListLiteral(3);
       result^.appendString(message^.getMessageTypeName);
     end;
 
   VAR m:P_storedMessage;
       messageEntry:P_listLiteral;
   begin
-    result:=newListLiteral();
+    result:=literalRecycler.newListLiteral();
     for m in messages do if m^.messageType in toInclude then begin
       messageEntry:=P_listLiteral(headByMessageType(m)^.appendString(ansistring(m^.getLocation)));
       if      m^.messageType in [mt_echo_input,mt_echo_declaration]
@@ -339,7 +339,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toIn
       result^.append(messageEntry,false);
     end;
     if ExitCode<>SUPPRESS_EXIT_CODE
-    then result^.append(newListLiteral(3)^.appendString('exitCode')^.appendString('')^.appendInt(ExitCode),false);
+    then result^.append(literalRecycler.newListLiteral(3)^.appendString('exitCode')^.appendString('')^.appendInt(ExitCode),false);
   end;
 
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; VAR recycler:T_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
@@ -969,7 +969,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       if mainRule=nil
       then globals.primaryContext.messages^.raiseSimpleError('The specified package contains no main rule.',packageTokenLocation(@self))
       else begin
-        parametersForMain:=newListLiteral(length(mainParameters));
+        parametersForMain:=literalRecycler.newListLiteral(length(mainParameters));
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
 
         {$ifdef fullVersion}
@@ -1001,7 +1001,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
         //------------------:error handling if main returns more than one token
         {$endif}
         recycler.cascadeDisposeToken(t.first);
-        disposeLiteral(parametersForMain);
+        literalRecycler.disposeLiteral(parametersForMain);
         parametersForMain:=nil;
       end;
     end;
@@ -1153,10 +1153,10 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
   begin
     if ruleMap.containsKey('toString',toStringRule) and (toStringRule.entryType=tt_userRule)
     then begin
-      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
+      parameters:=P_listLiteral(literalRecycler.newListLiteral(1)^.append(L,true));
       if P_rule(toStringRule.value)^.canBeApplied(location,parameters,toReduce,context,recycler)
       then stringOut:=P_context(context)^.reduceToLiteral(toReduce.first,recycler).literal;
-      disposeLiteral(parameters);
+      literalRecycler.disposeLiteral(parameters);
     end;
 
     if stringOut=nil then begin
@@ -1167,7 +1167,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
       if stringOut^.literalType=lt_string
       then result:=P_stringLiteral(stringOut)^.value
       else result:=stringOut^.toString();
-      disposeLiteral(stringOut);
+      literalRecycler.disposeLiteral(stringOut);
     end;
   end;
 
@@ -1264,26 +1264,28 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=newListLiteral(length(packageUses));
+      result:=literalRecycler.newListLiteral(length(packageUses));
       for i:=0 to length(packageUses)-1 do result^.append(
-        newListLiteral^.appendString(packageUses[i].id)^
-                       .appendString(packageUses[i].path),false);
+        literalRecycler.newListLiteral^
+          .appendString(packageUses[i].id)^
+          .appendString(packageUses[i].path),false);
     end;
 
   FUNCTION includeList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=newListLiteral(length(extendedPackages));
+      result:=literalRecycler.newListLiteral(length(extendedPackages));
       for i:=0 to length(extendedPackages)-1 do result^.append(
-        newListLiteral^.appendString(extendedPackages[i]^.getId)^
-                       .appendString(extendedPackages[i]^.getPath),false);
+        literalRecycler.newListLiteral^
+          .appendString(extendedPackages[i]^.getId)^
+          .appendString(extendedPackages[i]^.getPath),false);
     end;
 
   {$ifdef fullVersion}
   FUNCTION builtinCallList:P_listLiteral;
     VAR builtin:P_builtinFunctionMetaData;
     begin
-      result:=newListLiteral();
+      result:=literalRecycler.newListLiteral();
       for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin^.qualifiedId);
     end;
   {$endif}
@@ -1296,7 +1298,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
     end;
     {$endif}
 
-    result:=newMapLiteral(7)^.put('id'      ,getId)^
+    result:=literalRecycler.newMapLiteral(7)^.put('id'      ,getId)^
                              .put('path'    ,getPath)^
                              .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                              .put('uses'    ,usesList,false)^

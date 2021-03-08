@@ -287,7 +287,7 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
               (rep.first^.data=@boolLit[true]);
       recycler.cascadeDisposeToken(rep.first);
     end else result:=false;
-    disposeLiteral(parList);
+    literalRecycler.disposeLiteral(parList);
   end;
 
 FUNCTION T_abstractRule.getTypedef: P_typedef;

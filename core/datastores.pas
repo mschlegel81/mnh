@@ -59,7 +59,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       except
         result:=false;
       end;
-      if literal<>nil then disposeLiteral(literal);
+      if literal<>nil then literalRecycler.disposeLiteral(literal);
     end else dataAsStringList:=C_EMPTY_STRING_ARRAY;
     wrapper.destroy;
   end;
@@ -195,7 +195,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
-        if result<>nil then disposeLiteral(result);
+        if result<>nil then literalRecycler.disposeLiteral(result);
         result:=nil;
       end;
       wrapper.destroy;
@@ -223,7 +223,7 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       if fileName='' then exit(newVoidLiteral);
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
-      result:=newMapLiteral(2)^.put('id',ruleId)^.put('content',contentLiteral,false);
+      result:=literalRecycler.newMapLiteral(2)^.put('id',ruleId)^.put('content',contentLiteral,false);
     end else result:=newVoidLiteral;
   end;
 

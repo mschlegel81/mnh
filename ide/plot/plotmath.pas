@@ -577,19 +577,19 @@ FUNCTION T_dataRow.toNewLiteralForExport:P_listLiteral;
     begin
       if (num>=-9E18) and (num<9E18) then begin
         inum:=round(num);
-        if num=inum then result:=newIntLiteral(inum)
-                    else result:=newRealLiteral(num);
-      end else result:=newRealLiteral(num);
+        if num=inum then result:=literalRecycler.newIntLiteral(inum)
+                    else result:=literalRecycler.newRealLiteral(num);
+      end else result:=literalRecycler.newRealLiteral(num);
     end;
 
   VAR i:longint=0;
       simple:boolean=true;
   begin
     while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
-    result:=newListLiteral(alloc);
+    result:=literalRecycler.newListLiteral(alloc);
     if simple
     then for i:=0 to alloc-1 do result^.append(simplify(dat[i,1]),false)
-    else for i:=0 to alloc-1 do result^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
+    else for i:=0 to alloc-1 do result^.append(literalRecycler.newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
@@ -1270,7 +1270,7 @@ FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T
     myRowIndex:=globalRowData.size;
     if firstRow then result:='plot@(ROW['+intToStr(myRowIndex)+']);'
              else result:='addPlot@(ROW['+intToStr(myRowIndex)+']);';
-    globalRowData.append(newListLiteral(2)^.append(sample.toNewLiteralForExport,false)^.appendString(style.toString),false);
+    globalRowData.append(literalRecycler.newListLiteral(2)^.append(sample.toNewLiteralForExport,false)^.appendString(style.toString),false);
   end;
 
 PROCEDURE T_axisTrafo.prepare;

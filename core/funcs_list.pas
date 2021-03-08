@@ -27,7 +27,7 @@ begin
       tempList:=compound0^.toList;
       if      (params^.size=1)                                                    then result:=tempList^.CALL_MACRO
       else if (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then result:=tempList^.CALL_MACRO(int1^.intValue);
-      disposeLiteral(tempList);
+      literalRecycler.disposeLiteral(tempList);
     end else if arg0^.literalType in C_scalarTypes then SCALAR_FALLBACK;
   end;
 end}
@@ -48,9 +48,9 @@ FUNCTION head_imp intFuncSignature;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
-       if int1^.intValue=0 then exit(newListLiteral());
+       if int1^.intValue=0 then exit(literalRecycler.newListLiteral());
        iterator:=P_expressionLiteral(arg0);
-       result:=newListLiteral(int1^.intValue);
+       result:=literalRecycler.newListLiteral(int1^.intValue);
        for i:=1 to int1^.intValue do begin
          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
          if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
@@ -71,19 +71,19 @@ FUNCTION trailing_imp intFuncSignature;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
-       if int1^.intValue=0 then exit(newListLiteral());
+       if int1^.intValue=0 then exit(literalRecycler.newListLiteral());
        iterator:=P_expressionLiteral(arg0);
        setLength(buffer,int1^.intValue);
        for i:=0 to length(buffer)-1 do buffer[i]:=nil;
        repeat
          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
          if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then begin
-           if buffer[0]<>nil then disposeLiteral(buffer[0]);
+           if buffer[0]<>nil then literalRecycler.disposeLiteral(buffer[0]);
            for i:=1 to length(buffer)-1 do buffer[i-1]:=buffer[i];
            buffer[length(buffer)-1]:=valueToAppend;
          end;
        until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
-       result:=newListLiteral(int1^.intValue);
+       result:=literalRecycler.newListLiteral(int1^.intValue);
        for i:=0 to length(buffer)-1 do if buffer[i]<>nil then listResult^.append(buffer[i],false,false);
        exit(result);
     end;
@@ -92,18 +92,18 @@ FUNCTION trailing_imp intFuncSignature;
 
 FUNCTION tail_imp intFuncSignature;
 {$define CALL_MACRO:=tail}
-{$define SCALAR_FALLBACK:=result:=newListLiteral}
+{$define SCALAR_FALLBACK:=result:=literalRecycler.newListLiteral}
   VAR valueToAppend:P_literal;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
-       tempList:=newListLiteral();
+       tempList:=literalRecycler.newListLiteral();
        repeat
          valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
          if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then tempList^.append(valueToAppend,false);
        until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
        result:=tempList^.tail(int1^.intValue);
-       disposeLiteral(tempList);
+       literalRecycler.disposeLiteral(tempList);
        exit(result);
     end;
     SUB_LIST_IMPL;
@@ -115,13 +115,13 @@ FUNCTION leading_imp intFuncSignature;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
-       tempList:=newListLiteral();
+       tempList:=literalRecycler.newListLiteral();
        repeat
          valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
          if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then tempList^.append(valueToAppend,false);
        until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
        result:=tempList^.leading(int1^.intValue);
-       disposeLiteral(tempList);
+       literalRecycler.disposeLiteral(tempList);
        exit(result);
     end;
     SUB_LIST_IMPL;
@@ -225,9 +225,9 @@ FUNCTION getElementFreqency intFuncSignature;
     end;
 
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
-      result:=newMapLiteral(100);
+      result:=literalRecycler.newMapLiteral(100);
       iter:=compound0^.iteratableList;
-      for x in iter do P_mapLiteral(result)^.put(x,newIntLiteral(1),false);
+      for x in iter do P_mapLiteral(result)^.put(x,literalRecycler.newIntLiteral(1),false);
       exit(result);
     end;
     if not(arg0^.literalType in C_listTypes) then exit(nil);
@@ -245,7 +245,7 @@ FUNCTION getElementFreqency intFuncSignature;
       exit(nil);
     end;
     freqList:=freqMap.keyValueList;
-    result:=newMapLiteral(100);
+    result:=literalRecycler.newMapLiteral(100);
     for i:=0 to length(freqList)-1 do P_mapLiteral(result)^.put(freqList[i].key^.rereferenced,freqList[i].value,false);
     freqMap.destroy;
   end;
@@ -259,12 +259,12 @@ FUNCTION flatten_imp intFuncSignature;
       for x in iter do if x^.literalType in C_compoundTypes
       then recurse_flatten(P_compoundLiteral(x))
       else listResult^.append(x,true);
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end;
 
   begin
     if params<>nil then begin
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       recurse_flatten(params);
     end else result:=nil;
   end;
@@ -274,8 +274,8 @@ FUNCTION size_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_compoundTypes
-      then result:=newIntLiteral(compound0^.size)
-      else result:=newIntLiteral(1);
+      then result:=literalRecycler.newIntLiteral(compound0^.size)
+      else result:=literalRecycler.newIntLiteral(1);
     end;
   end;
 
@@ -286,20 +286,20 @@ FUNCTION trueCount_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
-        lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_boolean: if bool0^.value then exit(literalRecycler.newIntLiteral(1)) else exit(literalRecycler.newIntLiteral(0));
         lt_booleanList: begin
           c:=0;
           for i:=0 to list0^.size-1 do if P_boolLiteral(list0^.value[i])^.value then inc(c);
-          exit(newIntLiteral(c));
+          exit(literalRecycler.newIntLiteral(c));
         end;
         lt_booleanSet: begin
           trueLit:=newBoolLiteral(true);
           if set0^.contains(trueLit)
-          then result:=newIntLiteral(1)
-          else result:=newIntLiteral(0);
-          disposeLiteral(trueLit);
+          then result:=literalRecycler.newIntLiteral(1)
+          else result:=literalRecycler.newIntLiteral(0);
+          literalRecycler.disposeLiteral(trueLit);
         end;
-        lt_emptyList,lt_emptySet: exit(newIntLiteral(0));
+        lt_emptyList,lt_emptySet: exit(literalRecycler.newIntLiteral(0));
       end;
     end;
   end;
@@ -309,7 +309,7 @@ FUNCTION reverseList_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes) then begin
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       for i:=list0^.size-1 downto 0 do listResult^.append(list0^.value[i],true);
     end;
   end;
@@ -330,7 +330,7 @@ FUNCTION isSubsetOf_imp   intFuncSignature;
           begin
             iter:=compound0^.iteratableList;
             for a in iter do allContained:=allContained and list1^.contains(a);
-            disposeLiteral(iter);
+            literalRecycler.disposeLiteral(iter);
             result:=newBoolLiteral(allContained);
           end;
         lt_emptyList,lt_emptySet,lt_emptyMap:
@@ -378,22 +378,22 @@ FUNCTION getAll_imp intFuncSignature;
         if got<>nil then begin
           if got^.literalType<>lt_void
           then collResult^.append(got,false)
-          else disposeLiteral(got);
-        end else disposeLiteral(result);
+          else literalRecycler.disposeLiteral(got);
+        end else literalRecycler.disposeLiteral(result);
       end;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end else if (params<>nil) and (params^.size=3) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_listTypes) and (arg2^.literalType in C_listTypes) and (list1^.size=list2^.size) then begin
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       for i:=0 to list1^.size-1 do if result<>nil then begin
         got:=compound0^.get(list1^.value[i]);
         if got<>nil then begin
           if got^.literalType<>lt_void
           then collResult^.append(got,false)
           else begin
-            disposeLiteral(got);
+            literalRecycler.disposeLiteral(got);
             collResult^.append(list2^.value[i],true);
           end;
-        end else disposeLiteral(result);
+        end else literalRecycler.disposeLiteral(result);
       end;
     end;
   end;
@@ -426,7 +426,7 @@ FUNCTION indexOf_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_booleanList,lt_emptyList]) then begin
-      result:=newListLiteral;
+      result:=literalRecycler.newListLiteral;
       with list0^ do for i:=0 to size-1 do if P_boolLiteral(list0^.value[i])^.value then listResult^.appendInt(i);
     end;
   end;
@@ -447,11 +447,11 @@ FUNCTION cross_impl intFuncSignature;
     begin
       if not(memoryCleaner.isMemoryInComfortZone) or memoryPanic then begin
         memoryPanic:=true;
-        disposeLiteral(resultList);
+        literalRecycler.disposeLiteral(resultList);
         exit;
       end;
       if index>=params^.size then begin
-        resultElement:=newListLiteral(length(lit));
+        resultElement:=literalRecycler.newListLiteral(length(lit));
         for l in lit do resultElement^.append(l,true);
         resultList^.append(resultElement,false);
       end else begin
@@ -464,7 +464,7 @@ FUNCTION cross_impl intFuncSignature;
           subLit[k]:=l;
           recurseBuild(index+1,subLit);
         end;
-        disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
       end;
     end;
 
@@ -479,7 +479,7 @@ FUNCTION cross_impl intFuncSignature;
         then resultSize:=resultSize*P_compoundLiteral(params^.value[i])^.size
         else allCompound:=false;
       if not(allCompound) then exit(nil);
-      resultList:=newListLiteral(resultSize);
+      resultList:=literalRecycler.newListLiteral(resultSize);
       setLength(emptyList,0);
       recurseBuild(0,emptyList);
       result:=resultList;
@@ -514,7 +514,7 @@ FUNCTION group_imp intFuncSignature;
           hasError:=true;
         end;
       end;
-      disposeLiteral(dummy);
+      literalRecycler.disposeLiteral(dummy);
     end;
 
   PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); {$ifndef debugMode} inline; {$endif}
@@ -525,7 +525,7 @@ FUNCTION group_imp intFuncSignature;
       resultLiteral:=groupMap.get(groupKey,nil);
       if aggregator=nil then begin
         if resultLiteral=nil then begin
-          resultLiteral:=newListLiteral;
+          resultLiteral:=literalRecycler.newListLiteral;
           groupMap.put(groupKey,resultLiteral);
         end;
         P_listLiteral(resultLiteral)^.append(L,true);
@@ -535,7 +535,7 @@ FUNCTION group_imp intFuncSignature;
         end else begin
           newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,@recycler,resultLiteral,L).literal;
           if newLit<>nil then begin
-            disposeLiteral(resultLiteral);
+            literalRecycler.disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
           end else begin
             context.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
@@ -570,10 +570,10 @@ FUNCTION group_imp intFuncSignature;
       groupMap.create(100);
       for inputIndex:=0 to length(keyList)-1 do if context.messages^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
-      disposeLiteral(keyList);
+      literalRecycler.disposeLiteral(keyList);
 
       groupList:=groupMap.keyValueList;
-      result:=newMapLiteral(groupMap.fill);
+      result:=literalRecycler.newMapLiteral(groupMap.fill);
       for groupEntry in groupList do mapResult^.put(groupEntry.key^.rereferenced,
                                                     groupEntry.value,
                                                     false);
@@ -629,7 +629,7 @@ FUNCTION groupToList_imp intFuncSignature;
             else begin
               temp:=aggregator^.evaluateToLiteral(tokenLocation,@context,@recycler,resultValues[key],valueList[i]).literal;
               if temp<>nil then begin
-                disposeLiteral(resultValues[key]);
+                literalRecycler.disposeLiteral(resultValues[key]);
                 resultValues[key]:=temp;
               end else begin
                 context.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
@@ -643,15 +643,15 @@ FUNCTION groupToList_imp intFuncSignature;
         end;
       end;
       if allOkay then begin
-        result:=newListLiteral(length(resultValues));
+        result:=literalRecycler.newListLiteral(length(resultValues));
         for temp in resultValues do
           if temp=nil
           then listResult^.append(defaultValue,true)
           else listResult^.append(temp,false);
       end;
       setLength(resultValues,0);
-      disposeLiteral(valueList);
-      disposeLiteral(keyList);
+      literalRecycler.disposeLiteral(valueList);
+      literalRecycler.disposeLiteral(keyList);
     end;
   end;
 

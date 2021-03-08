@@ -106,7 +106,7 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
 {$MACRO ON}
 {$define processX:=
 begin
-  indexLiteral:=newIntLiteral(eachIndex);
+  indexLiteral:=literalRecycler.newIntLiteral(eachIndex);
   for rule in rulesList do if proceed then begin
     aggregator^.addToAggregation(
       rule^.evaluateToLiteral(eachLocation,@context,@recycler,x,indexLiteral),
@@ -116,7 +116,7 @@ begin
     proceed:=context.messages^.continueEvaluation and not(aggregator^.earlyAbort);
   end;
   inc(eachIndex);
-  disposeLiteral(indexLiteral);
+  literalRecycler.disposeLiteral(indexLiteral);
 end}
 
   VAR rule:P_expressionLiteral;
@@ -130,14 +130,14 @@ end}
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
         processX;
-        disposeLiteral(x);
+        literalRecycler.disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
       end;
-      if x<>nil then disposeLiteral(x);
+      if x<>nil then literalRecycler.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
       for x in iter do if proceed then processX;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end else begin
       x:=input;
       processX;
@@ -224,14 +224,14 @@ end}
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
         processX;
-        disposeLiteral(x);
+        literalRecycler.disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,@context,@recycler,nil,nil).literal;
       end;
-      if x<>nil then disposeLiteral(x);
+      if x<>nil then literalRecycler.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
       for x in iter do if proceed then processX;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end else begin
       x:=input;
       processX;
@@ -256,25 +256,25 @@ FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
       isExpressionNullary:boolean;
   begin
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
-    result:=newListLiteral();
+    result:=literalRecycler.newListLiteral();
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       if isExpressionNullary then while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
         result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal,false);
-        disposeLiteral(x);
+        literalRecycler.disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end else while (x<>nil) and (x^.literalType<>lt_void) and (context.messages^.continueEvaluation) do begin
         result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,x  ,nil).literal,false);
-        disposeLiteral(x);
+        literalRecycler.disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal;
       end;
-      if x<>nil then disposeLiteral(x);
+      if x<>nil then literalRecycler.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
       if isExpressionNullary
       then begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil,nil).literal,false); end
       else begin for x in iter do if (context.continueEvaluation) then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,x  ,nil).literal,false); end;
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end else begin
       if isExpressionNullary
       then result^.append(expr^.evaluateToLiteral(mapLocation,@context,@recycler,nil  ,nil).literal,false)
@@ -290,17 +290,17 @@ FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpres
   begin
     case input^.literalType of
       lt_emptyList,lt_emptySet,lt_emptyMap                                       : exit(P_compoundLiteral(input^.rereferenced));
-      lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: result:=newListLiteral;
-      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : result:=newSetLiteral(0);
-      else result:=newListLiteral;
+      lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList: result:=literalRecycler.newListLiteral;
+      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet : result:=literalRecycler.newSetLiteral(0);
+      else result:=literalRecycler.newListLiteral;
     end;
     iter:=input^.iteratableList;
     for x in iter do if context.continueEvaluation and filterExpression^.evaluateToBoolean(filterLocation,@context,@recycler,true,x,nil) then P_collectionLiteral(result)^.append(x,true);
-    disposeLiteral(iter);
+    literalRecycler.disposeLiteral(iter);
     if input^.literalType=lt_map then begin
       x:=result;
       result:=P_listLiteral(result)^.toMap(filterLocation,@context);
-      disposeLiteral(x);
+      literalRecycler.disposeLiteral(x);
     end;
   end;
 
@@ -312,16 +312,16 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       x:=P_expressionLiteral(input)^.evaluateToLiteral(location,@context,@recycler,nil,nil);
       while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) do begin
         aggregator^.addToAggregation(x,false,location,@context,recycler);
-        disposeLiteral(x.literal);
+        literalRecycler.disposeLiteral(x.literal);
         x:=P_expressionLiteral(input)^.evaluateToLiteral(location,@context,@recycler,nil,nil);
       end;
-      if x.literal<>nil then disposeLiteral(x.literal);
+      if x.literal<>nil then literalRecycler.disposeLiteral(x.literal);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.iteratableList;
       x.reasonForStop:=rr_ok;
       for x.literal in iter do if (x.literal^.literalType<>lt_void) and context.messages^.continueEvaluation and not(aggregator^.earlyAbort) then
         aggregator^.addToAggregation(x,false,location,@context,recycler);
-      disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
     end else begin
       x.reasonForStop:=rr_ok;
       x.literal:=input;
@@ -346,7 +346,7 @@ PROCEDURE T_futureTask.evaluate(VAR recycler:T_recycler);
   begin
     context^.beginEvaluation;
     payload^.executeInContext(context,recycler);
-    disposeLiteral(payload);
+    literalRecycler.disposeLiteral(payload);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -363,7 +363,7 @@ PROCEDURE T_filterTask.evaluate(VAR recycler:T_recycler);
       then mapTaskResult:=mapParameter^.rereferenced
       else mapTaskResult:=nil;
     end else mapTaskResult:=nil;
-    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    if mapPayload.mapParameter<>nil then literalRecycler.disposeLiteral(mapPayload.mapParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -381,13 +381,13 @@ PROCEDURE T_mapTask.evaluate(VAR recycler:T_recycler);
     then with mapPayload do mapTaskResult:=mapRule^.evaluateToLiteral(location,context,@recycler,mapParameter,nil).literal
     else mapTaskResult:=nil;
     if mapPayload.mapParameter<>nil
-    then disposeLiteral(mapPayload.mapParameter);
+    then literalRecycler.disposeLiteral(mapPayload.mapParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
 DESTRUCTOR T_mapTask.destroy;
   begin
-    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    if mapPayload.mapParameter<>nil then literalRecycler.disposeLiteral(mapPayload.mapParameter);
     inherited destroy;
   end;
 
@@ -419,11 +419,11 @@ PROCEDURE T_eachTask.evaluate(VAR recycler:T_recycler);
     context^.beginEvaluation;
     evaluationResult.literal:=nil;
     if not(isCancelled) and context^.messages^.continueEvaluation then with payloads do begin
-      indexLiteral:=newIntLiteral(eachIndex);
+      indexLiteral:=literalRecycler.newIntLiteral(eachIndex);
       evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,context,@recycler,eachParameter,indexLiteral);
-      disposeLiteral(indexLiteral);
+      literalRecycler.disposeLiteral(indexLiteral);
     end;
-    if payloads.eachParameter<>nil then disposeLiteral(payloads.eachParameter);
+    if payloads.eachParameter<>nil then literalRecycler.disposeLiteral(payloads.eachParameter);
     context^.finalizeTaskAndDetachFromParent(@recycler);
   end;
 
@@ -471,9 +471,9 @@ DESTRUCTOR T_futureLiteral.destroy;
       sleep(1);
       enterCriticalSection(criticalSection);
     end;
-    disposeLiteral(func);
-    if param<>nil then disposeLiteral(param);
-    if resultValue<>nil then disposeLiteral(resultValue);
+    literalRecycler.disposeLiteral(func);
+    if param<>nil then literalRecycler.disposeLiteral(param);
+    if resultValue<>nil then literalRecycler.disposeLiteral(resultValue);
     leaveCriticalSection(criticalSection);
     doneCriticalSection(criticalSection);
   end;

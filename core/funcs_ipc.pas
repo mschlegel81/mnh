@@ -227,18 +227,18 @@ PROCEDURE T_myIpcServer.execute;
           response.payload :=nil;
           response.statusOk:=false;
         end;
-        if request.payload<>nil then disposeLiteral(request.payload);
+        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
           sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash);
-          if response.payload<>nil then disposeLiteral(response.payload);
+          if response.payload<>nil then literalRecycler.disposeLiteral(response.payload);
         finally
         end;
         //------------------------------------------------:respond
         result:=true;
       end else begin
-        if request.payload<>nil then disposeLiteral(request.payload);
+        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
         result:=false;
       end;
     end;
@@ -304,7 +304,7 @@ DESTRUCTOR T_myIpcServer.destroy;
         servingContextOrNil^.finalizeTaskAndDetachFromParent(nil);
         contextPool.disposeContext(servingContextOrNil);
       end;
-      if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
+      if servingExpressionOrNil<>nil then literalRecycler.disposeLiteral(servingExpressionOrNil);
       enterCriticalSection(localServerCs);
       localServers.dropKey(serverId);
       leaveCriticalSection(localServerCs);

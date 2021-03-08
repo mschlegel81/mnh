@@ -26,11 +26,11 @@ FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
     if not(context.checkSideEffects('random',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getGlobals^.prng.realRandom))
+    if (params=nil) or (params^.size=0) then exit(literalRecycler.newRealLiteral(context.getGlobals^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
       count:=int0^.intValue;
       if count>0 then begin
-        result:=newListLiteral;
+        result:=literalRecycler.newListLiteral;
         for i:=1 to count do listResult^.appendReal(context.getGlobals^.prng.realRandom);
         exit(result);
       end;
@@ -43,8 +43,8 @@ FUNCTION intRandom_imp intFuncSignature;
   FUNCTION singleIntRandom:P_abstractIntLiteral;
     begin
       if arg0^.literalType=lt_bigint
-      then result:=newIntLiteral(randomInt(@(context.getGlobals^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
-      else result:=newIntLiteral(context.getGlobals^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
+      then result:=literalRecycler.newIntLiteral(randomInt(@(context.getGlobals^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
+      else result:=literalRecycler.newIntLiteral(context.getGlobals^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
     end;
 
   begin
@@ -54,7 +54,7 @@ FUNCTION intRandom_imp intFuncSignature;
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
       count:=int1^.intValue;
       if count>=0 then begin
-        result:=newListLiteral;
+        result:=literalRecycler.newListLiteral;
         for i:=1 to count do listResult^.append(singleIntRandom,false);
         exit(result);
       end;
@@ -67,7 +67,7 @@ FUNCTION systime_imp intFuncSignature;
     if not(context.checkSideEffects('systime',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then exit(newRealLiteral(now));
+    then exit(literalRecycler.newRealLiteral(now));
   end;
 
 FUNCTION beep_imp intFuncSignature;
@@ -96,7 +96,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       driveType:=GetDriveType(PChar(DriveLetter));
       if not(driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK])
       then exit(nil);
-      infoMap:=newMapLiteral(5);
+      infoMap:=literalRecycler.newMapLiteral(5);
       case driveType of
         DRIVE_REMOVABLE: infoMap^.put('type','removable');
         DRIVE_FIXED:     infoMap^.put('type','fixed'    );
@@ -109,7 +109,7 @@ FUNCTION driveInfo_imp intFuncSignature;
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
       if VolumeFlags=0 then begin
-        disposeLiteral(infoMap);
+        literalRecycler.disposeLiteral(infoMap);
         exit(nil);
       end;
       setString(DriveLetter, Buf, StrLen(Buf));
@@ -125,7 +125,7 @@ FUNCTION driveInfo_imp intFuncSignature;
     if not(context.checkSideEffects('driveInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral(4);
+      result:=literalRecycler.newMapLiteral(4);
       for c:='A' to 'Z' do begin
         info:=infoForLetter(c);
         if info<>nil then mapResult^.put(c,info,false);
@@ -150,14 +150,14 @@ FUNCTION getEnv_impl intFuncSignature;
     if not(context.checkSideEffects('getEnv',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral(30);
+      result:=literalRecycler.newMapLiteral(30);
       for envString in getEnvironment do begin
         envTuple:=split(envString,'=');
         envKey:=envTuple[0];
         if length(envTuple)>=2 then begin
           envTuple:=split(envTuple[1],';');
           if length(envTuple)=1 then mapResult^.put(envKey,envTuple[0]) else begin
-            inner:=newListLiteral(length(envTuple));
+            inner:=literalRecycler.newListLiteral(length(envTuple));
             for envValue in envTuple do inner^.appendString(envValue);
             mapResult^.put(envKey,inner,false);
           end;
@@ -178,7 +178,7 @@ FUNCTION setExitCode_impl intFuncSignature;
 FUNCTION scriptTime_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('scriptTime',tokenLocation,[se_readContextState])) then exit(nil);
-    result:=newRealLiteral(context.wallclockTime);
+    result:=literalRecycler.newRealLiteral(context.wallclockTime);
   end;
 
 {$ifdef fullVersion}VAR timeLoc:P_intFuncCallback;{$endif}
@@ -207,11 +207,11 @@ FUNCTION time_imp intFuncSignature;
       context.callStackPop(nil);
       {$endif}
       if res<>nil then begin
-        result:=newMapLiteral(3)
+        result:=literalRecycler.newMapLiteral(3)
           ^.put('expression',arg0^.toString(100))
           ^.put('time',t );
         if res^.literalType<>lt_void then P_mapLiteral(result)^.put('result',res,false)
-                                     else disposeLiteral(res);
+                                     else literalRecycler.disposeLiteral(res);
       end;
     end;
   end;
@@ -251,7 +251,7 @@ FUNCTION getCPULoadPercentage_impl intFuncSignature;
   begin
     {$ifdef Windows}
     if not(context.checkSideEffects('getCPULoadPercentage',tokenLocation,[se_executingExternal])) then exit(nil);
-    result:=newIntLiteral(mySys.getCPULoadPercentage);
+    result:=literalRecycler.newIntLiteral(mySys.getCPULoadPercentage);
     {$else}
     context.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
@@ -267,8 +267,8 @@ FUNCTION getTaskInfo_impl intFuncSignature;
     {$ifdef Windows}
     if not(context.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     info:=mySys.getTaskInfo;
-    result:=newListLiteral(length(info));
-    for i in info do listResult^.append(newMapLiteral(5)
+    result:=literalRecycler.newListLiteral(length(info));
+    for i in info do listResult^.append(literalRecycler.newMapLiteral(5)
       ^.put('caption',i.caption)
       ^.put('commandLine',i.commandLine)
       ^.put('PID',i.pid)

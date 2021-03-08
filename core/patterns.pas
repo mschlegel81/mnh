@@ -212,7 +212,7 @@ FUNCTION T_patternElement.toCmdLineHelpStringString: ansistring;
           result:=result+P_stringLiteral(l)^.value;
         end;
         result:='['+result+']';
-        disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
         if id<>'' then result:='<'+id+'> in '+result;
       end else result:='<'+id+'>';
       else result:='<'+id+'>';
@@ -328,7 +328,7 @@ FUNCTION T_patternElement.hides(CONST e: T_patternElement): boolean;
 
 DESTRUCTOR T_patternElement.destroy;
   begin
-    if restrictionValue<>nil then disposeLiteral(restrictionValue);
+    if restrictionValue<>nil then literalRecycler.disposeLiteral(restrictionValue);
   end;
 
 FUNCTION T_patternElement.getBuiltinTypeCheck: T_typeCheck;
@@ -634,7 +634,7 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
 FUNCTION T_pattern.getParameterNames: P_listLiteral;
   VAR el:T_patternElement;
   begin
-    result:=newListLiteral(length(sig));
+    result:=literalRecycler.newListLiteral(length(sig));
     for el in sig do result^.appendString(el.id);
   end;
 

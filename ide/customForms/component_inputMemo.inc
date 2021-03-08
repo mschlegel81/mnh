@@ -33,7 +33,7 @@ PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key<>13) or not(ssShift in Shift) then exit;
-    if config.action<>nil then postAction(newStringLiteral(synMeta.editor.text));
+    if config.action<>nil then postAction(literalRecycler.newStringLiteral(synMeta.editor.text));
   end;
 
 FUNCTION T_inputEditorMeta.getName:string;

@@ -643,7 +643,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if parIdx>=0 then begin
               if parIdx=ALL_PARAMETERS_PAR_IDX then begin
                 if allParams=nil then begin
-                  allParams:=newListLiteral;
+                  allParams:=literalRecycler.newListLiteral;
                   if param<>nil then allParams^.appendAll(param);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
@@ -654,7 +654,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               end else if parIdx=REMAINING_PARAMETERS_IDX then begin
                 if remaining=nil then begin
                   if param=nil
-                  then remaining:=newListLiteral
+                  then remaining:=literalRecycler.newListLiteral
                   else remaining:=param^.tail(pattern.arity);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
@@ -845,20 +845,20 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       // generator+3 -> lazyMap(generator,{$x+3})
       LHSinstead:=newIdentityRule(P_context(threadContext)^,tokenLocation,recycler);
       new(newRule,createFromOp(LHSinstead,op,RHS,tokenLocation));
-      disposeLiteral(LHSinstead);
+      literalRecycler.disposeLiteral(LHSinstead);
       RHSinstead:=newRule; //={$x+3}
       result:=createLazyMap(P_expressionLiteral(LHS),P_expressionLiteral(RHSinstead),tokenLocation);
-      disposeLiteral(RHSinstead);
+      literalRecycler.disposeLiteral(RHSinstead);
       exit(result);
     end;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_iteratableExpressionTypes) and not(LHS^.literalType=lt_expression) then begin
       // 2^generator -> lazyMap(generator,{2^$x})
       RHSinstead:=newIdentityRule(P_context(threadContext)^,tokenLocation,recycler);
       new(newRule,createFromOp(LHS,op,RHSinstead,tokenLocation));
-      disposeLiteral(RHSinstead);
+      literalRecycler.disposeLiteral(RHSinstead);
       LHSinstead:=newRule; //={2^$x}
       result:=createLazyMap(P_expressionLiteral(RHS),P_expressionLiteral(LHSinstead),tokenLocation);
-      disposeLiteral(LHSinstead);
+      literalRecycler.disposeLiteral(LHSinstead);
       exit(result);
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
@@ -877,8 +877,8 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     new(newRule,createFromOp(LHSinstead,op,RHSinstead,tokenLocation));
     result:=newRule;
     if LHSinstead<>nil then
-    disposeLiteral(LHSinstead);
-    disposeLiteral(RHSinstead);
+    literalRecycler.disposeLiteral(LHSinstead);
+    literalRecycler.disposeLiteral(RHSinstead);
   end;
 
 FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
@@ -891,7 +891,7 @@ FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string;
   begin
     temp:=getEquivalentInlineExpression(P_context(threadContext)^,P_recycler(recycler)^);
     new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)^));
-    disposeLiteral(temp);
+    literalRecycler.disposeLiteral(temp);
   end;
 
 FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
@@ -900,10 +900,10 @@ FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId
   begin
     identity:=newIdentityRule(P_context(threadContext)^,funcLocation,P_recycler(recycler)^);
     mapper:=identity^.applyBuiltinFunction(intrinsicRuleId,funcLocation,threadContext,recycler);
-    disposeLiteral(identity);
+    literalRecycler.disposeLiteral(identity);
     if mapper=nil then exit(nil);
     result:=createLazyMap(@self,mapper,funcLocation);
-    disposeLiteral(mapper);
+    literalRecycler.disposeLiteral(mapper);
   end;
 
 PROCEDURE T_inlineExpression.validateSerializability(CONST messages:P_messages);
@@ -1015,11 +1015,11 @@ FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_context
 FUNCTION T_builtinExpression.getParameterNames: P_listLiteral;
   VAR i:longint;
   begin
-    result:=newListLiteral(arity.minPatternLength);
+    result:=literalRecycler.newListLiteral(arity.minPatternLength);
     for i:=0 to arity.minPatternLength-1 do result^.appendString('$'+intToStr(i));
   end;
 
-FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=newListLiteral(); end;
+FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=literalRecycler.newListLiteral(); end;
 
 FUNCTION newBuiltinExpression(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
   begin
@@ -1104,7 +1104,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       end;
     end;
     parameterList.destroy;
-    if evResult.literal<>nil then disposeLiteral(evResult.literal);
+    if evResult.literal<>nil then literalRecycler.disposeLiteral(evResult.literal);
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
@@ -1356,7 +1356,7 @@ FUNCTION T_inlineExpression.loadFromStream(CONST stream:P_inputStreamWrapper; CO
 
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   begin
-    result:=newMapLiteral(0);
+    result:=literalRecycler.newMapLiteral(0);
     P_mapLiteral(result)^.put('pattern' ,pattern.toString)^
                          .put('location',getLocation     )^
                          .put('type'    ,C_expressionTypeString[typ]);
@@ -1487,7 +1487,7 @@ PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_callAndIdInfos);
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;
   begin
-    result:=newMapLiteral(0);
+    result:=literalRecycler.newMapLiteral(0);
     for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
   end;
 
@@ -1608,7 +1608,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     VAR firstRep:P_token=nil;
     begin
       firstRep:=recycler.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
-      firstRep^.next:=recycler.newToken(location,'',tt_parList,newListLiteral(2)^.append(TList,true)^.append(f,true));
+      firstRep^.next:=recycler.newToken(location,'',tt_parList,literalRecycler.newListLiteral(2)^.append(TList,true)^.append(f,true));
       context.reduceExpression(firstRep,recycler);
       result:=context.messages^.continueEvaluation and
               (firstRep<>nil) and
@@ -1635,7 +1635,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
-      else if temp<>nil then disposeLiteral(temp);
+      else if temp<>nil then literalRecycler.disposeLiteral(temp);
       collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
     end;
@@ -1648,7 +1648,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       initialSampleCount:=(samples div 100)-1;
       if initialSampleCount< 5 then
          initialSampleCount:=5;
-      TList:=newListLiteral;
+      TList:=literalRecycler.newListLiteral;
       setLength(tRow,initialSampleCount+1);
       for sampleIndex:=0 to initialSampleCount do begin
         t:=t0+(t1-t0)*sampleIndex/initialSampleCount;
@@ -1679,7 +1679,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
-        TList:=newListLiteral;
+        TList:=literalRecycler.newListLiteral;
         for i:=0 to dataRow.size-2 do
         for j:=1 to refinementSteps[i] do begin
           t:=j/(refinementSteps[i]+1);
@@ -1728,9 +1728,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           newRow.free;
           oldRow.free;
           //------------------------------------------------------:Merge samples
-          disposeLiteral(resultLiteral);
+          literalRecycler.disposeLiteral(resultLiteral);
         end;
-        disposeLiteral(TList);
+        literalRecycler.disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
     end;
@@ -1749,11 +1749,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      disposeLiteral(resultLiteral);
-      disposeLiteral(TList);
+      literalRecycler.disposeLiteral(resultLiteral);
+      literalRecycler.disposeLiteral(TList);
       refineDataRow;
     end else begin
-      disposeLiteral(TList);
+      literalRecycler.disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
       context.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       oldMessages^.postCustomMessages(collector.getStoredMessages);
@@ -1772,7 +1772,7 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
+    then result:=literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;
@@ -1788,7 +1788,7 @@ FUNCTION tokenSplit_impl intFuncSignature;
         i:longint;
     begin
       sub:=P_subruleExpression(subruleLiteral);
-      result:=newListLiteral(length(sub^.preparedBody));
+      result:=literalRecycler.newListLiteral(length(sub^.preparedBody));
       for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
         if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
         then result^.append(token.data,true)
@@ -1812,7 +1812,7 @@ FUNCTION tokenSplit_impl intFuncSignature;
       lt_string:begin
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
-        result:=newListLiteral;
+        result:=literalRecycler.newListLiteral;
         for i:=0 to length(tokens)-1 do result:=listResult^.appendString(tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then

@@ -43,7 +43,7 @@ PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
       if (config.bindingTo<>'') then begin
-        if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+        if state.bindingValue<>nil then literalRecycler.disposeLiteral(state.bindingValue);
         state.bindingValue:=newBoolLiteral(checkbox.checked);
         propagateCursor(getCustomForm,crHourGlass);
       end;

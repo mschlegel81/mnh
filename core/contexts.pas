@@ -782,7 +782,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
         parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
         if parameterIndex<0 then begin
           if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-            newValue:=newListLiteral(length(mainParameters)+1);
+            newValue:=literalRecycler.newListLiteral(length(mainParameters)+1);
             P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
             for s in mainParameters do P_listLiteral(newValue)^.appendString(s);
           end else begin
@@ -790,9 +790,9 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
             exit;
           end;
         end else if parameterIndex=0 then
-          newValue:=newStringLiteral(first^.location.package^.getPath)
+          newValue:=literalRecycler.newStringLiteral(first^.location.package^.getPath)
         else if parameterIndex<=length(mainParameters) then
-          newValue:=newStringLiteral(mainParameters[parameterIndex-1])
+          newValue:=literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
         else
           newValue:=newVoidLiteral;
         first^.data:=newValue;

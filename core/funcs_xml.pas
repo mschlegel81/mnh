@@ -20,20 +20,20 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
 
     begin
       if (node.NodeType=TEXT_NODE) or
-         (node.NodeType=CDATA_SECTION_NODE) then exit(newStringLiteral(UTF16ToUTF8(node.NodeValue)));
-      result:=newMapLiteral(3);
+         (node.NodeType=CDATA_SECTION_NODE) then exit(literalRecycler.newStringLiteral(UTF16ToUTF8(node.NodeValue)));
+      result:=literalRecycler.newMapLiteral(3);
       P_mapLiteral(result)^.put('name',UTF16ToUTF8(node.NodeName));
       if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put('type',node.NodeType);
       if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put('value',UTF16ToUTF8(node.NodeValue));
       if Assigned(node.attributes) and (node.attributes.length>0) then begin
-        attributesMap:=newMapLiteral(node.attributes.length);
+        attributesMap:=literalRecycler.newMapLiteral(node.attributes.length);
         for j:=0 to node.attributes.length-1 do
          attributesMap^.put(UTF16ToUTF8(node.attributes[j].NodeName),
                             UTF16ToUTF8(node.attributes[j].NodeValue));
         P_mapLiteral(result)^.put('attributes',attributesMap,false);
       end;
       if Assigned(node.ChildNodes) and (node.ChildNodes.length>0) then begin
-        childList:=newListLiteral(node.ChildNodes.count);
+        childList:=literalRecycler.newListLiteral(node.ChildNodes.count);
         for j:=0 to node.ChildNodes.count-1 do childList^.append(readNode(node.ChildNodes[j]),false);
         P_mapLiteral(result)^.put('children',childList,false);
       end;
@@ -42,7 +42,7 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
   VAR i:longint;
   begin
     if Assigned(FDoc) then begin
-      result:=newListLiteral();
+      result:=literalRecycler.newListLiteral();
       for i:=0 to FDoc.ChildNodes.count-1 do result^.append(readNode(FDoc.ChildNodes[i]),false);
       FreeAndNil(FDoc);
     end else result:=nil;

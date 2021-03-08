@@ -66,7 +66,7 @@ CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchT
 DESTRUCTOR T_echoOutMessage.destroy;
   begin
     enterCriticalSection(messageCs);
-    disposeLiteral(literal);
+    literalRecycler.disposeLiteral(literal);
     leaveCriticalSection(messageCs);
     inherited;
   end;

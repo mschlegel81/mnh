@@ -66,7 +66,7 @@ CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValu
 DESTRUCTOR T_namedVariable.destroy;
   begin
     enterCriticalSection(varCs);
-    if value<>nil then disposeLiteral(value);
+    if value<>nil then literalRecycler.disposeLiteral(value);
     leaveCriticalSection(varCs);
     doneCriticalSection(varCs);
   end;
@@ -76,7 +76,7 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     if readonly then raise Exception.create('Mutation of constant "'+id+'" is not allowed.');
     enterCriticalSection(varCs);
     try
-      disposeLiteral(value);
+      literalRecycler.disposeLiteral(value);
       value:=newValue;
       value^.rereference;
     finally
@@ -180,7 +180,7 @@ PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:P_literal
 PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean=true);
   VAR lit:P_abstractIntLiteral;
   begin
-    lit:=newIntLiteral(value);
+    lit:=literalRecycler.newIntLiteral(value);
     createVariable(id,lit,readonly);
     lit^.unreference;
   end;

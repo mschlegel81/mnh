@@ -364,7 +364,7 @@ PROCEDURE T_ruleMap.clear;
   VAR i:longint;
   begin
     inherited clear;
-    for i:=0 to length(afterRules)-1 do disposeLiteral(afterRules[i]);
+    for i:=0 to length(afterRules)-1 do literalRecycler.disposeLiteral(afterRules[i]);
     setLength(afterRules,0);
     {$ifdef fullVersion}
     suppressAllUnusedWarnings:=false;
@@ -594,10 +594,10 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
       entryForId.value     :=newVar;
       if subRule<>nil then begin
         variableValue:=subRule^.getInlineValue;
-        disposeLiteral(subRule);
+        literalRecycler.disposeLiteral(subRule);
         if variableValue<>nil then begin
           newVar^.setMutableValue(variableValue,true);
-          disposeLiteral(variableValue);
+          literalRecycler.disposeLiteral(variableValue);
         end;
       end;
       put(ruleId,entryForId);
@@ -670,7 +670,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
       tt_userRule:       declareRule;
       tt_globalVariable: declareVariable;
       tt_customType:     declareType;
-    end else if subRule<>nil then disposeLiteral(subRule);
+    end else if subRule<>nil then literalRecycler.disposeLiteral(subRule);
   end;
 
 FUNCTION T_ruleMap.getLocalMain: P_rule;
@@ -736,7 +736,7 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages; CONST resolveIdCo
 FUNCTION T_ruleMap.inspect(VAR context:T_context; VAR recycler:T_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
   VAR entry:T_ruleMapEntry;
   begin
-    result:=newMapLiteral(size);
+    result:=literalRecycler.newMapLiteral(size);
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
       tt_userRule:
         result^.put(entry.value^.getId,P_rule(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
@@ -883,7 +883,7 @@ FUNCTION T_ruleWithSubrules.canCurry(CONST callLocation: T_tokenLocation; CONST 
         output.last:=output.last^.next;
         result:=true;
       end;
-      disposeLiteral(parHead);
+      literalRecycler.disposeLiteral(parHead);
     end;
   end;
 
@@ -896,12 +896,12 @@ FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p
       exit(nil);
     end;
     inc(P_context(context)^.callDepth);
-    parList:=P_listLiteral(newListLiteral(2)^.append(p1,true)^.append(p2,true));
+    parList:=P_listLiteral(literalRecycler.newListLiteral(2)^.append(p1,true)^.append(p2,true));
     if canBeApplied(callLocation,parList,rep,context,recycler)
     then result:=P_context(context)^.reduceToLiteral(rep.first,recycler).literal
     else result:=nil;
     dec(P_context(context)^.callDepth);
-    disposeLiteral(parList);
+    literalRecycler.disposeLiteral(parList);
   end;
 
 FUNCTION T_rule.evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal;
@@ -1069,7 +1069,7 @@ CONSTRUCTOR T_datastore.create(CONST ruleId: T_idString; CONST startAt:T_tokenLo
 DESTRUCTOR T_ruleWithSubrules.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(subrules)-1 do disposeLiteral(subrules[i]);
+    for i:=0 to length(subrules)-1 do literalRecycler.disposeLiteral(subrules[i]);
     setLength(subrules,0);
     inherited destroy;
   end;
@@ -1122,7 +1122,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       setLength(subrules,i+1);
       for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
     end else begin
-      disposeLiteral(subrules[i]);
+      literalRecycler.disposeLiteral(subrules[i]);
       if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
       then context.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
     end;
@@ -1156,7 +1156,7 @@ PROCEDURE T_typeCheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
         inlineValue:=rule^.getInlineValue;
         if inlineValue<>nil then begin
           alwaysTrue:=boolLit[true].equals(inlineValue);
-          disposeLiteral(inlineValue);
+          literalRecycler.disposeLiteral(inlineValue);
         end;
       end else alwaysTrue:=false;
       new(typedef,create(getId,
@@ -1294,7 +1294,7 @@ FUNCTION T_protectedRuleWithSubrules.canBeApplied(CONST callLocation:T_tokenLoca
 FUNCTION T_memoizedRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean;
 {$MACRO ON}
 {$define CLEAN_EXIT:=
-if param=nil then disposeLiteral(useParam);
+if param=nil then literalRecycler.disposeLiteral(useParam);
 exit}
   VAR lit:P_literal;
       useParam:P_listLiteral;
@@ -1312,7 +1312,7 @@ exit}
     VAR newFirst,t:P_token;
     begin
       newFirst      :=recycler.newToken(output.first^.location, getId+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=recycler.newToken(output.first^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
+      newFirst^.next:=recycler.newToken(output.first^.location, '', tt_parList_constructor,literalRecycler.newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
       t       ^.next:=output.first;
       output.first:=newFirst;
       output.last^.next:=recycler.newToken(output.first^.location, '', tt_braceClose);
@@ -1322,7 +1322,7 @@ exit}
   begin
     initialize(output);
     result:=false;
-    if param=nil then useParam:=newListLiteral
+    if param=nil then useParam:=literalRecycler.newListLiteral
                  else useParam:=param;
     lit:=cache.get(useParam);
     if lit<>nil then begin
@@ -1366,14 +1366,14 @@ FUNCTION T_typeCastRule.canBeApplied(CONST callLocation:T_tokenLocation; CONST p
       raw:=P_context(context)^.reduceToLiteral(output.first,recycler).literal;
       dec(P_context(context)^.callDepth);
       if not(P_context(context)^.messages^.continueEvaluation) then begin
-        if raw<>nil then disposeLiteral(raw);
+        if raw<>nil then literalRecycler.disposeLiteral(raw);
         exit(false);
       end;
     end else if (param<>nil) and (param^.size=1)
     then raw:=param^.value[0]^.rereferenced
     else exit(false);
     cast:=typedef^.cast(raw,callLocation,context,@recycler);
-    disposeLiteral(raw);
+    literalRecycler.disposeLiteral(raw);
     if cast=nil then exit(false)
     else begin
       result:=true;
@@ -1442,9 +1442,9 @@ FUNCTION T_datastore.getValue(VAR context:T_context; VAR recycler:T_recycler):P_
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
   begin
-    result:=newMapLiteral(3)^
-      .put('type'    ,newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put('location',newStringLiteral(getLocation                ),false);
+    result:=literalRecycler.newMapLiteral(3)^
+      .put('type'    ,literalRecycler.newStringLiteral(C_ruleTypeText[getRuleType]),false)^
+      .put('location',literalRecycler.newStringLiteral(getLocation                ),false);
   end;
 
 FUNCTION T_delegatorRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_context; VAR recycler:T_recycler):P_mapLiteral;
@@ -1458,7 +1458,7 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
     begin
-      result:=newListLiteral(length(subrules));
+      result:=literalRecycler.newListLiteral(length(subrules));
       for sub in subrules do result^.append(sub^.inspect,false);
     end;
 
@@ -1480,8 +1480,8 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR contex
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
     begin
-      result:=newListLiteral(length(subrules)+1);
-      result^.append(newMapLiteral(5)^
+      result:=literalRecycler.newListLiteral(length(subrules)+1);
+      result^.append(literalRecycler.newMapLiteral(5)^
         .put('pattern'   ,'()'           )^
         .put('location'  ,getLocation    )^
         .put('type'      ,privateOrPublic)^
@@ -1506,10 +1506,10 @@ FUNCTION T_variable.inspect(CONST includeFunctionPointer: boolean;
     end;
 
   begin
-    result:=newMapLiteral(4)^
-      .put('type'      ,newStringLiteral(privateOrPublic+' '+C_varTypeText[varType]),false)^
-      .put('location'  ,newStringLiteral(getLocation ),false)^
-      .put('comment'   ,newStringLiteral(meta.comment),false)^
+    result:=literalRecycler.newMapLiteral(4)^
+      .put('type'      ,literalRecycler.newStringLiteral(privateOrPublic+' '+C_varTypeText[varType]),false)^
+      .put('location'  ,literalRecycler.newStringLiteral(getLocation ),false)^
+      .put('comment'   ,literalRecycler.newStringLiteral(meta.comment),false)^
       .put('attributes',meta.getAttributesLiteral,false);
   end;
 
@@ -1682,7 +1682,7 @@ FUNCTION T_datastore.writeBack(CONST adapters:P_messages):boolean;
     if adapters^.continueEvaluation and (state=vs_modified) then begin
       L:=namedValue.getValue;
       dataStoreMeta.writeValue(L,getLocation,adapters,varType=vt_plainDatastore);
-      disposeLiteral(L);
+      literalRecycler.disposeLiteral(L);
       state:=vs_inSyncWithFile;
       result:=true;
     end else result:=false;

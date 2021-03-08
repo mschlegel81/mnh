@@ -151,10 +151,10 @@ PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
 FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
   VAR keyLit:P_literal;
   begin
-    keyLit:=newStringLiteral(key);
+    keyLit:=literalRecycler.newStringLiteral(key);
     result:=map^.get(keyLit);
-    disposeLiteral(keyLit);
-    if result^.literalType=lt_void then disposeLiteral(result);
+    literalRecycler.disposeLiteral(keyLit);
+    if result^.literalType=lt_void then literalRecycler.disposeLiteral(result);
   end;
 
 OPERATOR:=(x:T_listLiteral):T_arrayOfString;
@@ -206,7 +206,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       for k in keys do if not(isConsidered(k)) then begin
         context.messages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
       end;
-      disposeLiteral(keys);
+      literalRecycler.disposeLiteral(keys);
     end;
 
   VAR tmp:P_literal;
@@ -241,7 +241,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
           lt_expression: config.caption:=P_expressionLiteral(tmp);
           lt_string    : begin
             state .caption:=P_stringLiteral(tmp)^.value;
-            disposeLiteral(tmp);
+            literalRecycler.disposeLiteral(tmp);
           end
           else context.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
         end;
@@ -262,7 +262,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
           config.bindingTo:=P_stringLiteral(tmp)^.value;
           state.bindingValue:=context.valueScope^.getVariableValue(config.bindingTo);
         end else context.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
-        disposeLiteral(tmp);
+        literalRecycler.disposeLiteral(tmp);
       end;
 
       raiseUnusedKeyWarning;
@@ -281,7 +281,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
   begin
     if (config.action=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     try
-      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
+      if state.actionParameter<>nil then literalRecycler.disposeLiteral(state.actionParameter);
       state.actionParameter:=param;
       state.actionTriggered:=true;
       propagateCursor(getCustomForm,crHourGlass);
@@ -309,13 +309,13 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
           end else begin
             if tmp^.equals(state.bindingValue) then begin
-              disposeLiteral(tmp);
+              literalRecycler.disposeLiteral(tmp);
             end else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
               {$endif}
               result:=true;
-              disposeLiteral(tmp);
+              literalRecycler.disposeLiteral(tmp);
               context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
             end;
           end;
@@ -323,12 +323,12 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
           tmp:=context.valueScope^.getVariableValue(config.bindingTo);
           if tmp<>nil then begin
             if tmp^.equals(state.bindingValue)
-            then  disposeLiteral(tmp)
+            then  literalRecycler.disposeLiteral(tmp)
             else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
               {$endif}
-              disposeLiteral(state.bindingValue);
+              literalRecycler.disposeLiteral(state.bindingValue);
               state.bindingValue:=tmp;
               result:=true;
             end;
@@ -343,8 +343,8 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
         then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
         else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
-        if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-        if tmp                  <>nil then disposeLiteral(tmp);
+        if state.actionParameter<>nil then literalRecycler.disposeLiteral(state.actionParameter);
+        if tmp                  <>nil then literalRecycler.disposeLiteral(tmp);
         state.actionTriggered:=false;
         result:=true;
       end;
@@ -368,7 +368,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
           if tmp^.literalType=lt_string
           then state.caption:=P_stringLiteral(tmp)^.value
           else state.caption:=tmp^.toString();
-          disposeLiteral(tmp);
+          literalRecycler.disposeLiteral(tmp);
         end;
         result:=result or (oldCaption<>state.caption);
       end;
@@ -381,12 +381,12 @@ DESTRUCTOR T_guiElementMeta.destroy;
   begin
     enterCriticalSection(elementCs);
     try
-      if config.action  <>nil then disposeLiteral(config.action );
-      if config.caption <>nil then disposeLiteral(config.caption);
-      if config.enabled <>nil then disposeLiteral(config.enabled);
+      if config.action  <>nil then literalRecycler.disposeLiteral(config.action );
+      if config.caption <>nil then literalRecycler.disposeLiteral(config.caption);
+      if config.enabled <>nil then literalRecycler.disposeLiteral(config.enabled);
       state.actionTriggered:=false;
-      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-      if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
+      if state.actionParameter<>nil then literalRecycler.disposeLiteral(state.actionParameter);
+      if state.bindingValue   <>nil then literalRecycler.disposeLiteral(state.bindingValue);
     finally
       leaveCriticalSection(elementCs);
       doneCriticalSection(elementCs);
@@ -516,14 +516,14 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
       componentTypeLiteral:=mapGet(def,key[dmk_type]);
       if (componentTypeLiteral=nil) or (componentTypeLiteral^.literalType<>lt_string) then begin
         setupContext^.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
-        if componentTypeLiteral<>nil then disposeLiteral(componentTypeLiteral);
+        if componentTypeLiteral<>nil then literalRecycler.disposeLiteral(componentTypeLiteral);
         exit(tc_error);
       end;
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
         setupContext^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel","grid"]',setupLocation);
-      disposeLiteral(componentTypeLiteral);
+      literalRecycler.disposeLiteral(componentTypeLiteral);
     end;
 
   PROCEDURE addMeta(CONST m:P_guiElementMeta);
@@ -552,12 +552,12 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
         if panelContents=nil then begin end
         else if panelContents^.literalType=lt_list then begin
           iter:=P_listLiteral(panelContents)^.iteratableList;
-          disposeLiteral(panelContents);
+          literalRecycler.disposeLiteral(panelContents);
           for panelContents in iter do if setupContext^.messages^.continueEvaluation then initComponent(targetPanel,panelContents);
-          disposeLiteral(iter);
+          literalRecycler.disposeLiteral(iter);
         end else begin
           setupContext^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
-          disposeLiteral(panelContents);
+          literalRecycler.disposeLiteral(panelContents);
         end;
       end;
 

@@ -433,7 +433,7 @@ CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLoc
 DESTRUCTOR T_variableLexer.destroy;
   begin
     inherited;
-    disposeLiteral(data);
+    literalRecycler.disposeLiteral(data);
   end;
 
 { T_singleStringLexer }
@@ -1483,7 +1483,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=newStringLiteral(join(lines,C_lineBreakChar));
+      result^.data:=literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
       setLength(lines,0);
       exit(result);
     end;
@@ -1536,7 +1536,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           end;
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=newStringLiteral(stringValue);
+          result^.data:=literalRecycler.newStringLiteral(stringValue);
         end;
         stringValue:='';
       end;
@@ -1555,8 +1555,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
-          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=newRealLiteral(Nan);      end
-          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=newRealLiteral(infinity); end
+          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(Nan);      end
+          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
@@ -1836,7 +1836,7 @@ FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST conte
     {$ifdef fullVersion}
     if functionCallInfos<>nil then new(functionCallInfos,create);
     {$endif}
-    result:=newMapLiteral(0);
+    result:=literalRecycler.newMapLiteral(0);
   end;
 
 FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; VAR recycler: T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
