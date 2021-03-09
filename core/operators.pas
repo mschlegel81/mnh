@@ -963,12 +963,9 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         lt_boolean..lt_string: exit(recycler.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+1)^
                                     .appendAll(@recycler.literalRecycler,P_listLiteral(LHS))^
                                     .append   (@recycler.literalRecycler,RHS,true));
-        lt_list..lt_emptySet:  exit(recycler.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
+        lt_list..lt_emptyMap:  exit(recycler.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
                                     .appendAll(@recycler.literalRecycler,P_listLiteral(LHS))^
-                                    .appendAll(@recycler.literalRecycler,P_collectionLiteral(RHS)));
-        lt_map,lt_emptyMap:    exit(recycler.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
-                                    .appendAll(@recycler.literalRecycler,P_listLiteral(LHS))^
-                                    .appendMap(@recycler.literalRecycler,P_mapLiteral(RHS)));
+                                    .appendAll(@recycler.literalRecycler,P_compoundLiteral(RHS)));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
         defaultRHSCases;
@@ -978,12 +975,9 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         lt_list..lt_emptyList: exit(recycler.literalRecycler.newListLiteral^
                                     .appendAll(@recycler.literalRecycler,P_setLiteral (LHS))^
                                     .appendAll(@recycler.literalRecycler,P_listLiteral(RHS)));
-        lt_set ..lt_emptySet : exit(recycler.literalRecycler.newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
+        lt_set ..lt_emptyMap : exit(recycler.literalRecycler.newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
                                     .appendAll(@recycler.literalRecycler,P_setLiteral  (LHS))^
-                                    .appendAll(@recycler.literalRecycler,P_setLiteral  (RHS)));
-        lt_map ..lt_emptyMap : exit(recycler.literalRecycler.newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
-                                    .appendAll(@recycler.literalRecycler,P_setLiteral  (LHS))^
-                                    .appendMap(@recycler.literalRecycler,P_mapLiteral  (RHS)));
+                                    .appendAll(@recycler.literalRecycler,P_compoundLiteral(RHS)));
       end;
       lt_map..lt_emptyMap: case RHS^.literalType of
         defaultRHSCases;
@@ -991,7 +985,7 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
                                    .putAll(@recycler.literalRecycler,P_mapLiteral(LHS))^
                                    .putAll(@recycler.literalRecycler,P_mapLiteral(RHS)));
         lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(@recycler.literalRecycler,true)^
-                                   .appendMap(@recycler.literalRecycler,P_mapLiteral(LHS))^
+                                   .appendAll(@recycler.literalRecycler,P_mapLiteral(LHS))^
                                    .appendAll(@recycler.literalRecycler,P_setLiteral(RHS)));
       end;
     end;

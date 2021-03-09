@@ -107,7 +107,7 @@ FUNCTION ask_impl intFuncSignature;
     if (params<>nil) and
        (params^.size = 1) and
        (arg0^.literalType = lt_string)
-    then result:=literalRecycler.newStringLiteral(ask(str0^.value,context.messages))
+    then result:=recycler.literalRecycler.newStringLiteral(ask(str0^.value,context.messages))
     else if (params<>nil) and (params^.size = 2) and
             (arg0^.literalType = lt_string) and
             (arg1^.literalType = lt_stringList) then begin
@@ -117,8 +117,8 @@ FUNCTION ask_impl intFuncSignature;
         iter:=list1^.iteratableList;
         setLength(opt,length(iter));
         for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(iter[i])^.value;
-        literalRecycler.disposeLiteral(iter);
-        result:=literalRecycler.newStringLiteral(ask(str0^.value, opt,context.messages));
+        recycler.literalRecycler.disposeLiteral(iter);
+        result:=recycler.literalRecycler.newStringLiteral(ask(str0^.value, opt,context.messages));
       finally
         system.leaveCriticalSection(cs);
       end;

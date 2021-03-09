@@ -184,7 +184,7 @@ FUNCTION getMnhInfo:T_arrayOfString;
     recycler.initRecycler;
     globals.create(nil);
     L:=mnhInfo_imp(nil,pseudoLoc,globals.primaryContext,recycler);
-    result:=serializeToStringList(recycler.literalRecycler,L,pseudoLoc,nil);
+    result:=serializeToStringList(L,pseudoLoc,nil);
     recycler.literalRecycler.disposeLiteral(L);
     globals.destroy;
     recycler.cleanup;

@@ -12,7 +12,7 @@ USES sysutils,XMLRead,dom,Classes,LazUTF8,
 IMPLEMENTATION
 {$i func_defines.inc}
 
-FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
+FUNCTION obtainXmlData(VAR literalRecycler:T_literalRecycler; VAR FDoc: TXMLDocument):P_listLiteral;
   FUNCTION readNode(CONST node:TDOMNode):P_literal;
     VAR j:longint;
         attributesMap:P_mapLiteral;
@@ -22,20 +22,21 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
       if (node.NodeType=TEXT_NODE) or
          (node.NodeType=CDATA_SECTION_NODE) then exit(literalRecycler.newStringLiteral(UTF16ToUTF8(node.NodeValue)));
       result:=literalRecycler.newMapLiteral(3);
-      P_mapLiteral(result)^.put('name',UTF16ToUTF8(node.NodeName));
-      if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put('type',node.NodeType);
-      if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put('value',UTF16ToUTF8(node.NodeValue));
+      P_mapLiteral(result)^.put(@literalRecycler,'name',UTF16ToUTF8(node.NodeName));
+      if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put(@literalRecycler,'type',node.NodeType);
+      if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put(@literalRecycler,'value',UTF16ToUTF8(node.NodeValue));
       if Assigned(node.attributes) and (node.attributes.length>0) then begin
         attributesMap:=literalRecycler.newMapLiteral(node.attributes.length);
         for j:=0 to node.attributes.length-1 do
-         attributesMap^.put(UTF16ToUTF8(node.attributes[j].NodeName),
+         attributesMap^.put(@literalRecycler,
+                            UTF16ToUTF8(node.attributes[j].NodeName),
                             UTF16ToUTF8(node.attributes[j].NodeValue));
-        P_mapLiteral(result)^.put('attributes',attributesMap,false);
+        P_mapLiteral(result)^.put(@literalRecycler,'attributes',attributesMap,false);
       end;
       if Assigned(node.ChildNodes) and (node.ChildNodes.length>0) then begin
         childList:=literalRecycler.newListLiteral(node.ChildNodes.count);
-        for j:=0 to node.ChildNodes.count-1 do childList^.append(readNode(node.ChildNodes[j]),false);
-        P_mapLiteral(result)^.put('children',childList,false);
+        for j:=0 to node.ChildNodes.count-1 do childList^.append(@literalRecycler,readNode(node.ChildNodes[j]),false);
+        P_mapLiteral(result)^.put(@literalRecycler,'children',childList,false);
       end;
     end;
 
@@ -43,7 +44,7 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_listLiteral;
   begin
     if Assigned(FDoc) then begin
       result:=literalRecycler.newListLiteral();
-      for i:=0 to FDoc.ChildNodes.count-1 do result^.append(readNode(FDoc.ChildNodes[i]),false);
+      for i:=0 to FDoc.ChildNodes.count-1 do result^.append(@literalRecycler,readNode(FDoc.ChildNodes[i]),false);
       FreeAndNil(FDoc);
     end else result:=nil;
   end;
@@ -64,7 +65,7 @@ FUNCTION readXmlFile_impl intFuncSignature;
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
         exit(newVoidLiteral);
       end;
-      result:=obtainXmlData(FDoc);
+      result:=obtainXmlData(recycler.literalRecycler,FDoc);
       if result=nil then begin
         context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
         result:=newVoidLiteral;
@@ -88,7 +89,7 @@ FUNCTION readXml_impl intFuncSignature;
         end;
       end;
       FreeAndNil(input);
-      result:=obtainXmlData(FDoc);
+      result:=obtainXmlData(recycler.literalRecycler,FDoc);
       if result=nil then begin
         context.raiseError('Error parsing XML input.',tokenLocation);
         result:=newVoidLiteral;

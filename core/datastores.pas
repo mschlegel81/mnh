@@ -247,7 +247,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     enterCriticalSection(globalDatastoreCs);
     if writePlainText then begin
       plainText:=ruleId+':=';
-      append(plainText,serializeToStringList(literalRecycler,L,location,threadLocalMessages));
+      append(plainText,serializeToStringList(L,location,threadLocalMessages));
       writeFileLines(tempFileName,plainText,C_lineBreakChar,false);
       finishedOk:=threadLocalMessages^.continueEvaluation;
     end else begin

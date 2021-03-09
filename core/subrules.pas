@@ -200,7 +200,7 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
-    newGeneratorFromStreamCallback: FUNCTION(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+    newGeneratorFromStreamCallback: FUNCTION(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
@@ -1974,7 +1974,7 @@ FUNCTION readExpressionFromStream(VAR literalRecycler:T_literalRecycler; CONST s
         end;
       et_builtinIteratable,
       et_builtinAsyncOrFuture    :
-        result:=newGeneratorFromStreamCallback(stream,location,adapters,typeMap);
+        result:=newGeneratorFromStreamCallback(literalRecycler,stream,location,adapters,typeMap);
       et_subrule          ,
       et_inline           ,
       et_subruleIteratable,
