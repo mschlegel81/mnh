@@ -431,9 +431,10 @@ CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLoc
   end;
 
 DESTRUCTOR T_variableLexer.destroy;
+  VAR l:P_literal;
   begin
     inherited;
-    literalRecycler.disposeLiteral(data);
+    for l in data do l^.unreference;
   end;
 
 { T_singleStringLexer }
@@ -1483,7 +1484,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
+      result^.data:=recycler.literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
       setLength(lines,0);
       exit(result);
     end;
@@ -1508,7 +1509,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end;
     case line[inputLocation.column] of
       '0'..'9': begin
-        result^.data:=parseNumber(line,inputLocation.column, false,parsedLength);
+        result^.data:=parseNumber(line,inputLocation.column, false,recycler.literalRecycler, parsedLength);
         if parsedLength<=0 then begin
                                   fail('Cannot parse numeric literal '+line);
                                   recycler.disposeToken(result);
@@ -1536,7 +1537,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           end;
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=literalRecycler.newStringLiteral(stringValue);
+          result^.data:=recycler.literalRecycler.newStringLiteral(stringValue);
         end;
         stringValue:='';
       end;
@@ -1555,8 +1556,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
-          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(Nan);      end
-          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(infinity); end
+          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler.literalRecycler.newRealLiteral(Nan);      end
+          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler.literalRecycler.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
@@ -1836,7 +1837,7 @@ FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST conte
     {$ifdef fullVersion}
     if functionCallInfos<>nil then new(functionCallInfos,create);
     {$endif}
-    result:=literalRecycler.newMapLiteral(0);
+    result:=recycler.literalRecycler.newMapLiteral(0);
   end;
 
 FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; VAR recycler: T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;

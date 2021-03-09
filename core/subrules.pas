@@ -60,7 +60,7 @@ TYPE
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; CONST messages:P_messages);
-      FUNCTION getAttributesLiteral:P_mapLiteral;
+      FUNCTION getAttributesLiteral(VAR literalRecycler:T_literalRecycler):P_mapLiteral;
       FUNCTION getDocTxt:ansistring;
       PROCEDURE setComment(CONST commentText:ansistring);
       FUNCTION attributeCount:longint;
@@ -119,11 +119,11 @@ TYPE
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION inspect(VAR literalRecycler:T_literalRecycler):P_mapLiteral; virtual;
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
-      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getSideEffects:T_sideEffects;
   end;
@@ -148,7 +148,7 @@ TYPE
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getStructuredInfo:T_structuredRuleInfo; virtual;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION inspect(VAR literalRecycler:T_literalRecycler):P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
@@ -189,7 +189,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
@@ -228,7 +228,7 @@ T_builtinExpression=object(T_expression)
     FUNCTION getId:T_idString; virtual;
     FUNCTION equals(CONST other:P_literal):boolean; virtual;
     FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
     FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
@@ -1289,14 +1289,14 @@ FUNCTION T_inlineExpression.containsReturnToken: boolean;
     for p in preparedBody do if p.token.tokType=tt_return then exit(true);
   end;
 
-FUNCTION T_builtinExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_builtinExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeAnsiString(id);
     result:=true;
   end;
 
-FUNCTION T_builtinGeneratorExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_builtinGeneratorExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.logWrongTypeError;
     if adapters<>nil
@@ -1305,17 +1305,17 @@ FUNCTION T_builtinGeneratorExpression.writeToStream(CONST locationOfSerializeCal
     result:=false;
   end;
 
-FUNCTION T_inlineExpression.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_inlineExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   VAR i:longint;
   begin
     if referencesAnyUserPackage then exit(false);
     stream^.writeByte(byte(typ));
     stream^.writeAnsiString(customId);
-    result:=pattern.writeToStream(locationOfSerializeCall,adapters,stream)
+    result:=pattern.writeToStream(literalRecycler^,locationOfSerializeCall,adapters,stream)
             and stream^.allOkay;
     stream^.writeNaturalNumber(length(preparedBody));
     for i:=0 to length(preparedBody)-1 do begin
-      result:=result and preparedBody[i].token.serializeSingleToken(locationOfSerializeCall,adapters,stream);
+      result:=result and preparedBody[i].token.serializeSingleToken(literalRecycler^,locationOfSerializeCall,adapters,stream);
       stream^.writeInteger(preparedBody[i].parIdx);
     end;
     if (customType=nil)
@@ -1326,19 +1326,19 @@ FUNCTION T_inlineExpression.writeToStream(CONST locationOfSerializeCall: T_token
     result:=result and stream^.allOkay;
   end;
 
-FUNCTION T_inlineExpression.loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
   VAR i:longint;
       customTypeName:string;
   begin
     //This must happen on construction:
     //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
     customId:=stream^.readAnsiString;
-    result:=pattern.loadFromStream(stream,location,adapters,typeMap)
+    result:=pattern.loadFromStream(literalRecycler^,stream,location,adapters,typeMap)
             and stream^.allOkay;
     setLength(preparedBody,stream^.readNaturalNumber);
     for i:=0 to length(preparedBody)-1 do begin
       preparedBody[i].token.create;
-      preparedBody[i].token.deserializeSingleToken(location,adapters,stream,typeMap);
+      preparedBody[i].token.deserializeSingleToken(literalRecycler^,location,adapters,stream,typeMap);
       preparedBody[i].parIdx:=stream^.readInteger;
     end;
     customTypeName:=stream^.readAnsiString;
@@ -1356,18 +1356,18 @@ FUNCTION T_inlineExpression.loadFromStream(CONST stream:P_inputStreamWrapper; CO
     result:=result and stream^.allOkay;
   end;
 
-FUNCTION T_inlineExpression.inspect: P_mapLiteral;
+FUNCTION T_inlineExpression.inspect(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
   begin
     result:=literalRecycler.newMapLiteral(0);
-    P_mapLiteral(result)^.put('pattern' ,pattern.toString)^
-                         .put('location',getLocation     )^
-                         .put('type'    ,C_expressionTypeString[typ]);
+    P_mapLiteral(result)^.put(@literalRecycler,'pattern' ,pattern.toString)^
+                         .put(@literalRecycler,'location',getLocation     )^
+                         .put(@literalRecycler,'type'    ,C_expressionTypeString[typ]);
   end;
 
-FUNCTION T_subruleExpression.inspect: P_mapLiteral;
+FUNCTION T_subruleExpression.inspect(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
   begin
-    result:=inherited inspect^.put('comment'   ,meta.comment            )^
-                              .put('attributes',meta.getAttributesLiteral,false);
+    result:=inherited inspect(literalRecycler)^.put(@literalRecycler,'comment'   ,meta.comment            )^
+                              .put(@literalRecycler,'attributes',meta.getAttributesLiteral(literalRecycler),false);
   end;
 
 FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
@@ -1486,11 +1486,11 @@ PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_callAndIdInfos);
   end;
 {$endif}
 
-FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
+FUNCTION T_ruleMetaData.getAttributesLiteral(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
   VAR i:longint;
   begin
     result:=literalRecycler.newMapLiteral(0);
-    for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
+    for i:=0 to length(attributes)-1 do result^.put(@literalRecycler,attributes[i].key,attributes[i].value);
   end;
 
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
@@ -1775,14 +1775,14 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
+    then result:=recycler.literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=P_expression(arg0)^.getParameterNames;
+    then result:=P_expression(arg0)^.getParameterNames(@recycler.literalRecycler);
   end;
 
 FUNCTION tokenSplit_impl intFuncSignature;
@@ -1791,11 +1791,11 @@ FUNCTION tokenSplit_impl intFuncSignature;
         i:longint;
     begin
       sub:=P_subruleExpression(subruleLiteral);
-      result:=literalRecycler.newListLiteral(length(sub^.preparedBody));
+      result:=recycler.literalRecycler.newListLiteral(length(sub^.preparedBody));
       for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
         if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
-        then result^.append(token.data,true)
-        else result^.appendString(safeTokenToString(@token));
+        then result^.append      (@recycler.literalRecycler,token.data,true)
+        else result^.appendString(@recycler.literalRecycler,safeTokenToString(@token));
       end;
     end;
 
@@ -1815,8 +1815,8 @@ FUNCTION tokenSplit_impl intFuncSignature;
       lt_string:begin
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
-        result:=literalRecycler.newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(tokens[i]);
+        result:=recycler.literalRecycler.newListLiteral;
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(@recycler.literalRecycler,tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then
         result:=expressionToTokens(P_expressionLiteral(arg0));
@@ -1954,7 +1954,7 @@ FUNCTION interpret_imp intFuncSignature;
     end;
   end;
 
-FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
+FUNCTION readExpressionFromStream(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
   VAR expressionType:T_expressionType;
       builtinId :string;
       inlineEx :P_inlineExpression;
@@ -1983,7 +1983,7 @@ FUNCTION readExpressionFromStream(CONST stream:P_inputStreamWrapper; CONST locat
       et_inlineStateful:
         begin
           new(inlineEx,init(expressionType,location));
-          if not(inlineEx^.loadFromStream(stream,location,adapters,typeMap))
+          if not(inlineEx^.loadFromStream(@literalRecycler,stream,location,adapters,typeMap))
           then dispose(inlineEx,destroy)
           else result:=inlineEx;
         end;

@@ -490,7 +490,7 @@ CONST
   NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
-  readExpressionFromStreamCallback: FUNCTION(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
+  readExpressionFromStreamCallback: FUNCTION(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
 FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;
 FUNCTION exp(CONST x:double):double; inline;
 
@@ -3943,7 +3943,7 @@ FUNCTION newLiteralFromStream(VAR literalRecycler:T_literalRecycler; CONST strea
           result^.literalType:=lt_map;
         end;
         lt_expression: begin
-          result:=readExpressionFromStreamCallback(stream,location,adapters,typeMap);
+          result:=readExpressionFromStreamCallback(literalRecycler,stream,location,adapters,typeMap);
           if result=nil then result:=newVoidLiteral;
         end;
         else begin
@@ -4053,7 +4053,7 @@ PROCEDURE writeLiteralToStream(VAR literalRecycler:T_literalRecycler; CONST L:P_
           end;
         end;
         lt_expression: begin
-          if not(P_expressionLiteral(L)^.writeToStream(location,adapters,stream)) then begin
+          if not(P_expressionLiteral(L)^.writeToStream(@literalRecycler,location,adapters,stream)) then begin
             if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
                              else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
           end;

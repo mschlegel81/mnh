@@ -93,7 +93,7 @@ PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
 
 VAR messageHashTally:T_hashInt=0;
 PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
-                      CONST location:T_tokenLocation; CONST adapters:P_messages; VAR messageHash:T_hashInt);
+                      CONST location:T_tokenLocation; CONST adapters:P_messages; VAR messageHash:T_hashInt; VAR recycler:T_recycler);
   VAR streamWrapper:T_outputStreamWrapper;
       memoryStream:TMemoryStream;
       client:TSimpleIPCClient;
@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(recycler.literalRecycler,payload,@streamWrapper,location,adapters);
     except
       serializationOk:=false;
     end;
@@ -151,7 +151,8 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
                      OUT messageHash:T_hashInt;
                      OUT statusOk:boolean;
                      OUT payload:P_literal;
-                     CONST location:T_tokenLocation; CONST adapters:P_messages):boolean;
+                     CONST location:T_tokenLocation; CONST adapters:P_messages;
+                     VAR recycler:T_recycler):boolean;
   VAR streamWrapper:T_inputStreamWrapper;
       memoryStream:TMemoryStream;
       typeMap:T_typeMap;
@@ -168,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(recycler.literalRecycler,@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;
@@ -215,7 +216,7 @@ PROCEDURE T_myIpcServer.execute;
       if result then exit(true);
 
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages) and
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages,recycler) and
          processThisRequest(request.messageHash)then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
@@ -227,18 +228,18 @@ PROCEDURE T_myIpcServer.execute;
           response.payload :=nil;
           response.statusOk:=false;
         end;
-        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
+        if request.payload<>nil then recycler.literalRecycler.disposeLiteral(request.payload);
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
-          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash);
-          if response.payload<>nil then literalRecycler.disposeLiteral(response.payload);
+          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,recycler);
+          if response.payload<>nil then recycler.literalRecycler.disposeLiteral(response.payload);
         finally
         end;
         //------------------------------------------------:respond
         result:=true;
       end else begin
-        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
+        if request.payload<>nil then recycler.literalRecycler.disposeLiteral(request.payload);
         result:=false;
       end;
     end;
@@ -301,10 +302,10 @@ DESTRUCTOR T_myIpcServer.destroy;
     try
       recycler.initRecycler;
       if servingContextOrNil<>nil then begin
-        servingContextOrNil^.finalizeTaskAndDetachFromParent(nil);
+        servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
         contextPool.disposeContext(servingContextOrNil);
       end;
-      if servingExpressionOrNil<>nil then literalRecycler.disposeLiteral(servingExpressionOrNil);
+      if servingExpressionOrNil<>nil then recycler.literalRecycler.disposeLiteral(servingExpressionOrNil);
       enterCriticalSection(localServerCs);
       localServers.dropKey(serverId);
       leaveCriticalSection(localServerCs);
@@ -419,15 +420,15 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       then result:=localServer.processLocally(arg1)
       else begin
         temporaryReceiver:=newServer();
-        sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
+        sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash,recycler);
         repeat
-          fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages);
+          fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages,recycler);
           if not(fetchedResult) then begin
             inc(aliveCheckCounter);
             if (aliveCheckCounter>100) then begin
               if not(isServerRunning(str0^.value))
               then context.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
-              else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash);
+              else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash,recycler);
               aliveCheckCounter:=0;
             end else sleep(1);
           end;

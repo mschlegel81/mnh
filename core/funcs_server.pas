@@ -65,28 +65,26 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
   VAR header:T_httpHeader;
       i:longint=0;
-      iter:T_arrayOfLiteral;
-      key,value:P_literal;
+      iter:T_arrayOfKeyValuePair;
       invalidHeader:boolean=false;
   begin
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      if  params^.size=1                                    then exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
-      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
+      if  params^.size=1                                    then exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
+      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
       if (params^.size=3) and (arg1^.literalType=lt_smallint) and (arg2^.literalType in [lt_map,lt_emptyMap]) then begin
-        iter:=map2^.iteratableList;
+        iter:=map2^.entryList;
         setLength(header,length(iter));
-        for i:=0 to length(iter)-1 do begin
-          key  :=P_listLiteral(iter[i])^.value[0];
-          value:=P_listLiteral(iter[i])^.value[1];
+        for i:=0 to length(iter)-1 do with iter[i] do begin
           if key  ^.literalType=lt_string then header[i].key  :=P_stringLiteral(key  )^.value else invalidHeader:=true;
           if value^.literalType=lt_string then header[i].value:=P_stringLiteral(value)^.value else header[i].value:=value^.toString();
+          key^.unreference;
+          value^.unreference;
         end;
-        literalRecycler.disposeLiteral(iter);
         setHeaderDefaults(header,length(str0^.value));
         if invalidHeader then begin
           context.raiseError('Invalid header map; all keys must be strings',tokenLocation);
           exit(nil);
-        end else exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
+        end else exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
       end;
       result:=nil;
     end else result:=nil;
@@ -95,9 +93,9 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
 FUNCTION httpError_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint)
-    then result:=literalRecycler.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
+    then result:=recycler.literalRecycler.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
     else if (params=nil) or (params^.size=0)
-    then result:=literalRecycler.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
+    then result:=recycler.literalRecycler.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
     else result:=nil;
   end;
 
@@ -128,7 +126,7 @@ FUNCTION startServer_impl intFuncSignature;
           FreeAndNil(microserver);
           exit(nil);
         end;
-        result:=literalRecycler.newStringLiteral(microserver.ip);
+        result:=recycler.literalRecycler.newStringLiteral(microserver.ip);
       end else context.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
@@ -152,15 +150,16 @@ PROCEDURE T_microserverRequest.execute;
     VAR headerMap:P_mapLiteral;
         i:longint;
     begin
-      headerMap:=literalRecycler.newMapLiteral(8);
-      requestMap:=literalRecycler.newMapLiteral(8)
-        ^.put('request',
-          literalRecycler.newMapLiteral(3)^.put('method',C_httpRequestMethodName[connection.getMethod])
-                          ^.put('path',connection.getRequest)
-                          ^.put('protocol',connection.getProtocol),false)
-        ^.put('header',headerMap,false)
-        ^.put('body',connection.getBody);
-      for i:=0 to length(connection.getHeader)-1 do headerMap^.put(connection.getHeader[i].key,connection.getHeader[i].value);
+      headerMap:=recycler.literalRecycler.newMapLiteral(8);
+      requestMap:=recycler.literalRecycler.newMapLiteral(8)
+        ^.put(@recycler.literalRecycler,'request',
+          recycler.literalRecycler.newMapLiteral(3)
+                          ^.put(@recycler.literalRecycler,'method',C_httpRequestMethodName[connection.getMethod])
+                          ^.put(@recycler.literalRecycler,'path',connection.getRequest)
+                          ^.put(@recycler.literalRecycler,'protocol',connection.getProtocol),false)
+        ^.put(@recycler.literalRecycler,'header',headerMap,false)
+        ^.put(@recycler.literalRecycler,'body',connection.getBody);
+      for i:=0 to length(connection.getHeader)-1 do headerMap^.put(@recycler.literalRecycler,connection.getHeader[i].key,connection.getHeader[i].value);
     end;
 
   VAR response:P_literal;
@@ -170,17 +169,17 @@ PROCEDURE T_microserverRequest.execute;
     executionTime:=context^.wallclockTime;
     response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,@recycler,requestMap,nil).literal;
     executionTime:=context^.wallclockTime-executionTime;
-    literalRecycler.disposeLiteral(requestMap);
+    recycler.literalRecycler.disposeLiteral(requestMap);
     if (response<>nil) then begin
       if response^.literalType=lt_string
       then connection.sendStringAndClose(P_stringLiteral(response)^.value)
       else connection.sendStringAndClose(response^.toString);
-      literalRecycler.disposeLiteral(response);
+      recycler.literalRecycler.disposeLiteral(response);
     end else begin
       context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
       connection.sendStringAndClose(HTTP_404_RESPONSE);
     end;
-    context^.finalizeTaskAndDetachFromParent(@recycler);
+    context^.finalizeTaskAndDetachFromParent(recycler);
     contextPool.disposeContext(context);
     myParent.logExecution(myParent.context^.wallclockTime-creationTime,executionTime);
     connection.destroy;
@@ -189,7 +188,7 @@ PROCEDURE T_microserverRequest.execute;
 
 DESTRUCTOR T_microserverRequest.destroy;
   begin
-    literalRecycler.disposeLiteral(servingExpression);
+    recycler.literalRecycler.disposeLiteral(servingExpression);
     recycler.cleanup;
     inherited destroy;
   end;
@@ -221,8 +220,8 @@ DESTRUCTOR T_microserver.destroy;
   VAR recycler:T_recycler;
   begin
     recycler.initRecycler;
-    literalRecycler.disposeLiteral(servingExpression);
-    context^.finalizeTaskAndDetachFromParent(nil);
+    recycler.literalRecycler.disposeLiteral(servingExpression);
+    context^.finalizeTaskAndDetachFromParent(recycler);
     contextPool.disposeContext(context);
     httpListener.destroy;
     recycler.cleanup;
@@ -318,10 +317,10 @@ FUNCTION extractParameters_impl intFuncSignature;
       for i:=0 to length(keyAndValue)-1 do begin
         keyAndValue[i]:=percentDecode(ansiReplaceStr(keyAndValue[i],'+',' '));
       end;
-      value:=literalRecycler.newStringLiteral(keyAndValue[1]);
-      castValue:=value^.softCast;
-      literalRecycler.disposeLiteral(value);
-      parameters^.put(keyAndValue[0],castValue,false);
+      value:=recycler.literalRecycler.newStringLiteral(keyAndValue[1]);
+      castValue:=value^.softCast(@recycler.literalRecycler);
+      recycler.literalRecycler.disposeLiteral(value);
+      parameters^.put(@recycler.literalRecycler,keyAndValue[0],castValue,false);
     end;
 
   VAR parts:T_arrayOfString;
@@ -331,7 +330,7 @@ FUNCTION extractParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       while (length(parts)<2) do append(parts,'');
-      parameters:=literalRecycler.newMapLiteral(0);
+      parameters:=recycler.literalRecycler.newMapLiteral(0);
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
@@ -346,7 +345,9 @@ FUNCTION extractRawParameters_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
-      if length(parts)>1 then exit(literalRecycler.newStringLiteral(parts[1])) else exit(literalRecycler.newStringLiteral(''));
+      if length(parts)>1
+      then exit(recycler.literalRecycler.newStringLiteral(parts[1]))
+      else exit(recycler.literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -356,7 +357,9 @@ FUNCTION extractPath_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
-      if length(parts)>0 then exit(literalRecycler.newStringLiteral(parts[0])) else exit(literalRecycler.newStringLiteral(''));
+      if length(parts)>0
+      then exit(recycler.literalRecycler.newStringLiteral(parts[0]))
+      else exit(recycler.literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -371,7 +374,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
       path:string='';
       parameters:string='';
       i:longint;
-      iter:T_arrayOfLiteral;
+      iter:T_arrayOfKeyValuePair;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string,lt_emptyMap]) then begin
@@ -381,23 +384,24 @@ FUNCTION encodeRequest_impl intFuncSignature;
       case arg2^.literalType of
         lt_string: parameters:=percentEncode(str2^.value);
         lt_map: begin
-          iter:=map2^.iteratableList;
+          iter:=map2^.entryList;
           for i:=0 to length(iter)-1 do begin
             if i>0 then parameters:=parameters+'&';
-            parameters:=parameters+percentEncode(getString(P_listLiteral(iter[i])^.value[0]))
-                              +'='+percentEncode(getString(P_listLiteral(iter[i])^.value[1]));
+            parameters:=parameters+percentEncode(getString(iter[i].key))
+                              +'='+percentEncode(getString(iter[i].value));
+            iter[i].key  ^.unreference;
+            iter[i].value^.unreference;
           end;
-          literalRecycler.disposeLiteral(iter);
         end;
       end;
       if parameters<>'' then parameters:='?'+parameters;
-      result:=literalRecycler.newStringLiteral(address+path+parameters);
+      result:=recycler.literalRecycler.newStringLiteral(address+path+parameters);
     end;
   end;
 
 VAR httpRequestCs:TRTLCriticalSection;
 
-FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context):P_literal;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
       requestText:ansistring='';
@@ -430,14 +434,15 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
         key:string;
     begin
       headerMap:=literalRecycler.newMapLiteral(0);
-      result:=literalRecycler.newMapLiteral(0)^.put('body',resultText)
-      ^.put('code',client.ResponseStatusCode)
-      ^.put('status',client.ResponseStatusText)
-      ^.put('header',headerMap,false);
+      result:=literalRecycler.newMapLiteral(0)
+      ^.put(@literalRecycler,'body',resultText)
+      ^.put(@literalRecycler,'code',client.ResponseStatusCode)
+      ^.put(@literalRecycler,'status',client.ResponseStatusText)
+      ^.put(@literalRecycler,'header',headerMap,false);
       for i:=0 to client.ResponseHeaders.count-1 do begin
         s:=client.ResponseHeaders[i];
         key:=fetch(s,':');
-        headerMap^.put(key,trim(s));
+        headerMap^.put(@literalRecycler,key,trim(s));
       end;
     end;
 
@@ -493,10 +498,10 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     setLength(requestHeader,0);
   end;
 
-FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpPut_imp    intFuncSignature; begin if context.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpPost_imp   intFuncSignature; begin if context.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context) else result:=nil; end;
-FUNCTION httpDelete_imp intFuncSignature; begin if context.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context) else result:=nil; end;
+FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
+FUNCTION httpPut_imp    intFuncSignature; begin if context.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
+FUNCTION httpPost_imp   intFuncSignature; begin if context.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
+FUNCTION httpDelete_imp intFuncSignature; begin if context.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
 
 FUNCTION openUrl_imp intFuncSignature;
   begin

@@ -26,15 +26,17 @@ TYPE
       FUNCTION fileExists:boolean;
       FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
       FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
+      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; VAR literalRecycler:T_literalRecycler);
   end;
 
+{$ifdef fullVersion}
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
+{$endif}
 IMPLEMENTATION
 USES FileUtil;
 VAR globalDatastoreCs:TRTLCriticalSection;
 CONST TEMP_FILE_SUFFIX='_tmp';
-
+{$ifdef fullVersion}
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
   VAR wrapper:T_bufferedInputStreamWrapper;
       id:string;
@@ -63,6 +65,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
     end else dataAsStringList:=C_EMPTY_STRING_ARRAY;
     wrapper.destroy;
   end;
+{$endif}
 
 FUNCTION T_datastoreMeta.newStoreName:string;
   VAR i:longint;
@@ -192,10 +195,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(recycler.literalRecycler,@wrapper,location,context.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
-        if result<>nil then literalRecycler.disposeLiteral(result);
+        if result<>nil then recycler.literalRecycler.disposeLiteral(result);
         result:=nil;
       end;
       wrapper.destroy;
@@ -223,11 +226,13 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       if fileName='' then exit(newVoidLiteral);
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
-      result:=literalRecycler.newMapLiteral(2)^.put('id',ruleId)^.put('content',contentLiteral,false);
+      result:=recycler.literalRecycler.newMapLiteral(2)
+        ^.put(@recycler.literalRecycler,'id',ruleId)
+        ^.put(@recycler.literalRecycler,'content',contentLiteral,false);
     end else result:=newVoidLiteral;
   end;
 
-PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean);
+PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; VAR literalRecycler:T_literalRecycler);
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
       tempFileName:string;
@@ -242,13 +247,13 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     enterCriticalSection(globalDatastoreCs);
     if writePlainText then begin
       plainText:=ruleId+':=';
-      append(plainText,serializeToStringList(L,location,threadLocalMessages));
+      append(plainText,serializeToStringList(literalRecycler,L,location,threadLocalMessages));
       writeFileLines(tempFileName,plainText,C_lineBreakChar,false);
       finishedOk:=threadLocalMessages^.continueEvaluation;
     end else begin
       wrapper.createToWriteToFile(tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
+      writeLiteralToStream(literalRecycler,L,@wrapper,location,threadLocalMessages);
       finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;
