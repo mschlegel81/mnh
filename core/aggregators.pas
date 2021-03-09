@@ -123,6 +123,7 @@ TYPE T_counterMap=specialize G_literalKeyMap<longint>;
     public
       CONSTRUCTOR create;
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
+      PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler); virtual;
       FUNCTION getResult(VAR literalRecycler:T_literalRecycler):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
@@ -295,10 +296,16 @@ FUNCTION T_elementFrequencyAggregator.getResult(VAR literalRecycler:T_literalRec
     end;
   end;
 
-DESTRUCTOR T_elementFrequencyAggregator.destroy;
+PROCEDURE T_elementFrequencyAggregator.cleanup(VAR literalRecycler:T_literalRecycler);
   VAR keySet:T_arrayOfLiteral;
   begin
-    assert(keySet=nil);
+    keySet:=counterMap.keySet;
+    literalRecycler.disposeLiteral(keySet);
+    counterMap.destroy;
+  end;
+
+DESTRUCTOR T_elementFrequencyAggregator.destroy;
+  begin
     counterMap.destroy;
     inherited;
   end;
