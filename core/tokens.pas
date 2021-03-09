@@ -61,7 +61,7 @@ TYPE
 
 CONST EMPTY_TOKEN_RANGE:T_tokenRange=(first:nil;last:nil);
 VAR patternToString:FUNCTION (CONST pattern:pointer):ansistring=nil;
-    disposePattern :PROCEDURE(VAR pattern:pointer)             =nil;
+    disposePattern :PROCEDURE(VAR pattern:pointer; VAR literalRecycler: T_literalRecycler)=nil;
     clonePattern   :FUNCTION (CONST pattern:pointer):pointer     =nil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
@@ -206,7 +206,7 @@ PROCEDURE T_token.undefine(VAR literalRecycler:T_literalRecycler);
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: literalRecycler.disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then literalRecycler.disposeLiteral(data);
-      tt_functionPattern: disposePattern(data);
+      tt_functionPattern: disposePattern(data,literalRecycler);
     end;
     data:=nil;
     tokType:=tt_EOL;

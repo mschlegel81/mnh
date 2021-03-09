@@ -1099,8 +1099,12 @@ DESTRUCTOR T_memoizedRule.destroy;
   end;
 
 DESTRUCTOR T_variable.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
+    literalRecycler.initRecycler;
+    namedValue.cleanup(literalRecycler);
     namedValue.destroy;
+    literalRecycler.cleanup;
   end;
 
 DESTRUCTOR T_datastore.destroy;
@@ -1410,8 +1414,14 @@ FUNCTION T_typeCheckRule.getFirstParameterTypeWhitelist: T_literalTypeSet;
   end;
 
 DESTRUCTOR T_typeCheckRule.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
-    if typedef<>nil then dispose(typedef,destroy);
+    if typedef<>nil then begin
+      literalRecycler.initRecycler;
+      typedef^.cleanup(@literalRecycler);
+      dispose(typedef,destroy);
+      literalRecycler.cleanup;
+    end;
     inherited destroy;
   end;
 

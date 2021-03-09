@@ -221,7 +221,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
         first^.txt:='';
         first^.next:=recycler.disposeToken(bracketClosingEach);
         if aggregator^.hasReturn then processReturnStatement;
-        aggregator^.cleanup((recycler.literalRecycler));
+        aggregator^.cleanup(recycler.literalRecycler);
         dispose(aggregator,destroy);
       end;
 
@@ -264,7 +264,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
       recycler.literalRecycler.disposeLiteral(input);
-      for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
+      for i:=0 to length(bodyRule)-1 do begin
+        bodyRule[i]^.cleanup(@recycler.literalRecycler);
+        dispose(bodyRule[i],destroy);
+      end;
       //----------------------------------------------------------------------cleanup
       didSubstitution:=context.continueEvaluation;
     end;
@@ -332,9 +335,12 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_context; VAR recycler
       first^.next:=recycler.disposeToken(bracketClosingWhile);
 
       //cleanup----------------------------------------------------------------------
+      headRule^.cleanup(@recycler.literalRecycler);
       dispose(headRule,destroy);
-      if bodyRule<>nil then
-      dispose(bodyRule,destroy);
+      if bodyRule<>nil then begin
+        bodyRule^.cleanup(@recycler.literalRecycler);
+        dispose(bodyRule,destroy);
+      end;
       //----------------------------------------------------------------------cleanup
       if returnValue.reasonForStop=rr_okWithReturn then begin
         recycler.literalRecycler.disposeLiteral(first^.data);

@@ -66,8 +66,8 @@ TYPE
       CONSTRUCTOR create;
       CONSTRUCTOR clone(original:T_pattern);
       CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CONST fallbackLocation:T_tokenLocation);
+      PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
       DESTRUCTOR destroy;
-      PROCEDURE clear;
       FUNCTION appendFreeId(CONST parId:T_idString; CONST location:T_tokenLocation):longint;
       FUNCTION indexOfId(CONST id:T_idString):longint;
       FUNCTION indexOfIdForInline(CONST id:T_idString; CONST location:T_tokenLocation):longint;
@@ -407,7 +407,10 @@ FUNCTION T_patternElement.writeToStream(VAR literalRecycer:T_literalRecycler; CO
   end;
 
 CONSTRUCTOR T_pattern.create;
-  begin clear; end;
+  begin
+    setLength(sig,0);
+    hasOptionals:=false;
+  end;
 
 CONSTRUCTOR T_pattern.clone(original: T_pattern);
   VAR i:longint;
@@ -433,16 +436,19 @@ CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CO
     end;
   end;
 
-PROCEDURE T_pattern.clear;
+PROCEDURE T_pattern.cleanup(VAR literalRecycler:T_literalRecycler);
   VAR i:longint;
   begin
-    for i:=0 to length(sig)-1 do sig[i].destroy;
+    for i:=0 to length(sig)-1 do begin
+      sig[i].cleanup(literalRecycler);
+      sig[i].destroy;
+    end;
     setLength(sig,0);
     hasOptionals:=false;
   end;
 
 DESTRUCTOR T_pattern.destroy;
-  begin clear; end;
+  begin assert(length(sig)=0); end;
 
 FUNCTION T_pattern.appendFreeId(CONST parId: T_idString; CONST location:T_tokenLocation): longint;
   begin
@@ -886,8 +892,9 @@ FUNCTION patternToString(CONST p:pointer):ansistring;
     else result:=P_pattern(p)^.toString+C_tokenDefaultId[tt_declare];
   end;
 
-PROCEDURE disposePattern(VAR pattern:pointer);
+PROCEDURE disposePattern(VAR pattern:pointer; VAR literalRecycler: T_literalRecycler);
   begin
+    P_pattern(pattern)^.cleanup(literalRecycler);
     dispose(P_pattern(pattern),destroy);
     pattern:=nil;
   end;

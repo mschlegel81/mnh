@@ -184,13 +184,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
     PROPERTY value:ansistring read val;
     FUNCTION softCast(CONST literalRecycler:P_literalRecycler): P_literal;
-    //FUNCTION trim(CONST literalRecycler:P_literalRecycler): P_stringLiteral;
-    //FUNCTION trimLeft: P_stringLiteral;
-    //FUNCTION trimRight: P_stringLiteral;
-    //FUNCTION upper: P_stringLiteral;
-    //FUNCTION lower: P_stringLiteral;
-    //FUNCTION unbrace: P_stringLiteral;
-    //FUNCTION escape: P_stringLiteral;
     FUNCTION getEncoding: T_stringEncoding;
     PROCEDURE append(CONST suffix:ansistring);
     //from T_scalarLiteral:
@@ -1436,7 +1429,7 @@ CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
 DESTRUCTOR T_bigIntLiteral.destroy; begin end;
-DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
+DESTRUCTOR T_stringLiteral.destroy; begin end;
 DESTRUCTOR T_listLiteral.destroy;
   begin
     assert(length(dat)=0);
@@ -2426,7 +2419,7 @@ FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
 
 PROCEDURE T_stringLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
-    val:='';
+    setLength(val,0);
     enc:=se_testPending;
   end;
 

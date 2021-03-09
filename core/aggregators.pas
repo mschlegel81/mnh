@@ -96,6 +96,7 @@ TYPE
       aggregator:P_expressionLiteral;
     public
       CONSTRUCTOR create(CONST ex:P_expressionLiteral);
+      PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; VAR recycler:T_recycler); virtual;
   end;
@@ -228,11 +229,17 @@ CONSTRUCTOR T_unaryExpressionAggregator.create(CONST ex: P_expressionLiteral);
 
 PROCEDURE T_aggregator.cleanup(VAR literalRecycler:T_literalRecycler);
   begin
-    literalRecycler.disposeLiteral(resultLiteral);
+    if resultLiteral<>nil then literalRecycler.disposeLiteral(resultLiteral);
   end;
 
 DESTRUCTOR T_aggregator          .destroy; begin assert(resultLiteral=nil); end;
 DESTRUCTOR T_binaryExpressionAggregator.destroy; begin assert(aggregator=nil); inherited destroy; end;
+
+PROCEDURE T_binaryExpressionAggregator.cleanup(VAR literalRecycler:T_literalRecycler);
+  begin
+    literalRecycler.disposeLiteral(aggregator);
+    inherited;
+  end;
 
 {$MACRO ON}
 {$define aggregationDefaultHandling:=

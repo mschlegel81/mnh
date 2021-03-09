@@ -35,7 +35,6 @@ TYPE
                        CONST unqualifiedId_  :T_idString;
                        CONST sideEffects_    :T_sideEffects;
                        CONST functionPointer_:P_intFuncCallback);
-    PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
     DESTRUCTOR destroy;
     FUNCTION qualifiedId:string;
   end;
@@ -113,8 +112,10 @@ DESTRUCTOR T_functionMap.destroy;
     enterCriticalSection(functionMapCs);
     mapByFuncPointer.destroy;
     mapByName       .destroy;
-    for i:=0 to length(uniqueMetaDatas)-1 do dispose(uniqueMetaDatas[i],destroy);
-    setLength(uniqueMetaDatas,0);
+    if length(uniqueMetaDatas)>0 then begin
+      for i:=0 to length(uniqueMetaDatas)-1 do dispose(uniqueMetaDatas[i],destroy);
+      setLength(uniqueMetaDatas,0);
+    end;
     leaveCriticalSection(functionMapCs);
     doneCriticalSection(functionMapCs);
   end;
@@ -246,15 +247,9 @@ CONSTRUCTOR T_builtinFunctionMetaData.create(CONST arityKind_: T_arityKind; CONS
     wrappedFunction:=nil;
   end;
 
-PROCEDURE T_builtinFunctionMetaData.cleanup(VAR literalRecycler:T_literalRecycler);
-  begin
-    wrappedFunction^.cleanup(@literalRecycler);
-    while wrappedFunction<>nil do literalRecycler.disposeLiteral(wrappedFunction);
-  end;
-
 DESTRUCTOR T_builtinFunctionMetaData.destroy;
   begin
-    assert(wrappedFunction=nil);
+    if wrappedFunction<>nil then dispose(wrappedFunction,destroy);
   end;
 
 FUNCTION T_builtinFunctionMetaData.qualifiedId: string;

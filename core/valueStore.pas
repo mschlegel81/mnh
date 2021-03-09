@@ -36,6 +36,7 @@ TYPE
     varFill     :longint;
     CONSTRUCTOR create(CONST asChildOf:P_valueScope);
     PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope);
+    PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
     DESTRUCTOR destroy;
     PROCEDURE insteadOfDestroy;
 
@@ -161,19 +162,26 @@ PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope);
     refCount        :=1;
   end;
 
-DESTRUCTOR T_valueScope.destroy;
+PROCEDURE T_valueScope.cleanup(VAR literalRecycler:T_literalRecycler);
   VAR k:longint;
   begin
-    for k:=0 to varFill-1 do dispose(variables[k],destroy);
+    for k:=0 to varFill-1 do begin
+      variables[k]^.cleanup(literalRecycler);
+      dispose(variables[k],destroy);
+    end;
     varFill:=0;
     setLength(variables,0);
   end;
 
-PROCEDURE T_valueScope.insteadOfDestroy;
-  VAR k:longint;
+DESTRUCTOR T_valueScope.destroy;
   begin
-    for k:=0 to varFill-1 do dispose(variables[k],destroy);
-    varFill:=0;
+    assert(length(variables)=0);
+    assert(varFill=0);
+  end;
+
+PROCEDURE T_valueScope.insteadOfDestroy;
+  begin
+    assert(varFill=0);
   end;
 
 PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);

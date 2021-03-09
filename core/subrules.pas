@@ -84,7 +84,7 @@ TYPE
       saveValueStore:P_valueScope;
       currentlyEvaluating:boolean;
 
-      PROCEDURE updatePatternForInline;
+      PROCEDURE updatePatternForInline(VAR literalRecycler:T_literalRecycler);
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
@@ -98,6 +98,7 @@ TYPE
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
       CONSTRUCTOR createFromOp(VAR literalRecycler:T_literalRecycler; CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
+      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
@@ -468,10 +469,10 @@ FUNCTION T_inlineExpression.needEmbrace(CONST outerOperator:T_tokenType; CONST a
     result:=false;
   end;
 
-PROCEDURE T_inlineExpression.updatePatternForInline;
+PROCEDURE T_inlineExpression.updatePatternForInline(VAR literalRecycler:T_literalRecycler);
   VAR i:longint;
   begin
-    pattern.clear;
+    pattern.cleanup(literalRecycler);
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokType=tt_parameterIdentifier then begin
       parIdx:=pattern.indexOfIdForInline(token.txt,getLocation);
@@ -492,7 +493,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     if rep^.tokType=tt_functionPattern then begin
       assert(retainFirstToken,'Invalid state!');
       pattern.clone(P_pattern(rep^.data)^);
-      disposePattern(rep^.data);
+      disposePattern(rep^.data,recycler.literalRecycler);
       rep^.tokType:=tt_EOL;
       constructExpression(rep^.next,context,recycler,rep^.location);
       exit;
@@ -525,18 +526,27 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
       inc(i);
     end;
     setLength(preparedBody,i);
-    updatePatternForInline;
+    updatePatternForInline(recycler.literalRecycler);
   end;
 
-DESTRUCTOR T_inlineExpression.destroy;
+PROCEDURE T_inlineExpression.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR i:longint;
   begin
-    inherited destroy;
+    pattern.cleanup(literalRecycler^);
     pattern.destroy;
-    for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
+    for i:=0 to length(preparedBody)-1 do begin
+      preparedBody[i].token.undefine(literalRecycler^);
+      preparedBody[i].token.destroy;
+    end;
     setLength(preparedBody,0);
     noRecycler_disposeScope(saveValueStore);
     meta.destroy;
+  end;
+
+DESTRUCTOR T_inlineExpression.destroy;
+  begin
+    inherited destroy;
+    assert(length(preparedBody)=0);
     doneCriticalSection(subruleCallCs);
   end;
 

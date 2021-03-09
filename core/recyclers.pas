@@ -157,13 +157,17 @@ FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
   VAR parent:P_valueScope;
+      literalRecycler:T_literalRecycler;
   begin
     if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)>0 then begin
       scope:=nil;
       exit;
     end;
+    literalRecycler.initRecycler;
     parent:=scope^.parentScope;
+    scope^.cleanup(literalRecycler);
+    literalRecycler.cleanup;
     dispose(scope,destroy);
     noRecycler_disposeScope(parent);
     scope:=nil;
@@ -231,6 +235,7 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
       scope:=newScope;
       exit;
     end;
+    scope^.cleanup(literalRecycler);
     with scopeRecycler do begin
       if (fill>=length(dat))
       then dispose(scope,destroy)
