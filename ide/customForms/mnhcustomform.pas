@@ -148,11 +148,11 @@ PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
     end;
   end;
 
-FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
+FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string; VAR literalRecycler:T_literalRecycler):P_literal;
   VAR keyLit:P_literal;
   begin
     keyLit:=literalRecycler.newStringLiteral(key);
-    result:=map^.get(keyLit);
+    result:=map^.get(@literalRecycler,keyLit);
     literalRecycler.disposeLiteral(keyLit);
     if result^.literalType=lt_void then literalRecycler.disposeLiteral(result);
   end;

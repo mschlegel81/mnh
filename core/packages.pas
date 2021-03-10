@@ -1288,8 +1288,8 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
   FUNCTION builtinCallList:P_listLiteral;
     VAR builtin:P_builtinFunctionMetaData;
     begin
-      result:=literalRecycler.newListLiteral();
-      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(builtin^.qualifiedId);
+      result:=recycler.literalRecycler.newListLiteral();
+      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(@recycler.literalRecycler,builtin^.qualifiedId);
     end;
   {$endif}
 
@@ -1311,7 +1311,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
         .put(@recycler.literalRecycler, 'plain script',newBoolLiteral(isPlainScript),false);
     {$ifdef fullVersion}
     functionCallInfos^.cleanup;
-    result^.put('called builtin',builtinCallList,false);
+    result^.put(@recycler.literalRecycler,'called builtin',builtinCallList,false);
     dispose(functionCallInfos,destroy);
     functionCallInfos:=nil;
     {$endif}

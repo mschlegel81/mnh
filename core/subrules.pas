@@ -1620,7 +1620,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     VAR firstRep:P_token=nil;
     begin
       firstRep:=recycler.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
-      firstRep^.next:=recycler.newToken(location,'',tt_parList,literalRecycler.newListLiteral(2)^.append(TList,true)^.append(f,true));
+      firstRep^.next:=recycler.newToken(location,'',tt_parList,recycler.literalRecycler.newListLiteral(2)^
+                                                                    .append(@recycler.literalRecycler, TList,true)^
+                                                                    .append(@recycler.literalRecycler, f    ,true));
       context.reduceExpression(firstRep,recycler);
       result:=context.messages^.continueEvaluation and
               (firstRep<>nil) and
@@ -1639,16 +1641,16 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         temp:P_literal;
     begin
       params.create(1);
-      params.append(TList,true);
+      params.append(@recycler.literalRecycler,TList,true);
       temp:=f^.evaluate(location,@context,@recycler,@params).literal;
-      params.cleanup(@literalRecycler);
+      params.cleanup(@recycler.literalRecycler);
       params.destroy;
       result:=context.messages^.continueEvaluation and
               (temp<>nil) and
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
-      else if temp<>nil then literalRecycler.disposeLiteral(temp);
+      else if temp<>nil then recycler.literalRecycler.disposeLiteral(temp);
       collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
     end;
@@ -1661,11 +1663,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       initialSampleCount:=(samples div 100)-1;
       if initialSampleCount< 5 then
          initialSampleCount:=5;
-      TList:=literalRecycler.newListLiteral;
+      TList:=recycler.literalRecycler.newListLiteral;
       setLength(tRow,initialSampleCount+1);
       for sampleIndex:=0 to initialSampleCount do begin
         t:=t0+(t1-t0)*sampleIndex/initialSampleCount;
-        TList^.appendReal(t);
+        TList^.appendReal(@recycler.literalRecycler,t);
         tRow[sampleIndex]:=t;
       end;
     end;
@@ -1692,12 +1694,12 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
-        TList:=literalRecycler.newListLiteral;
+        TList:=recycler.literalRecycler.newListLiteral;
         for i:=0 to dataRow.size-2 do
         for j:=1 to refinementSteps[i] do begin
           t:=j/(refinementSteps[i]+1);
           t:=tRow[i]*(1-t)+tRow[i+1]*t;
-          TList^.appendReal(t);
+          TList^.appendReal(@recycler.literalRecycler,t);
           append(newTimes,t);
         end;
         //---------------------------------------------:Prepare new time samples
@@ -1741,9 +1743,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           newRow.free;
           oldRow.free;
           //------------------------------------------------------:Merge samples
-          literalRecycler.disposeLiteral(resultLiteral);
+          recycler.literalRecycler.disposeLiteral(resultLiteral);
         end;
-        literalRecycler.disposeLiteral(TList);
+        recycler.literalRecycler.disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
     end;
@@ -1762,11 +1764,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      literalRecycler.disposeLiteral(resultLiteral);
-      literalRecycler.disposeLiteral(TList);
+      recycler.literalRecycler.disposeLiteral(resultLiteral);
+      recycler.literalRecycler.disposeLiteral(TList);
       refineDataRow;
     end else begin
-      literalRecycler.disposeLiteral(TList);
+      recycler.literalRecycler.disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
       context.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       oldMessages^.postCustomMessages(collector.getStoredMessages);

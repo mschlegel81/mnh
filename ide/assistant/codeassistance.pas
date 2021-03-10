@@ -184,7 +184,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         result:=package.usedAndExtendedPackages;
       except end;
       globals^.afterEvaluation(recycler,packageTokenLocation(@package));
-      globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+      globals^.primaryContext.finalizeTaskAndDetachFromParent(recycler);
       package.destroy;
       recycler.cleanup;
     end;

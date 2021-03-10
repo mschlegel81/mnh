@@ -39,11 +39,14 @@ PROCEDURE T_checkboxMeta.update;
   end;
 
 PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
+  VAR literalRecycler:T_literalRecycler;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
       if (config.bindingTo<>'') then begin
+        literalRecycler.initRecycler;
         if state.bindingValue<>nil then literalRecycler.disposeLiteral(state.bindingValue);
+        literalRecycler.cleanup;
         state.bindingValue:=newBoolLiteral(checkbox.checked);
         propagateCursor(getCustomForm,crHourGlass);
       end;

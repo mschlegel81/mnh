@@ -51,9 +51,12 @@ PROCEDURE T_customFormRequest.setCreatedForm(form:TscriptedForm);
   end;
 
 DESTRUCTOR T_customFormRequest.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
     inherited destroy;
+    literalRecycler.initRecycler;
     literalRecycler.disposeLiteral(setupDef);
+    literalRecycler.cleanup;
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;

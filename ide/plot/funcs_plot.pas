@@ -118,21 +118,21 @@ FUNCTION getOptions intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       opt:=getOptionsViaAdapters(context.messages);
-      result:=literalRecycler.newMapLiteral(14)^
-        .put('x0'             ,opt.axisTrafo['x'].worldMin)^
-        .put('x1'             ,opt.axisTrafo['x'].worldMax)^
-        .put('y0'             ,opt.axisTrafo['y'].worldMin)^
-        .put('y1'             ,opt.axisTrafo['y'].worldMax)^
-        .put('fontsize'       ,opt.relativeFontSize)^
-        .put('preserveAspect' ,opt.preserveAspect  )^
-        .put('autoscaleX'     ,opt.axisTrafo['x'].autoscale)^
-        .put('autoscaleY'     ,opt.axisTrafo['y'].autoscale)^
-        .put('autoscaleFactor',opt.autoscaleFactor )^
-        .put('logscaleX'      ,opt.axisTrafo['x'].logscale)^
-        .put('logscaleY'      ,opt.axisTrafo['y'].logscale)^
-        .put('axisStyleX'     ,byte(opt.axisStyle['x']))^
-        .put('axisStyleY'     ,byte(opt.axisStyle['y']))^
-        .put('strictInput'    ,opt.strictInput);
+      result:=recycler.literalRecycler.newMapLiteral(14)^
+        .put(@recycler.literalRecycler,'x0'             ,opt.axisTrafo['x'].worldMin)^
+        .put(@recycler.literalRecycler,'x1'             ,opt.axisTrafo['x'].worldMax)^
+        .put(@recycler.literalRecycler,'y0'             ,opt.axisTrafo['y'].worldMin)^
+        .put(@recycler.literalRecycler,'y1'             ,opt.axisTrafo['y'].worldMax)^
+        .put(@recycler.literalRecycler,'fontsize'       ,opt.relativeFontSize)^
+        .put(@recycler.literalRecycler,'preserveAspect' ,opt.preserveAspect  )^
+        .put(@recycler.literalRecycler,'autoscaleX'     ,opt.axisTrafo['x'].autoscale)^
+        .put(@recycler.literalRecycler,'autoscaleY'     ,opt.axisTrafo['y'].autoscale)^
+        .put(@recycler.literalRecycler,'autoscaleFactor',opt.autoscaleFactor )^
+        .put(@recycler.literalRecycler,'logscaleX'      ,opt.axisTrafo['x'].logscale)^
+        .put(@recycler.literalRecycler,'logscaleY'      ,opt.axisTrafo['y'].logscale)^
+        .put(@recycler.literalRecycler,'axisStyleX'     ,byte(opt.axisStyle['x']))^
+        .put(@recycler.literalRecycler,'axisStyleY'     ,byte(opt.axisStyle['y']))^
+        .put(@recycler.literalRecycler,'strictInput'    ,opt.strictInput);
     end;
   end;
 
@@ -216,14 +216,14 @@ FUNCTION setOptions intFuncSignature;
     result:=nil;
     opt.setDefaults;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
-      iter:=compound0^.iteratableList;
+      iter:=compound0^.forcedIteratableList(@recycler.literalRecycler);
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
-        literalRecycler.disposeLiteral(iter);
+        recycler.literalRecycler.disposeLiteral(iter);
         exit(nil);
       end;
       for pair in iter do
         matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_listLiteral(pair)^.value[1]);
-      literalRecycler.disposeLiteral(iter);
+      recycler.literalRecycler.disposeLiteral(iter);
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_smallint,lt_bigint,lt_boolean]) then begin
       matchKey(str0^.value,arg1);
@@ -293,7 +293,7 @@ FUNCTION renderToString_impl intFuncSignature;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height));
       context.messages^.postCustomMessage(renderRequest^.rereferenced,true);
-      result:=literalRecycler.newStringLiteral(renderRequest^.getStringWaiting(context.messages));
+      result:=recycler.literalRecycler.newStringLiteral(renderRequest^.getStringWaiting(context.messages));
       renderRequest^.setString('');
       disposeMessage(renderRequest);
     end;
