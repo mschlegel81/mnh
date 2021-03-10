@@ -135,7 +135,7 @@ FUNCTION driveInfo_imp intFuncSignature;
   {$else}
   begin
     result:=nil;
-    context.raiseError('Function driveInfo is not avaliable under Linux',tokenLocation);
+    context^.raiseError('Function driveInfo is not avaliable under Linux',tokenLocation);
   end;
   {$endif}
 
@@ -253,7 +253,7 @@ FUNCTION getCPULoadPercentage_impl intFuncSignature;
     if not(context^.checkSideEffects('getCPULoadPercentage',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=recycler^.literalRecycler.newIntLiteral(mySys.getCPULoadPercentage);
     {$else}
-    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    context^.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
     {$endif}
   end;
@@ -275,7 +275,7 @@ FUNCTION getTaskInfo_impl intFuncSignature;
       ^.put(@recycler^.literalRecycler,'parentPID',i.parentPID)
       ^.put(@recycler^.literalRecycler,'workingSetSize',i.workingSetSize),false);
     {$else}
-    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    context^.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
     {$endif}
   end;
