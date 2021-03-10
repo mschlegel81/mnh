@@ -2,7 +2,7 @@ TYPE
   P_checkboxMeta=^T_checkboxMeta;
   T_checkboxMeta=object(T_guiElementMeta)
     checkbox:TCheckBox;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
@@ -10,9 +10,9 @@ TYPE
   end;
 
 CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                  CONST location: T_tokenLocation; VAR context: T_context);
+                                  CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
   begin
-    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
+    inherited create(def,location,context,literalRecycler,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
     checkbox:=TCheckBox.create(parent^.winControl);
     checkbox.parent:=parent^.winControl;
     checkbox.Align:=alTop;

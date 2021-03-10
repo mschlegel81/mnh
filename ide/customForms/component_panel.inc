@@ -5,7 +5,7 @@ TYPE
     lastControl:TControl;
     winControl:TWinControl;
     containedInForm:TForm;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TscriptedForm);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
@@ -60,11 +60,11 @@ DESTRUCTOR T_customFormRequest.destroy;
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                               CONST location: T_tokenLocation; VAR context: T_context;
+                               CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler;
                                CONST consideredKeys:T_definingMapKeys);
   VAR newPanel:TPanel;
   begin
-    inherited create(def,location,context,consideredKeys);
+    inherited create(def,location,context,literalRecycler,consideredKeys);
     newPanel:=TPanel.create(parent^.winControl);
     newPanel.parent:=parent^.winControl;
     newPanel.ParentFont:=true;

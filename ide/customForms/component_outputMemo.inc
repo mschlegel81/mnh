@@ -4,7 +4,7 @@ TYPE
     synMeta:T_basicEditorMeta;
     config_hlLang:P_expressionLiteral;
     state_hlLang :string;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
     PROCEDURE update; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
@@ -15,17 +15,18 @@ TYPE
 
 CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
                                     CONST location: T_tokenLocation; VAR context: T_context;
+                                    VAR literalRecycler:T_literalRecycler;
                                     CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
   VAR langLit:P_literal;
   begin
-    inherited create(def,location,context,consideredKeys);
+    inherited create(def,location,context,consideredKeys,literalRecycler);
     synMeta.createWithParent(parent^.winControl,nil);
     synMeta.editor.Align:=alTop;
     synMeta.editor.readonly:=true;
     state_hlLang:='';
     config_hlLang:=nil;
 
-    langLit:=mapGet(def,key[dmk_highlight]);
+    langLit:=mapGet(def,key[dmk_highlight],literalRecycler);
     if langLit<>nil then begin
       case langLit^.literalType of
         lt_string: begin
@@ -70,9 +71,11 @@ FUNCTION T_outputMemoMeta.getName:string;
 FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR tmp:P_literal;
       oldLang:string;
+  VAR literalRecycler:T_literalRecycler;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
     try
+      literalRecycler.initRecycler;
       result:=inherited evaluate(location,context,recycler);
       if config_hlLang<>nil then begin
         tmp:=config_hlLang^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
@@ -86,14 +89,18 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         end;
       end;
     finally
+      literalRecycler.cleanup;
       leaveCriticalSection(elementCs);
     end;
   end;
 
 DESTRUCTOR T_outputMemoMeta.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
     inherited destroy;
     synMeta.destroy;
+    literalRecycler.initRecycler;
     if config_hlLang<>nil then literalRecycler.disposeLiteral(config_hlLang);
+    literalRecycler.cleanup;
   end;
 

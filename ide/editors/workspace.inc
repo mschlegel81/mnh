@@ -130,8 +130,8 @@ FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
 FUNCTION editors_impl intFuncSignature;
   VAR meta:P_editorMeta;
   begin
-    result:=literalRecycler.newListLiteral();
-    for meta in workspace.metas do listResult^.appendString(meta^.pseudoName());
+    result:=recycler.literalRecycler.newListLiteral();
+    for meta in workspace.metas do listResult^.appendString(@recycler.literalRecycler,meta^.pseudoName());
   end;
 
 FUNCTION editorContent_impl intFuncSignature;
@@ -142,8 +142,8 @@ FUNCTION editorContent_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       meta:=workspace.getExistingEditorForPath(str0^.value);
       if meta=nil then exit(newVoidLiteral);
-      result:=literalRecycler.newListLiteral(meta^.editor.lines.count);
-      for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(meta^.editor.lines[i]);
+      result:=recycler.literalRecycler.newListLiteral(meta^.editor.lines.count);
+      for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(@recycler.literalRecycler,meta^.editor.lines[i]);
     end;
   end;
 

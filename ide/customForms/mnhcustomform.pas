@@ -64,7 +64,7 @@ TYPE
     end;
     elementCs:TRTLCriticalSection;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
     FUNCTION getCustomForm:TWinControl;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
@@ -103,7 +103,7 @@ TYPE
     lock:TRTLCriticalSection;
     processingEvents:boolean;
     adapter:P_customFormAdapter;
-    PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST relatedPlotAdapter:P_guiPlotSystem);
+    PROCEDURE initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; VAR literalRecycler:T_literalRecycler; CONST relatedPlotAdapter:P_guiPlotSystem);
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
@@ -187,7 +187,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 {$I component_worker.inc}
 
 CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
-                                    CONST location: T_tokenLocation; VAR context: T_context;
+                                    CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler;
                                     CONST consideredKeys: T_definingMapKeys);
   PROCEDURE raiseUnusedKeyWarning;
     FUNCTION isConsidered(CONST k:P_literal):boolean;
@@ -228,14 +228,14 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
         isFocused:=false;
       end;
 
-      tmp:=mapGet(def,key[dmk_action]);
+      tmp:=mapGet(def,key[dmk_action],literalRecycler);
       if tmp<>nil then begin
         if (tmp^.literalType=lt_expression)
         then config.action:=P_expressionLiteral(tmp)
         else context.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
       end;
 
-      tmp:=mapGet(def,key[dmk_caption]);
+      tmp:=mapGet(def,key[dmk_caption],literalRecycler);
       if tmp<>nil then begin
         case tmp^.literalType of
           lt_expression: config.caption:=P_expressionLiteral(tmp);
@@ -247,7 +247,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
         end;
       end;
 
-      tmp:=mapGet(def,key[dmk_enabled]);
+      tmp:=mapGet(def,key[dmk_enabled],literalRecycler);
       if tmp<>nil then begin
         case tmp^.literalType of
           lt_expression: config.enabled:=P_expressionLiteral(tmp);
@@ -256,7 +256,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
         end;
       end;
 
-      tmp:=mapGet(def,key[dmk_bind]);
+      tmp:=mapGet(def,key[dmk_bind],literalRecycler);
       if tmp<>nil then begin
         if tmp^.literalType=lt_string then begin
           config.bindingTo:=P_stringLiteral(tmp)^.value;
@@ -278,10 +278,15 @@ FUNCTION T_guiElementMeta.getCustomForm:TWinControl;
   end;
 
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
+  VAR literalRecycler:T_literalRecycler;
   begin
     if (config.action=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     try
-      if state.actionParameter<>nil then literalRecycler.disposeLiteral(state.actionParameter);
+      if state.actionParameter<>nil then begin
+        literalRecycler.initRecycler;
+        literalRecycler.disposeLiteral(state.actionParameter);
+        literalRecycler.cleanup;
+      end;
       state.actionParameter:=param;
       state.actionTriggered:=true;
       propagateCursor(getCustomForm,crHourGlass);
@@ -306,29 +311,29 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
             {$endif}
             result:=true;
-            context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
+            context.valueScope^.setVariableValue(recycler.literalRecycler,config.bindingTo,state.bindingValue,location,@context);
           end else begin
             if tmp^.equals(state.bindingValue) then begin
-              literalRecycler.disposeLiteral(tmp);
+              recycler.literalRecycler.disposeLiteral(tmp);
             end else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
               {$endif}
               result:=true;
-              literalRecycler.disposeLiteral(tmp);
-              context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,@context);
+              recycler.literalRecycler.disposeLiteral(tmp);
+              context.valueScope^.setVariableValue(recycler.literalRecycler,config.bindingTo,state.bindingValue,location,@context);
             end;
           end;
         end else if not(state.isFocused) then begin
           tmp:=context.valueScope^.getVariableValue(config.bindingTo);
           if tmp<>nil then begin
             if tmp^.equals(state.bindingValue)
-            then  literalRecycler.disposeLiteral(tmp)
+            then  recycler.literalRecycler.disposeLiteral(tmp)
             else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
               {$endif}
-              literalRecycler.disposeLiteral(state.bindingValue);
+              recycler.literalRecycler.disposeLiteral(state.bindingValue);
               state.bindingValue:=tmp;
               result:=true;
             end;
@@ -343,8 +348,8 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
         then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
         else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
-        if state.actionParameter<>nil then literalRecycler.disposeLiteral(state.actionParameter);
-        if tmp                  <>nil then literalRecycler.disposeLiteral(tmp);
+        if state.actionParameter<>nil then recycler.literalRecycler.disposeLiteral(state.actionParameter);
+        if tmp                  <>nil then recycler.literalRecycler.disposeLiteral(tmp);
         state.actionTriggered:=false;
         result:=true;
       end;
@@ -368,7 +373,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
           if tmp^.literalType=lt_string
           then state.caption:=P_stringLiteral(tmp)^.value
           else state.caption:=tmp^.toString();
-          literalRecycler.disposeLiteral(tmp);
+          recycler.literalRecycler.disposeLiteral(tmp);
         end;
         result:=result or (oldCaption<>state.caption);
       end;
@@ -378,8 +383,10 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
   end;
 
 DESTRUCTOR T_guiElementMeta.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
     enterCriticalSection(elementCs);
+    literalRecycler.initRecycler;
     try
       if config.action  <>nil then literalRecycler.disposeLiteral(config.action );
       if config.caption <>nil then literalRecycler.disposeLiteral(config.caption);
@@ -390,6 +397,7 @@ DESTRUCTOR T_guiElementMeta.destroy;
     finally
       leaveCriticalSection(elementCs);
       doneCriticalSection(elementCs);
+      literalRecycler.cleanup;
     end;
   end;
 
@@ -505,7 +513,7 @@ PROCEDURE TscriptedForm.performFastUpdate;
 
 PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
   CONST setupLocation: T_tokenLocation; CONST setupContext: P_context;
-  CONST relatedPlotAdapter: P_guiPlotSystem);
+  VAR literalRecycler:T_literalRecycler; CONST relatedPlotAdapter: P_guiPlotSystem);
   TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid,tc_plotDock);
   CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid','plotDock');
 
@@ -513,7 +521,7 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
     VAR tc:T_componentType;
         componentTypeLiteral:P_literal;
     begin
-      componentTypeLiteral:=mapGet(def,key[dmk_type]);
+      componentTypeLiteral:=mapGet(def,key[dmk_type],literalRecycler);
       if (componentTypeLiteral=nil) or (componentTypeLiteral^.literalType<>lt_string) then begin
         setupContext^.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
         if componentTypeLiteral<>nil then literalRecycler.disposeLiteral(componentTypeLiteral);
@@ -563,39 +571,39 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
 
     begin
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
-        tc_label:        begin new(labelMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(labelMeta   ); end;
-        tc_button:       begin new(buttonMeta  ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(buttonMeta  ); end;
-        tc_checkbox:     begin new(checkboxMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(checkboxMeta); end;
-        tc_textBox:      begin new(editMeta    ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(editMeta    ); end;
-        tc_inputEditor : begin new(inputEditM  ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
-        tc_outputEditor: begin new(outputEditM ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
-        tc_comboBox:     begin new(comboMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
-        tc_console:      begin new(consoleMeta ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
-        tc_worker:       begin new(workerMeta  ,create(          P_mapLiteral(def),setupLocation,setupContext^)); addMeta(workerMeta); end;
+        tc_label:        begin new(labelMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(labelMeta   ); end;
+        tc_button:       begin new(buttonMeta  ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(buttonMeta  ); end;
+        tc_checkbox:     begin new(checkboxMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(checkboxMeta); end;
+        tc_textBox:      begin new(editMeta    ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(editMeta    ); end;
+        tc_inputEditor : begin new(inputEditM  ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(inputEditM  ); end;
+        tc_outputEditor: begin new(outputEditM ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(outputEditM ); end;
+        tc_comboBox:     begin new(comboMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(comboMeta   ); end;
+        tc_console:      begin new(consoleMeta ,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(consoleMeta ); end;
+        tc_worker:       begin new(workerMeta  ,create(          P_mapLiteral(def),setupLocation,setupContext^,literalRecycler)); addMeta(workerMeta); end;
         tc_plot:         if plotLink=nil then begin;
-          new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
+          new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^,literalRecycler,relatedPlotAdapter));
           addMeta(plotLink);
         end else setupContext^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_plotDock:     if plotDock=nil then begin;
-          new(P_plotDockMeta(plotDock),create(container,P_mapLiteral(def),setupLocation,setupContext^,relatedPlotAdapter));
+          new(P_plotDockMeta(plotDock),create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler,relatedPlotAdapter));
           addMeta(plotDock);
         end else setupContext^.raiseError('Only one plot dock is allowed per custom form',setupLocation);
         tc_panel:begin
-          new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
-          addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts]));
+          new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler));
+          addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts],literalRecycler));
           addMeta(newPanel);
           newPanel^.alignContents;
         end;
         tc_splitPanel:begin
-          new(splitPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
-          addPanelContents(@splitPanel^.Left ,mapGet(P_mapLiteral(def),key[dmk_left ]));
-          addPanelContents(@splitPanel^.Right,mapGet(P_mapLiteral(def),key[dmk_right]));
+          new(splitPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler));
+          addPanelContents(@splitPanel^.Left ,mapGet(P_mapLiteral(def),key[dmk_left ],literalRecycler));
+          addPanelContents(@splitPanel^.Right,mapGet(P_mapLiteral(def),key[dmk_right],literalRecycler));
           addMeta(splitPanel);
           splitPanel^.alignContents;
         end;
         tc_grid:begin
-          new(gridMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^));
-          addPanelContents(gridMeta,mapGet(P_mapLiteral(def),key[dmk_parts]));
+          new(gridMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^,literalRecycler));
+          addPanelContents(gridMeta,mapGet(P_mapLiteral(def),key[dmk_parts],literalRecycler));
           gridMeta^.doneAdding;
           addMeta(gridMeta);
         end;
@@ -731,9 +739,11 @@ CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter(CONST plot:P_guiPlotSyst
 FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR i,k:longint;
       newForm:TscriptedForm;
+      literalRecycler:T_literalRecycler;
   begin
     result:=[];
     enterCriticalSection(adapterCs);
+    literalRecycler.initRecycler;
     try
       for i:=0 to collectedFill-1 do begin
         case collected[i]^.messageType of
@@ -751,7 +761,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
             newForm.caption:=setupTitle;
             setLength(scriptedForms,length(scriptedForms)+1);
             scriptedForms[length(scriptedForms)-1]:=newForm;
-            newForm.initialize(setupDef,setupLocation,setupContext,relatedPlotAdapter);
+            newForm.initialize(setupDef,setupLocation,setupContext,literalRecycler,relatedPlotAdapter);
             newForm.adapter:=@self;
             setCreatedForm(newForm);
             dockNewForm(newForm);
@@ -763,6 +773,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
       clear;
     finally
       leaveCriticalSection(adapterCs);
+      literalRecycler.cleanup;
     end;
   end;
 

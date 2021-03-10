@@ -6,7 +6,7 @@ TYPE
     combobox:TComboBox;
     config_items:P_expressionLiteral;
     state_items :T_arrayOfString;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
     FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE update; virtual;
     PROCEDURE OnSelect(Sender: TObject);
@@ -18,12 +18,12 @@ TYPE
   end;
 
 CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                  CONST location: T_tokenLocation; VAR context: T_context);
+                                  CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
   VAR tmp:P_literal;
   begin
-    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items]);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items],literalRecycler);
     config_items:=nil;
-    tmp:=mapGet(def,key[dmk_items]);
+    tmp:=mapGet(def,key[dmk_items],literalRecycler);
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config_items:=P_expressionLiteral(tmp);
@@ -100,8 +100,11 @@ PROCEDURE T_comboboxMeta.update;
   end;
 
 PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
+  VAR literalRecycler:T_literalRecycler;
   begin
+    literalRecycler.initRecycler;
     if config.action<>nil then postAction(literalRecycler.newStringLiteral(combobox.text));
+    literalRecycler.cleanup;
   end;
 
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
@@ -117,9 +120,11 @@ FUNCTION T_comboboxMeta.getControl: TControl;
 FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
+      literalRecycler:T_literalRecycler;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
     try
+      literalRecycler.initRecycler;
       result:=inherited evaluate(location,context,recycler);
       if config_items<>nil then begin
         oldItems:=state_items;
@@ -134,6 +139,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       end;
     finally
       leaveCriticalSection(elementCs);
+      literalRecycler.cleanup;
     end;
   end;
 
@@ -143,9 +149,12 @@ FUNCTION T_comboboxMeta.getName:string;
   end;
 
 DESTRUCTOR T_comboboxMeta.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
     inherited destroy;
+    literalRecycler.initRecycler;
     if config_items<>nil then literalRecycler.disposeLiteral(config_items);
     setLength(state_items,0);
+    literalRecycler.cleanup;
   end;
 
