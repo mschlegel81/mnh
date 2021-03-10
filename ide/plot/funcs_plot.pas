@@ -13,7 +13,7 @@ USES sysutils,math,
      mnh_messages,
      recyclers,
      mnh_plotData,plotstyles,plotMath;
-TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_dataRow;
+TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
@@ -66,7 +66,7 @@ FUNCTION addPlot intFuncSignature;
     end;
 
   begin
-    if not(context.checkSideEffects('addPlot',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('addPlot',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
       if (params^.value[params^.size-1]^.literalType = lt_string) then begin
@@ -77,14 +77,14 @@ FUNCTION addPlot intFuncSignature;
         sizeWithoutOptions:=params^.size;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.messages^.postCustomMessage(addRowMessage(newDataRow(list0)),true);
+        context^.messages^.postCustomMessage(addRowMessage(newDataRow(list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
-        context.messages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)),true);
+        context^.messages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
@@ -92,7 +92,7 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
          (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
-        context.messages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
+        context^.messages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
                                                                 fReal(arg1),
                                                                 fReal(arg2),
                                                                 int3^.intValue,
@@ -105,8 +105,8 @@ FUNCTION addPlot intFuncSignature;
 
 FUNCTION plot intFuncSignature;
   begin
-    if not(context.checkSideEffects('plot',tokenLocation,[se_alterGuiState])) then exit(nil);
-    context.messages^.postSingal(mt_plot_clear,C_nilSearchTokenLocation);
+    if not(context^.checkSideEffects('plot',tokenLocation,[se_alterGuiState])) then exit(nil);
+    context^.messages^.postSingal(mt_plot_clear,C_nilSearchTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context,recycler);
@@ -117,22 +117,22 @@ FUNCTION getOptions intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      opt:=getOptionsViaAdapters(context.messages);
-      result:=recycler.literalRecycler.newMapLiteral(14)^
-        .put(@recycler.literalRecycler,'x0'             ,opt.axisTrafo['x'].worldMin)^
-        .put(@recycler.literalRecycler,'x1'             ,opt.axisTrafo['x'].worldMax)^
-        .put(@recycler.literalRecycler,'y0'             ,opt.axisTrafo['y'].worldMin)^
-        .put(@recycler.literalRecycler,'y1'             ,opt.axisTrafo['y'].worldMax)^
-        .put(@recycler.literalRecycler,'fontsize'       ,opt.relativeFontSize)^
-        .put(@recycler.literalRecycler,'preserveAspect' ,opt.preserveAspect  )^
-        .put(@recycler.literalRecycler,'autoscaleX'     ,opt.axisTrafo['x'].autoscale)^
-        .put(@recycler.literalRecycler,'autoscaleY'     ,opt.axisTrafo['y'].autoscale)^
-        .put(@recycler.literalRecycler,'autoscaleFactor',opt.autoscaleFactor )^
-        .put(@recycler.literalRecycler,'logscaleX'      ,opt.axisTrafo['x'].logscale)^
-        .put(@recycler.literalRecycler,'logscaleY'      ,opt.axisTrafo['y'].logscale)^
-        .put(@recycler.literalRecycler,'axisStyleX'     ,byte(opt.axisStyle['x']))^
-        .put(@recycler.literalRecycler,'axisStyleY'     ,byte(opt.axisStyle['y']))^
-        .put(@recycler.literalRecycler,'strictInput'    ,opt.strictInput);
+      opt:=getOptionsViaAdapters(context^.messages);
+      result:=recycler^.literalRecycler.newMapLiteral(14)^
+        .put(@recycler^.literalRecycler,'x0'             ,opt.axisTrafo['x'].worldMin)^
+        .put(@recycler^.literalRecycler,'x1'             ,opt.axisTrafo['x'].worldMax)^
+        .put(@recycler^.literalRecycler,'y0'             ,opt.axisTrafo['y'].worldMin)^
+        .put(@recycler^.literalRecycler,'y1'             ,opt.axisTrafo['y'].worldMax)^
+        .put(@recycler^.literalRecycler,'fontsize'       ,opt.relativeFontSize)^
+        .put(@recycler^.literalRecycler,'preserveAspect' ,opt.preserveAspect  )^
+        .put(@recycler^.literalRecycler,'autoscaleX'     ,opt.axisTrafo['x'].autoscale)^
+        .put(@recycler^.literalRecycler,'autoscaleY'     ,opt.axisTrafo['y'].autoscale)^
+        .put(@recycler^.literalRecycler,'autoscaleFactor',opt.autoscaleFactor )^
+        .put(@recycler^.literalRecycler,'logscaleX'      ,opt.axisTrafo['x'].logscale)^
+        .put(@recycler^.literalRecycler,'logscaleY'      ,opt.axisTrafo['y'].logscale)^
+        .put(@recycler^.literalRecycler,'axisStyleX'     ,byte(opt.axisStyle['x']))^
+        .put(@recycler^.literalRecycler,'axisStyleY'     ,byte(opt.axisStyle['y']))^
+        .put(@recycler^.literalRecycler,'strictInput'    ,opt.strictInput);
     end;
   end;
 
@@ -143,7 +143,7 @@ FUNCTION setOptions intFuncSignature;
   PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
     PROCEDURE fail;
       begin
-        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,
           'invalid plot option ; key="'+key+'" is not known or not compatible with value '+value^.toString);
         allOkay:=false;
       end;
@@ -212,18 +212,18 @@ FUNCTION setOptions intFuncSignature;
       iter:T_arrayOfLiteral;
       postOptionsMessage:P_plotOptionsMessage;
   begin
-    if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('setOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
     opt.setDefaults;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
-      iter:=compound0^.forcedIteratableList(@recycler.literalRecycler);
+      iter:=compound0^.forcedIteratableList(@recycler^.literalRecycler);
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
-        recycler.literalRecycler.disposeLiteral(iter);
+        recycler^.literalRecycler.disposeLiteral(iter);
         exit(nil);
       end;
       for pair in iter do
         matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_listLiteral(pair)^.value[1]);
-      recycler.literalRecycler.disposeLiteral(iter);
+      recycler^.literalRecycler.disposeLiteral(iter);
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_smallint,lt_bigint,lt_boolean]) then begin
       matchKey(str0^.value,arg1);
@@ -231,7 +231,7 @@ FUNCTION setOptions intFuncSignature;
     end else allOkay:=false;
     if allOkay then begin
       new(postOptionsMessage,createPostRequest(opt,modified));
-      context.messages^.postCustomMessage(postOptionsMessage,true);
+      context^.messages^.postCustomMessage(postOptionsMessage,true);
     end;
   end;
 
@@ -239,11 +239,11 @@ FUNCTION resetOptions_impl intFuncSignature;
   VAR opt:T_scalingOptions;
       postOptionsMessage:P_plotOptionsMessage;
   begin
-    if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('resetOptions',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       opt.setDefaults;
       new(postOptionsMessage,createPostRequest(opt,[low(T_scalingOptionElement)..high(T_scalingOptionElement)]));
-      context.messages^.postCustomMessage(postOptionsMessage,true);
+      context^.messages^.postCustomMessage(postOptionsMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -253,7 +253,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
-    if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile,se_readGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('renderToFile',tokenLocation,[se_writeFile,se_readGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=3) and
       (arg0^.literalType = lt_string) and
@@ -267,10 +267,10 @@ FUNCTION renderToFile_impl intFuncSignature;
       try
         fileName:=ChangeFileExt(str0^.value,'.png');
         new(renderRequest,createRenderToFileRequest(fileName,width,height));
-        context.messages^.postCustomMessage(renderRequest,true);
+        context^.messages^.postCustomMessage(renderRequest,true);
       except
         on e:Exception do begin
-          context.raiseError('Error on renderToFile: '+e.message,tokenLocation);
+          context^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
           exit(nil);
         end;
       end;
@@ -282,7 +282,7 @@ FUNCTION renderToString_impl intFuncSignature;
   VAR width, height: longint;
       renderRequest:P_plotRenderRequest;
   begin
-    if not(context.checkSideEffects('renderToString',tokenLocation,[se_readGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('renderToString',tokenLocation,[se_readGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=2) and
       (arg0^.literalType in [lt_smallint,lt_bigint]) and
@@ -292,8 +292,8 @@ FUNCTION renderToString_impl intFuncSignature;
       width:=int0^.intValue;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height));
-      context.messages^.postCustomMessage(renderRequest^.rereferenced,true);
-      result:=recycler.literalRecycler.newStringLiteral(renderRequest^.getStringWaiting(context.messages));
+      context^.messages^.postCustomMessage(renderRequest^.rereferenced,true);
+      result:=recycler^.literalRecycler.newStringLiteral(renderRequest^.getStringWaiting(context^.messages));
       renderRequest^.setString('');
       disposeMessage(renderRequest);
     end;
@@ -303,12 +303,12 @@ FUNCTION removePlot_imp intFuncSignature;
   VAR toDrop:longint=1;
       dropPlotMessage:P_plotDropRowRequest;
   begin
-    if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('removePlot',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
       new(dropPlotMessage,create(toDrop,true));
-      context.messages^.postCustomMessage(dropPlotMessage,true);
+      context^.messages^.postCustomMessage(dropPlotMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -317,17 +317,17 @@ FUNCTION removeText_imp intFuncSignature;
   VAR toDrop:longint=1;
       dropPlotMessage:P_plotDropRowRequest;
   begin
-    if not(context.checkSideEffects('removeText',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('removeText',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
       new(dropPlotMessage,create(toDrop,false));
-      context.messages^.postCustomMessage(dropPlotMessage,true);
+      context^.messages^.postCustomMessage(dropPlotMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
-FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST abspos:boolean):P_literal;
+FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST abspos:boolean):P_literal;
   VAR txt:P_customText;
       lines:T_arrayOfString;
       i:longint;
@@ -379,13 +379,13 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
         end;
       end;
       new(postRequest,create(txt));
-      context.messages^.postCustomMessage(postRequest,true);
+      context^.messages^.postCustomMessage(postRequest,true);
       result:=newVoidLiteral;
     end;
   end;
 
-FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSideEffects('drawText'        ,tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
-FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
+FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context^.checkSideEffects('drawText'        ,tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
+FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context^.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,

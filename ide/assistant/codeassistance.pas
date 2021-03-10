@@ -179,12 +179,12 @@ PROCEDURE T_codeAssistanceThread.execute;
       try
         recycler.initRecycler;
         package.create(newCodeProvider(fileName),nil);
-        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-        package.load(lu_usageScan,globals^,recycler,C_EMPTY_STRING_ARRAY);
+        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
+        package.load(lu_usageScan,globals^,@recycler,C_EMPTY_STRING_ARRAY);
         result:=package.usedAndExtendedPackages;
       except end;
-      globals^.afterEvaluation(recycler,packageTokenLocation(@package));
-      globals^.primaryContext.finalizeTaskAndDetachFromParent(recycler);
+      globals^.afterEvaluation(@recycler,packageTokenLocation(@package));
+      globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       package.destroy;
       recycler.cleanup;
     end;
@@ -353,7 +353,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
       secondaryCallInfos.create;
-      user.load(lu_forCodeAssistanceSecondary,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
+      user.load(lu_forCodeAssistanceSecondary,globals^,@recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
       callAndIdInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;
@@ -390,7 +390,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       givenAdapters^.clear;
     end;
 
-    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
     globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(callAndIdInfos,create);
@@ -402,10 +402,10 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
 
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
     globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
+    package^.load(lu_forCodeAssistance,globals^,@recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
-    globals^.afterEvaluation(recycler,packageTokenLocation(package));
+    globals^.afterEvaluation(@recycler,packageTokenLocation(package));
     {$ifdef debugMode}
     writeln('Code assistance end  : ',scriptPath);
     {$endif}

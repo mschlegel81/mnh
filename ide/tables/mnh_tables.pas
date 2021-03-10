@@ -94,7 +94,7 @@ IMPLEMENTATION
 USES myStringUtil,strutils,math,LCLType,LazUTF8Classes,LConvEncoding;
 {$R *.lfm}
 
-FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR caption:string='';
       fixedRowsRead:boolean=false;
       FixedCols:longint=0;
@@ -102,9 +102,9 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
       tableDisplayRequest:P_tableDisplayRequest;
   begin
-    if not(context.checkSideEffects('showTable',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('showTable',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (gui_started=NO) then begin
-      context.messages^.logGuiNeeded;
+      context^.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and
@@ -133,7 +133,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       if (gui_started<>NO) then begin
         new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,FixedRows,FixedCols));
-        context.messages^.postCustomMessage(tableDisplayRequest,true);
+        context^.messages^.postCustomMessage(tableDisplayRequest,true);
         result:=newVoidLiteral;
       end else result:=nil;
     end else result:=nil;

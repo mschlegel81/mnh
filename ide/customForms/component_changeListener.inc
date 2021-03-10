@@ -6,7 +6,7 @@ TYPE
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST consideredKeys:T_definingMapKeys; VAR literalRecycler:T_literalRecycler);
     PROCEDURE triggerChange(CONST changeValue:string);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -61,7 +61,7 @@ DESTRUCTOR T_changeListeningMeta.destroy;
     literalRecycler.cleanup;
   end;
 
-FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
+FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
   VAR tmp:P_literal;
       literalRecycler:T_literalRecycler;
   begin

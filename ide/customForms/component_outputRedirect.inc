@@ -4,7 +4,7 @@ TYPE
     adaptersHoldingCollector:P_messagesDistributor;
     synOutAdapter:P_eagerInitializedOutAdapter;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     PROCEDURE update; virtual;
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
@@ -21,7 +21,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     new(synOutAdapter,create(synMeta.editor,parent^.containedInForm));
   end;
 
-FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
+FUNCTION T_secondaryOutputMemoMeta.evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
   begin
     result:=synOutAdapter^.fill>0;
   end;

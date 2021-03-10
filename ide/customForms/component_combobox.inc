@@ -12,7 +12,7 @@ TYPE
     PROCEDURE OnSelect(Sender: TObject);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -117,14 +117,12 @@ FUNCTION T_comboboxMeta.getControl: TControl;
     result:=comboboxPanel;
   end;
 
-FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
-      literalRecycler:T_literalRecycler;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit(false);
     try
-      literalRecycler.initRecycler;
       result:=inherited evaluate(location,context,recycler);
       if config_items<>nil then begin
         oldItems:=state_items;
@@ -132,14 +130,13 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
         if (tmp<>nil) then begin
           if tmp^.literalType in [lt_stringList,lt_emptyList]
           then state_items:=P_listLiteral(tmp)^
-          else context.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
-          literalRecycler.disposeLiteral(tmp);
+          else context^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+          recycler^.disposeLiteral(tmp);
         end;
         result:=result or not(arrEquals(oldItems,state_items));
       end;
     finally
       leaveCriticalSection(elementCs);
-      literalRecycler.cleanup;
     end;
   end;
 

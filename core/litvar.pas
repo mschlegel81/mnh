@@ -7,8 +7,8 @@ USES myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_messages,
      out_adapters;
 
-CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
-      HASH_SHRINK_THRESHOLD_FACTOR=0.5;
+CONST HASH_GROWTH_THRESHOLD_FACTOR=1.5;
+      HASH_SHRINK_THRESHOLD_FACTOR=1.2/HASH_GROWTH_THRESHOLD_FACTOR;
 TYPE T_expressionType=(et_builtin          ,
                        et_builtinIteratable,
                        et_builtinAsyncOrFuture    ,
@@ -468,17 +468,17 @@ TYPE
       PROCEDURE disposeLiteral(VAR l:P_literal);
       PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral);
       PROCEDURE disposeLiteral(VAR l: T_arrayOfKeyValuePair);
-      FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
+      FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;
       FUNCTION newBigIntLiteral(value: T_bigInt): P_abstractIntLiteral;
-      FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; inline;
-      FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; inline;
-      FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
-      FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; inline;
-      FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; inline;
+      FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral;
+      FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral;
+      FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;
+      FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;
+      FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;
       FUNCTION newListLiteral  (CONST a:P_literal;
-                                CONST b:P_literal=nil)      : P_listLiteral; inline;
-      FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral;  inline;
-      FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;  inline;
+                                CONST b:P_literal=nil)      : P_listLiteral;
+      FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral;
+      FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;
     end;
 
 CONST
@@ -928,18 +928,18 @@ FUNCTION T_literalRecycler.newStringLiteral(CONST value: ansistring; CONST enfor
 
 FUNCTION T_literalRecycler.newRealLiteral(CONST value: T_myFloat): P_realLiteral;
   begin
-    if isNan(value) then result:=P_realLiteral(nanLit.rereferenced)
-    else if isInfinite(value) then begin
-      if value>0 then result:=P_realLiteral(   infLit.rereferenced)
-                 else result:=P_realLiteral(negInfLit.rereferenced);
-    end else begin
+    //if isNan(value) then result:=P_realLiteral(nanLit.rereferenced)
+    //else if isInfinite(value) then begin
+    //  if value>0 then result:=P_realLiteral(   infLit.rereferenced)
+    //             else result:=P_realLiteral(negInfLit.rereferenced);
+    //end else begin
       with realLiterals do if (fill>0) then begin
         dec(fill);
         result:=dat[fill];
         result^.val:=value;
         result^.numberOfReferences:=1;
       end else new(result,create(value));
-    end;
+    //end;
   end;
 
 FUNCTION T_literalRecycler.newListLiteral(CONST initialSize: longint): P_listLiteral;

@@ -24,8 +24,8 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
       FUNCTION fileExists:boolean;
-      FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+      FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
+      FUNCTION readValue(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; VAR literalRecycler:T_literalRecycler);
   end;
 
@@ -182,7 +182,7 @@ FUNCTION T_datastoreMeta.fileExists:boolean;
     result:=fileName<>'';
   end;
 
-FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
       lexer:T_linesLexer;
       fileLines:T_arrayOfString;
@@ -198,10 +198,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(recycler.literalRecycler,@wrapper,location,context.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(recycler^.literalRecycler,@wrapper,location,context^.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
-        if result<>nil then recycler.literalRecycler.disposeLiteral(result);
+        if result<>nil then recycler^.literalRecycler.disposeLiteral(result);
         result:=nil;
       end;
       wrapper.destroy;
@@ -211,17 +211,17 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       else begin
         dropFirst(fileLines,1);
         lexer.create(fileLines,location,P_abstractPackage(location.package));
-        stmt:=lexer.getNextStatement(context.messages,recycler);
+        stmt:=lexer.getNextStatement(context^.messages,recycler);
         stmt.token.first^.setSingleLocationForExpression(location);
         lexer.destroy;
-        result:=context.reduceToLiteral(stmt.token.first,recycler).literal;
+        result:=context^.reduceToLiteral(stmt.token.first,recycler).literal;
       end;
     end;
     fileAge(fileName,fileReadAt);
     leaveCriticalSection(globalDatastoreCs)
   end;
 
-FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   VAR contentLiteral:P_literal=nil;
   begin
     if sysutils.fileExists(fname) then begin
@@ -229,9 +229,9 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       if fileName='' then exit(newVoidLiteral);
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
-      result:=recycler.literalRecycler.newMapLiteral(2)
-        ^.put(@recycler.literalRecycler,'id',ruleId)
-        ^.put(@recycler.literalRecycler,'content',contentLiteral,false);
+      result:=recycler^.literalRecycler.newMapLiteral(2)
+        ^.put(@recycler^.literalRecycler,'id',ruleId)
+        ^.put(@recycler^.literalRecycler,'content',contentLiteral,false);
     end else result:=newVoidLiteral;
   end;
 

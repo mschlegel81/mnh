@@ -6,7 +6,7 @@ TYPE
     state_hlLang :string;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
     PROCEDURE update; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION preferClientAlignment:boolean; virtual;
     FUNCTION getName:string; virtual;
@@ -68,7 +68,7 @@ FUNCTION T_outputMemoMeta.getName:string;
     result:='T_outputMemoMeta';
   end;
 
-FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
+FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): boolean;
   VAR tmp:P_literal;
       oldLang:string;
   VAR literalRecycler:T_literalRecycler;
@@ -84,7 +84,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             oldLang:=state_hlLang;
             state_hlLang:=P_stringLiteral(tmp)^.value;
             result:=result or (oldLang<>state_hlLang);
-          end else context.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
+          end else context^.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
           literalRecycler.disposeLiteral(tmp);
         end;
       end;

@@ -883,7 +883,7 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
                            else highlighter:=fileTypeMeta[language].highlighter;
       content:=TStringList.create;
       for i:=0 to list0^.size-1 do content.append(P_stringLiteral(list0^.value[i])^.value);
-      result:=recycler.literalRecycler.newStringLiteral(htmlExporter.textToHtml(name,content,highlighter));
+      result:=recycler^.literalRecycler.newStringLiteral(htmlExporter.textToHtml(name,content,highlighter));
       FreeAndNil(content);
       if language=LANG_MNH then FreeAndNil(highlighter);
     end;

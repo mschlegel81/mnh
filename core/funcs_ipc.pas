@@ -93,7 +93,7 @@ PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
 
 VAR messageHashTally:T_hashInt=0;
 PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
-                      CONST location:T_tokenLocation; CONST adapters:P_messages; VAR messageHash:T_hashInt; VAR recycler:T_recycler);
+                      CONST location:T_tokenLocation; CONST adapters:P_messages; VAR messageHash:T_hashInt; CONST recycler:P_recycler);
   VAR streamWrapper:T_outputStreamWrapper;
       memoryStream:TMemoryStream;
       client:TSimpleIPCClient;
@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(recycler.literalRecycler,payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(recycler^.literalRecycler,payload,@streamWrapper,location,adapters);
     except
       serializationOk:=false;
     end;
@@ -152,7 +152,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
                      OUT statusOk:boolean;
                      OUT payload:P_literal;
                      CONST location:T_tokenLocation; CONST adapters:P_messages;
-                     VAR recycler:T_recycler):boolean;
+                     CONST recycler:P_recycler):boolean;
   VAR streamWrapper:T_inputStreamWrapper;
       memoryStream:TMemoryStream;
       typeMap:T_typeMap;
@@ -169,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(recycler.literalRecycler,@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(recycler^.literalRecycler,@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;
@@ -216,7 +216,7 @@ PROCEDURE T_myIpcServer.execute;
       if result then exit(true);
 
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages,recycler) and
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages,@recycler) and
          processThisRequest(request.messageHash)then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
@@ -232,7 +232,7 @@ PROCEDURE T_myIpcServer.execute;
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
-          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,recycler);
+          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,@recycler);
           if response.payload<>nil then recycler.literalRecycler.disposeLiteral(response.payload);
         finally
         end;
@@ -302,7 +302,7 @@ DESTRUCTOR T_myIpcServer.destroy;
     try
       recycler.initRecycler;
       if servingContextOrNil<>nil then begin
-        servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
+        servingContextOrNil^.finalizeTaskAndDetachFromParent(@recycler);
         contextPool.disposeContext(servingContextOrNil);
       end;
       if servingExpressionOrNil<>nil then recycler.literalRecycler.disposeLiteral(servingExpressionOrNil);
@@ -354,24 +354,24 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       normalizedPath:string;
   begin
     result:=nil;
-    if ((params=nil) or (params^.size=0)) and context.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
+    if ((params=nil) or (params^.size=0)) and context^.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
       enterCriticalSection(localServerCs);
       try
         normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
         if localServers.containsKey(normalizedPath,markerServer) then begin
           if (markerServer.feedbackLocation.package=tokenLocation.package)
           then result:=newVoidLiteral
-          else context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation);
+          else context^.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation);
         end else begin
           if isServerRunning(normalizedPath)
-          then context.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
+          then context^.messages^.raiseSimpleError('There already is an instance of this script running',tokenLocation)
           else begin
-            markerServer:=T_myIpcServer.create(normalizedPath,tokenLocation,nil,nil,context.messages,context.getGlobals);
+            markerServer:=T_myIpcServer.create(normalizedPath,tokenLocation,nil,nil,context^.messages,context^.getGlobals);
             result:=newVoidLiteral;
           end;
         end;
       except on e:Exception do
-        context.messages^.raiseSimpleError(e.message,tokenLocation,mt_el4_systemError);
+        context^.messages^.raiseSimpleError(e.message,tokenLocation,mt_el4_systemError);
       end;
       leaveCriticalSection(localServerCs);
     end;
@@ -381,17 +381,17 @@ FUNCTION startIpcServer_impl intFuncSignature;
   VAR childContext:P_context;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and context.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and
+    if (params<>nil) and (params^.size=2) and context^.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       if isServerRunning(str0^.value) then begin
-        context.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
+        context^.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
       end else begin
-        childContext:=context.getNewAsyncContext(recycler,false);
+        childContext:=context^.getNewAsyncContext(recycler,false);
         if childContext<>nil then begin
-          T_myIpcServer.create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context.getGlobals);
+          T_myIpcServer.create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages,context^.getGlobals);
           result:=newVoidLiteral;
-        end else context.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
+        end else context^.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
       end;
     end;
   end;
@@ -411,7 +411,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       responseHash:T_hashInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and context.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
+    if (params<>nil) and (params^.size=2) and context^.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
        (arg0^.literalType=lt_string) then begin
       enterCriticalSection(localServerCs);
       isLocal:=localServers.containsKey(str0^.value,localServer);
@@ -420,20 +420,20 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       then result:=localServer.processLocally(arg1)
       else begin
         temporaryReceiver:=newServer();
-        sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash,recycler);
+        sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context^.messages,messageHash,recycler);
         repeat
-          fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.messages,recycler);
+          fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context^.messages,recycler);
           if not(fetchedResult) then begin
             inc(aliveCheckCounter);
             if (aliveCheckCounter>100) then begin
               if not(isServerRunning(str0^.value))
-              then context.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
-              else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.messages,messageHash,recycler);
+              then context^.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
+              else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context^.messages,messageHash,recycler);
               aliveCheckCounter:=0;
             end else sleep(1);
           end;
-        until fetchedResult or not(context.messages^.continueEvaluation);
-        if fetchedResult and context.messages^.continueEvaluation then begin
+        until fetchedResult or not(context^.messages^.continueEvaluation);
+        if fetchedResult and context^.messages^.continueEvaluation then begin
           if response.payload<>nil then result:=response.payload
                                    else result:=newVoidLiteral;
         end;
@@ -444,7 +444,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
 
 FUNCTION isIpcServerRunning_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('isIpcServerRunning',tokenLocation,[se_accessIpc])) then exit(nil);
+    if not(context^.checkSideEffects('isIpcServerRunning',tokenLocation,[se_accessIpc])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then
       result:=newBoolLiteral(isServerRunning(str0^.value))

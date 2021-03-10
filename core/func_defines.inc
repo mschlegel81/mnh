@@ -1,5 +1,5 @@
 {$MACRO ON}
-{$define intFuncSignature:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal}
+{$define intFuncSignature:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal}
 {$define arg0:=params^.value[0]}
 {$define arg1:=params^.value[1]}
 {$define arg2:=params^.value[2]}
@@ -46,5 +46,5 @@
 {$define setResult :=P_setLiteral(result)}
 {$define mapResult :=P_mapLiteral(result)}
 {$define VECTORIZE :=genericVectorization(FUNC_ID,params,tokenLocation,context,recycler)}
-{$define CHECK_SIDE:=if not(context.checkSideEffects(FUNC_ID,tokenLocation,SIDE_EFFECTS)) then exit(nil);}
+{$define CHECK_SIDE:=if not(context^.checkSideEffects(FUNC_ID,tokenLocation,SIDE_EFFECTS)) then exit(nil);}
 

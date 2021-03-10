@@ -8,7 +8,7 @@ TYPE
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TscriptedForm);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE alignContents; virtual;
@@ -105,7 +105,7 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     lastControl:=meta^.getControl;
   end;
 
-FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; begin result:=false; end;
+FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; begin result:=false; end;
 
 PROCEDURE T_panelMeta.update;
   VAR k:longint;

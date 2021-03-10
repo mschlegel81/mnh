@@ -85,18 +85,18 @@ TYPE
       currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline(VAR literalRecycler:T_literalRecycler);
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST eachLocation:T_tokenLocation);
+      PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
       {Calling with intrinsicTuleId='' means the original is cloned}
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; VAR recycler:T_recycler);
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION usedGlobalVariables:T_arrayOfPointer;
-      CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
-      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
+      CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+      CONSTRUCTOR createFromInline (CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
       CONSTRUCTOR createFromOp(VAR literalRecycler:T_literalRecycler; CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
@@ -113,9 +113,9 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
 
       //Evaluation calls:
-      FUNCTION matchesPatternAndReplaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
+      FUNCTION matchesPatternAndReplaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
-      FUNCTION evaluateFormat(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST parameters:P_listLiteral):P_literal;
+      FUNCTION evaluateFormat(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST parameters:P_listLiteral):P_literal;
 
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
@@ -137,7 +137,7 @@ TYPE
       parent:P_abstractRule;
       PROPERTY metaData:T_ruleMetaData read meta;
 
-      CONSTRUCTOR create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
+      CONSTRUCTOR create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; CONST context:P_context; CONST recycler:P_recycler; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
       FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
@@ -153,7 +153,7 @@ TYPE
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
-      PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
+      PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context);
       PROCEDURE fillCallInfos(CONST infos:P_callAndIdInfos);
       {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
@@ -195,11 +195,11 @@ TYPE
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
-FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
-FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
-FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
+PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST recycler:P_recycler);
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
+FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
     newGeneratorFromStreamCallback: FUNCTION(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
@@ -216,7 +216,7 @@ T_builtinExpression=object(T_expression)
     meta:P_builtinFunctionMetaData;
     id:T_idString;
     func:P_intFuncCallback;
-    FUNCTION getEquivalentInlineExpression(VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
+    FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
     FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
   public
@@ -233,14 +233,14 @@ T_builtinExpression=object(T_expression)
     FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST recycler:P_recycler);
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
       lambdaForm:boolean;
   begin
     if not(rep^.tokType in [tt_expBraceOpen,tt_functionPattern]) then begin
-      context.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      context^.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
     lambdaForm:=rep^.tokType=tt_functionPattern;
@@ -265,9 +265,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
         end;
       end;
       prev^.next:=nil; //unlink closing curly bracket
-      if context.messages^.continueEvaluation then begin
+      if context^.messages^.continueEvaluation then begin
         new(inlineSubRule,createFromInline(inlineRuleTokens,context,recycler,'',lambdaForm));
-        if context.messages^.continueEvaluation then begin
+        if context^.messages^.continueEvaluation then begin
           rep^.tokType:=tt_literal;
           rep^.data:=inlineSubRule;
           rep^.next:=t;
@@ -290,15 +290,15 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
         t:=t^.next;
       end;
       if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-        context.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
+        context^.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
         exit;
       end;
       rep^.next:=t^.next; //remove expression from parent expression
       prev^.next:=nil; //unlink closing curly bracket
-      recycler.disposeToken(t); //dispose closing curly bracket
-      if context.messages^.continueEvaluation then begin
+      recycler^.disposeToken(t); //dispose closing curly bracket
+      if context^.messages^.continueEvaluation then begin
         new(inlineSubRule,createFromInline(inlineRuleTokens,context,recycler));
-        if context.messages^.continueEvaluation then begin
+        if context^.messages^.continueEvaluation then begin
           rep^.tokType:=tt_literal;
           rep^.data:=inlineSubRule;
         end else dispose(inlineSubRule,destroy);
@@ -306,7 +306,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_context; VAR rec
     end;
   end;
 
-PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:T_context; VAR recycler:T_recycler; CONST eachLocation:T_tokenLocation);
+PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
@@ -321,7 +321,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
       if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
         token:=t^;
-        t^.tokType:=tt_EOL; t:=recycler.disposeToken(t);
+        t^.tokType:=tt_EOL; t:=recycler^.disposeToken(t);
         token.next:=nil;
         case token.tokType of
           tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
@@ -330,17 +330,17 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
             if subExpressionLevel=0 then begin
-              if indexOfSave>=0     then context.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
-              else if scopeLevel<>1 then context.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
+              if indexOfSave>=0     then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
+              else if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
               else begin
                 indexOfSave:=i;
-                makeStateful(@context,token.location);
+                makeStateful(context,token.location);
               end;
             end;
             parIdx:=-1;
           end;
           tt_return: begin
-            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.raiseError('return statements are currently only allowed in subrules, not in inline expressions',token.location);
+            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context^.raiseError('return statements are currently only allowed in subrules, not in inline expressions',token.location);
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
@@ -383,14 +383,14 @@ CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location:
     currentlyEvaluating:=false;
   end;
 
-CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler);
+CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   begin
     init(et_whileBody,declAt);
     pattern.create;
     constructExpression(rep,context,recycler,declAt);
   end;
 
-CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_context; VAR recycler:T_recycler; VAR meta_:T_ruleMetaData);
+CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; CONST context:P_context; CONST recycler:P_recycler; VAR meta_:T_ruleMetaData);
   begin
     init(et_subrule,declAt);
     parent:=nil;
@@ -401,7 +401,7 @@ CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; C
     constructExpression(rep,context,recycler,declAt);
   end;
 
-CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation: T_tokenLocation; VAR context: T_context; VAR recycler: T_recycler);
+CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   begin
     init(et_eachBody,rep^.location);
     pattern.create;
@@ -482,7 +482,7 @@ PROCEDURE T_inlineExpression.updatePatternForInline(VAR literalRecycler:T_litera
     end;
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_context; VAR recycler:T_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
+CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST context:P_context; CONST recycler:P_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
@@ -493,7 +493,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     if rep^.tokType=tt_functionPattern then begin
       assert(retainFirstToken,'Invalid state!');
       pattern.clone(P_pattern(rep^.data)^);
-      disposePattern(rep^.data,recycler.literalRecycler);
+      disposePattern(rep^.data,recycler^.literalRecycler);
       rep^.tokType:=tt_EOL;
       constructExpression(rep^.next,context,recycler,rep^.location);
       exit;
@@ -507,7 +507,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
       with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
-        t:=recycler.disposeToken(t);
+        t:=recycler^.disposeToken(t);
         token.next:=nil;
         case token.tokType of
           tt_beginBlock   : inc(scopeLevel        );
@@ -515,9 +515,9 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
           tt_expBraceOpen : inc(subExpressionLevel);
           tt_expBraceClose: dec(subExpressionLevel);
           tt_save: if subExpressionLevel=0 then begin
-            if indexOfSave>=0 then context.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-            makeStateful(@context,token.location);
+            if indexOfSave>=0 then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+            if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+            makeStateful(context,token.location);
             indexOfSave:=i;
           end;
         end;
@@ -526,7 +526,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
       inc(i);
     end;
     setLength(preparedBody,i);
-    updatePatternForInline(recycler.literalRecycler);
+    updatePatternForInline(recycler^.literalRecycler);
   end;
 
 PROCEDURE T_inlineExpression.cleanup(CONST literalRecycler: P_literalRecycler);
@@ -585,7 +585,7 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST ot
          or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT output:T_tokenRange; VAR context: T_context; VAR recycler:T_recycler): boolean;
+FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler): boolean;
   PROCEDURE updateBody;
     VAR i:longint;
         level:longint=1;
@@ -615,20 +615,20 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     begin
       enterCriticalSection(subruleCallCs);
       {$ifdef fullVersion}
-      if tco_stackTrace in context.threadOptions then parametersNode:=newCallParametersNode(nil);
+      if tco_stackTrace in context^.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
       if (indexOfSave>=0) and currentlyEvaluating then begin
         output.first:=nil;
         output.last:=nil;
         leaveCriticalSection(subruleCallCs);
-        context.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+        context^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
       end else begin
         try
           currentlyEvaluating:=true;
 
-          if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context.messages,ON_EVALUATION);
+          if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
           blocking:=typ in C_subruleExpressionTypes;
-          output.first:=recycler.newToken(getLocation,'',beginToken[blocking]);
+          output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
           output.last:=output.first;
 
           if (preparedBody[                     0].token.tokType=tt_beginBlock) and
@@ -653,8 +653,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if parIdx>=0 then begin
               if parIdx=ALL_PARAMETERS_PAR_IDX then begin
                 if allParams=nil then begin
-                  allParams:=recycler.literalRecycler.newListLiteral;
-                  if param<>nil then allParams^.appendAll(@recycler.literalRecycler,param);
+                  allParams:=recycler^.literalRecycler.newListLiteral;
+                  if param<>nil then allParams^.appendAll(@recycler^.literalRecycler,param);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
                   {$endif}
@@ -664,8 +664,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               end else if parIdx=REMAINING_PARAMETERS_IDX then begin
                 if remaining=nil then begin
                   if param=nil
-                  then remaining:=recycler.literalRecycler.newListLiteral
-                  else remaining:=param^.tail(@recycler.literalRecycler,pattern.arity);
+                  then remaining:=recycler^.literalRecycler.newListLiteral
+                  else remaining:=param^.tail(@recycler^.literalRecycler,pattern.arity);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
                   {$endif}
@@ -675,48 +675,48 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               end else begin
                 L:=param^.value[parIdx];
               end;
-              output.last^.next:=recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
-            end else output.last^.next:=recycler.newToken(token);
+              output.last^.next:=recycler^.newToken(token.location,'',tt_literal,L^.rereferenced);
+            end else output.last^.next:=recycler^.newToken(token);
             output.last:=output.last^.next;
           end;
 
           {$ifdef fullVersion}
-          context.callStackPush(callLocation,@self,parametersNode);
+          context^.callStackPush(callLocation,@self,parametersNode);
           {$endif}
           if indexOfSave>=0 then begin
             if saveValueStore=nil then begin
-              saveValueStore:=recycler.newValueScopeAsChildOf(context.valueScope);
+              saveValueStore:=recycler^.newValueScopeAsChildOf(context^.valueScope);
               firstCallOfResumable:=true;
             end else begin
-              saveValueStore^.attachParent(context.valueScope);
+              saveValueStore^.attachParent(context^.valueScope);
             end;
             //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
-            previousValueScope:=context.valueScope;
-            context.valueScope:=saveValueStore;
+            previousValueScope:=context^.valueScope;
+            context^.valueScope:=saveValueStore;
 
-            output.first:=recycler.disposeToken(output.first);
+            output.first:=recycler^.disposeToken(output.first);
 
-            context.reduceExpression(output.first,recycler);
+            context^.reduceExpression(output.first,recycler);
             if output.first=nil
             then output.last:=nil
             else output.last:=output.first^.last;
-            context.valueScope:=previousValueScope;
+            context^.valueScope:=previousValueScope;
             if firstCallOfResumable then begin
-              if context.messages^.continueEvaluation then begin
+              if context^.messages^.continueEvaluation then begin
                 updateBody;
                 //We have to detach the parent after evaluation to resolve temporary cyclic referencing
                 saveValueStore^.detachParent;
               end else begin
-                recycler.disposeScope(saveValueStore);
+                recycler^.disposeScope(saveValueStore);
               end;
             end else saveValueStore^.detachParent;
             {$ifdef fullVersion}
-            context.callStackPop(output.first);
+            context^.callStackPop(output.first);
             {$endif}
           end else begin
-            output.last^.next:=recycler.newToken(getLocation,'',tt_semicolon);
+            output.last^.next:=recycler^.newToken(getLocation,'',tt_semicolon);
             output.last:=output.last^.next;
-            output.last^.next:=recycler.newToken(getLocation,'',endToken[blocking]);
+            output.last^.next:=recycler^.newToken(getLocation,'',endToken[blocking]);
             output.last:=output.last^.next;
           end;
           currentlyEvaluating:=false;
@@ -739,7 +739,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     end;
   end;
 
-FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
+FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler):boolean;
   begin
     result:=P_subruleExpression(subrulePointer)^.matchesPatternAndReplaces(param,callLocation,output,context,recycler);
   end;
@@ -839,36 +839,36 @@ CONSTRUCTOR T_inlineExpression.createFromOp(VAR literalRecycler:T_literalRecycle
     setLength(preparedBody,preparedBodyLength);
   end;
 
-FUNCTION newIdentityRule(VAR context:T_context; CONST location:T_tokenLocation; VAR recycler:T_recycler):P_subruleExpression;
+FUNCTION newIdentityRule(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler):P_subruleExpression;
   begin
     new(result,
-        createFromInline(recycler.newToken(location,'$x',tt_parameterIdentifier,nil),
+        createFromInline(recycler^.newToken(location,'$x',tt_parameterIdentifier,nil),
                          context,recycler)); //={$x}
   end;
 
-FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; VAR recycler:T_recycler):P_literal;
+FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
   VAR newRule:P_subruleExpression;
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
   begin
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iteratableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
       // generator+3 -> lazyMap(generator,{$x+3})
-      LHSinstead:=newIdentityRule(P_context(threadContext)^,tokenLocation,recycler);
-      new(newRule,createFromOp(recycler.literalRecycler,LHSinstead,op,RHS,tokenLocation));
-      recycler.literalRecycler.disposeLiteral(LHSinstead);
+      LHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
+      new(newRule,createFromOp(recycler^.literalRecycler,LHSinstead,op,RHS,tokenLocation));
+      recycler^.literalRecycler.disposeLiteral(LHSinstead);
       RHSinstead:=newRule; //={$x+3}
       result:=createLazyMap(P_expressionLiteral(LHS),P_expressionLiteral(RHSinstead),tokenLocation);
-      recycler.literalRecycler.disposeLiteral(RHSinstead);
+      recycler^.literalRecycler.disposeLiteral(RHSinstead);
       exit(result);
     end;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_iteratableExpressionTypes) and not(LHS^.literalType=lt_expression) then begin
       // 2^generator -> lazyMap(generator,{2^$x})
-      RHSinstead:=newIdentityRule(P_context(threadContext)^,tokenLocation,recycler);
-      new(newRule,createFromOp(recycler.literalRecycler,LHS,op,RHSinstead,tokenLocation));
-      recycler.literalRecycler.disposeLiteral(RHSinstead);
+      RHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
+      new(newRule,createFromOp(recycler^.literalRecycler,LHS,op,RHSinstead,tokenLocation));
+      recycler^.literalRecycler.disposeLiteral(RHSinstead);
       LHSinstead:=newRule; //={2^$x}
       result:=createLazyMap(P_expressionLiteral(RHS),P_expressionLiteral(LHSinstead),tokenLocation);
-      recycler.literalRecycler.disposeLiteral(LHSinstead);
+      recycler^.literalRecycler.disposeLiteral(LHSinstead);
       exit(result);
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
@@ -878,29 +878,29 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if LHS<>nil then begin
       if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_builtinExpressionTypes)
-      then LHSinstead:=P_builtinExpression(LHS)^.getEquivalentInlineExpression(P_context(threadContext)^,recycler)
+      then LHSinstead:=P_builtinExpression(LHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
       else LHSinstead:=LHS^.rereferenced;
     end else LHSinstead:=nil;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_builtinExpressionTypes)
-    then RHSinstead:=P_builtinExpression(RHS)^.getEquivalentInlineExpression(P_context(threadContext)^,recycler)
+    then RHSinstead:=P_builtinExpression(RHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
     else RHSinstead:=RHS^.rereferenced;
-    new(newRule,createFromOp(recycler.literalRecycler,LHSinstead,op,RHSinstead,tokenLocation));
+    new(newRule,createFromOp(recycler^.literalRecycler,LHSinstead,op,RHSinstead,tokenLocation));
     result:=newRule;
     if LHSinstead<>nil then
-    recycler.literalRecycler.disposeLiteral(LHSinstead);
-    recycler.literalRecycler.disposeLiteral(RHSinstead);
+    recycler^.literalRecycler.disposeLiteral(LHSinstead);
+    recycler^.literalRecycler.disposeLiteral(RHSinstead);
   end;
 
 FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
   begin
-    new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation,P_recycler(recycler)^));
+    new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation,P_recycler(recycler)));
   end;
 
 FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
   VAR temp:P_inlineExpression;
   begin
-    temp:=getEquivalentInlineExpression(P_context(threadContext)^,P_recycler(recycler)^);
-    new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)^));
+    temp:=getEquivalentInlineExpression(P_context(threadContext),P_recycler(recycler));
+    new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)));
     P_recycler(recycler)^.literalRecycler.disposeLiteral(temp);
   end;
 
@@ -908,7 +908,7 @@ FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId
   VAR identity:P_subruleExpression;
       mapper  :P_expressionLiteral;
   begin
-    identity:=newIdentityRule(P_context(threadContext)^,funcLocation,P_recycler(recycler)^);
+    identity:=newIdentityRule(P_context(threadContext),funcLocation,P_recycler(recycler));
     mapper:=identity^.applyBuiltinFunction(intrinsicRuleId,funcLocation,threadContext,recycler);
     P_recycler(recycler)^.literalRecycler.disposeLiteral(identity);
     if mapper=nil then exit(nil);
@@ -927,14 +927,14 @@ PROCEDURE T_expression.validateSerializability(CONST messages:P_messages);
     if messages<>nil then messages^.raiseSimpleError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; VAR recycler:T_recycler);
+CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST recycler:P_recycler);
   VAR i:longint;
   PROCEDURE appendToExpression(VAR T:T_token; CONST parameterIndex:longint);
     begin
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(T,recycler.literalRecycler);
+        token.define(T,recycler^.literalRecycler);
         parIdx:=parameterIndex;
       end;
     end;
@@ -959,7 +959,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token,original^.preparedBody[i].parIdx);
     indexOfSave:=original^.indexOfSave;
-    if original^.saveValueStore<>nil then saveValueStore:=recycler.cloneSafeValueStore(original^.saveValueStore);
+    if original^.saveValueStore<>nil then saveValueStore:=recycler^.cloneSafeValueStore(original^.saveValueStore);
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
     meta:=original^.meta;
   end;
@@ -969,55 +969,55 @@ FUNCTION T_inlineExpression.getParameterNames(CONST literalRecycler:P_literalRec
     result:=pattern.getParameterNames(literalRecycler^);
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
+FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
   VAR last:P_token;
       i:longint;
   begin
-    result:=recycler.newToken(location,'',tt_braceOpen);
+    result:=recycler^.newToken(location,'',tt_braceOpen);
     last:=result;
     for i:=0 to minPatternLength-1 do begin
       if i>0 then begin
-        last^.next:=recycler.newToken(location,'',tt_separatorComma);
+        last^.next:=recycler^.newToken(location,'',tt_separatorComma);
         last:=last^.next;
       end;
-      last^.next:=recycler.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
+      last^.next:=recycler^.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
       last:=last^.next;
     end;
-    last^.next:=recycler.newToken(location,'',tt_braceClose);
+    last^.next:=recycler^.newToken(location,'',tt_braceClose);
     last:=last^.next;
     if variadic then begin
-      last^.next:=recycler.newToken(location,'',tt_listToParameterList);
+      last^.next:=recycler^.newToken(location,'',tt_listToParameterList);
       last:=last^.next;
       if minPatternLength>0 then begin
-        last^.next:=recycler.newToken(location,'',tt_optionalParameters);
+        last^.next:=recycler^.newToken(location,'',tt_optionalParameters);
       end else begin
-        last^.next:=recycler.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+        last^.next:=recycler^.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
       end;
     end;
   end;
 
-FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_token;
+FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
   VAR last:P_token;
       i:longint;
   begin
-    result:=recycler.newToken(location,'',tt_parList_constructor,givenParameters^.rereferenced);
+    result:=recycler^.newToken(location,'',tt_parList_constructor,givenParameters^.rereferenced);
     last:=result;
     for i:=givenParameters^.size to expectedArity-1 do begin
-      last^.next:=recycler.newToken(location,'$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
+      last^.next:=recycler^.newToken(location,'$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
       last:=last^.next;
       if i<expectedArity-1 then begin
-        last^.next:=recycler.newToken(location,'',tt_separatorComma);
+        last^.next:=recycler^.newToken(location,'',tt_separatorComma);
         last:=last^.next;
       end;
     end;
-    last^.next:=recycler.newToken(location,'',tt_braceClose);
+    last^.next:=recycler^.newToken(location,'',tt_braceClose);
     last:=last^.next;
   end;
 
-FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_context; VAR recycler:T_recycler): P_inlineExpression;
+FUNCTION T_builtinExpression.getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler): P_inlineExpression;
   VAR first:P_token;
   begin
-    first:=recycler.newToken(getLocation,meta^.qualifiedId,tt_intrinsicRule,func);
+    first:=recycler^.newToken(getLocation,meta^.qualifiedId,tt_intrinsicRule,func);
     first^.next:=getParametersForPseudoFuncPtr(C_arityKind[meta^.arityKind].fixedParameters,C_arityKind[meta^.arityKind].variadic,getLocation,context,recycler);
     new(result,createFromInline(first,context,recycler));
   end;
@@ -1121,16 +1121,16 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   VAR toReduce:T_tokenRange;
   begin
-    if matchesPatternAndReplaces(parameters,location,toReduce,P_context(context)^,P_recycler(recycler)^)
+    if matchesPatternAndReplaces(parameters,location,toReduce,P_context(context),P_recycler(recycler))
     then begin
-      result:=P_context(context)^.reduceToLiteral(toReduce.first,P_recycler(recycler)^);
+      result:=P_context(context)^.reduceToLiteral(toReduce.first,P_recycler(recycler));
     end else begin
       result.literal:=nil;
       result.reasonForStop:=rr_patternMismatch;
     end;
   end;
 
-FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST parameters:P_listLiteral):P_literal;
+FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST parameters:P_listLiteral):P_literal;
   VAR toReduce: T_tokenRange;
       t: P_token;
       k: longint;
@@ -1148,20 +1148,20 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; VAR c
     if matchesPatternAndReplaces(parameters,location,toReduce,context,recycler)
     then begin
       if (toReduce.first^.tokType=tt_beginExpression) and (toReduce.last^.tokType=tt_endExpression) then begin
-        toReduce.first:=recycler.disposeToken(toReduce.first);
+        toReduce.first:=recycler^.disposeToken(toReduce.first);
         t:=toReduce.first;
         while t^.next^.next<>toReduce.last do t:=t^.next;
-        t^.next:=recycler.disposeToken(t^.next);
-        t^.next:=recycler.disposeToken(t^.next);
+        t^.next:=recycler^.disposeToken(t^.next);
+        t^.next:=recycler^.disposeToken(t^.next);
       end;
-      result:=context.reduceToLiteral(toReduce.first,recycler).literal;
+      result:=context^.reduceToLiteral(toReduce.first,recycler).literal;
     end else result:=nil;
   end;
 
 FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     {$ifdef fullVersion} P_context(context)^.callStackPush(location,@self,nil); {$endif}
-    result.literal:=func(parameters,location,P_context(context)^,P_recycler(recycler)^);
+    result.literal:=func(parameters,location,P_context(context),P_recycler(recycler));
     result.reasonForStop:=rr_ok;
     {$ifdef fullVersion} P_context(context)^.callStackPop(nil); {$endif}
   end;
@@ -1207,7 +1207,7 @@ FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: P_ab
 
 FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
   begin
-    new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location,P_recycler(recycler)^));
+    new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location,P_recycler(recycler)));
   end;
 
 FUNCTION T_builtinExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
@@ -1478,7 +1478,7 @@ FUNCTION T_subruleExpression.getUsedParameters: T_arrayOfLongint;
     for t in preparedBody do with t do if (parIdx>=0) then append(result,parIdx);
   end;
 
-PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; VAR context:T_context);
+PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context);
   VAR t:T_preparedToken;
       used:T_arrayOfLongint;
   begin
@@ -1602,7 +1602,7 @@ FUNCTION T_inlineExpression.usedGlobalVariables: T_arrayOfPointer;
   end;
 
 {$ifdef fullVersion}
-FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_dataRow;
+FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_dataRow;
   VAR tRow :T_arrayOfDouble;
       TList:P_listLiteral=nil;
       dataRow:T_dataRow;
@@ -1619,12 +1619,12 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   FUNCTION evaluatePEachExpressionOk:boolean;
     VAR firstRep:P_token=nil;
     begin
-      firstRep:=recycler.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
-      firstRep^.next:=recycler.newToken(location,'',tt_parList,recycler.literalRecycler.newListLiteral(2)^
-                                                                    .append(@recycler.literalRecycler, TList,true)^
-                                                                    .append(@recycler.literalRecycler, f    ,true));
-      context.reduceExpression(firstRep,recycler);
-      result:=context.messages^.continueEvaluation and
+      firstRep:=recycler^.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
+      firstRep^.next:=recycler^.newToken(location,'',tt_parList,recycler^.literalRecycler.newListLiteral(2)^
+                                                       .append(@recycler^.literalRecycler, TList,true)^
+                                                       .append(@recycler^.literalRecycler, f    ,true));
+      context^.reduceExpression(firstRep,recycler);
+      result:=context^.messages^.continueEvaluation and
               (firstRep<>nil) and
               (firstRep^.next=nil) and
               (firstRep^.tokType=tt_literal) and
@@ -1633,7 +1633,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
       if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
-      recycler.cascadeDisposeToken(firstRep);
+      recycler^.cascadeDisposeToken(firstRep);
     end;
 
   FUNCTION evaluateVectorExpressionOk:boolean;
@@ -1641,16 +1641,16 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         temp:P_literal;
     begin
       params.create(1);
-      params.append(@recycler.literalRecycler,TList,true);
-      temp:=f^.evaluate(location,@context,@recycler,@params).literal;
-      params.cleanup(@recycler.literalRecycler);
+      params.append(@recycler^.literalRecycler,TList,true);
+      temp:=f^.evaluate(location,context,recycler,@params).literal;
+      params.cleanup(@recycler^.literalRecycler);
       params.destroy;
-      result:=context.messages^.continueEvaluation and
+      result:=context^.messages^.continueEvaluation and
               (temp<>nil) and
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
-      else if temp<>nil then recycler.literalRecycler.disposeLiteral(temp);
+      else if temp<>nil then recycler^.literalRecycler.disposeLiteral(temp);
       collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
     end;
@@ -1663,11 +1663,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       initialSampleCount:=(samples div 100)-1;
       if initialSampleCount< 5 then
          initialSampleCount:=5;
-      TList:=recycler.literalRecycler.newListLiteral;
+      TList:=recycler^.literalRecycler.newListLiteral;
       setLength(tRow,initialSampleCount+1);
       for sampleIndex:=0 to initialSampleCount do begin
         t:=t0+(t1-t0)*sampleIndex/initialSampleCount;
-        TList^.appendReal(@recycler.literalRecycler,t);
+        TList^.appendReal(@recycler^.literalRecycler,t);
         tRow[sampleIndex]:=t;
       end;
     end;
@@ -1683,7 +1683,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         refinementSteps:T_arrayOfLongint;
         refinementRun:longint=0;
     begin
-      scalingOptions:=getOptionsViaAdapters(context.messages);
+      scalingOptions:=getOptionsViaAdapters(context^.messages);
       while stillOk and (dataRow.size<samples) and (refinementRun<3) do begin
         //Prepare threshold:----------------------------------------------------
         if refinementRun=0 then k:=(samples-dataRow.size) div 4 else
@@ -1694,12 +1694,12 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
-        TList:=recycler.literalRecycler.newListLiteral;
+        TList:=recycler^.literalRecycler.newListLiteral;
         for i:=0 to dataRow.size-2 do
         for j:=1 to refinementSteps[i] do begin
           t:=j/(refinementSteps[i]+1);
           t:=tRow[i]*(1-t)+tRow[i+1]*t;
-          TList^.appendReal(@recycler.literalRecycler,t);
+          TList^.appendReal(@recycler^.literalRecycler,t);
           append(newTimes,t);
         end;
         //---------------------------------------------:Prepare new time samples
@@ -1743,17 +1743,17 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           newRow.free;
           oldRow.free;
           //------------------------------------------------------:Merge samples
-          recycler.literalRecycler.disposeLiteral(resultLiteral);
+          recycler^.literalRecycler.disposeLiteral(resultLiteral);
         end;
-        recycler.literalRecycler.disposeLiteral(TList);
+        recycler^.literalRecycler.disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
     end;
 
   begin
-    oldMessages:=context.messages;
+    oldMessages:=context^.messages;
     new(holder,createErrorHolder(oldMessages,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]));
-    context.messages:=holder;
+    context^.messages:=holder;
 
     collector.create(at_textMessageCollector,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     constructInitialTList;
@@ -1764,17 +1764,17 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      recycler.literalRecycler.disposeLiteral(resultLiteral);
-      recycler.literalRecycler.disposeLiteral(TList);
+      recycler^.literalRecycler.disposeLiteral(resultLiteral);
+      recycler^.literalRecycler.disposeLiteral(TList);
       refineDataRow;
     end else begin
-      recycler.literalRecycler.disposeLiteral(TList);
+      recycler^.literalRecycler.disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
-      context.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      context^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       oldMessages^.postCustomMessages(collector.getStoredMessages);
       dataRow.init();
     end;
-    context.messages:=oldMessages;
+    context^.messages:=oldMessages;
     dispose(holder,destroy);
     collector.destroy;
     result:=dataRow;
@@ -1787,14 +1787,14 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=recycler.literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
+    then result:=recycler^.literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=P_expression(arg0)^.getParameterNames(@recycler.literalRecycler);
+    then result:=P_expression(arg0)^.getParameterNames(@recycler^.literalRecycler);
   end;
 
 FUNCTION tokenSplit_impl intFuncSignature;
@@ -1803,11 +1803,11 @@ FUNCTION tokenSplit_impl intFuncSignature;
         i:longint;
     begin
       sub:=P_subruleExpression(subruleLiteral);
-      result:=recycler.literalRecycler.newListLiteral(length(sub^.preparedBody));
+      result:=recycler^.literalRecycler.newListLiteral(length(sub^.preparedBody));
       for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
         if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
-        then result^.append      (@recycler.literalRecycler,token.data,true)
-        else result^.appendString(@recycler.literalRecycler,safeTokenToString(@token));
+        then result^.append      (@recycler^.literalRecycler,token.data,true)
+        else result^.appendString(@recycler^.literalRecycler,safeTokenToString(@token));
       end;
     end;
 
@@ -1827,58 +1827,58 @@ FUNCTION tokenSplit_impl intFuncSignature;
       lt_string:begin
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
-        result:=recycler.literalRecycler.newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(@recycler.literalRecycler,tokens[i]);
+        result:=recycler^.literalRecycler.newListLiteral;
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(@recycler^.literalRecycler,tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then
         result:=expressionToTokens(P_expressionLiteral(arg0));
     end;
   end;
 
-FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
+FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler):P_token;
   VAR lexer:T_singleStringLexer;
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler);
     if statement.token.first<>nil then begin
-      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
-      recycler.cascadeDisposeToken(statement.token.first);
+      context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler^.cascadeDisposeToken(statement.token.first);
     end;
     lexer.destroy;
     if result=nil
-    then context.raiseError('The parsed expression appears to be empty',location)
-    else if not (context.messages^.continueEvaluation) then begin
-      recycler.cascadeDisposeToken(result);
+    then context^.raiseError('The parsed expression appears to be empty',location)
+    else if not (context^.messages^.continueEvaluation) then begin
+      recycler^.cascadeDisposeToken(result);
       result:=nil
     end;
   end;
 
-FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler):P_token;
+FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler):P_token;
   VAR lexer:T_variableLexer;
       statement: T_enhancedStatement;
   begin
     result:=nil;
     lexer.create(l^.iteratableList,location,package);
-    statement:=lexer.getNextStatement(context.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler);
     if statement.token.first<>nil then begin
-      context.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
-      recycler.cascadeDisposeToken(statement.token.first);
+      context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
+      recycler^.cascadeDisposeToken(statement.token.first);
     end;
     lexer.destroy;
     if result=nil
-    then context.raiseError('The parsed expression appears to be empty',location)
-    else if not (context.messages^.continueEvaluation) then begin
-      recycler.cascadeDisposeToken(result);
+    then context^.raiseError('The parsed expression appears to be empty',location)
+    else if not (context^.messages^.continueEvaluation) then begin
+      recycler^.cascadeDisposeToken(result);
       result:=nil
     end;
   end;
 
-FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_inlineExpression;
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
   VAR first:P_token=nil;
       temp:P_token;
       package:P_abstractPackage;
@@ -1890,29 +1890,29 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if first=nil then exit(nil);
 
     if not(first^.tokType in [tt_expBraceOpen,tt_startOfPattern]) then begin
-      temp:=recycler.newToken(location,'',tt_expBraceOpen);
+      temp:=recycler^.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;
-      temp^.next:=recycler.newToken(location,'',tt_expBraceClose);
+      temp^.next:=recycler^.newToken(location,'',tt_expBraceClose);
     end;
     predigest(first,package,context,recycler{$ifdef fullVersion},nil{$endif});
     digestInlineExpression(first,context,recycler);
-    if (context.messages^.continueEvaluation) and (first^.next<>nil) then context.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-    if not(context.messages^.continueEvaluation) then begin
-      recycler.cascadeDisposeToken(first);
+    if (context^.messages^.continueEvaluation) and (first^.next<>nil) then context^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if not(context^.messages^.continueEvaluation) then begin
+      recycler^.cascadeDisposeToken(first);
       exit(nil);
     end;
     {$ifdef debugMode}
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-      recycler.disposeToken(first);
-      context.raiseError('This is unexpected. The result of stringToExpression should be an expression!',location,mt_el4_systemError);
+      recycler^.disposeToken(first);
+      context^.raiseError('This is unexpected. The result of stringToExpression should be an expression!',location,mt_el4_systemError);
       exit(nil);
     end;
     {$endif}
     result:=P_inlineExpression(first^.data);
     first^.tokType:=tt_EOL;
     first^.data:=nil;
-    recycler.disposeToken(first);
+    recycler^.disposeToken(first);
   end;
 
 FUNCTION toExpression_imp intFuncSignature;
@@ -1920,15 +1920,15 @@ FUNCTION toExpression_imp intFuncSignature;
     VAR first:P_token;
     begin
       //Create token-series { <Literal> }
-      first            :=recycler.newToken(tokenLocation,'',tt_expBraceOpen);
-      first^.next      :=recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
-      first^.next^.next:=recycler.newToken(tokenLocation,'',tt_expBraceClose);
+      first            :=recycler^.newToken(tokenLocation,'',tt_expBraceOpen);
+      first^.next      :=recycler^.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
+      first^.next^.next:=recycler^.newToken(tokenLocation,'',tt_expBraceClose);
       //Reduce to inline expression
       digestInlineExpression(first,context,recycler);
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;
-      recycler.disposeToken(first);
+      recycler^.disposeToken(first);
     end;
 
   begin
@@ -1952,17 +1952,17 @@ FUNCTION interpret_imp intFuncSignature;
     if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist)) then exit(nil);
 
     if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) then begin
-      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*sideEffectWhitelist);
-      result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
-      context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
+      previousPrivileges:=context^.setAllowedSideEffectsReturningPrevious(context^.sideEffectWhitelist*sideEffectWhitelist);
+      result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+      context^.setAllowedSideEffectsReturningPrevious(previousPrivileges);
     end else begin
       package:=P_abstractPackage(tokenLocation.package);
       if      arg0^.literalType=lt_string      then first:=stringToTokens(str0^.value,tokenLocation,package,context,recycler)
       else if arg0^.literalType in C_listTypes then first:=listToTokens  (list0      ,tokenLocation,package,context,recycler);
       if first=nil then exit(nil);
-      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*sideEffectWhitelist);
-      result:=context.reduceToLiteral(first,recycler).literal;
-      context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
+      previousPrivileges:=context^.setAllowedSideEffectsReturningPrevious(context^.sideEffectWhitelist*sideEffectWhitelist);
+      result:=context^.reduceToLiteral(first,recycler).literal;
+      context^.setAllowedSideEffectsReturningPrevious(previousPrivileges);
     end;
   end;
 

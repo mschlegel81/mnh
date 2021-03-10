@@ -51,7 +51,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE cleanup;
       PROCEDURE disposeContext(VAR context:P_context);
-      FUNCTION newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
+      FUNCTION newContext(CONST recycler:P_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
   end;
 
   T_taskState=(fts_pending, //set on construction
@@ -96,14 +96,14 @@ TYPE
       //Messaging
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
       //Evaluation:
-      FUNCTION reduceExpression(VAR first:P_token; VAR recycler:T_recycler):T_reduceResult; inline;
-      FUNCTION reduceToLiteral(VAR first:P_token; VAR recycler:T_recycler):T_evaluationResult; inline;
+      FUNCTION reduceExpression(VAR first:P_token; CONST recycler:P_recycler):T_reduceResult; inline;
+      FUNCTION reduceToLiteral(VAR first:P_token; CONST recycler:P_recycler):T_evaluationResult; inline;
       //Multithreading:
-      FUNCTION getFutureEnvironment(VAR recycler:T_recycler):P_context;
-      FUNCTION getNewAsyncContext(VAR recycler:T_recycler; CONST local:boolean):P_context;
+      FUNCTION getFutureEnvironment(CONST recycler:P_recycler):P_context;
+      FUNCTION getNewAsyncContext(CONST recycler:P_recycler; CONST local:boolean):P_context;
       PROCEDURE beginEvaluation;
-      PROCEDURE reattachToParent(VAR recycler:T_recycler);
-      PROCEDURE finalizeTaskAndDetachFromParent(VAR recycler:T_recycler);
+      PROCEDURE reattachToParent(CONST recycler:P_recycler);
+      PROCEDURE finalizeTaskAndDetachFromParent(CONST recycler:P_recycler);
 
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
@@ -128,10 +128,10 @@ TYPE
     private
       isVolatile    :boolean;
     public
-      PROCEDURE   evaluate(VAR recycler:T_recycler); virtual; abstract;
+      PROCEDURE   evaluate(CONST recycler:P_recycler); virtual; abstract;
       CONSTRUCTOR create(CONST volatile:boolean; CONST newEnvironment:P_context);
-      PROCEDURE   defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
-      PROCEDURE   reattach(VAR recycler:T_recycler);
+      PROCEDURE   defineAndEnqueueOrEvaluate(CONST recycler:P_recycler);
+      PROCEDURE   reattach(CONST recycler:P_recycler);
       DESTRUCTOR  destroy; virtual;
       PROPERTY    getContext:P_context read context;
   end;
@@ -157,7 +157,7 @@ TYPE
     public
       handDownThreshold:longint;
       CONSTRUCTOR create(CONST handDownThreshold_:longint; VAR myContext:T_context);
-      FUNCTION enqueueOrExecute(CONST task:P_queueTask; VAR recycler:T_recycler):boolean;
+      FUNCTION enqueueOrExecute(CONST task:P_queueTask; CONST recycler:P_recycler):boolean;
       PROCEDURE flush;
   end;
 
@@ -175,7 +175,7 @@ TYPE
       PROCEDURE ensurePoolThreads();
       CONSTRUCTOR create(CONST parent_:P_evaluationGlobals);
       DESTRUCTOR destroy;
-      FUNCTION  activeDeqeue(VAR recycler:T_recycler):boolean;
+      FUNCTION  activeDeqeue(CONST recycler:P_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
       PROPERTY queuedCount:longint read queued;
   end;
@@ -220,14 +220,14 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
                                   CONST sideEffectProfile:T_sideEffects;
-                                  CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
+                                  CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST recycler:P_recycler);
       PROCEDURE startFinalization;
-      PROCEDURE stopWorkers(VAR recycler:T_recycler);
-      PROCEDURE afterEvaluation(VAR recycler:T_recycler; CONST location:T_searchTokenLocation);
+      PROCEDURE stopWorkers(CONST recycler:P_recycler);
+      PROCEDURE afterEvaluation(CONST recycler:P_recycler; CONST location:T_searchTokenLocation);
       PROPERTY options:T_evaluationContextOptions read globalOptions;
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
-      PROCEDURE resolveMainParameter(VAR first:P_token; VAR recycler:T_recycler);
+      PROCEDURE resolveMainParameter(VAR first:P_token; CONST recycler:P_recycler);
 
       {$ifdef fullVersion}
       FUNCTION stepper:P_debuggingStepper;
@@ -236,8 +236,8 @@ TYPE
   end;
 
 CONST TASKS_TO_QUEUE_PER_CPU=16;
-VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_context; VAR recycler:T_recycler):T_reduceResult;
-    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; VAR context:T_context; VAR recycler:T_recycler):boolean;
+VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; CONST context:P_context; CONST recycler:P_recycler):T_reduceResult;
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
     {$ifdef fullVersion}
@@ -253,7 +253,7 @@ CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
     taskQueue:=@(myContext.related.evaluation^.taskQueue);
   end;
 
-FUNCTION T_taskChain.enqueueOrExecute(CONST task:P_queueTask; VAR recycler:T_recycler):boolean;
+FUNCTION T_taskChain.enqueueOrExecute(CONST task:P_queueTask; CONST recycler:P_recycler):boolean;
   begin
     if handDownThreshold<=0 then begin
       task^.evaluate(recycler);
@@ -347,7 +347,7 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_context);
     context:=nil;
   end;
 
-FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
+FUNCTION T_contextRecycler.newContext(CONST recycler:P_recycler; CONST parentThread:P_context; CONST allowAccessToParentScope:boolean):P_context;
   begin
     if (tryEnterCriticalsection(recyclerCS)<>0) then begin
       try
@@ -375,7 +375,7 @@ FUNCTION T_contextRecycler.newContext(VAR recycler:T_recycler; CONST parentThrea
       messages:=parentThread^.messages;
 
       if allowAccessToParentScope
-      then valueScope:=recycler.newValueScopeAsChildOf(parentThread^.valueScope)
+      then valueScope:=recycler^.newValueScopeAsChildOf(parentThread^.valueScope)
       else valueScope:=nil;
 
       {$ifdef fullVersion}
@@ -433,7 +433,7 @@ DESTRUCTOR T_evaluationGlobals.destroy;
 
 PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; CONST packageVar_:F_fillCategoryNode; {$endif}
                                                  CONST sideEffectProfile:T_sideEffects;
-                                                 CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; VAR recycler:T_recycler);
+                                                 CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST recycler:P_recycler);
   VAR pc:T_profileCategory;
       i:longint;
   begin
@@ -481,7 +481,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     then primaryContext.allowedSideEffects:=sideEffectProfile-[se_input]
     else primaryContext.allowedSideEffects:=sideEffectProfile;
     primaryContext.setThreadOptions(globalOptions);
-    recycler.disposeScope(primaryContext.valueScope);
+    recycler^.disposeScope(primaryContext.valueScope);
     primaryContext.valueScope:=nil;
     primaryContext.messages^.clear();
     primaryContext.messages^.setUserDefinedExitCode(0);
@@ -518,7 +518,7 @@ PROCEDURE T_evaluationGlobals.startFinalization;
     end;
   end;
 
-PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
+PROCEDURE T_evaluationGlobals.stopWorkers(CONST recycler:P_recycler);
   CONST TIME_OUT_AFTER=1/(24*60*60); //=1 second
   VAR timeout:double;
   begin
@@ -531,7 +531,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers(VAR recycler: T_recycler);
     end;
   end;
 
-PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST location:T_searchTokenLocation);
+PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST location:T_searchTokenLocation);
   PROCEDURE logTimingInfo;
     CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
       'Importing time      ',
@@ -586,8 +586,8 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(VAR recycler:T_recycler; CONST loc
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do begin
-      primaryContext.valueScope^.checkVariablesOnPop(recycler.literalRecycler, location,@primaryContext);
-      recycler.scopePop(primaryContext.valueScope);
+      primaryContext.valueScope^.checkVariablesOnPop(recycler^.literalRecycler, location,@primaryContext);
+      recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
     primaryContext.messages^.awaitAllFlushed(0.2);
@@ -638,7 +638,7 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
     with timingInfo do timeSpent[component]:=primaryContext.wallclockTime-timeSpent[component];
   end;
 
-FUNCTION T_context.getNewAsyncContext(VAR recycler:T_recycler; CONST local: boolean): P_context;
+FUNCTION T_context.getNewAsyncContext(CONST recycler:P_recycler; CONST local: boolean): P_context;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
     result:=contextPool.newContext(recycler,@self,local);
@@ -684,18 +684,18 @@ PROCEDURE T_context.reportVariables(VAR variableReport: T_variableTreeEntryCateg
   end;
 {$endif}
 
-FUNCTION T_context.reduceExpression(VAR first: P_token; VAR recycler:T_recycler): T_reduceResult;
-  begin result:=reduceExpressionCallback(first,self,recycler); end;
+FUNCTION T_context.reduceExpression(VAR first: P_token; CONST recycler:P_recycler): T_reduceResult;
+  begin result:=reduceExpressionCallback(first,@self,recycler); end;
 
-FUNCTION T_context.reduceToLiteral(VAR first: P_token; VAR recycler:T_recycler): T_evaluationResult;
+FUNCTION T_context.reduceToLiteral(VAR first: P_token; CONST recycler:P_recycler): T_evaluationResult;
   begin
-    result.reasonForStop:=reduceExpressionCallback(first,self,recycler);
+    result.reasonForStop:=reduceExpressionCallback(first,@self,recycler);
     if messages^.continueEvaluation and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
       result.literal:=P_literal(first^.data)^.rereferenced;
-      recycler.disposeToken(first);
+      recycler^.disposeToken(first);
     end else begin
       result.literal:=nil;
-      recycler.cascadeDisposeToken(first);
+      recycler^.cascadeDisposeToken(first);
     end;
   end;
 
@@ -705,7 +705,7 @@ FUNCTION T_context.setAllowedSideEffectsReturningPrevious(CONST se: T_sideEffect
     allowedSideEffects:=se;
   end;
 
-FUNCTION T_context.getFutureEnvironment(VAR recycler:T_recycler) : P_context;
+FUNCTION T_context.getFutureEnvironment(CONST recycler:P_recycler) : P_context;
   begin
     result:=contextPool.newContext(recycler,@self,true);
   end;
@@ -716,18 +716,18 @@ PROCEDURE T_context.beginEvaluation;
     state:=fts_evaluating;
   end;
 
-PROCEDURE T_context.reattachToParent(VAR recycler:T_recycler);
+PROCEDURE T_context.reattachToParent(CONST recycler:P_recycler);
   begin
     assert(state=fts_finished,'Wrong state before calling T_threadContext.reattachToParent');
     assert(valueScope=nil,'valueScope must be nil on T_threadContext.reattachToParent');
     enterCriticalSection(contextCS);
-    valueScope:=recycler.newValueScopeAsChildOf(related.parent^.valueScope);
+    valueScope:=recycler^.newValueScopeAsChildOf(related.parent^.valueScope);
     state:=fts_pending;
     related.parent^.addChildContext;
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_context.finalizeTaskAndDetachFromParent(VAR recycler:T_recycler);
+PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recycler:P_recycler);
   VAR timeout:double;
   begin
     enterCriticalSection(contextCS);
@@ -745,8 +745,8 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(VAR recycler:T_recycler);
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
-      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler.literalRecycler,C_nilSearchTokenLocation,@self);
-      recycler.disposeScope(valueScope);
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler^.literalRecycler,C_nilSearchTokenLocation,@self);
+      recycler^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
       state:=fts_finished;
     finally
@@ -771,7 +771,7 @@ FUNCTION T_context.continueEvaluation: boolean;
     result:=messages^.continueEvaluation;
   end;
 
-PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; VAR recycler:T_recycler);
+PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recycler:P_recycler);
   VAR parameterIndex:longint;
       s:string;
       newValue:P_literal=nil;
@@ -781,17 +781,17 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; VAR recycl
         parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
         if parameterIndex<0 then begin
           if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-            newValue:=recycler.literalRecycler.newListLiteral(length(mainParameters)+1);
-            P_listLiteral(newValue)^.appendString(@recycler.literalRecycler,first^.location.package^.getPath);
-            for s in mainParameters do P_listLiteral(newValue)^.appendString(@recycler.literalRecycler,s);
+            newValue:=recycler^.literalRecycler.newListLiteral(length(mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(@recycler^.literalRecycler,first^.location.package^.getPath);
+            for s in mainParameters do P_listLiteral(newValue)^.appendString(@recycler^.literalRecycler,s);
           end else begin
             primaryContext.raiseError('Invalid parameter identifier',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
-          newValue:=recycler.literalRecycler.newStringLiteral(first^.location.package^.getPath)
+          newValue:=recycler^.literalRecycler.newStringLiteral(first^.location.package^.getPath)
         else if parameterIndex<=length(mainParameters) then
-          newValue:=recycler.literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
+          newValue:=recycler^.literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
         else
           newValue:=newVoidLiteral;
         first^.data:=newValue;
@@ -850,10 +850,10 @@ PROCEDURE T_workerThread.execute;
           sleep(1);
         end else begin
           if currentTask^.isVolatile then begin
-            currentTask^.evaluate(recycler);
+            currentTask^.evaluate(@recycler);
             dispose(currentTask,destroy);
           end else begin
-            currentTask^.evaluate(recycler);
+            currentTask^.evaluate(@recycler);
           end;
           sleepCount:=0;
         end;
@@ -938,7 +938,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean; CONST newEnvironment:P_co
     initCriticalSection(taskCs);
   end;
 
-PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
+PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(CONST recycler:P_recycler);
   begin
     nextToEvaluate  :=nil;
     if not(isVolatile) and not(memoryCleaner.isMemoryInComfortZone)
@@ -946,7 +946,7 @@ PROCEDURE T_queueTask.defineAndEnqueueOrEvaluate(VAR recycler:T_recycler);
     else context^.related.evaluation^.taskQueue.enqueue(@self,context);
   end;
 
-PROCEDURE T_queueTask.reattach(VAR recycler:T_recycler);
+PROCEDURE T_queueTask.reattach(CONST recycler:P_recycler);
   begin
     context^.reattachToParent(recycler);
   end;
@@ -1081,7 +1081,7 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
     end;
   end;
 
-FUNCTION T_taskQueue.activeDeqeue(VAR recycler:T_recycler):boolean;
+FUNCTION T_taskQueue.activeDeqeue(CONST recycler:P_recycler):boolean;
   VAR task:P_queueTask=nil;
   begin
     task:=dequeue;

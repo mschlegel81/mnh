@@ -73,13 +73,13 @@ TYPE
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages); virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
-      FUNCTION literalToString(CONST L:P_literal; {$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; {$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string; virtual;
       {$ifdef fullVersion}
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -90,7 +90,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages); virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
       {$ifdef fullVersion}
       PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
@@ -229,13 +229,13 @@ TYPE
       {$ifdef fullVersion}
       callAndIdInfos:P_callAndIdInfos;
       {$endif}
-      FUNCTION getToken(CONST line: ansistring; VAR inputLocation: T_tokenLocation; CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle): P_token;
-      FUNCTION fetchNext(                                                           CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):boolean;
-      FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual; abstract;
+      FUNCTION getToken(CONST line: ansistring; VAR inputLocation: T_tokenLocation; CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle): P_token;
+      FUNCTION fetchNext(                                                           CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle):boolean;
+      FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual; abstract;
     public
       CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
-      FUNCTION getNextStatement(CONST messages:P_messages; VAR recycler:T_recycler):T_enhancedStatement;
+      FUNCTION getNextStatement(CONST messages:P_messages; CONST recycler:P_recycler):T_enhancedStatement;
   end;
 
   { T_singleStringLexer }
@@ -245,7 +245,7 @@ TYPE
       text:string;
       inputLocation:T_tokenLocation;
       columnOffset:longint;
-      FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
+      FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST inputString:string; CONST parseLocation:T_tokenLocation;
                          CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
@@ -265,7 +265,7 @@ TYPE
       dataIdx:longint;
       textToParse:string;
     protected
-      FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
+      FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input:T_arrayOfLiteral; CONST parseLocation_:T_tokenLocation;
                          CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
@@ -280,7 +280,7 @@ TYPE
       input:T_arrayOfString;
       inputIndex:longint;
     protected
-      FUNCTION fetch(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
+      FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST parseLocation_:T_tokenLocation;
                          CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
@@ -290,7 +290,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
@@ -329,7 +329,7 @@ T_idStack=object
   FUNCTION hasId(CONST id:T_idString; OUT idType:T_tokenType; OUT idLoc:T_tokenLocation):boolean;
 end;
 
-FUNCTION T_linesLexer.fetch(CONST messages: P_messages; VAR recycler: T_recycler; CONST lexingStyle: T_lexingStyle): P_token;
+FUNCTION T_linesLexer.fetch(CONST messages: P_messages; CONST recycler:P_recycler; CONST lexingStyle: T_lexingStyle): P_token;
   begin
     result:=nil;
     while (result=nil) and (inputIndex<length(input)) do begin
@@ -340,17 +340,17 @@ FUNCTION T_linesLexer.fetch(CONST messages: P_messages; VAR recycler: T_recycler
         inputLocation.column:=1;
       end else if lexingStyle<>ls_retainAll then case result^.tokType of
         tt_EOL: begin
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_docComment: if lexingStyle<>ls_retainComments then begin
           myGenerics.append(nextStatement.comments ,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_attributeComment: if lexingStyle<>ls_retainComments then begin
           if (result^.txt<>'') then myGenerics.append(nextStatement.attributes,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
       end;
@@ -386,7 +386,7 @@ DESTRUCTOR T_linesLexer.destroy;
 
 { T_variableLexer }
 
-FUNCTION T_variableLexer.fetch(CONST messages: P_messages; VAR recycler: T_recycler; CONST lexingStyle: T_lexingStyle): P_token;
+FUNCTION T_variableLexer.fetch(CONST messages: P_messages; CONST recycler:P_recycler; CONST lexingStyle: T_lexingStyle): P_token;
   begin
     result:=nil;
     while (result=nil) do begin
@@ -398,21 +398,21 @@ FUNCTION T_variableLexer.fetch(CONST messages: P_messages; VAR recycler: T_recyc
           textToParse:=P_stringLiteral(data[dataIdx])^.value;
           inputLocation.column:=1;
         end else begin
-          result:=recycler.newToken(parseLocation,'',tt_literal,data[dataIdx]^.rereferenced);
+          result:=recycler^.newToken(parseLocation,'',tt_literal,data[dataIdx]^.rereferenced);
         end;
       end else if (lexingStyle<>ls_retainAll) then case result^.tokType of
         tt_EOL: begin
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_docComment: if lexingStyle<>ls_retainComments then begin
           myGenerics.append(nextStatement.comments ,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_attributeComment: if lexingStyle<>ls_retainComments then begin
           if (result^.txt<>'') then myGenerics.append(nextStatement.attributes,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
       end;
@@ -439,24 +439,24 @@ DESTRUCTOR T_variableLexer.destroy;
 
 { T_singleStringLexer }
 
-FUNCTION T_singleStringLexer.fetch(CONST messages: P_messages; VAR recycler: T_recycler; CONST lexingStyle: T_lexingStyle): P_token;
+FUNCTION T_singleStringLexer.fetch(CONST messages: P_messages; CONST recycler:P_recycler; CONST lexingStyle: T_lexingStyle): P_token;
   begin
     result:=nil;
     while (result=nil) and (inputLocation.column<=length(text)) do begin
       result:=getToken(text,inputLocation,messages,recycler,lexingStyle);
       if (result<>nil) and (lexingStyle<>ls_retainAll) then case result^.tokType of
         tt_EOL: begin
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_docComment: if lexingStyle<>ls_retainComments then begin
           myGenerics.append(nextStatement.comments ,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
         tt_attributeComment: if lexingStyle<>ls_retainComments then begin
           if (result^.txt<>'') then myGenerics.append(nextStatement.attributes,result^.txt);
-          recycler.disposeToken(result);
+          recycler^.disposeToken(result);
           result:=nil;
         end;
       end;
@@ -490,7 +490,7 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
     blob.closer:=idInfos^.getBlobCloserOrZero(inputLocation.line);
 
     adapters.createDummy;
-    while fetchNext(@adapters,recycler,ls_retainComments) do begin end;
+    while fetchNext(@adapters,@recycler,ls_retainComments) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(text);
 
@@ -521,7 +521,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
     adapters.createDummy;
-    repeat until not(lexer.fetchNext(@adapters,recycler,ls_retainAll));
+    repeat until not(lexer.fetchNext(@adapters,@recycler,ls_retainAll));
     adapters.destroy;
     setLength(result,0);
     while lexer.tokenQueue.hasNext do begin
@@ -571,7 +571,7 @@ DESTRUCTOR T_abstractLexer.destroy;
     end;
   end;
 
-FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycler: T_recycler): T_enhancedStatement;
+FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recycler:P_recycler): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       earlierSuppressedUnusedAttribute:boolean=false;
   FUNCTION hasSuppressedUnusedAttribute:boolean;
@@ -599,9 +599,9 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycl
       if nextToProcess^.tokType=tt_semicolon then begin
         if localIdStack.scopeBottom then begin
           if nextStatement.token.first=nil then messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
-          recycler.disposeToken(nextToProcess);
+          recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
-          if not(messages^.continueEvaluation) then recycler.cascadeDisposeToken(result.token.first);
+          if not(messages^.continueEvaluation) then recycler^.cascadeDisposeToken(result.token.first);
           resetTemp;
           localIdStack.destroy;
           exit;
@@ -613,7 +613,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; VAR recycl
       {$ifdef fullVersion}
       localIdStack.popRemaining;
       {$endif}
-      recycler.cascadeDisposeToken(result.token.first);
+      recycler^.cascadeDisposeToken(result.token.first);
     end;
     resetTemp;
     while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,localIdStack.prevToken^.location,nil,not(hasSuppressedUnusedAttribute));
@@ -823,7 +823,7 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR context:T_context; VAR recycler:T_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
       rule:P_abstractRule;
       pattern:P_pattern;
@@ -872,17 +872,17 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
         tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen:
           if (t^.next<>nil) and (t^.next^.next<>nil) and (t^.next^.tokType in [tt_literal,tt_globalVariable,tt_blockLocalVariable]) then case t^.next^.tokType of
             tt_operatorMinus: t^.next^.tokType:=tt_unaryOpMinus;
-            tt_operatorPlus : t^.next:=recycler.disposeToken(t^.next);
+            tt_operatorPlus : t^.next:=recycler^.disposeToken(t^.next);
           end;
         tt_unaryOpMinus:
           if (t^.next<>nil) and (t^.next^.tokType=tt_unaryOpMinus) then begin
-            t:=recycler.disposeToken(t);
-            t:=recycler.disposeToken(t);
+            t:=recycler^.disposeToken(t);
+            t:=recycler^.disposeToken(t);
           end;
         tt_startOfPattern:begin
           new(pattern,create);
           pattern^.parse(t,t^.location,context,recycler,true);
-          if context.continueEvaluation
+          if context^.continueEvaluation
           then prepareLambdaBody
           else begin
             dispose(pattern,destroy);
@@ -904,9 +904,9 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
                 t^.tokType:=t^.next^.tokType;
                 if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                 t^.txt:=t^.txt;
-                t^.next:=recycler.disposeToken(t^.next);
-              end else context.raiseError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
-            end else context.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
+                t^.next:=recycler^.disposeToken(t^.next);
+              end else context^.raiseError('You can only modify variables! '+t^.txt+' is not a variable.',t^.next^.location);
+            end else context^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
         tt_userRule: begin
@@ -914,22 +914,22 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR co
           if callAndIdInfos<>nil then callAndIdInfos^.add(t);
           {$endif}
         end;
-        tt_modifier: if t^.getModifier<>modifier_local then context.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        tt_modifier: if t^.getModifier<>modifier_local then context^.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
         else if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;
           t^.txt:=t^.next^.txt;
-          t^.next:=recycler.disposeToken(t^.next);
-          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler^.disposeToken(t^.next);
+          t^.next:=recycler^.disposeToken(t^.next);
         end;
         tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignExistingBlockLocal;
           t^.data:=nil;
-          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler^.disposeToken(t^.next);
         end else if (t^.next<>nil) and (t^.next^.tokType in [tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
           t^.tokType:=t^.next^.tokType;
           t^.data:=nil;
-          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler^.disposeToken(t^.next);
         end;
         {$ifdef fullVersion}
         else if callAndIdInfos<>nil then callAndIdInfos^.add(t);
@@ -1384,7 +1384,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   end;
 {$endif}
 
-FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_tokenLocation; CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle): P_token;
+FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_tokenLocation; CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle): P_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(message:ansistring);
@@ -1450,7 +1450,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       begin
         fail('Cannot parse: '+copy(line,inputLocation.column,20)+' (first char is "'+line[inputLocation.column]+'"=#'+intToStr(ord(line[inputLocation.column]))+')');
         inputLocation.column:=length(line)+1;
-        recycler.disposeToken(result);
+        recycler^.disposeToken(result);
         exit(nil);
       end}
 
@@ -1462,7 +1462,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       firstInLine:boolean;
   begin
     firstInLine:=inputLocation.column=1;
-    result:=recycler.newToken(inputLocation,'',tt_EOL);
+    result:=recycler^.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
       {$ifdef fullVersion}
       if callAndIdInfos<>nil then callAndIdInfos^.markBlobLine(inputLocation.line,closer);
@@ -1484,7 +1484,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=recycler.literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
+      result^.data:=recycler^.literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
       setLength(lines,0);
       exit(result);
     end;
@@ -1504,15 +1504,15 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       result^.location:=inputLocation;
     end;
     if length(line)<inputLocation.column then begin
-      recycler.disposeToken(result);
+      recycler^.disposeToken(result);
       exit(nil);
     end;
     case line[inputLocation.column] of
       '0'..'9': begin
-        result^.data:=parseNumber(line,inputLocation.column, false,recycler.literalRecycler, parsedLength);
+        result^.data:=parseNumber(line,inputLocation.column, false,recycler^.literalRecycler, parsedLength);
         if parsedLength<=0 then begin
                                   fail('Cannot parse numeric literal '+line);
-                                  recycler.disposeToken(result);
+                                  recycler^.disposeToken(result);
                                   exit(nil);
                                 end
                            else result^.tokType:=tt_literal;
@@ -1537,7 +1537,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           end;
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=recycler.literalRecycler.newStringLiteral(stringValue);
+          result^.data:=recycler^.literalRecycler.newStringLiteral(stringValue);
         end;
         stringValue:='';
       end;
@@ -1556,8 +1556,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
-          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler.literalRecycler.newRealLiteral(Nan);      end
-          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler.literalRecycler.newRealLiteral(infinity); end
+          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.literalRecycler.newRealLiteral(Nan);      end
+          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.literalRecycler.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
@@ -1634,7 +1634,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     if parsedLength>0 then inc(inputLocation.column,parsedLength);
   end;
 
-FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_recycler; CONST lexingStyle:T_lexingStyle): boolean;
+FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_recycler; CONST lexingStyle:T_lexingStyle): boolean;
   PROCEDURE appendToken(CONST tok:P_token); inline;
     begin
       if (tok<>nil) and
@@ -1665,7 +1665,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
             {$ifdef fullVersion}
             associatedPackage^.markTypeAsUsed(nextToken,callAndIdInfos);
             {$endif}
-            recycler.disposeToken(n[1]);
+            recycler^.disposeToken(n[1]);
           end else begin
             appendToken(nextToken);
             nextToken:=n[1]; //=> repeat case distinction
@@ -1683,8 +1683,8 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
               associatedPackage^.resolveId(nextToken^,nil);
-              recycler.disposeToken(n[1]);
-              recycler.disposeToken(n[2]);
+              recycler^.disposeToken(n[1]);
+              recycler^.disposeToken(n[2]);
               appendToken(nextToken);
               nextToken:=nil;
             end else begin
@@ -1719,9 +1719,9 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
           nextToken^.txt:=n[2]^.txt;
           nextToken^.data:=nil;
         end else messages^.raiseSimpleError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
-        recycler.disposeToken(n[1]);
-        recycler.disposeToken(n[2]);
-        recycler.disposeToken(n[3]);
+        recycler^.disposeToken(n[1]);
+        recycler^.disposeToken(n[2]);
+        recycler^.disposeToken(n[3]);
         appendToken(nextToken);
         nextToken:=nil;
       end;
@@ -1732,7 +1732,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
           nextToken^.txt:='';
           nextToken^.data:=nil;
         end else messages^.raiseSimpleError('Invalid agg construct.',nextToken^.location);
-        recycler.disposeToken(n[1]);
+        recycler^.disposeToken(n[1]);
         appendToken(nextToken);
         nextToken:=nil;
       end;
@@ -1741,12 +1741,12 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; VAR recycler:T_rec
         if (n[1]<>nil) then begin
           if (n[1]^.tokType=tt_declare) then begin
             nextToken^.tokType:=tt_endOfPatternDeclare;
-            recycler.disposeToken(n[1]);
+            recycler^.disposeToken(n[1]);
             appendToken(nextToken);
             nextToken:=nil;
           end else if (n[1]^.tokType=tt_assign) then begin
             nextToken^.tokType:=tt_endOfPatternAssign;
-            recycler.disposeToken(n[1]);
+            recycler^.disposeToken(n[1]);
             appendToken(nextToken);
             nextToken:=nil;
           end else begin
@@ -1832,15 +1832,15 @@ PROCEDURE T_extendedPackage.resolveId(VAR token: T_token;
     extender^.resolveId(token,adaptersOrNil);
   end;
 
-FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; VAR recycler:T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral;
+FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral;
   begin
     {$ifdef fullVersion}
     if functionCallInfos<>nil then new(functionCallInfos,create);
     {$endif}
-    result:=recycler.literalRecycler.newMapLiteral(0);
+    result:=recycler^.literalRecycler.newMapLiteral(0);
   end;
 
-FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; VAR recycler: T_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
   begin
     {$ifdef fullVersion}
     if functionCallInfos=nil then new(functionCallInfos,create);
@@ -1863,7 +1863,7 @@ PROCEDURE T_abstractPackage.logReady(CONST stateHashAtLoad:T_hashInt); begin rea
 FUNCTION T_abstractPackage.getId: T_idString;                          begin result:=codeProvider^.id;                           end;
 FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
-FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; VAR recycler:T_recycler):string;
+FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string;
   begin
     if (L^.literalType=lt_string)
     then result:=P_stringLiteral(L)^.value

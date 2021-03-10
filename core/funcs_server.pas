@@ -69,8 +69,8 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
       invalidHeader:boolean=false;
   begin
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      if  params^.size=1                                    then exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
-      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
+      if  params^.size=1                                    then exit(recycler^.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
+      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(recycler^.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
       if (params^.size=3) and (arg1^.literalType=lt_smallint) and (arg2^.literalType in [lt_map,lt_emptyMap]) then begin
         iter:=map2^.entryList;
         setLength(header,length(iter));
@@ -82,9 +82,9 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
         end;
         setHeaderDefaults(header,length(str0^.value));
         if invalidHeader then begin
-          context.raiseError('Invalid header map; all keys must be strings',tokenLocation);
+          context^.raiseError('Invalid header map; all keys must be strings',tokenLocation);
           exit(nil);
-        end else exit(recycler.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
+        end else exit(recycler^.literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
       end;
       result:=nil;
     end else result:=nil;
@@ -93,9 +93,9 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
 FUNCTION httpError_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint)
-    then result:=recycler.literalRecycler.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
+    then result:=recycler^.literalRecycler.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
     else if (params=nil) or (params^.size=0)
-    then result:=recycler.literalRecycler.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
+    then result:=recycler^.literalRecycler.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
     else result:=nil;
   end;
 
@@ -111,23 +111,23 @@ FUNCTION startServer_impl intFuncSignature;
        (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) and
        (arg2^.literalType in [lt_smallint,lt_bigint,lt_real])  and
-       context.checkSideEffects('startHttpServer',tokenLocation,[se_alterContextState,se_server,se_detaching]) then begin
+       context^.checkSideEffects('startHttpServer',tokenLocation,[se_alterContextState,se_server,se_detaching]) then begin
 
       timeout:=P_numericLiteral(arg2)^.floatValue/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       servingExpression^.rereference;
-      childContext:=context.getNewAsyncContext(recycler,false);
+      childContext:=context^.getNewAsyncContext(recycler,false);
       if childContext<>nil then begin
         microserver:=T_microserver.create(str0^.value,servingExpression,timeout,tokenLocation,childContext);
         if microserver.httpListener.getLastListenerSocketError=0
         then microserver.start
         else begin
-          context.raiseError('Error in socket creation ('+microserver.ip+')',tokenLocation);
+          context^.raiseError('Error in socket creation ('+microserver.ip+')',tokenLocation);
           FreeAndNil(microserver);
           exit(nil);
         end;
-        result:=recycler.literalRecycler.newStringLiteral(microserver.ip);
-      end else context.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
+        result:=recycler^.literalRecycler.newStringLiteral(microserver.ip);
+      end else context^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
 
@@ -137,7 +137,7 @@ CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; C
     servingExpression:=P_expressionLiteral(parent.servingExpression^.rereferenced);
     feedbackLocation:=parent.feedbackLocation;
     connection.create(conn,@(parent.httpListener));
-    context:=parent.context^.getNewAsyncContext(recycler,true);
+    context:=parent.context^.getNewAsyncContext(@recycler,true);
     myParent:=parent;
     FreeOnTerminate:=true;
     inherited create(parent.context^.getGlobals,feedbackLocation,false);
@@ -179,7 +179,7 @@ PROCEDURE T_microserverRequest.execute;
       context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
       connection.sendStringAndClose(HTTP_404_RESPONSE);
     end;
-    context^.finalizeTaskAndDetachFromParent(recycler);
+    context^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(context);
     myParent.logExecution(myParent.context^.wallclockTime-creationTime,executionTime);
     connection.destroy;
@@ -221,7 +221,7 @@ DESTRUCTOR T_microserver.destroy;
   begin
     recycler.initRecycler;
     recycler.literalRecycler.disposeLiteral(servingExpression);
-    context^.finalizeTaskAndDetachFromParent(recycler);
+    context^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(context);
     httpListener.destroy;
     recycler.cleanup;
@@ -317,10 +317,10 @@ FUNCTION extractParameters_impl intFuncSignature;
       for i:=0 to length(keyAndValue)-1 do begin
         keyAndValue[i]:=percentDecode(ansiReplaceStr(keyAndValue[i],'+',' '));
       end;
-      value:=recycler.literalRecycler.newStringLiteral(keyAndValue[1]);
-      castValue:=value^.softCast(@recycler.literalRecycler);
-      recycler.literalRecycler.disposeLiteral(value);
-      parameters^.put(@recycler.literalRecycler,keyAndValue[0],castValue,false);
+      value:=recycler^.literalRecycler.newStringLiteral(keyAndValue[1]);
+      castValue:=value^.softCast(@recycler^.literalRecycler);
+      recycler^.literalRecycler.disposeLiteral(value);
+      parameters^.put(@recycler^.literalRecycler,keyAndValue[0],castValue,false);
     end;
 
   VAR parts:T_arrayOfString;
@@ -330,7 +330,7 @@ FUNCTION extractParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       while (length(parts)<2) do append(parts,'');
-      parameters:=recycler.literalRecycler.newMapLiteral(0);
+      parameters:=recycler^.literalRecycler.newMapLiteral(0);
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
@@ -346,8 +346,8 @@ FUNCTION extractRawParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       if length(parts)>1
-      then exit(recycler.literalRecycler.newStringLiteral(parts[1]))
-      else exit(recycler.literalRecycler.newStringLiteral(''));
+      then exit(recycler^.literalRecycler.newStringLiteral(parts[1]))
+      else exit(recycler^.literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -358,8 +358,8 @@ FUNCTION extractPath_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       if length(parts)>0
-      then exit(recycler.literalRecycler.newStringLiteral(parts[0]))
-      else exit(recycler.literalRecycler.newStringLiteral(''));
+      then exit(recycler^.literalRecycler.newStringLiteral(parts[0]))
+      else exit(recycler^.literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -395,13 +395,13 @@ FUNCTION encodeRequest_impl intFuncSignature;
         end;
       end;
       if parameters<>'' then parameters:='?'+parameters;
-      result:=recycler.literalRecycler.newStringLiteral(address+path+parameters);
+      result:=recycler^.literalRecycler.newStringLiteral(address+path+parameters);
     end;
   end;
 
 VAR httpRequestCs:TRTLCriticalSection;
 
-FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler):P_literal;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; VAR literalRecycler:T_literalRecycler):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
       requestText:ansistring='';
@@ -483,7 +483,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
       except
         on E : Exception do begin
           resultText:='';
-          context.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
+          context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
         end;
       end;
       if isHttpsRequest then leaveCriticalSection(httpRequestCs);
@@ -498,14 +498,14 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     setLength(requestHeader,0);
   end;
 
-FUNCTION httpGet_imp    intFuncSignature; begin if context.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
-FUNCTION httpPut_imp    intFuncSignature; begin if context.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
-FUNCTION httpPost_imp   intFuncSignature; begin if context.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
-FUNCTION httpDelete_imp intFuncSignature; begin if context.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context,recycler.literalRecycler) else result:=nil; end;
+FUNCTION httpGet_imp    intFuncSignature; begin if context^.checkSideEffects('httpGet'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_get   ,params,tokenLocation,context,recycler^.literalRecycler) else result:=nil; end;
+FUNCTION httpPut_imp    intFuncSignature; begin if context^.checkSideEffects('httpPut'   ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_put   ,params,tokenLocation,context,recycler^.literalRecycler) else result:=nil; end;
+FUNCTION httpPost_imp   intFuncSignature; begin if context^.checkSideEffects('httpPost'  ,tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_post  ,params,tokenLocation,context,recycler^.literalRecycler) else result:=nil; end;
+FUNCTION httpDelete_imp intFuncSignature; begin if context^.checkSideEffects('httpDelete',tokenLocation,[se_accessHttp]) then result:=httpGetPutPost(hm_delete,params,tokenLocation,context,recycler^.literalRecycler) else result:=nil; end;
 
 FUNCTION openUrl_imp intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('openUrl',tokenLocation,[se_executingExternal])
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context^.checkSideEffects('openUrl',tokenLocation,[se_executingExternal])
     then result:=newBoolLiteral(OpenURL(str0^.value))
     else result:=nil;
   end;

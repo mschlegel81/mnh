@@ -77,9 +77,9 @@ CONST
                           {ak_variadic_3} (fixedParameters:3;       variadic:true ),
                           {ak_variadic_4} (fixedParameters:4;       variadic:true ));
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
-FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST messageTail:ansistring='');
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 VAR builtinFunctionMap:T_functionMap;
     makeBuiltinExpressionCallback:FUNCTION(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
@@ -257,21 +257,21 @@ FUNCTION T_builtinFunctionMetaData.qualifiedId: string;
     result:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; CONST messageTail: ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST messageTail: ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+L^.typeString+messageTail;
-    context.raiseError(complaintText,tokenLocation);
+    context^.raiseError(complaintText,tokenLocation);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST messageTail:ansistring='');
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;
-    context.raiseError(complaintText,tokenLocation);
+    context^.raiseError(complaintText,tokenLocation);
   end;
 
-FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   VAR anyList:boolean=false;
       firstSet:longint=-1;
       allOkay:boolean=true;
@@ -290,12 +290,12 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     VAR k:longint;
         x:P_literal;
     begin
-      result:=recycler.literalRecycler.newListLiteral(params^.size);
+      result:=recycler^.literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do begin
         x:=params^.value[k];
         if x^.literalType in C_listTypes
-        then result^.append(@recycler.literalRecycler,P_listLiteral(x)^.value[index],true)
-        else result^.append(@recycler.literalRecycler,x                             ,true);
+        then result^.append(@recycler^.literalRecycler,P_listLiteral(x)^.value[index],true)
+        else result^.append(@recycler^.literalRecycler,x                             ,true);
       end;
     end;
 
@@ -303,10 +303,10 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
   FUNCTION getSetSubParameters(CONST index:longint):P_listLiteral; inline;
     VAR k:longint;
     begin
-      result:=recycler.literalRecycler.newListLiteral(params^.size);
+      result:=recycler^.literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do
-      if k=firstSet then result^.append(@recycler.literalRecycler,setIter  [index],true)
-                    else result^.append(@recycler.literalRecycler,params^.value[k],true);
+      if k=firstSet then result^.append(@recycler^.literalRecycler,setIter  [index],true)
+                    else result^.append(@recycler^.literalRecycler,params^.value[k],true);
     end;
 
   VAR i:longint;
@@ -316,45 +316,45 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
   begin
     if params=nil then exit(nil);
     if (params^.size=1) and (arg0^.literalType=lt_expression) then
-      exit(P_expressionLiteral(arg0)^.applyBuiltinFunction(functionId,tokenLocation,@context,@recycler));
+      exit(P_expressionLiteral(arg0)^.applyBuiltinFunction(functionId,tokenLocation,context,recycler));
     for i:=0 to params^.size-1 do checkLength(params^.value[i],i);
     if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
     if not(builtinFunctionMap.containsFunctionForId(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
     if anyList then begin
-      result:=recycler.literalRecycler.newListLiteral(consensusLength);
+      result:=recycler^.literalRecycler.newListLiteral(consensusLength);
       for i:=0 to consensusLength-1 do if allOkay then begin
         p:=getListSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        recycler.literalRecycler.disposeLiteral(p);
+        recycler^.literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
-        else if not(context.continueEvaluation) then begin
+        else if not(context^.continueEvaluation) then begin
           allOkay:=false;
-          recycler.literalRecycler.disposeLiteral(fp);
-        end else P_listLiteral(result)^.append(@recycler.literalRecycler,fp,false);
+          recycler^.literalRecycler.disposeLiteral(fp);
+        end else P_listLiteral(result)^.append(@recycler^.literalRecycler,fp,false);
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
-      result:=recycler.literalRecycler.newSetLiteral(length(setIter));
+      result:=recycler^.literalRecycler.newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        recycler.literalRecycler.disposeLiteral(p);
+        recycler^.literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
-        else if not(context.continueEvaluation) then begin
+        else if not(context^.continueEvaluation) then begin
           allOkay:=false;
-          recycler.literalRecycler.disposeLiteral(fp);
+          recycler^.literalRecycler.disposeLiteral(fp);
         end else begin
           if fp^.literalType in (C_collectionTypes)
           then begin
-            P_setLiteral(result)^.appendAll(@recycler.literalRecycler,P_collectionLiteral(fp));
-            recycler.literalRecycler.disposeLiteral(fp);
-          end else P_setLiteral(result)^.append(@recycler.literalRecycler,fp,false);
+            P_setLiteral(result)^.appendAll(@recycler^.literalRecycler,P_collectionLiteral(fp));
+            recycler^.literalRecycler.disposeLiteral(fp);
+          end else P_setLiteral(result)^.append(@recycler^.literalRecycler,fp,false);
         end;
       end;
-      recycler.literalRecycler.disposeLiteral(setIter);
+      recycler^.literalRecycler.disposeLiteral(setIter);
     end else result:=nil;
     if not(allOkay) then begin
-      recycler.literalRecycler.disposeLiteral(result);
+      recycler^.literalRecycler.disposeLiteral(result);
       result:=nil;
     end;
   end;
@@ -365,7 +365,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
 FUNCTION clearPrint_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
+    context^.messages^.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
     result:=newVoidLiteral;
   end;
 
@@ -403,7 +403,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
 FUNCTION print_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postTextMessage(mt_printline,tokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
+    context^.messages^.postTextMessage(mt_printline,tokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     result:=newVoidLiteral;
   end;
 
@@ -411,7 +411,7 @@ FUNCTION print_imp intFuncSignature;
 FUNCTION printDirect_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postTextMessage(mt_printdirect,C_nilSearchTokenLocation,getStringToPrint(params,ft_never));
+    context^.messages^.postTextMessage(mt_printdirect,C_nilSearchTokenLocation,getStringToPrint(params,ft_never));
     result:=newVoidLiteral;
   end;
 
@@ -419,7 +419,7 @@ FUNCTION printDirect_imp intFuncSignature;
 FUNCTION log_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postTextMessage(mt_log,tokenLocation,getStringToPrint(params,ft_always));
+    context^.messages^.postTextMessage(mt_log,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
@@ -427,7 +427,7 @@ FUNCTION log_imp intFuncSignature;
 FUNCTION note_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
+    context^.messages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
@@ -435,15 +435,15 @@ FUNCTION note_imp intFuncSignature;
 FUNCTION warn_imp intFuncSignature;
   begin
     CHECK_SIDE;
-    context.messages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
+    context^.messages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
 FUNCTION fail_impl intFuncSignature;
   begin
-    if (params=nil) or (params^.size=0) then context.raiseError('Fail',tokenLocation,mt_el3_userDefined)
+    if (params=nil) or (params^.size=0) then context^.raiseError('Fail',tokenLocation,mt_el3_userDefined)
     else begin
-      context.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
+      context^.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
       result:=newVoidLiteral;
     end;
     result:=nil;
@@ -455,9 +455,9 @@ FUNCTION assert_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_boolean) then begin
       if not(bool0^.value) then begin
-        failParam:=params^.tail(@recycler.literalRecycler);
+        failParam:=params^.tail(@recycler^.literalRecycler);
         result:=fail_impl(failParam,tokenLocation,context,recycler);
-        recycler.literalRecycler.disposeLiteral(failParam);
+        recycler^.literalRecycler.disposeLiteral(failParam);
       end else result:=newVoidLiteral;
     end;
   end;
@@ -469,11 +469,11 @@ FUNCTION halt_impl intFuncSignature;
     CHECK_SIDE;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages^.setStopFlag;
+      context^.messages^.setStopFlag;
       result:=newVoidLiteral;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
-      context.messages^.setUserDefinedExitCode(P_smallIntLiteral(arg0)^.value);
-      context.messages^.setStopFlag;
+      context^.messages^.setUserDefinedExitCode(P_smallIntLiteral(arg0)^.value);
+      context^.messages^.setStopFlag;
       result:=newVoidLiteral;
     end;
   end;
@@ -482,8 +482,8 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=recycler.literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
-    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(@recycler.literalRecycler,meta^.qualifiedId);
+    result:=recycler^.literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(@recycler^.literalRecycler,meta^.qualifiedId);
   end;
 
 INITIALIZATION

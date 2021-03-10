@@ -67,7 +67,7 @@ TYPE
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
     FUNCTION getCustomForm:TWinControl;
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION leftLabelOrNil:TLabel; virtual;
@@ -107,7 +107,7 @@ TYPE
     PROCEDURE showAndConnectAll;
     PROCEDURE hideAndDisconnectAll;
   public
-    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):boolean;
+    FUNCTION processPendingEvents(CONST location: T_tokenLocation; CONST context: P_context; CONST recycler: P_recycler):boolean;
   end;
 
   P_customFormRequest=^T_customFormRequest;
@@ -201,7 +201,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     VAR keys:T_arrayOfLiteral;
         k:P_literal;
     begin
-      if not(context.messages^.continueEvaluation) then exit;
+      if not(context.continueEvaluation) then exit;
       keys:=def^.keyIteratableList;
       for k in keys do if not(isConsidered(k)) then begin
         context.messages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
@@ -295,7 +295,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     end;
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_context; VAR recycler:T_recycler): boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -305,35 +305,35 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       result:=false;
       if (config.bindingTo<>'') then begin
         if (state.bindingValue<>nil) and (state.isFocused) then begin
-          tmp:=context.valueScope^.getVariableValue(config.bindingTo);
+          tmp:=context^.valueScope^.getVariableValue(config.bindingTo);
           if tmp=nil then begin
             {$ifdef debug_mnhCustomForm}
             writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
             {$endif}
             result:=true;
-            context.valueScope^.setVariableValue(recycler.literalRecycler,config.bindingTo,state.bindingValue,location,@context);
+            context^.valueScope^.setVariableValue(recycler^.literalRecycler,config.bindingTo,state.bindingValue,location,context);
           end else begin
             if tmp^.equals(state.bindingValue) then begin
-              recycler.literalRecycler.disposeLiteral(tmp);
+              recycler^.disposeLiteral(tmp);
             end else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
               {$endif}
               result:=true;
-              recycler.literalRecycler.disposeLiteral(tmp);
-              context.valueScope^.setVariableValue(recycler.literalRecycler,config.bindingTo,state.bindingValue,location,@context);
+              recycler^.disposeLiteral(tmp);
+              context^.valueScope^.setVariableValue(recycler^.literalRecycler,config.bindingTo,state.bindingValue,location,context);
             end;
           end;
         end else if not(state.isFocused) then begin
-          tmp:=context.valueScope^.getVariableValue(config.bindingTo);
+          tmp:=context^.valueScope^.getVariableValue(config.bindingTo);
           if tmp<>nil then begin
             if tmp^.equals(state.bindingValue)
-            then  recycler.literalRecycler.disposeLiteral(tmp)
+            then  recycler^.disposeLiteral(tmp)
             else begin
               {$ifdef debug_mnhCustomForm}
               writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
               {$endif}
-              recycler.literalRecycler.disposeLiteral(state.bindingValue);
+              recycler^.disposeLiteral(state.bindingValue);
               state.bindingValue:=tmp;
               result:=true;
             end;
@@ -346,10 +346,10 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         writeln(stdErr,'        DEBUG: evaluating action for ',getName);
         {$endif}
         if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
-        then tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,state.actionParameter,nil).literal
-        else tmp:=config.action^.evaluateToLiteral(location,@context,@recycler,nil                  ,nil).literal;
-        if state.actionParameter<>nil then recycler.literalRecycler.disposeLiteral(state.actionParameter);
-        if tmp                  <>nil then recycler.literalRecycler.disposeLiteral(tmp);
+        then tmp:=config.action^.evaluateToLiteral(location,context,recycler,state.actionParameter,nil).literal
+        else tmp:=config.action^.evaluateToLiteral(location,context,recycler,nil                  ,nil).literal;
+        if state.actionParameter<>nil then recycler^.disposeLiteral(state.actionParameter);
+        if tmp                  <>nil then recycler^.disposeLiteral(tmp);
         state.actionTriggered:=false;
         result:=true;
       end;
@@ -359,7 +359,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
         {$endif}
         oldEnabled:=state.enabled;
-        state.enabled:=config.enabled^.evaluateToBoolean(location,@context,@recycler,true,nil,nil);
+        state.enabled:=config.enabled^.evaluateToBoolean(location,context,recycler,true,nil,nil);
         result:=result or (oldEnabled<>state.enabled);
       end;
 
@@ -368,12 +368,12 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
         {$endif}
         oldCaption:=state.caption;
-        tmp:=config.caption^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
+        tmp:=config.caption^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
         if tmp<>nil then begin
           if tmp^.literalType=lt_string
           then state.caption:=P_stringLiteral(tmp)^.value
           else state.caption:=tmp^.toString();
-          recycler.literalRecycler.disposeLiteral(tmp);
+          recycler^.disposeLiteral(tmp);
         end;
         result:=result or (oldCaption<>state.caption);
       end;
@@ -666,8 +666,7 @@ PROCEDURE TscriptedForm.dockChanged;
     closeButtonPanel.visible:=myComponentParent<>cpNone;
   end;
 
-FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
-  VAR context: T_context; VAR recycler: T_recycler): boolean;
+FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; CONST context: P_context; CONST recycler: P_recycler): boolean;
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
@@ -678,44 +677,44 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
       exit(false);
     end;
     try
-      customFormBefore:=context.parentCustomForm;
-      context.parentCustomForm:=self;
+      customFormBefore:=context^.parentCustomForm;
+      context^.parentCustomForm:=self;
       processingEvents:=true;
-      for m in meta do if context.messages^.continueEvaluation then begin
+      for m in meta do if context^.continueEvaluation then begin
         if m^.evaluate(location,context,recycler) then begin
           result:=true;
           metaForUpdate.put(m);
         end;
       end;
       processingEvents:=false;
-      context.parentCustomForm:=customFormBefore;
+      context^.parentCustomForm:=customFormBefore;
     finally
       leaveCriticalSection(lock);
     end;
     {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
   end;
 
-FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   VAR form:TscriptedForm;
       sleepTime:longint=0;
       formRequest:P_customFormRequest;
   begin
     result:=nil;
     if (gui_started=NO) then begin
-      context.messages^.logGuiNeeded;
+      context^.messages^.logGuiNeeded;
       exit(nil);
     end;
-    if not(context.checkSideEffects('showDialog',location,[se_alterGuiState,se_input])) then exit(nil);
+    if not(context^.checkSideEffects('showDialog',location,[se_alterGuiState,se_input])) then exit(nil);
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
       new(formRequest,create(P_stringLiteral(params^.value[0])^.value,
                          P_mapLiteral(params^.value[1]),
-                         @context,
+                         context,
                          location));
-      context.messages^.postCustomMessage(formRequest,false);
-      form:=formRequest^.getCreatedForm(context.messages);
+      context^.messages^.postCustomMessage(formRequest,false);
+      form:=formRequest^.getCreatedForm(context^.messages);
       disposeMessage(formRequest);
-      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
-      while not(form.markedForCleanup) and (context.messages^.continueEvaluation) do begin
+      if context^.parentCustomForm<>nil then TscriptedForm(context^.parentCustomForm).hideAndDisconnectAll;
+      while not(form.markedForCleanup) and (context^.continueEvaluation) do begin
         if form.processPendingEvents(location,context,recycler)
         then sleepTime:=0
         else begin
@@ -724,7 +723,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
           sleep(sleepTime);
         end;
       end;
-      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).showAndConnectAll;
+      if context^.parentCustomForm<>nil then TscriptedForm(context^.parentCustomForm).showAndConnectAll;
       result:=newVoidLiteral;
     end;
   end;

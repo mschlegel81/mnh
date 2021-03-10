@@ -53,21 +53,21 @@ FUNCTION readXmlFile_impl intFuncSignature;
   VAR FDoc: TXMLDocument;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('readXmlFile',tokenLocation,[se_readFile]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context^.checkSideEffects('readXmlFile',tokenLocation,[se_readFile]) then begin
       if fileExists(str0^.value)
       then try
         ReadXMLFile(FDoc, str0^.value)
       except
         on e:Exception do begin
-          context.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
+          context^.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
         end;
       end else begin
-        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
         exit(newVoidLiteral);
       end;
-      result:=obtainXmlData(recycler.literalRecycler,FDoc);
+      result:=obtainXmlData(recycler^.literalRecycler,FDoc);
       if result=nil then begin
-        context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
         result:=newVoidLiteral;
       end;
     end;
@@ -85,13 +85,13 @@ FUNCTION readXml_impl intFuncSignature;
         ReadXMLFile(FDoc,input);
       except
         on e:Exception do begin
-          context.raiseError('Error parsing XML input: '+e.message,tokenLocation);
+          context^.raiseError('Error parsing XML input: '+e.message,tokenLocation);
         end;
       end;
       FreeAndNil(input);
-      result:=obtainXmlData(recycler.literalRecycler,FDoc);
+      result:=obtainXmlData(recycler^.literalRecycler,FDoc);
       if result=nil then begin
-        context.raiseError('Error parsing XML input.',tokenLocation);
+        context^.raiseError('Error parsing XML input.',tokenLocation);
         result:=newVoidLiteral;
       end;
     end;
