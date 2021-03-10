@@ -455,13 +455,11 @@ TYPE
 
   T_literalRecycler=object
     private
-      smallIntLiterals:record dat:array[0..255] of P_smallIntLiteral; fill:longint; end;
-      bigIntLiterals  :record dat:array[0..255] of P_bigIntLiteral;   fill:longint; end;
-      realLiterals    :record dat:array[0..255] of P_realLiteral;     fill:longint; end;
-      stringLiterals  :record dat:array[0..255] of P_stringLiteral;   fill:longint; end;
-      listLiterals    :record dat:array[0..255] of P_listLiteral;     fill:longint; end;
-      mapLiterals     :record dat:array[0..255] of P_mapLiteral;      fill:longint; end;
-      setLiterals     :record dat:array[0..255] of P_setLiteral;      fill:longint; end;
+      smallIntLiterals:record dat:array[0..2047] of P_smallIntLiteral; fill:longint; end;
+      bigIntLiterals  :record dat:array[0.. 255] of P_bigIntLiteral;   fill:longint; end;
+      realLiterals    :record dat:array[0..2047] of P_realLiteral;     fill:longint; end;
+      stringLiterals  :record dat:array[0.. 511] of P_stringLiteral;   fill:longint; end;
+      listLiterals    :record dat:array[0.. 511] of P_listLiteral;     fill:longint; end;
     public
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
@@ -764,8 +762,6 @@ PROCEDURE T_literalRecycler.initRecycler;
     realLiterals    .fill:=0;
     stringLiterals  .fill:=0;
     listLiterals    .fill:=0;
-    mapLiterals     .fill:=0;
-    setLiterals     .fill:=0;
   end;
 
 PROCEDURE T_literalRecycler.cleanup;
@@ -775,16 +771,12 @@ PROCEDURE T_literalRecycler.cleanup;
     with realLiterals     do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
     with stringLiterals   do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
     with listLiterals     do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
-    with mapLiterals      do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
-    with setLiterals      do while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end;
 
     with smallIntLiterals do assert(fill=0);
     with bigIntLiterals   do assert(fill=0);
     with realLiterals     do assert(fill=0);
     with stringLiterals   do assert(fill=0);
     with listLiterals     do assert(fill=0);
-    with mapLiterals      do assert(fill=0);
-    with setLiterals      do assert(fill=0);
   end;
 
 PROCEDURE T_literalRecycler.disposeLiteral(VAR l: P_literal);
@@ -792,33 +784,33 @@ PROCEDURE T_literalRecycler.disposeLiteral(VAR l: P_literal);
     if l^.unreference<=0 then begin
       case l^.literalType of
         lt_smallint:
-          with smallIntLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_smallIntLiteral(l); inc(fill); end;
+          with smallIntLiterals do if (fill>=length(dat))
+          then dispose(l,destroy)
+          else begin dat[fill]:=P_smallIntLiteral(l); inc(fill); end;
         lt_bigint:
           begin
             l^.cleanup(@self);
-            with bigIntLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_bigIntLiteral(l); inc(fill); end;
+            with bigIntLiterals do if (fill>=length(dat))
+            then dispose(l,destroy)
+            else begin dat[fill]:=P_bigIntLiteral(l); inc(fill); end;
           end;
         lt_real:
-          with realLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_realLiteral(l); inc(fill); end;
+          with realLiterals do if (fill>=length(dat))
+          then dispose(l,destroy)
+          else begin dat[fill]:=P_realLiteral(l); inc(fill); end;
         lt_string:
           begin
             l^.cleanup(@self);
-            with stringLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_stringLiteral(l); inc(fill); end;
+            with stringLiterals do if (fill>=length(dat))
+            then dispose(l,destroy)
+            else begin dat[fill]:=P_stringLiteral(l); inc(fill); end;
           end;
         lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList:
           begin
             l^.cleanup(@self);
-            with listLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_listLiteral(l); inc(fill); end;
-          end;
-        lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,  lt_emptySet:
-          begin
-            l^.cleanup(@self);
-            with setLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_setLiteral(l); inc(fill); end;
-          end;
-        lt_map,lt_emptyMap:
-          begin
-            l^.cleanup(@self);
-            with mapLiterals do if (fill>=length(dat)) then dispose(l,destroy) else begin dat[fill]:=P_mapLiteral(l); inc(fill); end;
+            with listLiterals do if (fill>=length(dat))
+            then dispose(l,destroy)
+            else begin dat[fill]:=P_listLiteral(l); inc(fill); end;
           end;
         else begin l^.cleanup(@self); dispose(l,destroy); end;
       end;
@@ -863,7 +855,9 @@ FUNCTION T_literalRecycler.newBigIntLiteral(value: T_bigInt): P_abstractIntLiter
       P_bigIntLiteral(result)^.val:=value;
       result^.numberOfReferences:=1;
       value.clear;
-    end else new(P_bigIntLiteral(result),create(value));
+    end else begin
+      new(P_bigIntLiteral(result),create(value));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newIntLiteral(CONST value: int64): P_abstractIntLiteral;
@@ -877,13 +871,17 @@ FUNCTION T_literalRecycler.newIntLiteral(CONST value: int64): P_abstractIntLiter
         result:=dat[fill];
         P_smallIntLiteral(result)^.val:=value;
         P_smallIntLiteral(result)^.numberOfReferences:=1;
-      end else new(P_smallIntLiteral(result),create(value));
+      end else begin
+        new(P_smallIntLiteral(result),create(value));
+      end;
     end else with bigIntLiterals do if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
       P_bigIntLiteral(result)^.value.fromInt(value);
       result^.numberOfReferences:=1;
-    end else new(P_bigIntLiteral(result),create(value));
+    end else begin
+      new(P_bigIntLiteral(result),create(value));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newIntLiteral(CONST value: T_bigInt): P_abstractIntLiteral;
@@ -901,14 +899,18 @@ FUNCTION T_literalRecycler.newIntLiteral(CONST value: T_bigInt): P_abstractIntLi
         result:=dat[fill];
         P_smallIntLiteral(result)^.val:=value.toInt;
         P_smallIntLiteral(result)^.numberOfReferences:=1
-      end else new(P_smallIntLiteral(result),create(value.toInt));
+      end else begin
+        new(P_smallIntLiteral(result),create(value.toInt));
+      end;
       value.clear;
     end else with bigIntLiterals do if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
       P_bigIntLiteral(result)^.val:=value;
       result^.numberOfReferences:=1;
-    end else new(P_bigIntLiteral(result),create(value));
+    end else begin
+      new(P_bigIntLiteral(result),create(value));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newStringLiteral(CONST value: ansistring; CONST enforceNewString: boolean): P_stringLiteral;
@@ -923,23 +925,21 @@ FUNCTION T_literalRecycler.newStringLiteral(CONST value: ansistring; CONST enfor
       result^.val:=value;
       result^.numberOfReferences:=1;
       result^.enc:=se_testPending;
-    end else new(result,create(value));
+    end else begin
+      new(result,create(value));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newRealLiteral(CONST value: T_myFloat): P_realLiteral;
   begin
-    //if isNan(value) then result:=P_realLiteral(nanLit.rereferenced)
-    //else if isInfinite(value) then begin
-    //  if value>0 then result:=P_realLiteral(   infLit.rereferenced)
-    //             else result:=P_realLiteral(negInfLit.rereferenced);
-    //end else begin
-      with realLiterals do if (fill>0) then begin
-        dec(fill);
-        result:=dat[fill];
-        result^.val:=value;
-        result^.numberOfReferences:=1;
-      end else new(result,create(value));
-    //end;
+    with realLiterals do if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+      result^.val:=value;
+      result^.numberOfReferences:=1;
+    end else begin
+      new(result,create(value));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newListLiteral(CONST initialSize: longint): P_listLiteral;
@@ -950,7 +950,9 @@ FUNCTION T_literalRecycler.newListLiteral(CONST initialSize: longint): P_listLit
       result^.numberOfReferences:=1;
       setLength(result^.dat,initialSize);
       result^.fill:=0;
-    end else new(result,create(initialSize));
+    end else begin
+      new(result,create(initialSize));
+    end;
   end;
 
 FUNCTION T_literalRecycler.newListLiteral(CONST a: P_literal; CONST b: P_literal): P_listLiteral;
@@ -963,8 +965,10 @@ FUNCTION T_literalRecycler.newListLiteral(CONST a: P_literal; CONST b: P_literal
       result^.numberOfReferences:=1;
       setLength(result^.dat,initialSize);
       result^.fill:=0;
-    end else new(result,create(initialSize));
-                   result^.append(@self,a,true);
+    end else begin
+      new(result,create(initialSize));
+    end;
+    result^.append(@self,a,true);
     if b<>nil then result^.append(@self,b,true);
   end;
 
@@ -973,23 +977,12 @@ FUNCTION newBoolLiteral(CONST value: boolean)     : P_boolLiteral; begin result:
 
 FUNCTION T_literalRecycler.newSetLiteral(CONST expectedSize: longint): P_setLiteral;
   begin
-    with setLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.numberOfReferences:=1;
-      result^.dat.create(expectedSize);
-    end else new(result,create(expectedSize));
+    new(result,create(expectedSize));
   end;
 
 FUNCTION T_literalRecycler.newMapLiteral(CONST expectedSize: longint): P_mapLiteral;
   begin
-    with mapLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.numberOfReferences:=1;
-      result^.dat.create(expectedSize);
-      result^.literalType:=lt_emptyMap;
-    end else new(result,create(expectedSize));
+    new(result,create(expectedSize));
   end;
 
 CONSTRUCTOR T_typedef.create(CONST id: T_idString;
@@ -2444,12 +2437,6 @@ FUNCTION T_setLiteral.leqForSorting(CONST other: P_literal): boolean;
       else begin
         result:=false;
         //TODO: Is there a nice solution?
-
-        //myList   :=                     toList; myList   ^.sort;
-        //otherList:=P_setLiteral(other)^.toList; otherList^.sort;
-        //result:=myList^.leqForSorting(literalRecycler,otherList);
-        //literalRecycler^.disposeLiteral(myList);
-        //literalRecycler^.disposeLiteral(otherList);
       end;
     end else result:=literalType<=other^.literalType;
   end;
@@ -2460,13 +2447,8 @@ FUNCTION T_mapLiteral.leqForSorting(CONST other: P_literal): boolean;
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
       else begin
+        result:=false;
         //TODO: Is there a nice solution?
-
-        //myList   :=                     toList; myList   ^.sort;
-        //otherList:=P_mapLiteral(other)^.toList; otherList^.sort;
-        //result:=myList^.leqForSorting(literalRecycler,otherList);
-        //literalRecycler^.disposeLiteral(myList);
-        //literalRecycler^.disposeLiteral(otherList);
       end;
     end else result:=literalType<=other^.literalType;
   end;
@@ -2994,13 +2976,11 @@ FUNCTION T_listLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoun
 
 FUNCTION T_setLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
   begin
-    //TODO: Take from recycler
     new(P_setLiteral(result),createClone(self));
   end;
 
 FUNCTION T_mapLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
   begin
-    //TODO: Take from recycler
     new(P_mapLiteral(result),createClone(self));
   end;
 
