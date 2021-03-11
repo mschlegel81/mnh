@@ -127,12 +127,12 @@ FUNCTION charSet_imp intFuncSignature;
       if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
         for sub in input^.value do charSetUtf8.put(sub);
-        result:=recycler^.literalRecycler.newSetLiteral(charSetUtf8.size);
+        result:=newSetLiteral(charSetUtf8.size);
         for sub in charSetUtf8.values do result^.appendString(@recycler^.literalRecycler,sub);
         charSetUtf8.destroy;
       end else begin
         for c in input^.value do include(byteSet,c);
-        result:=recycler^.literalRecycler.newSetLiteral(100);
+        result:=newSetLiteral(100);
         for c in byteSet do result^.appendString(@recycler^.literalRecycler,c);
       end;
     end;
@@ -185,8 +185,11 @@ FUNCTION split_imp intFuncSignature;
         lt_set ,lt_stringSet ,lt_emptySet: begin
           result:=P_collectionLiteral(p)^.newOfSameType(@recycler^.literalRecycler,true);
           iter:=P_collectionLiteral(p)^.iteratableList;
-          for sub in iter do collResult^.append(@recycler^.literalRecycler,splitRecurse(sub),false);
-          recycler^.literalRecycler.disposeLiteral(iter);
+          for sub in iter do begin
+            collResult^.append(@recycler^.literalRecycler,splitRecurse(sub),false);
+            sub^.unreference;
+          end;
+          setLength(iter,0);
         end;
         else raiseNotApplicableError('split',p,tokenLocation,context);
       end;
@@ -228,8 +231,11 @@ FUNCTION join_impl intFuncSignature;
         if collection0^.size=0 then exit(recycler^.literalRecycler.newStringLiteral(''));
         iter:=collection0^.iteratableList;
         setLength(resultParts,length(iter));
-        for i:=0 to length(iter)-1 do resultParts[i]:=stringOfLit(iter[i]);
-        recycler^.literalRecycler.disposeLiteral(iter);
+        for i:=0 to length(iter)-1 do begin
+          resultParts[i]:=stringOfLit(iter[i]);
+          iter[i]^.unreference;
+        end;
+        setLength(iter,0);
 
         if params^.size=2
         then resultString:=join(resultParts,str1^.value)
@@ -334,8 +340,11 @@ FUNCTION replace_one_or_all(VAR literalRecycler:T_literalRecycler; CONST params:
     else begin
       result:=collection0^.newOfSameType(@literalRecycler,true);
       iter:=collection0^.iteratableList;
-      for sub in iter do listResult^.appendString(@literalRecycler,modify(P_stringLiteral(sub)^.value));
-      literalRecycler.disposeLiteral(iter);
+      for sub in iter do begin
+        listResult^.appendString(@literalRecycler,modify(P_stringLiteral(sub)^.value));
+        sub^.unreference;
+      end;
+      setLength(iter,0);
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -450,9 +459,12 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         end;
         lt_stringSet,lt_emptySet: begin
           iter:=set0^.iteratableList;
-          result:=recycler^.literalRecycler.newSetLiteral(length(iter));
-          for l in iter do setResult^.appendString(@recycler^.literalRecycler,innerClean(P_stringLiteral(l)^.value));
-          recycler^.literalRecycler.disposeLiteral(iter);
+          result:=newSetLiteral(length(iter));
+          for l in iter do begin
+            setResult^.appendString(@recycler^.literalRecycler,innerClean(P_stringLiteral(l)^.value));
+            l^.unreference;
+          end;
+          setLength(iter,0);
         end;
       end;
 
@@ -533,7 +545,7 @@ FUNCTION prepareDiff(VAR literalRecycler:T_literalRecycler; CONST A,B:P_literal;
     diff.execute(aHashes,bHashes,aLen,bLen);
     freeMem(aHashes,aLen*sizeOf(integer));
     freeMem(bHashes,bLen*sizeOf(integer));
-    result:=literalRecycler.newMapLiteral(4)^
+    result:=newMapLiteral(4)^
             .put(@literalRecycler,'adds'    ,diff.DiffStats.adds    )^
             .put(@literalRecycler,'deletes' ,diff.DiffStats.deletes )^
             .put(@literalRecycler,'matches' ,diff.DiffStats.matches )^
@@ -815,8 +827,11 @@ FUNCTION formatTabs_impl intFuncSignature;
         begin
           result:=P_collectionLiteral(l)^.newOfSameType(@recycler^.literalRecycler,false);
           iter  :=P_collectionLiteral(l)^.iteratableList;
-          for sub in iter do P_collectionLiteral(result)^.append(@recycler^.literalRecycler,innerRec(sub),false);
-          recycler^.literalRecycler.disposeLiteral(iter);
+          for sub in iter do begin
+            P_collectionLiteral(result)^.append(@recycler^.literalRecycler,innerRec(sub),false);
+            sub^.unreference;
+          end;
+          setLength(iter,0);
         end;
         else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context);
       end;

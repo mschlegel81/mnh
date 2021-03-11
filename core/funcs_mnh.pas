@@ -128,13 +128,13 @@ FUNCTION ord_imp intFuncSignature;
                     then exit(recycler^.literalRecycler.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(recycler^.literalRecycler.newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,context,recycler);
-        lt_error,lt_void, lt_real: begin
+        lt_void, lt_real: begin
           context^.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
           then result:=recycler^.literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
-          else result:=recycler^.literalRecycler.newSetLiteral (P_compoundLiteral(x)^.size);
+          else result:=newSetLiteral (P_compoundLiteral(x)^.size);
           iter:=P_listLiteral(x)^.iteratableList;
           for sub in iter do if context^.messages^.continueEvaluation then
             collResult^.append(@recycler^.literalRecycler,recurse(sub),false);
@@ -153,7 +153,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if not(context^.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
-    result:=recycler^.literalRecycler.newMapLiteral(17)^
+    result:=newMapLiteral(17)^
       .put(@recycler^.literalRecycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put(@recycler^.literalRecycler,'isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put(@recycler^.literalRecycler,'is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^

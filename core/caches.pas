@@ -34,38 +34,18 @@ TYPE
   end;
 
 IMPLEMENTATION
-VAR allCaches:T_arrayOfPointer;
-    allCacheCs:TRTLCriticalSection;
-PROCEDURE polishAllCaches;
-  VAR i:longint;
-  begin
-    enterCriticalSection(allCacheCs);
-    try
-      for i:=0 to length(allCaches)-1 do P_cache(allCaches[i])^.polish;
-    finally
-      leaveCriticalSection(allCacheCs);
-    end;
-  end;
-
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
   begin
     criticalSection:=ruleCS;
     fill := 0;
     useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
-    enterCriticalSection(allCacheCs);
-    try
-      append(allCaches,pointer(@self));
-    finally
-      leaveCriticalSection(allCacheCs);
-    end;
+    memoryCleaner.registerObjectForCleanup(@polish);
   end;
 
 DESTRUCTOR T_cache.destroy;
   begin
-    enterCriticalSection(allCacheCs);
-    dropValues(allCaches,@self);
-    leaveCriticalSection(allCacheCs);
+    memoryCleaner.unregisterObjectForCleanup(@polish);
     clear;
   end;
 
@@ -136,22 +116,22 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
   begin
     enterCriticalSection(criticalSection);
     try
-    hash:=key^.hash;
-    binIdx:=hash and (length(cached)-1);
-    with cached[binIdx] do begin
-      i := 0;
-      while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
-      if (i>=length(data)) then begin
-        setLength(data, i+1);
-        inc(fill);
-        data[i].key     :=P_listLiteral(key^.rereferenced);
-        data[i].keyHash :=hash;
-        data[i].value   :=value^.rereferenced;
-        data[i].lastUse :=useCounter;
+      hash:=key^.hash;
+      binIdx:=hash and (length(cached)-1);
+      with cached[binIdx] do begin
+        i := 0;
+        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
+        if (i>=length(data)) then begin
+          setLength(data, i+1);
+          inc(fill);
+          data[i].key     :=P_listLiteral(key^.rereferenced);
+          data[i].keyHash :=hash;
+          data[i].value   :=value^.rereferenced;
+          data[i].lastUse :=useCounter;
+        end;
       end;
-    end;
-    inc(useCounter);
-    if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
+      inc(useCounter);
+      if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
     finally
       leaveCriticalSection(criticalSection);
     end;
@@ -203,13 +183,5 @@ PROCEDURE T_cache.clear;
       literalRecycler.cleanup;
     end;
   end;
-
-INITIALIZATION
-  allCaches:=C_EMPTY_POINTER_ARRAY;
-  initialize(allCacheCs);
-  initCriticalSection(allCacheCs);
-  memoryCleaner.registerCleanupMethod(@polishAllCaches);
-FINALIZATION
-  doneCriticalSection(allCacheCs);
 
 end.

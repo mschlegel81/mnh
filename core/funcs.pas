@@ -334,7 +334,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
-      result:=recycler^.literalRecycler.newSetLiteral(length(setIter));
+      result:=newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
@@ -350,8 +350,9 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
             recycler^.literalRecycler.disposeLiteral(fp);
           end else P_setLiteral(result)^.append(@recycler^.literalRecycler,fp,false);
         end;
+        setIter[i]^.unreference;
       end;
-      recycler^.literalRecycler.disposeLiteral(setIter);
+      setLength(setIter,0);
     end else result:=nil;
     if not(allOkay) then begin
       recycler^.literalRecycler.disposeLiteral(result);
@@ -482,7 +483,7 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=recycler^.literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    result:=newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
     for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(@recycler^.literalRecycler,meta^.qualifiedId);
   end;
 

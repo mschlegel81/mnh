@@ -263,7 +263,7 @@ FUNCTION inspectAll_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       main:=P_package(tokenLocation.package)^.mainPackage;
-      result:=recycler^.literalRecycler.newMapLiteral(0);
+      result:=newMapLiteral(0);
       for p in main^.secondaryPackages do
       mapResult^.put(@recycler^.literalRecycler,p   ^.getPath,p   ^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
       mapResult^.put(@recycler^.literalRecycler,main^.getPath,main^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);

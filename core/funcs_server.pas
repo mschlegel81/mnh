@@ -150,11 +150,10 @@ PROCEDURE T_microserverRequest.execute;
     VAR headerMap:P_mapLiteral;
         i:longint;
     begin
-      headerMap:=recycler.literalRecycler.newMapLiteral(8);
-      requestMap:=recycler.literalRecycler.newMapLiteral(8)
+      headerMap:=newMapLiteral(8);
+      requestMap:=newMapLiteral(8)
         ^.put(@recycler.literalRecycler,'request',
-          recycler.literalRecycler.newMapLiteral(3)
-                          ^.put(@recycler.literalRecycler,'method',C_httpRequestMethodName[connection.getMethod])
+          newMapLiteral(3)^.put(@recycler.literalRecycler,'method',C_httpRequestMethodName[connection.getMethod])
                           ^.put(@recycler.literalRecycler,'path',connection.getRequest)
                           ^.put(@recycler.literalRecycler,'protocol',connection.getProtocol),false)
         ^.put(@recycler.literalRecycler,'header',headerMap,false)
@@ -330,7 +329,7 @@ FUNCTION extractParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       while (length(parts)<2) do append(parts,'');
-      parameters:=recycler^.literalRecycler.newMapLiteral(0);
+      parameters:=newMapLiteral(0);
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
@@ -433,8 +432,8 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
         s:string;
         key:string;
     begin
-      headerMap:=literalRecycler.newMapLiteral(0);
-      result:=literalRecycler.newMapLiteral(0)
+      headerMap:=newMapLiteral(0);
+      result:=newMapLiteral(0)
       ^.put(@literalRecycler,'body',resultText)
       ^.put(@literalRecycler,'code',client.ResponseStatusCode)
       ^.put(@literalRecycler,'status',client.ResponseStatusText)

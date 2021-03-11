@@ -741,7 +741,7 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages; CONST resolveIdCo
 FUNCTION T_ruleMap.inspect(CONST context:P_context; CONST recycler:P_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
   VAR entry:T_ruleMapEntry;
   begin
-    result:=recycler^.literalRecycler.newMapLiteral(size);
+    result:=newMapLiteral(size);
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
       tt_userRule:
         result^.put(@recycler^.literalRecycler,entry.value^.getId,P_rule(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
@@ -1462,7 +1462,7 @@ FUNCTION T_datastore.getValue(CONST context:P_context; CONST recycler:P_recycler
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; CONST context:P_context; CONST recycler:P_recycler):P_mapLiteral;
   begin
-    result:=recycler^.literalRecycler.newMapLiteral(3)^
+    result:=newMapLiteral(3)^
       .put(@recycler^.literalRecycler,'type'    ,recycler^.literalRecycler.newStringLiteral(C_ruleTypeText[getRuleType]),false)^
       .put(@recycler^.literalRecycler,'location',recycler^.literalRecycler.newStringLiteral(getLocation                ),false);
   end;
@@ -1501,7 +1501,7 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; CONST cont
     VAR sub:P_subruleExpression;
     begin
       result:=recycler^.literalRecycler.newListLiteral(length(subrules)+1);
-      result^.append(@recycler^.literalRecycler,recycler^.literalRecycler.newMapLiteral(5)^
+      result^.append(@recycler^.literalRecycler,newMapLiteral(5)^
         .put(@recycler^.literalRecycler,'pattern'   ,'()'           )^
         .put(@recycler^.literalRecycler,'location'  ,getLocation    )^
         .put(@recycler^.literalRecycler,'type'      ,privateOrPublic)^
@@ -1525,7 +1525,7 @@ FUNCTION T_variable.inspect(CONST includeFunctionPointer: boolean; CONST context
     end;
 
   begin
-    result:=recycler^.literalRecycler.newMapLiteral(4)^
+    result:=newMapLiteral(4)^
       .put(@recycler^.literalRecycler,'type'      ,recycler^.literalRecycler.newStringLiteral(privateOrPublic+' '+C_varTypeText[varType]),false)^
       .put(@recycler^.literalRecycler,'location'  ,recycler^.literalRecycler.newStringLiteral(getLocation ),false)^
       .put(@recycler^.literalRecycler,'comment'   ,recycler^.literalRecycler.newStringLiteral(meta.comment),false)^

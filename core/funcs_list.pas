@@ -225,7 +225,7 @@ FUNCTION getElementFreqency intFuncSignature;
     end;
 
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
-      result:=recycler^.literalRecycler.newMapLiteral(100);
+      result:=newMapLiteral(100);
       iter:=compound0^.forcedIteratableList(@recycler^.literalRecycler);
       for x in iter do P_mapLiteral(result)^.put(@recycler^.literalRecycler,x,recycler^.literalRecycler.newIntLiteral(1),false);
       exit(result);
@@ -245,7 +245,7 @@ FUNCTION getElementFreqency intFuncSignature;
       exit(nil);
     end;
     freqList:=freqMap.keyValueList;
-    result:=recycler^.literalRecycler.newMapLiteral(100);
+    result:=newMapLiteral(100);
     for i:=0 to length(freqList)-1 do P_mapLiteral(result)^.put(@recycler^.literalRecycler,freqList[i].key^.rereferenced,freqList[i].value,false);
     freqMap.destroy;
   end;
@@ -577,7 +577,7 @@ FUNCTION group_imp intFuncSignature;
       recycler^.literalRecycler.disposeLiteral(keyList);
 
       groupList:=groupMap.keyValueList;
-      result:=recycler^.literalRecycler.newMapLiteral(groupMap.fill);
+      result:=newMapLiteral(groupMap.fill);
       for groupEntry in groupList do mapResult^.put(@recycler^.literalRecycler,
                                                     groupEntry.key^.rereferenced,
                                                     groupEntry.value,

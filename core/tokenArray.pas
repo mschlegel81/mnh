@@ -1837,7 +1837,7 @@ FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST conte
     {$ifdef fullVersion}
     if functionCallInfos<>nil then new(functionCallInfos,create);
     {$endif}
-    result:=recycler^.literalRecycler.newMapLiteral(0);
+    result:=newMapLiteral(0);
   end;
 
 FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;

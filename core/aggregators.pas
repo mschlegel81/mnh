@@ -199,7 +199,7 @@ CONSTRUCTOR T_concatAltAggregator.create(VAR literalRecycler:T_literalRecycler);
 CONSTRUCTOR T_headAggregator     .create;                                        begin inherited create(nil);            end;
 CONSTRUCTOR T_minAggregator      .create;                                        begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_maxAggregator      .create;                                        begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_setAggregator      .create(VAR literalRecycler:T_literalRecycler); begin inherited create(literalRecycler.newSetLiteral(0));  end;
+CONSTRUCTOR T_setAggregator      .create(VAR literalRecycler:T_literalRecycler); begin inherited create(newSetLiteral(0));  end;
 CONSTRUCTOR T_elementFrequencyAggregator.create;
   begin
     inherited create(nil);
@@ -286,7 +286,7 @@ FUNCTION T_elementFrequencyAggregator.getResult(VAR literalRecycler:T_literalRec
     then begin
       result:=resultLiteral^.rereferenced
     end else begin
-      result:=literalRecycler.newMapLiteral(counterMap.fill);
+      result:=newMapLiteral(counterMap.fill);
       for entry in counterMap.keyValueList do
         P_mapLiteral(result)^.put(
           @literalRecycler,

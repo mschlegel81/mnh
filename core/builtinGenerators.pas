@@ -1030,7 +1030,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
         filterGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
         if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(filterGenerator);
         if arg0^.literalType= lt_set then begin
-          result:=recycler^.literalRecycler.newSetLiteral(set0^.size div 2);
+          result:=newSetLiteral(set0^.size div 2);
           filterGenerator^.collectResults(P_setLiteral(result),tokenLocation,context,recycler);
         end else begin
           result:=recycler^.literalRecycler.newListLiteral();

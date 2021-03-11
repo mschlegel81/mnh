@@ -235,7 +235,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       eachLocation:=first^.next^.location;
       initialize(bodyRule);
 
-      if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_void]) then begin
+      if (first^.data=nil) or (P_literal(first^.data)^.literalType=lt_void) then begin
         context^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;

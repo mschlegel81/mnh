@@ -229,7 +229,7 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       if fileName='' then exit(newVoidLiteral);
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
-      result:=recycler^.literalRecycler.newMapLiteral(2)
+      result:=newMapLiteral(2)
         ^.put(@recycler^.literalRecycler,'id',ruleId)
         ^.put(@recycler^.literalRecycler,'content',contentLiteral,false);
     end else result:=newVoidLiteral;
