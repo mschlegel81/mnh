@@ -84,14 +84,14 @@ FUNCTION obtainDimensionsViaAdapters(CONST messages:P_messages):T_imageDimension
     disposeMessage(m);
   end;
 
-FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):T_standaloneWorkflow;
+FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_standaloneWorkflow;
   VAR errorRaised:boolean=false;
   PROCEDURE warn(CONST message:string);
     begin
       errorRaised:=true;
       isValid:=false;
-      if validating then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,message)
-                    else context.raiseError(message,tokenLocation);
+      if validating then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,message)
+                    else context^.raiseError(message,tokenLocation);
     end;
 
   VAR i:longint;
@@ -117,8 +117,8 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       end;
       imageContexts.maxImageManipulationThreads:=settings.cpuCount;
     end;
-    if steps<>tmpSteps then disposeLiteral(tmpSteps);
-    if not(isValid) and not(validating) and not(errorRaised) then context.raiseError('Invalid workflow',tokenLocation);
+    if steps<>tmpSteps then recycler^.disposeLiteral(tmpSteps);
+    if not(isValid) and not(validating) and not(errorRaised) then context^.raiseError('Invalid workflow',tokenLocation);
   end;
 
 FUNCTION validateWorkflow_imp intFuncSignature;
@@ -135,23 +135,23 @@ FUNCTION validateWorkflow_imp intFuncSignature;
 VAR workflowsActive:longint=0;
     workflowCs:TRTLCriticalSection;
 
-PROCEDURE doOutput(CONST s:string; CONST warning:boolean; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST outputMethod:P_expressionLiteral);
+PROCEDURE doOutput(CONST s:string; CONST warning:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST outputMethod:P_expressionLiteral);
   VAR sLit:P_stringLiteral;
       outputLit:P_literal;
   begin
     if outputMethod<>nil then begin
-      sLit:=newStringLiteral(s);
+      sLit:=recycler^.literalRecycler.newStringLiteral(s);
       outputLit:=outputMethod^.evaluateToLiteral(location,@context,@recycler,sLit,nil).literal;
-      disposeLiteral(sLit);
-      if outputLit<>nil then disposeLiteral(outputLit);
+      recycler^.disposeLiteral(sLit);
+      if outputLit<>nil then recycler^.disposeLiteral(outputLit);
     end else begin
       if warning
-      then context.messages^.postTextMessage(mt_el2_warning,location,s)
-      else context.messages^.postTextMessage(mt_el1_note   ,location,s);
+      then context^.messages^.postTextMessage(mt_el2_warning,location,s)
+      else context^.messages^.postTextMessage(mt_el1_note   ,location,s);
     end;
   end;
 
-PROCEDURE pollLog(VAR thisWorkflow:T_simpleWorkflow; CONST location:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler; CONST outputMethod:P_expressionLiteral);
+PROCEDURE pollLog(VAR thisWorkflow:T_simpleWorkflow; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST outputMethod:P_expressionLiteral);
   VAR msg:P_structuredMessage;
   begin
     msg:=thisWorkflow.messageQueue^.get;
@@ -183,7 +183,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list]) and context.checkSideEffects('executeWorkflow',tokenLocation,[se_readFile,se_writeFile]) then begin
+    if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list]) and context^.checkSideEffects('executeWorkflow',tokenLocation,[se_readFile,se_writeFile]) then begin
       for i:=1 to params^.size-1 do begin
         case params^.value[i]^.literalType of
           lt_bigint,lt_smallint: begin
@@ -206,20 +206,20 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       if (dest='') and (source<>'') then begin dest:=source; source:=''; end;
 
       if (source='') and ((xRes=0) or (yRes=0)) then begin
-        context.raiseError('Either target resolution or input image must be provided',tokenLocation);
+        context^.raiseError('Either target resolution or input image must be provided',tokenLocation);
         isValid:=false;
       end;
       if (dest='') then begin
-        context.raiseError('No output file given',tokenLocation);
+        context^.raiseError('No output file given',tokenLocation);
         isValid:=false;
       end;
       thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context,recycler);
       if isValid then begin
         thisWorkflow.config.sizeLimit:=C_maxImageDimensions;
         if (source=C_nullSourceOrTargetFileName) then begin
-          obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
+          obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
           if obtainedImage=nil then begin
-            context.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
+            context^.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
             isValid:=false;
           end else begin
             thisWorkflow.config.setInitialImage(obtainedImage^);
@@ -236,7 +236,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           leaveCriticalSection(workflowCs);
           if not(hasDelayMessage) then begin
             hasDelayMessage:=true;
-            context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
+            context^.messages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
           end;
           threadSleepMillis(random(WORKFLOW_START_INTERVAL_MILLISECONDS));
           enterCriticalSection(workflowCs);
@@ -247,7 +247,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           thisWorkflow.appendSaveStep(dest,sizeLimit);
         except
           on e:Exception do begin
-            context.raiseError(e.message,tokenLocation);
+            context^.raiseError(e.message,tokenLocation);
             isValid:=false;
           end;
         end;
@@ -256,12 +256,12 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           if source<>''
           then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod)
           else doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod);
-          while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
+          while thisWorkflow.executing and (context^.messages^.continueEvaluation) do begin
             pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
             threadSleepMillis(sleepTime);
             if sleepTime<1000 then inc(sleepTime);
           end;
-          if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
+          if not(context^.messages^.continueEvaluation) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
           thisWorkflow.ensureStop;
         end;
         pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
@@ -269,8 +269,8 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         dec(workflowsActive);
         leaveCriticalSection(workflowCs);
       end;
-      if (context.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
-        postNewImage(context.messages,newFromWorkflowImage);
+      if (context^.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
+        postNewImage(context^.messages,newFromWorkflowImage);
         doOutput('Output of workflow copied to current image',false,tokenLocation,context,recycler,outputMethod);
       end;
       if isValid then result:=newBoolLiteral(thisWorkflow.isDone)
@@ -288,7 +288,7 @@ FUNCTION executeTodo_imp intFuncSignature;
        (arg0^.literalType=lt_string) and
        ((params^.size=1) or (arg1^.literalType=lt_expression)) then begin
       if not(fileExists(str0^.value)) then begin
-        context.messages^.postTextMessage(mt_el2_warning,tokenLocation, 'File "'+str0^.value+'" does not exist');
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation, 'File "'+str0^.value+'" does not exist');
         exit(newBoolLiteral(false));
       end;
       if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
@@ -299,12 +299,12 @@ FUNCTION executeTodo_imp intFuncSignature;
         inc(workflowsActive);
         thisWorkflow.executeAsTodo;
         leaveCriticalSection(workflowCs);
-        while thisWorkflow.executing and (context.messages^.continueEvaluation) do begin
+        while thisWorkflow.executing and (context^.messages^.continueEvaluation) do begin
           pollLog(thisWorkflow,tokenLocation,context,recycler,outputMethod);
           threadSleepMillis(sleepTime);
           if sleepTime<1000 then inc(sleepTime);
         end;
-        if not(context.messages^.continueEvaluation) then context.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
+        if not(context^.messages^.continueEvaluation) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
         thisWorkflow.ensureStop;
         enterCriticalSection(workflowCs);
         dec(workflowsActive);
@@ -321,16 +321,16 @@ FUNCTION loadImage_imp intFuncSignature;
       ok:boolean=true;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('loadImage',tokenLocation,[se_readFile]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context^.checkSideEffects('loadImage',tokenLocation,[se_readFile]) then begin
       new(loadedImage,create(1,1));
       try
         loadedImage^.loadFromFile(P_stringLiteral(arg0)^.value);
       except
         ok:=false;
-        context.raiseError('Error loading image '+arg0^.toString(),tokenLocation);
+        context^.raiseError('Error loading image '+arg0^.toString(),tokenLocation);
       end;
       if ok then begin
-        postNewImage(context.messages,loadedImage);
+        postNewImage(context^.messages,loadedImage);
         result:=newVoidLiteral;
       end else dispose(loadedImage,destroy);
     end;
@@ -339,20 +339,20 @@ FUNCTION loadImage_imp intFuncSignature;
 FUNCTION saveImage_imp intFuncSignature;
   VAR obtainedImage:P_rawImage;
   begin
-    if not(context.checkSideEffects('saveImage',tokenLocation,[se_writeFile])) then exit(nil);
+    if not(context^.checkSideEffects('saveImage',tokenLocation,[se_writeFile])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
                      and ((params^.size =1) or (params^.size=2) and (arg1^.literalType=lt_smallint)) then begin
-      obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
+      obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
       if obtainedImage=nil then begin
-        context.messages^.postTextMessage(mt_el1_note,tokenLocation,'Cannot save image because no image is loaded.');
+        context^.messages^.postTextMessage(mt_el1_note,tokenLocation,'Cannot save image because no image is loaded.');
         exit(nil);
       end;
       try
       if params^.size=2 then obtainedImage^.saveJpgWithSizeLimit(str0^.value,int1^.intValue)
                         else obtainedImage^.saveToFile(str0^.value);
       except
-        on e:Exception do context.raiseError(e.message,tokenLocation);
+        on e:Exception do context^.raiseError(e.message,tokenLocation);
       end;
       dispose(obtainedImage,destroy);
       result:=newVoidLiteral;
@@ -363,7 +363,7 @@ FUNCTION closeImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages^.postSingal(mt_image_close,tokenLocation);
+      context^.messages^.postSingal(mt_image_close,tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -374,19 +374,23 @@ FUNCTION imageSize_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      size:=obtainDimensionsViaAdapters(context.messages);
-      result:=newListLiteral(2)^.appendInt(size.width)^.appendInt(size.height);
+      size:=obtainDimensionsViaAdapters(context^.messages);
+      result:=recycler^.literalRecycler.newListLiteral(
+                recycler^.literalRecycler.newIntLiteral(size.width),
+                recycler^.literalRecycler.newIntLiteral(size.height));
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       if not(fileExists(str0^.value)) then begin
-        context.raiseError('File '+str0^.value+' does not exist',tokenLocation);
+        context^.raiseError('File '+str0^.value+' does not exist',tokenLocation);
         exit(nil);
       end;
       try
         tempImage.create(str0^.value);
-        result:=newListLiteral(2)^.appendInt(tempImage.dimensions.width)^.appendInt(tempImage.dimensions.height)
+        result:=recycler^.literalRecycler.newListLiteral(
+                  recycler^.literalRecycler.newIntLiteral(tempImage.dimensions.width),
+                  recycler^.literalRecycler.newIntLiteral(tempImage.dimensions.height));
       except
-        if result<>nil then disposeLiteral(result);
-        result:=newListLiteral(0);
+        if result<>nil then recycler^.disposeLiteral(result);
+        result:=recycler^.literalRecycler.newListLiteral(0);
       end;
       tempImage.destroy;
     end;
@@ -407,11 +411,11 @@ FUNCTION resizeImage_imp intFuncSignature;
       r:=res_dataResize;
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
       if (r=res_dataResize) or (res.width<=0) or (res.height<=0) then exit(nil);
-      obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.raiseError('Cannot resize image because no image is loaded',tokenLocation)
+      obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
+      if obtainedImage=nil then context^.raiseError('Cannot resize image because no image is loaded',tokenLocation)
       else begin
         obtainedImage^.resize(res,r);
-        postNewImage(context.messages,obtainedImage);
+        postNewImage(context^.messages,obtainedImage);
         result:=newVoidLiteral;
       end;
     end;
@@ -421,7 +425,7 @@ FUNCTION displayImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      context.messages^.postSingal(mt_image_postDisplay,tokenLocation);
+      context^.messages^.postSingal(mt_image_postDisplay,tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -431,17 +435,17 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
+      if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
-        result:=newStringLiteral(obtainedImage^.getJpgFileData());
+        result:=recycler^.literalRecycler.newStringLiteral(obtainedImage^.getJpgFileData());
         dispose(obtainedImage,destroy);
       end;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
-      obtainedImage:=obtainCurrentImageViaAdapters(context.messages);
-      if obtainedImage=nil then context.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
+      if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
-        result:=newStringLiteral(obtainedImage^.getJpgFileData(int0^.intValue));
+        result:=recycler^.literalRecycler.newStringLiteral(obtainedImage^.getJpgFileData(int0^.intValue));
         dispose(obtainedImage,destroy);
       end;
     end;
@@ -450,8 +454,8 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
 FUNCTION listManipulations_imp intFuncSignature;
   VAR op:P_imageOperationMeta;
   begin
-    result:=newListLiteral();
-    for op in allImageOperations do listResult^.appendString(op^.getDefaultParameterString);
+    result:=recycler^.literalRecycler.newListLiteral();
+    for op in allImageOperations do listResult^.appendString(@recycler^.literalRecycler,op^.getDefaultParameterString);
   end;
 
 FUNCTION expandImageGeneration_imp intFuncSignature;
@@ -462,7 +466,7 @@ FUNCTION expandImageGeneration_imp intFuncSignature;
       meta:=getAlgorithmOrNil(str0^.value,true);
       if meta=nil
       then exit(str0^.rereferenced)
-      else exit(newStringLiteral(meta^.prototype^.toFullString()));
+      else exit(recycler^.literalRecycler.newStringLiteral(meta^.prototype^.toFullString()));
     end;
   end;
 
@@ -473,14 +477,14 @@ FUNCTION getThumbnail_imp intFuncSignature;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType in [lt_smallint,lt_bigint]) and
-       (arg2^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('getThumbnail',tokenLocation,[se_readFile]) then begin
+       (arg2^.literalType in [lt_smallint,lt_bigint]) and context^.checkSideEffects('getThumbnail',tokenLocation,[se_readFile]) then begin
       if not(fileExists(str0^.value)) then begin
-        context.raiseError('File '+str0^.value+' does not exist',tokenLocation);
+        context^.raiseError('File '+str0^.value+' does not exist',tokenLocation);
         exit(nil);
       end;
       img.create(str0^.value);
       img.resize(imageDimensions(int1^.intValue,int2^.intValue),res_fit);
-      result:=newStringLiteral(img.getJpgFileData(80));
+      result:=recycler^.literalRecycler.newStringLiteral(img.getJpgFileData(80));
       img.destroy;
     end;
   end;
@@ -502,10 +506,10 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       width:=int0^.intValue;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height));
-      context.messages^.postCustomMessage(renderRequest^.rereferenced);
+      context^.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
-      imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context.messages));
+      imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context^.messages));
       disposeMessage(renderRequest);
       imgStream.position:=0;
       plotImage.picture.PNG.loadFromStream(imgStream);
@@ -513,7 +517,7 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       new(plotPic,create(1,1));
       plotPic^.copyFromImage(plotImage);
       FreeAndNil(plotImage);
-      postNewImage(context.messages,plotPic);
+      postNewImage(context^.messages,plotPic);
       result:=newVoidLiteral;
     end;
   end;
@@ -523,7 +527,7 @@ FUNCTION randomIfs_impl intFuncSignature;
   begin
     ifs.create;
     ifs.resetParameters(1);
-    result:=newStringLiteral(ifs.getAlgorithmName+ifs.toString(tsm_forSerialization));
+    result:=recycler^.literalRecycler.newStringLiteral(ifs.getAlgorithmName+ifs.toString(tsm_forSerialization));
     ifs.destroy;
   end;
 

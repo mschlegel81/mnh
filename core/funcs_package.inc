@@ -17,8 +17,8 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
       end;
       if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist))
       then exit(nil);
-      messages:=sandbox^.execute(src,sideEffectWhitelist,recycler,ExitCode,context.getGlobals^.prng.dwordRandom);
-      result:=messagesToLiteralForSandbox(messages,C_textMessages-[mt_timing_info],ExitCode);
+      messages:=sandbox^.execute(src,sideEffectWhitelist,recycler,ExitCode,context^.getGlobals^.prng.dwordRandom);
+      result:=messagesToLiteralForSandbox(recycler^.literalRecycler,messages,C_textMessages-[mt_timing_info],ExitCode);
       setLength(messages,0);
     end;
   end;
@@ -29,28 +29,28 @@ FUNCTION try_imp intFuncSignature;
         tryMessages:T_messagesErrorHolder;
         oldMessages:P_messages;
     begin
-      oldMessages:=context.messages;
-      tryMessages.createErrorHolder(context.messages,[mt_el3_evalError..mt_el3_userDefined]);
-      context.messages:=@tryMessages;
+      oldMessages:=context^.messages;
+      tryMessages.createErrorHolder(context^.messages,[mt_el3_evalError..mt_el3_userDefined]);
+      context^.messages:=@tryMessages;
 
-      result:=toTry^.evaluate(tokenLocation,@context,@recycler,toTryParameters).literal;
+      result:=toTry^.evaluate(tokenLocation,context,recycler,toTryParameters).literal;
       if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
-        if (result<>nil) then disposeLiteral(result);
+        if (result<>nil) then recycler^.literalRecycler.disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin
           tryMessages.clear;
           result:=newVoidLiteral
         end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
+            messagesLiteral:=messagesToLiteralForSandbox(recycler^.literalRecycler,tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
             tryMessages.clear;
-            context.messages:=oldMessages;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,messagesLiteral,nil).literal;
-            disposeLiteral(messagesLiteral);
+            context^.messages:=oldMessages;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,context,recycler,messagesLiteral,nil).literal;
+            recycler^.literalRecycler.disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
-            context.messages:=oldMessages;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,@recycler,nil,nil).literal;
+            context^.messages:=oldMessages;
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
           end;
         end else begin
           tryMessages.clear;
@@ -58,7 +58,7 @@ FUNCTION try_imp intFuncSignature;
         end;
       end;
       tryMessages.destroy;
-      context.messages:=oldMessages;
+      context^.messages:=oldMessages;
     end;
 
   begin
@@ -83,16 +83,15 @@ CONST RUNSCRIPT_KEY_NAME         ='name';
       RUNSCRIPT_KEY_DETERMINISTIC='deterministic';
 
 FUNCTION runScript_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      entry:P_literal;
-      key,value:P_literal;
+  VAR iter:T_arrayOfKeyValuePair;
+      entry:T_keyValuePair;
 
   VAR scriptName:string='';
   PROCEDURE parseName;
     begin
-      if value^.literalType=lt_string
-      then scriptName:=P_stringLiteral(value)^.value
-      else context.raiseError('Script name must be a string',tokenLocation);
+      if entry.value^.literalType=lt_string
+      then scriptName:=P_stringLiteral(entry.value)^.value
+      else context^.raiseError('Script name must be a string',tokenLocation);
     end;
 
   FUNCTION listToStrings(CONST L:P_literal):T_arrayOfString;
@@ -105,74 +104,72 @@ FUNCTION runScript_imp intFuncSignature;
   VAR scriptSource:T_arrayOfString;
   PROCEDURE parseSource;
     begin
-      if value^.literalType=lt_stringList
-      then scriptSource:=listToStrings(value)
-      else context.raiseError('Script source must be a (non empty) string list',tokenLocation);
+      if entry.value^.literalType=lt_stringList
+      then scriptSource:=listToStrings(entry.value)
+      else context^.raiseError('Script source must be a (non empty) string list',tokenLocation);
     end;
 
   VAR scriptParams:T_arrayOfString;
   PROCEDURE parseParameters;
     begin
-      if value^.literalType in [lt_stringList,lt_emptyList]
-      then scriptParams:=listToStrings(value)
-      else if value^.literalType<>lt_emptySet then context.raiseError('Script parameters must be a string list',tokenLocation);
+      if entry.value^.literalType in [lt_stringList,lt_emptyList]
+      then scriptParams:=listToStrings(entry.value)
+      else if entry.value^.literalType<>lt_emptySet then context^.raiseError('Script parameters must be a string list',tokenLocation);
     end;
 
   VAR sideEffects:T_sideEffects;
   PROCEDURE parseSideEffects;
     begin
-      canInterpretAsSideEffectList(value,true,tokenLocation,context,sideEffects);
+      canInterpretAsSideEffectList(entry.value,true,tokenLocation,context,sideEffects);
     end;
 
   VAR connect:longint=0;
   PROCEDURE parseIsolation;
     begin
-      if (value^.literalType=lt_smallint)
-      and (P_smallIntLiteral(value)^.value>=0) and (P_smallIntLiteral(value)^.value<=3)
-      then connect:=P_smallIntLiteral(value)^.value
-      else context.raiseError('Invalid connection level '+value^.toString(),tokenLocation);
+      if (entry.value^.literalType=lt_smallint)
+      and (P_smallIntLiteral(entry.value)^.value>=0) and (P_smallIntLiteral(entry.value)^.value<=3)
+      then connect:=P_smallIntLiteral(entry.value)^.value
+      else context^.raiseError('Invalid connection level '+entry.value^.toString(),tokenLocation);
     end;
 
   VAR enforceDeterminism:boolean=false;
   PROCEDURE parseDeterministic;
     begin
-      if boolLit[false].equals(value) then exit;
-      if boolLit[true].equals(value)
+      if boolLit[false].equals(entry.value) then exit;
+      if boolLit[true].equals(entry.value)
       then enforceDeterminism:=true
-      else context.raiseError('Expected a boolean',tokenLocation);
+      else context^.raiseError('Expected a boolean',tokenLocation);
     end;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_map) then begin
       scriptSource:=C_EMPTY_STRING_ARRAY;
       scriptParams:=C_EMPTY_STRING_ARRAY;
-      iter:=map0^.iteratableList;
+      iter:=map0^.entryList;
       for entry in iter do begin
-        assert(entry^.literalType in C_listTypes);
-        assert(P_listLiteral(entry)^.size=2);
-        key  :=P_listLiteral(entry)^.value[0];
-        value:=P_listLiteral(entry)^.value[1];
-        if key^.literalType=lt_string then begin
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_NAME          then parseName else
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_SOURCE        then parseSource else
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_PARAMETERS    then parseParameters else
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_SIDE_EFFECTS  then parseSideEffects else
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_DETERMINISTIC then parseDeterministic else
-          if P_stringLiteral(key)^.value=RUNSCRIPT_KEY_ISOLATION     then parseIsolation else
-          context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
-        end else context.raiseError('Invalid map entry with key '+key^.toString(),tokenLocation);
+        if entry.key^.literalType=lt_string then begin
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_NAME          then parseName else
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_SOURCE        then parseSource else
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_PARAMETERS    then parseParameters else
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_SIDE_EFFECTS  then parseSideEffects else
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_DETERMINISTIC then parseDeterministic else
+          if P_stringLiteral(entry.key)^.value=RUNSCRIPT_KEY_ISOLATION     then parseIsolation else
+          context^.raiseError('Invalid map entry with key '+entry.key^.toString(),tokenLocation);
+        end else context^.raiseError('Invalid map entry with key '+entry.key^.toString(),tokenLocation);
+        entry.key  ^.unreference;
+        entry.value^.unreference;
       end;
-      disposeLiteral(iter);
+      setLength(iter,0);
 
-      if scriptName='' then context.raiseError('No script name given.',tokenLocation);
+      if scriptName='' then context^.raiseError('No script name given.',tokenLocation);
 
-      if context.continueEvaluation then result:=
+      if context^.continueEvaluation then result:=
         sandbox^.runScript(scriptName,
                            scriptSource,
                            scriptParams,
                            sideEffects,
                            tokenLocation,
-                           @context,
+                           context,
                            recycler,
                            byte(connect),
                            enforceDeterminism);
@@ -182,7 +179,7 @@ FUNCTION runScript_imp intFuncSignature;
 FUNCTION helpOnMain_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0)
-    then result:=newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
+    then result:=recycler^.literalRecycler.newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
     else result:=nil;
   end;
 
@@ -194,7 +191,7 @@ FUNCTION inspect_imp intFuncSignature;
       loadMessages:P_collectionLiteral=nil;
       inspectedPackageIsTemporary:boolean=true;
 
-  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_context);
+  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string);
     VAR fileName:string='';
         id      :string='';
         loadedPackage:P_package;
@@ -214,10 +211,10 @@ FUNCTION inspect_imp intFuncSignature;
         else id      :=filenameOrId;
         if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
         if (fileName='') or not(fileExists(fileName)) then begin
-          context.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
+          context^.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
           tempPackage:=nil;
         end else
-        if context.checkSideEffects('inspect',tokenLocation,[se_readFile]) then new(tempPackage,create(newFileCodeProvider(fileName),nil));
+        if context^.checkSideEffects('inspect',tokenLocation,[se_readFile]) then new(tempPackage,create(newFileCodeProvider(fileName),nil));
       end;
     end;
 
@@ -226,7 +223,7 @@ FUNCTION inspect_imp intFuncSignature;
         k:longint;
     begin
       msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-      loadMessages:=messagesToLiteralForSandbox(msg,C_errorsAndWarnings,SUPPRESS_EXIT_CODE);
+      loadMessages:=messagesToLiteralForSandbox(recycler^.literalRecycler,msg,C_errorsAndWarnings,SUPPRESS_EXIT_CODE);
       for k:=0 to length(msg)-1 do disposeMessage(msg[k]);
       setLength(msg,0);
     end;
@@ -236,23 +233,23 @@ FUNCTION inspect_imp intFuncSignature;
   {$endif}
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif})
+    if (params=nil) or (params^.size=0) then result:=P_abstractPackage(tokenLocation.package)^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif})
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
-      obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
+      obtainPackage(P_package(tokenLocation.package),tokenLocation,id);
       if tempPackage<>nil then begin
         if inspectedPackageIsTemporary then loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
-        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),@context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-        if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
+        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+        if loadMessages<>nil then mapResult^.put(@recycler^.literalRecycler,'messages',loadMessages,false);
         if inspectedPackageIsTemporary
         then dispose(tempPackage,destroy);
-      end else result:=newListLiteral;
+      end else result:=recycler^.literalRecycler.newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
-      result:=tempPackage^.inspect(false,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put('messages',loadMessages,false);
+      result:=tempPackage^.inspect(false,context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put(@recycler^.literalRecycler,'messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;
@@ -268,22 +265,22 @@ FUNCTION inspectAll_imp intFuncSignature;
       main:=P_package(tokenLocation.package)^.mainPackage;
       result:=newMapLiteral(0);
       for p in main^.secondaryPackages do
-      mapResult^.put(p   ^.getPath,p   ^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
-      mapResult^.put(main^.getPath,main^.inspect(true,@context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
+      mapResult^.put(@recycler^.literalRecycler,p   ^.getPath,p   ^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
+      mapResult^.put(@recycler^.literalRecycler,main^.getPath,main^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
     end;
   end;
 
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context.messages,true));
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler^.literalRecycler));
     end else result:=nil;
   end;
 
 FUNCTION writeDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context.messages,false));
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler^.literalRecycler));
     end else result:=nil;
   end;
 

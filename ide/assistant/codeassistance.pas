@@ -20,6 +20,9 @@ USES
   Forms,
   ComCtrls;
 
+CONST
+  MARKER_USAGE_SCAN_END='#';
+
 TYPE
   T_highlightingData=object
     private
@@ -168,7 +171,6 @@ PROCEDURE T_codeAssistanceThread.execute;
       isLatest:boolean;
       i,j:longint;
       folderToScan:string;
-      response: P_codeAssistanceResponse;
 
   FUNCTION findUsedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
     VAR recycler:T_recycler;
@@ -177,11 +179,11 @@ PROCEDURE T_codeAssistanceThread.execute;
       try
         recycler.initRecycler;
         package.create(newCodeProvider(fileName),nil);
-        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-        package.load(lu_usageScan,globals^,recycler,C_EMPTY_STRING_ARRAY);
+        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
+        package.load(lu_usageScan,globals^,@recycler,C_EMPTY_STRING_ARRAY);
         result:=package.usedAndExtendedPackages;
       except end;
-      globals^.afterEvaluation(recycler,packageTokenLocation(@package));
+      globals^.afterEvaluation(@recycler,packageTokenLocation(@package));
       globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       package.destroy;
       recycler.cleanup;
@@ -239,10 +241,25 @@ PROCEDURE T_codeAssistanceThread.execute;
       leaveCriticalSection(codeAssistanceCs);
     end;
 
+  VAR scriptsToScanAfterFileScanFinished:T_arrayOfString;
+  PROCEDURE scanScript(CONST request:P_codeAssistanceRequest);
+    VAR response: P_codeAssistanceResponse;
+    begin
+      appendIfNew(scriptsToScanAfterFileScanFinished,request^.scriptPath);
+      response:=request^.execute(recycler,globals,@adapters);
+      {$ifdef debugMode}
+      writeln('  response for ',request^.scriptPath,' is ',response^.stateHash);
+      {$endif}
+      updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
+      preparedResponses.append(response);
+      recycler.cleanup;
+    end;
+
   begin
     {$ifdef debugMode}
     writeln('  codeAssistanceThread started');
     {$endif}
+    setLength(scriptsToScanAfterFileScanFinished,0);
     threadStartsSleeping; //low prio thread
     postIdeMessage('Code assistance started',false);
     //setup:
@@ -255,7 +272,21 @@ PROCEDURE T_codeAssistanceThread.execute;
       if length(requests)=0
       then begin
         if pendingUsageScans.canGetNext(folderToScan) then begin
-          scanFolder(canonicalFileName(folderToScan));
+          if folderToScan=MARKER_USAGE_SCAN_END
+          then begin
+            //rescan all scripts after folders have been scanned
+            for folderToScan in scriptsToScanAfterFileScanFinished do postAssistanceRequest(folderToScan);
+            setLength(scriptsToScanAfterFileScanFinished,0);
+
+            //clean up pending folder scans
+            scriptsToScanAfterFileScanFinished:=pendingUsageScans.getAll;
+            dropValues(scriptsToScanAfterFileScanFinished,MARKER_USAGE_SCAN_END);
+            sortUnique(scriptsToScanAfterFileScanFinished);
+            for folderToScan in scriptsToScanAfterFileScanFinished do pendingUsageScans.append(folderToScan);
+            if length(scriptsToScanAfterFileScanFinished)>0 then pendingUsageScans.append(MARKER_USAGE_SCAN_END);
+            setLength(scriptsToScanAfterFileScanFinished,0);
+          end
+          else scanFolder(canonicalFileName(folderToScan));
           sleepBetweenRunsMillis:=0;
         end else begin
           sleepBetweenRunsMillis+=1;
@@ -270,15 +301,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         for i:=0 to length(requests)-1 do begin
           isLatest:=not(shuttingDown);
           for j:=i+1 to length(requests)-1 do isLatest:=isLatest and (requests[i]^.scriptPath<>requests[j]^.scriptPath);
-          if isLatest then begin
-            response:=requests[i]^.execute(recycler,globals,@adapters);
-            {$ifdef debugMode}
-            writeln('  response for ',requests[i]^.scriptPath,' is ',response^.stateHash);
-            {$endif}
-            updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
-            preparedResponses.append(response);
-            recycler.cleanup;
-          end;
+          if isLatest then scanScript(requests[i]);
           dispose(requests[i],destroy);
         end;
         setLength(requests,0);
@@ -330,7 +353,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
       secondaryCallInfos.create;
-      user.load(lu_forCodeAssistanceSecondary,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
+      user.load(lu_forCodeAssistanceSecondary,globals^,@recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
       callAndIdInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;
@@ -367,7 +390,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       givenAdapters^.clear;
     end;
 
-    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
     globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(callAndIdInfos,create);
@@ -379,10 +402,10 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
 
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
     globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
+    package^.load(lu_forCodeAssistance,globals^,@recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
-    globals^.afterEvaluation(recycler,packageTokenLocation(package));
+    globals^.afterEvaluation(@recycler,packageTokenLocation(package));
     {$ifdef debugMode}
     writeln('Code assistance end  : ',scriptPath);
     {$endif}

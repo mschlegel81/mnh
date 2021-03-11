@@ -56,13 +56,13 @@ IMPLEMENTATION
 USES recyclers;
 {$R *.lfm}
 
-FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR caption:string='';
       Post:P_treeDisplayRequest;
   begin
-    if not(context.checkSideEffects('showVariable',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('showVariable',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (gui_started=NO) then begin
-      context.messages^.logGuiNeeded;
+      context^.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and
@@ -73,7 +73,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
         else exit(nil);
       end;
       new(Post,create(P_listLiteral(params^.value[0]),caption));
-      context.messages^.postCustomMessage(Post,true);
+      context^.messages^.postCustomMessage(Post,true);
       if (gui_started<>NO) then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
   end;
@@ -131,8 +131,11 @@ CONSTRUCTOR T_treeDisplayRequest.create(CONST L: P_literal; CONST newCaption: st
   end;
 
 DESTRUCTOR T_treeDisplayRequest.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
-    disposeLiteral(treeContent);
+    literalRecycler.initRecycler;
+    literalRecycler.disposeLiteral(treeContent);
+    literalRecycler.cleanup;
     inherited destroy;
   end;
 

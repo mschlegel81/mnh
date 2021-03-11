@@ -24,19 +24,20 @@ TYPE
     index:longint;
     underlying:P_literal;
     values:T_arrayOfLiteral;
-    CONSTRUCTOR create(CONST v:P_compoundLiteral; CONST location:T_tokenLocation);
+    CONSTRUCTOR create(VAR literalRecycler:T_literalRecycler; CONST v:P_compoundLiteral; CONST location:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral({$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
-CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
+CONSTRUCTOR T_listIterator.create(VAR literalRecycler:T_literalRecycler; CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
   begin
     inherited create(location);
     index:=0;
     underlying:=v^.rereferenced;
-    values:=v^.iteratableList;
+    values:=v^.forcedIteratableList(@literalRecycler);
   end;
 
 FUNCTION T_listIterator.toString(CONST lengthLimit:longint=maxLongint):string;
@@ -53,10 +54,16 @@ FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
     inc(index);
   end;
 
+PROCEDURE T_listIterator.cleanup(CONST literalRecycler:P_literalRecycler);
+  begin
+    literalRecycler^.disposeLiteral(underlying);
+    literalRecycler^.disposeLiteral(values);
+  end;
+
 DESTRUCTOR T_listIterator.destroy;
   begin
-    disposeLiteral(underlying);
-    disposeLiteral(values);
+    assert(underlying=nil);
+    assert(length(values)=0);
   end;
 
 TYPE
@@ -67,8 +74,9 @@ TYPE
     CONSTRUCTOR create(CONST v:P_literal; CONST location:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal; CONST location:T_tokenLocation);
@@ -92,14 +100,19 @@ FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation;
     didDeliver:=true;
   end;
 
-DESTRUCTOR T_singleValueIterator.destroy;
+PROCEDURE T_singleValueIterator.cleanup(CONST literalRecycler:P_literalRecycler);
   begin
-    disposeLiteral(value);
+    literalRecycler^.disposeLiteral(value);
   end;
 
-FUNCTION newIterator(CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
+DESTRUCTOR T_singleValueIterator.destroy;
   begin
-    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input),location))
+    assert(value=nil);
+  end;
+
+FUNCTION newIterator(VAR literalRecycler:T_literalRecycler; CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
+  begin
+    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(input),location))
     else if (input^.literalType=lt_expression) and
             (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then result:=P_expressionLiteral(input^.rereferenced)
     else new(P_singleValueIterator(result),create(input,location));
@@ -118,7 +131,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: P_abstractIntLiteral; CONST loc: T_tokenLocation);
@@ -161,33 +174,33 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
       bUpper:
         if bigNext.compare(bigLim) in [CR_LESSER,CR_EQUAL] then begin
           tmp:=bigNext+1;
-          result.literal:=newIntLiteral(bigNext);
+          result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(bigNext);
           bigNext:=tmp;
         end else result.literal:=newVoidLiteral;
       bLower:
         if bigNext.compare(bigLim) in [CR_GREATER,CR_EQUAL] then begin
           tmp:=bigNext-1;
-          result.literal:=newIntLiteral(bigNext);
+          result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(bigNext);
           bigNext:=tmp;
         end else result.literal:=newVoidLiteral;
       bNone : begin
         tmp:=bigNext+1;
-        result.literal:=newIntLiteral(bigNext);
+        result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(bigNext);
         bigNext:=tmp;
       end;
     end else case bounding of
       bUpper:
         if smallNext<=smallLim then begin
-          result.literal:=newIntLiteral(smallNext);
+          result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(smallNext);
           inc(smallNext);
         end else result.literal:=newVoidLiteral;
       bLower:
         if smallNext>=smallLim then begin
-          result.literal:=newIntLiteral(smallNext);
+          result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(smallNext);
           dec(smallNext);
         end else result.literal:=newVoidLiteral;
       bNone : begin
-        result.literal:=newIntLiteral(smallNext);
+        result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(smallNext);
         inc(smallNext);
         if smallNext=9223372036854775807 then begin
           workBig:=true;
@@ -222,35 +235,36 @@ TYPE
       nextPermutation:T_arrayOfLiteral;
       first:boolean;
     public
-      CONSTRUCTOR create(CONST i:int64; CONST loc:T_tokenLocation);
-      CONSTRUCTOR create(CONST arr:P_compoundLiteral; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(VAR literalRecycler:T_literalRecycler; CONST i:int64; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(VAR literalRecycler:T_literalRecycler;CONST arr:P_compoundLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
-CONSTRUCTOR T_permutationIterator.create(CONST i: int64; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_permutationIterator.create(VAR literalRecycler:T_literalRecycler;CONST i: int64; CONST loc: T_tokenLocation);
   VAR k:longint;
   begin
     inherited create(loc);
-    underlying:=newIntLiteral(i);
+    underlying:=literalRecycler.newIntLiteral(i);
     first:=true;
     setLength(nextPermutation,i);
-    for k:=0 to i-1 do nextPermutation[k]:=newIntLiteral(k);
+    for k:=0 to i-1 do nextPermutation[k]:=literalRecycler.newIntLiteral(k);
   end;
 
-CONSTRUCTOR T_permutationIterator.create(CONST arr: P_compoundLiteral; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_permutationIterator.create(VAR literalRecycler:T_literalRecycler;CONST arr: P_compoundLiteral; CONST loc: T_tokenLocation);
   VAR sorted:P_listLiteral;
   begin
     inherited create(loc);
     underlying:=arr^.rereferenced;
     first:=true;
-    sorted:=newListLiteral();
-    sorted^.appendAll(arr);
+    sorted:=literalRecycler.newListLiteral();
+    sorted^.appendAll(@literalRecycler,arr);
     sorted^.sort;
     nextPermutation:=sorted^.iteratableList;
-    disposeLiteral(sorted);
+    literalRecycler.disposeLiteral(sorted);
   end;
 
 FUNCTION T_permutationIterator.toString(CONST lengthLimit:longint=maxLongint):string;
@@ -264,8 +278,8 @@ FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation;
   begin
     result.reasonForStop:=rr_ok;
     if first then begin
-      result.literal:=newListLiteral(length(nextPermutation));
-      for i:=0 to length(nextPermutation)-1 do P_listLiteral(result.literal)^.append(nextPermutation[i],true);
+      result.literal:=P_recycler(recycler)^.literalRecycler.newListLiteral(length(nextPermutation));
+      for i:=0 to length(nextPermutation)-1 do P_listLiteral(result.literal)^.append(@P_recycler(recycler)^.literalRecycler,nextPermutation[i],true);
       first:=false;
       exit(result);
     end;
@@ -294,14 +308,20 @@ FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation;
       nextPermutation[length(nextPermutation)-i]:=swapTmp;
     end;
     //construct result
-    result.literal:=newListLiteral(length(nextPermutation));
-    for i:=0 to length(nextPermutation)-1 do P_listLiteral(result.literal)^.append(nextPermutation[i],true);
+    result.literal:=P_recycler(recycler)^.literalRecycler.newListLiteral(length(nextPermutation));
+    for i:=0 to length(nextPermutation)-1 do P_listLiteral(result.literal)^.append(@P_recycler(recycler)^.literalRecycler,nextPermutation[i],true);
+  end;
+
+PROCEDURE T_permutationIterator.cleanup(CONST literalRecycler:P_literalRecycler);
+  begin
+    literalRecycler^.disposeLiteral(underlying);
+    literalRecycler^.disposeLiteral(nextPermutation);
   end;
 
 DESTRUCTOR T_permutationIterator.destroy;
   begin
-    disposeLiteral(underlying);
-    disposeLiteral(nextPermutation);
+    assert(underlying=nil);
+    assert(nextPermutation=nil);
   end;
 
 FUNCTION permutationIterator intFuncSignature;
@@ -309,9 +329,9 @@ FUNCTION permutationIterator intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType=lt_smallint then begin
-        new(P_permutationIterator(result),create(int0^.intValue,tokenLocation));
+        new(P_permutationIterator(result),create(recycler^.literalRecycler,int0^.intValue,tokenLocation));
       end else if arg0^.literalType in C_compoundTypes then begin
-        new(P_permutationIterator(result),create(compound0,tokenLocation));
+        new(P_permutationIterator(result),create(recycler^.literalRecycler,compound0,tokenLocation));
       end;
     end;
   end;
@@ -326,8 +346,9 @@ TYPE
       CONSTRUCTOR create(CONST source,filter:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_filterGenerator.create(CONST source,filter: P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -353,7 +374,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
       if (nextUnfiltered.literal<>nil) and (nextUnfiltered.literal^.literalType<>lt_void) then begin
         if filterExpression^.evaluateToBoolean(location,context,recycler,true,nextUnfiltered.literal,nil)
         then exit          (nextUnfiltered)
-        else disposeLiteral(nextUnfiltered.literal);
+        else P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnfiltered.literal);
       end else begin
         if nextUnfiltered.literal=nil
         then begin result.reasonForStop:=rr_ok; result.literal:=newVoidLiteral; exit(result); end
@@ -362,10 +383,16 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
+PROCEDURE T_filterGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
+  begin
+    literalRecycler^.disposeLiteral(sourceGenerator);
+    literalRecycler^.disposeLiteral(filterExpression);
+  end;
+
 DESTRUCTOR T_filterGenerator.destroy;
   begin
-    disposeLiteral(sourceGenerator);
-    disposeLiteral(filterExpression);
+    assert(sourceGenerator=nil);
+    assert(filterExpression=nil);
   end;
 
 TYPE
@@ -379,8 +406,9 @@ TYPE
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -408,10 +436,10 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
         if isNullary then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
                      else result:=mapExpression^.evaluateToLiteral(location,context,recycler,nextUnmapped,nil);
-        disposeLiteral(nextUnmapped);
+        P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnmapped);
         //error handling
         if result.literal=nil then begin result.literal:=newVoidLiteral; result.reasonForStop:=rr_ok; exit(result); end;
-        if result.literal^.literalType=lt_void then disposeLiteral(result.literal);
+        if result.literal^.literalType=lt_void then P_recycler(recycler)^.literalRecycler.disposeLiteral(result.literal);
       end else begin
         if nextUnmapped=nil
         then result.literal:=newVoidLiteral
@@ -421,10 +449,16 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
+PROCEDURE T_mapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
+  begin
+    literalRecycler^.disposeLiteral(sourceGenerator);
+    literalRecycler^.disposeLiteral(mapExpression);
+  end;
+
 DESTRUCTOR T_mapGenerator.destroy;
   begin
-    disposeLiteral(sourceGenerator);
-    disposeLiteral(mapExpression);
+    assert(sourceGenerator=nil);
+    assert(mapExpression=nil);
   end;
 
 TYPE
@@ -439,8 +473,9 @@ TYPE
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;CONST loc: T_tokenLocation);
@@ -476,17 +511,17 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
             if isNullary
             then valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,nil     ,nil).literal
             else valueToAppend:=mapExpression^.evaluateToLiteral(location,context,recycler,unmapped,nil).literal;
-            disposeLiteral(unmapped);
+            P_recycler(recycler)^.literalRecycler.disposeLiteral(unmapped);
             if (valueToAppend<>nil) then begin
               if valueToAppend^.literalType=lt_void
-              then disposeLiteral(valueToAppend)
+              then P_recycler(recycler)^.literalRecycler.disposeLiteral(valueToAppend)
               else begin
                 queue.append(valueToAppend);
                 someFetched:=true;
               end;
             end;
           end;
-        end else disposeLiteral(unmapped);
+        end else P_recycler(recycler)^.literalRecycler.disposeLiteral(unmapped);
       end;
 
     VAR nextUnmapped:P_literal;
@@ -516,10 +551,10 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
             lt_numSet,
             lt_stringSet,
             lt_map: begin
-              iter:=P_compoundLiteral(nextUnmapped)^.iteratableList;
+              iter:=P_compoundLiteral(nextUnmapped)^.forcedIteratableList(@P_recycler(recycler)^.literalRecycler);
               for sub in iter do appendEvaluated(sub^.rereferenced);
-              disposeLiteral(iter);
-              disposeLiteral(nextUnmapped);
+              P_recycler(recycler)^.literalRecycler.disposeLiteral(iter);
+              P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnmapped);
             end;
             lt_expression: begin
               if (P_expressionLiteral(nextUnmapped)^.typ in C_iteratableExpressionTypes) then begin
@@ -528,12 +563,12 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
                   appendEvaluated(sub);
                   sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
                 end;
-                disposeLiteral(nextUnmapped);
+                P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnmapped);
               end else appendEvaluated(nextUnmapped);
             end;
           end;
         end else begin
-          if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
+          if nextUnmapped<>nil then P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnmapped);
           doneFetching:=true;
         end;
       until someFetched or doneFetching or not(context^.continueEvaluation);
@@ -547,15 +582,23 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
     else result.literal:=queue.next;
   end;
 
+PROCEDURE T_flatMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
+  VAR l:P_literal;
+  begin
+    literalRecycler^.disposeLiteral(sourceGenerator);
+    if mapExpression<>nil then literalRecycler^.disposeLiteral(mapExpression);
+    while queue.hasNext do begin
+      l:=queue.next;
+      literalRecycler^.disposeLiteral(l);
+    end;
+  end;
+
 DESTRUCTOR T_flatMapGenerator.destroy;
   VAR l:P_literal;
   begin
-    disposeLiteral(sourceGenerator);
-    if mapExpression<>nil then disposeLiteral(mapExpression);
-    while queue.hasNext do begin
-      l:=queue.next;
-      disposeLiteral(l);
-    end;
+    assert(sourceGenerator=nil);
+    assert(mapExpression=nil);
+    assert(not(queue.hasNext));
     queue.destroy;
   end;
 
@@ -571,7 +614,7 @@ FUNCTION flatMap_imp intFuncSignature;
         then mappingFunction:=P_expressionLiteral(arg1)
         else exit(nil);
       end;
-      new(P_flatMapGenerator(result),create(newIterator(arg0,tokenLocation),mappingFunction,tokenLocation));
+      new(P_flatMapGenerator(result),create(newIterator(recycler^.literalRecycler,arg0,tokenLocation),mappingFunction,tokenLocation));
     end;
   end;
 
@@ -587,8 +630,9 @@ TYPE
       CONSTRUCTOR create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_chunkIterator.create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -615,18 +659,18 @@ FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONS
   begin
     result:=NIL_EVAL_RESULT;
     if context^.continueEvaluation then repeat
-      unmappedList:=newListLiteral(chunkSize);
+      unmappedList:=P_recycler(recycler)^.literalRecycler.newListLiteral(chunkSize);
       repeat
         nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
         if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-          unmappedList^.append(nextUnmapped,false)
+          unmappedList^.append(@P_recycler(recycler)^.literalRecycler,nextUnmapped,false)
         end else begin
-          if nextUnmapped<>nil then disposeLiteral(nextUnmapped);
+          if nextUnmapped<>nil then P_recycler(recycler)^.literalRecycler.disposeLiteral(nextUnmapped);
           doneFetching:=true;
         end;
       until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
       if doneFetching and (unmappedList^.size=0) then begin
-        disposeLiteral(unmappedList);
+        P_recycler(recycler)^.literalRecycler.disposeLiteral(unmappedList);
         result.literal:=newVoidLiteral;
         exit(result);
       end else begin
@@ -635,10 +679,10 @@ FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONS
           if isNullary
           then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
           else result:=mapExpression^.evaluateToLiteral(location,context,recycler,unmappedList,nil);
-          disposeLiteral(unmappedList);
+          P_recycler(recycler)^.literalRecycler.disposeLiteral(unmappedList);
           if (result.literal<>nil) then begin
             if result.literal^.literalType=lt_void
-            then disposeLiteral(result.literal)
+            then P_recycler(recycler)^.literalRecycler.disposeLiteral(result.literal)
             else exit(result);
           end;
         end;
@@ -646,10 +690,16 @@ FUNCTION T_chunkIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONS
     until doneFetching or (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
+PROCEDURE T_chunkIterator.cleanup(CONST literalRecycler:P_literalRecycler);
+  begin
+    literalRecycler^.disposeLiteral(sourceGenerator);
+    if mapExpression<>nil then literalRecycler^.disposeLiteral(mapExpression);
+  end;
+
 DESTRUCTOR T_chunkIterator.destroy;
   begin
-    disposeLiteral(sourceGenerator);
-    if mapExpression<>nil then disposeLiteral(mapExpression);
+    assert(sourceGenerator=nil);
+    assert(mapExpression=nil);
   end;
 
 FUNCTION chunkMap_imp intFuncSignature;
@@ -664,7 +714,7 @@ FUNCTION chunkMap_imp intFuncSignature;
         then mappingFunction:=P_expressionLiteral(arg2)
         else exit(nil);
       end;
-      new(P_chunkIterator(result),create(newIterator(arg0,tokenLocation),int1^.intValue,mappingFunction,tokenLocation));
+      new(P_chunkIterator(result),create(newIterator(recycler^.literalRecycler,arg0,tokenLocation),int1^.intValue,mappingFunction,tokenLocation));
     end;
   end;
 
@@ -683,26 +733,27 @@ TYPE
         fill:longint;
       end;
       outputQueue : specialize G_queue<P_literal>;
-      PROCEDURE canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
+      PROCEDURE canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler);
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
   T_parallelFilterGenerator=object(T_parallelMapGenerator)
     private
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler); virtual;
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -724,12 +775,12 @@ CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressio
     inherited create(source,filterEx,loc);
   end;
 
-PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler);
   VAR toAggregate:P_chainTask;
   begin
     if forceAggregate and (firstToAggregate<>nil) and not(firstToAggregate^.canGetResult)
     then begin
-      if not(context.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
+      if not(context^.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
     end;
     while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
       assert(firstToAggregate^.getContext<>nil);
@@ -738,7 +789,7 @@ PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; VAR 
       firstToAggregate:=firstToAggregate^.nextToAggregate;
       if P_mapTask(toAggregate)^.mapTaskResult<>nil then begin
         if P_mapTask(toAggregate)^.mapTaskResult^.literalType=lt_void
-        then disposeLiteral    (P_mapTask(toAggregate)^.mapTaskResult)
+        then recycler^.disposeLiteral    (P_mapTask(toAggregate)^.mapTaskResult)
         else outputQueue.append(P_mapTask(toAggregate)^.mapTaskResult);
       end;
       with recycling do if fill<length(dat) then begin
@@ -750,28 +801,28 @@ PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; VAR 
     end;
   end;
 
-PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   VAR nextUnmapped  :P_literal=nil;
       task          :P_mapTask=nil;
       doneQueuing:boolean=false;
       taskChain   : T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching or not(context.continueEvaluation) then exit;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context.getGlobals^.taskQueue.queuedCount,context);
+    if doneFetching or not(context^.continueEvaluation) then exit;
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context^.getGlobals^.taskQueue.queuedCount,context^);
     if taskChain.handDownThreshold>1 then repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
         taskChain.flush;
       end else begin
         if isExpressionNullary
-        then disposeLiteral(nextUnmapped);
+        then recycler^.disposeLiteral(nextUnmapped);
         with recycling do if fill>0 then begin
           dec(fill);
           task:=P_mapTask(dat[fill]);
           task^.reattach(recycler);
-        end else new(task,createMapTask(context.getFutureEnvironment(recycler),mapExpression));
+        end else new(task,createMapTask(context^.getFutureEnvironment(recycler),mapExpression));
         if firstToAggregate=nil then begin
           firstToAggregate:=task;
           lastToAggregate:=task;
@@ -781,21 +832,21 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR 
         end;
         if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true;
       end;
-    until doneFetching or doneQueuing or not(context.continueEvaluation);
+    until doneFetching or doneQueuing or not(context^.continueEvaluation);
     taskChain.destroy;
   end;
 
-PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   VAR nextUnmapped  :P_literal=nil;
       task          :P_filterTask=nil;
       doneQueuing   :boolean=false;
       taskChain     :T_taskChain;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching or not(context.continueEvaluation) then exit;
-    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context.getGlobals^.taskQueue.queuedCount,context);
+    if doneFetching or not(context^.continueEvaluation) then exit;
+    taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context^.getGlobals^.taskQueue.queuedCount,context^);
     if taskChain.handDownThreshold>1 then repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,@context,@recycler,nil,nil).literal;
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
         taskChain.flush;
@@ -804,7 +855,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
           dec(fill);
           task:=P_filterTask(dat[fill]);
           task^.reattach(recycler);
-        end else new(task,createFilterTask(context.getFutureEnvironment(recycler),mapExpression));
+        end else new(task,createFilterTask(context^.getFutureEnvironment(recycler),mapExpression));
         if firstToAggregate=nil then begin
           firstToAggregate:=task;
           lastToAggregate:=task;
@@ -814,7 +865,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; V
         end;
         if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true;
       end;
-    until doneFetching or doneQueuing or not(context.continueEvaluation);
+    until doneFetching or doneQueuing or not(context^.continueEvaluation);
     taskChain.destroy;
   end;
 
@@ -839,16 +890,16 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
     result.reasonForStop:=rr_ok;
     result.literal:=nil;
     if outputQueue.hasNext then begin
-      doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
+      doEnqueueTasks(location,P_context(context),P_recycler(recycler));
       result.literal:=outputQueue.next;
     end else begin
-      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^);
+      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context),P_recycler(recycler));
       if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
       then begin
         result.literal:=newVoidLiteral;
       end else repeat
-        if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context)^,P_recycler(recycler)^)
-                                  else canAggregate(true      ,P_context(context)^,P_recycler(recycler)^);
+        if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context),P_recycler(recycler))
+                                  else canAggregate(true      ,P_context(context),P_recycler(recycler));
         if outputQueue.hasNext then begin
           result.literal:=outputQueue.next;
           exit(result);
@@ -857,22 +908,22 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
     end;
   end;
 
-PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler);
+PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   VAR tmp:P_literal;
   begin
     repeat
       if outputQueue.hasNext
-      then container^.append(outputQueue.next,false)
+      then container^.append(@recycler^.literalRecycler,outputQueue.next,false)
       else doEnqueueTasks(loc,context,recycler);
-    until doneFetching and (firstToAggregate=nil) or not(context.continueEvaluation);
+    until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
     while firstToAggregate<>nil do canAggregate(true,context,recycler);
 
-    if context.continueEvaluation
-    then while outputQueue.hasNext do container^.append(outputQueue.next,false)
+    if context^.continueEvaluation
+    then while outputQueue.hasNext do container^.append(@recycler^.literalRecycler,outputQueue.next,false)
     else begin
       while outputQueue.hasNext do begin
         tmp:=outputQueue.next;
-        disposeLiteral(tmp);
+        recycler^.disposeLiteral(tmp);
       end;
     end;
   end;
@@ -882,7 +933,7 @@ FUNCTION T_parallelMapGenerator.mustBeDroppedBeforePop:boolean;
     result:=true;
   end;
 
-DESTRUCTOR T_parallelMapGenerator.destroy;
+PROCEDURE T_parallelMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
   VAR literal:P_literal;
       toAggregate:P_mapTask;
       timeout:double;
@@ -903,12 +954,21 @@ DESTRUCTOR T_parallelMapGenerator.destroy;
       dec(fill);
       dispose(dat[fill],destroy);
     end;
-    disposeLiteral(sourceGenerator);
-    disposeLiteral(mapExpression);
+    literalRecycler^.disposeLiteral(sourceGenerator);
+    literalRecycler^.disposeLiteral(mapExpression);
     while outputQueue.hasNext do begin
       literal:=outputQueue.next;
-      disposeLiteral(literal);
+      literalRecycler^.disposeLiteral(literal);
     end;
+  end;
+
+DESTRUCTOR T_parallelMapGenerator.destroy;
+  begin
+    assert(firstToAggregate=nil);
+    assert(recycling.fill=0);
+    assert(sourceGenerator=nil);
+    assert(mapExpression=nil);
+    assert(not(outputQueue.hasNext));
     outputQueue.destroy;
   end;
 
@@ -945,13 +1005,14 @@ FUNCTION pMap_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
+      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
       then begin
-        new(mapGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
+        new(mapGenerator,create(newIterator(recycler^.literalRecycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         mapGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
         if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(mapGenerator);
-        result:=newListLiteral();
+        result:=recycler^.literalRecycler.newListLiteral();
         mapGenerator^.collectResults(P_listLiteral(result),tokenLocation,context,recycler);
+        mapGenerator^.cleanup(@recycler^.literalRecycler);
         dispose(mapGenerator,destroy);
       end else result:=map_imp(params,tokenLocation,context,recycler);
     end;
@@ -963,18 +1024,19 @@ FUNCTION parallelFilter_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
-      if (tco_spawnWorker in context.threadOptions) and (context.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
+      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
       then begin
-        new(filterGenerator,create(newIterator(arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
+        new(filterGenerator,create(newIterator(recycler^.literalRecycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         filterGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
         if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(filterGenerator);
         if arg0^.literalType= lt_set then begin
           result:=newSetLiteral(set0^.size div 2);
           filterGenerator^.collectResults(P_setLiteral(result),tokenLocation,context,recycler);
         end else begin
-          result:=newListLiteral();
+          result:=recycler^.literalRecycler.newListLiteral();
           filterGenerator^.collectResults(P_listLiteral(result),tokenLocation,context,recycler);
         end;
+        filterGenerator^.cleanup(@recycler^.literalRecycler);
         dispose(filterGenerator,destroy);
       end else result:=filter_imp(params,tokenLocation,context,recycler);
     end;
@@ -1086,9 +1148,9 @@ FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CO
     end;
     if fileTruncated then P_context(context)^.messages^.postTextMessage(mt_el1_note,location,'File was (probably) truncated');
     if queue.hasNext
-    then result.literal:=newStringLiteral(queue.next)
+    then result.literal:=P_recycler(recycler)^.literalRecycler.newStringLiteral(queue.next)
     else if stringBuffer<>'' then begin
-      result.literal:=newStringLiteral(stringBuffer);
+      result.literal:=P_recycler(recycler)^.literalRecycler.newStringLiteral(stringBuffer);
       stringBuffer:='';
     end else result.literal:=newVoidLiteral;
   end;
@@ -1109,9 +1171,9 @@ FUNCTION fileLineIterator intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
        (arg0^.literalType=lt_string) and fileExists(str0^.value) and
        ((params^.size=1) or (arg1^.literalType in [lt_smallint,lt_bigint,lt_real])) and
-       context.checkSideEffects('fileLineIterator',tokenLocation,[se_readFile]) then begin
+       context^.checkSideEffects('fileLineIterator',tokenLocation,[se_readFile]) then begin
       if (params^.size=2) then timeout:=P_numericLiteral(arg1)^.floatValue;
-      new(P_fileLineIterator(result),create(str0^.value,timeout,tokenLocation,context));
+      new(P_fileLineIterator(result),create(str0^.value,timeout,tokenLocation,context^));
       if not(P_fileLineIterator(result)^.initialized) then begin
         dispose(result,destroy);
         result:=nil;
@@ -1133,7 +1195,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
   end;
 
 CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
@@ -1190,7 +1252,7 @@ FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
       if index>=int64(CHUNK_SIZE)*int64(length(table)) then extendTable;
     end;
     result.reasonForStop:=rr_ok;
-    result.literal:=newIntLiteral(index);
+    result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(index);
     inc(index);
   end;
 
@@ -1281,7 +1343,7 @@ FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
     setLength(s,length(currIdx));
     for i:=0 to length(currIdx)-1 do s[length(s)-i]:=charSet[currIdx[i]];
     result.reasonForStop:=rr_ok;
-    result.literal:=newStringLiteral(s);
+    result.literal:=P_recycler(recycler)^.literalRecycler.newStringLiteral(s);
   end;
 
 DESTRUCTOR T_stringIterator.destroy;
@@ -1309,14 +1371,14 @@ FUNCTION stringIterator intFuncSignature;
         then include(charSet,s[1])
         else begin
           err:=true;
-          context.raiseError('Charset must only contain strings of 1 byte.',tokenLocation);
+          context^.raiseError('Charset must only contain strings of 1 byte.',tokenLocation);
         end;
       end;
       if length(iter)=0 then begin
         err:=true;
-        context.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
+        context^.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
       end;
-      disposeLiteral(iter);
+      recycler^.literalRecycler.disposeLiteral(iter);
       if err then result:=nil
              else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.intValue,int2^.intValue));
     end else result:=nil;
@@ -1390,7 +1452,7 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location:T_tokenLocation; CONS
       if parameters^.value[0]^.literalType=lt_smallint
       then range.fromInt(P_smallIntLiteral(parameters^.value[0])^.value)
       else range.create (P_bigIntLiteral  (parameters^.value[0])^.value);
-      result.literal:=newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
+      result.literal:=P_recycler(recycler)^.literalRecycler.newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
     end else begin
       P_context(context)^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
       result.literal:=newVoidLiteral;
@@ -1464,19 +1526,19 @@ FUNCTION T_isaacRandomGenerator.toString(CONST lengthLimit: longint): string;
 FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     result.reasonForStop:=rr_ok;
-    result.literal:=newRealLiteral(XOS.realRandom);
+    result.literal:=P_recycler(recycler)^.literalRecycler.newRealLiteral(XOS.realRandom);
   end;
 
 FUNCTION T_intRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     result.reasonForStop:=rr_ok;
-    result.literal:=newIntLiteral(bigint.randomInt(@XOS.dwordRandom,range));
+    result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(bigint.randomInt(@XOS.dwordRandom,range));
   end;
 
 FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
   begin
     result.reasonForStop:=rr_ok;
-    result.literal:=newIntLiteral(bigint.randomInt(@isaac.iRandom,range));
+    result.literal:=P_recycler(recycler)^.literalRecycler.newIntLiteral(bigint.randomInt(@isaac.iRandom,range));
   end;
 
 FUNCTION randomGenerator_impl intFuncSignature;
@@ -1516,7 +1578,7 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
     CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-    FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
 end;
 
 CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
@@ -1550,7 +1612,7 @@ FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location:T_tokenLocatio
       inc(i);
     end;
     result.reasonForStop:=rr_ok;
-    result.literal:=newRealLiteral(x);
+    result.literal:=P_recycler(recycler)^.literalRecycler.newRealLiteral(x);
   end;
 
 FUNCTION vanDerCorputGenerator_impl intFuncSignature;
@@ -1560,23 +1622,23 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
       new(P_vanDerCorputGenerator(result),create(int0^.intValue,tokenLocation));
   end;
 
-FUNCTION T_listIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_listIterator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_listIterator));
-    writeLiteralToStream(underlying,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,underlying,stream,locationOfSerializeCall,adapters);
     result:=stream^.allOkay;
   end;
 
-FUNCTION T_singleValueIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_singleValueIterator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_singleValueIterator));
-    writeLiteralToStream(value,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,value,stream,locationOfSerializeCall,adapters);
     result:=stream^.allOkay;
   end;
 
-FUNCTION T_rangeGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_rangeGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   VAR tmp:T_bigInt;
   begin
     stream^.writeByte(byte(typ));
@@ -1598,81 +1660,81 @@ FUNCTION T_rangeGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLoc
     result:=stream^.allOkay;
   end;
 
-FUNCTION T_permutationIterator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_permutationIterator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_permutationIterator));
-    writeLiteralToStream(underlying,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,underlying,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_filterGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_filterGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_filterGenerator));
-    writeLiteralToStream(sourceGenerator ,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(filterExpression,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator ,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,filterExpression,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_mapGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_mapGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_mapGenerator));
-    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_flatMapGenerator.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_flatMapGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_flatMapGenerator));
-    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator,stream,locationOfSerializeCall,adapters);
     stream^.writeBoolean(mapExpression<>nil);
     if mapExpression<>nil
-    then writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    then writeLiteralToStream(literalRecycler^,mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_chunkIterator.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_chunkIterator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_chunkMapGenerator));
-    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator,stream,locationOfSerializeCall,adapters);
     stream^.writeNaturalNumber(chunkSize);
     stream^.writeBoolean(mapExpression<>nil);
     if mapExpression<>nil
-    then writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    then writeLiteralToStream(literalRecycler^,mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_parallelMapGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_parallelMapGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_parallelMapGenerator));
-    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_parallelFilterGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_parallelFilterGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_parallelFilterGenerator));
-    writeLiteralToStream(sourceGenerator,stream,locationOfSerializeCall,adapters);
-    writeLiteralToStream(mapExpression  ,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,sourceGenerator,stream,locationOfSerializeCall,adapters);
+    writeLiteralToStream(literalRecycler^,mapExpression  ,stream,locationOfSerializeCall,adapters);
     result:=true;
   end;
 
-FUNCTION T_primeGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_primeGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_primeGenerator));
     result:=true;
   end;
 
-FUNCTION T_vanDerCorputGenerator.writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+FUNCTION T_vanDerCorputGenerator.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeByte(byte(bgt_vanDerCorputGenerator));
@@ -1680,7 +1742,7 @@ FUNCTION T_vanDerCorputGenerator.writeToStream(CONST locationOfSerializeCall:T_t
     result:=true;
   end;
 
-FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+FUNCTION newGeneratorFromStream(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
   VAR generatorType:T_builtinGeneratorType;
       lit,lit2:P_literal;
       intParameter:longint;
@@ -1691,93 +1753,93 @@ FUNCTION newGeneratorFromStream(CONST stream:P_inputStreamWrapper; CONST locatio
     result:=nil;
     case generatorType of
       bgt_listIterator: begin
-        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(P_compoundLiteral(lit),location))
+        then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
         else stream^.logWrongTypeError;
-        disposeLiteral(lit); //is rereferenced in T_listIterator.create;
+        literalRecycler.disposeLiteral(lit); //is rereferenced in T_listIterator.create;
       end;
       bgt_singleValueIterator: begin
-        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(P_compoundLiteral(lit),location))
+        then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
         else stream^.logWrongTypeError;
-        disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
+        literalRecycler.disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
       end;
       bgt_rangeGenerator: begin
         bounded:=stream^.readBoolean;
         bigint.createZero;
         bigint.readFromStream(stream);
-        lit:=newIntLiteral(bigint);
+        lit:=literalRecycler.newIntLiteral(bigint);
         if bounded then begin
           bigint.createZero;
           bigint.readFromStream(stream);
-          lit2:=newIntLiteral(bigint);
+          lit2:=literalRecycler.newIntLiteral(bigint);
         end else lit2:=nil;
         new(P_rangeGenerator(result),create(P_abstractIntLiteral(lit),P_abstractIntLiteral(lit2),location));
-        disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
-        if lit2<>nil then disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
+        literalRecycler.disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
+        if lit2<>nil then literalRecycler.disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
       end;
       bgt_permutationIterator: begin
-        lit:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if lit^.literalType in C_compoundTypes
-        then new(P_permutationIterator(result),create(P_compoundLiteral(lit),location))
+        then new(P_permutationIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
         else if lit^.literalType=lt_smallint
-             then new(P_permutationIterator(result),create(P_smallIntLiteral(lit)^.value,location));
-        disposeLiteral(lit);
+             then new(P_permutationIterator(result),create(literalRecycler,P_smallIntLiteral(lit)^.value,location));
+        literalRecycler.disposeLiteral(lit);
       end;
       bgt_filterGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
         then new(P_filterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        literalRecycler.disposeLiteral(lit2);
       end;
       bgt_mapGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
         then new(P_mapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        literalRecycler.disposeLiteral(lit2);
       end;
       bgt_parallelFilterGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
         then new(P_parallelFilterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        literalRecycler.disposeLiteral(lit2);
       end;
       bgt_parallelMapGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
         then new(P_parallelMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        literalRecycler.disposeLiteral(lit2);
       end;
       bgt_flatMapGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         if stream^.readBoolean
-        then lit2:=newLiteralFromStream(stream,location,adapters,typeMap)
+        then lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
         else lit2:=nil;
         if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
         then new(P_flatMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        if lit2<>nil then disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        if lit2<>nil then literalRecycler.disposeLiteral(lit2);
       end;
       bgt_chunkMapGenerator: begin
-        lit :=newLiteralFromStream(stream,location,adapters,typeMap);
+        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
         intParameter:=stream^.readNaturalNumber;
         if stream^.readBoolean
-        then lit2:=newLiteralFromStream(stream,location,adapters,typeMap)
+        then lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
         else lit2:=nil;
         if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
         then new(P_chunkIterator(result),create(P_expressionLiteral(lit),intParameter,P_expressionLiteral(lit2),location));
-        disposeLiteral(lit);
-        if lit2<>nil then disposeLiteral(lit2);
+        literalRecycler.disposeLiteral(lit);
+        if lit2<>nil then literalRecycler.disposeLiteral(lit2);
       end;
       bgt_primeGenerator: new(P_primeGenerator(result),create(location));
       bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(stream^.readNaturalNumber,location));

@@ -544,6 +544,7 @@ CONST
   {lt_void       }(name:LITERAL_TEXT_VOID; containedIn:[]                                                          ;comparableTo:[]));
 
   C_compoundTypes     : T_literalTypeSet=[lt_list..lt_emptyMap];
+  C_collectionTypes   : T_literalTypeSet=[lt_list..lt_emptySet];
   C_listTypes         : T_literalTypeSet=[lt_list..lt_emptyList];
   C_setTypes          : T_literalTypeSet=[lt_set..lt_emptySet];
   C_mapTypes          : T_literalTypeSet=[lt_map..lt_emptyMap];

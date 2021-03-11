@@ -13,7 +13,7 @@ USES mnh_constants,
 
 {$i func_defines.inc}
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer): P_literal;
-FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
 FUNCTION operator_StrConcat intFuncSignature;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
 
@@ -21,8 +21,8 @@ IMPLEMENTATION
 USES sysutils,
      bigint;
 
-TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
-     P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+TYPE P_op   =FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
+     P_unary=FUNCTION(CONST x:P_literal; CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;
     UN_IMPL:array[tt_unaryOpNegate..tt_unaryOpMinus] of P_unary;
 FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
@@ -32,7 +32,7 @@ FUNCTION isUnaryOperatorId(CONST id:T_idString):boolean;
     result:=false;
   end;
 
-FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     result:=x^.rereferenced;
   end;
@@ -43,29 +43,30 @@ FUNCTION unaryNoOp_impl intFuncSignature;
                       else result:=nil;
   end;
 
-FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
       containsError:boolean=false;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context,recycler);
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,context,recycler);
       lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
       lt_list,lt_booleanList,lt_emptyList,
       lt_set ,lt_booleanSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        result:=P_collectionLiteral(x)^.newOfSameType(@recycler^.literalRecycler,true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
           yNeg:=logicalNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then containsError:=true
-          else P_collectionLiteral(result)^.append(yNeg,false);
+          else P_collectionLiteral(result)^.append(@recycler^.literalRecycler,yNeg,false);
+          y^.unreference;
         end;
-        disposeLiteral(iter);
+        setLength(iter,0);
         if containsError then begin
           raiseNotApplicableError('! (logical negation)',x,opLocation,context);
-          disposeLiteral(result);
+          recycler^.literalRecycler.disposeLiteral(result);
         end;
       end;
       else raiseNotApplicableError('! (logical negation)',x,opLocation,context);
@@ -79,31 +80,32 @@ FUNCTION logicalNegationOf_impl intFuncSignature;
                       else result:=nil;
   end;
 
-FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   VAR y,yNeg:P_literal;
       iter:T_arrayOfLiteral;
       containsError:boolean=false;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context,recycler);
-      lt_bigint    : result:=newIntLiteral (P_bigIntLiteral (x)^.value.negated);
-      lt_smallint  : result:=newIntLiteral(-P_smallIntLiteral(x)^.value);
-      lt_real      : result:=newRealLiteral(-P_realLiteral(x)^.value);
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,context,recycler);
+      lt_bigint    : result:=recycler^.literalRecycler.newIntLiteral (P_bigIntLiteral (x)^.value.negated);
+      lt_smallint  : result:=recycler^.literalRecycler.newIntLiteral(-P_smallIntLiteral(x)^.value);
+      lt_real      : result:=recycler^.literalRecycler.newRealLiteral(-P_realLiteral(x)^.value);
       lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
       lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        result:=P_collectionLiteral(x)^.newOfSameType(@recycler^.literalRecycler,true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
           yNeg:=arithmeticNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then containsError:=true
-          else P_collectionLiteral(result)^.append(yNeg,false);
+          else P_collectionLiteral(result)^.append(@recycler^.literalRecycler,yNeg,false);
+          y^.unreference;
         end;
-        disposeLiteral(iter);
+        setLength(iter,0);
         if containsError then begin
           raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context);
-          disposeLiteral(result);
+          recycler^.literalRecycler.disposeLiteral(result);
         end;
       end;
       else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context);
@@ -117,16 +119,16 @@ FUNCTION arithmeticNegationOf_impl intFuncSignature;
                       else result:=nil;
   end;
 
-FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR rule   :P_abstractRule =nil;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,operand,nil,recycler,@context);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,operand,nil,recycler,context);
     if result=nil then
     result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
     if result=nil then begin
-      context.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
+      context^.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -136,15 +138,15 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,LHS,RHS,P_recycler(recycler)^,context);
-    if result=nil then result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context)^,P_recycler(recycler)^);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,LHS,RHS,P_recycler(recycler),context);
+    if result=nil then result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context),P_recycler(recycler));
     if result=nil then begin
       P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
 
-FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     result:=newBoolLiteral(LHS^.isInRelationTo(tt_comparatorListEq,RHS));
   end;
@@ -156,7 +158,7 @@ FUNCTION comparator_ListEq intFuncSignature;
                       else exit(newBoolLiteral(false));
   end;
 
-FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     if LHS^.literalType=lt_void then exit(RHS^.rereferenced) else exit(LHS^.rereferenced);
   end;
@@ -168,7 +170,7 @@ FUNCTION operator_OrElse   intFuncSignature;
     else exit(arg0^.rereferenced);
   end;
 
-FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     exit(newBoolLiteral(LHS^.isInRelationTo(tt_operatorIn,RHS)));
   end;
@@ -180,7 +182,7 @@ FUNCTION operator_In       intFuncSignature;
                       else exit(newBoolLiteral(false));
   end;
 
-FUNCTION perform_NotIn(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_NotIn(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     exit(newBoolLiteral(LHS^.isInRelationTo(tt_operatorNotIn,RHS)));
   end;
@@ -193,40 +195,45 @@ FUNCTION operator_NotIn       intFuncSignature;
   end;
 
 {$define defaultLHScases:=
-  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
-  lt_void:       exit(RHS^.rereferenced);
-  lt_error:      exit(LHS^.rereferenced)}
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,context,recycler));
+  lt_void:       exit(RHS^.rereferenced)}
 {$define defaultRHSCases:=
-  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context,recycler));
-  lt_void:       exit(LHS^.rereferenced);
-  lt_error:      exit(RHS^.rereferenced)}
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,context,recycler));
+  lt_void:       exit(LHS^.rereferenced)}
 {$define generic_recursions:=
     FUNCTION recurse_scalar_compound:P_literal;
     VAR rhsIt:T_arrayOfLiteral;
         rhsX :P_literal;
     begin
-      result:=P_collectionLiteral(RHS)^.newOfSameType(true);
+      result:=P_collectionLiteral(RHS)^.newOfSameType(@recycler^.literalRecycler,true);
       rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
-      for rhsX in rhsIt do P_collectionLiteral(result)^.append(function_id(LHS,rhsX,tokenLocation,context,recycler),false);
-      disposeLiteral(rhsIt);
+      for rhsX in rhsIt do begin
+        P_collectionLiteral(result)^.append(@recycler^.literalRecycler,function_id(LHS,rhsX,tokenLocation,context,recycler),false);
+        rhsX^.unreference;
+      end;
+      setLength(rhsIt,0);
     end;
 
   FUNCTION recurse_compound_scalar:P_literal;
     VAR lhsIt:T_arrayOfLiteral;
         lhsX :P_literal;
     begin
-      result:=P_collectionLiteral(LHS)^.newOfSameType(true);
+      result:=P_collectionLiteral(LHS)^.newOfSameType(@recycler^.literalRecycler,true);
       lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
-      for lhsX in lhsIt do P_collectionLiteral(result)^.append(function_id(lhsX,RHS,tokenLocation,context,recycler),false);
-      disposeLiteral(lhsIt);
+      for lhsX in lhsIt do begin
+        P_collectionLiteral(result)^.append(@recycler^.literalRecycler,function_id(lhsX,RHS,tokenLocation,context,recycler),false);
+        lhsX^.unreference;
+      end;
+      setLength(lhsIt,0);
     end;
 
   FUNCTION recurse_list_list:P_literal;
     VAR i:longint;
     begin
       if  (P_compoundLiteral(LHS)^.size=P_compoundLiteral(RHS)^.size) then begin
-        result:=newListLiteral(P_listLiteral(LHS)^.size);
+        result:=recycler^.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size);
         for i:=0 to P_listLiteral(LHS)^.size-1 do P_listLiteral(result)^.append(
+          @recycler^.literalRecycler,
           function_id(P_listLiteral(LHS)^.value[i],
                       P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler),false);
       end else result:=nil;
@@ -240,14 +247,16 @@ FUNCTION operator_NotIn       intFuncSignature;
         lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
         rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
         result:=newSetLiteral(length(lhsIt)+length(rhsIt));
-        for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
-        disposeLiteral(lhsIt);
-        disposeLiteral(rhsIt);
+        for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(@recycler^.literalRecycler,function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
+        for lhsX in lhsIt do lhsX^.unreference;
+        for rhsX in rhsIt do rhsX^.unreference;
+        setLength(lhsIt,0);
+        setLength(rhsIt,0);
       end else result:=nil;
     end}
 
 {$define comparator_implementation:=
-FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal; inline;
+FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal; inline;
   generic_recursions;
   begin
     if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then
@@ -277,12 +286,12 @@ FUNCTION outerFunc_id intFuncSignature;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,context);
     if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
+      if result=nil then context^.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -315,7 +324,7 @@ comparator_implementation;
 comparator_implementation;
 {$undef comparator_implementation}
 
-{$define boolIntOperator:=FUNCTION function_id(CONST LHS:P_literal; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+{$define boolIntOperator:=FUNCTION function_id(CONST LHS:P_literal; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -327,14 +336,14 @@ comparator_implementation;
       end;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral(P_smallIntLiteral(LHS)^.value boolOp P_smallIntLiteral(RHS)^.value));
-        lt_bigint  : exit(newIntLiteral(P_bigIntLiteral(RHS)^.value.bitOp(P_smallIntLiteral(LHS)^.value)));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral(P_smallIntLiteral(LHS)^.value boolOp P_smallIntLiteral(RHS)^.value));
+        lt_bigint  : exit(recycler^.literalRecycler.newIntLiteral(P_bigIntLiteral(RHS)^.value.bitOp(P_smallIntLiteral(LHS)^.value)));
         lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_scalar_compound);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral   (P_bigIntLiteral(LHS)^.value.bitOp(P_smallIntLiteral(RHS)^.value)));
-        lt_bigint:   exit(newBigIntLiteral(P_bigIntLiteral(LHS)^.value.bitOp(P_bigIntLiteral  (RHS)^.value)));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral   (P_bigIntLiteral(LHS)^.value.bitOp(P_smallIntLiteral(RHS)^.value)));
+        lt_bigint:   exit(recycler^.literalRecycler.newBigIntLiteral(P_bigIntLiteral(LHS)^.value.bitOp(P_bigIntLiteral  (RHS)^.value)));
         lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_scalar_compound);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
@@ -376,12 +385,12 @@ FUNCTION outerFunc_id intFuncSignature;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,context);
     if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
+      if result=nil then context^.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -412,11 +421,11 @@ boolIntOperator;
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,@context);
+    if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,params,recycler,context);
     if result<>nil then exit(result);
     if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
+      if result=nil then context^.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -424,38 +433,38 @@ boolIntOperator;
 {$define function_id:=perform_plus}
 {$define outerFunc_id:=operator_plus}
 {$define op:=tt_operatorPlus}
-FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral(int64(       P_smallIntLiteral(LHS)^.value)+int64(P_smallIntLiteral(RHS)^.value)));
-        lt_bigint:   exit(newIntLiteral (            P_bigIntLiteral  (RHS)^.value +      P_smallIntLiteral(LHS)^.value));
-        lt_real:     exit(newRealLiteral(            P_smallIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral(int64(       P_smallIntLiteral(LHS)^.value)+int64(P_smallIntLiteral(RHS)^.value)));
+        lt_bigint:   exit(recycler^.literalRecycler.newIntLiteral (            P_bigIntLiteral  (RHS)^.value +      P_smallIntLiteral(LHS)^.value));
+        lt_real:     exit(recycler^.literalRecycler.newRealLiteral(            P_smallIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral (            P_bigIntLiteral(LHS)^.value+ P_smallIntLiteral(RHS)^.value));
-        lt_bigint:   exit(newIntLiteral (            P_bigIntLiteral(LHS)^.value+ P_bigIntLiteral  (RHS)^.value));
-        lt_real:     exit(newRealLiteral(            P_bigIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral (            P_bigIntLiteral(LHS)^.value+ P_smallIntLiteral(RHS)^.value));
+        lt_bigint:   exit(recycler^.literalRecycler.newIntLiteral (            P_bigIntLiteral(LHS)^.value+ P_bigIntLiteral  (RHS)^.value));
+        lt_real:     exit(recycler^.literalRecycler.newRealLiteral(            P_bigIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,
-        lt_bigint: exit(newRealLiteral(P_realLiteral(LHS)^.value+P_abstractIntLiteral(RHS)^.floatValue));
-        lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.value+P_realLiteral       (RHS)^.value));
+        lt_bigint: exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value+P_abstractIntLiteral(RHS)^.floatValue));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value+P_realLiteral       (RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_string: case RHS^.literalType of
         defaultRHSCases;
-        lt_string: exit(newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
+        lt_string: exit(recycler^.literalRecycler.newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
         lt_list,lt_stringList,lt_emptyList,
         lt_set ,lt_stringSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -497,32 +506,32 @@ genericOuter;
 {$define function_id:=perform_minus}
 {$define outerFunc_id:=operator_minus}
 {$define op:=tt_operatorMinus}
-FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral (int64(       P_smallIntLiteral(LHS)^.value)-int64(P_smallIntLiteral(RHS)^.value)));
-        lt_bigint:   exit(newIntLiteral (             P_smallIntLiteral(LHS)^.value-P_bigIntLiteral(RHS)^.value));
-        lt_real:     exit(newRealLiteral(             P_smallIntLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral (int64(       P_smallIntLiteral(LHS)^.value)-int64(P_smallIntLiteral(RHS)^.value)));
+        lt_bigint:   exit(recycler^.literalRecycler.newIntLiteral (             P_smallIntLiteral(LHS)^.value-P_bigIntLiteral(RHS)^.value));
+        lt_real:     exit(recycler^.literalRecycler.newRealLiteral(             P_smallIntLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral (             P_bigIntLiteral(LHS)^.value        -P_smallIntLiteral(RHS)^.value));
-        lt_bigint  : exit(newIntLiteral (             P_bigIntLiteral(LHS)^.value        -P_bigIntLiteral  (RHS)^.value));
-        lt_real    : exit(newRealLiteral(             P_bigIntLiteral(LHS)^.value.toFloat-P_realLiteral    (RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral (             P_bigIntLiteral(LHS)^.value        -P_smallIntLiteral(RHS)^.value));
+        lt_bigint  : exit(recycler^.literalRecycler.newIntLiteral (             P_bigIntLiteral(LHS)^.value        -P_bigIntLiteral  (RHS)^.value));
+        lt_real    : exit(recycler^.literalRecycler.newRealLiteral(             P_bigIntLiteral(LHS)^.value.toFloat-P_realLiteral    (RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,
-        lt_bigint: exit(newRealLiteral(P_realLiteral(LHS)^.value-P_abstractIntLiteral(RHS)^.floatValue));
-        lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
+        lt_bigint: exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value-P_abstractIntLiteral(RHS)^.floatValue));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -554,31 +563,31 @@ genericOuter;
 {$define function_id:=perform_mult}
 {$define outerFunc_id:=operator_mult}
 {$define op:=tt_operatorMult}
-FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral (int64(P_smallIntLiteral(LHS)^.value)*int64(P_smallIntLiteral(RHS)^.value)));
-        lt_bigint  : exit(newIntLiteral( P_bigIntLiteral(RHS)^.value * P_smallIntLiteral(LHS)^.value));
-        lt_real    : exit(newRealLiteral(P_smallIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral (int64(P_smallIntLiteral(LHS)^.value)*int64(P_smallIntLiteral(RHS)^.value)));
+        lt_bigint  : exit(recycler^.literalRecycler.newIntLiteral( P_bigIntLiteral(RHS)^.value * P_smallIntLiteral(LHS)^.value));
+        lt_real    : exit(recycler^.literalRecycler.newRealLiteral(P_smallIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint: exit(newIntLiteral (P_bigIntLiteral(LHS)^.value*P_smallIntLiteral(RHS)^.value));
-        lt_bigint  : exit(newIntLiteral (P_bigIntLiteral(LHS)^.value*P_bigIntLiteral (RHS)^.value));
-        lt_real    : exit(newRealLiteral(P_bigIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
+        lt_smallint: exit(recycler^.literalRecycler.newIntLiteral (P_bigIntLiteral(LHS)^.value*P_smallIntLiteral(RHS)^.value));
+        lt_bigint  : exit(recycler^.literalRecycler.newIntLiteral (P_bigIntLiteral(LHS)^.value*P_bigIntLiteral (RHS)^.value));
+        lt_real    : exit(recycler^.literalRecycler.newRealLiteral(P_bigIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(newRealLiteral(P_realLiteral(LHS)^.value*P_abstractIntLiteral(RHS)^.floatValue));
-        lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.value*P_realLiteral(RHS)^.value));
+        lt_smallint,lt_bigint: exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value*P_abstractIntLiteral(RHS)^.floatValue));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -610,22 +619,22 @@ genericOuter;
 {$define function_id:=perform_divReal}
 {$define outerFunc_id:=operator_divReal}
 {$define op:=tt_operatorDivReal}
-FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_smallint,lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(divideInts(P_abstractIntLiteral(LHS),P_abstractIntLiteral(RHS)));
-        lt_real:   exit(newRealLiteral(P_abstractIntLiteral(LHS)^.floatValue/P_realLiteral(RHS)^.value));
+        lt_smallint,lt_bigint: exit(divideInts(recycler^.literalRecycler,P_abstractIntLiteral(LHS),P_abstractIntLiteral(RHS)));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(P_abstractIntLiteral(LHS)^.floatValue/P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint:    exit(newRealLiteral(P_realLiteral(LHS)^.value/P_abstractIntLiteral (RHS)^.floatValue));
-        lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.value/P_realLiteral(RHS)^.value));
+        lt_smallint,lt_bigint:    exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value/P_abstractIntLiteral (RHS)^.floatValue));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(P_realLiteral(LHS)^.value/P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -657,7 +666,7 @@ genericOuter;
 {$define function_id:=perform_divInt}
 {$define outerFunc_id:=operator_divInt}
 {$define op:=tt_operatorDivInt}
-FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -666,10 +675,10 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(P_smallIntLiteral(LHS)^.value div P_smallIntLiteral(RHS)^.value));
+                     else exit(recycler^.literalRecycler.newIntLiteral(P_smallIntLiteral(LHS)^.value div P_smallIntLiteral(RHS)^.value));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(bigint.divide(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
+                     else exit(recycler^.literalRecycler.newIntLiteral(bigint.divide(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -677,10 +686,10 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(bigint.divide(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
+                     else exit(recycler^.literalRecycler.newIntLiteral(bigint.divide(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value.divide(P_bigIntLiteral(RHS)^.value)));
+                     else exit(recycler^.literalRecycler.newIntLiteral(P_bigIntLiteral(LHS)^.value.divide(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -712,7 +721,7 @@ genericOuter;
 {$define function_id:=perform_mod}
 {$define outerFunc_id:=operator_mod}
 {$define op:=tt_operatorMod}
-FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
@@ -721,10 +730,10 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(P_smallIntLiteral(LHS)^.value mod P_smallIntLiteral(RHS)^.value));
+                     else exit(recycler^.literalRecycler.newIntLiteral(P_smallIntLiteral(LHS)^.value mod P_smallIntLiteral(RHS)^.value));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
+                     else exit(recycler^.literalRecycler.newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -732,10 +741,10 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value mod P_smallIntLiteral(RHS)^.value));
+                     else exit(recycler^.literalRecycler.newIntLiteral(P_bigIntLiteral(LHS)^.value mod P_smallIntLiteral(RHS)^.value));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(nanLit.rereferenced)
-                     else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value.modulus(P_bigIntLiteral(RHS)^.value)));
+                     else exit(recycler^.literalRecycler.newIntLiteral(P_bigIntLiteral(LHS)^.value.modulus(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -768,12 +777,12 @@ genericOuter;
 {$define function_id:=perform_pot}
 {$define outerFunc_id:=operator_pot}
 {$define op:=tt_operatorPot}
-FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   FUNCTION pot_int_int(CONST x:T_bigInt; exponent: longint): P_literal;
     VAR tx, rx: T_myFloat;
     begin
       if exponent>=0
-      then result:=newIntLiteral(x.pow(exponent))
+      then result:=recycler^.literalRecycler.newIntLiteral(x.pow(exponent))
       else begin
         rx:=x.toFloat;
         tx:=1;
@@ -783,7 +792,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
           rx:=rx*rx;
           exponent:=exponent shr 1;
         end;
-        result:=newRealLiteral(1/tx);
+        result:=recycler^.literalRecycler.newRealLiteral(1/tx);
       end;
     end;
 
@@ -794,7 +803,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       if exponent>=0
       then begin
         x.fromInt(smallX);
-        result:=newIntLiteral(x.pow(exponent));
+        result:=recycler^.literalRecycler.newIntLiteral(x.pow(exponent));
         x.clear;
       end else begin
         rx:=smallX;
@@ -805,7 +814,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
           rx:=rx*rx;
           exponent:=exponent shr 1;
         end;
-        result:=newRealLiteral(1/tx);
+        result:=recycler^.literalRecycler.newRealLiteral(1/tx);
       end;
     end;
 
@@ -821,7 +830,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         x:=x*x;
         exponent:=exponent shr 1;
       end;
-      result:=newRealLiteral(resultVal);
+      result:=recycler^.literalRecycler.newRealLiteral(resultVal);
     end;
 
     generic_recursions;
@@ -834,10 +843,10 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_int_int(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context^.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
-        lt_real:   exit(newRealLiteral(exp(ln(P_smallIntLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(exp(ln(P_smallIntLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -847,10 +856,10 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_int_int(P_bigIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context^.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
-        lt_real:   exit(newRealLiteral(exp(ln(P_bigIntLiteral(LHS)^.floatValue)*P_realLiteral(RHS)^.value)));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(exp(ln(P_bigIntLiteral(LHS)^.floatValue)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -860,10 +869,10 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_real_int(P_realLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context^.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
-        lt_real:   exit(newRealLiteral(exp(ln(P_realLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
+        lt_real:   exit(recycler^.literalRecycler.newRealLiteral(exp(ln(P_realLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
       end;
@@ -895,21 +904,21 @@ genericOuter;
 {$define function_id:=perform_strConcat}
 {$define outerFunc_id:=operator_strConcat}
 {$define OP:=tt_operatorStrConcat}
-FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_string: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_real: exit(newStringLiteral(P_stringLiteral(LHS)^.value+RHS^.toString));
-        lt_string:           exit(newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
+        lt_boolean..lt_real: exit(recycler^.literalRecycler.newStringLiteral(P_stringLiteral(LHS)^.value+RHS^.toString));
+        lt_string:           exit(recycler^.literalRecycler.newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
         lt_list..lt_emptySet:  exit(recurse_scalar_compound);
       end;
       lt_boolean..lt_real: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_real: exit(newStringLiteral(LHS^.toString+RHS^.toString));
-        lt_string:           exit(newStringLiteral(LHS^.toString+P_stringLiteral(RHS)^.value));
+        lt_boolean..lt_real: exit(recycler^.literalRecycler.newStringLiteral(LHS^.toString+RHS^.toString));
+        lt_string:           exit(recycler^.literalRecycler.newStringLiteral(LHS^.toString+P_stringLiteral(RHS)^.value));
         lt_list..lt_emptySet:  exit(recurse_scalar_compound);
       end;
       lt_list..lt_emptyList: case RHS^.literalType of
@@ -932,7 +941,7 @@ genericOuter;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
-      if result=nil then context.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
+      if result=nil then context^.raiseError('Incompatible operands '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -941,51 +950,51 @@ genericOuter;
 {$define function_id:=perform_concat}
 {$define outerFunc_id:=operator_concat}
 {$define op:=tt_operatorConcat}
-FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     case LHS^.literalType of
       defaultLHScases;
       lt_boolean..lt_string: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(newListLiteral(2)^
-                                    .append(LHS,true)^
-                                    .append(RHS,true));
-        lt_list..lt_emptyList: exit(newListLiteral(P_listLiteral(RHS)^.size+1)^
-                                    .append   (LHS,true)^
-                                    .appendAll(P_listLiteral(RHS)));
+        lt_boolean..lt_string: exit(recycler^.literalRecycler.newListLiteral(2)^
+                                    .append(@recycler^.literalRecycler,LHS,true)^
+                                    .append(@recycler^.literalRecycler,RHS,true));
+        lt_list..lt_emptyList: exit(recycler^.literalRecycler.newListLiteral(P_listLiteral(RHS)^.size+1)^
+                                    .append   (@recycler^.literalRecycler,LHS,true)^
+                                    .appendAll(@recycler^.literalRecycler,P_listLiteral(RHS)));
         lt_set ..lt_emptySet : exit(newSetLiteral(P_setLiteral(RHS)^.size)^
-                                    .append   (LHS,true)^
-                                    .appendAll(P_setLiteral(RHS)));
+                                    .append   (@recycler^.literalRecycler,LHS,true)^
+                                    .appendAll(@recycler^.literalRecycler,P_setLiteral(RHS)));
       end;
       lt_list..lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
-                                    .appendAll(P_listLiteral(LHS))^
-                                    .append(RHS,true));
-        lt_list..lt_emptyMap:  exit(newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
-                                    .appendAll(P_listLiteral(LHS))^
-                                    .appendAll(P_compoundLiteral(RHS)));
+        lt_boolean..lt_string: exit(recycler^.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+1)^
+                                    .appendAll(@recycler^.literalRecycler,P_listLiteral(LHS))^
+                                    .append   (@recycler^.literalRecycler,RHS,true));
+        lt_list..lt_emptyMap:  exit(recycler^.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
+                                    .appendAll(@recycler^.literalRecycler,P_listLiteral(LHS))^
+                                    .appendAll(@recycler^.literalRecycler,P_compoundLiteral(RHS)));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
         defaultRHSCases;
         lt_boolean..lt_string: exit(newSetLiteral(P_setLiteral(LHS)^.size)^
-                                    .appendAll(P_setLiteral(LHS))^
-                                    .append(RHS,true));
-        lt_list..lt_emptyList: exit(newListLiteral^
-                                    .appendAll(P_setLiteral (LHS))^
-                                    .appendAll(P_listLiteral(RHS)));
+                                    .appendAll(@recycler^.literalRecycler,P_setLiteral(LHS))^
+                                    .append   (@recycler^.literalRecycler,RHS,true));
+        lt_list..lt_emptyList: exit(recycler^.literalRecycler.newListLiteral^
+                                    .appendAll(@recycler^.literalRecycler,P_setLiteral (LHS))^
+                                    .appendAll(@recycler^.literalRecycler,P_listLiteral(RHS)));
         lt_set ..lt_emptyMap : exit(newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
-                                    .appendAll(P_setLiteral     (LHS))^
-                                    .appendAll(P_compoundLiteral(RHS)));
+                                    .appendAll(@recycler^.literalRecycler,P_setLiteral  (LHS))^
+                                    .appendAll(@recycler^.literalRecycler,P_compoundLiteral(RHS)));
       end;
       lt_map..lt_emptyMap: case RHS^.literalType of
         defaultRHSCases;
         lt_map..lt_emptyMap:  exit(newMapLiteral(P_mapLiteral(LHS)^.size)^
-                                   .putAll(P_mapLiteral(LHS))^
-                                   .putAll(P_mapLiteral(RHS)));
-        lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(true)^
-                                   .appendAll(P_mapLiteral(LHS))^
-                                   .appendAll(P_setLiteral(RHS)));
+                                   .putAll(@recycler^.literalRecycler,P_mapLiteral(LHS))^
+                                   .putAll(@recycler^.literalRecycler,P_mapLiteral(RHS)));
+        lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(@recycler^.literalRecycler,true)^
+                                   .appendAll(@recycler^.literalRecycler,P_mapLiteral(LHS))^
+                                   .appendAll(@recycler^.literalRecycler,P_setLiteral(RHS)));
       end;
     end;
     result:=nil;
@@ -995,23 +1004,18 @@ genericOuter;
 {$define function_id:=perform_concatAlt}
 {$define outerFunc_id:=operator_concatAlt}
 {$define op:=tt_operatorConcatAlt}
-FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     case LHS^.literalType of
       defaultLHScases;
-      lt_list..lt_emptyList: case RHS^.literalType of
-        lt_error:      exit(RHS^.rereferenced)
-        else
-        exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
-             .appendAll(P_listLiteral(LHS))^
-             .append(RHS,true,true));
-      end;
-      lt_set ..lt_emptySet : case RHS^.literalType of
-        lt_error:      exit(RHS^.rereferenced)
-        else exit(newSetLiteral(P_setLiteral(LHS)^.size)^
-             .appendAll(P_setLiteral(LHS))^
-             .append(RHS,true,true));
-      end;
+      lt_list..lt_emptyList:
+        exit(recycler^.literalRecycler.newListLiteral(P_listLiteral(LHS)^.size+1)^
+             .appendAll(@recycler^.literalRecycler,P_listLiteral(LHS))^
+             .append   (@recycler^.literalRecycler,RHS,true,true));
+      lt_set ..lt_emptySet :
+        exit(newSetLiteral(P_setLiteral(LHS)^.size)^
+             .appendAll(@recycler^.literalRecycler,P_setLiteral(LHS))^
+             .append   (@recycler^.literalRecycler,RHS,true,true));
     end;
     result:=nil;
   end;

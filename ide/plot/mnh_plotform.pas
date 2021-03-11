@@ -728,27 +728,27 @@ PROCEDURE TplotForm.doPlot;
 FUNCTION plotClosedByUser_impl intFuncSignature;
   VAR closedRequest:P_queryPlotClosedMessage;
   begin if (params=nil) or (params^.size=0) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
-    if not(se_input in context.sideEffectWhitelist) then exit(newBoolLiteral(false));
+    if (gui_started=NO) then context^.messages^.logGuiNeeded;
+    if not(se_input in context^.sideEffectWhitelist) then exit(newBoolLiteral(false));
     new(closedRequest,createRetrieveRequest);
-    context.messages^.postCustomMessage(closedRequest);
-    result:=newBoolLiteral(closedRequest^.getResponseWaiting(context.messages));
+    context^.messages^.postCustomMessage(closedRequest);
+    result:=newBoolLiteral(closedRequest^.getResponseWaiting(context^.messages));
     disposeMessage(closedRequest);
   end else result:=nil; end;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
-      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      if (gui_started=NO) then context^.messages^.logGuiNeeded;
       result:=newVoidLiteral;
-      context.messages^.postSingal(mt_plot_clearAnimation,C_nilSearchTokenLocation);
+      context^.messages^.postSingal(mt_plot_clearAnimation,C_nilSearchTokenLocation);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_boolean) then begin
-      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      if (gui_started=NO) then context^.messages^.logGuiNeeded;
       result:=newVoidLiteral;
       if bool0^.value
-      then context.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilSearchTokenLocation)
-      else context.messages^.postSingal(mt_plot_clearAnimation        ,C_nilSearchTokenLocation);
+      then context^.messages^.postSingal(mt_plot_clearAnimationVolatile,C_nilSearchTokenLocation)
+      else context^.messages^.postSingal(mt_plot_clearAnimation        ,C_nilSearchTokenLocation);
     end else result:=nil;
   end;
 
@@ -756,12 +756,12 @@ FUNCTION addAnimFrame_impl intFuncSignature;
   VAR request:P_plotAddAnimationFrameRequest;
       sleepInSeconds:double;
   begin
-    if not(context.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
-      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      if (gui_started=NO) then context^.messages^.logGuiNeeded;
       new(request,create());
-      context.messages^.postCustomMessage(request);
-      sleepInSeconds:=request^.getProposedSleepTime(context.messages);
+      context^.messages^.postCustomMessage(request);
+      sleepInSeconds:=request^.getProposedSleepTime(context^.messages);
       disposeMessage(request);
       if sleepInSeconds>0 then sleep(round(1000*sleepInSeconds));
       result:=newVoidLiteral;
@@ -770,11 +770,11 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
-  begin if ((params=nil) or (params^.size=0)) and context.checkSideEffects('display',tokenLocation,[se_alterGuiState]) then begin
-    if (gui_started=NO) then context.messages^.logGuiNeeded;
+  begin if ((params=nil) or (params^.size=0)) and context^.checkSideEffects('display',tokenLocation,[se_alterGuiState]) then begin
+    if (gui_started=NO) then context^.messages^.logGuiNeeded;
     new(displayRequest,create());
-    context.messages^.postCustomMessage(displayRequest);
-    displayRequest^.waitForExecution(context.messages);
+    context^.messages^.postCustomMessage(displayRequest);
+    displayRequest^.waitForExecution(context^.messages);
     disposeMessage(displayRequest);
     result:=newVoidLiteral;
   end else result:=nil; end;
@@ -782,11 +782,11 @@ FUNCTION display_imp intFuncSignature;
 FUNCTION postdisplay_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin
-    if not(context.checkSideEffects('postDisplay',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('postDisplay',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
-      if (gui_started=NO) then context.messages^.logGuiNeeded;
+      if (gui_started=NO) then context^.messages^.logGuiNeeded;
       new(displayRequest,create());
-      context.messages^.postCustomMessage(displayRequest,true);
+      context^.messages^.postCustomMessage(displayRequest,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;

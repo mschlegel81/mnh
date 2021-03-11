@@ -15,23 +15,23 @@ USES out_adapters,mnh_messages;
 {$i func_defines.inc}
 FUNCTION resetRandom_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('resetRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
+    if not(context^.checkSideEffects('resetRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
     result:=nil;
-    if (params= nil) or  (params^.size=0) then begin context.getGlobals^.prng.resetSeed(0); result:=newVoidLiteral; end else
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context.getGlobals^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin context.getGlobals^.prng.resetSeed(P_smallIntLiteral(arg0)^.value          ); result:=newVoidLiteral; end;
+    if (params= nil) or  (params^.size=0) then begin context^.getGlobals^.prng.resetSeed(0); result:=newVoidLiteral; end else
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context^.getGlobals^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin context^.getGlobals^.prng.resetSeed(P_smallIntLiteral(arg0)^.value          ); result:=newVoidLiteral; end;
   end;
 
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
-    if not(context.checkSideEffects('random',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getGlobals^.prng.realRandom))
+    if not(context^.checkSideEffects('random',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
+    if (params=nil) or (params^.size=0) then exit(recycler^.literalRecycler.newRealLiteral(context^.getGlobals^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
       count:=int0^.intValue;
       if count>0 then begin
-        result:=newListLiteral;
-        for i:=1 to count do listResult^.appendReal(context.getGlobals^.prng.realRandom);
+        result:=recycler^.literalRecycler.newListLiteral;
+        for i:=1 to count do listResult^.appendReal(@recycler^.literalRecycler,context^.getGlobals^.prng.realRandom);
         exit(result);
       end;
     end;
@@ -43,19 +43,19 @@ FUNCTION intRandom_imp intFuncSignature;
   FUNCTION singleIntRandom:P_abstractIntLiteral;
     begin
       if arg0^.literalType=lt_bigint
-      then result:=newIntLiteral(randomInt(@(context.getGlobals^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
-      else result:=newIntLiteral(context.getGlobals^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
+      then result:=recycler^.literalRecycler.newIntLiteral(randomInt(@(context^.getGlobals^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
+      else result:=recycler^.literalRecycler.newIntLiteral(context^.getGlobals^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
     end;
 
   begin
-    if not(context.checkSideEffects('intRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
+    if not(context^.checkSideEffects('intRandom',tokenLocation,[se_readContextState,se_alterContextState])) then exit(nil);
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint])
     then exit(singleIntRandom)
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
       count:=int1^.intValue;
       if count>=0 then begin
-        result:=newListLiteral;
-        for i:=1 to count do listResult^.append(singleIntRandom,false);
+        result:=recycler^.literalRecycler.newListLiteral;
+        for i:=1 to count do listResult^.append(@recycler^.literalRecycler,singleIntRandom,false);
         exit(result);
       end;
     end;
@@ -64,15 +64,15 @@ FUNCTION intRandom_imp intFuncSignature;
 
 FUNCTION systime_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('systime',tokenLocation,[se_readContextState])) then exit(nil);
+    if not(context^.checkSideEffects('systime',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then exit(newRealLiteral(now));
+    then exit(recycler^.literalRecycler.newRealLiteral(now));
   end;
 
 FUNCTION beep_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('beep',tokenLocation,[se_sound])) then exit(nil);
+    if not(context^.checkSideEffects('beep',tokenLocation,[se_sound])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
@@ -98,44 +98,44 @@ FUNCTION driveInfo_imp intFuncSignature;
       then exit(nil);
       infoMap:=newMapLiteral(5);
       case driveType of
-        DRIVE_REMOVABLE: infoMap^.put('type','removable');
-        DRIVE_FIXED:     infoMap^.put('type','fixed'    );
-        DRIVE_REMOTE:    infoMap^.put('type','network'  );
-        DRIVE_CDROM:     infoMap^.put('type','CD_ROM'   );
-        DRIVE_RAMDISK:   infoMap^.put('type','RAM_disk' );
+        DRIVE_REMOVABLE: infoMap^.put(@recycler^.literalRecycler,'type','removable');
+        DRIVE_FIXED:     infoMap^.put(@recycler^.literalRecycler,'type','fixed'    );
+        DRIVE_REMOTE:    infoMap^.put(@recycler^.literalRecycler,'type','network'  );
+        DRIVE_CDROM:     infoMap^.put(@recycler^.literalRecycler,'type','CD_ROM'   );
+        DRIVE_RAMDISK:   infoMap^.put(@recycler^.literalRecycler,'type','RAM_disk' );
       end;
       {$WARN 5036 OFF}
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
       if VolumeFlags=0 then begin
-        disposeLiteral(infoMap);
+        recycler^.literalRecycler.disposeLiteral(infoMap);
         exit(nil);
       end;
       setString(DriveLetter, Buf, StrLen(Buf));
-      infoMap^.put('serial',VolumeSerialNumber);
-      infoMap^.put('label' ,DriveLetter);
-      infoMap^.put('flags', VolumeFlags);
+      infoMap^.put(@recycler^.literalRecycler,'serial',VolumeSerialNumber);
+      infoMap^.put(@recycler^.literalRecycler,'label' ,DriveLetter);
+      infoMap^.put(@recycler^.literalRecycler,'flags', VolumeFlags);
       result:=infoMap;
     end;
 
   VAR c:char;
       info:P_literal;
   begin
-    if not(context.checkSideEffects('driveInfo',tokenLocation,[se_executingExternal])) then exit(nil);
+    if not(context^.checkSideEffects('driveInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newMapLiteral(4);
       for c:='A' to 'Z' do begin
         info:=infoForLetter(c);
-        if info<>nil then mapResult^.put(c,info,false);
+        if info<>nil then mapResult^.put(@recycler^.literalRecycler,c,info,false);
       end;
     end;
   end;
   {$else}
   begin
     result:=nil;
-    context.raiseError('Function driveInfo is not avaliable under Linux',tokenLocation);
+    context^.raiseError('Function driveInfo is not avaliable under Linux',tokenLocation);
   end;
   {$endif}
 
@@ -147,7 +147,7 @@ FUNCTION getEnv_impl intFuncSignature;
       inner:P_listLiteral;
 
   begin
-    if not(context.checkSideEffects('getEnv',tokenLocation,[se_executingExternal])) then exit(nil);
+    if not(context^.checkSideEffects('getEnv',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newMapLiteral(30);
@@ -156,29 +156,29 @@ FUNCTION getEnv_impl intFuncSignature;
         envKey:=envTuple[0];
         if length(envTuple)>=2 then begin
           envTuple:=split(envTuple[1],';');
-          if length(envTuple)=1 then mapResult^.put(envKey,envTuple[0]) else begin
-            inner:=newListLiteral(length(envTuple));
-            for envValue in envTuple do inner^.appendString(envValue);
-            mapResult^.put(envKey,inner,false);
+          if length(envTuple)=1 then mapResult^.put(@recycler^.literalRecycler,envKey,envTuple[0]) else begin
+            inner:=recycler^.literalRecycler.newListLiteral(length(envTuple));
+            for envValue in envTuple do inner^.appendString(@recycler^.literalRecycler,envValue);
+            mapResult^.put(@recycler^.literalRecycler,envKey,inner,false);
           end;
-        end else mapResult^.put(envKey,newVoidLiteral,false);
+        end else mapResult^.put(@recycler^.literalRecycler,envKey,newVoidLiteral,false);
       end;
     end;
   end;
 
 FUNCTION setExitCode_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context^.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.intValue;
-      context.messages^.setUserDefinedExitCode(ExitCode);
+      context^.messages^.setUserDefinedExitCode(ExitCode);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
 FUNCTION scriptTime_imp intFuncSignature;
   begin
-    if not(context.checkSideEffects('scriptTime',tokenLocation,[se_readContextState])) then exit(nil);
-    result:=newRealLiteral(context.wallclockTime);
+    if not(context^.checkSideEffects('scriptTime',tokenLocation,[se_readContextState])) then exit(nil);
+    result:=recycler^.literalRecycler.newRealLiteral(context^.wallclockTime);
   end;
 
 {$ifdef fullVersion}VAR timeLoc:P_intFuncCallback;{$endif}
@@ -188,38 +188,38 @@ FUNCTION time_imp intFuncSignature;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral=nil):P_literal;
     begin
-      t:=context.wallclockTime;
-      result:=subruleLiteral^.evaluate(tokenLocation,@context,@recycler,parameters).literal;
-      t:=context.wallclockTime-t;
+      t:=context^.wallclockTime;
+      result:=subruleLiteral^.evaluate(tokenLocation,context,recycler,parameters).literal;
+      t:=context^.wallclockTime-t;
     end;
 
   begin
-    if not(context.checkSideEffects('time',tokenLocation,[se_readContextState])) then exit(nil);
+    if not(context^.checkSideEffects('time',tokenLocation,[se_readContextState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(timeLoc,false),nil);
+      context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(timeLoc,false),nil);
       {$endif}
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluate(P_expressionLiteral(arg0));
       {$ifdef fullVersion}
-      context.callStackPop(nil);
+      context^.callStackPop(nil);
       {$endif}
       if res<>nil then begin
         result:=newMapLiteral(3)
-          ^.put('expression',arg0^.toString(100))
-          ^.put('time',t );
-        if res^.literalType<>lt_void then P_mapLiteral(result)^.put('result',res,false)
-                                     else disposeLiteral(res);
+          ^.put(@recycler^.literalRecycler,'expression',arg0^.toString(100))
+          ^.put(@recycler^.literalRecycler,'time',t );
+        if res^.literalType<>lt_void then P_mapLiteral(result)^.put(@recycler^.literalRecycler,'result',res,false)
+                                     else recycler^.literalRecycler.disposeLiteral(res);
       end;
     end;
   end;
 
 FUNCTION changeDirectory_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('changeDirectory',tokenLocation,[se_alterContextState])) then exit(nil);
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState])  then begin
+    if not(context^.checkSideEffects('changeDirectory',tokenLocation,[se_alterContextState])) then exit(nil);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context^.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState])  then begin
       SetCurrentDir(str0^.value);
       result:=newVoidLiteral;
     end else result:=nil;
@@ -227,7 +227,7 @@ FUNCTION changeDirectory_impl intFuncSignature;
 
 FUNCTION callMemoryCleaner_impl intFuncSignature;
   begin
-    if not(context.checkSideEffects('callMemoryCleaner',tokenLocation,[se_alterContextState])) then exit(nil);
+    if not(context^.checkSideEffects('callMemoryCleaner',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       memoryCleaner.callCleanupMethods;
       result:=newVoidLiteral;
@@ -237,7 +237,7 @@ FUNCTION callMemoryCleaner_impl intFuncSignature;
 FUNCTION assertGuiStarted_impl intFuncSignature;
   begin
     if (gui_started=NO) then begin
-      context.messages^.logGuiNeeded;
+      context^.messages^.logGuiNeeded;
       result:=nil;
     end else result:=newVoidLiteral;
   end;
@@ -250,10 +250,10 @@ FUNCTION isGuiStarted_impl intFuncSignature;
 FUNCTION getCPULoadPercentage_impl intFuncSignature;
   begin
     {$ifdef Windows}
-    if not(context.checkSideEffects('getCPULoadPercentage',tokenLocation,[se_executingExternal])) then exit(nil);
-    result:=newIntLiteral(mySys.getCPULoadPercentage);
+    if not(context^.checkSideEffects('getCPULoadPercentage',tokenLocation,[se_executingExternal])) then exit(nil);
+    result:=recycler^.literalRecycler.newIntLiteral(mySys.getCPULoadPercentage);
     {$else}
-    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    context^.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
     {$endif}
   end;
@@ -265,17 +265,17 @@ FUNCTION getTaskInfo_impl intFuncSignature;
   {$endif}
   begin
     {$ifdef Windows}
-    if not(context.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
+    if not(context^.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     info:=mySys.getTaskInfo;
-    result:=newListLiteral(length(info));
-    for i in info do listResult^.append(newMapLiteral(5)
-      ^.put('caption',i.caption)
-      ^.put('commandLine',i.commandLine)
-      ^.put('PID',i.pid)
-      ^.put('parentPID',i.parentPID)
-      ^.put('workingSetSize',i.workingSetSize),false);
+    result:=recycler^.literalRecycler.newListLiteral(length(info));
+    for i in info do listResult^.append(@recycler^.literalRecycler,newMapLiteral(5)
+      ^.put(@recycler^.literalRecycler,'caption',i.caption)
+      ^.put(@recycler^.literalRecycler,'commandLine',i.commandLine)
+      ^.put(@recycler^.literalRecycler,'PID',i.pid)
+      ^.put(@recycler^.literalRecycler,'parentPID',i.parentPID)
+      ^.put(@recycler^.literalRecycler,'workingSetSize',i.workingSetSize),false);
     {$else}
-    context.raiseError('Implemented for Windows flavours only',tokenLocation);
+    context^.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
     {$endif}
   end;

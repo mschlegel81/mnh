@@ -3,14 +3,14 @@ INTERFACE
 
 IMPLEMENTATION
 USES funcs,mnh_constants,contexts,basicTypes,litVar,recyclers;
-FUNCTION returnFalse(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION returnFalse(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     result:=newBoolLiteral(false);
   end;
 
-FUNCTION requireGui(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler):P_literal;
+FUNCTION requireGui(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
-    context.messages^.logGuiNeeded;
+    context^.messages^.logGuiNeeded;
     result:=nil;
   end;
 
