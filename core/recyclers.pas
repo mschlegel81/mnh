@@ -23,6 +23,7 @@ TYPE
         dat:array[0..63] of P_valueScope;
       end;
     public
+      literalRecycler:T_literalRecycler;
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
 
@@ -37,6 +38,8 @@ TYPE
       PROCEDURE scopePush(VAR scope:P_valueScope); inline;
       PROCEDURE scopePop(VAR scope:P_valueScope); inline;
       FUNCTION  cloneSafeValueStore(CONST oldStore:P_valueScope):P_valueScope;
+
+      PROCEDURE disposeLiteral(VAR L:P_literal);
   end;
 
   P_abstractRule=^T_abstractRule;
@@ -64,10 +67,10 @@ TYPE
       {$endif}
       PROCEDURE clearCache; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; VAR recycler:T_recycler):boolean; virtual; abstract;
-      FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
-      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
-      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; VAR recycler:T_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
+      FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; CONST recycler:P_recycler):boolean; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST recycler:P_recycler; CONST context:P_abstractContext):boolean;
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       CONST recycler:P_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; CONST recycler:P_recycler; CONST context:P_abstractContext):P_literal; virtual; abstract;
       FUNCTION getTypedef:P_typedef; virtual;
       FUNCTION getInlineValue:P_literal; virtual;
       {Return "pure" for the sake of constant inlining, i.e. memoized rules are pure by definition}
@@ -80,6 +83,7 @@ PROCEDURE T_recycler.initRecycler;
   begin
     tokens.fill:=0;
     scopeRecycler.fill:=0;
+    literalRecycler.initRecycler;
   end;
 
 PROCEDURE T_recycler.cleanup;
@@ -102,6 +106,7 @@ PROCEDURE T_recycler.cleanup;
         end;
       end;
     end;
+    literalRecycler.cleanup;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
@@ -114,10 +119,10 @@ FUNCTION T_recycler.disposeToken(p: P_token): P_token;
       {$endif}
 
       result:=p^.next;
+      p^.undefine(literalRecycler);
       with tokens do if (fill>=length(dat))
       then dispose(p,destroy)
       else begin
-        p^.undefine;
         dat[fill]:=p;
         inc(fill);
       end;
@@ -141,26 +146,30 @@ FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation;
 FUNCTION T_recycler.newToken(CONST original: T_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original);
+    result^.define(original,literalRecycler);
     result^.next:=nil;
   end;
 
 FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original^);
+    result^.define(original^,literalRecycler);
     result^.next:=nil;
   end;
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
   VAR parent:P_valueScope;
+      literalRecycler:T_literalRecycler;
   begin
     if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)>0 then begin
       scope:=nil;
       exit;
     end;
+    literalRecycler.initRecycler;
     parent:=scope^.parentScope;
+    scope^.cleanup(literalRecycler);
+    literalRecycler.cleanup;
     dispose(scope,destroy);
     noRecycler_disposeScope(parent);
     scope:=nil;
@@ -228,6 +237,7 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
       scope:=newScope;
       exit;
     end;
+    scope^.cleanup(literalRecycler);
     with scopeRecycler do begin
       if (fill>=length(dat))
       then dispose(scope,destroy)
@@ -248,6 +258,11 @@ FUNCTION T_recycler.cloneSafeValueStore(CONST oldStore: P_valueScope): P_valueSc
     setLength(result^.variables,oldStore^.varFill);
     result^.varFill:=oldStore^.varFill;
     for k:=0 to oldStore^.varFill-1 do result^.variables[k]:=oldStore^.variables[k]^.clone;
+  end;
+
+PROCEDURE T_recycler.disposeLiteral(VAR L:P_literal);
+  begin
+    literalRecycler.disposeLiteral(L);
   end;
 
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
@@ -273,21 +288,21 @@ FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;
   end;
 
 PROCEDURE T_abstractRule.clearCache; begin end;
-FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; VAR recycler:T_recycler; CONST context:P_abstractContext):boolean;
+FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST recycler:P_recycler; CONST context:P_abstractContext):boolean;
   VAR parList:P_listLiteral;
       rep:T_tokenRange;
   begin
-    new(parList,create(1));
-    parList^.append(singleParameter,true);
+    parList:=recycler^.literalRecycler.newListLiteral(1);
+    parList^.append(@recycler^.literalRecycler,singleParameter,true);
     if canBeApplied(callLocation,parList,rep,context,recycler)
     then begin
       result:=(rep.first<>     nil          ) and
               (rep.first^.next=nil          ) and
               (rep.first^.tokType=tt_literal) and
               (rep.first^.data=@boolLit[true]);
-      recycler.cascadeDisposeToken(rep.first);
+      recycler^.cascadeDisposeToken(rep.first);
     end else result:=false;
-    disposeLiteral(parList);
+    recycler^.literalRecycler.disposeLiteral(parList);
   end;
 
 FUNCTION T_abstractRule.getTypedef: P_typedef;

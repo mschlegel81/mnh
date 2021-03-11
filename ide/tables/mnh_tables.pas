@@ -94,7 +94,7 @@ IMPLEMENTATION
 USES myStringUtil,strutils,math,LCLType,LazUTF8Classes,LConvEncoding;
 {$R *.lfm}
 
-FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_context; VAR recycler:T_recycler): P_literal;
+FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR caption:string='';
       fixedRowsRead:boolean=false;
       FixedCols:longint=0;
@@ -102,9 +102,9 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
       tableDisplayRequest:P_tableDisplayRequest;
   begin
-    if not(context.checkSideEffects('showTable',tokenLocation,[se_alterGuiState])) then exit(nil);
+    if not(context^.checkSideEffects('showTable',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (gui_started=NO) then begin
-      context.messages^.logGuiNeeded;
+      context^.messages^.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and
@@ -133,7 +133,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       if (gui_started<>NO) then begin
         new(tableDisplayRequest,create(P_listLiteral(params^.value[0]),caption,FixedRows,FixedCols));
-        context.messages^.postCustomMessage(tableDisplayRequest,true);
+        context^.messages^.postCustomMessage(tableDisplayRequest,true);
         result:=newVoidLiteral;
       end else result:=nil;
     end else result:=nil;
@@ -195,8 +195,11 @@ CONSTRUCTOR T_tableDisplayRequest.create(CONST L: P_listLiteral; CONST newCaptio
   end;
 
 DESTRUCTOR T_tableDisplayRequest.destroy;
+  VAR literalRecycler:T_literalRecycler;
   begin
-    disposeLiteral(tableContent);
+    literalRecycler.initRecycler;
+    literalRecycler.disposeLiteral(tableContent);
+    literalRecycler.cleanup;
     inherited destroy;
   end;
 
@@ -214,8 +217,11 @@ PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
+  VAR literalRecycler:T_literalRecycler;
   begin
-    if literal<>nil then disposeLiteral(literal);
+    literalRecycler.initRecycler;
+    if literal<>nil then literalRecycler.disposeLiteral(literal);
+    literalRecycler.cleanup;
     unregisterFontControl(StringGrid);
     adapter^.childDestroyed(self);
   end;
@@ -327,10 +333,13 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
       tmp:longint;
+      literalRecycler:T_literalRecycler;
   begin
+    literalRecycler.initRecycler;
     mi_transpose.checked:=not(mi_transpose.checked);
-    newLiteral:=literal^.transpose(@emptyStringSingleton);
-    disposeLiteral(literal);
+    newLiteral:=literal^.transpose(@literalRecycler,@emptyStringSingleton);
+    literalRecycler.disposeLiteral(literal);
+    literalRecycler.cleanup;
     literal:=newLiteral;
     tmp         :=fixedColumns;
     fixedColumns:=FixedRows;
@@ -338,41 +347,43 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
     fillTable(true);
   end;
 
-PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean;
-  index: integer);
+PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
   VAR dummyLocation:T_tokenLocation;
       newLiteral:P_listLiteral;
       headerRows:P_listLiteral;
       i:longint;
+      literalRecycler:T_literalRecycler;
   begin
     dummyLocation.package:=nil;
     dummyLocation.column:=0;
     dummyLocation.line:=0;
     if not(IsColumn) then exit;
+    literalRecycler.initRecycler;
     with sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
       //Initialize the literal with fixed rows
-      newLiteral:=newListLiteral(literal^.size);
-      for i:=0 to FixedRows-1 do newLiteral^.append(literal^.value[i],true);
+      newLiteral:=literalRecycler.newListLiteral(literal^.size);
+      for i:=0 to FixedRows-1 do newLiteral^.append(@literalRecycler,literal^.value[i],true);
       //Append the remaining rows in reversed order
       for i:=literal^.size-1 downto FixedRows do
-      newLiteral^.append(literal^.value[i],true);
-      disposeLiteral(literal);
+      newLiteral^.append(@literalRecycler,literal^.value[i],true);
+      literalRecycler.disposeLiteral(literal);
       literal:=newLiteral;
     end else begin
       byColumn:=index;
       ascending:=true;
-      headerRows:=literal^.head(FixedRows);
-      newLiteral:=literal^.tail(FixedRows);
-      disposeLiteral(literal);
+      headerRows:=literal^.head(@literalRecycler,FixedRows);
+      newLiteral:=literal^.tail(@literalRecycler,FixedRows);
+      literalRecycler.disposeLiteral(literal);
 
       newLiteral^.sortBySubIndex(index,dummyLocation,nil);
-      headerRows^.appendAll(newLiteral);
-      disposeLiteral(newLiteral);
+      headerRows^.appendAll(@literalRecycler,newLiteral);
+      literalRecycler.disposeLiteral(newLiteral);
 
       literal:=headerRows;
     end;
+    literalRecycler.cleanup;
     fillTable(false);
   end;
 
@@ -433,6 +444,8 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
       cellLit:P_literal;
       iter:T_arrayOfLiteral;
       additionalHeaderRow:longint=0;
+      literalRecycler:T_literalRecycler;
+
   FUNCTION sortMarker(CONST input:string; CONST i:longint):string;
     CONST arrow:array[false..true] of string=(#226#150#188,#226#150#178);
     begin
@@ -459,10 +472,11 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
     end else begin
+      literalRecycler.initRecycler;
       for i:=0 to literal^.size-1 do begin
         rowLit:=literal^.value[i];
         if rowLit^.literalType in C_compoundTypes then begin
-          iter:=P_compoundLiteral(rowLit)^.iteratableList;
+          iter:=P_compoundLiteral(rowLit)^.forcedIteratableList(@literalRecycler);
           setLength(cellContents[i],length(iter));
           for j:=0 to length(iter)-1 do begin
             cellLit:=iter[j];
@@ -474,7 +488,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
               else cellContents[i,j]:=cellLit^.toString;
             end;
           end;
-          disposeLiteral(iter);
+          literalRecycler.disposeLiteral(iter);
         end else begin
           setLength(cellContents[i],1);
           cellLit:=rowLit; j:=0;
@@ -488,6 +502,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
         end;
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
+      literalRecycler.cleanup;
     end;
 
     if FixedRows=0 then additionalHeaderRow:=1;

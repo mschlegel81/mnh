@@ -46,7 +46,7 @@ TYPE
       PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
       PROPERTY size:longint read alloc write setSize;
       PROCEDURE cloneTo(OUT other:T_dataRow);
-      FUNCTION toNewLiteralForExport:P_listLiteral;
+      FUNCTION toNewLiteralForExport(VAR literalRecycler:T_literalRecycler):P_listLiteral;
   end;
 
   T_rowToPaint = array of record
@@ -104,7 +104,7 @@ TYPE
     pseudoIndex:longint;
     CONSTRUCTOR create(CONST row:T_dataRow);
     DESTRUCTOR destroy;
-    FUNCTION toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string;
+    FUNCTION toPlotStatement(CONST firstRow:boolean; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral):string;
   end;
 
   T_allSamples=array of T_sampleRow;
@@ -571,25 +571,27 @@ FUNCTION numToString(num:double):string;
     end else result:=myFloatToStr(num);
   end;
 
-FUNCTION T_dataRow.toNewLiteralForExport:P_listLiteral;
+FUNCTION T_dataRow.toNewLiteralForExport(VAR literalRecycler:T_literalRecycler):P_listLiteral;
   FUNCTION simplify(CONST num:double):P_numericLiteral;
     VAR inum:int64;
     begin
       if (num>=-9E18) and (num<9E18) then begin
         inum:=round(num);
-        if num=inum then result:=newIntLiteral(inum)
-                    else result:=newRealLiteral(num);
-      end else result:=newRealLiteral(num);
+        if num=inum then result:=literalRecycler.newIntLiteral(inum)
+                    else result:=literalRecycler.newRealLiteral(num);
+      end else result:=literalRecycler.newRealLiteral(num);
     end;
 
   VAR i:longint=0;
       simple:boolean=true;
   begin
     while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
-    result:=newListLiteral(alloc);
+    result:=literalRecycler.newListLiteral(alloc);
     if simple
-    then for i:=0 to alloc-1 do result^.append(simplify(dat[i,1]),false)
-    else for i:=0 to alloc-1 do result^.append(newListLiteral(2)^.append(simplify(dat[i,0]),false)^.append(simplify(dat[i,1]),false),false);
+    then for i:=0 to alloc-1 do result^.append(@literalRecycler,simplify(dat[i,1]),false)
+    else for i:=0 to alloc-1 do result^.append(@literalRecycler,literalRecycler.newListLiteral(2)^
+                                                    .append(@literalRecycler,simplify(dat[i,0]),false)^
+                                                    .append(@literalRecycler,simplify(dat[i,1]),false),false);
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
@@ -1264,13 +1266,16 @@ DESTRUCTOR T_sampleRow.destroy;
     sample.free;
   end;
 
-FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string;
+FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral):string;
   VAR myRowIndex:longint;
   begin
     myRowIndex:=globalRowData.size;
     if firstRow then result:='plot@(ROW['+intToStr(myRowIndex)+']);'
              else result:='addPlot@(ROW['+intToStr(myRowIndex)+']);';
-    globalRowData.append(newListLiteral(2)^.append(sample.toNewLiteralForExport,false)^.appendString(style.toString),false);
+    globalRowData.append(@literalRecycler,
+                         literalRecycler.newListLiteral(2)^
+                               .append      (@literalRecycler,sample.toNewLiteralForExport(literalRecycler),false)^
+                               .appendString(@literalRecycler,style.toString),false);
   end;
 
 PROCEDURE T_axisTrafo.prepare;
