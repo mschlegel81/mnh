@@ -3737,7 +3737,7 @@ FUNCTION newLiteralFromStream(VAR literalRecycler:T_literalRecycler; CONST strea
       if customTypeName<>'' then begin
         if literalType in C_typables then begin
           if typeMap.containsKey(customTypeName,customType) then begin
-            P_compoundLiteral(result)^.customType:=customType;
+            P_typableLiteral(result)^.customType:=customType;
           end else errorOrException('Read unknown custom type '+customTypeName);
         end else errorOrException('Read invalid custom for literal of type '+C_typeInfo[literalType].name);
       end;
