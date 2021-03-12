@@ -333,7 +333,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         end else P_listLiteral(result)^.append(@recycler^.literalRecycler,fp,false);
       end;
     end else if firstSet>=0 then begin
-      setIter:=P_setLiteral(params^.value[firstSet])^.iteratableList;
+      setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;
       result:=newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
@@ -350,9 +350,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
             recycler^.literalRecycler.disposeLiteral(fp);
           end else P_setLiteral(result)^.append(@recycler^.literalRecycler,fp,false);
         end;
-        setIter[i]^.unreference;
       end;
-      setLength(setIter,0);
     end else result:=nil;
     if not(allOkay) then begin
       recycler^.literalRecycler.disposeLiteral(result);
@@ -372,7 +370,7 @@ FUNCTION clearPrint_imp intFuncSignature;
 
 FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef debugMode} inline; {$endif}
   VAR i:longint;
-      resultParts:T_arrayOfString;
+      resultParts:T_arrayOfString=();
       tabOrBreak:boolean=false;
   begin
     if params<>nil then begin

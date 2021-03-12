@@ -141,7 +141,7 @@ FUNCTION T_runParameterHistory.getParameterHistory(CONST scriptName: string): T_
   VAR i:longint;
       p:string;
   begin
-    setLength(result,0);
+    initialize(result);
     for i:=0 to length(historyPerScript)-1 do
       if historyPerScript[i].scriptName=scriptName
       then append(result,historyPerScript[i].parameterHistory);
@@ -196,9 +196,8 @@ FUNCTION T_runParameterHistory.loadFromStream(VAR stream: T_bufferedInputStreamW
 PROCEDURE T_runParameterHistory.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR i:longint;
       s:string;
-      toPersist:T_arrayOfLongint;
+      toPersist:T_arrayOfLongint=();
   begin
-    setLength(toPersist,0);
     //Save only parameters associated with existent files
     for i:=0 to length(historyPerScript)-1 do if fileExists(historyPerScript[i].scriptName) then append(toPersist,i);
 

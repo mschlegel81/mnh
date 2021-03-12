@@ -151,11 +151,13 @@ PROCEDURE T_outlineNode.updateWithEntry(CONST rule: T_ruleMapEntry; CONST inMain
   FUNCTION extractSubrules:T_subruleArray;
     VAR local:P_rule;
     begin
-      setLength(result,0);
       if (rule.entryType=tt_userRule) then begin
         local:=P_rule(rule.value);
         if (local^.getRuleType=rt_delegate) then local:=P_delegatorRule(local)^.getLocalRule;
         if local<>nil then result:=P_ruleWithSubrules(local)^.getSubrules;
+      end else begin
+        initialize(result);
+        setLength(result,0);
       end;
     end;
 

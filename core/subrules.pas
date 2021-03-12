@@ -1594,7 +1594,7 @@ FUNCTION T_inlineExpression.usedGlobalVariables: T_arrayOfPointer;
   begin
     enterCriticalSection(subruleCallCs);
     try
-      setLength(result,0);
+      initialize(result);
       for prep in preparedBody do if prep.token.tokType=tt_globalVariable then appendIfNew(result,prep.token.data);
     finally
       leaveCriticalSection(subruleCallCs);
@@ -1861,7 +1861,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
       statement: T_enhancedStatement;
   begin
     result:=nil;
-    lexer.create(l^.iteratableList,location,package);
+    lexer.create(l^.forcedIteratableList(nil),location,package);
     statement:=lexer.getNextStatement(context^.messages,recycler);
     result:=statement.token.first;
     statement:=lexer.getNextStatement(context^.messages,recycler);

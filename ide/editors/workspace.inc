@@ -584,6 +584,7 @@ FUNCTION T_workspace.getAllBreakpoints: T_searchTokenLocations;
       mark:TSynEditMark;
       k:longint;
   begin
+    initialize(result);
     setLength(result,0);
     for m in metas do begin
       for k:=0 to m^.editor.Marks.count-1 do begin
@@ -710,7 +711,7 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
 
 PROCEDURE T_workspace.openDependenciesForCurrentScript(CONST openMask: byte);
   VAR meta:P_editorMeta;
-      filesToOpen:T_arrayOfString;
+      filesToOpen:T_arrayOfString=();
       assistanceResponse:P_codeAssistanceResponse;
   begin
     meta:=currentEditor;

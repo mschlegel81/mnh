@@ -21,6 +21,7 @@ TYPE
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+    FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
   P_logFormatter=^T_logFormatter;
@@ -28,10 +29,12 @@ TYPE
     maxLocationLength:longint;
     timeFormat:string;
     handlePrintAsLog:boolean;
+    fullLoc:boolean;
     CONSTRUCTOR create;
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+    FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
   P_guiFormatter=^T_guiFormatter;
@@ -45,12 +48,53 @@ TYPE
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+      FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
+  {$ifdef fullVersion}
+  T_profilingInfo=record
+    timeSpent_inclusive,
+    timeSpent_exclusive:double;
+    callCount:longint;
+  end;
+
+  T_callerListEntry=record
+    id:string;
+    location:T_searchTokenLocation;
+    time:T_profilingInfo;
+  end;
+  T_callerList=array of T_callerListEntry;
+
+  T_profilingListEntry=record
+    id:T_idString;
+    calleeLocation:T_searchTokenLocation;
+    callers,
+    callees:T_callerList;
+    //aggregated values
+    aggTime:T_profilingInfo;
+  end;
+
+  T_profilingList=array of T_profilingListEntry;
+
+  P_profileMessage=^T_profileMessage;
+  T_profileMessage=object(T_payloadMessage)
+    public
+      content:T_profilingList;
+      FUNCTION internalType:shortstring; virtual;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION toString(CONST formatter:P_messageFormatProvider): T_arrayOfString;
+  end;
+
+  PROCEDURE sortCallerList(VAR list:T_callerList; CONST sortIndex:byte);
+  PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
+
+  VAR mnhSysPseudopackagePrefix :string='';
+  {$endif}
 VAR defaultConsoleFormatter:T_defaultConsoleFormatter;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
 IMPLEMENTATION
-USES sysutils,LazFileUtils;
+USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif};
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
   begin
     new(result,create(value,loc));
@@ -88,6 +132,7 @@ CONSTRUCTOR T_logFormatter.create;
     timeFormat:='hh:nn:ss.zzz';
     maxLocationLength:=maxLongint;
     handlePrintAsLog:=false;
+    fullLoc:=false;
   end;
 
 DESTRUCTOR T_logFormatter.destroy; begin inherited; end;
@@ -97,6 +142,32 @@ FUNCTION T_logFormatter.getClonedInstance: P_messageFormatProvider;
     P_logFormatter(result)^.handlePrintAsLog:=handlePrintAsLog;
     P_logFormatter(result)^.timeFormat:=timeFormat;
     P_logFormatter(result)^.maxLocationLength:=maxLocationLength;
+    P_logFormatter(result)^.fullLoc:=fullLoc;
+  end;
+
+FUNCTION T_logFormatter.formatLocation(CONST location:T_searchTokenLocation):string;
+  VAR s  :string;
+  begin
+    if (maxLocationLength<=1) or (maxLocationLength>1000) then begin
+      fullLoc:=true;
+      result:=location;
+    end else begin
+      fullLoc:=false;
+      if location.column<0
+      then s:=':'+intToStr(location.line)+',1'
+      else s:=':'+intToStr(location.line)+','+intToStr(location.column);
+
+      result:=location.fileName;
+      if 1+length(result)+length(s)<=maxLocationLength
+      then result:='@'+result+s
+      else begin
+        result:=ExtractFileNameOnly(location.fileName);
+        if 1+length(result)+length(s)<=maxLocationLength
+        then result:='@'+     result                                 +s
+        else result:='@'+copy(result,1,maxLocationLength-length(s)-1)+s;
+      end;
+      result+=StringOfChar(' ',maxLocationLength-length(result));
+    end;
   end;
 
 FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
@@ -107,32 +178,6 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       except
         result:='--erroneous time format--';
       end else result:='';
-    end;
-
-  VAR fullLoc:boolean=false;
-  FUNCTION getLocationPart(CONST loc:T_searchTokenLocation):string;
-    VAR s  :string;
-    begin
-      if (maxLocationLength<=1) or (maxLocationLength>1000) then begin
-        fullLoc:=true;
-        result:=loc;
-      end else begin
-        fullLoc:=false;
-        if loc.column<0
-        then s:=':'+intToStr(loc.line)+',1'
-        else s:=':'+intToStr(loc.line)+','+intToStr(loc.column);
-
-        result:=message^.getLocation.fileName;
-        if 1+length(result)+length(s)<=maxLocationLength
-        then result:='@'+result+s
-        else begin
-          result:=ExtractFileNameOnly(message^.getLocation.fileName);
-          if 1+length(result)+length(s)<=maxLocationLength
-          then result:='@'+     result                                 +s
-          else result:='@'+copy(result,1,maxLocationLength-length(s)-1)+s;
-        end;
-        result+=StringOfChar(' ',maxLocationLength-length(result));
-      end;
     end;
 
   VAR mc:T_messageClass;
@@ -165,8 +210,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       s           :string;
       i           :longint;
   begin
-    if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
-
+    if (message=nil) or (not(message^.isTextMessage) and not(message^.messageType in [mt_echo_output{$ifdef fullVersion},mt_profile_call_info{$endif}]))  then exit(C_EMPTY_STRING_ARRAY);
     mc:=message^.messageClass;
     if mc=mc_print then begin
       if handlePrintAsLog
@@ -188,10 +232,14 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         end;
         append(result,trimRight(nextLine));
       end;
-    end else append(result,P_storedMessageWithText(message)^.txt);
+    end
+    {$ifdef fullVersion}
+    else if (message^.messageType=mt_profile_call_info) then exit(P_profileMessage(message)^.toString(@self))
+    {$endif}
+    else append(result,P_storedMessageWithText(message)^.txt);
     if length(result)=0 then append(result,'');
 
-    locationPart:=getLocationPart(message^.getLocation);
+    locationPart:=formatLocation(message^.getLocation);
     timePart    :=getTimePart;
     levelPart   :=getLevelPart;
 
@@ -207,7 +255,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
       s:=StringOfChar(' ',length(timePart)+length(levelPart));
       for i:=0 to length(stacktrace)-1 do
-        append(result,s+getLocationPart(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
+        append(result,s+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
     end;
   end;
 //------------------------------------------------------------------------------
@@ -228,6 +276,11 @@ FUNCTION T_guiFormatter.getClonedInstance: P_messageFormatProvider;
     P_guiFormatter(result)^.wrapEcho           :=wrapEcho;
   end;
 
+FUNCTION T_guiFormatter.formatLocation(CONST location:T_searchTokenLocation):string;
+  begin
+    if formatterForDemos then result:='' else result:=string(location);
+  end;
+
 FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   VAR locationPart:string='';
       marker      :string='';
@@ -237,7 +290,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
   begin
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
     if not(formatterForDemos)
-    then locationPart:=string(message^.getLocation)+' ';
+    then locationPart:=formatLocation(message^.getLocation)+' ';
 
     marker:=C_messageClassMeta[message^.messageClass].guiMarker;
     setLength(result,0);
@@ -296,6 +349,15 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     end;
   end;
 
+FUNCTION T_defaultConsoleFormatter.formatLocation(CONST location:T_searchTokenLocation):string;
+  begin
+    if (location.fileName='?') and (location.line=0) and (location.column=0) then exit('');
+    if location.column<0
+    then result:='@'+ExtractFileNameOnly(location.fileName)+':'+intToStr(location.line)+',1'
+    else result:='@'+ExtractFileNameOnly(location.fileName)+':'+intToStr(location.line)+','+intToStr(location.column);
+
+  end;
+
 FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   CONST CONSOLE_OUT_WIDTH=100;
   VAR locationPart:string='';
@@ -303,21 +365,17 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
       s           :string;
       i           :longint;
 
-  FUNCTION shortLocationString(CONST x:T_searchTokenLocation):string;
-    begin
-      if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
-      if x.column<0
-      then result:='@'+ExtractFileNameOnly(x.fileName)+':'+intToStr(x.line)+',1'
-      else result:='@'+ExtractFileNameOnly(x.fileName)+':'+intToStr(x.line)+','+intToStr(x.column);
-    end;
-
   begin
-    if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
-    locationPart:=shortLocationString(message^.getLocation)+' ';
+    if (message=nil) or (not(message^.isTextMessage) and not(message^.messageType in [mt_echo_output{$ifdef fullVersion},mt_profile_call_info{$endif}]))  then exit(C_EMPTY_STRING_ARRAY);
+    locationPart:=formatLocation(message^.getLocation)+' ';
 
     setLength(result,0);
 
     case message^.messageClass of
+      {$ifdef fullVersion}
+      mc_gui: if message^.messageType=mt_profile_call_info
+              then result:=P_profileMessage(message)^.toString(@self);
+      {$endif}
       mc_echo: case message^.messageType of
         mt_echo_input,
         mt_echo_declaration: begin
@@ -356,12 +414,122 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
         if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
           s:=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);
           for i:=0 to length(stacktrace)-1 do
-            append(result,s+shortLocationString(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
+            append(result,s+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
         end;
       end
       else result:=P_storedMessageWithText(message)^.txt;
     end;
   end;
+
+{$ifdef fullVersion}
+PROCEDURE sortProfilingList(VAR list:T_profilingList; CONST sortIndex:byte);
+  FUNCTION lesser(CONST a,b:T_profilingListEntry):boolean;
+    begin
+      result:=false;
+      case sortIndex of
+        0: result:=a.id<b.id;
+        1: result:=a.id>b.id;
+        2: result:=a.calleeLocation<b.calleeLocation;
+        3: result:=b.calleeLocation<a.calleeLocation;
+        4: result:=a.aggTime.callCount<b.aggTime.callCount;
+        5: result:=a.aggTime.callCount>b.aggTime.callCount;
+        6: result:=a.aggTime.timeSpent_inclusive<b.aggTime.timeSpent_inclusive;
+        7: result:=a.aggTime.timeSpent_inclusive>b.aggTime.timeSpent_inclusive;
+        8: result:=a.aggTime.timeSpent_exclusive<b.aggTime.timeSpent_exclusive;
+        9: result:=a.aggTime.timeSpent_exclusive>b.aggTime.timeSpent_exclusive;
+      end;
+    end;
+
+  VAR i,j:longint;
+      tmp:T_profilingListEntry;
+  begin
+    for i:=1 to length(list)-1 do
+    for j:=0 to i-1 do if lesser(list[i],list[j]) then begin
+      tmp:=list[i]; list[i]:=list[j]; list[j]:=tmp;
+    end;
+  end;
+
+PROCEDURE sortCallerList(VAR list:T_callerList; CONST sortIndex:byte);
+  FUNCTION lesser(CONST a,b:T_callerListEntry):boolean;
+    begin
+      result:=false;
+      case sortIndex of
+        0: result:=a.id<b.id;
+        1: result:=a.id>b.id;
+        2: result:=a.location<b.location;
+        3: result:=b.location<a.location;
+        4: result:=a.time.callCount          <b.time.callCount;
+        5: result:=a.time.callCount          >b.time.callCount;
+        6: result:=a.time.timeSpent_inclusive<b.time.timeSpent_inclusive;
+        7: result:=a.time.timeSpent_inclusive>b.time.timeSpent_inclusive;
+        8: result:=a.time.timeSpent_exclusive<b.time.timeSpent_exclusive;
+        9: result:=a.time.timeSpent_exclusive>b.time.timeSpent_exclusive;
+      end;
+    end;
+
+  VAR i,j:longint;
+      tmp:T_callerListEntry;
+  begin
+    for i:=1 to length(list)-1 do
+    for j:=0 to i-1 do if lesser(list[i],list[j]) then begin
+      tmp:=list[i]; list[i]:=list[j]; list[j]:=tmp;
+    end;
+  end;
+
+FUNCTION T_profileMessage.internalType: shortstring;
+begin result:='T_profileMessage'; end;
+
+CONSTRUCTOR T_profileMessage.create;
+  begin
+    inherited create(mt_profile_call_info);
+  end;
+
+DESTRUCTOR T_profileMessage.destroy;
+  begin
+    setLength(content,0);
+  end;
+
+FUNCTION T_profileMessage.toString(CONST formatter:P_messageFormatProvider): T_arrayOfString;
+  FUNCTION nicestTime(CONST seconds:double):string;
+    begin
+       result:=formatFloat('0.000',seconds*1E3);
+    end;
+
+  FUNCTION profiledLocation(CONST location:T_searchTokenLocation):string;
+    begin
+      if startsWith(location,mnhSysPseudopackagePrefix)
+      then result:='(builtin)'
+      else result:=formatter^.formatLocation(location);
+    end;
+
+  VAR j,k:longint;
+      shortId:string;
+  begin
+    for k:=0 to length(content)-1 do sortCallerList(content[k].callers,4);
+    sortProfilingList(content,6);
+    result:='id'          +C_tabChar+
+            'location'    +C_tabChar+
+            'count'       +C_tabChar+
+            'inclusive ms'+C_tabChar+
+            'exclusive ms';
+    for k:=0 to length(content)-1 do with content[k] do begin
+      if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
+      append(result,shortId                         +C_tabChar+
+                    profiledLocation(calleeLocation)+C_tabChar+
+                    intToStr  (aggTime.callCount)           +C_tabChar+
+                    nicestTime(aggTime.timeSpent_inclusive) +C_tabChar+
+                    nicestTime(aggTime.timeSpent_exclusive));
+      for j:=0 to length(callers)-1 do begin
+        append(result,BoolToStr(j=0,C_shiftInChar+'called at',' ')+C_tabChar+
+                  profiledLocation(callers[j].location)           +C_tabChar+
+                  intToStr  (callers[j].time.callCount)           +C_tabChar+
+                  nicestTime(callers[j].time.timeSpent_inclusive) +C_tabChar+
+                  nicestTime(callers[j].time.timeSpent_exclusive));
+      end;
+    end;
+    formatTabs(result);
+  end;
+{$endif}
 
 INITIALIZATION
   defaultConsoleFormatter.create;

@@ -95,6 +95,7 @@ FUNCTION T_variableTreeEntryCategoryNode.toStringForErrorTrace:string;
 FUNCTION T_variableTreeEntryCategoryNode.getChildren: T_treeEntries;
   VAR i:longint;
   begin
+    initialize(result);
     setLength(result,length(children));
     for i:=0 to length(children)-1 do result[i]:=children[i];
   end;
@@ -217,6 +218,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
       end;
       literalRecycler.cleanup;
     end;
+    initialize(result);
     setLength(result,length(preparedChildren));
     for i:=0 to length(result)-1 do result[i]:=preparedChildren[i];
   end;

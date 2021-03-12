@@ -61,7 +61,7 @@ PROCEDURE T_submenuModel.addItem(CONST paths: T_arrayOfString; CONST Tag: ptrint
     end;
 
   VAR sub:P_submenuModel;
-      pathTail:T_arrayOfString;
+      pathTail:T_arrayOfString=();
       k:longint;
   begin
     if length(paths)=0 then exit;

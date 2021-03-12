@@ -221,6 +221,7 @@ TYPE
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
+    FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual; abstract;
   end;
 
   P_storedMessageWithText=^T_storedMessageWithText;

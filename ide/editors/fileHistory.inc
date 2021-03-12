@@ -57,6 +57,7 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
   FUNCTION readArray(OUT items:T_arrayOfString):boolean;
     VAR i,count:longint;
     begin
+      initialize(items);
       setLength(items,0);
       count:=stream.readNaturalNumber;
       if count>FILE_HISTORY_MAX_SIZE then exit(false);

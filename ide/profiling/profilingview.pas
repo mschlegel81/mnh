@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Grids, Menus,profiling,ideLayoutUtil,mnh_messages,out_adapters,basicTypes;
+  Grids, Menus,profiling,ideLayoutUtil,mnh_messages,out_adapters,basicTypes,messageFormatting;
 
 TYPE
   TprofilingOutputForm = class(T_mnhComponentForm)

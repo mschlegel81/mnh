@@ -72,7 +72,8 @@ PROCEDURE T_gridMeta.update;
       ph:longint=0;
       freeSpace,requiredSpace:longint;
       anyStretch:boolean;
-      widths,heights:array of record size:longint; stretch:boolean; end;
+      widths :array of record size:longint; stretch:boolean; end=();
+      heights:array of record size:longint; stretch:boolean; end=();
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try

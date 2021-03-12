@@ -565,7 +565,7 @@ FUNCTION group_imp intFuncSignature;
       then begin
         initialize(keyList);
         makeKeysByIndex(int1^.intValue);
-      end else keyList:=list1^.iteratableList;
+      end else keyList:=list1^.forcedIteratableList(@recycler^.literalRecycler);
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;
@@ -610,8 +610,8 @@ FUNCTION groupToList_imp intFuncSignature;
        ((params^.size=4) or (params^.value[4]^.literalType=lt_smallint) and (P_smallIntLiteral(params^.value[4])^.value>=0))
     then begin
 
-      valueList   :=list0^.iteratableList;
-      keyList     :=list1^.iteratableList;
+      valueList   :=list0^.tempIteratableList;
+      keyList     :=list1^.tempIteratableList;
       defaultValue:=arg2;
       aggregator  :=P_expressionLiteral(arg3);
 
@@ -656,8 +656,6 @@ FUNCTION groupToList_imp intFuncSignature;
           else listResult^.append(@recycler^.literalRecycler,temp,false);
       end;
       setLength(resultValues,0);
-      recycler^.literalRecycler.disposeLiteral(valueList);
-      recycler^.literalRecycler.disposeLiteral(keyList);
     end;
   end;
 

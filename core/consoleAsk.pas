@@ -114,10 +114,9 @@ FUNCTION ask_impl intFuncSignature;
       system.enterCriticalSection(cs);
       try
         setLength(opt, list1^.size);
-        iter:=list1^.iteratableList;
+        iter:=list1^.tempIteratableList;
         setLength(opt,length(iter));
         for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(iter[i])^.value;
-        recycler^.literalRecycler.disposeLiteral(iter);
         result:=recycler^.literalRecycler.newStringLiteral(ask(str0^.value, opt,context^.messages));
       finally
         system.leaveCriticalSection(cs);

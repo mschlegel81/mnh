@@ -473,6 +473,7 @@ DESTRUCTOR T_basicEditorMeta.destroy;
 FUNCTION T_basicEditorMeta.getLines: T_arrayOfString;
   VAR i:longint;
   begin
+    initialize(result);
     setLength(result,editor_.lines.count);
     for i:=0 to length(result)-1 do result[i]:=editor_.lines[i];
   end;

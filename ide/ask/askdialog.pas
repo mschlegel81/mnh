@@ -238,7 +238,7 @@ PROCEDURE initAskForm;
   end;
 
 FUNCTION ask_impl intFuncSignature;
-  VAR opt: T_arrayOfString;
+  VAR opt: T_arrayOfString=();
       i: longint;
   begin
     if not(context^.checkSideEffects('ask',tokenLocation,[se_input])) then exit(nil);

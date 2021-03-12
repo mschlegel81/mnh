@@ -295,8 +295,8 @@ PROCEDURE T_bSplineBuilder.flush;
 PROCEDURE T_cSplineBuilder.flush;
   CONST precision=32;
         dt=1/precision;
-  VAR M:array of T_point;
-      C:array of double;
+  VAR M:array of T_point=();
+      C:array of double=();
       i,n,j:longint;
       t:double;
       cub0,cub1, off,lin :T_point;
@@ -611,7 +611,7 @@ CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
   end;
 
 FUNCTION T_customText.clone:P_customText;
-  VAR clonedText:T_arrayOfString;
+  VAR clonedText:T_arrayOfString=();
       i:longint;
   begin
     setLength(clonedText,length(text));
@@ -1150,7 +1150,7 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
                    sqr(a[1]*t-b[1]));
     end;
 
-  VAR triangleHeights:array of double;
+  VAR triangleHeights:array of double=();
       tmp:double=0;
       i:longint;
       k:longint=0;
@@ -1178,6 +1178,7 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
     tmp:=0;
     for k:=0 to length(triangleHeights)-1 do tmp+=triangleHeights[k];
     tmp:=samplesToDistribute/tmp;
+    //Note: initialize(result) leads to memory leak
     setLength(result,length(triangleHeights));
     for k:=0 to length(result)-1 do result[k]:=round(triangleHeights[k]*tmp);
   end;

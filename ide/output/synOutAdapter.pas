@@ -309,7 +309,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageT
     end;
 
   VAR i:longint;
-      toProcessInThisRun:T_storedMessages;
+      toProcessInThisRun:T_storedMessages=();
   begin
     if not(forceFlush or autoflush) then exit([]);
     enterCriticalSection(adapterCs);

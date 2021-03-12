@@ -55,15 +55,13 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
       lt_list,lt_booleanList,lt_emptyList,
       lt_set ,lt_booleanSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(@recycler^.literalRecycler,true);
-        iter:=P_collectionLiteral(x)^.iteratableList;
+        iter:=P_collectionLiteral(x)^.tempIteratableList;
         for y in iter do begin
           yNeg:=logicalNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then containsError:=true
           else P_collectionLiteral(result)^.append(@recycler^.literalRecycler,yNeg,false);
-          y^.unreference;
         end;
-        setLength(iter,0);
         if containsError then begin
           raiseNotApplicableError('! (logical negation)',x,opLocation,context);
           recycler^.literalRecycler.disposeLiteral(result);
@@ -94,15 +92,13 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
       lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
       lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(@recycler^.literalRecycler,true);
-        iter:=P_collectionLiteral(x)^.iteratableList;
+        iter:=P_collectionLiteral(x)^.tempIteratableList;
         for y in iter do begin
           yNeg:=arithmeticNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
           then containsError:=true
           else P_collectionLiteral(result)^.append(@recycler^.literalRecycler,yNeg,false);
-          y^.unreference;
         end;
-        setLength(iter,0);
         if containsError then begin
           raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context);
           recycler^.literalRecycler.disposeLiteral(result);
@@ -200,18 +196,14 @@ FUNCTION operator_NotIn       intFuncSignature;
 {$define defaultRHSCases:=
   lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,context,recycler));
   lt_void:       exit(LHS^.rereferenced)}
-{$define generic_recursions:=
-    FUNCTION recurse_scalar_compound:P_literal;
+{$define generic_recursions:=FUNCTION recurse_scalar_compound:P_literal;
     VAR rhsIt:T_arrayOfLiteral;
         rhsX :P_literal;
     begin
       result:=P_collectionLiteral(RHS)^.newOfSameType(@recycler^.literalRecycler,true);
-      rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
-      for rhsX in rhsIt do begin
+      rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
+      for rhsX in rhsIt do
         P_collectionLiteral(result)^.append(@recycler^.literalRecycler,function_id(LHS,rhsX,tokenLocation,context,recycler),false);
-        rhsX^.unreference;
-      end;
-      setLength(rhsIt,0);
     end;
 
   FUNCTION recurse_compound_scalar:P_literal;
@@ -219,12 +211,9 @@ FUNCTION operator_NotIn       intFuncSignature;
         lhsX :P_literal;
     begin
       result:=P_collectionLiteral(LHS)^.newOfSameType(@recycler^.literalRecycler,true);
-      lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
-      for lhsX in lhsIt do begin
+      lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
+      for lhsX in lhsIt do
         P_collectionLiteral(result)^.append(@recycler^.literalRecycler,function_id(lhsX,RHS,tokenLocation,context,recycler),false);
-        lhsX^.unreference;
-      end;
-      setLength(lhsIt,0);
     end;
 
   FUNCTION recurse_list_list:P_literal;
@@ -244,14 +233,10 @@ FUNCTION operator_NotIn       intFuncSignature;
         lhsX ,rhsX :P_literal;
     begin
       if (LHS^.literalType in C_setTypes) and (RHS^.literalType in C_setTypes) then begin
-        lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
-        rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
+        lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
+        rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
         result:=newSetLiteral(length(lhsIt)+length(rhsIt));
         for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(@recycler^.literalRecycler,function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
-        for lhsX in lhsIt do lhsX^.unreference;
-        for rhsX in rhsIt do rhsX^.unreference;
-        setLength(lhsIt,0);
-        setLength(rhsIt,0);
       end else result:=nil;
     end}
 

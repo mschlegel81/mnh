@@ -206,15 +206,13 @@ FUNCTION T_patternElement.toCmdLineHelpStringString: ansistring;
                                                    else result:=restrictionValue^.toString
       end else result:='<'+id+'>';
       tt_operatorIn: if (restrictionValue<>nil) and (restrictionValue^.literalType in [lt_stringList,lt_stringSet]) then begin
-        iter:=P_listLiteral(restrictionValue)^.iteratableList;
+        iter:=P_listLiteral(restrictionValue)^.tempIteratableList;
         result:='';
         for l in iter do begin
           if result<>'' then result:=result+'|';
           result:=result+P_stringLiteral(l)^.value;
-          l^.unreference;
         end;
         result:='['+result+']';
-        setLength(iter,0);
         if id<>'' then result:='<'+id+'> in '+result;
       end else result:='<'+id+'>';
       else result:='<'+id+'>';

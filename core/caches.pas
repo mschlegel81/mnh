@@ -80,7 +80,7 @@ PROCEDURE T_cache.polish;
 
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
   PROCEDURE grow;
-    VAR redistribute:array of T_cacheEntry;
+    VAR redistribute:array of T_cacheEntry=();
         i,j,k:longint;
     begin
       setLength(redistribute,fill);
