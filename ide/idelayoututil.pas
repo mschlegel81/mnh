@@ -858,7 +858,7 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
       content:TStrings;
       i:longint;
   PROCEDURE initMnhHighlighting;
-    VAR lineData:T_arrayOfString;
+    VAR lineData:T_arrayOfString=();
         k:longint;
         provider:P_virtualFileCodeProvider;
         codeAssistanceData:P_codeAssistanceResponse;

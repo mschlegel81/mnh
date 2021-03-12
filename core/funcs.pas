@@ -372,7 +372,7 @@ FUNCTION clearPrint_imp intFuncSignature;
 
 FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef debugMode} inline; {$endif}
   VAR i:longint;
-      resultParts:T_arrayOfString;
+      resultParts:T_arrayOfString=();
       tabOrBreak:boolean=false;
   begin
     if params<>nil then begin

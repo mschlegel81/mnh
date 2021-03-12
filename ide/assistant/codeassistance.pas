@@ -124,6 +124,7 @@ FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
     enterCriticalSection(codeAssistanceCs);
     try
       with scriptUsage do begin
+        initialize(result);
         setLength(result,0);
         for i:=0 to length(dat)-1 do if dat[i].usedScript=scriptName then appendIfNew(result,dat[i].usingScript);
       end;
@@ -597,6 +598,7 @@ PROCEDURE T_codeAssistanceResponse.doCreateHtmlData;
       SynExporterHTML.free;
       size:=outputStream.size;
       outputStream.Seek(0,soFromBeginning);
+      initialize(result);
       setLength(result,size);
       outputStream.ReadBuffer(result[1],size);
       outputStream.free;

@@ -36,7 +36,6 @@ USES evaluation,
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_messagesDistributor;
-      memCheckerStarted:boolean=false;
 
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
@@ -97,7 +96,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     memoryCleaner.memoryComfortThreshold:=settings.memoryLimit;
     if commandLine.applyAndReturnOk(@consoleAdapters) then begin
       if (commandLine.fileOrCommandToInterpret<>'') and not(clf_GUI in commandLine.mnhExecutionOptions.flags) then begin
-         memCheckerStarted:=true;
          if commandLine.mnhExecutionOptions.executeCommand
          then executeCommand
          else executeScript;

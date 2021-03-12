@@ -135,7 +135,6 @@ IMPLEMENTATION
 USES renameDialog,
      recyclers,
      packages,
-     strutils,
      eventsComponent;
 VAR underCursor:T_tokenInfo;
 
@@ -532,7 +531,7 @@ FUNCTION T_editorMeta.setFile(CONST fileName: string):boolean;
   end;
 
 PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
-  VAR arr:T_arrayOfString;
+  VAR arr:T_arrayOfString=();
       i:longint;
       previousName:string;
       lineEndingSetting:byte;

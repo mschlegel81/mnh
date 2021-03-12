@@ -594,7 +594,6 @@ PROCEDURE T_flatMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
   end;
 
 DESTRUCTOR T_flatMapGenerator.destroy;
-  VAR l:P_literal;
   begin
     assert(sourceGenerator=nil);
     assert(mapExpression=nil);
@@ -1312,7 +1311,7 @@ FUNCTION T_stringIterator.toString(CONST lengthLimit:longint=maxLongint):string;
   end;
 
 FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
-  VAR s:string;
+  VAR s:string='';
       i:longint=0;
       carry:boolean=true;
   begin

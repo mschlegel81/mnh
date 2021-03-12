@@ -337,6 +337,7 @@ FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle
   FUNCTION copyOf(CONST x:T_arrayOfStyle):T_arrayOfStyle;
     VAR i:longint;
     begin
+      //Note: initialize(result) leads to memory leak
       setLength(result,length(x));
       for i:=0 to length(x)-1 do result[i]:=x[i];
     end;
@@ -359,10 +360,15 @@ FUNCTION getStyles(CONST index:longint; CONST styleString:string):T_arrayOfStyle
     end;
   end;
 
+PROCEDURE disposeStyle(VAR v:T_arrayOfStyle);
+  begin
+    setLength(v,0);
+  end;
+
 INITIALIZATION
   initialize(styleCS);
   initCriticalSection(styleCS);
-  styleMap.create();
+  styleMap.create(@disposeStyle);
   memoryCleaner.registerCleanupMethod(@clearStyles);
 FINALIZATION
   enterCriticalSection(styleCS);

@@ -1249,7 +1249,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticIn
   PROCEDURE drawTubes;
     VAR i :longint=0;
         k :longint=0;
-        polyBetween:array of TPoint;
+        polyBetween:array of TPoint=();
         lastWasValid:boolean=false;
     begin
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
@@ -1652,6 +1652,7 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR literal
       i:longint;
   begin
     if haltExport^ then exit;
+    initialize(result);
     system.enterCriticalSection(cs);
     try
       opt:=scalingOptions.getOptionDiffString(prevOptions);
@@ -1905,7 +1906,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
 FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   VAR lastDisplayIndex:longint;
       i:longint;
-      toProcessInThisRun:T_storedMessages;
+      toProcessInThisRun:T_storedMessages=();
       m:P_storedMessage;
   begin
     enterCriticalSection(adapterCs);

@@ -96,10 +96,10 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 
 PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
   {$include res_examples.inc}
-  VAR code:T_arrayOfString;
+  VAR code:T_arrayOfString=();
       i:longint;
-      keys:T_arrayOfString;
-      allDocs:array of P_intrinsicFunctionDocumentation;
+      keys:T_arrayOfString=();
+      allDocs:array of P_intrinsicFunctionDocumentation=();
 
   PROCEDURE addExample(CONST exampleSource,html,txt,idList:T_arrayOfString);
     VAR ids:T_arrayOfString;
@@ -179,6 +179,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     FUNCTION readArrayOfString:T_arrayOfString;
       VAR i:longint;
       begin
+        initialize(result);
         setLength(result,wrapper.readNaturalNumber);
         for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
       end;
@@ -218,7 +219,6 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     end;
     recycler.initRecycler;
     keys:=functionDocMap.keySet;
-    setLength(allDocs,0);
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
@@ -308,6 +308,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_array
       sigAndComment:T_arrayOfString;
   begin
     parts:=split(description,'#');
+    initialize(result);
     setLength(result,length(parts));
     for i:=0 to length(result)-1 do begin
       result[i].location:=C_nilSearchTokenLocation;
@@ -526,8 +527,8 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
 
 VAR docMapIsFinalized:boolean=false;
 PROCEDURE finalizeFunctionDocMap;
-  VAR entries:functionDocMap.KEY_VALUE_LIST;
-      values:T_arrayOfPointer;
+  VAR entries:functionDocMap.KEY_VALUE_LIST=();
+      values:T_arrayOfPointer=();
       i:longint;
   begin
     if docMapIsFinalized then exit;

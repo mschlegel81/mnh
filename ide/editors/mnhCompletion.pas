@@ -176,8 +176,8 @@ FUNCTION T_completionLogic.fillFilteredItems(CONST part:string):longint;
     begin
       result:=startsWith(uppercase(txt),uppercase(part));
     end;
-  VAR allWords,
-      words:T_arrayOfString;
+  VAR allWords:T_arrayOfString=();
+      words   :T_arrayOfString=();
       w    :string;
       k    :longint=0;
   begin

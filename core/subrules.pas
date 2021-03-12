@@ -1594,7 +1594,7 @@ FUNCTION T_inlineExpression.usedGlobalVariables: T_arrayOfPointer;
   begin
     enterCriticalSection(subruleCallCs);
     try
-      setLength(result,0);
+      initialize(result);
       for prep in preparedBody do if prep.token.tokType=tt_globalVariable then appendIfNew(result,prep.token.data);
     finally
       leaveCriticalSection(subruleCallCs);
