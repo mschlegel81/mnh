@@ -295,7 +295,7 @@ FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
-USES sysutils,{$ifdef fullVersion}strutils,{$endif}math,subrules,profiling,typinfo,patterns;
+USES sysutils,{$ifdef fullVersion}strutils,messageFormatting,{$endif}math,subrules,profiling,typinfo,patterns;
 
 TYPE
 T_scopeType=(sc_block,sc_each,sc_bracketOnly);
@@ -1878,8 +1878,8 @@ FUNCTION T_abstractPackage.getTypeMap:T_typeMap;
 INITIALIZATION
   BLANK_ABSTRACT_PACKAGE.create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
   MNH_PSEUDO_PACKAGE.create();
-  profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$ifdef fullVersion}
+  messageFormatting.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
 
