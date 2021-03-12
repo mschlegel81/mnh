@@ -560,10 +560,9 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal;
       begin
         if panelContents=nil then begin end
         else if panelContents^.literalType=lt_list then begin
-          iter:=P_listLiteral(panelContents)^.iteratableList;
+          iter:=P_listLiteral(panelContents)^.tempIteratableList;
           literalRecycler.disposeLiteral(panelContents);
           for panelContents in iter do if setupContext^.messages^.continueEvaluation then initComponent(targetPanel,panelContents);
-          literalRecycler.disposeLiteral(iter);
         end else begin
           setupContext^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
           literalRecycler.disposeLiteral(panelContents);

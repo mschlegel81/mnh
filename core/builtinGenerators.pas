@@ -263,7 +263,7 @@ CONSTRUCTOR T_permutationIterator.create(VAR literalRecycler:T_literalRecycler;C
     sorted:=literalRecycler.newListLiteral();
     sorted^.appendAll(@literalRecycler,arr);
     sorted^.sort;
-    nextPermutation:=sorted^.iteratableList;
+    nextPermutation:=sorted^.forcedIteratableList(@literalRecycler);
     literalRecycler.disposeLiteral(sorted);
   end;
 
@@ -1363,7 +1363,7 @@ FUNCTION stringIterator intFuncSignature;
        (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) and
        (arg2^.literalType=lt_smallint) and (int2^.intValue>=int1^.intValue) then begin
       charSet:=[];
-      iter:=collection0^.iteratableList;
+      iter:=collection0^.tempIteratableList;
       for c in iter do begin
         s:=P_stringLiteral(c)^.value;
         if length(s)=1
@@ -1377,7 +1377,6 @@ FUNCTION stringIterator intFuncSignature;
         err:=true;
         context^.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
       end;
-      recycler^.literalRecycler.disposeLiteral(iter);
       if err then result:=nil
              else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.intValue,int2^.intValue));
     end else result:=nil;

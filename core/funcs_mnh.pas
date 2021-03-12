@@ -26,7 +26,7 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
       if raiseErrors then context^.raiseError('Invalid specification of side effects. Type is '+L^.typeString+' should be collection of strings',location);
       exit(false);
     end;
-    iter:=P_collectionLiteral(L)^.iteratableList;
+    iter:=P_collectionLiteral(L)^.tempIteratableList;
     result:=true;
     for seId in iter do begin
       anyMatch:=false;
@@ -38,7 +38,6 @@ FUNCTION canInterpretAsSideEffectList(L:P_literal; CONST raiseErrors:boolean; CO
         if raiseErrors then context^.raiseError('Invalid side effect name '+seId^.toString(),location);
         result:=false;
       end;
-      seId^.unreference;
     end;
     if result then sideEffects:=preliminary;
     setLength(iter,0);
@@ -135,10 +134,9 @@ FUNCTION ord_imp intFuncSignature;
           if x^.literalType in C_listTypes
           then result:=recycler^.literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
           else result:=newSetLiteral (P_compoundLiteral(x)^.size);
-          iter:=P_listLiteral(x)^.iteratableList;
+          iter:=P_listLiteral(x)^.tempIteratableList;
           for sub in iter do if context^.messages^.continueEvaluation then
             collResult^.append(@recycler^.literalRecycler,recurse(sub),false);
-          recycler^.literalRecycler.disposeLiteral(iter);
         end;
       end;
     end;

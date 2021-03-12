@@ -307,11 +307,10 @@ FUNCTION max_imp intFuncSignature;
     else x:=params;
     if x^.literalType in [lt_emptyList,lt_emptySet] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
-    it:=P_collectionLiteral(x)^.iteratableList;
+    it:=P_collectionLiteral(x)^.tempIteratableList;
     result:=it[0];
     for x in it do if not(x^.leqForSorting(result)) then result:=x;
     result^.rereference;
-    recycler^.literalRecycler.disposeLiteral(it);
   end;
 
 FUNCTION min_imp intFuncSignature;
@@ -325,11 +324,10 @@ FUNCTION min_imp intFuncSignature;
     else x:=params;
     if x^.literalType in [lt_emptyList,lt_emptySet] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
-    it:=P_collectionLiteral(x)^.iteratableList;
+    it:=P_collectionLiteral(x)^.tempIteratableList;
     result:=it[0];
     for x in it do if x^.leqForSorting(result) then result:=x;
     result^.rereference;
-    recycler^.literalRecycler.disposeLiteral(it);
   end;
 
 FUNCTION argMax_imp intFuncSignature;
@@ -455,13 +453,12 @@ FUNCTION subSets_impl intFuncSignature;
     VAR iter:T_arrayOfLiteral;
         i:longint;
     begin
-      iter:=s^.iteratableList;
+      iter:=s^.tempIteratableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do begin
         mightContain[i].value:=iter[i];
         mightContain[i].multiplicity:=1;
       end;
-      recycler^.literalRecycler.disposeLiteral(iter);
     end;
 
   VAR mustContain :T_arrayOfLiteral;
@@ -528,12 +525,11 @@ FUNCTION permutations_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes)) then begin
       setLength(mustContain,0);
-      iter:=collection0^.iteratableList;
+      iter:=collection0^.tempIteratableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
       result:=newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
-      recycler^.literalRecycler.disposeLiteral(iter);
       if memoryPanic then begin
         recycler^.literalRecycler.disposeLiteral(result);
         result:=nil;

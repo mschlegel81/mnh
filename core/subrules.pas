@@ -1861,7 +1861,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
       statement: T_enhancedStatement;
   begin
     result:=nil;
-    lexer.create(l^.iteratableList,location,package);
+    lexer.create(l^.forcedIteratableList(nil),location,package);
     statement:=lexer.getNextStatement(context^.messages,recycler);
     result:=statement.token.first;
     statement:=lexer.getNextStatement(context^.messages,recycler);

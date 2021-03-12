@@ -184,12 +184,9 @@ FUNCTION split_imp intFuncSignature;
         lt_list,lt_stringList,lt_emptyList,
         lt_set ,lt_stringSet ,lt_emptySet: begin
           result:=P_collectionLiteral(p)^.newOfSameType(@recycler^.literalRecycler,true);
-          iter:=P_collectionLiteral(p)^.iteratableList;
-          for sub in iter do begin
+          iter:=P_collectionLiteral(p)^.tempIteratableList;
+          for sub in iter do
             collResult^.append(@recycler^.literalRecycler,splitRecurse(sub),false);
-            sub^.unreference;
-          end;
-          setLength(iter,0);
         end;
         else raiseNotApplicableError('split',p,tokenLocation,context);
       end;
@@ -206,7 +203,7 @@ FUNCTION split_imp intFuncSignature;
   end;
 
 FUNCTION join_impl intFuncSignature;
-  FUNCTION stringOfLit(CONST L:P_literal):ansistring;
+  FUNCTION stringOfLit(CONST L:P_literal):ansistring; inline;
     begin
       case L^.literalType of
         lt_string: result:=P_stringLiteral(L)^.value;
@@ -229,12 +226,9 @@ FUNCTION join_impl intFuncSignature;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
       if (arg0^.literalType in C_listTypes+C_setTypes) then begin
         if collection0^.size=0 then exit(recycler^.literalRecycler.newStringLiteral(''));
-        iter:=collection0^.iteratableList;
+        iter:=collection0^.tempIteratableList;
         setLength(resultParts,length(iter));
-        for i:=0 to length(iter)-1 do begin
-          resultParts[i]:=stringOfLit(iter[i]);
-          iter[i]^.unreference;
-        end;
+        for i:=0 to length(iter)-1 do resultParts[i]:=stringOfLit(iter[i]);
         setLength(iter,0);
 
         if params^.size=2
@@ -339,12 +333,9 @@ FUNCTION replace_one_or_all(VAR literalRecycler:T_literalRecycler; CONST params:
     if arg0^.literalType=lt_string then result:=literalRecycler.newStringLiteral(modify(str0^.value))
     else begin
       result:=collection0^.newOfSameType(@literalRecycler,true);
-      iter:=collection0^.iteratableList;
-      for sub in iter do begin
+      iter:=collection0^.tempIteratableList;
+      for sub in iter do
         listResult^.appendString(@literalRecycler,modify(P_stringLiteral(sub)^.value));
-        sub^.unreference;
-      end;
-      setLength(iter,0);
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -458,13 +449,10 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
           for k:=0 to list0^.size-1 do listResult^.appendString(@recycler^.literalRecycler,innerClean(P_stringLiteral(list0^.value[k])^.value));
         end;
         lt_stringSet,lt_emptySet: begin
-          iter:=set0^.iteratableList;
+          iter:=set0^.tempIteratableList;
           result:=newSetLiteral(length(iter));
-          for l in iter do begin
+          for l in iter do
             setResult^.appendString(@recycler^.literalRecycler,innerClean(P_stringLiteral(l)^.value));
-            l^.unreference;
-          end;
-          setLength(iter,0);
         end;
       end;
 
@@ -826,12 +814,9 @@ FUNCTION formatTabs_impl intFuncSignature;
         lt_set,lt_stringSet,lt_emptySet:
         begin
           result:=P_collectionLiteral(l)^.newOfSameType(@recycler^.literalRecycler,false);
-          iter  :=P_collectionLiteral(l)^.iteratableList;
-          for sub in iter do begin
+          iter  :=P_collectionLiteral(l)^.tempIteratableList;
+          for sub in iter do
             P_collectionLiteral(result)^.append(@recycler^.literalRecycler,innerRec(sub),false);
-            sub^.unreference;
-          end;
-          setLength(iter,0);
         end;
         else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context);
       end;

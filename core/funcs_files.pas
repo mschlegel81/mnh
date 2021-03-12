@@ -491,9 +491,8 @@ FUNCTION fileInfo_imp intFuncSignature;
       lt_string: exit(infoForSearch(str0^.value));
       lt_stringList,lt_stringSet: begin
         result:=collection0^.newOfSameType(@recycler^.literalRecycler,true);
-        iter  :=collection0^.iteratableList;
+        iter  :=collection0^.tempIteratableList;
         for sub in iter do collResult^.append(@recycler^.literalRecycler,infoForSearch(P_stringLiteral(sub)^.value),false);
-        recycler^.literalRecycler.disposeLiteral(iter);
       end;
       lt_emptyList: result:=recycler^.literalRecycler.newListLiteral(0);
       lt_emptySet : result:=newSetLiteral(0);
