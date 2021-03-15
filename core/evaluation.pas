@@ -1375,11 +1375,22 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
   VAR payload:P_futureLiteral;
       childContext:P_context;
       parameters:P_listLiteral=nil;
+      timeout:double;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
         context^.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
+
+      if getGlobalThreads>=GLOBAL_THREAD_LIMIT
+      then begin
+        threadStartsSleeping;
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Cannot create any more threads - retrying for one second...');
+        timeout:=context^.wallclockTime+60;
+        while (context^.wallclockTime<timeout) and (getGlobalThreads>=GLOBAL_THREAD_LIMIT) do sleep(1);
+        threadStopsSleeping;
+      end;
+
       if getGlobalThreads>=GLOBAL_THREAD_LIMIT
       then context^.raiseError('Cannot create any more threads.',tokenLocation)
       else try
