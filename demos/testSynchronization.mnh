@@ -1,0 +1,64 @@
+//Test to validate "synchronization", i.e. protection against parallel execution
+private mutable sum:=0;
+reset->begin sum:=0; end;
+synchronized addToSum(i:Int)->begin
+  sum+=i;
+  true;
+end;
+
+newAggregator->{begin
+  local total:=0;
+save;
+  total+=$0;
+end};
+
+PAR_MAP  :='map';
+PAR_PMAP :='pMap';
+PAR_ASYNC:='async';
+PAYLOAD_MUTABLE:='mutable';
+PAYLOAD_STATEFUL:='stateful expression';
+
+assertOk((PAR_MAP),(PAYLOAD_MUTABLE))->begin
+  reset;
+  [1..1000].map(::addToSum);
+  assert(sum==500500);
+end;
+
+assertOk((PAR_PMAP),(PAYLOAD_MUTABLE))->begin
+  reset;
+  [1..1000].pMap(::addToSum);
+  assert(sum==500500);
+end;
+
+assertOk((PAR_ASYNC),(PAYLOAD_MUTABLE))->begin
+  reset;
+  [1..1000].map((i)->async(::addToSum,[i]))
+            .map((task)->while(task().isVoid,sleep(1E-3)));
+  assert(sum==500500,sum);
+end;
+
+assertOk((PAR_MAP),(PAYLOAD_STATEFUL))->begin
+  local A:=newAggregator;
+  [1..1000].map(A);
+  assert(A(0)==500500,A(0));
+end;
+
+assertOk((PAR_PMAP),(PAYLOAD_STATEFUL))->begin
+  local A:=newAggregator;
+  [1..1000].pMap(A);
+  assert(A(0)==500500,A(0));
+end;
+
+assertOk((PAR_ASYNC),(PAYLOAD_STATEFUL))->begin
+  local A:=newAggregator;
+  [1..1000].map((i)->localAsync(A,[i]))
+            .map((task)->while(task().isVoid,sleep(1E-3)));
+  assert(A(0)==500500,A(0));
+end;
+
+main->begin
+  cross([PAR_MAP,PAR_PMAP,PAR_ASYNC],[PAYLOAD_MUTABLE,PAYLOAD_STATEFUL]).map((param)->begin
+    assertOk@param;
+    print(param.join(' '),' is o.k.');
+  end);
+end;

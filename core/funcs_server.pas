@@ -255,7 +255,7 @@ PROCEDURE T_microserver.execute;
     end;
 
   CONST minSleepTime=0;
-        maxSleepTime=10;
+        maxSleepTime=50;
   VAR sleepTime:longint=minSleepTime;
       recycler:T_recycler;
       requestSocket:TSocket;

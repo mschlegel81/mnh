@@ -841,6 +841,8 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
 PROCEDURE finalizeCodeAssistance;
   VAR i:longint;
       response:P_codeAssistanceResponse;
+      folderForUsageScan:ansistring;
+      assistanceRequest:P_codeAssistanceRequest;
   begin
     enterCriticalSection(codeAssistanceCs);
     shuttingDown:=true;
@@ -850,6 +852,9 @@ PROCEDURE finalizeCodeAssistance;
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
     end;
+    while pendingUsageScans.canGetNext(folderForUsageScan) do folderForUsageScan:='';
+    while pendingRequests.canGetNext(assistanceRequest) do dispose(assistanceRequest,destroy);
+
     if not(codeAssistantIsRunning)
     then doneCriticalSection(codeAssistanceCs);
     pendingRequests.destroy;

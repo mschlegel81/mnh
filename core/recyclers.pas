@@ -178,15 +178,12 @@ PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
   VAR parent:P_valueScope;
   begin
-
     if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)>0 then begin
-      {$ifdef debugMode}
-      //writeln('Scope ',IntToHex(ptrint(scope),32),' still has ',scope^.refCount,' references - not disposed');
-      {$endif}
       scope:=nil;
       exit;
     end;
+    scope^.cleanup(literalRecycler);
     parent:=scope^.parentScope;
     with scopeRecycler do begin
       if (fill>=length(dat))

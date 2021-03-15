@@ -140,6 +140,7 @@ FUNCTION runScript_imp intFuncSignature;
       then enforceDeterminism:=true
       else context^.raiseError('Expected a boolean',tokenLocation);
     end;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_map) then begin
