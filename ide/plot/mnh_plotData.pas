@@ -1721,9 +1721,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_addAnimationFrame: begin
         displayImmediate:=true;
         animation.addFrame(currentPlot);
-        if animation.volatile and (animation.frameCount>VOLATILE_FRAMES_MAX)
-        then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/20)
-        else P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
       end;
       mt_plot_postDisplay:       begin
         if doPlot<>nil then doPlot();
@@ -1863,6 +1860,8 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
     enterCriticalSection(adapterCs);
     try
       case message^.messageType of
+        mt_endOfEvaluation,
+        mt_plot_postDisplay,
         mt_startOfEvaluation,
         mt_plot_addText,
         mt_plot_addRow,
@@ -1876,23 +1875,17 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         mt_plot_queryClosedByUser: begin
           result:=true;
           //if there are pending tasks then store else process
-          if (collectedFill>0)
-          then inherited append(message)
-          else processMessage(message);
+          if sandboxed
+          then processMessage(message)
+          else inherited append(message);
         end;
         mt_plot_addAnimationFrame: begin
-          if not(animation.volatile) then P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
+          if animation.volatile
+          then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/25)
+          else P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
           result:=true;
           //if there are pending tasks then store else process
-          if (collectedFill>0)
-          then inherited append(message)
-          else processMessage(message);
-        end;
-        mt_endOfEvaluation,
-        mt_plot_postDisplay: begin
-          //if we can't plot anyway, we can process the message right away
-          result:=true;
-          if doPlot=nil
+          if sandboxed
           then processMessage(message)
           else inherited append(message);
         end;

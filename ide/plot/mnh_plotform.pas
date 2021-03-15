@@ -763,7 +763,12 @@ FUNCTION addAnimFrame_impl intFuncSignature;
       context^.messages^.postCustomMessage(request);
       sleepInSeconds:=request^.getProposedSleepTime(context^.messages);
       disposeMessage(request);
-      if sleepInSeconds>0 then sleep(round(1000*sleepInSeconds));
+      if sleepInSeconds>0 then begin
+        {$ifdef debugMode}
+        writeln(stdErr,'after adding animation frame I sleep for ',sleepInSeconds:0:5,' seconds');
+        {$endif}
+        sleep(round(1000*sleepInSeconds));
+      end;
       result:=newVoidLiteral;
     end else result:=nil;
   end;
