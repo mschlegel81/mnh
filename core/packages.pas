@@ -367,10 +367,10 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     if connectLevel>0 then messages.setupMessageRedirection(callerContext^.messages,TYPES_BY_LEVEL[connectLevel]);
 
     if enforceDeterminism then globals.prng.resetSeed(0);
-    if length(scriptSource)=0
-    then package.replaceCodeProvider(newCodeProvider(fileName))
-    else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
     try
+      if length(scriptSource)=0
+      then package.replaceCodeProvider(newCodeProvider(fileName))
+      else package.replaceCodeProvider(newVirtualFileCodeProvider(filenameOrId,scriptSource));
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}sideEffectWhitelist,callContextType,mainParameters,recycler);
       if callerContext=nil
       then globals.primaryContext.callDepth:=0

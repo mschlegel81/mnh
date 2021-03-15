@@ -6,6 +6,7 @@ INTERFACE
 
 IMPLEMENTATION
 USES sysutils,
+     Classes,
      myGenerics,
      mySys,
      {$ifdef useTryCatchBlocks}
@@ -1358,7 +1359,8 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
     payload:=payload_;
     myContext:=context_;
     recycler.initRecycler;
-    inherited create();
+    inherited create(tpNormal,true);
+    FreeOnTerminate:=true;
   end;
 
 DESTRUCTOR T_asyncTask.destroy;
@@ -1376,6 +1378,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
       childContext:P_context;
       parameters:P_listLiteral=nil;
       timeout:double;
+      task:T_asyncTask;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
@@ -1399,12 +1402,23 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           if params^.size=2 then parameters:=list1;
           new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
           result:=payload^.rereferenced;
-          T_asyncTask.create(payload,childContext);
+          task:=T_asyncTask.create(payload,childContext);
+          if task.FatalException=nil
+          then task.start
+          else begin
+            context^.raiseError('Thread creation failed: '+task.FatalException.toString,tokenLocation);
+            task.free;
+            task:=nil;
+          end;
         end else begin
           context^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
       except
         on e:EOutOfMemory do context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
+        on e:EThread      do begin
+          context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          if task<>nil then task.free;
+        end;
       end;
     end;
   end;

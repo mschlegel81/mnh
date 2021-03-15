@@ -96,6 +96,8 @@ allowedSideEffects((demosRoot&'ipcTest.mnh'       ))->DEFAULT_WHITELIST | ['exec
 allowedSideEffects((demosRoot&'testExitCode.mnh'  ))->DEFAULT_WHITELIST | ['executing external'];
 allowedSideEffects((demosRoot&'helloWorldHttp.mnh'))->DEFAULT_WHITELIST | ['detaching', 'server','http'];
 allowedSideEffects((demosRoot&'logTest.mnh'       ))->DEFAULT_WHITELIST | ['write file','read file', 'executing external'];
+allowedSideEffects((demosRoot&'testSynchronization.mnh'))->DEFAULT_WHITELIST | ['detaching'];
+
 allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['read GUI state','alter GUI state','write file'];
 allowedSideEffects(file            )->DEFAULT_WHITELIST;
 
