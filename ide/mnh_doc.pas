@@ -179,7 +179,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     FUNCTION readArrayOfString:T_arrayOfString;
       VAR i:longint;
       begin
-        initialize(result);
+        //NOTE: initialize(result); leads to memory leak
         setLength(result,wrapper.readNaturalNumber);
         for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
       end;
