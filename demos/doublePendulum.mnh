@@ -47,9 +47,15 @@ private plottable(state:NumericList(4))->begin
 end;
 
 begin
-  setOptions([['autoscaleX',false],['autoscaleY',false],['preserveAspect',true],['x0',0],['x1',0],['y0',0],['y1',0],['axisStyleX',0],['axisStyleY',0]]);
+  setOptions(['autoscaleX'=>false,
+              'autoscaleY'=>false,
+              'preserveAspect'=>true,
+              'x0'=>(local x0:=0),
+              'x1'=>(local x1:=0),
+              'y0'=>(local y0:=0),
+              'y1'=>(local y1:=0),['axisStyleX',0],['axisStyleY',0]]);
   local state1:=[pi/2,-pi/2,0,0];
-  local state2:=state1+(random(4)-0.5)*1E-6;
+  local state2:=state1+(random(4)-0.5)*1E-7;
   local hist1:=[state1];
   local hist2:=[state2];
   local trace1:=[state1.plottable.trailing];
@@ -59,10 +65,10 @@ begin
   local replot:={begin
                    trace1:=trace1.trailing(100)|[p1.trailing];
                    trace2:=trace2.trailing(100)|[p2.trailing];
-                   setOptions([['x0',min(getOptions['x0'],min(p1.getInner(0)),min(p2.getInner(0)))],
-                               ['x1',max(getOptions['x1'],max(p1.getInner(0)),max(p2.getInner(0)))],
-                               ['y0',min(getOptions['y0'],min(p1.getInner(1)),min(p2.getInner(1)))],
-                               ['y1',max(getOptions['y1'],max(p1.getInner(1)),max(p2.getInner(1)))]]);
+                   setOptions(['x0'=>(x0:=min(x0,min(p1.getInner(0)),min(p2.getInner(0)))),
+                               'x1'=>(x1:=max(x1,max(p1.getInner(0)),max(p2.getInner(0)))),
+                               'y0'=>(y0:=min(y0,min(p1.getInner(1)),min(p2.getInner(1)))),
+                               'y1'=>(y1:=max(y1,max(p1.getInner(1)),max(p2.getInner(1))))]);
                    plot   (trace2,'red');
                    addPlot(trace1,'black');
                    addPlot(p2,'3 . red l');
@@ -72,7 +78,7 @@ begin
   clearAnimation(true);
   replot();
   postDisplay;
-  local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
+  local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-7);
   state1:=future(step,[state1]);
   state2:=future(step,[state2]);
   while(!plotClosed,begin
