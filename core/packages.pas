@@ -380,7 +380,6 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
       result:=messagesToLiteralForSandbox(recycler^.literalRecycler,messages.storedMessages(false),C_textMessages,messages.getExitCode);
       messages.clear(true);
-      globals.primaryContext.finalizeTaskAndDetachFromParent(recycler);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
