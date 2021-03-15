@@ -193,6 +193,7 @@ TYPE
       FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName:string; newName:string):boolean;
     public
       CONSTRUCTOR create(CONST tok:P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package:P_abstractPackage);
+      PROCEDURE cleanup(CONST recycler:P_recycler);
       DESTRUCTOR destroy;
       FUNCTION toInfo:T_tokenInfo;
   end;
@@ -1170,9 +1171,15 @@ CONSTRUCTOR T_enhancedTokens.create;
 
 DESTRUCTOR T_enhancedTokens.destroy;
   VAR i:longint;
+      recycler:T_recycler;
   begin
-    for i:=0 to length(dat)-1 do dat[i].destroy;
+    recycler.initRecycler;
+    for i:=0 to length(dat)-1 do begin
+      dat[i].cleanup(@recycler);
+      dat[i].destroy;
+    end;
     setLength(dat,0);
+    recycler.cleanup;
   end;
 
 FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedToken;
@@ -1257,9 +1264,15 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST callAndIdInfos:P_ca
     end;
   end;
 
+PROCEDURE T_enhancedToken.cleanup(CONST recycler:P_recycler);
+  begin
+    if token<>nil then recycler^.disposeToken(token);
+    token:=nil;
+  end;
+
 DESTRUCTOR T_enhancedToken.destroy;
   begin
-    if token<>nil then dispose(token,destroy);
+    assert(token=nil);
   end;
 
 FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName:string; newName: string): boolean;
