@@ -1,6 +1,6 @@
 USE inputs;
 
-private memoized words->dict.fileLines.trim;
+private words:=dict.fileLines.trim;
 
 private relativeFrequency(L:List)->begin
   local Freq:=L.elementFrequency.sort;
@@ -10,9 +10,7 @@ end;
 
 private memoized lengthTable->length(words).relativeFrequency;
 private memoized firstTable->words.copy(0,1).relativeFrequency;
-private memoized followerTable->words.pEach(word,word.length<2 ? void : word.copy([0..length(word)-2],2))
-                                     .flatten
-                                     .pEach(s,s.chars)
+private memoized followerTable->words.pEach(word,word.length<2 ? void : word.copy([0..length(word)-2],2).chars,|)
                                      .group(0)
                                      .pEach(g,g[0]=>g[1].getInner(1).relativeFrequency)
                                      .toMap;
