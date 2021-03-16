@@ -394,7 +394,7 @@ PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
     if associateFullVersion
     then targetExe:=settings.fullFlavourLocation
     else targetExe:=settings.lightFlavourLocation;
-    recycler.initRecycler;
+    recycler.create;
     runScript('tempFile',
         {src} split(decompressString(ensureAssoc_mnh),C_lineBreakChar),
               targetExe,
@@ -402,7 +402,7 @@ PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
               noLoc,
               nil,
               @recycler,0,false);
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 PROCEDURE T_sandbox.runUninstallScript;
@@ -410,9 +410,9 @@ PROCEDURE T_sandbox.runUninstallScript;
   VAR recycler:T_recycler;
       exitDummy:longint;
   begin
-    recycler.initRecycler;
+    recycler.create;
     execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,@recycler,exitDummy);
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 PROCEDURE T_sandbox.demoCallToHtml(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);

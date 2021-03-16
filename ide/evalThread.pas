@@ -296,9 +296,9 @@ PROCEDURE T_evaluationThread.execute;
   begin
     with eval^ do begin
       evalTime:=now;
-      recycler.initRecycler;
+      recycler.create;
       execute(recycler);
-      recycler.cleanup;
+      recycler.destroy;
       enterCriticalSection(evaluationCs);
       try
         if stoppedByUser
@@ -602,7 +602,7 @@ PROCEDURE T_abstractEvaluation.haltEvaluation;
 PROCEDURE T_abstractEvaluation.postHalt;
   VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
+    recycler.create;
     system.enterCriticalSection(evaluationCs);
     try
       globals.primaryContext.messages^.setStopFlag;
@@ -611,7 +611,7 @@ PROCEDURE T_abstractEvaluation.postHalt;
       stoppedByUser:=true;
     finally
       system.leaveCriticalSection(evaluationCs);
-      recycler.cleanup;
+      recycler.destroy;
     end;
   end;
 

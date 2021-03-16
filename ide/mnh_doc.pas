@@ -217,7 +217,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       bar.caption:='Executing example code for help/doc';
       Application.ProcessMessages;
     end;
-    recycler.initRecycler;
+    recycler.create;
     keys:=functionDocMap.keySet;
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
@@ -242,7 +242,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       setLength(examplesToStore,0);
     end else bar.position:=bar.position+length(decompressed_examples);
     functionDocExamplesReady:=true;
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 FUNCTION shortName(CONST id:T_idString):T_idString;

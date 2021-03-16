@@ -246,7 +246,7 @@ PROCEDURE T_myIpcServer.execute;
 
   VAR serverCreated:boolean=false;
   begin
-    recycler.initRecycler;
+    recycler.create;
 
     for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
     recentRequestOffset:=0;
@@ -267,6 +267,7 @@ PROCEDURE T_myIpcServer.execute;
                  if sleepTime<500 then inc(sleepTime);
                  threadSleepMillis(sleepTime shr 2);
                end;
+      recycler.cleanupIfPosted;
     end;
     if serverCreated then try
       disposeServer(server);
@@ -274,7 +275,7 @@ PROCEDURE T_myIpcServer.execute;
       ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
     end;
     if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
-    recycler.cleanup;
+    recycler.destroy;
     Terminate;
   end;
 
@@ -300,7 +301,7 @@ DESTRUCTOR T_myIpcServer.destroy;
   begin
     enterCriticalSection(serverCs);
     try
-      recycler.initRecycler;
+      recycler.create;
       if servingContextOrNil<>nil then begin
         servingContextOrNil^.finalizeTaskAndDetachFromParent(@recycler);
         contextPool.disposeContext(servingContextOrNil);
@@ -312,7 +313,7 @@ DESTRUCTOR T_myIpcServer.destroy;
     finally
       leaveCriticalSection(serverCs);
       doneCriticalSection(serverCs);
-      recycler.cleanup;
+      recycler.destroy;
       inherited destroy;
     end;
   end;

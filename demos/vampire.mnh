@@ -1,9 +1,7 @@
-USE '..\packages\mathUtils.mnh';
 private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
-  local minDiv:=10^(iDigits.size div 2-1);
-  local dividers:=factorize(i).elementFrequency.each(x,powers(x),*).toList;
-  dividers:=dividers[minDiv<=dividers and sqr(dividers)<=i];
+  local dividers:=factorize(i).subSets.map((s)->s.agg(*) orElse 1);
+  dividers:=dividers[10^(iDigits.size div 2-1)<=dividers and sqr(dividers)<=i];
   [dividers,i div dividers].transpose
     .filter({!($f mod 10=0).agg(AND) AND $f.digits.flatten.sort==iDigits})
     .sort;

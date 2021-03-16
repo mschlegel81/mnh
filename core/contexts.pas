@@ -841,7 +841,7 @@ PROCEDURE T_workerThread.execute;
       currentTask:P_queueTask;
       recycler:T_recycler;
   begin
-    recycler.initRecycler;
+    recycler.create;
     with globals^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
@@ -857,6 +857,7 @@ PROCEDURE T_workerThread.execute;
           end;
           sleepCount:=0;
         end;
+        recycler.cleanupIfPosted;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
@@ -866,7 +867,7 @@ PROCEDURE T_workerThread.execute;
       if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
     end;
-    recycler.cleanup;
+    recycler.destroy;
     Terminate;
   end;
 

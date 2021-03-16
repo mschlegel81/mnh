@@ -178,7 +178,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         package:T_package;
     begin
       try
-        recycler.initRecycler;
+        recycler.create;
         package.create(newCodeProvider(fileName),nil);
         globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
         package.load(lu_usageScan,globals^,@recycler,C_EMPTY_STRING_ARRAY);
@@ -187,7 +187,7 @@ PROCEDURE T_codeAssistanceThread.execute;
       globals^.afterEvaluation(@recycler,packageTokenLocation(@package));
       globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
       package.destroy;
-      recycler.cleanup;
+      recycler.destroy;
     end;
 
   PROCEDURE updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
@@ -253,7 +253,6 @@ PROCEDURE T_codeAssistanceThread.execute;
       {$endif}
       updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
       preparedResponses.append(response);
-      recycler.cleanup;
     end;
 
   begin
@@ -266,7 +265,7 @@ PROCEDURE T_codeAssistanceThread.execute;
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
     new(globals,create(@adapters));
-    recycler.initRecycler;
+    recycler.create;
     //:setup
     repeat
       requests:=pendingRequests.getAll;
@@ -307,6 +306,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         end;
         setLength(requests,0);
       end;
+      recycler.cleanupIfPosted;
       enterCriticalSection(codeAssistanceCs);
       isLatest:=shuttingDown;
       leaveCriticalSection(codeAssistanceCs);
@@ -317,7 +317,7 @@ PROCEDURE T_codeAssistanceThread.execute;
     enterCriticalSection(codeAssistanceCs);
     codeAssistantIsRunning:=false;
     leaveCriticalSection(codeAssistanceCs);
-    recycler.cleanup;
+    recycler.destroy;
     //:shutdown
     threadStopsSleeping;
     postIdeMessage('Code assistance stopped',false);
@@ -570,9 +570,9 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssist
       recycler:T_recycler;
   begin
     new(request,createWithProvider(editorMeta));
-    recycler.initRecycler;
+    recycler.create;
     result:=request^.execute(recycler);
-    recycler.cleanup;
+    recycler.destroy;
     dispose(request,destroy);
   end;
 

@@ -55,14 +55,14 @@ TYPE
   P_plotRenderRequest=^T_plotRenderRequest;
   T_plotRenderRequest=object(T_payloadMessage)
     private
-      targetIsString:boolean;
+      targetIsString,renderInBackground:boolean;
       fileName:string;
       width,height:longint;
       retrieved:boolean;
       outputString:string;
     public
       FUNCTION internalType:shortstring; virtual;
-      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint);
+      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean);
       CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint);
       PROCEDURE setString(CONST s:string);
       FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
@@ -127,6 +127,7 @@ TYPE
         postedHeight :longint;
         postedFileName:string;
         renderToFilePosted:boolean;
+        destroyAfterwardsPosted:boolean;
       end;
 
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
@@ -153,7 +154,7 @@ TYPE
 
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint);
-      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint);
+      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
@@ -408,6 +409,7 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
   end;
 
 PROCEDURE T_plotPreparationThread.execute;
+  VAR destroyPlot:boolean;
   begin
     try
       enterCriticalSection(plot^.cs);
@@ -420,6 +422,7 @@ PROCEDURE T_plotPreparationThread.execute;
       with plot^.backgroundProcessing do begin
         plot^.prepareImage(postedWidth,postedHeight);
         if renderToFilePosted then begin
+          destroyPlot:=destroyAfterwardsPosted;
           plot^.renderToFile(postedFileName,postedWidth,postedHeight);
           plot^.doneImage(fcm_none);
         end;
@@ -428,6 +431,7 @@ PROCEDURE T_plotPreparationThread.execute;
       plot^.backgroundProcessing.backgroundPreparationRunning:=false;
       leaveCriticalSection(plot^.cs);
     end;
+    if destroyPlot then dispose(plot,destroy);
     Terminate;
   end;
 
@@ -445,6 +449,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         postedHeight:=height;
         postedWidth:=width;
         renderToFilePosted:=false;
+        destroyAfterwardsPosted:=false;
       end;
       T_plotPreparationThread.create(@self);
     finally
@@ -538,10 +543,11 @@ FUNCTION T_plotRenderRequest.internalType: shortstring;
     result:='T_plotRenderRequest';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_: longint);
+CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_: longint; CONST backgroundRendering:boolean);
   begin
     inherited create(mt_plot_renderRequest);
     targetIsString:=false;
+    renderInBackground:=backgroundRendering;
     fileName:=filename_;
     width:=width_;
     height:=height_;
@@ -768,7 +774,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     try
       {$ifndef unix}
       if exportingAll
-      then frame[index]^.postRenderToFile(fileName,width,height)
+      then frame[index]^.postRenderToFile(fileName,width,height,false)
       else begin
       {$endif}
         storeImage:=TImage.create(nil);
@@ -1586,10 +1592,10 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
     storeImage.destroy;
   end;
 
-PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint);
+PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
   begin
     enterCriticalSection(cs);
-    if backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
+    if not(forceThreadAndDestroyAfterwards) and (backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(cs);
       exit;
@@ -1600,6 +1606,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         postedHeight:=height;
         postedWidth:=width;
         renderToFilePosted:=true;
+        destroyAfterwardsPosted:=forceThreadAndDestroyAfterwards;
         postedFileName:=fileName;
       end;
       T_plotPreparationThread.create(@self);
@@ -1679,6 +1686,7 @@ FUNCTION T_plot.getRowStatementCount:longint;
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   VAR clonedRow:T_dataRow;
+      clonedPlot:P_plot;
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
@@ -1706,7 +1714,13 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_renderRequest: begin
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
         then setString(currentPlot.renderToString(width,height))
-        else currentPlot.renderToFile(fileName,   width,height);
+        else begin
+          if renderInBackground then begin
+            new(clonedPlot,createWithDefaults);
+            clonedPlot^.copyFrom(currentPlot);
+            clonedPlot^.postRenderToFile(fileName,width,height,true);
+          end else currentPlot.renderToFile(fileName,   width,height);
+        end;
         P_plotRenderRequest(message)^.fileName:='';
       end;
       mt_plot_retrieveOptions:

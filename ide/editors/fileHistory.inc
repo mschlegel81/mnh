@@ -110,27 +110,32 @@ PROCEDURE T_fileHistory.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 FUNCTION T_fileHistory.polishHistory: boolean;
   VAR i, j: longint;
   begin
-    result := false;
-    for i:=0 to length(fileItems)-1 do
-    if not(fileExists (fileItems[i])) then begin
-      fileItems[i]:='';
-      result:=true;
-    end;
-    for i:=1 to length(fileItems)-1 do
-    if (fileItems[i]<>'') then for j:=0 to i-1 do
-    if SameFileName(fileItems[i],fileItems[j]) then begin
-      fileItems[i]:='';
-      result:=true;
-    end;
-    dropValues(fileItems,'');
+    try
+      enterCriticalSection(historyCs);
+      result := false;
+      for i:=0 to length(fileItems)-1 do
+      if not(fileExists (fileItems[i])) then begin
+        fileItems[i]:='';
+        result:=true;
+      end;
+      for i:=1 to length(fileItems)-1 do
+      if (fileItems[i]<>'') then for j:=0 to i-1 do
+      if SameFileName(fileItems[i],fileItems[j]) then begin
+        fileItems[i]:='';
+        result:=true;
+      end;
+      dropValues(fileItems,'');
 
-    for i:=0 to length(folderItems)-1 do
-    if not(DirectoryExists(folderItems[i])) then begin
-      folderItems[i]:='';
-      result:=true;
+      for i:=0 to length(folderItems)-1 do
+      if not(DirectoryExists(folderItems[i])) then begin
+        folderItems[i]:='';
+        result:=true;
+      end;
+      dropValues(folderItems,'');
+      sortUnique(folderItems);
+    finally
+      leaveCriticalSection(historyCs);
     end;
-    dropValues(folderItems,'');
-    sortUnique(folderItems);
   end;
 
 PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
@@ -229,8 +234,7 @@ PROCEDURE T_fileHistory.fileHistoryClick(Sender: TObject);
   begin
     historyIdx:=TMenuItem(Sender).Tag;
     if fileExists(historyItem(historyIdx))
-    then workspace.addOrGetEditorMetaForFiles(historyItem(historyIdx),true,false)
-    else if polishHistory then updateHistoryMenu;
+    then workspace.addOrGetEditorMetaForFiles(historyItem(historyIdx),true,false);
   end;
 
 {$endif}
