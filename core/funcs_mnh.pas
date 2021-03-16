@@ -179,13 +179,13 @@ FUNCTION getMnhInfo:T_arrayOfString;
       globals:T_evaluationGlobals;
       recycler:T_recycler;
   begin
-    recycler.initRecycler;
+    recycler.create;
     globals.create(nil);
     L:=mnhInfo_imp(nil,pseudoLoc,@globals.primaryContext,@recycler);
     result:=serializeToStringList(L,pseudoLoc,nil);
     recycler.literalRecycler.disposeLiteral(L);
     globals.destroy;
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 INITIALIZATION

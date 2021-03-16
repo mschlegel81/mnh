@@ -188,7 +188,7 @@ PROCEDURE T_microserverRequest.execute;
 DESTRUCTOR T_microserverRequest.destroy;
   begin
     recycler.literalRecycler.disposeLiteral(servingExpression);
-    recycler.cleanup;
+    recycler.destroy;
     inherited destroy;
   end;
 
@@ -218,12 +218,12 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
 DESTRUCTOR T_microserver.destroy;
   VAR recycler:T_recycler;
   begin
-    recycler.initRecycler;
+    recycler.create;
     recycler.literalRecycler.disposeLiteral(servingExpression);
     context^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(context);
     httpListener.destroy;
-    recycler.cleanup;
+    recycler.destroy;
     doneCriticalSection(serverCs);
     enterCriticalSection(localServerCs);
     localServers.dropKey(ip);
@@ -261,7 +261,7 @@ PROCEDURE T_microserver.execute;
       requestSocket:TSocket;
   begin
     FreeOnTerminate:=true;
-    recycler.initRecycler;
+    recycler.create;
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
     up:=true;
     lastActivity:=now;
@@ -285,10 +285,11 @@ PROCEDURE T_microserver.execute;
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
+      recycler.cleanupIfPosted;
     until timedOut or Terminated or not(context^.messages^.continueEvaluation);
     postShutdownMessage;
     up:=false;
-    recycler.cleanup;
+    recycler.destroy;
     threadStopsSleeping;
     Terminate;
   end;

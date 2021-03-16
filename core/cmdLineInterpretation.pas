@@ -45,7 +45,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR globals:T_evaluationGlobals;
         recycler:T_recycler;
     begin
-      recycler.initRecycler;
+      recycler.create;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,@recycler);
@@ -55,7 +55,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         dispose(package,destroy);
         Exclude(commandLine.mnhExecutionOptions.flags,clf_SHOW_HELP);
         globals.destroy;
-        recycler.cleanup;
+        recycler.destroy;
         commandLine.pauseIfConfigured(false);
         exit;
       end;
@@ -66,11 +66,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
         include(commandLine.mnhExecutionOptions.flags,clf_GUI);
         globals.destroy;
-        recycler.cleanup;
+        recycler.destroy;
         exit;
       end;
       globals.destroy;
-      recycler.cleanup;
+      recycler.destroy;
       consoleAdapters.setExitCode;
       commandLine.pauseIfConfigured((ExitCode<>0) or (consoleAdapters.triggersBeep));
     end;

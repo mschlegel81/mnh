@@ -1332,7 +1332,7 @@ end}
       cleanupStackAndExpression;
     end;
     stack.destroy;
-    if not(memoryCleaner.isMemoryInComfortZone) then recycler^.cleanup;
+    recycler^.cleanupIfPosted;
   end;
 
 TYPE
@@ -1358,7 +1358,7 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
   begin
     payload:=payload_;
     myContext:=context_;
-    recycler.initRecycler;
+    recycler.create;
     inherited create(tpNormal,true);
     FreeOnTerminate:=true;
   end;
@@ -1369,7 +1369,7 @@ DESTRUCTOR T_asyncTask.destroy;
     recycler.disposeLiteral(payload);
     myContext^.finalizeTaskAndDetachFromParent(@recycler);
     contextPool.disposeContext(myContext);
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 {$i func_defines.inc}

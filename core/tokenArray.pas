@@ -487,7 +487,7 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
       recycler:T_recycler;
       tokenToProcess:P_token;
   begin
-    recycler.initRecycler;
+    recycler.create;
     blob.closer:=idInfos^.getBlobCloserOrZero(inputLocation.line);
 
     adapters.createDummy;
@@ -506,7 +506,7 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
     end;
     result.addLineEnder(inputLocation.column);
     resetTemp;
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
@@ -516,7 +516,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       recycler:T_recycler;
       t:P_token;
   begin
-    recycler.initRecycler;
+    recycler.create;
     location.package:=@BLANK_ABSTRACT_PACKAGE;
     location.line:=0;
     location.column:=1;
@@ -534,7 +534,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     end;
     lexer.resetTemp;
     lexer.destroy;
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 FUNCTION T_abstractPackage.getImport(CONST idOrPath:string):P_abstractPackage; begin result:=nil; end;
@@ -1173,13 +1173,13 @@ DESTRUCTOR T_enhancedTokens.destroy;
   VAR i:longint;
       recycler:T_recycler;
   begin
-    recycler.initRecycler;
+    recycler.create;
     for i:=0 to length(dat)-1 do begin
       dat[i].cleanup(@recycler);
       dat[i].destroy;
     end;
     setLength(dat,0);
-    recycler.cleanup;
+    recycler.destroy;
   end;
 
 FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedToken;

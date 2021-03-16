@@ -22,11 +22,16 @@ TYPE
         fill:longint;
         dat:array[0..63] of P_valueScope;
       end;
-    public
-      literalRecycler:T_literalRecycler;
+      cleanupPosted:boolean;
       PROCEDURE initRecycler;
       PROCEDURE cleanup;
+      PROCEDURE postCleanup;
+    public
+      literalRecycler:T_literalRecycler;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
 
+      PROCEDURE cleanupIfPosted;
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
       FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
@@ -79,6 +84,7 @@ TYPE
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 IMPLEMENTATION
+USES mySys;
 PROCEDURE T_recycler.initRecycler;
   begin
     tokens.fill:=0;
@@ -107,6 +113,30 @@ PROCEDURE T_recycler.cleanup;
       end;
     end;
     literalRecycler.cleanup;
+  end;
+
+PROCEDURE T_recycler.postCleanup;
+  begin
+    cleanupPosted:=true;
+  end;
+
+CONSTRUCTOR T_recycler.create;
+  begin
+    cleanupPosted:=false;
+    initRecycler;
+    memoryCleaner.registerObjectForCleanup(@postCleanup);
+  end;
+
+DESTRUCTOR T_recycler.destroy;
+  begin
+    memoryCleaner.unregisterObjectForCleanup(@postCleanup);
+    cleanup;
+  end;
+
+PROCEDURE T_recycler.cleanupIfPosted;
+  begin
+    if cleanupPosted then cleanup;
+    cleanupPosted:=false;;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
