@@ -146,6 +146,7 @@ TYPE
     PROCEDURE miShebangClick(Sender: TObject);
     PROCEDURE miToggleFullscreenClick(Sender: TObject);
     PROCEDURE miUndockAllClick(Sender: TObject);
+    PROCEDURE smFileClick(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE attachNewForm(CONST form:T_mnhComponentForm); override;
 
@@ -629,6 +630,11 @@ PROCEDURE TIdeMainForm.miUndockAllClick(Sender: TObject);
   VAR cp:T_componentParent;
   begin
     for cp in PAGES do dockSites[cp]^.undockAll;
+  end;
+
+PROCEDURE TIdeMainForm.smFileClick(Sender: TObject);
+  begin
+    workspace.fileHistory.updateHistoryMenu;
   end;
 
 PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);

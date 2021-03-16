@@ -638,6 +638,7 @@ object IdeMainForm: TIdeMainForm
     Top = 56
     object smFile: TMenuItem
       Caption = '&File'
+      OnClick = smFileClick
       object miNew: TMenuItem
         Caption = 'New'
         ShortCut = 16462
