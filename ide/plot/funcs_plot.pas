@@ -252,21 +252,21 @@ FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
       width, height: longint;
       renderRequest:P_plotRenderRequest;
+      backgroundRendering:boolean=false;
   begin
     if not(context^.checkSideEffects('renderToFile',tokenLocation,[se_writeFile,se_readGuiState])) then exit(nil);
     result:=nil;
-    if (params<>nil) and (params^.size=3) and
+    if (params<>nil) and ((params^.size=3) or (params^.size=4) and (arg3^.literalType=lt_boolean)) and
       (arg0^.literalType = lt_string) and
       (arg1^.literalType in [lt_smallint,lt_bigint]) and
-      (arg2^.literalType in [lt_smallint,lt_bigint]) and
-      ((params^.size = 3) or (params^.size = 4) and
-      (arg3^.literalType in [lt_smallint,lt_bigint])) then begin
+      (arg2^.literalType in [lt_smallint,lt_bigint]) then begin
       fileName:=str0^.value;
       width :=int1^.intValue;
       height:=int2^.intValue;
+      if params^.size=4 then backgroundRendering:=bool3^.value;
       try
         fileName:=ChangeFileExt(str0^.value,'.png');
-        new(renderRequest,createRenderToFileRequest(fileName,width,height));
+        new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering));
         context^.messages^.postCustomMessage(renderRequest,true);
       except
         on e:Exception do begin
@@ -429,8 +429,8 @@ INITIALIZATION
     'setOptions(key:string,value);//Sets a single plot option',[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
     'resetOptions;//Sets the default plot options',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_ternary,
-    'renderToFile(filename<>'',width>=1,height>=1]);//Renders the current plot to a file.',[se_writeFile,se_readGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
+    'renderToFile(filename<>'',width>=1,height>=1);//Renders the current plot to a file.#renderToFile(filename<>'',width>=1,height>=1,background:true);//Renders the current plot to a file in a background thread.',[se_writeFile,se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
     'renderToString(width,height);//Renders the current plot to a string.',[se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
