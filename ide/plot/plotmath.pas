@@ -768,16 +768,23 @@ FUNCTION T_customText.toTextStatement:string;
     else result:='drawText(';
     result+=numToString(p[0])+','+numToString(p[1])+','+
             escapeString(join(text,C_lineBreakChar),es_pickShortest,se_testPending,dummy);
-    if isNan(fontSize) then result+=',Nan' else result+=','+numToString(fontSize);
+    if not(isNan(fontSize))
+    then result+=','+numToString(fontSize);
     result+=','+anchorText[anchor];
-    result+=','+escapeString(fontName,es_pickShortest,se_testPending,dummy);
-    result+=',['+numToString(foreground[cc_red  ]*255)+','+
-                 numToString(foreground[cc_green]*255)+','+
-                 numToString(foreground[cc_blue ]*255)+']';
-    if not(transparentBackground) then
-    result+=',['+numToString(background[cc_red  ]*255)+','+
-                 numToString(background[cc_green]*255)+','+
-                 numToString(background[cc_blue ]*255)+']';
+    if fontName<>''
+    then result+=','+escapeString(fontName,es_pickShortest,se_testPending,dummy);
+    if not(transparentBackground) or
+       (foreground[cc_red]<>0) or
+       (foreground[cc_green]<>0) or
+       (foreground[cc_blue]<>0) or
+       (foreground[cc_alpha]<>255)
+    then result+=',['+numToString(foreground[cc_red  ]/255)+','+
+                      numToString(foreground[cc_green]/255)+','+
+                      numToString(foreground[cc_blue ]/255)+']';
+    if not(transparentBackground)
+    then result+=',['+numToString(background[cc_red  ]/255)+','+
+                      numToString(background[cc_green]/255)+','+
+                      numToString(background[cc_blue ]/255)+']';
     result+=');';
   end;
 

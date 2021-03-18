@@ -299,10 +299,10 @@ TYPE
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
     FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
+    FUNCTION containsKey(CONST entry:CACHE_ENTRY):boolean;
     FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
     FUNCTION keyValueList:KEY_VALUE_LIST;
     FUNCTION keySet:T_arrayOfLiteral;
-
     {$ifdef debugMode}
     PROCEDURE writeDump;
     {$endif}
@@ -451,6 +451,7 @@ TYPE
       FUNCTION transpose(CONST literalRecycler:P_literalRecycler): P_listLiteral;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
+      FUNCTION underlyingMap:P_literalKeyLiteralValueMap;
   end;
 
   T_literalRecycler=object
@@ -1218,6 +1219,14 @@ FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
     with bin[hash and (length(bin)-1)] do
     for j:=0 to binFill-1 do if (arr[j].keyHash=hash) and (arr[j].key^.equals(key)) then exit(@arr[j]);
     result:=nil;
+  end;
+
+FUNCTION G_literalKeyMap.containsKey(CONST entry:CACHE_ENTRY):boolean;
+  VAR j:longint;
+  begin
+    with bin[entry.keyHash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (arr[j].keyHash=entry.keyHash) and (arr[j].key^.equals(entry.key)) then exit(true);
+    result:=false;
   end;
 
 FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
@@ -2989,6 +2998,11 @@ FUNCTION T_mapLiteral.forcedIteratableList(CONST literalRecycler:P_literalRecycl
     for i:=0 to length(e)-1 do result[i]:=literalRecycler^.newListLiteral(e[i].key,e[i].value);
   end;
 
+FUNCTION T_mapLiteral.underlyingMap:P_literalKeyLiteralValueMap;
+  begin
+    result:=@dat;
+  end;
+
 FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
   VAR L:P_literal;
   begin
@@ -3049,29 +3063,40 @@ FUNCTION setIntersect(VAR literalRecycler:T_literalRecycler; CONST params:P_list
     end;
 
   FUNCTION resultByContains:P_setLiteral;
-    VAR iter:T_arrayOfLiteral;
-        elem:P_literal;
+    VAR iter:T_literalKeyBooleanValueMap.KEY_VALUE_LIST;
+        elem:T_literalKeyBooleanValueMap.CACHE_ENTRY;
+        resultMap:P_literalKeyBooleanValueMap;
         inAll:boolean;
+        previousValueDummy:boolean;
         k:longint;
     begin
-      iter:=P_setLiteral(params^.value[smallestSetIndex])^.tempIteratableList;
+      iter:=P_setLiteral(params^.value[smallestSetIndex])^.dat.keyValueList;
       result:=newSetLiteral(length(iter));
+      resultMap:=@(result^.dat);
       for elem in iter do begin
         inAll:=true;
-        for k:=0 to params^.size-1 do inAll:=inAll and ((k=smallestSetIndex) or P_setLiteral(params^.value[k])^.contains(elem));
-        if inAll then result^.append(@literalRecycler,elem,true);
+        for k:=0 to params^.size-1 do inAll:=inAll and ((k=smallestSetIndex) or P_setLiteral(params^.value[k])^.dat.containsKey(elem));
+        if inAll then begin
+          resultMap^.putNew(elem,previousValueDummy);
+          result^.modifyType(elem.key);
+          elem.key^.rereference;
+        end;
       end;
     end;
 
   begin
-    if not((params<>nil) and (params^.size>=1))                                            then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_collectionTypes) then exit(nil) else begin
-      allSets:=allSets and (params^.value[i]^.literalType in C_setTypes);
-      if P_compoundLiteral(params^.value[i])^.size<P_compoundLiteral(params^.value[smallestSetIndex])^.size
-      then smallestSetIndex:=i;
-      if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
-    end;
-    if params^.size=1  then exit(P_compoundLiteral(params^.value[0])^.toSet(@literalRecycler));
+    if not((params<>nil) and (params^.size>=1))
+    then exit(nil);
+    for i:=0 to params^.size-1 do
+      if not(params^.value[i]^.literalType in C_collectionTypes)
+      then exit(nil)
+      else begin
+        allSets:=allSets and (params^.value[i]^.literalType in C_setTypes);
+        if P_compoundLiteral(params^.value[i])^.size<P_compoundLiteral(params^.value[smallestSetIndex])^.size
+        then smallestSetIndex:=i;
+        if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
+      end;
+    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet(@literalRecycler));
     if allSets then exit(resultByContains);
     if params^.size>16 then exit(resultByRecursion);
 
@@ -3082,7 +3107,11 @@ FUNCTION setIntersect(VAR literalRecycler:T_literalRecycler; CONST params:P_list
       inc(acceptMask,bit[i]);
     end;
     result:=newSetLiteral(maxSubsetSize);
-    for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(@literalRecycler,entry.key,true);
+    for entry in counterSet.keyValueList do if (entry.value=acceptMask) then  begin
+      result^.dat.putNew(entry,allSets);
+      result^.modifyType(entry.key);
+      entry.key^.rereference;
+    end;
     counterSet.destroy;
   end;
 

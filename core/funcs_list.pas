@@ -493,13 +493,10 @@ FUNCTION cross_impl intFuncSignature;
 
 {$ifdef fullVersion}VAR groupLoc:P_intFuncCallback;{$endif}
 FUNCTION group_imp intFuncSignature;
-  TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
       keyList:T_arrayOfLiteral;
       aggregator:P_expressionLiteral=nil;
-      groupMap:T_groupMap;
-      groupList :T_groupMap.KEY_VALUE_LIST;
-      groupEntry:T_groupMap.CACHE_ENTRY;
+      groupMap:P_literalKeyLiteralValueMap;
 
   PROCEDURE makeKeysByIndex(CONST index:longint);
     VAR i:longint;
@@ -519,23 +516,23 @@ FUNCTION group_imp intFuncSignature;
           hasError:=true;
         end;
       end;
-      recycler^.literalRecycler.disposeLiteral(dummy);
+      recycler^.disposeLiteral(dummy);
     end;
 
   PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR newLit:P_literal;
         resultLiteral:P_literal;
     begin
-
-      resultLiteral:=groupMap.get(groupKey,nil);
+      resultLiteral:=groupMap^.get(groupKey,nil);
       if aggregator=nil then begin
         if resultLiteral=nil then begin
           resultLiteral:=recycler^.literalRecycler.newListLiteral;
-          groupMap.put(groupKey,resultLiteral);
+          groupMap^.put(groupKey^.rereferenced,resultLiteral);
         end;
         P_listLiteral(resultLiteral)^.append(@recycler^.literalRecycler,L,true);
       end else begin
         if resultLiteral=nil then begin
+          groupKey^.rereference;
           resultLiteral:=L; L^.rereference;
         end else begin
           newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,context,recycler,resultLiteral,L).literal;
@@ -547,7 +544,7 @@ FUNCTION group_imp intFuncSignature;
             exit;
           end;
         end;
-        groupMap.put(groupKey,resultLiteral);
+        groupMap^.put(groupKey,resultLiteral);
       end;
     end;
 
@@ -572,18 +569,12 @@ FUNCTION group_imp intFuncSignature;
       {$ifdef fullVersion}
       if (aggregator<>nil) then context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(groupLoc,false),nil);
       {$endif}
-      groupMap.create(100);
-      for inputIndex:=0 to length(keyList)-1 do if context^.messages^.continueEvaluation then
+      result:=newMapLiteral(0);
+      groupMap:=P_mapLiteral(result)^.underlyingMap;
+      for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       recycler^.literalRecycler.disposeLiteral(keyList);
 
-      groupList:=groupMap.keyValueList;
-      result:=newMapLiteral(groupMap.fill);
-      for groupEntry in groupList do mapResult^.put(@recycler^.literalRecycler,
-                                                    groupEntry.key^.rereferenced,
-                                                    groupEntry.value,
-                                                    false);
-      groupMap.destroy;
       {$ifdef fullVersion}
       if aggregator<>nil then context^.callStackPop(nil);
       {$endif}
