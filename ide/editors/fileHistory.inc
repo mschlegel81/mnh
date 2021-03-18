@@ -109,30 +109,47 @@ PROCEDURE T_fileHistory.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 
 FUNCTION T_fileHistory.polishHistory: boolean;
   VAR i, j: longint;
+      fileItemsWorkingCopy,
+      folderItemsWorkingCopy:T_arrayOfString;
   begin
     try
       enterCriticalSection(historyCs);
-      result := false;
-      for i:=0 to length(fileItems)-1 do
-      if not(fileExists (fileItems[i])) then begin
-        fileItems[i]:='';
-        result:=true;
-      end;
-      for i:=1 to length(fileItems)-1 do
-      if (fileItems[i]<>'') then for j:=0 to i-1 do
-      if SameFileName(fileItems[i],fileItems[j]) then begin
-        fileItems[i]:='';
-        result:=true;
-      end;
-      dropValues(fileItems,'');
+      setLength(fileItemsWorkingCopy,length(fileItems));
+      for i:=0 to length(fileItemsWorkingCopy)-1 do fileItemsWorkingCopy[i]:=fileItems[i];
+      setLength(folderItemsWorkingCopy,length(folderItems));
+      for i:=0 to length(folderItemsWorkingCopy)-1 do folderItemsWorkingCopy[i]:=folderItems[i];
+    finally
+      leaveCriticalSection(historyCs);
+    end;
 
-      for i:=0 to length(folderItems)-1 do
-      if not(DirectoryExists(folderItems[i])) then begin
-        folderItems[i]:='';
-        result:=true;
-      end;
-      dropValues(folderItems,'');
-      sortUnique(folderItems);
+    result := false;
+    for i:=0 to length(fileItemsWorkingCopy)-1 do
+    if not(fileExists (fileItemsWorkingCopy[i])) then begin
+      fileItemsWorkingCopy[i]:='';
+      result:=true;
+    end;
+    for i:=1 to length(fileItemsWorkingCopy)-1 do
+    if (fileItemsWorkingCopy[i]<>'') then for j:=0 to i-1 do
+    if SameFileName(fileItemsWorkingCopy[i],fileItemsWorkingCopy[j]) then begin
+      fileItemsWorkingCopy[i]:='';
+      result:=true;
+    end;
+    dropValues(fileItemsWorkingCopy,'');
+
+    for i:=0 to length(folderItemsWorkingCopy)-1 do
+    if not(DirectoryExists(folderItemsWorkingCopy[i])) then begin
+      folderItemsWorkingCopy[i]:='';
+      result:=true;
+    end;
+    dropValues(folderItemsWorkingCopy,'');
+    sortUnique(folderItemsWorkingCopy);
+
+    try
+      enterCriticalSection(historyCs);
+      setLength(fileItems,length(fileItemsWorkingCopy));
+      for i:=0 to length(fileItemsWorkingCopy)-1 do fileItems[i]:=fileItemsWorkingCopy[i];
+      setLength(folderItems,length(folderItemsWorkingCopy));
+      for i:=0 to length(folderItemsWorkingCopy)-1 do folderItems[i]:=folderItemsWorkingCopy[i];
     finally
       leaveCriticalSection(historyCs);
     end;
