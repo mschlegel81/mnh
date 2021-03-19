@@ -21,11 +21,11 @@ FUNCTION softCast_imp intFuncSignature;
         sub :P_literal;
     begin
       case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.softCast(@recycler^.literalRecycler);
+        lt_string: result:=P_stringLiteral(x)^.softCast(recycler);
         lt_list..lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType(@recycler^.literalRecycler,true);
+          result:=P_collectionLiteral(x)^.newOfSameType(recycler,true);
           iter:=P_collectionLiteral(x)^.tempIteratableList;
-          for sub in iter do collResult^.append(@recycler^.literalRecycler,softCastRecurse(sub),false);
+          for sub in iter do collResult^.append(recycler,softCastRecurse(sub),false);
         end;
         else begin
           x^.rereference;
@@ -46,7 +46,7 @@ FUNCTION toBuiltin_imp intFuncSignature;
     else if (params^.size=1) then begin
       if not(arg0^.literalType in C_typables) or (P_typableLiteral(arg0)^.customType=nil)
       then exit(arg0^.rereferenced)
-      else exit(P_typableLiteral(arg0)^.customType^.uncast(@recycler^.literalRecycler,arg0,tokenLocation,context,context^.messages,@recycler));
+      else exit(P_typableLiteral(arg0)^.customType^.uncast(recycler,arg0,tokenLocation,context,context^.messages,@recycler));
     end else result:=nil;
   end;
 
@@ -57,7 +57,7 @@ FUNCTION toString_imp intFuncSignature;
       if arg0^.literalType=lt_string then begin
         result:=arg0;
         result^.rereference;
-      end else result:=recycler^.literalRecycler.newStringLiteral(arg0^.toString);
+      end else result:=recycler^.newStringLiteral(arg0^.toString);
     end;
   end;
 
@@ -92,21 +92,21 @@ FUNCTION toInt_imp intFuncSignature;
           exit(arg0^.rereferenced);
         lt_boolean:
           if bool0^.value
-          then exit(recycler^.literalRecycler.newIntLiteral(1))
-          else exit(recycler^.literalRecycler.newIntLiteral(0));
+          then exit(recycler^.newIntLiteral(1))
+          else exit(recycler^.newIntLiteral(0));
         lt_real:
           if real0^.value=round(real0^.value)
-          then exit(recycler^.literalRecycler.newIntLiteral(round(real0^.value)));
+          then exit(recycler^.newIntLiteral(round(real0^.value)));
         lt_string: begin
-          result:=parseNumber(str0^.value,1,false,recycler^.literalRecycler,len);
+          result:=parseNumber(str0^.value,1,false,recycler,len);
           if (result=nil) or (result^.literalType in [lt_smallint,lt_bigint]) then exit(result);
           //parsed a real number
           if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
             i:=round(P_realLiteral(result)^.value);
-            recycler^.literalRecycler.disposeLiteral(result);
-            exit(recycler^.literalRecycler.newIntLiteral(i));
+            recycler^.disposeLiteral(result);
+            exit(recycler^.newIntLiteral(i));
           end else begin
-            recycler^.literalRecycler.disposeLiteral(result);
+            recycler^.disposeLiteral(result);
             result:=nil;
           end;
         end;
@@ -123,15 +123,15 @@ FUNCTION toReal_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
         lt_real: begin result:=arg0; result^.rereference; exit(result); end;
-        lt_boolean: if bool0^.value then exit(recycler^.literalRecycler.newIntLiteral(1)) else exit(recycler^.literalRecycler.newIntLiteral(0));
-        lt_smallint,lt_bigint: exit(recycler^.literalRecycler.newRealLiteral(int0^.floatValue));
+        lt_boolean: if bool0^.value then exit(recycler^.newIntLiteral(1)) else exit(recycler^.newIntLiteral(0));
+        lt_smallint,lt_bigint: exit(recycler^.newRealLiteral(int0^.floatValue));
         lt_string: begin
-          result:=parseNumber(str0^.value,1,false,recycler^.literalRecycler,len);
+          result:=parseNumber(str0^.value,1,false,recycler,len);
           if (result=nil) or (result^.literalType=lt_real) then exit(result);
           //parsed an integer
           x:=P_abstractIntLiteral(result)^.floatValue;
-          recycler^.literalRecycler.disposeLiteral(result);
-          exit(recycler^.literalRecycler.newRealLiteral(x));
+          recycler^.disposeLiteral(result);
+          exit(recycler^.newRealLiteral(x));
         end;
       end;
       context^.raiseError(arg0^.toString+' cannot be cast to real',tokenLocation);
@@ -146,15 +146,15 @@ FUNCTION toList_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
-        result:=recycler^.literalRecycler.newListLiteral();
+        result:=recycler^.newListLiteral();
         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
-          listResult^.append(@recycler^.literalRecycler,valueToAppend,false);
+          listResult^.append(recycler,valueToAppend,false);
           valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
         end;
       end else if arg0^.literalType in C_scalarTypes
-      then result:=recycler^.literalRecycler.newListLiteral(1)^.append(@recycler^.literalRecycler,arg0,true)
-      else result:=compound0^.toList(@recycler^.literalRecycler);
+      then result:=recycler^.newListLiteral(1)^.append(recycler,arg0,true)
+      else result:=compound0^.toList(recycler);
     end;
   end;
 
@@ -169,13 +169,13 @@ FUNCTION toSet_imp intFuncSignature;
         result:=newSetLiteral(1);
         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
-          setResult^.append(@recycler^.literalRecycler,valueToAppend,false);
+          setResult^.append(recycler,valueToAppend,false);
           valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
         end;
       end else
       if arg0^.literalType in C_scalarTypes
-      then result:=newSetLiteral(1)^.append(@recycler^.literalRecycler,arg0,true)
-      else result:=compound0^.toSet(@recycler^.literalRecycler);
+      then result:=newSetLiteral(1)^.append(recycler,arg0,true)
+      else result:=compound0^.toSet(recycler);
     end;
   end;
 
@@ -183,7 +183,7 @@ FUNCTION toMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_compoundTypes) then begin
-      result:=compound0^.toMap(@recycler^.literalRecycler,tokenLocation,context);
+      result:=compound0^.toMap(recycler,tokenLocation,context);
     end;
   end;
 
@@ -238,8 +238,8 @@ FUNCTION typeOf_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then exit(recycler^.literalRecycler.newStringLiteral(arg0^.typeString))
-    else exit(recycler^.literalRecycler.newStringLiteral(parameterListTypeString(params)));
+    then exit(recycler^.newStringLiteral(arg0^.typeString))
+    else exit(recycler^.newStringLiteral(parameterListTypeString(params)));
   end;
 
 INITIALIZATION

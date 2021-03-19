@@ -484,14 +484,14 @@ DESTRUCTOR T_singleStringLexer.destroy;
 {$ifdef fullVersion}
 FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos): T_enhancedTokens;
   VAR adapters:T_messagesDummy;
-      recycler:T_recycler;
+      recycler:P_recycler;
       tokenToProcess:P_token;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     blob.closer:=idInfos^.getBlobCloserOrZero(inputLocation.line);
 
     adapters.createDummy;
-    while fetchNext(@adapters,@recycler,ls_retainComments) do begin end;
+    while fetchNext(@adapters,recycler,ls_retainComments) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(text);
 
@@ -506,23 +506,23 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
     end;
     result.addLineEnder(inputLocation.column);
     resetTemp;
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR lexer:T_singleStringLexer;
       location:T_tokenLocation;
       adapters:T_messagesDummy;
-      recycler:T_recycler;
+      recycler:P_recycler;
       t:P_token;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     location.package:=@BLANK_ABSTRACT_PACKAGE;
     location.line:=0;
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
     adapters.createDummy;
-    repeat until not(lexer.fetchNext(@adapters,@recycler,ls_retainAll));
+    repeat until not(lexer.fetchNext(@adapters,recycler,ls_retainAll));
     adapters.destroy;
     setLength(result,0);
     while lexer.tokenQueue.hasNext do begin
@@ -530,11 +530,11 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       setLength(result,length(result)+1);
       BLANK_ABSTRACT_PACKAGE.resolveId(t^,nil);
       result[length(result)-1]:=t^.getRawToken;
-      recycler.disposeToken(t);
+      recycler^.disposeToken(t);
     end;
     lexer.resetTemp;
     lexer.destroy;
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 FUNCTION T_abstractPackage.getImport(CONST idOrPath:string):P_abstractPackage; begin result:=nil; end;
@@ -1171,15 +1171,15 @@ CONSTRUCTOR T_enhancedTokens.create;
 
 DESTRUCTOR T_enhancedTokens.destroy;
   VAR i:longint;
-      recycler:T_recycler;
+      recycler:P_recycler;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     for i:=0 to length(dat)-1 do begin
-      dat[i].cleanup(@recycler);
+      dat[i].cleanup(recycler);
       dat[i].destroy;
     end;
     setLength(dat,0);
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedToken;
@@ -1497,7 +1497,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=recycler^.literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
+      result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar));
       setLength(lines,0);
       exit(result);
     end;
@@ -1522,7 +1522,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end;
     case line[inputLocation.column] of
       '0'..'9': begin
-        result^.data:=parseNumber(line,inputLocation.column, false,recycler^.literalRecycler, parsedLength);
+        result^.data:=parseNumber(line,inputLocation.column, false,recycler, parsedLength);
         if parsedLength<=0 then begin
                                   fail('Cannot parse numeric literal '+line);
                                   recycler^.disposeToken(result);
@@ -1550,7 +1550,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           end;
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=recycler^.literalRecycler.newStringLiteral(stringValue);
+          result^.data:=recycler^.newStringLiteral(stringValue);
         end;
         stringValue:='';
       end;
@@ -1569,8 +1569,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
-          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.literalRecycler.newRealLiteral(Nan);      end
-          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.literalRecycler.newRealLiteral(infinity); end
+          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(Nan);      end
+          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
