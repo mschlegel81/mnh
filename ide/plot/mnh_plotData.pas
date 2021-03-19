@@ -1810,7 +1810,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       end;
       DataString:=base92Encode(
                    compressString(
-                     serialize(recycler^,
+                     serialize(recycler,
                                globalRowData,
                                dummyLocation,
                                nil),
