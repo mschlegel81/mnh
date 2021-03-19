@@ -26,7 +26,7 @@ TYPE
       FUNCTION fileExists:boolean;
       FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
       FUNCTION readValue(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
-      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; VAR literalRecycler:T_literalRecycler);
+      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler);
   end;
 
 {$ifdef fullVersion}
@@ -198,10 +198,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(recycler^.literalRecycler,@wrapper,location,context^.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(recycler,@wrapper,location,context^.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
-        if result<>nil then recycler^.literalRecycler.disposeLiteral(result);
+        if result<>nil then recycler^.disposeLiteral(result);
         result:=nil;
       end;
       wrapper.destroy;
@@ -230,12 +230,12 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
       result:=newMapLiteral(2)
-        ^.put(@recycler^.literalRecycler,'id',ruleId)
-        ^.put(@recycler^.literalRecycler,'content',contentLiteral,false);
+        ^.put(recycler,'id',ruleId)
+        ^.put(recycler,'content',contentLiteral,false);
     end else result:=newVoidLiteral;
   end;
 
-PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; VAR literalRecycler:T_literalRecycler);
+PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler);
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
       tempFileName:string;
@@ -256,7 +256,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     end else begin
       wrapper.createToWriteToFile(tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(literalRecycler,L,@wrapper,location,threadLocalMessages);
+      writeLiteralToStream(recycler,L,@wrapper,location,threadLocalMessages);
       finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;

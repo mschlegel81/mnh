@@ -12,8 +12,9 @@ USES sysutils,
      tokens;
 TYPE
   P_recycler=^T_recycler;
-  T_recycler=object
+  T_recycler=object(T_literalRecycler)
     private
+      isFree:boolean;
       tokens:record
         dat:array[0..1023] of P_token;
         fill:longint;
@@ -23,13 +24,11 @@ TYPE
         dat:array[0..63] of P_valueScope;
       end;
       cleanupPosted:boolean;
-      PROCEDURE initRecycler;
       PROCEDURE cleanup;
-      PROCEDURE postCleanup;
-    public
-      literalRecycler:T_literalRecycler;
+
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
+    public
 
       PROCEDURE cleanupIfPosted;
       FUNCTION disposeToken(p:P_token):P_token; inline;
@@ -43,8 +42,6 @@ TYPE
       PROCEDURE scopePush(VAR scope:P_valueScope); inline;
       PROCEDURE scopePop(VAR scope:P_valueScope); inline;
       FUNCTION  cloneSafeValueStore(CONST oldStore:P_valueScope):P_valueScope;
-
-      PROCEDURE disposeLiteral(VAR L:P_literal);
   end;
 
   P_abstractRule=^T_abstractRule;
@@ -82,14 +79,71 @@ TYPE
       FUNCTION isPure:boolean; virtual; abstract;
   end;
 
+FUNCTION newRecycler:P_recycler;
+PROCEDURE freeRecycler(VAR recycler:P_recycler);
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 IMPLEMENTATION
 USES mySys;
-PROCEDURE T_recycler.initRecycler;
+VAR recyclerPool:array of P_recycler;
+    recyclerPoolCs:TRTLCriticalSection;
+    recyclerPoolsFinalized:boolean=false;
+
+ FUNCTION newRecycler:P_recycler;
+   VAR r:P_recycler;
+   begin
+     result:=nil;
+     EnterCriticalSection(recyclerPoolCs);
+     try
+       for r in recyclerPool do if (result=nil) and r^.isFree then begin
+         r^.isFree:=false;
+         result:=r;
+       end;
+       if result=nil then begin
+         setLength(recyclerPool,length(recyclerPool)+1);
+         new(result,create);
+         recyclerPool[length(recyclerPool)-1]:=result;
+       end;
+     finally
+       LeaveCriticalSection(recyclerPoolCs);
+     end;
+   end;
+
+PROCEDURE freeRecycler(VAR recycler:P_recycler);
   begin
-    tokens.fill:=0;
-    scopeRecycler.fill:=0;
-    literalRecycler.initRecycler;
+    recycler^.isFree:=true;
+    recycler^.cleanupIfPosted;
+    recycler:=nil;
+  end;
+
+PROCEDURE cleanupRecyclerPools;
+  VAR i:longint;
+  begin
+    if recyclerPoolsFinalized then exit;
+    EnterCriticalSection(recyclerPoolCs);
+    try
+      for i:=0 to length(recyclerPool)-1 do
+      if recyclerPool[i]^.isFree
+      then recyclerPool[i]^.cleanup
+      else recyclerPool[i]^.cleanupPosted:=true;
+
+      i:=length(recyclerPool)-1;
+      while (i>=0) and (recyclerPool[i]^.isFree) do begin
+        dispose(recyclerPool[i],destroy);
+        setLength(recyclerPool,i);
+        dec(i);
+      end;
+    finally
+      LeaveCriticalSection(recyclerPoolCs);
+    end;
+  end;
+
+PROCEDURE finalizeRecyclerPools;
+  begin
+    assert(not(recyclerPoolsFinalized));
+    cleanupRecyclerPools;
+    assert(length(recyclerPool)=0);
+    recyclerPoolsFinalized:=true;
+    DoneCriticalSection(recyclerPoolCs);
   end;
 
 PROCEDURE T_recycler.cleanup;
@@ -112,31 +166,28 @@ PROCEDURE T_recycler.cleanup;
         end;
       end;
     end;
-    literalRecycler.cleanup;
-  end;
-
-PROCEDURE T_recycler.postCleanup;
-  begin
-    cleanupPosted:=true;
+    inherited freeMemory;
   end;
 
 CONSTRUCTOR T_recycler.create;
   begin
+    isFree:=false;
     cleanupPosted:=false;
-    initRecycler;
-    memoryCleaner.registerObjectForCleanup(@postCleanup);
+    tokens.fill:=0;
+    scopeRecycler.fill:=0;
+    inherited create;
   end;
 
 DESTRUCTOR T_recycler.destroy;
   begin
-    memoryCleaner.unregisterObjectForCleanup(@postCleanup);
     cleanup;
+    destroy;
   end;
 
 PROCEDURE T_recycler.cleanupIfPosted;
   begin
     if cleanupPosted then cleanup;
-    cleanupPosted:=false;;
+    cleanupPosted:=false;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
@@ -149,7 +200,7 @@ FUNCTION T_recycler.disposeToken(p: P_token): P_token;
       {$endif}
 
       result:=p^.next;
-      p^.undefine(literalRecycler);
+      p^.undefine(@self);
       with tokens do if (fill>=length(dat))
       then dispose(p,destroy)
       else begin
@@ -176,33 +227,23 @@ FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation;
 FUNCTION T_recycler.newToken(CONST original: T_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original,literalRecycler);
+    result^.define(original,@self);
     result^.next:=nil;
   end;
 
 FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original^,literalRecycler);
+    result^.define(original^,@self);
     result^.next:=nil;
   end;
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
-  VAR parent:P_valueScope;
-      literalRecycler:T_literalRecycler;
+  VAR recycler:P_recycler;
   begin
-    if scope=nil then exit;
-    if interlockedDecrement(scope^.refCount)>0 then begin
-      scope:=nil;
-      exit;
-    end;
-    literalRecycler.initRecycler;
-    parent:=scope^.parentScope;
-    scope^.cleanup(literalRecycler);
-    literalRecycler.cleanup;
-    dispose(scope,destroy);
-    noRecycler_disposeScope(parent);
-    scope:=nil;
+    recycler:=newRecycler;
+    recycler^.disposeScope(scope);
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
@@ -213,7 +254,7 @@ PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
       scope:=nil;
       exit;
     end;
-    scope^.cleanup(literalRecycler);
+    scope^.cleanup(@self);
     parent:=scope^.parentScope;
     with scopeRecycler do begin
       if (fill>=length(dat))
@@ -264,7 +305,7 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
       scope:=newScope;
       exit;
     end;
-    scope^.cleanup(literalRecycler);
+    scope^.cleanup(@self);
     with scopeRecycler do begin
       if (fill>=length(dat))
       then dispose(scope,destroy)
@@ -285,11 +326,6 @@ FUNCTION T_recycler.cloneSafeValueStore(CONST oldStore: P_valueScope): P_valueSc
     setLength(result^.variables,oldStore^.varFill);
     result^.varFill:=oldStore^.varFill;
     for k:=0 to oldStore^.varFill-1 do result^.variables[k]:=oldStore^.variables[k]^.clone;
-  end;
-
-PROCEDURE T_recycler.disposeLiteral(VAR L:P_literal);
-  begin
-    literalRecycler.disposeLiteral(L);
   end;
 
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
@@ -319,8 +355,8 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
   VAR parList:P_listLiteral;
       rep:T_tokenRange;
   begin
-    parList:=recycler^.literalRecycler.newListLiteral(1);
-    parList^.append(@recycler^.literalRecycler,singleParameter,true);
+    parList:=recycler^.newListLiteral(1);
+    parList^.append(recycler,singleParameter,true);
     if canBeApplied(callLocation,parList,rep,context,recycler)
     then begin
       result:=(rep.first<>     nil          ) and
@@ -329,7 +365,7 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
               (rep.first^.data=@boolLit[true]);
       recycler^.cascadeDisposeToken(rep.first);
     end else result:=false;
-    recycler^.literalRecycler.disposeLiteral(parList);
+    recycler^.disposeLiteral(parList);
   end;
 
 FUNCTION T_abstractRule.getTypedef: P_typedef;
@@ -340,5 +376,12 @@ FUNCTION T_abstractRule.getTypedef: P_typedef;
 
 FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
+
+initialization
+  InitCriticalSection(recyclerPoolCs);
+  setLength(recyclerPool,0);
+  memoryCleaner.registerCleanupMethod(@cleanupRecyclerPools);
+finalization
+  finalizeRecyclerPools;
 
 end.

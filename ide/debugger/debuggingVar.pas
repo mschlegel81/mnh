@@ -200,7 +200,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
       literalRecycler:T_literalRecycler;
   begin
     if (length(preparedChildren)=0) and (canExpand) then begin
-      literalRecycler.initRecycler;
+      literalRecycler.create;
       if isKeyValuePair then begin
         if length(P_listLiteral(value)^.value[0]^.toString())>=50 then begin
           setLength(preparedChildren,2);
@@ -216,7 +216,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
         for i:=0 to length(iter)-1 do new(preparedChildren[i],create(iter[i],value^.literalType in C_mapTypes));
         literalRecycler.disposeLiteral(iter);
       end;
-      literalRecycler.cleanup;
+      literalRecycler.destroy;
     end;
     initialize(result);
     setLength(result,length(preparedChildren));
@@ -227,11 +227,11 @@ DESTRUCTOR T_variableTreeEntryAnonymousValue.destroy;
   VAR i:longint;
       literalRecycler:T_literalRecycler;
   begin
-    literalRecycler.initRecycler;
+    literalRecycler.create;
     for i:=0 to length(preparedChildren)-1 do dispose(preparedChildren[i],destroy);
     setLength(preparedChildren,0);
     literalRecycler.disposeLiteral(value);
-    literalRecycler.cleanup;
+    literalRecycler.destroy;
   end;
 
 DESTRUCTOR T_variableTreeEntryNamedValue.destroy;

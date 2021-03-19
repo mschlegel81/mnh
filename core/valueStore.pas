@@ -18,10 +18,10 @@ TYPE
     public
       varCs:TRTLCriticalSection;
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
-      PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
       DESTRUCTOR destroy;
-      PROCEDURE setValue(VAR literalRecycler:T_literalRecycler; CONST newValue:P_literal);
-      FUNCTION mutate(VAR literalRecycler:T_literalRecycler;CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+      PROCEDURE setValue(CONST literalRecycler:P_literalRecycler; CONST newValue:P_literal);
+      FUNCTION mutate(CONST literalRecycler:P_literalRecycler;CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -36,22 +36,22 @@ TYPE
     varFill     :longint;
     CONSTRUCTOR create(CONST asChildOf:P_valueScope);
     PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope);
-    PROCEDURE cleanup(VAR literalRecycler:T_literalRecycler);
+    PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
     DESTRUCTOR destroy;
     PROCEDURE insteadOfDestroy;
 
     PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
-    PROCEDURE createVariable(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
+    PROCEDURE createVariable(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
     FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
-    FUNCTION  setVariableValue(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
-    FUNCTION  mutateVariableValue(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+    FUNCTION  setVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
+    FUNCTION  mutateVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
     {$ifdef fullVersion}
     //For debugging:
     PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
     {$endif}
     PROCEDURE attachParent(CONST parent:P_valueScope);
     PROCEDURE detachParent;
-    FUNCTION checkVariablesOnPop(VAR literalRecycler:T_literalRecycler; CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
+    FUNCTION checkVariablesOnPop(CONST literalRecycler:P_literalRecycler; CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
   end;
 
 IMPLEMENTATION
@@ -65,10 +65,10 @@ CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValu
     if value<>nil then value^.rereference;
   end;
 
-PROCEDURE T_namedVariable.cleanup(VAR literalRecycler:T_literalRecycler);
+PROCEDURE T_namedVariable.cleanup(CONST literalRecycler:P_literalRecycler);
   begin
     enterCriticalSection(varCs);
-    if value<>nil then literalRecycler.disposeLiteral(value);
+    if value<>nil then literalRecycler^.disposeLiteral(value);
     leaveCriticalSection(varCs);
   end;
 
@@ -78,12 +78,12 @@ DESTRUCTOR T_namedVariable.destroy;
     doneCriticalSection(varCs);
   end;
 
-PROCEDURE T_namedVariable.setValue(VAR literalRecycler:T_literalRecycler; CONST newValue:P_literal);
+PROCEDURE T_namedVariable.setValue(CONST literalRecycler:P_literalRecycler; CONST newValue:P_literal);
   begin
     if readonly then raise Exception.create('Mutation of constant "'+id+'" is not allowed.');
     enterCriticalSection(varCs);
     try
-      literalRecycler.disposeLiteral(value);
+      literalRecycler^.disposeLiteral(value);
       value:=newValue;
       value^.rereference;
     finally
@@ -91,7 +91,7 @@ PROCEDURE T_namedVariable.setValue(VAR literalRecycler:T_literalRecycler; CONST 
     end;
   end;
 
-FUNCTION T_namedVariable.mutate(VAR literalRecycler:T_literalRecycler; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+FUNCTION T_namedVariable.mutate(CONST literalRecycler:P_literalRecycler; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
   begin
     if readonly then begin
       context^.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
@@ -162,7 +162,7 @@ PROCEDURE T_valueScope.insteadOfCreate(CONST asChildOf:P_valueScope);
     refCount        :=1;
   end;
 
-PROCEDURE T_valueScope.cleanup(VAR literalRecycler:T_literalRecycler);
+PROCEDURE T_valueScope.cleanup(CONST literalRecycler:P_literalRecycler);
   VAR k:longint;
   begin
     for k:=0 to varFill-1 do begin
@@ -191,10 +191,10 @@ PROCEDURE T_valueScope.createVariable(CONST id:T_idString; CONST value:P_literal
     inc(varFill);
   end;
 
-PROCEDURE T_valueScope.createVariable(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST value:int64;     CONST readonly:boolean=true);
+PROCEDURE T_valueScope.createVariable(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:int64;     CONST readonly:boolean=true);
   VAR lit:P_abstractIntLiteral;
   begin
-    lit:=literalRecycler.newIntLiteral(value);
+    lit:=literalRecycler^.newIntLiteral(value);
     createVariable(id,lit,readonly);
     lit^.unreference;
   end;
@@ -210,7 +210,7 @@ FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;
     if parentScope<>nil then result:=parentScope^.getVariableValue(id);
   end;
 
-FUNCTION T_valueScope.setVariableValue(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
+FUNCTION T_valueScope.setVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
   VAR k:longint;
   begin
     result:=false;
@@ -223,7 +223,7 @@ FUNCTION T_valueScope.setVariableValue(VAR literalRecycler:T_literalRecycler; CO
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
   end;
 
-FUNCTION T_valueScope.mutateVariableValue(VAR literalRecycler:T_literalRecycler; CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
+FUNCTION T_valueScope.mutateVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
   VAR k:longint;
   begin
     result:=nil;
@@ -251,7 +251,7 @@ PROCEDURE T_valueScope.detachParent;
     parentScope:=nil;
   end;
 
-FUNCTION T_valueScope.checkVariablesOnPop(VAR literalRecycler:T_literalRecycler; CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
+FUNCTION T_valueScope.checkVariablesOnPop(CONST literalRecycler:P_literalRecycler; CONST location:T_searchTokenLocation; CONST context:P_abstractContext):boolean;
   VAR i:longint;
   begin
     result:=true;

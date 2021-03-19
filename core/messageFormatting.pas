@@ -110,11 +110,11 @@ CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchT
 DESTRUCTOR T_echoOutMessage.destroy;
   VAR literalRecycler:T_literalRecycler;
   begin
-    literalRecycler.initRecycler;
+    literalRecycler.create;
     enterCriticalSection(messageCs);
     literalRecycler.disposeLiteral(literal);
     leaveCriticalSection(messageCs);
-    literalRecycler.cleanup;
+    literalRecycler.destroy;
     inherited;
   end;
 
