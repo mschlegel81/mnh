@@ -92,7 +92,7 @@ VAR recyclerPool:array of P_recycler;
    VAR r:P_recycler;
    begin
      result:=nil;
-     EnterCriticalSection(recyclerPoolCs);
+     enterCriticalSection(recyclerPoolCs);
      try
        for r in recyclerPool do if (result=nil) and r^.isFree then begin
          r^.isFree:=false;
@@ -104,7 +104,7 @@ VAR recyclerPool:array of P_recycler;
          recyclerPool[length(recyclerPool)-1]:=result;
        end;
      finally
-       LeaveCriticalSection(recyclerPoolCs);
+       leaveCriticalSection(recyclerPoolCs);
      end;
    end;
 
@@ -119,7 +119,7 @@ PROCEDURE cleanupRecyclerPools;
   VAR i:longint;
   begin
     if recyclerPoolsFinalized then exit;
-    EnterCriticalSection(recyclerPoolCs);
+    enterCriticalSection(recyclerPoolCs);
     try
       for i:=0 to length(recyclerPool)-1 do
       if recyclerPool[i]^.isFree
@@ -133,7 +133,7 @@ PROCEDURE cleanupRecyclerPools;
         dec(i);
       end;
     finally
-      LeaveCriticalSection(recyclerPoolCs);
+      leaveCriticalSection(recyclerPoolCs);
     end;
   end;
 
@@ -143,7 +143,7 @@ PROCEDURE finalizeRecyclerPools;
     cleanupRecyclerPools;
     assert(length(recyclerPool)=0);
     recyclerPoolsFinalized:=true;
-    DoneCriticalSection(recyclerPoolCs);
+    doneCriticalSection(recyclerPoolCs);
   end;
 
 PROCEDURE T_recycler.cleanup;
@@ -181,7 +181,7 @@ CONSTRUCTOR T_recycler.create;
 DESTRUCTOR T_recycler.destroy;
   begin
     cleanup;
-    destroy;
+    inherited destroy;
   end;
 
 PROCEDURE T_recycler.cleanupIfPosted;
@@ -337,7 +337,7 @@ CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
 
 DESTRUCTOR T_abstractRule.destroy;                    begin id:='';                   end;
 FUNCTION T_abstractRule.getId: T_idString;            begin result:=id; end;
-FUNCTION T_abstractRule.getRootId: T_idString;         begin result:=id; end;
+FUNCTION T_abstractRule.getRootId: T_idString;        begin result:=id; end;
 FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
 
 FUNCTION T_abstractRule.innerRuleType: T_ruleType;
@@ -377,11 +377,11 @@ FUNCTION T_abstractRule.getTypedef: P_typedef;
 FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
 
-initialization
-  InitCriticalSection(recyclerPoolCs);
+INITIALIZATION
+  initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
   memoryCleaner.registerCleanupMethod(@cleanupRecyclerPools);
-finalization
+FINALIZATION
   finalizeRecyclerPools;
 
 end.
