@@ -586,7 +586,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do begin
-      primaryContext.valueScope^.checkVariablesOnPop(recycler^.literalRecycler, location,@primaryContext);
+      primaryContext.valueScope^.checkVariablesOnPop(recycler, location,@primaryContext);
       recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
@@ -745,7 +745,7 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recycler:P_recycler);
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
-      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler^.literalRecycler,C_nilSearchTokenLocation,@self);
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler,C_nilSearchTokenLocation,@self);
       recycler^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
       state:=fts_finished;
@@ -781,17 +781,17 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recy
         parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
         if parameterIndex<0 then begin
           if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-            newValue:=recycler^.literalRecycler.newListLiteral(length(mainParameters)+1);
-            P_listLiteral(newValue)^.appendString(@recycler^.literalRecycler,first^.location.package^.getPath);
-            for s in mainParameters do P_listLiteral(newValue)^.appendString(@recycler^.literalRecycler,s);
+            newValue:=recycler^.newListLiteral(length(mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(recycler,first^.location.package^.getPath);
+            for s in mainParameters do P_listLiteral(newValue)^.appendString(recycler,s);
           end else begin
             primaryContext.raiseError('Invalid parameter identifier',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
-          newValue:=recycler^.literalRecycler.newStringLiteral(first^.location.package^.getPath)
+          newValue:=recycler^.newStringLiteral(first^.location.package^.getPath)
         else if parameterIndex<=length(mainParameters) then
-          newValue:=recycler^.literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
+          newValue:=recycler^.newStringLiteral(mainParameters[parameterIndex-1])
         else
           newValue:=newVoidLiteral;
         first^.data:=newValue;
@@ -839,9 +839,9 @@ PROCEDURE T_workerThread.execute;
   CONST MS_IDLE_BEFORE_QUIT=1000;
   VAR sleepCount:longint=0;
       currentTask:P_queueTask;
-      recycler:T_recycler;
+      recycler:P_recycler;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     with globals^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
@@ -850,14 +850,14 @@ PROCEDURE T_workerThread.execute;
           sleep(1);
         end else begin
           if currentTask^.isVolatile then begin
-            currentTask^.evaluate(@recycler);
+            currentTask^.evaluate(recycler);
             dispose(currentTask,destroy);
           end else begin
-            currentTask^.evaluate(@recycler);
+            currentTask^.evaluate(recycler);
           end;
           sleepCount:=0;
         end;
-        recycler.cleanupIfPosted;
+        recycler^.cleanupIfPosted;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
@@ -867,7 +867,7 @@ PROCEDURE T_workerThread.execute;
       if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
     end;
-    recycler.destroy;
+    freeRecycler(recycler);
     Terminate;
   end;
 

@@ -138,13 +138,13 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
 
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
   VAR examplesToStore:array of array[0..3] of T_arrayOfString;
-      recycler:T_recycler;
+      recycler:P_recycler;
 
   PROCEDURE processExample;
     VAR html,txt,ids:T_arrayOfString;
     begin
       if (length(code)<=0) then exit;
-      demoCodeToHtmlCallback(code,txt,html,ids,@recycler);
+      demoCodeToHtmlCallback(code,txt,html,ids,recycler);
       addExample(code,html,txt,ids);
       setLength(examplesToStore,length(examplesToStore)+1);
       examplesToStore[length(examplesToStore)-1,0]:=code;
@@ -217,7 +217,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       bar.caption:='Executing example code for help/doc';
       Application.ProcessMessages;
     end;
-    recycler.create;
+    recycler:=newRecycler;
     keys:=functionDocMap.keySet;
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
@@ -242,7 +242,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       setLength(examplesToStore,0);
     end else bar.position:=bar.position+length(decompressed_examples);
     functionDocExamplesReady:=true;
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 FUNCTION shortName(CONST id:T_idString):T_idString;

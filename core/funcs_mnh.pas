@@ -85,8 +85,8 @@ FUNCTION myPath_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if tokenLocation.package=nil then result:=recycler^.literalRecycler.newStringLiteral('<Unknown>')
-                                   else result:=recycler^.literalRecycler.newStringLiteral(tokenLocation.package^.getPath);
+      if tokenLocation.package=nil then result:=recycler^.newStringLiteral('<Unknown>')
+                                   else result:=recycler^.newStringLiteral(tokenLocation.package^.getPath);
     end;
   end;
 
@@ -94,22 +94,22 @@ FUNCTION executor_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=recycler^.literalRecycler.newStringLiteral(paramStr(0));
+    then result:=recycler^.newStringLiteral(paramStr(0));
   end;
 
 FUNCTION hash_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=recycler^.literalRecycler.newIntLiteral(arg0^.hash);
+    then result:=recycler^.newIntLiteral(arg0^.hash);
   end;
 
 FUNCTION listSideEffects_imp intFuncSignature;
   VAR se:T_sideEffect;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=recycler^.literalRecycler.newListLiteral();
-      for se in T_sideEffect do listResult^.appendString(@recycler^.literalRecycler, C_sideEffectName[se]);
+      result:=recycler^.newListLiteral();
+      for se in T_sideEffect do listResult^.appendString(recycler, C_sideEffectName[se]);
     end else result:=nil;
   end;
 
@@ -120,23 +120,23 @@ FUNCTION ord_imp intFuncSignature;
     begin
       case x^.literalType of
         lt_boolean: if P_boolLiteral(x)^.value
-                    then exit(recycler^.literalRecycler.newIntLiteral(1))
-                    else exit(recycler^.literalRecycler.newIntLiteral(0));
+                    then exit(recycler^.newIntLiteral(1))
+                    else exit(recycler^.newIntLiteral(0));
         lt_smallint,lt_bigint: exit(x^.rereferenced);
         lt_string : if length(P_stringLiteral(x)^.value)=1
-                    then exit(recycler^.literalRecycler.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
-                    else exit(recycler^.literalRecycler.newIntLiteral(-1));
+                    then exit(recycler^.newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
+                    else exit(recycler^.newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,context,recycler);
         lt_void, lt_real: begin
           context^.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
-          then result:=recycler^.literalRecycler.newListLiteral(P_compoundLiteral(x)^.size)
+          then result:=recycler^.newListLiteral(P_compoundLiteral(x)^.size)
           else result:=newSetLiteral (P_compoundLiteral(x)^.size);
           iter:=P_listLiteral(x)^.tempIteratableList;
           for sub in iter do if context^.messages^.continueEvaluation then
-            collResult^.append(@recycler^.literalRecycler,recurse(sub),false);
+            collResult^.append(recycler,recurse(sub),false);
         end;
       end;
     end;
@@ -152,24 +152,24 @@ FUNCTION mnhInfo_imp intFuncSignature;
     if not(context^.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
     result:=newMapLiteral(17)^
-      .put(@recycler^.literalRecycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
-      .put(@recycler^.literalRecycler,'isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
-      .put(@recycler^.literalRecycler,'is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
-      .put(@recycler^.literalRecycler,'compileTime'    ,{$I %DATE%}+' '+{$I %TIME%})^
-      .put(@recycler^.literalRecycler,'compilerVersion',{$I %FPCVERSION%}          )^
-      .put(@recycler^.literalRecycler,'targetCpu'      ,{$I %FPCTARGET%}           )^
-      .put(@recycler^.literalRecycler,'targetOs'       ,{$I %FPCTargetOS%}         )^
-      .put(@recycler^.literalRecycler,'version'        ,VERSION                    )^
-      .put(@recycler^.literalRecycler,'codeVersion'    ,CODE_HASH                  )^
-      .put(@recycler^.literalRecycler,'build'          ,BUILD_NUMBER               )^
-      .put(@recycler^.literalRecycler,'flavour'        ,FLAVOUR_STRING             )^
-      .put(@recycler^.literalRecycler,'configDir'      ,configDir                  )^
-      .put(@recycler^.literalRecycler,'fullVersionPath' ,settings.fullFlavourLocation)^
-      .put(@recycler^.literalRecycler,'lightVersionPath',settings.lightFlavourLocation)^
-      .put(@recycler^.literalRecycler,'configured_cpus',settings.cpuCount)^
-      .put(@recycler^.literalRecycler,'configured_mem' ,settings.memoryLimit)^
-      .put(@recycler^.literalRecycler,'used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^
-      .put(@recycler^.literalRecycler,'PID'            ,GetProcessID)
+      .put(recycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
+      .put(recycler,'isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
+      .put(recycler,'is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
+      .put(recycler,'compileTime'    ,{$I %DATE%}+' '+{$I %TIME%})^
+      .put(recycler,'compilerVersion',{$I %FPCVERSION%}          )^
+      .put(recycler,'targetCpu'      ,{$I %FPCTARGET%}           )^
+      .put(recycler,'targetOs'       ,{$I %FPCTargetOS%}         )^
+      .put(recycler,'version'        ,VERSION                    )^
+      .put(recycler,'codeVersion'    ,CODE_HASH                  )^
+      .put(recycler,'build'          ,BUILD_NUMBER               )^
+      .put(recycler,'flavour'        ,FLAVOUR_STRING             )^
+      .put(recycler,'configDir'      ,configDir                  )^
+      .put(recycler,'fullVersionPath' ,settings.fullFlavourLocation)^
+      .put(recycler,'lightVersionPath',settings.lightFlavourLocation)^
+      .put(recycler,'configured_cpus',settings.cpuCount)^
+      .put(recycler,'configured_mem' ,settings.memoryLimit)^
+      .put(recycler,'used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^
+      .put(recycler,'PID'            ,GetProcessID)
     else result:=nil;
   end;
 
@@ -177,15 +177,15 @@ FUNCTION getMnhInfo:T_arrayOfString;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
       globals:T_evaluationGlobals;
-      recycler:T_recycler;
+      recycler:P_recycler;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     globals.create(nil);
-    L:=mnhInfo_imp(nil,pseudoLoc,@globals.primaryContext,@recycler);
+    L:=mnhInfo_imp(nil,pseudoLoc,@globals.primaryContext,recycler);
     result:=serializeToStringList(L,pseudoLoc,nil);
-    recycler.literalRecycler.disposeLiteral(L);
+    recycler^.disposeLiteral(L);
     globals.destroy;
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 INITIALIZATION

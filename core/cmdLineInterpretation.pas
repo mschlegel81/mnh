@@ -44,9 +44,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 
   PROCEDURE executePackage(package:P_package; CONST loadMode:T_packageLoadUsecase);
     VAR globals:T_evaluationGlobals;
-        recycler:T_recycler;
+        recycler:P_recycler;
     begin
-      recycler.create;
+      recycler:=newRecycler;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}
       consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true);
@@ -54,27 +54,27 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,@recycler);
       if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
-        package^.load(lu_forCodeAssistance,globals,@recycler,C_EMPTY_STRING_ARRAY);
+        package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
         consoleAdapters.postTextMessage(mt_printline,C_nilSearchTokenLocation,package^.getHelpOnMain);
         dispose(package,destroy);
         Exclude(commandLine.mnhExecutionOptions.flags,clf_SHOW_HELP);
         globals.destroy;
-        recycler.destroy;
+        freeRecycler(recycler);
         commandLine.pauseIfConfigured(false);
         exit;
       end;
       if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_input]);
-      package^.load(loadMode,globals,@recycler,commandLine.mainParameters);
-      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(@recycler,packageTokenLocation(package));
+      package^.load(loadMode,globals,recycler,commandLine.mainParameters);
+      if not(FlagGUINeeded in globals.primaryContext.messages^.getFlags) then globals.afterEvaluation(recycler,packageTokenLocation(package));
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
         include(commandLine.mnhExecutionOptions.flags,clf_GUI);
         globals.destroy;
-        recycler.destroy;
+        freeRecycler(recycler);
         exit;
       end;
       globals.destroy;
-      recycler.destroy;
+      freeRecycler(recycler);
       consoleAdapters.setExitCode;
       commandLine.pauseIfConfigured((ExitCode<>0) or (consoleAdapters.triggersBeep));
     end;

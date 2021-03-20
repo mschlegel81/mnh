@@ -94,7 +94,7 @@ TYPE
 VAR defaultConsoleFormatter:T_defaultConsoleFormatter;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
 IMPLEMENTATION
-USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif};
+USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif},recyclers;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
   begin
     new(result,create(value,loc));
@@ -108,13 +108,13 @@ CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchT
   end;
 
 DESTRUCTOR T_echoOutMessage.destroy;
-  VAR literalRecycler:T_literalRecycler;
+  VAR  recycler:P_recycler;
   begin
-    literalRecycler.initRecycler;
+    recycler:=newRecycler;
     enterCriticalSection(messageCs);
-    literalRecycler.disposeLiteral(literal);
+    recycler^.disposeLiteral(literal);
     leaveCriticalSection(messageCs);
-    literalRecycler.cleanup;
+    freeRecycler(recycler);
     inherited;
   end;
 

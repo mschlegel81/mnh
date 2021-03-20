@@ -96,7 +96,7 @@ TYPE
       scriptPath             :string;
       provider               :P_codeProvider;
 
-      FUNCTION execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse; virtual;
+      FUNCTION execute(CONST recycler:P_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse; virtual;
     public
       CONSTRUCTOR createWithProvider(CONST editorMeta:P_codeProvider);
       CONSTRUCTOR create(CONST path:string);
@@ -165,7 +165,7 @@ PROCEDURE T_codeAssistanceThread.execute;
   VAR sleepBetweenRunsMillis:longint=0;
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
-      recycler:T_recycler;
+      recycler:P_recycler;
 
       requests:array of P_codeAssistanceRequest;
 
@@ -174,20 +174,17 @@ PROCEDURE T_codeAssistanceThread.execute;
       folderToScan:string;
 
   FUNCTION findUsedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
-    VAR recycler:T_recycler;
-        package:T_package;
+    VAR package:T_package;
     begin
       try
-        recycler.create;
         package.create(newCodeProvider(fileName),nil);
-        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
-        package.load(lu_usageScan,globals^,@recycler,C_EMPTY_STRING_ARRAY);
+        globals^.resetForEvaluation(@package,@package.reportVariables,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+        package.load(lu_usageScan,globals^,recycler,C_EMPTY_STRING_ARRAY);
         result:=package.usedAndExtendedPackages;
       except end;
-      globals^.afterEvaluation(@recycler,packageTokenLocation(@package));
-      globals^.primaryContext.finalizeTaskAndDetachFromParent(@recycler);
+      globals^.afterEvaluation(recycler,packageTokenLocation(@package));
+      globals^.primaryContext.finalizeTaskAndDetachFromParent(recycler);
       package.destroy;
-      recycler.destroy;
     end;
 
   PROCEDURE updateScriptUsage(CONST scriptName:string; CONST allUses:T_arrayOfString);
@@ -265,7 +262,7 @@ PROCEDURE T_codeAssistanceThread.execute;
     //setup:
     adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
     new(globals,create(@adapters));
-    recycler.create;
+    recycler:=newRecycler;
     //:setup
     repeat
       requests:=pendingRequests.getAll;
@@ -306,7 +303,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         end;
         setLength(requests,0);
       end;
-      recycler.cleanupIfPosted;
+      recycler^.cleanupIfPosted;
       enterCriticalSection(codeAssistanceCs);
       isLatest:=shuttingDown;
       leaveCriticalSection(codeAssistanceCs);
@@ -317,7 +314,7 @@ PROCEDURE T_codeAssistanceThread.execute;
     enterCriticalSection(codeAssistanceCs);
     codeAssistantIsRunning:=false;
     leaveCriticalSection(codeAssistanceCs);
-    recycler.destroy;
+    freeRecycler(recycler);
     //:shutdown
     threadStopsSleeping;
     postIdeMessage('Code assistance stopped',false);
@@ -336,7 +333,7 @@ DESTRUCTOR T_codeAssistanceRequest.destroy;
   begin
   end;
 
-FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
+FUNCTION T_codeAssistanceRequest.execute(CONST recycler:P_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse;
   VAR //temporary
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
@@ -354,7 +351,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
       user.create(newCodeProvider(name),nil);
       secondaryCallInfos.create;
-      user.load(lu_forCodeAssistanceSecondary,globals^,@recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
+      user.load(lu_forCodeAssistanceSecondary,globals^,recycler,C_EMPTY_STRING_ARRAY,@secondaryCallInfos);
       callAndIdInfos^.includeUsages(@secondaryCallInfos);
       secondaryCallInfos.destroy;
       globals^.primaryContext.messages^.clearFlags;
@@ -391,7 +388,7 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
       givenAdapters^.clear;
     end;
 
-    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
+    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
     globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
     if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
     new(callAndIdInfos,create);
@@ -403,10 +400,10 @@ FUNCTION T_codeAssistanceRequest.execute(VAR recycler:T_recycler; CONST givenGlo
 
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
     globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,@recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
+    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
-    globals^.afterEvaluation(@recycler,packageTokenLocation(package));
+    globals^.afterEvaluation(recycler,packageTokenLocation(package));
     {$ifdef debugMode}
     writeln('Code assistance end  : ',scriptPath);
     {$endif}
@@ -567,12 +564,12 @@ PROCEDURE postUsageScan(CONST folderToScan: string);
 
 FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
   VAR request:P_codeAssistanceRequest;
-      recycler:T_recycler;
+      recycler:P_recycler;
   begin
     new(request,createWithProvider(editorMeta));
-    recycler.create;
+    recycler:=newRecycler;
     result:=request^.execute(recycler);
-    recycler.destroy;
+    freeRecycler(recycler);
     dispose(request,destroy);
   end;
 

@@ -249,7 +249,7 @@ FUNCTION ask_impl intFuncSignature;
       system.enterCriticalSection(cs);
       try
         askForm.initWithQuestion(str0^.value);
-        result := recycler^.literalRecycler.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
+        result := recycler^.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
       finally
         system.leaveCriticalSection(cs);
       end;
@@ -263,7 +263,7 @@ FUNCTION ask_impl intFuncSignature;
         for i := 0 to length(opt)-1 do
           opt[i] := P_stringLiteral(list1^.value[i])^.value;
         askForm.initWithQuestionAndOptions(str0^.value, opt);
-        result := recycler^.literalRecycler.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
+        result := recycler^.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
       finally
         system.leaveCriticalSection(cs);
       end;

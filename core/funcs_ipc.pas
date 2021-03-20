@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(recycler^.literalRecycler,payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(recycler,payload,@streamWrapper,location,adapters);
     except
       serializationOk:=false;
     end;
@@ -169,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(recycler^.literalRecycler,@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(recycler,@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;
@@ -182,7 +182,7 @@ PROCEDURE T_myIpcServer.execute;
       server:TSimpleIPCServer;
       recentRequests:array[0..63] of T_hashInt;
       recentRequestOffset:byte;
-      recycler:T_recycler;
+      recycler:P_recycler;
 
   FUNCTION processThisRequest(CONST hash:T_hashInt):boolean;
     VAR i:longint;
@@ -207,7 +207,7 @@ PROCEDURE T_myIpcServer.execute;
       enterCriticalSection(serverCs);
       try
         if (localRequest<>nil) and (localResponse=nil) then begin
-          localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,localRequest,nil).literal;
+          localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,recycler,localRequest,nil).literal;
           result:=true;
         end;
       finally
@@ -216,37 +216,37 @@ PROCEDURE T_myIpcServer.execute;
       if result then exit(true);
 
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages,@recycler) and
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages,recycler) and
          processThisRequest(request.messageHash)then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,@recycler,request.payload,nil).literal;
+          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,recycler,request.payload,nil).literal;
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
           response.payload :=nil;
           response.statusOk:=false;
         end;
-        if request.payload<>nil then recycler.literalRecycler.disposeLiteral(request.payload);
+        if request.payload<>nil then recycler^.disposeLiteral(request.payload);
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
-          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,@recycler);
-          if response.payload<>nil then recycler.literalRecycler.disposeLiteral(response.payload);
+          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,recycler);
+          if response.payload<>nil then recycler^.disposeLiteral(response.payload);
         finally
         end;
         //------------------------------------------------:respond
         result:=true;
       end else begin
-        if request.payload<>nil then recycler.literalRecycler.disposeLiteral(request.payload);
+        if request.payload<>nil then recycler^.disposeLiteral(request.payload);
         result:=false;
       end;
     end;
 
   VAR serverCreated:boolean=false;
   begin
-    recycler.create;
+    recycler:=newRecycler;
 
     for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
     recentRequestOffset:=0;
@@ -267,7 +267,7 @@ PROCEDURE T_myIpcServer.execute;
                  if sleepTime<500 then inc(sleepTime);
                  threadSleepMillis(sleepTime shr 2);
                end;
-      recycler.cleanupIfPosted;
+      recycler^.cleanupIfPosted;
     end;
     if serverCreated then try
       disposeServer(server);
@@ -275,7 +275,7 @@ PROCEDURE T_myIpcServer.execute;
       ipcMessageConnector^.raiseSimpleError(e.message,feedbackLocation,mt_el4_systemError);
     end;
     if servingContextOrNil<>nil then servingContextOrNil^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
-    recycler.destroy;
+    freeRecycler(recycler);
     Terminate;
   end;
 
@@ -297,23 +297,23 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_: string; CONST location: T_toke
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
   begin
     enterCriticalSection(serverCs);
     try
-      recycler.create;
+      recycler:=newRecycler;
       if servingContextOrNil<>nil then begin
-        servingContextOrNil^.finalizeTaskAndDetachFromParent(@recycler);
+        servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
         contextPool.disposeContext(servingContextOrNil);
       end;
-      if servingExpressionOrNil<>nil then recycler.literalRecycler.disposeLiteral(servingExpressionOrNil);
+      if servingExpressionOrNil<>nil then recycler^.disposeLiteral(servingExpressionOrNil);
       enterCriticalSection(localServerCs);
       localServers.dropKey(serverId);
       leaveCriticalSection(localServerCs);
     finally
       leaveCriticalSection(serverCs);
       doneCriticalSection(serverCs);
-      recycler.destroy;
+      freeRecycler(recycler);
       inherited destroy;
     end;
   end;

@@ -54,7 +54,7 @@ TYPE
 
       messages:T_guiMessagesDistributor;
       globals:T_evaluationGlobals; //needed for debugging
-      PROCEDURE execute(VAR recycler:T_recycler); virtual; abstract;
+      PROCEDURE execute(CONST recycler:P_recycler); virtual; abstract;
     protected
       CONSTRUCTOR init(CONST kind:T_evaluationKind);
       PROCEDURE executeInNewThread(CONST debugging:boolean=false);
@@ -77,7 +77,7 @@ TYPE
         callMain:boolean;
       end;
       stdOutAdapter:P_lazyInitializedOutAdapter;
-      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+      PROCEDURE execute(CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
       PROCEDURE evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST executeInFolder:string);
@@ -90,7 +90,7 @@ TYPE
 
   T_reevaluationWithGui = object(T_standardEvaluation)
     private
-      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+      PROCEDURE execute(CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create();
   end;
@@ -99,7 +99,7 @@ TYPE
     private
       parentProvider:P_codeProvider;
       toEvaluate:T_arrayOfString;
-      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+      PROCEDURE execute(CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create(CONST quickStdout:P_eagerInitializedOutAdapter);
       FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
@@ -111,7 +111,7 @@ TYPE
       utilityScriptList:T_scriptMetaArray;
       evalRequest:P_editScriptTask;
       stdOutAdapter:P_lazyInitializedOutAdapter;
-      PROCEDURE execute(VAR recycler:T_recycler); virtual;
+      PROCEDURE execute(CONST recycler:P_recycler); virtual;
     public
       CONSTRUCTOR create(CONST mainForm:T_mnhIdeForm);
       DESTRUCTOR destroy; virtual;
@@ -292,13 +292,13 @@ TYPE
   end;
 
 PROCEDURE T_evaluationThread.execute;
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
   begin
     with eval^ do begin
       evalTime:=now;
-      recycler.create;
+      recycler:=newRecycler;
       execute(recycler);
-      recycler.destroy;
+      freeRecycler(recycler);
       enterCriticalSection(evaluationCs);
       try
         if stoppedByUser
@@ -333,13 +333,13 @@ PROCEDURE T_abstractEvaluation.executeInNewThread(CONST debugging:boolean);
     end;
   end;
 
-PROCEDURE T_reevaluationWithGui.execute(VAR recycler: T_recycler);
+PROCEDURE T_reevaluationWithGui.execute(CONST recycler: P_recycler);
   begin
-    globals.resetForEvaluation(@package,@package.reportVariables,commandLine.mnhExecutionOptions.allowedSideEffects,evalRequest.contextType,evalRequest.parameters,@recycler);
+    globals.resetForEvaluation(@package,@package.reportVariables,commandLine.mnhExecutionOptions.allowedSideEffects,evalRequest.contextType,evalRequest.parameters,recycler);
     if commandLine.getFileToInterpretFromCommandLine=''
-    then package.load(lu_forDirectExecution,globals,@recycler,commandLine.mainParameters)
-    else package.load(lu_forCallingMain    ,globals,@recycler,commandLine.mainParameters);
-    globals.afterEvaluation(@recycler,packageTokenLocation(@package));
+    then package.load(lu_forDirectExecution,globals,recycler,commandLine.mainParameters)
+    else package.load(lu_forCallingMain    ,globals,recycler,commandLine.mainParameters);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     messages.setExitCode;
   end;
 
@@ -376,17 +376,17 @@ PROCEDURE T_ideScriptEvaluation.runUtilScript(CONST scriptIndex: longint; CONST 
     end;
   end;
 
-PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
+PROCEDURE T_ideScriptEvaluation.execute(CONST recycler: P_recycler);
   PROCEDURE setupEdit;
     begin
       messages.clear();
-      globals.resetForEvaluation(nil,nil,C_allSideEffects,ect_normal,C_EMPTY_STRING_ARRAY,@recycler);
+      globals.resetForEvaluation(nil,nil,C_allSideEffects,ect_normal,C_EMPTY_STRING_ARRAY,recycler);
     end;
 
   PROCEDURE doneEdit;
     begin
-      package.finalize(@globals.primaryContext,@recycler);
-      globals.afterEvaluation(@recycler,packageTokenLocation(@package));
+      package.finalize(@globals.primaryContext,recycler);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))
       else messages.postSingal(mt_guiEditScriptsLoaded,C_nilSearchTokenLocation);
@@ -406,7 +406,7 @@ PROCEDURE T_ideScriptEvaluation.execute(VAR recycler: T_recycler);
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',package.getPath); {$endif}
-      package.load(lu_forImport,globals,@recycler,C_EMPTY_STRING_ARRAY);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       if globals.primaryContext.continueEvaluation then begin
         for scriptType in T_scriptType do
         for subRule in package.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
@@ -465,29 +465,29 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
     end;
   end;
 
-PROCEDURE T_quickEvaluation.execute(VAR recycler: T_recycler);
+PROCEDURE T_quickEvaluation.execute(CONST recycler: P_recycler);
   VAR lexer:T_linesLexer;
       stmt :T_enhancedStatement;
   begin
     if parentProvider=nil then begin
       package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
-      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
-      package.load(lu_forDirectExecution,globals,@recycler,C_EMPTY_STRING_ARRAY);
-      globals.afterEvaluation(@recycler,packageTokenLocation(@package));
+      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end else begin
       package.replaceCodeProvider(parentProvider);
-      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,@recycler);
-      package.load(lu_forImport,globals,@recycler,C_EMPTY_STRING_ARRAY);
+      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,@recycler);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
-        package.interpret(stmt,lu_forDirectExecution,globals,@recycler);
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,@recycler);
+        package.interpret(stmt,lu_forDirectExecution,globals,recycler);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
       end;
-      if (stmt.token.first<>nil) then recycler.cascadeDisposeToken(stmt.token.first);
+      if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
       lexer.destroy;
-      globals.afterEvaluation(@recycler,packageTokenLocation(@package));
+      globals.afterEvaluation(recycler,packageTokenLocation(@package));
     end;
   end;
 
@@ -533,13 +533,13 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; CONST pa
     end;
   end;
 
-PROCEDURE T_standardEvaluation.execute(VAR recycler: T_recycler);
+PROCEDURE T_standardEvaluation.execute(CONST recycler: P_recycler);
   CONST C_loadMode:array[false..true] of T_packageLoadUsecase=(lu_forDirectExecution,lu_forCallingMain);
   begin
-    globals.resetForEvaluation(@package,@package.reportVariables,C_allSideEffects,evalRequest.contextType,evalRequest.parameters,@recycler);
+    globals.resetForEvaluation(@package,@package.reportVariables,C_allSideEffects,evalRequest.contextType,evalRequest.parameters,recycler);
     SetCurrentDir(evalRequest.folder);
-    package.load(C_loadMode[evalRequest.callMain],globals,@recycler,evalRequest.parameters);
-    globals.afterEvaluation(@recycler,packageTokenLocation(@package));
+    package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
     package.clear(true);
   end;
 
@@ -600,18 +600,18 @@ PROCEDURE T_abstractEvaluation.haltEvaluation;
   end;
 
 PROCEDURE T_abstractEvaluation.postHalt;
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
   begin
-    recycler.create;
+    recycler:=newRecycler;
     system.enterCriticalSection(evaluationCs);
     try
       globals.primaryContext.messages^.setStopFlag;
       if eco_debugging in globals.options then globals.stepper^.haltEvaluation;
-      globals.stopWorkers(@recycler);
+      globals.stopWorkers(recycler);
       stoppedByUser:=true;
     finally
       system.leaveCriticalSection(evaluationCs);
-      recycler.destroy;
+      freeRecycler(recycler);
     end;
   end;
 

@@ -60,7 +60,7 @@ TYPE
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; CONST messages:P_messages);
-      FUNCTION getAttributesLiteral(VAR literalRecycler:T_literalRecycler):P_mapLiteral;
+      FUNCTION getAttributesLiteral(CONST literalRecycler:P_literalRecycler):P_mapLiteral;
       FUNCTION getDocTxt:ansistring;
       PROCEDURE setComment(CONST commentText:ansistring);
       FUNCTION attributeCount:longint;
@@ -84,7 +84,7 @@ TYPE
       saveValueStore:P_valueScope;
       currentlyEvaluating:boolean;
 
-      PROCEDURE updatePatternForInline(VAR literalRecycler:T_literalRecycler);
+      PROCEDURE updatePatternForInline(CONST literalRecycler:P_literalRecycler);
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
@@ -97,7 +97,7 @@ TYPE
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       CONSTRUCTOR createFromInline (CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
-      CONSTRUCTOR createFromOp(VAR literalRecycler:T_literalRecycler; CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
+      CONSTRUCTOR createFromOp(CONST literalRecycler:P_literalRecycler; CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
@@ -120,7 +120,7 @@ TYPE
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION inspect(VAR literalRecycler:T_literalRecycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST literalRecycler:P_literalRecycler):P_mapLiteral; virtual;
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
       FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
@@ -149,7 +149,7 @@ TYPE
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getStructuredInfo:T_structuredRuleInfo; virtual;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION inspect(VAR literalRecycler:T_literalRecycler):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST literalRecycler:P_literalRecycler):P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
@@ -201,7 +201,7 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
-    newGeneratorFromStreamCallback: FUNCTION(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+    newGeneratorFromStreamCallback: FUNCTION(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
@@ -469,7 +469,7 @@ FUNCTION T_inlineExpression.needEmbrace(CONST outerOperator:T_tokenType; CONST a
     result:=false;
   end;
 
-PROCEDURE T_inlineExpression.updatePatternForInline(VAR literalRecycler:T_literalRecycler);
+PROCEDURE T_inlineExpression.updatePatternForInline(CONST literalRecycler:P_literalRecycler);
   VAR i:longint;
   begin
     pattern.cleanup(literalRecycler);
@@ -493,7 +493,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
     if rep^.tokType=tt_functionPattern then begin
       assert(retainFirstToken,'Invalid state!');
       pattern.clone(P_pattern(rep^.data)^);
-      disposePattern(rep^.data,recycler^.literalRecycler);
+      disposePattern(rep^.data,recycler);
       rep^.tokType:=tt_EOL;
       constructExpression(rep^.next,context,recycler,rep^.location);
       exit;
@@ -526,16 +526,16 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
       inc(i);
     end;
     setLength(preparedBody,i);
-    updatePatternForInline(recycler^.literalRecycler);
+    updatePatternForInline(recycler);
   end;
 
 PROCEDURE T_inlineExpression.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR i:longint;
   begin
-    pattern.cleanup(literalRecycler^);
+    pattern.cleanup(literalRecycler);
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do begin
-      preparedBody[i].token.undefine(literalRecycler^);
+      preparedBody[i].token.undefine(literalRecycler);
       preparedBody[i].token.destroy;
     end;
     setLength(preparedBody,0);
@@ -653,8 +653,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if parIdx>=0 then begin
               if parIdx=ALL_PARAMETERS_PAR_IDX then begin
                 if allParams=nil then begin
-                  allParams:=recycler^.literalRecycler.newListLiteral;
-                  if param<>nil then allParams^.appendAll(@recycler^.literalRecycler,param);
+                  allParams:=recycler^.newListLiteral;
+                  if param<>nil then allParams^.appendAll(recycler,param);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
                   {$endif}
@@ -664,8 +664,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               end else if parIdx=REMAINING_PARAMETERS_IDX then begin
                 if remaining=nil then begin
                   if param=nil
-                  then remaining:=recycler^.literalRecycler.newListLiteral
-                  else remaining:=param^.tail(@recycler^.literalRecycler,pattern.arity);
+                  then remaining:=recycler^.newListLiteral
+                  else remaining:=param^.tail(recycler,pattern.arity);
                   {$ifdef fullVersion}
                   if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
                   {$endif}
@@ -744,7 +744,7 @@ FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral
     result:=P_subruleExpression(subrulePointer)^.matchesPatternAndReplaces(param,callLocation,output,context,recycler);
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromOp(VAR literalRecycler:T_literalRecycler; CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
+CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecycler; CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
   VAR i:longint;
       r:P_inlineExpression;
       embrace:boolean;
@@ -854,21 +854,21 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iteratableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
       // generator+3 -> lazyMap(generator,{$x+3})
       LHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
-      new(newRule,createFromOp(recycler^.literalRecycler,LHSinstead,op,RHS,tokenLocation));
-      recycler^.literalRecycler.disposeLiteral(LHSinstead);
+      new(newRule,createFromOp(recycler,LHSinstead,op,RHS,tokenLocation));
+      recycler^.disposeLiteral(LHSinstead);
       RHSinstead:=newRule; //={$x+3}
       result:=createLazyMap(P_expressionLiteral(LHS),P_expressionLiteral(RHSinstead),tokenLocation);
-      recycler^.literalRecycler.disposeLiteral(RHSinstead);
+      recycler^.disposeLiteral(RHSinstead);
       exit(result);
     end;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_iteratableExpressionTypes) and not(LHS^.literalType=lt_expression) then begin
       // 2^generator -> lazyMap(generator,{2^$x})
       RHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
-      new(newRule,createFromOp(recycler^.literalRecycler,LHS,op,RHSinstead,tokenLocation));
-      recycler^.literalRecycler.disposeLiteral(RHSinstead);
+      new(newRule,createFromOp(recycler,LHS,op,RHSinstead,tokenLocation));
+      recycler^.disposeLiteral(RHSinstead);
       LHSinstead:=newRule; //={2^$x}
       result:=createLazyMap(P_expressionLiteral(RHS),P_expressionLiteral(LHSinstead),tokenLocation);
-      recycler^.literalRecycler.disposeLiteral(LHSinstead);
+      recycler^.disposeLiteral(LHSinstead);
       exit(result);
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
@@ -884,11 +884,11 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_builtinExpressionTypes)
     then RHSinstead:=P_builtinExpression(RHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
     else RHSinstead:=RHS^.rereferenced;
-    new(newRule,createFromOp(recycler^.literalRecycler,LHSinstead,op,RHSinstead,tokenLocation));
+    new(newRule,createFromOp(recycler,LHSinstead,op,RHSinstead,tokenLocation));
     result:=newRule;
     if LHSinstead<>nil then
-    recycler^.literalRecycler.disposeLiteral(LHSinstead);
-    recycler^.literalRecycler.disposeLiteral(RHSinstead);
+    recycler^.disposeLiteral(LHSinstead);
+    recycler^.disposeLiteral(RHSinstead);
   end;
 
 FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
@@ -901,7 +901,7 @@ FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string;
   begin
     temp:=getEquivalentInlineExpression(P_context(threadContext),P_recycler(recycler));
     new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)));
-    P_recycler(recycler)^.literalRecycler.disposeLiteral(temp);
+    P_recycler(recycler)^.disposeLiteral(temp);
   end;
 
 FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
@@ -910,10 +910,10 @@ FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId
   begin
     identity:=newIdentityRule(P_context(threadContext),funcLocation,P_recycler(recycler));
     mapper:=identity^.applyBuiltinFunction(intrinsicRuleId,funcLocation,threadContext,recycler);
-    P_recycler(recycler)^.literalRecycler.disposeLiteral(identity);
+    P_recycler(recycler)^.disposeLiteral(identity);
     if mapper=nil then exit(nil);
     result:=createLazyMap(@self,mapper,funcLocation);
-    P_recycler(recycler)^.literalRecycler.disposeLiteral(mapper);
+    P_recycler(recycler)^.disposeLiteral(mapper);
   end;
 
 PROCEDURE T_inlineExpression.validateSerializability(CONST messages:P_messages);
@@ -934,7 +934,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(T,recycler^.literalRecycler);
+        token.define(T,recycler);
         parIdx:=parameterIndex;
       end;
     end;
@@ -966,7 +966,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
 
 FUNCTION T_inlineExpression.getParameterNames(CONST literalRecycler:P_literalRecycler): P_listLiteral;
   begin
-    result:=pattern.getParameterNames(literalRecycler^);
+    result:=pattern.getParameterNames(literalRecycler);
   end;
 
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
@@ -1101,8 +1101,8 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       parameterList:T_listLiteral;
   begin
     parameterList.create(2);
-    if a<>nil then parameterList.append(@P_recycler(recycler)^.literalRecycler,a,true);
-    if b<>nil then parameterList.append(@P_recycler(recycler)^.literalRecycler,b,true);
+    if a<>nil then parameterList.append(P_recycler(recycler),a,true);
+    if b<>nil then parameterList.append(P_recycler(recycler),b,true);
     evResult:=evaluate(location,context,recycler,@parameterList);
     if (evResult.literal<>nil) and (evResult.literal^.literalType=lt_boolean) then begin
       result:=P_boolLiteral(evResult.literal)^.value;
@@ -1113,9 +1113,9 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
         else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
       end;
     end;
-    parameterList.cleanup(@P_recycler(recycler)^.literalRecycler);
+    parameterList.cleanup(P_recycler(recycler));
     parameterList.destroy;
-    if evResult.literal<>nil then P_recycler(recycler)^.literalRecycler.disposeLiteral(evResult.literal);
+    if evResult.literal<>nil then P_recycler(recycler)^.disposeLiteral(evResult.literal);
   end;
 
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
@@ -1179,11 +1179,11 @@ FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST c
   begin
     if (a<>nil) or (b<>nil) then begin
       parameterList.create(2);
-      if a<>nil then parameterList.append(@P_recycler(recycler)^.literalRecycler,a,true);
-      if b<>nil then parameterList.append(@P_recycler(recycler)^.literalRecycler,b,true);
+      if a<>nil then parameterList.append(P_recycler(recycler),a,true);
+      if b<>nil then parameterList.append(P_recycler(recycler),b,true);
       result:=evaluate(location,context,recycler,@parameterList);
       if (result.literal=nil) and context^.continueEvaluation then context^.raiseError('An error ocurred when trying to evaluate function '+toString(50),location);
-      parameterList.cleanup(@P_recycler(recycler)^.literalRecycler);
+      parameterList.cleanup(P_recycler(recycler));
       parameterList.destroy;
     end else result:=evaluate(location,context,recycler,nil);
   end;
@@ -1321,11 +1321,11 @@ FUNCTION T_inlineExpression.writeToStream(CONST literalRecycler:P_literalRecycle
     if referencesAnyUserPackage then exit(false);
     stream^.writeByte(byte(typ));
     stream^.writeAnsiString(customId);
-    result:=pattern.writeToStream(literalRecycler^,locationOfSerializeCall,adapters,stream)
+    result:=pattern.writeToStream(literalRecycler,locationOfSerializeCall,adapters,stream)
             and stream^.allOkay;
     stream^.writeNaturalNumber(length(preparedBody));
     for i:=0 to length(preparedBody)-1 do begin
-      result:=result and preparedBody[i].token.serializeSingleToken(literalRecycler^,locationOfSerializeCall,adapters,stream);
+      result:=result and preparedBody[i].token.serializeSingleToken(literalRecycler,locationOfSerializeCall,adapters,stream);
       stream^.writeInteger(preparedBody[i].parIdx);
     end;
     if (customType=nil)
@@ -1343,12 +1343,12 @@ FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycl
     //This must happen on construction:
     //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
     customId:=stream^.readAnsiString;
-    result:=pattern.loadFromStream(literalRecycler^,stream,location,adapters,typeMap)
+    result:=pattern.loadFromStream(literalRecycler,stream,location,adapters,typeMap)
             and stream^.allOkay;
     setLength(preparedBody,stream^.readNaturalNumber);
     for i:=0 to length(preparedBody)-1 do begin
       preparedBody[i].token.create;
-      preparedBody[i].token.deserializeSingleToken(literalRecycler^,location,adapters,stream,typeMap);
+      preparedBody[i].token.deserializeSingleToken(literalRecycler,location,adapters,stream,typeMap);
       preparedBody[i].parIdx:=stream^.readInteger;
     end;
     customTypeName:=stream^.readAnsiString;
@@ -1366,18 +1366,19 @@ FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycl
     result:=result and stream^.allOkay;
   end;
 
-FUNCTION T_inlineExpression.inspect(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
+FUNCTION T_inlineExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   begin
     result:=newMapLiteral(0);
-    P_mapLiteral(result)^.put(@literalRecycler,'pattern' ,pattern.toString)^
-                         .put(@literalRecycler,'location',getLocation     )^
-                         .put(@literalRecycler,'type'    ,C_expressionTypeString[typ]);
+    P_mapLiteral(result)^.put(literalRecycler,'pattern' ,pattern.toString)^
+                         .put(literalRecycler,'location',getLocation     )^
+                         .put(literalRecycler,'type'    ,C_expressionTypeString[typ]);
   end;
 
-FUNCTION T_subruleExpression.inspect(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
+FUNCTION T_subruleExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   begin
-    result:=inherited inspect(literalRecycler)^.put(@literalRecycler,'comment'   ,meta.comment            )^
-                              .put(@literalRecycler,'attributes',meta.getAttributesLiteral(literalRecycler),false);
+    result:=inherited inspect(literalRecycler)^
+      .put(literalRecycler,'comment'   ,meta.comment            )^
+      .put(literalRecycler,'attributes',meta.getAttributesLiteral(literalRecycler),false);
   end;
 
 FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
@@ -1496,11 +1497,11 @@ PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_callAndIdInfos);
   end;
 {$endif}
 
-FUNCTION T_ruleMetaData.getAttributesLiteral(VAR literalRecycler:T_literalRecycler): P_mapLiteral;
+FUNCTION T_ruleMetaData.getAttributesLiteral(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   VAR i:longint;
   begin
     result:=newMapLiteral(0);
-    for i:=0 to length(attributes)-1 do result^.put(@literalRecycler,attributes[i].key,attributes[i].value);
+    for i:=0 to length(attributes)-1 do result^.put(literalRecycler,attributes[i].key,attributes[i].value);
   end;
 
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
@@ -1620,9 +1621,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     VAR firstRep:P_token=nil;
     begin
       firstRep:=recycler^.newToken(location,'pMap',tt_intrinsicRule,BUILTIN_PMAP);
-      firstRep^.next:=recycler^.newToken(location,'',tt_parList,recycler^.literalRecycler.newListLiteral(2)^
-                                                       .append(@recycler^.literalRecycler, TList,true)^
-                                                       .append(@recycler^.literalRecycler, f    ,true));
+      firstRep^.next:=recycler^.newToken(location,'',tt_parList,recycler^.newListLiteral(2)^
+                                                       .append(recycler, TList,true)^
+                                                       .append(recycler, f    ,true));
       context^.reduceExpression(firstRep,recycler);
       result:=context^.messages^.continueEvaluation and
               (firstRep<>nil) and
@@ -1641,16 +1642,16 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         temp:P_literal;
     begin
       params.create(1);
-      params.append(@recycler^.literalRecycler,TList,true);
+      params.append(recycler,TList,true);
       temp:=f^.evaluate(location,context,recycler,@params).literal;
-      params.cleanup(@recycler^.literalRecycler);
+      params.cleanup(recycler);
       params.destroy;
       result:=context^.messages^.continueEvaluation and
               (temp<>nil) and
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
-      else if temp<>nil then recycler^.literalRecycler.disposeLiteral(temp);
+      else if temp<>nil then recycler^.disposeLiteral(temp);
       collector.appendAll(holder^.storedMessages(true));
       holder^.clear;
     end;
@@ -1663,11 +1664,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       initialSampleCount:=(samples div 100)-1;
       if initialSampleCount< 5 then
          initialSampleCount:=5;
-      TList:=recycler^.literalRecycler.newListLiteral;
+      TList:=recycler^.newListLiteral;
       setLength(tRow,initialSampleCount+1);
       for sampleIndex:=0 to initialSampleCount do begin
         t:=t0+(t1-t0)*sampleIndex/initialSampleCount;
-        TList^.appendReal(@recycler^.literalRecycler,t);
+        TList^.appendReal(recycler,t);
         tRow[sampleIndex]:=t;
       end;
     end;
@@ -1694,12 +1695,12 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
-        TList:=recycler^.literalRecycler.newListLiteral;
+        TList:=recycler^.newListLiteral;
         for i:=0 to dataRow.size-2 do
         for j:=1 to refinementSteps[i] do begin
           t:=j/(refinementSteps[i]+1);
           t:=tRow[i]*(1-t)+tRow[i+1]*t;
-          TList^.appendReal(@recycler^.literalRecycler,t);
+          TList^.appendReal(recycler,t);
           append(newTimes,t);
         end;
         //---------------------------------------------:Prepare new time samples
@@ -1743,9 +1744,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           newRow.free;
           oldRow.free;
           //------------------------------------------------------:Merge samples
-          recycler^.literalRecycler.disposeLiteral(resultLiteral);
+          recycler^.disposeLiteral(resultLiteral);
         end;
-        recycler^.literalRecycler.disposeLiteral(TList);
+        recycler^.disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
     end;
@@ -1764,11 +1765,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      recycler^.literalRecycler.disposeLiteral(resultLiteral);
-      recycler^.literalRecycler.disposeLiteral(TList);
+      recycler^.disposeLiteral(resultLiteral);
+      recycler^.disposeLiteral(TList);
       refineDataRow;
     end else begin
-      recycler^.literalRecycler.disposeLiteral(TList);
+      recycler^.disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
       context^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       oldMessages^.postCustomMessages(collector.getStoredMessages);
@@ -1787,14 +1788,14 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=recycler^.literalRecycler.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
+    then result:=recycler^.newIntLiteral(P_expressionLiteral(arg0)^.arity.minPatternLength);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=P_expression(arg0)^.getParameterNames(@recycler^.literalRecycler);
+    then result:=P_expression(arg0)^.getParameterNames(recycler);
   end;
 
 FUNCTION tokenSplit_impl intFuncSignature;
@@ -1803,11 +1804,11 @@ FUNCTION tokenSplit_impl intFuncSignature;
         i:longint;
     begin
       sub:=P_subruleExpression(subruleLiteral);
-      result:=recycler^.literalRecycler.newListLiteral(length(sub^.preparedBody));
+      result:=recycler^.newListLiteral(length(sub^.preparedBody));
       for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
         if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
-        then result^.append      (@recycler^.literalRecycler,token.data,true)
-        else result^.appendString(@recycler^.literalRecycler,safeTokenToString(@token));
+        then result^.append      (recycler,token.data,true)
+        else result^.appendString(recycler,safeTokenToString(@token));
       end;
     end;
 
@@ -1827,8 +1828,8 @@ FUNCTION tokenSplit_impl intFuncSignature;
       lt_string:begin
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
-        result:=recycler^.literalRecycler.newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(@recycler^.literalRecycler,tokens[i]);
+        result:=recycler^.newListLiteral;
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(recycler,tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then
         result:=expressionToTokens(P_expressionLiteral(arg0));
@@ -1966,7 +1967,7 @@ FUNCTION interpret_imp intFuncSignature;
     end;
   end;
 
-FUNCTION readExpressionFromStream(VAR literalRecycler:T_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
+FUNCTION readExpressionFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
   VAR expressionType:T_expressionType;
       builtinId :string;
       inlineEx :P_inlineExpression;
@@ -1995,7 +1996,7 @@ FUNCTION readExpressionFromStream(VAR literalRecycler:T_literalRecycler; CONST s
       et_inlineStateful:
         begin
           new(inlineEx,init(expressionType,location));
-          if not(inlineEx^.loadFromStream(@literalRecycler,stream,location,adapters,typeMap))
+          if not(inlineEx^.loadFromStream(literalRecycler,stream,location,adapters,typeMap))
           then dispose(inlineEx,destroy)
           else result:=inlineEx;
         end;

@@ -2,7 +2,7 @@ TYPE
 P_splitPanelMeta=^T_splitPanelMeta;
 T_splitPanelMeta=object(T_panelMeta)
   Left,Right:T_panelMeta;
-  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
+  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
   PROCEDURE update; virtual;
   PROCEDURE alignContents; virtual;
   DESTRUCTOR destroy; virtual;
@@ -11,11 +11,11 @@ T_splitPanelMeta=object(T_panelMeta)
 end;
 
 CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
-  VAR context: T_context; VAR literalRecycler:T_literalRecycler);
+  VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(parent,def,location,context,literalRecycler,[dmk_type,dmk_left,dmk_right]);
-    Left .create(@self,def,location,context,literalRecycler,[dmk_type,dmk_left,dmk_right]); Left.winControl.Align:=alLeft;
-    Right.create(@self,def,location,context,literalRecycler,[dmk_type,dmk_left,dmk_right]); Right.winControl.Align:=alClient;
+    inherited create(parent,def,location,context,recycler,[dmk_type,dmk_left,dmk_right]);
+    Left .create(@self,def,location,context,recycler,[dmk_type,dmk_left,dmk_right]); Left.winControl.Align:=alLeft;
+    Right.create(@self,def,location,context,recycler,[dmk_type,dmk_left,dmk_right]); Right.winControl.Align:=alClient;
     getControl.OnResize:=@OnResize;
   end;
 

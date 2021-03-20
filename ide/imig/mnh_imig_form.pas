@@ -160,9 +160,9 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
 FUNCTION getScreenSize_imp intFuncSignature;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=recycler^.literalRecycler.newListLiteral(
-      recycler^.literalRecycler.newIntLiteral(screen.width),
-      recycler^.literalRecycler.newIntLiteral(screen.height));
+    if (params=nil) or (params^.size=0) then result:=recycler^.newListLiteral(
+      recycler^.newIntLiteral(screen.width),
+      recycler^.newIntLiteral(screen.height));
   end;
 
 INITIALIZATION

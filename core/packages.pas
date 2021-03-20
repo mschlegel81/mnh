@@ -73,7 +73,7 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       {$endif}
-      FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean; VAR literalRecycler:T_literalRecycler):boolean;
+      FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler):boolean;
       public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
       private
@@ -317,29 +317,29 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; CONST r
   end;
 
 CONST SUPPRESS_EXIT_CODE=maxLongint-159; //just some large, reasonably improbable code
-FUNCTION messagesToLiteralForSandbox(VAR literalRecycler:T_literalRecycler; CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
+FUNCTION messagesToLiteralForSandbox(CONST literalRecycler:P_literalRecycler; CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
   FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
     begin
-      result:=literalRecycler.newListLiteral(3);
-      result^.appendString(@literalRecycler,message^.getMessageTypeName);
+      result:=literalRecycler^.newListLiteral(3);
+      result^.appendString(literalRecycler,message^.getMessageTypeName);
     end;
 
   VAR m:P_storedMessage;
       messageEntry:P_listLiteral;
   begin
-    result:=literalRecycler.newListLiteral();
+    result:=literalRecycler^.newListLiteral();
     for m in messages do if m^.messageType in toInclude then begin
-      messageEntry:=P_listLiteral(headByMessageType(m)^.appendString(@literalRecycler,ansistring(m^.getLocation)));
+      messageEntry:=P_listLiteral(headByMessageType(m)^.appendString(literalRecycler,ansistring(m^.getLocation)));
       if      m^.messageType in [mt_echo_input,mt_echo_declaration]
-      then messageEntry^.appendString(@literalRecycler,join(P_storedMessageWithText(m)^.txt,''))
+      then messageEntry^.appendString(literalRecycler,join(P_storedMessageWithText(m)^.txt,''))
       else if m^.isTextMessage
-      then messageEntry^.appendString(@literalRecycler,join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
+      then messageEntry^.appendString(literalRecycler,join(P_storedMessageWithText(m)^.txt,C_lineBreakChar))
       else if m^.messageType=mt_echo_output
-      then messageEntry^.append(@literalRecycler,P_echoOutMessage(m)^.getLiteral,true);
-      result^.append(@literalRecycler,messageEntry,false);
+      then messageEntry^.append(literalRecycler,P_echoOutMessage(m)^.getLiteral,true);
+      result^.append(literalRecycler,messageEntry,false);
     end;
     if ExitCode<>SUPPRESS_EXIT_CODE
-    then result^.append(@literalRecycler,literalRecycler.newListLiteral(3)^.appendString(@literalRecycler,'exitCode')^.appendString(@literalRecycler,'')^.appendInt(@literalRecycler,ExitCode),false);
+    then result^.append(literalRecycler,literalRecycler^.newListLiteral(3)^.appendString(literalRecycler,'exitCode')^.appendString(literalRecycler,'')^.appendInt(literalRecycler,ExitCode),false);
   end;
 
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; CONST recycler:P_recycler; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
@@ -378,7 +378,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       package.load(lu_forCallingMain,globals,recycler,mainParameters);
     finally
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
-      result:=messagesToLiteralForSandbox(recycler^.literalRecycler,messages.storedMessages(false),C_textMessages,messages.getExitCode);
+      result:=messagesToLiteralForSandbox(recycler,messages.storedMessages(false),C_textMessages,messages.getExitCode);
       messages.clear(true);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
@@ -387,32 +387,32 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
 {$ifdef fullVersion}
 PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
   {$i res_ensureAssoc.inc}
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
       noLoc:T_tokenLocation;
       targetExe:string;
   begin
     if associateFullVersion
     then targetExe:=settings.fullFlavourLocation
     else targetExe:=settings.lightFlavourLocation;
-    recycler.create;
+    recycler:=newRecycler;
     runScript('tempFile',
         {src} split(decompressString(ensureAssoc_mnh),C_lineBreakChar),
               targetExe,
               C_allSideEffects,
               noLoc,
               nil,
-              @recycler,0,false);
-    recycler.destroy;
+              recycler,0,false);
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
       exitDummy:longint;
   begin
-    recycler.create;
-    execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,@recycler,exitDummy);
-    recycler.destroy;
+    recycler:=newRecycler;
+    execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler,exitDummy);
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_sandbox.demoCallToHtml(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
@@ -973,8 +973,8 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       if mainRule=nil
       then globals.primaryContext.messages^.raiseSimpleError('The specified package contains no main rule.',packageTokenLocation(@self))
       else begin
-        parametersForMain:=recycler^.literalRecycler.newListLiteral(length(mainParameters));
-        for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(@recycler^.literalRecycler,mainParameters[i]);
+        parametersForMain:=recycler^.newListLiteral(length(mainParameters));
+        for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(recycler,mainParameters[i]);
 
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
@@ -1005,7 +1005,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
         //------------------:error handling if main returns more than one token
         {$endif}
         recycler^.cascadeDisposeToken(t.first);
-        recycler^.literalRecycler.disposeLiteral(parametersForMain);
+        recycler^.disposeLiteral(parametersForMain);
         parametersForMain:=nil;
       end;
     end;
@@ -1134,7 +1134,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     readyForUsecase:=lu_NONE;
   end;
 
-FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean; VAR literalRecycler:T_literalRecycler):boolean;
+FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler):boolean;
   VAR i:longint;
   begin
     result:=ruleMap.writeBackDatastores(messages,literalRecycler);
@@ -1146,7 +1146,7 @@ PROCEDURE T_package.finalize(CONST context:P_context; CONST recycler:P_recycler)
   begin
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
     ruleMap.executeAfterRules(context,recycler);
-    ruleMap.writeBackDatastores(context^.messages,recycler^.literalRecycler);
+    ruleMap.writeBackDatastores(context^.messages,recycler);
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string;
@@ -1157,10 +1157,10 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
   begin
     if ruleMap.containsKey('toString',toStringRule) and (toStringRule.entryType=tt_userRule)
     then begin
-      parameters:=P_listLiteral(recycler^.literalRecycler.newListLiteral(1)^.append(@recycler^.literalRecycler,L,true));
+      parameters:=P_listLiteral(recycler^.newListLiteral(1)^.append(recycler,L,true));
       if P_rule(toStringRule.value)^.canBeApplied(location,parameters,toReduce,context,recycler)
       then stringOut:=P_context(context)^.reduceToLiteral(toReduce.first,recycler).literal;
-      recycler^.literalRecycler.disposeLiteral(parameters);
+      recycler^.disposeLiteral(parameters);
     end;
 
     if stringOut=nil then begin
@@ -1171,7 +1171,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
       if stringOut^.literalType=lt_string
       then result:=P_stringLiteral(stringOut)^.value
       else result:=stringOut^.toString();
-      recycler^.literalRecycler.disposeLiteral(stringOut);
+      recycler^.disposeLiteral(stringOut);
     end;
   end;
 
@@ -1268,31 +1268,31 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=recycler^.literalRecycler.newListLiteral(length(packageUses));
+      result:=recycler^.newListLiteral(length(packageUses));
       for i:=0 to length(packageUses)-1 do result^.append(
-        @recycler^.literalRecycler,
-        recycler^.literalRecycler.newListLiteral^
-          .appendString(@recycler^.literalRecycler, packageUses[i].id)^
-          .appendString(@recycler^.literalRecycler, packageUses[i].path),false);
+        recycler,
+        recycler^.newListLiteral^
+          .appendString(recycler, packageUses[i].id)^
+          .appendString(recycler, packageUses[i].path),false);
     end;
 
   FUNCTION includeList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=recycler^.literalRecycler.newListLiteral(length(extendedPackages));
+      result:=recycler^.newListLiteral(length(extendedPackages));
       for i:=0 to length(extendedPackages)-1 do result^.append(
-        @recycler^.literalRecycler,
-        recycler^.literalRecycler.newListLiteral^
-          .appendString(@recycler^.literalRecycler, extendedPackages[i]^.getId)^
-          .appendString(@recycler^.literalRecycler, extendedPackages[i]^.getPath),false);
+        recycler,
+        recycler^.newListLiteral^
+          .appendString(recycler, extendedPackages[i]^.getId)^
+          .appendString(recycler, extendedPackages[i]^.getPath),false);
     end;
 
   {$ifdef fullVersion}
   FUNCTION builtinCallList:P_listLiteral;
     VAR builtin:P_builtinFunctionMetaData;
     begin
-      result:=recycler^.literalRecycler.newListLiteral();
-      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(@recycler^.literalRecycler,builtin^.qualifiedId);
+      result:=recycler^.newListLiteral();
+      for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(recycler,builtin^.qualifiedId);
     end;
   {$endif}
 
@@ -1305,16 +1305,16 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
     {$endif}
 
     result:=newMapLiteral(7)^
-        .put(@recycler^.literalRecycler, 'id'      ,getId)^
-        .put(@recycler^.literalRecycler, 'path'    ,getPath)^
-        .put(@recycler^.literalRecycler, 'source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
-        .put(@recycler^.literalRecycler, 'uses'    ,usesList,false)^
-        .put(@recycler^.literalRecycler, 'includes',includeList,false)^
-        .put(@recycler^.literalRecycler, 'declares',ruleMap.inspect(P_context(context),recycler,includeRulePointer),false)^
-        .put(@recycler^.literalRecycler, 'plain script',newBoolLiteral(isPlainScript),false);
+        .put(recycler, 'id'      ,getId)^
+        .put(recycler, 'path'    ,getPath)^
+        .put(recycler, 'source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
+        .put(recycler, 'uses'    ,usesList,false)^
+        .put(recycler, 'includes',includeList,false)^
+        .put(recycler, 'declares',ruleMap.inspect(P_context(context),recycler,includeRulePointer),false)^
+        .put(recycler, 'plain script',newBoolLiteral(isPlainScript),false);
     {$ifdef fullVersion}
     functionCallInfos^.cleanup;
-    result^.put(@recycler^.literalRecycler,'called builtin',builtinCallList,false);
+    result^.put(recycler,'called builtin',builtinCallList,false);
     dispose(functionCallInfos,destroy);
     functionCallInfos:=nil;
     {$endif}

@@ -158,7 +158,7 @@ TYPE
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
-      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       FUNCTION getRowStatementCount:longint;
 
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
@@ -231,7 +231,8 @@ USES FPReadPNG,
      IntfGraphics,
      myStringUtil,
      commandLineParameters,
-     contexts;
+     contexts,
+     recyclers;
 VAR preparationThreadsRunning:longint=0;
 TYPE
 T_plotPreparationThread=class(T_basicThread)
@@ -1654,7 +1655,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     end;
   end;
 
-FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR opt:string;
       i:longint;
   begin
@@ -1773,12 +1774,13 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       dummyLocation:T_tokenLocation=(package:nil;line:0;column:0);
       commands:T_arrayOfString;
       DataString:string;
-      literalRecycler:T_literalRecycler;
+      recycler:P_recycler;
+
   begin
     enterCriticalSection(adapterCs);
-    literalRecycler.initRecycler;
+    recycler:=newRecycler;
     try
-      globalRowData:=literalRecycler.newListLiteral();
+      globalRowData:=recycler^.newListLiteral();
       result:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
       myGenerics.append(result,'plain script;');
 
@@ -1792,23 +1794,23 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
           progress.position:=0;
           Application.ProcessMessages;
           for i:=0 to length(animation.frame)-1 do begin
-            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,literalRecycler,globalRowData^,haltExport,Application,progress));
+            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
             prevOptions:=animation.frame[i]^.scalingOptions;
             myGenerics.append(commands,'addAnimationFrame;');
           end;
         end else begin
           progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.getRowStatementCount*2;
           Application.ProcessMessages;
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,literalRecycler,globalRowData^,haltExport,Application,progress));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
         progress.max:=currentPlot.getRowStatementCount*2;
         Application.ProcessMessages;
-        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,literalRecycler,globalRowData^,haltExport,Application,progress));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
                    compressString(
-                     serialize(literalRecycler,
+                     serialize(recycler,
                                globalRowData,
                                dummyLocation,
                                nil),
@@ -1837,9 +1839,9 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       myGenerics.append(result,'display;');
       setLength(commands,0);
     finally
-      literalRecycler.disposeLiteral(globalRowData);
+      recycler^.disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
-      literalRecycler.cleanup;
+      freeRecycler(recycler)
     end;
   end;
 

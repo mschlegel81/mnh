@@ -34,6 +34,7 @@ TYPE
   end;
 
 IMPLEMENTATION
+USES recyclers;
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
   begin
     criticalSection:=ruleCS;
@@ -52,9 +53,9 @@ DESTRUCTOR T_cache.destroy;
 PROCEDURE T_cache.polish;
   VAR binIdx,i,j: longint;
       dropThreshold:longint;
-      literalRecycler:T_literalRecycler;
+      recycler:P_recycler;
   begin
-    literalRecycler.initRecycler;
+    recycler:=newRecycler;
     enterCriticalSection(criticalSection);
     try
       dropThreshold:=useCounter - fill shr 1;
@@ -66,15 +67,15 @@ PROCEDURE T_cache.polish;
           data[j] := data[i];
           inc(j);
         end else begin
-          literalRecycler.disposeLiteral(data[i].key);
-          literalRecycler.disposeLiteral(data[i].value);
+          recycler^.disposeLiteral(data[i].key);
+          recycler^.disposeLiteral(data[i].value);
           dec(fill);
         end;
         setLength(data, j);
       end;
     finally
       leaveCriticalSection(criticalSection);
-      literalRecycler.cleanup;
+      freeRecycler(recycler);
     end;
   end;
 
@@ -163,15 +164,15 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
 
 PROCEDURE T_cache.clear;
   VAR i, j: longint;
-      literalRecycler:T_literalRecycler;
+      recycler:P_recycler;
   begin
-    literalRecycler.initRecycler;
+    recycler:=newRecycler;
     enterCriticalSection(criticalSection);
     try
       for i := 0 to (length(cached)-1) do with cached[i] do begin
         for j := 0 to length(data)-1 do with data[j] do begin
-          literalRecycler.disposeLiteral(key);
-          literalRecycler.disposeLiteral(value);
+          recycler^.disposeLiteral(key);
+          recycler^.disposeLiteral(value);
         end;
         setLength(data, 0);
       end;
@@ -180,7 +181,7 @@ PROCEDURE T_cache.clear;
       useCounter:=0;
     finally
       leaveCriticalSection(criticalSection);
-      literalRecycler.cleanup;
+      freeRecycler(recycler);
     end;
   end;
 

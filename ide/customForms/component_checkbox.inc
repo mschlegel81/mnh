@@ -2,7 +2,7 @@ TYPE
   P_checkboxMeta=^T_checkboxMeta;
   T_checkboxMeta=object(T_guiElementMeta)
     checkbox:TCheckBox;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
@@ -10,9 +10,9 @@ TYPE
   end;
 
 CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                  CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
+                                  CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(def,location,context,literalRecycler,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
+    inherited create(def,location,context,recycler,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
     checkbox:=TCheckBox.create(parent^.winControl);
     checkbox.parent:=parent^.winControl;
     checkbox.Align:=alTop;
@@ -39,14 +39,14 @@ PROCEDURE T_checkboxMeta.update;
   end;
 
 PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
-  VAR literalRecycler:T_literalRecycler;
+  VAR recycler:P_recycler;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
       if (config.bindingTo<>'') then begin
-        literalRecycler.initRecycler;
-        if state.bindingValue<>nil then literalRecycler.disposeLiteral(state.bindingValue);
-        literalRecycler.cleanup;
+        recycler:=newRecycler;
+        if state.bindingValue<>nil then recycler^.disposeLiteral(state.bindingValue);
+        freeRecycler(recycler);
         state.bindingValue:=newBoolLiteral(checkbox.checked);
         propagateCursor(getCustomForm,crHourGlass);
       end;
