@@ -2,7 +2,7 @@ TYPE
   P_buttonMeta=^T_buttonMeta;
   T_buttonMeta=object(T_guiElementMeta)
     button:TButton;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
@@ -10,9 +10,9 @@ TYPE
   end;
 
 CONSTRUCTOR T_buttonMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
+                                CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(def,location,context,literalRecycler,[dmk_type,dmk_action,dmk_caption,dmk_enabled]);
+    inherited create(def,location,context,recycler,[dmk_type,dmk_action,dmk_caption,dmk_enabled]);
     button:=TButton.create(parent^.winControl);
     button.parent:=parent^.winControl;
     update;

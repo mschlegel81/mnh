@@ -1369,15 +1369,16 @@ FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycl
 FUNCTION T_inlineExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   begin
     result:=newMapLiteral(0);
-    P_mapLiteral(result)^.put(@literalRecycler,'pattern' ,pattern.toString)^
-                         .put(@literalRecycler,'location',getLocation     )^
-                         .put(@literalRecycler,'type'    ,C_expressionTypeString[typ]);
+    P_mapLiteral(result)^.put(literalRecycler,'pattern' ,pattern.toString)^
+                         .put(literalRecycler,'location',getLocation     )^
+                         .put(literalRecycler,'type'    ,C_expressionTypeString[typ]);
   end;
 
 FUNCTION T_subruleExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   begin
-    result:=inherited inspect(literalRecycler)^.put(@literalRecycler,'comment'   ,meta.comment            )^
-                              .put(@literalRecycler,'attributes',meta.getAttributesLiteral(literalRecycler),false);
+    result:=inherited inspect(literalRecycler)^
+      .put(literalRecycler,'comment'   ,meta.comment            )^
+      .put(literalRecycler,'attributes',meta.getAttributesLiteral(literalRecycler),false);
   end;
 
 FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
@@ -1500,7 +1501,7 @@ FUNCTION T_ruleMetaData.getAttributesLiteral(CONST literalRecycler:P_literalRecy
   VAR i:longint;
   begin
     result:=newMapLiteral(0);
-    for i:=0 to length(attributes)-1 do result^.put(@literalRecycler,attributes[i].key,attributes[i].value);
+    for i:=0 to length(attributes)-1 do result^.put(literalRecycler,attributes[i].key,attributes[i].value);
   end;
 
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
@@ -1806,8 +1807,8 @@ FUNCTION tokenSplit_impl intFuncSignature;
       result:=recycler^.newListLiteral(length(sub^.preparedBody));
       for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
         if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
-        then result^.append      (@recycler^,token.data,true)
-        else result^.appendString(@recycler^,safeTokenToString(@token));
+        then result^.append      (recycler,token.data,true)
+        else result^.appendString(recycler,safeTokenToString(@token));
       end;
     end;
 
@@ -1828,7 +1829,7 @@ FUNCTION tokenSplit_impl intFuncSignature;
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
         result:=recycler^.newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(@recycler^,tokens[i]);
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(recycler,tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then
         result:=expressionToTokens(P_expressionLiteral(arg0));
@@ -1995,7 +1996,7 @@ FUNCTION readExpressionFromStream(CONST literalRecycler:P_literalRecycler; CONST
       et_inlineStateful:
         begin
           new(inlineEx,init(expressionType,location));
-          if not(inlineEx^.loadFromStream(@literalRecycler,stream,location,adapters,typeMap))
+          if not(inlineEx^.loadFromStream(literalRecycler,stream,location,adapters,typeMap))
           then dispose(inlineEx,destroy)
           else result:=inlineEx;
         end;

@@ -148,7 +148,7 @@ FUNCTION formatComment(CONST commentString:string; CONST tokenLocation:T_tokenLo
     context^.messages:=@tryMessages;
     fmt.create(commentString,tokenLocation,context,recycler);
     dummyParams:=recycler^.newListLiteral(1);
-    dummyParams^.appendString(@recycler^,commentString);
+    dummyParams^.appendString(recycler,commentString);
     resultList:=fmt.format(dummyParams,tokenLocation,context,recycler);
     fmt.destroy;
     recycler^.disposeLiteral(dummyParams);

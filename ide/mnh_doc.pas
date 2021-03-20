@@ -144,7 +144,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
     VAR html,txt,ids:T_arrayOfString;
     begin
       if (length(code)<=0) then exit;
-      demoCodeToHtmlCallback(code,txt,html,ids,@recycler);
+      demoCodeToHtmlCallback(code,txt,html,ids,recycler);
       addExample(code,html,txt,ids);
       setLength(examplesToStore,length(examplesToStore)+1);
       examplesToStore[length(examplesToStore)-1,0]:=code;

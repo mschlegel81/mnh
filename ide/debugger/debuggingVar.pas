@@ -60,6 +60,7 @@ TYPE
 
 FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
 IMPLEMENTATION
+USES recyclers;
 FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
   VAR i:longint;
   begin
@@ -197,10 +198,10 @@ FUNCTION T_variableTreeEntryAnonymousValue.toStringForErrorTrace:string;
 FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
   VAR i:longint;
       iter:T_arrayOfLiteral;
-      literalRecycler:T_literalRecycler;
+      recycler:P_recycler;
   begin
     if (length(preparedChildren)=0) and (canExpand) then begin
-      literalRecycler.create;
+      recycler:=newRecycler;
       if isKeyValuePair then begin
         if length(P_listLiteral(value)^.value[0]^.toString())>=50 then begin
           setLength(preparedChildren,2);
@@ -211,12 +212,12 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
           new(preparedChildren[0],create(P_listLiteral(value)^.value[1],false));
         end;
       end else begin
-        iter:=P_compoundLiteral(value)^.forcedIteratableList(@literalRecycler);
+        iter:=P_compoundLiteral(value)^.forcedIteratableList(recycler);
         setLength(preparedChildren,length(iter));
         for i:=0 to length(iter)-1 do new(preparedChildren[i],create(iter[i],value^.literalType in C_mapTypes));
-        literalRecycler.disposeLiteral(iter);
+        recycler^.disposeLiteral(iter);
       end;
-      literalRecycler.destroy;
+      freeRecycler(recycler);
     end;
     initialize(result);
     setLength(result,length(preparedChildren));
@@ -225,13 +226,13 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
 
 DESTRUCTOR T_variableTreeEntryAnonymousValue.destroy;
   VAR i:longint;
-      literalRecycler:T_literalRecycler;
+      recycler:P_recycler;
   begin
-    literalRecycler.create;
+    recycler:=newRecycler;
     for i:=0 to length(preparedChildren)-1 do dispose(preparedChildren[i],destroy);
     setLength(preparedChildren,0);
-    literalRecycler.disposeLiteral(value);
-    literalRecycler.destroy;
+    recycler^.disposeLiteral(value);
+    freeRecycler(recycler);
   end;
 
 DESTRUCTOR T_variableTreeEntryNamedValue.destroy;

@@ -5,7 +5,7 @@ TYPE
     lastControl:TControl;
     winControl:TWinControl;
     containedInForm:TForm;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TscriptedForm);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
@@ -51,20 +51,20 @@ PROCEDURE T_customFormRequest.setCreatedForm(form:TscriptedForm);
   end;
 
 DESTRUCTOR T_customFormRequest.destroy;
-  VAR literalRecycler:T_literalRecycler;
+  VAR recyler:P_recycler;
   begin
     inherited destroy;
-    literalRecycler.initRecycler;
-    literalRecycler.disposeLiteral(setupDef);
-    literalRecycler.cleanup;
+    recyler:=newRecycler;
+    recyler^.disposeLiteral(setupDef);
+    freeRecycler(recyler);
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                               CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler;
+                               CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler;
                                CONST consideredKeys:T_definingMapKeys);
   VAR newPanel:TPanel;
   begin
-    inherited create(def,location,context,literalRecycler,consideredKeys);
+    inherited create(def,location,context,recycler,consideredKeys);
     newPanel:=TPanel.create(parent^.winControl);
     newPanel.parent:=parent^.winControl;
     newPanel.ParentFont:=true;

@@ -158,7 +158,7 @@ TYPE
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
-      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       FUNCTION getRowStatementCount:longint;
 
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
@@ -1655,7 +1655,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     end;
   end;
 
-FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR literalRecycler:T_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR opt:string;
       i:longint;
   begin
@@ -1794,19 +1794,19 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
           progress.position:=0;
           Application.ProcessMessages;
           for i:=0 to length(animation.frame)-1 do begin
-            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,recycler^,globalRowData^,haltExport,Application,progress));
+            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
             prevOptions:=animation.frame[i]^.scalingOptions;
             myGenerics.append(commands,'addAnimationFrame;');
           end;
         end else begin
           progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.getRowStatementCount*2;
           Application.ProcessMessages;
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,recycler^,globalRowData^,haltExport,Application,progress));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
         progress.max:=currentPlot.getRowStatementCount*2;
         Application.ProcessMessages;
-        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler^,globalRowData^,haltExport,Application,progress));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
                    compressString(

@@ -6,7 +6,7 @@ TYPE
     combobox:TComboBox;
     config_items:P_expressionLiteral;
     state_items :T_arrayOfString;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE update; virtual;
     PROCEDURE OnSelect(Sender: TObject);
@@ -18,19 +18,19 @@ TYPE
   end;
 
 CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                  CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
+                                  CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   VAR tmp:P_literal;
   begin
-    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items],literalRecycler);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items],recycler);
     config_items:=nil;
-    tmp:=mapGet(def,key[dmk_items],literalRecycler);
+    tmp:=mapGet(def,key[dmk_items],recycler);
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config_items:=P_expressionLiteral(tmp);
         lt_stringList,
         lt_emptyList: begin
           state_items :=P_listLiteral(tmp)^;
-          literalRecycler.disposeLiteral(tmp);
+          recycler^.disposeLiteral(tmp);
         end
         else context.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
       end;
@@ -100,11 +100,11 @@ PROCEDURE T_comboboxMeta.update;
   end;
 
 PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
-  VAR literalRecycler:T_literalRecycler;
+  VAR recycler:P_recycler;
   begin
-    literalRecycler.initRecycler;
-    if config.action<>nil then postAction(literalRecycler.newStringLiteral(combobox.text));
-    literalRecycler.cleanup;
+    recycler:=newRecycler;
+    if config.action<>nil then postAction(recycler^.newStringLiteral(combobox.text));
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
@@ -126,7 +126,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; CONST context:
       result:=inherited evaluate(location,context,recycler);
       if config_items<>nil then begin
         oldItems:=state_items;
-        tmp:=config_items^.evaluateToLiteral(location,@context,@recycler,nil,nil).literal;
+        tmp:=config_items^.evaluateToLiteral(location,@context,recycler,nil,nil).literal;
         if (tmp<>nil) then begin
           if tmp^.literalType in [lt_stringList,lt_emptyList]
           then state_items:=P_listLiteral(tmp)^
@@ -146,12 +146,12 @@ FUNCTION T_comboboxMeta.getName:string;
   end;
 
 DESTRUCTOR T_comboboxMeta.destroy;
-  VAR literalRecycler:T_literalRecycler;
+  VAR recycler:P_recycler;
   begin
     inherited destroy;
-    literalRecycler.initRecycler;
-    if config_items<>nil then literalRecycler.disposeLiteral(config_items);
+    recycler:=newRecycler;
+    if config_items<>nil then recycler^.disposeLiteral(config_items);
     setLength(state_items,0);
-    literalRecycler.cleanup;
+    freeRecycler(recycler);
   end;
 

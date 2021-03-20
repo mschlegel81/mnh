@@ -1,16 +1,16 @@
 TYPE
   P_inputEditorMeta=^T_inputEditorMeta;
   T_inputEditorMeta=object(T_outputMemoMeta)
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; VAR literalRecycler:T_literalRecycler);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE update; virtual;
     PROCEDURE OnChange(Sender: TObject);
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context; VAR literalRecycler:T_literalRecycler);
+CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(parent,def,location,context,literalRecycler,[dmk_type,dmk_highlight,dmk_bind,dmk_action]);
+    inherited create(parent,def,location,context,recycler,[dmk_type,dmk_highlight,dmk_bind,dmk_action]);
     synMeta.editor.readonly:=false;
     if (config.bindingTo<>'') or (config_onChange<>nil) then begin
       synMeta.editor.OnChange:=@OnChange;
@@ -31,12 +31,12 @@ PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   end;
 
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-  VAR literalRecycler:T_literalRecycler;
+  VAR recycler:P_recycler;
   begin
     if (key<>13) or not(ssShift in Shift) then exit;
-    literalRecycler.initRecycler;
-    if config.action<>nil then postAction(literalRecycler.newStringLiteral(synMeta.editor.text));
-    literalRecycler.cleanup;
+    recycler:=newRecycler;
+    if config.action<>nil then postAction(recycler^.newStringLiteral(synMeta.editor.text));
+    freeRecycler(recycler);
   end;
 
 FUNCTION T_inputEditorMeta.getName:string;

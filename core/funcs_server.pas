@@ -137,6 +137,7 @@ CONSTRUCTOR T_microserverRequest.createMicroserverRequest(CONST conn: TSocket; C
     servingExpression:=P_expressionLiteral(parent.servingExpression^.rereferenced);
     feedbackLocation:=parent.feedbackLocation;
     connection.create(conn,@(parent.httpListener));
+    recycler:=newRecycler;
     context:=parent.context^.getNewAsyncContext(recycler,true);
     myParent:=parent;
     FreeOnTerminate:=true;
@@ -152,7 +153,7 @@ PROCEDURE T_microserverRequest.execute;
     begin
       headerMap:=newMapLiteral(8);
       requestMap:=newMapLiteral(8)
-        ^.put(@recycler^,'request',
+        ^.put(recycler,'request',
           newMapLiteral(3)^.put(recycler,'method',C_httpRequestMethodName[connection.getMethod])
                           ^.put(recycler,'path',connection.getRequest)
                           ^.put(recycler,'protocol',connection.getProtocol),false)
@@ -257,11 +258,9 @@ PROCEDURE T_microserver.execute;
   CONST minSleepTime=0;
         maxSleepTime=50;
   VAR sleepTime:longint=minSleepTime;
-      recycler:T_recycler;
       requestSocket:TSocket;
   begin
     FreeOnTerminate:=true;
-    recycler.create;
     context^.messages^.postTextMessage(mt_el1_note,feedbackLocation,'http Microserver started. '+httpListener.toString);
     up:=true;
     lastActivity:=now;
@@ -285,11 +284,9 @@ PROCEDURE T_microserver.execute;
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
-      recycler.cleanupIfPosted;
     until timedOut or Terminated or not(context^.messages^.continueEvaluation);
     postShutdownMessage;
     up:=false;
-    recycler.destroy;
     threadStopsSleeping;
     Terminate;
   end;

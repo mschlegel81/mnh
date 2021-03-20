@@ -387,32 +387,32 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
 {$ifdef fullVersion}
 PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
   {$i res_ensureAssoc.inc}
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
       noLoc:T_tokenLocation;
       targetExe:string;
   begin
     if associateFullVersion
     then targetExe:=settings.fullFlavourLocation
     else targetExe:=settings.lightFlavourLocation;
-    recycler.create;
+    recycler:=newRecycler;
     runScript('tempFile',
         {src} split(decompressString(ensureAssoc_mnh),C_lineBreakChar),
               targetExe,
               C_allSideEffects,
               noLoc,
               nil,
-              @recycler,0,false);
-    recycler.destroy;
+              recycler,0,false);
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
-  VAR recycler:T_recycler;
+  VAR recycler:P_recycler;
       exitDummy:longint;
   begin
-    recycler.create;
-    execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,@recycler,exitDummy);
-    recycler.destroy;
+    recycler:=newRecycler;
+    execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler,exitDummy);
+    freeRecycler(recycler);
   end;
 
 PROCEDURE T_sandbox.demoCallToHtml(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);

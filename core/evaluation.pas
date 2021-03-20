@@ -266,7 +266,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       finalizeAggregation;
       recycler^.disposeLiteral(input);
       for i:=0 to length(bodyRule)-1 do begin
-        bodyRule[i]^.cleanup(@recycler);
+        bodyRule[i]^.cleanup(recycler);
         dispose(bodyRule[i],destroy);
       end;
       //----------------------------------------------------------------------cleanup
@@ -336,10 +336,10 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       first^.next:=recycler^.disposeToken(bracketClosingWhile);
 
       //cleanup----------------------------------------------------------------------
-      headRule^.cleanup(@recycler);
+      headRule^.cleanup(recycler);
       dispose(headRule,destroy);
       if bodyRule<>nil then begin
-        bodyRule^.cleanup(@recycler);
+        bodyRule^.cleanup(recycler);
         dispose(bodyRule,destroy);
       end;
       //----------------------------------------------------------------------cleanup
@@ -1338,7 +1338,7 @@ end}
 TYPE
   T_asyncTask=class(T_basicThread)
     private
-      recycler:T_recycler;
+      recycler:P_recycler;
       payload:P_futureLiteral;
       myContext:P_context;
     protected
@@ -1350,7 +1350,7 @@ TYPE
 
 PROCEDURE T_asyncTask.execute;
   begin
-    if not(Terminated) then payload^.executeInContext(myContext,@recycler);
+    if not(Terminated) then payload^.executeInContext(myContext,recycler);
     Terminate;
   end;
 
@@ -1358,7 +1358,7 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
   begin
     payload:=payload_;
     myContext:=context_;
-    recycler.create;
+    recycler:=newRecycler;
     inherited create(tpNormal,true);
     FreeOnTerminate:=true;
   end;
@@ -1366,10 +1366,10 @@ CONSTRUCTOR T_asyncTask.create(CONST payload_: P_futureLiteral; CONST context_: 
 DESTRUCTOR T_asyncTask.destroy;
   begin
     inherited destroy;
-    recycler.disposeLiteral(payload);
-    myContext^.finalizeTaskAndDetachFromParent(@recycler);
+    recycler^.disposeLiteral(payload);
+    myContext^.finalizeTaskAndDetachFromParent(recycler);
     contextPool.disposeContext(myContext);
-    recycler.destroy;
+    freeRecycler(recycler);
   end;
 
 {$i func_defines.inc}
