@@ -1374,11 +1374,11 @@ DESTRUCTOR T_asyncTask.destroy;
 
 {$i func_defines.inc}
 FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
-  VAR payload:P_futureLiteral;
-      childContext:P_context;
-      parameters:P_listLiteral=nil;
-      timeout:double;
-      task:T_asyncTask;
+  VAR payload     :P_futureLiteral=nil;
+      childContext:P_context      =nil;
+      parameters  :P_listLiteral  =nil;
+      timeout     :double         =0;
+      task        :T_asyncTask    =nil;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
@@ -1404,7 +1404,18 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           result:=payload^.rereferenced;
           task:=T_asyncTask.create(payload,childContext);
           if task.FatalException=nil
-          then task.start
+          then begin
+            try
+              task.start;
+            except
+              on e:Exception do begin
+                context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error on thread start: '+e.message+'; cleaning memory and retrying once...');
+                memoryCleaner.callCleanupMethods;
+                recycler^.cleanupIfPosted;
+                task.start;
+              end;
+            end;
+          end
           else begin
             context^.raiseError('Thread creation failed: '+task.FatalException.toString,tokenLocation);
             task.free;
@@ -1414,10 +1425,15 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           context^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
       except
-        on e:EOutOfMemory do context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
-        on e:EThread      do begin
+        on e:EOutOfMemory do begin
+          context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          memoryCleaner.callCleanupMethods;
+          recycler^.cleanupIfPosted;
+        end;
+        on e:Exception do begin
           context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
           if task<>nil then task.free;
+          if result<>nil then recycler^.disposeLiteral(result);
         end;
       end;
     end;
