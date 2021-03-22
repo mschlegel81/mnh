@@ -121,17 +121,19 @@ PROCEDURE cleanupRecyclerPools;
     if recyclerPoolsFinalized then exit;
     enterCriticalSection(recyclerPoolCs);
     try
+      //Clear trailing free pools
+      i:=length(recyclerPool)-1;
+      while (i>=0) and (recyclerPool[i]^.isFree) do begin
+        dispose(recyclerPool[i],destroy);
+        dec(i);
+      end;
+      setLength(recyclerPool,i+1);
+
+      //Cleanup pools or post cleanup if not free
       for i:=0 to length(recyclerPool)-1 do
       if recyclerPool[i]^.isFree
       then recyclerPool[i]^.cleanup
       else recyclerPool[i]^.cleanupPosted:=true;
-
-      i:=length(recyclerPool)-1;
-      while (i>=0) and (recyclerPool[i]^.isFree) do begin
-        dispose(recyclerPool[i],destroy);
-        setLength(recyclerPool,i);
-        dec(i);
-      end;
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;
@@ -140,9 +142,11 @@ PROCEDURE cleanupRecyclerPools;
 PROCEDURE finalizeRecyclerPools;
   begin
     assert(not(recyclerPoolsFinalized));
+    enterCriticalSection(recyclerPoolCs);
     cleanupRecyclerPools;
     assert(length(recyclerPool)=0);
     recyclerPoolsFinalized:=true;
+    leaveCriticalSection(recyclerPoolCs);
     doneCriticalSection(recyclerPoolCs);
   end;
 
@@ -166,7 +170,7 @@ PROCEDURE T_recycler.cleanup;
         end;
       end;
     end;
-    inherited freeMemory;
+    inherited freeMemory(true);
   end;
 
 CONSTRUCTOR T_recycler.create;
