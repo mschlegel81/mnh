@@ -452,6 +452,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
       FUNCTION underlyingMap:P_literalKeyLiteralValueMap;
+      PROCEDURE ensureType;
   end;
 
   T_literalRecycler=object
@@ -3018,6 +3019,11 @@ FUNCTION T_mapLiteral.forcedIteratableList(CONST literalRecycler:P_literalRecycl
 FUNCTION T_mapLiteral.underlyingMap:P_literalKeyLiteralValueMap;
   begin
     result:=@dat;
+  end;
+
+PROCEDURE T_mapLiteral.ensureType;
+  begin
+    if dat.fill=0 then literalType:=lt_emptyMap else literalType:=lt_map;
   end;
 
 FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;

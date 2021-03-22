@@ -281,17 +281,21 @@ PROCEDURE T_elementFrequencyAggregator.addToAggregation(er:T_evaluationResult; C
 
 FUNCTION T_elementFrequencyAggregator.getResult(CONST literalRecycler:P_literalRecycler):P_literal;
   VAR entry:T_counterMap.CACHE_ENTRY;
+      mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+      dummy:P_literal;
   begin
     if hasReturnLiteral
     then begin
       result:=resultLiteral^.rereferenced
     end else begin
       result:=newMapLiteral(counterMap.fill);
-      for entry in counterMap.keyValueList do
-        P_mapLiteral(result)^.put(
-          literalRecycler,
-          entry.key,
-          int64(entry.value),true);
+      for entry in counterMap.keyValueList do begin
+        mapEntry.key:=entry.key^.rereferenced;
+        mapEntry.value:=literalRecycler^.newIntLiteral(entry.value);
+        mapEntry.keyHash:=entry.keyHash;
+        P_mapLiteral(result)^.underlyingMap^.putNew(mapEntry,dummy);
+      end;
+      P_mapLiteral(result)^.ensureType;
     end;
   end;
 
