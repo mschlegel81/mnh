@@ -83,7 +83,7 @@ FUNCTION newRecycler:P_recycler;
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 IMPLEMENTATION
-USES mySys;
+USES mySys,mnh_settings;
 VAR recyclerPool:array of P_recycler;
     recyclerPoolCs:TRTLCriticalSection;
     recyclerPoolsFinalized:boolean=false;
@@ -109,31 +109,44 @@ VAR recyclerPool:array of P_recycler;
    end;
 
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
+  VAR i:longint;
   begin
-    recycler^.isFree:=true;
     recycler^.cleanupIfPosted;
+    recycler^.isFree:=true;
     recycler:=nil;
+
+    if length(recyclerPool)*2>settings.cpuCount then begin
+      enterCriticalSection(recyclerPoolCs);
+      try
+        //Clear trailing free pools
+        i:=length(recyclerPool)-1;
+        while (i>=0) and (recyclerPool[i]^.isFree) do begin
+          dispose(recyclerPool[i],destroy);
+          dec(i);
+        end;
+        setLength(recyclerPool,i+1);
+      finally
+        leaveCriticalSection(recyclerPoolCs);
+      end;
+    end;
   end;
 
 PROCEDURE cleanupRecyclerPools;
   VAR i:longint;
+      j:longint=0;
   begin
     if recyclerPoolsFinalized then exit;
     enterCriticalSection(recyclerPoolCs);
     try
-      //Clear trailing free pools
-      i:=length(recyclerPool)-1;
-      while (i>=0) and (recyclerPool[i]^.isFree) do begin
-        dispose(recyclerPool[i],destroy);
-        dec(i);
-      end;
-      setLength(recyclerPool,i+1);
-
-      //Cleanup pools or post cleanup if not free
       for i:=0 to length(recyclerPool)-1 do
-      if recyclerPool[i]^.isFree
-      then recyclerPool[i]^.cleanup
-      else recyclerPool[i]^.cleanupPosted:=true;
+        if recyclerPool[i]^.isFree
+        then dispose(recyclerPool[i],destroy)
+        else begin
+          recyclerPool[j]:=recyclerPool[i];
+          recyclerPool[i]^.cleanupPosted:=true;
+          inc(j);
+        end;
+      setLength(recyclerPool,j);
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;

@@ -775,45 +775,35 @@ PROCEDURE T_literalRecycler.disposeLiteral(VAR l: P_literal);
       lt_smallint:
         with smallIntLiterals do begin
           if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          //if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_smallIntLiteral(l);
-            inc(fill);
-          //end;
+          dat[fill]:=P_smallIntLiteral(l);
+          inc(fill);
         end;
       lt_bigint:
         with bigIntLiterals do begin
           l^.cleanup(@self);
           if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          //if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_bigIntLiteral(l);
-            inc(fill);
-          //end;
+          dat[fill]:=P_bigIntLiteral(l);
+          inc(fill);
         end;
       lt_real:
         with realLiterals do begin
           if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          //if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_realLiteral(l);
-            inc(fill);
-          //end;
+          dat[fill]:=P_realLiteral(l);
+          inc(fill);
         end;
       lt_string:
         with stringLiterals do begin
           l^.cleanup(@self);
           if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          //if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_stringLiteral(l);
-            inc(fill);
-          //end;
+          dat[fill]:=P_stringLiteral(l);
+          inc(fill);
         end;
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList:
         with listLiterals do begin
           l^.cleanup(@self);
           if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          //if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_listLiteral(l);
-            inc(fill);
-          //end;
+          dat[fill]:=P_listLiteral(l);
+          inc(fill);
         end;
       else begin l^.cleanup(@self); dispose(l,destroy); end;
     end;
