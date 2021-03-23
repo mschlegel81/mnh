@@ -122,13 +122,13 @@ FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl;
 
 { TCmdLineParametersFrame }
 
-procedure TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
   begin
     guiFlagCb.checked    :=false;
     profileFlagCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -137,7 +137,7 @@ procedure TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
     updateLogComboBox(outputFileComboBox.ItemIndex);
   end;
 
-procedure TCmdLineParametersFrame.logLocationLengthEditEditingDone(
+PROCEDURE TCmdLineParametersFrame.logLocationLengthEditEditingDone(
   Sender: TObject);
   VAR i:longint;
   VAR a:P_textFileAdapterSpecification;
@@ -152,7 +152,7 @@ procedure TCmdLineParametersFrame.logLocationLengthEditEditingDone(
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.outFileVerbosityEditEditingDone(
+PROCEDURE TCmdLineParametersFrame.outFileVerbosityEditEditingDone(
   Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
@@ -164,22 +164,22 @@ procedure TCmdLineParametersFrame.outFileVerbosityEditEditingDone(
     end;
   end;
 
-procedure TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
   begin
     if pauseFlagCb.checked then headlessFlagCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
   begin
     if pauseOnErrorFlagCb.checked then headlessFlagCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
   begin
     if profileFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=true;
@@ -188,7 +188,7 @@ procedure TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=false;
@@ -197,7 +197,7 @@ procedure TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=false;
@@ -206,7 +206,7 @@ procedure TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
   VAR logIdxToDrop:longint;
       i:longint;
   begin
@@ -219,7 +219,7 @@ procedure TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
     end;
   end;
 
-procedure TCmdLineParametersFrame.updateLogPreview;
+PROCEDURE TCmdLineParametersFrame.updateLogPreview;
   VAR specification:P_textFileAdapterSpecification;
       formatter:P_messageFormatProvider;
   PROCEDURE formattedLinesFor(CONST messageType:T_messageType; CONST lineIndex:longint;
@@ -300,7 +300,7 @@ procedure TCmdLineParametersFrame.updateLogPreview;
     dispose(formatter,destroy);
   end;
 
-procedure TCmdLineParametersFrame.updateLogSection;
+PROCEDURE TCmdLineParametersFrame.updateLogSection;
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -327,7 +327,7 @@ procedure TCmdLineParametersFrame.updateLogSection;
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.initLabels;
+PROCEDURE TCmdLineParametersFrame.initLabels;
   VAR i:longint;
   begin
     lightVersionRb.caption:=settings.lightFlavourLocation;
@@ -350,15 +350,15 @@ procedure TCmdLineParametersFrame.initLabels;
     sideEffectsComboBox.ItemIndex:=0;
   end;
 
-function TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
+FUNCTION TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
   begin
     if (outputFileComboBox.ItemIndex>=0) and (outputFileComboBox.ItemIndex<length(optionsToUpdate^.deferredAdapterCreations))
     then result:=@(optionsToUpdate^.deferredAdapterCreations[outputFileComboBox.ItemIndex])
     else result:=nil;
   end;
 
-procedure TCmdLineParametersFrame.updateLogComboBox(
-  const preferredItemIndex: longint);
+PROCEDURE TCmdLineParametersFrame.updateLogComboBox(
+  CONST preferredItemIndex: longint);
   VAR i:longint;
   begin
     outputFileComboBox.items.clear;
@@ -374,24 +374,24 @@ procedure TCmdLineParametersFrame.updateLogComboBox(
     else outputFileComboBox.ItemIndex:=-1;
   end;
 
-procedure TCmdLineParametersFrame.updateShebangPreview;
+PROCEDURE TCmdLineParametersFrame.updateShebangPreview;
   VAR newTxt:string;
   begin
     newTxt:=optionsToUpdate^.getShebang;
     if not(shebangEditor)
-    then newTxt:=Copy(newTxt,3,length(newTxt)-2)+' '+scriptFilePath;
+    then newTxt:=copy(newTxt,3,length(newTxt)-2)+' '+scriptFilePath;
     cmdLinePreviewEdit.text:=newTxt;
   end;
 
-constructor TCmdLineParametersFrame.create(TheOwner: TComponent);
+CONSTRUCTOR TCmdLineParametersFrame.create(TheOwner: TComponent);
   begin
     inherited create(TheOwner);
     optionsToUpdate:=nil;
     initLabels;
   end;
 
-procedure TCmdLineParametersFrame.initFromExecOptions(
-  const opt: P_mnhExecutionOptions);
+PROCEDURE TCmdLineParametersFrame.initFromExecOptions(
+  CONST opt: P_mnhExecutionOptions);
   VAR i:longint;
   begin
     initializing:=true;
@@ -425,12 +425,12 @@ procedure TCmdLineParametersFrame.initFromExecOptions(
     initializing:=false;
   end;
 
-procedure TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
   begin
     if guiFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
-procedure TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     if cbConsoleLikeLog.checked then begin
@@ -450,7 +450,7 @@ procedure TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
     end;
   end;
 
-procedure TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
   VAR newLogIndex:longint;
   begin
     with optionsToUpdate^ do begin
@@ -462,7 +462,7 @@ procedure TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
     updateLogSection;
   end;
 
-procedure TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -473,7 +473,7 @@ procedure TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -482,17 +482,17 @@ procedure TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
     updateShebangPreview;
   end;
 
-procedure TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
   begin
     if forceStdErrCb.checked then forceStdOutCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
   begin
     if forceStdOutCb.checked then forceStdErrCb.checked:=false;
   end;
 
-procedure TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
   begin
     if headlessFlagCb.checked then begin
       pauseFlagCb.checked:=false;
@@ -500,7 +500,7 @@ procedure TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
     end;
   end;
 
-procedure TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
+PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
   begin
     if initializing then exit;
     optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
