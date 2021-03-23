@@ -79,18 +79,24 @@ TYPE
   private
     optionsToUpdate:P_mnhExecutionOptions;
     initializing:boolean;
+    shebangEditor:boolean;
+    scriptFilePath:string;
     PROCEDURE updateLogPreview;
     PROCEDURE updateLogSection;
     PROCEDURE initLabels;
     FUNCTION currentAdapterSpecification:P_textFileAdapterSpecification;
     PROCEDURE updateLogComboBox(CONST preferredItemIndex:longint);
+    PROCEDURE updateShebangPreview;
   public
     CONSTRUCTOR create(TheOwner: TComponent); override;
     PROCEDURE initFromExecOptions(CONST opt:P_mnhExecutionOptions);
   end;
 
 PROCEDURE detachCmdLineParametersFrameInstance;
-FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl; CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
+FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl;
+                                           CONST shebangEditor:boolean;
+                                           CONST scriptFilePath:string;
+                                           CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
 IMPLEMENTATION
 USES mnh_messages,myGenerics,litVar,basicTypes,myStringUtil;
 {$R *.lfm}
@@ -101,23 +107,28 @@ PROCEDURE detachCmdLineParametersFrameInstance;
     if myFrame<>nil then myFrame.parent:=nil;
   end;
 
-FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl; CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
+FUNCTION getCmdLineParametersFrameInstance(CONST parent:TWinControl;
+                                           CONST shebangEditor:boolean;
+                                           CONST scriptFilePath:string;
+                                           CONST optionsToUpdate:P_mnhExecutionOptions):TCmdLineParametersFrame;
   begin
     if myFrame=nil then myFrame:=TCmdLineParametersFrame.create(Application);
     myFrame.parent:=parent;
+    myFrame.shebangEditor:=shebangEditor;
+    myFrame.scriptFilePath:=scriptFilePath;
     myFrame.initFromExecOptions(optionsToUpdate);
     result:=myFrame;
   end;
 
 { TCmdLineParametersFrame }
 
-PROCEDURE TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.lightVersionRbClick(Sender: TObject);
   begin
     guiFlagCb.checked    :=false;
     profileFlagCb.checked:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
+procedure TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -126,7 +137,8 @@ PROCEDURE TCmdLineParametersFrame.logFilenameEditEditingDone(Sender: TObject);
     updateLogComboBox(outputFileComboBox.ItemIndex);
   end;
 
-PROCEDURE TCmdLineParametersFrame.logLocationLengthEditEditingDone(Sender: TObject);
+procedure TCmdLineParametersFrame.logLocationLengthEditEditingDone(
+  Sender: TObject);
   VAR i:longint;
   VAR a:P_textFileAdapterSpecification;
   begin
@@ -137,63 +149,64 @@ PROCEDURE TCmdLineParametersFrame.logLocationLengthEditEditingDone(Sender: TObje
     logLocationLengthEdit.text:=intToStr(i);
     a^.logLocationLen:=i;
     updateLogPreview;
-    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.outFileVerbosityEditEditingDone(Sender: TObject);
+procedure TCmdLineParametersFrame.outFileVerbosityEditEditingDone(
+  Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a<>nil then begin
       a^.setVerbosityPart(outFileVerbosityEdit.text,stringToMessageTypeSet(optionsToUpdate^.verbosityString));
       updateLogPreview;
-      cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+      updateShebangPreview;
     end;
   end;
 
-PROCEDURE TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
   begin
     if pauseFlagCb.checked then headlessFlagCb.checked:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
   begin
     if pauseOnErrorFlagCb.checked then headlessFlagCb.checked:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
   begin
     if profileFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
-PROCEDURE TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
+procedure TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=true;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_file;
-    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
+procedure TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stderr;
-    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
+procedure TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stdout;
-    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
+procedure TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
   VAR logIdxToDrop:longint;
       i:longint;
   begin
@@ -206,7 +219,7 @@ PROCEDURE TCmdLineParametersFrame.removeOutFileClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TCmdLineParametersFrame.updateLogPreview;
+procedure TCmdLineParametersFrame.updateLogPreview;
   VAR specification:P_textFileAdapterSpecification;
       formatter:P_messageFormatProvider;
   PROCEDURE formattedLinesFor(CONST messageType:T_messageType; CONST lineIndex:longint;
@@ -216,7 +229,8 @@ PROCEDURE TCmdLineParametersFrame.updateLogPreview;
         toAppend:T_arrayOfString;
         line:string;
     begin
-      location.fileName:='/home/user/scripts/myTestScript.mnh';
+
+      location.fileName:=scriptFilePath;
       location.line:=lineIndex;
       location.column:=1;
       message.create(messageType,location,split(txt1,'#'));
@@ -232,7 +246,7 @@ PROCEDURE TCmdLineParametersFrame.updateLogPreview;
         toAppend:T_arrayOfString;
         line:string;
     begin
-      location.fileName:='/home/user/scripts/myTestScript.mnh';
+      location.fileName:=scriptFilePath;
       location.line:=2;
       location.column:=1;
       message.create(newVoidLiteral,location);
@@ -286,7 +300,7 @@ PROCEDURE TCmdLineParametersFrame.updateLogPreview;
     dispose(formatter,destroy);
   end;
 
-PROCEDURE TCmdLineParametersFrame.updateLogSection;
+procedure TCmdLineParametersFrame.updateLogSection;
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -310,10 +324,10 @@ PROCEDURE TCmdLineParametersFrame.updateLogSection;
     logLocationLengthEdit.enabled:=a^.useLogFormatter;
     logLocationLengthEdit.text   :=intToStr(a^.logLocationLen);
     updateLogPreview;
-    cmdLinePreviewEdit.caption:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.initLabels;
+procedure TCmdLineParametersFrame.initLabels;
   VAR i:longint;
   begin
     lightVersionRb.caption:=settings.lightFlavourLocation;
@@ -336,14 +350,15 @@ PROCEDURE TCmdLineParametersFrame.initLabels;
     sideEffectsComboBox.ItemIndex:=0;
   end;
 
-FUNCTION TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
+function TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterSpecification;
   begin
     if (outputFileComboBox.ItemIndex>=0) and (outputFileComboBox.ItemIndex<length(optionsToUpdate^.deferredAdapterCreations))
     then result:=@(optionsToUpdate^.deferredAdapterCreations[outputFileComboBox.ItemIndex])
     else result:=nil;
   end;
 
-PROCEDURE TCmdLineParametersFrame.updateLogComboBox(CONST preferredItemIndex: longint);
+procedure TCmdLineParametersFrame.updateLogComboBox(
+  const preferredItemIndex: longint);
   VAR i:longint;
   begin
     outputFileComboBox.items.clear;
@@ -359,14 +374,24 @@ PROCEDURE TCmdLineParametersFrame.updateLogComboBox(CONST preferredItemIndex: lo
     else outputFileComboBox.ItemIndex:=-1;
   end;
 
-CONSTRUCTOR TCmdLineParametersFrame.create(TheOwner: TComponent);
+procedure TCmdLineParametersFrame.updateShebangPreview;
+  VAR newTxt:string;
+  begin
+    newTxt:=optionsToUpdate^.getShebang;
+    if not(shebangEditor)
+    then newTxt:=Copy(newTxt,3,length(newTxt)-2)+' '+scriptFilePath;
+    cmdLinePreviewEdit.text:=newTxt;
+  end;
+
+constructor TCmdLineParametersFrame.create(TheOwner: TComponent);
   begin
     inherited create(TheOwner);
     optionsToUpdate:=nil;
     initLabels;
   end;
 
-PROCEDURE TCmdLineParametersFrame.initFromExecOptions(CONST opt:P_mnhExecutionOptions);
+procedure TCmdLineParametersFrame.initFromExecOptions(
+  const opt: P_mnhExecutionOptions);
   VAR i:longint;
   begin
     initializing:=true;
@@ -400,12 +425,12 @@ PROCEDURE TCmdLineParametersFrame.initFromExecOptions(CONST opt:P_mnhExecutionOp
     initializing:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
   begin
     if guiFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
-PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
+procedure TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     if cbConsoleLikeLog.checked then begin
@@ -421,11 +446,11 @@ PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
     if a<>nil then begin
       a^.useLogFormatter:=not(cbConsoleLikeLog.checked);
       updateLogPreview;
-      cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
+      updateShebangPreview;
     end;
   end;
 
-PROCEDURE TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
+procedure TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
   VAR newLogIndex:longint;
   begin
     with optionsToUpdate^ do begin
@@ -437,7 +462,7 @@ PROCEDURE TCmdLineParametersFrame.addOutFileClick(Sender: TObject);
     updateLogSection;
   end;
 
-PROCEDURE TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
+procedure TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
@@ -445,29 +470,29 @@ PROCEDURE TCmdLineParametersFrame.cbConvertPrintToLogClick(Sender: TObject);
     a^.handlePrintAsLog:=cbConvertPrintToLog.checked;
     a^.logDateFormat   :=timeFormatEdit.text;
     updateLogPreview;
-    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
+procedure TCmdLineParametersFrame.cbLogAppendClick(Sender: TObject);
   VAR a:P_textFileAdapterSpecification;
   begin
     a:=currentAdapterSpecification;
     if a=nil then exit;
     a^.forceNewFile:=not(cbLogAppend.checked);
-    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
-PROCEDURE TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.forceStdErrCbClick(Sender: TObject);
   begin
     if forceStdErrCb.checked then forceStdOutCb.checked:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
   begin
     if forceStdOutCb.checked then forceStdErrCb.checked:=false;
   end;
 
-PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
+procedure TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
   begin
     if headlessFlagCb.checked then begin
       pauseFlagCb.checked:=false;
@@ -475,7 +500,7 @@ PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
+procedure TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
   begin
     if initializing then exit;
     optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
@@ -491,7 +516,7 @@ PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
     if forceStdErrCb     .checked then include(optionsToUpdate^.flags,clf_FORCE_STDERR);
     if forceStdOutCb     .checked then include(optionsToUpdate^.flags,clf_FORCE_STDOUT);
     optionsToUpdate^.sideEffectProfile:=sideEffectsComboBox.ItemIndex;
-    cmdLinePreviewEdit.text:=optionsToUpdate^.getShebang;
+    updateShebangPreview;
   end;
 
 end.

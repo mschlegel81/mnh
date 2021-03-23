@@ -1,24 +1,25 @@
 object ShebangWizard: TShebangWizard
   Left = 1152
-  Height = 703
+  Height = 879
   Top = 50
-  Width = 442
+  Width = 552
   Caption = 'Shebang wizard'
-  ClientHeight = 703
-  ClientWidth = 442
+  ClientHeight = 879
+  ClientWidth = 552
+  DesignTimePPI = 120
   OnCreate = FormCreate
   LCLVersion = '2.0.10.0'
   object notExecutableHint: TPanel
     Left = 0
-    Height = 51
+    Height = 66
     Top = 0
-    Width = 442
+    Width = 552
     Align = alTop
     AutoSize = True
     BevelColor = clRed
     BevelWidth = 3
-    ClientHeight = 51
-    ClientWidth = 442
+    ClientHeight = 66
+    ClientWidth = 552
     Color = clYellow
     Font.Style = [fsBold]
     ParentColor = False
@@ -26,9 +27,9 @@ object ShebangWizard: TShebangWizard
     TabOrder = 0
     object Label3: TLabel
       Left = 3
-      Height = 30
+      Height = 40
       Top = 3
-      Width = 436
+      Width = 546
       Align = alClient
       Alignment = taCenter
       Caption = 'This script is not executable'#13#10'and therefore should not have a shebang.'
@@ -38,9 +39,9 @@ object ShebangWizard: TShebangWizard
     end
     object considerErrorsLabel: TLabel
       Left = 3
-      Height = 15
-      Top = 33
-      Width = 436
+      Height = 20
+      Top = 43
+      Width = 546
       Align = alBottom
       Alignment = taCenter
       Caption = 'This might be due to errors in the script.'
@@ -50,20 +51,21 @@ object ShebangWizard: TShebangWizard
   end
   object Panel1: TPanel
     Left = 0
-    Height = 25
-    Top = 678
-    Width = 442
+    Height = 30
+    Top = 849
+    Width = 552
     Align = alBottom
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 25
-    ClientWidth = 442
+    ClientHeight = 30
+    ClientWidth = 552
+    ParentFont = False
     TabOrder = 1
     object Button1: TButton
       Left = 0
-      Height = 25
+      Height = 30
       Top = 0
-      Width = 380
+      Width = 482
       Align = alClient
       AutoSize = True
       Caption = 'OK'
@@ -74,10 +76,10 @@ object ShebangWizard: TShebangWizard
     object Button2: TButton
       AnchorSideLeft.Control = Button1
       AnchorSideLeft.Side = asrBottom
-      Left = 380
-      Height = 25
+      Left = 482
+      Height = 30
       Top = 0
-      Width = 62
+      Width = 70
       Align = alRight
       AutoSize = True
       Cancel = True
