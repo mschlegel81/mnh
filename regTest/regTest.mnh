@@ -5,7 +5,7 @@ private mutable longestCaseText:=0;
 private printCase(s:String)->begin
   longestCaseText:=max(longestCaseText,s.length);
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
-  s=='' ? void : note("Testcase: ",s);
+  s=='' ? void : note("Testcase: ",s,"\n",'%{$1/1024²}0.3fMB used (%{$1/$0*100}.1f%%)'.format@(mnhInfo.getAll(['configured_mem','used_mem'])));
 end;
 
 PREFIX_OF_MESSAGE_TYPE:=['el1_note'        =>'Note',
@@ -49,6 +49,8 @@ processSandboxOutput(L:List,excludes:List)->
 testFile(scriptFileName:String,doLog:Boolean)->
  begin
     printCase(scriptFileName);
+    mnhInfo['used_mem']>0.5*mnhInfo['configured_mem'] ? callMemoryCleaner : void;
+
     local logName:=extractFileNameOnly(scriptFileName);
     local startTime:=scriptTime;
     local output:=runScript(testConfiguration(scriptFileName))

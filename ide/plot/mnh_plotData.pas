@@ -1,5 +1,8 @@
 UNIT mnh_plotData;
 INTERFACE
+{$ifdef Windows}
+  {$define enable_render_threads}
+{$endif}
 USES sysutils,
      math,
      Interfaces, Classes, ExtCtrls, Graphics, types,Forms, ComCtrls, LCLType,
@@ -154,7 +157,6 @@ TYPE
 
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint);
-      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
@@ -164,7 +166,11 @@ TYPE
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
       PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
       PROCEDURE prepareImage(CONST width,height:longint);
+
+      {$ifdef enable_render_threads}
+      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
       PROCEDURE postPreparation(CONST width,height:longint);
+      {$endif}
 
       FUNCTION isImagePreparedForResolution(CONST width,height:longint):boolean;
       FUNCTION hasResolution(CONST width,height:longint):boolean;
@@ -233,6 +239,7 @@ USES FPReadPNG,
      commandLineParameters,
      contexts,
      recyclers;
+{$ifdef enable_render_threads}
 VAR preparationThreadsRunning:longint=0;
 TYPE
 T_plotPreparationThread=class(T_basicThread)
@@ -256,6 +263,7 @@ DESTRUCTOR T_plotPreparationThread.destroy;
     inherited destroy;
     interlockedDecrement(preparationThreadsRunning);
   end;
+{$endif}
 
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
   begin
@@ -409,6 +417,7 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
     end;
   end;
 
+{$ifdef enable_render_threads}
 PROCEDURE T_plotPreparationThread.execute;
   VAR destroyPlot:boolean;
   begin
@@ -457,6 +466,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
       leaveCriticalSection(cs);
     end;
   end;
+{$endif}
 
 FUNCTION T_plot.isImagePreparedForResolution(CONST width,height:longint):boolean;
   begin
@@ -773,7 +783,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       exit;
     end;
     try
-      {$ifndef unix}
+      {$ifdef enable_render_threads}
       if exportingAll
       then frame[index]^.postRenderToFile(fileName,width,height,false)
       else begin
@@ -790,7 +800,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
         end;
         storeImage.destroy;
         frame[index]^.doneImage(fcm_none);
-      {$ifndef unix}
+      {$ifdef enable_render_threads}
       end;
       {$endif}
     finally
@@ -849,7 +859,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
                      result:=false;
                    end;
         end;
-        {$ifndef unix}
+        {$ifdef enable_render_threads}
         if result then begin
           if not(weHadAMemoryPanic) and memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
@@ -1593,6 +1603,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
     storeImage.destroy;
   end;
 
+{$ifdef enable_render_threads}
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
   begin
     enterCriticalSection(cs);
@@ -1615,6 +1626,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
       leaveCriticalSection(cs);
     end;
   end;
+{$endif}
 
 FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
   VAR storeImage: TImage;
@@ -1687,7 +1699,9 @@ FUNCTION T_plot.getRowStatementCount:longint;
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   VAR clonedRow:T_dataRow;
+      {$ifdef enable_render_threads}
       clonedPlot:P_plot;
+      {$endif}
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
@@ -1716,11 +1730,14 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
         then setString(currentPlot.renderToString(width,height))
         else begin
+          {$ifdef enable_render_threads}
           if renderInBackground then begin
             new(clonedPlot,createWithDefaults);
             clonedPlot^.copyFrom(currentPlot);
             clonedPlot^.postRenderToFile(fileName,width,height,true);
-          end else currentPlot.renderToFile(fileName,   width,height);
+          end else
+          {$endif}
+          currentPlot.renderToFile(fileName,   width,height);
         end;
         P_plotRenderRequest(message)^.fileName:='';
       end;

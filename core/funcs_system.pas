@@ -230,6 +230,7 @@ FUNCTION callMemoryCleaner_impl intFuncSignature;
     if not(context^.checkSideEffects('callMemoryCleaner',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       memoryCleaner.callCleanupMethods;
+      recycler^.cleanupIfPosted;
       result:=newVoidLiteral;
     end else result:=nil;
   end;

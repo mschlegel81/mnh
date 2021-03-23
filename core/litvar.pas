@@ -452,17 +452,18 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
       FUNCTION underlyingMap:P_literalKeyLiteralValueMap;
+      PROCEDURE ensureType;
   end;
 
   T_literalRecycler=object
     private
-      smallIntLiterals:record dat:array[0..255] of P_smallIntLiteral; fill:longint; end;
-      bigIntLiterals  :record dat:array[0..255] of P_bigIntLiteral;   fill:longint; end;
-      realLiterals    :record dat:array[0..255] of P_realLiteral;     fill:longint; end;
-      stringLiterals  :record dat:array[0..255] of P_stringLiteral;   fill:longint; end;
-      listLiterals    :record dat:array[0..255] of P_listLiteral;     fill:longint; end;
+      smallIntLiterals:record dat:array of P_smallIntLiteral; fill:longint; end;
+      bigIntLiterals  :record dat:array of P_bigIntLiteral;   fill:longint; end;
+      realLiterals    :record dat:array of P_realLiteral;     fill:longint; end;
+      stringLiterals  :record dat:array of P_stringLiteral;   fill:longint; end;
+      listLiterals    :record dat:array of P_listLiteral;     fill:longint; end;
     public
-      PROCEDURE freeMemory;
+      PROCEDURE freeMemory(CONST hard:boolean);
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE disposeLiteral(VAR l:P_literal);
@@ -739,31 +740,32 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-PROCEDURE T_literalRecycler.freeMemory;
+PROCEDURE T_literalRecycler.freeMemory(CONST hard:boolean);
+  VAR threshold:longint;
   begin
-    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,length(dat) shr 1);} end;
-    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,length(dat) shr 1);} end;
-    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,length(dat) shr 1);} end;
-    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,length(dat) shr 1);} end;
-    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,length(dat) shr 1);} end;
+    with smallIntLiterals do begin if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); end;
+    with bigIntLiterals   do begin if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); end;
+    with realLiterals     do begin if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); end;
+    with stringLiterals   do begin if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); end;
+    with listLiterals     do begin if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); end;
   end;
 
 CONSTRUCTOR T_literalRecycler.create;
   begin
-    with smallIntLiterals do begin fill:=0; {setLength(dat,0);} end;
-    with bigIntLiterals   do begin fill:=0; {setLength(dat,0);} end;
-    with realLiterals     do begin fill:=0; {setLength(dat,0);} end;
-    with stringLiterals   do begin fill:=0; {setLength(dat,0);} end;
-    with listLiterals     do begin fill:=0; {setLength(dat,0);} end;
+    with smallIntLiterals do begin fill:=0; setLength(dat,0); end;
+    with bigIntLiterals   do begin fill:=0; setLength(dat,0); end;
+    with realLiterals     do begin fill:=0; setLength(dat,0); end;
+    with stringLiterals   do begin fill:=0; setLength(dat,0); end;
+    with listLiterals     do begin fill:=0; setLength(dat,0); end;
   end;
 
 DESTRUCTOR T_literalRecycler.destroy;
   begin
-    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,0);} end;
-    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,0);} end;
-    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,0);} end;
-    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,0);} end;
-    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); {setLength(dat,0);} end;
+    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
   end;
 
 PROCEDURE T_literalRecycler.disposeLiteral(VAR l: P_literal);
@@ -772,45 +774,36 @@ PROCEDURE T_literalRecycler.disposeLiteral(VAR l: P_literal);
     case l^.literalType of
       lt_smallint:
         with smallIntLiterals do begin
-          if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_smallIntLiteral(l);
-            inc(fill);
-          end;
+          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
+          dat[fill]:=P_smallIntLiteral(l);
+          inc(fill);
         end;
       lt_bigint:
         with bigIntLiterals do begin
           l^.cleanup(@self);
-//          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_bigIntLiteral(l);
-            inc(fill);
-          end;
+          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
+          dat[fill]:=P_bigIntLiteral(l);
+          inc(fill);
         end;
       lt_real:
         with realLiterals do begin
-          //if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_realLiteral(l);
-            inc(fill);
-          end;
+          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
+          dat[fill]:=P_realLiteral(l);
+          inc(fill);
         end;
       lt_string:
         with stringLiterals do begin
           l^.cleanup(@self);
-          //if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_stringLiteral(l);
-            inc(fill);
-          end;
+          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
+          dat[fill]:=P_stringLiteral(l);
+          inc(fill);
         end;
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList:
         with listLiterals do begin
           l^.cleanup(@self);
-          //if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
-          if (fill>=length(dat)) then dispose(L,destroy) else begin
-            dat[fill]:=P_listLiteral(l);
-            inc(fill);
-          end;
+          if (fill>=length(dat)) then setLength(dat,length(dat)*2+1);
+          dat[fill]:=P_listLiteral(l);
+          inc(fill);
         end;
       else begin l^.cleanup(@self); dispose(l,destroy); end;
     end;
@@ -3018,6 +3011,11 @@ FUNCTION T_mapLiteral.forcedIteratableList(CONST literalRecycler:P_literalRecycl
 FUNCTION T_mapLiteral.underlyingMap:P_literalKeyLiteralValueMap;
   begin
     result:=@dat;
+  end;
+
+PROCEDURE T_mapLiteral.ensureType;
+  begin
+    if dat.fill=0 then literalType:=lt_emptyMap else literalType:=lt_map;
   end;
 
 FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;

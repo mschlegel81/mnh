@@ -111,6 +111,10 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     cpuCount:=stream.readLongint;
     if cpuCount<=0 then cpuCount:=getNumberOfCPUs;
     memoryLimit:=stream.readInt64;
+    {$ifdef CPU32}
+    if   memoryLimit> 1610612736 //=1.5GiB
+    then memoryLimit:=1610612736;
+    {$endif}
     fullFlavourLocation:=stream.readAnsiString;
     lightFlavourLocation:=stream.readAnsiString;
     newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);

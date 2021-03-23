@@ -202,6 +202,7 @@ FUNCTION getElementFreqency intFuncSignature;
   VAR freqMap:T_freqMap;
       freqList:T_freqMap.KEY_VALUE_LIST;
       freqEntry:T_freqMap.P_CACHE_ENTRY;
+      mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
       i:longint;
       list:P_listLiteral;
       iter:T_arrayOfLiteral;
@@ -246,8 +247,14 @@ FUNCTION getElementFreqency intFuncSignature;
       exit(nil);
     end;
     freqList:=freqMap.keyValueList;
-    result:=newMapLiteral(100);
-    for i:=0 to length(freqList)-1 do P_mapLiteral(result)^.put(recycler,freqList[i].key^.rereferenced,freqList[i].value,false);
+    result:=newMapLiteral(length(freqList));
+    for i:=0 to length(freqList)-1 do begin
+      mapEntry.key:=freqList[i].key^.rereferenced;
+      mapEntry.value:=recycler^.newIntLiteral(freqList[i].value);
+      mapEntry.keyHash:=freqList[i].keyHash;
+      P_mapLiteral(result)^.underlyingMap^.putNew(mapEntry,x);
+    end;
+    P_mapLiteral(result)^.ensureType;
     freqMap.destroy;
   end;
 
@@ -574,7 +581,7 @@ FUNCTION group_imp intFuncSignature;
       for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       recycler^.disposeLiteral(keyList);
-
+      P_mapLiteral(result)^.ensureType;
       {$ifdef fullVersion}
       if aggregator<>nil then context^.callStackPop(nil);
       {$endif}
