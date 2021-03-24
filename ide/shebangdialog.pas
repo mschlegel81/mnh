@@ -38,7 +38,7 @@ PROCEDURE showShebangWizard(CONST meta:P_editorMeta);
     if ShebangWizard=nil then ShebangWizard:=TShebangWizard.create(Application);
     with ShebangWizard do begin
       opt:=meta^.getParametersFromShebang(hadShebang,isExecutable);
-      getCmdLineParametersFrameInstance(ShebangWizard,@opt);
+      getCmdLineParametersFrameInstance(ShebangWizard,true,meta^.pseudoName(),@opt);
 
       notExecutableHint.visible:=not(isExecutable);
       if ShowModal=mrOk then begin

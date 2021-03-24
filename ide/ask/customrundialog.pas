@@ -101,7 +101,7 @@ FUNCTION showCustomRunForm(CONST externalRun:boolean):boolean;
       if fileHadShebang and runnerModel.persistentRunOptions.preferShebang
       then runnerModel.externalRun.mnhExecutionOptions.copyFrom(myCustomRunForm.parametersFromShebang)
       else runnerModel.externalRun.mnhExecutionOptions.copyFrom(runnerModel.persistentRunOptions.mnhExecutionOptions);
-      getCmdLineParametersFrameInstance(myCustomRunForm,@runnerModel.externalRun);
+      getCmdLineParametersFrameInstance(myCustomRunForm,false,scriptName,@runnerModel.externalRun);
       myCustomRunForm.bottomPanel.Align:=alBottom;
       if myCustomRunForm.height<500 then myCustomRunForm.height:=500;
     end else begin
@@ -246,7 +246,7 @@ PROCEDURE TCustomRunForm.flagsByShebangCbChange(Sender: TObject);
     if flagsByShebangCb.enabled and flagsByShebangCb.checked
     then runnerModel.externalRun.mnhExecutionOptions.copyFrom(parametersFromShebang)
     else runnerModel.externalRun.mnhExecutionOptions.copyFrom(runnerModel.persistentRunOptions.mnhExecutionOptions);
-    getCmdLineParametersFrameInstance(myCustomRunForm,@runnerModel.externalRun);
+    getCmdLineParametersFrameInstance(myCustomRunForm,false,workspace.currentEditor^.pseudoName(),@runnerModel.externalRun);
   end;
 
 PROCEDURE TCustomRunForm.scriptParamEditKeyPress(Sender: TObject; VAR key: char);

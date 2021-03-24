@@ -844,7 +844,7 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; C
     canAggregate(doneFetching,context,recycler);
     if doneFetching or not(context^.continueEvaluation) then exit;
     taskChain.create(settings.cpuCount*TASKS_TO_QUEUE_PER_CPU-context^.getGlobals^.taskQueue.queuedCount,context^);
-    if taskChain.handDownThreshold>1 then repeat
+    if taskChain.handDownThreshold>0 then repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
@@ -870,17 +870,17 @@ PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; C
 
 FUNCTION T_parallelMapGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:=sourceGenerator^.toString(30)+
+    result:=sourceGenerator^.toString(lengthLimit div 2)+
             '.pMap('+
-            mapExpression^.toString(20)+
+            mapExpression^.toString(lengthLimit div 2)+
             ')';
   end;
 
 FUNCTION T_parallelFilterGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:=sourceGenerator^.toString(30)+
+    result:=sourceGenerator^.toString(lengthLimit div 2)+
             '.pFilter('+
-            mapExpression^.toString(20)+
+            mapExpression^.toString(lengthLimit div 2)+
             ')';
   end;
 
@@ -888,11 +888,10 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
   begin
     result.reasonForStop:=rr_ok;
     result.literal:=nil;
-    if outputQueue.hasNext then begin
-      doEnqueueTasks(location,P_context(context),P_recycler(recycler));
-      result.literal:=outputQueue.next;
-    end else begin
-      if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context),P_recycler(recycler));
+    if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context),P_recycler(recycler));
+    if outputQueue.hasNext
+    then result.literal:=outputQueue.next
+    else begin
       if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
       then begin
         result.literal:=newVoidLiteral;

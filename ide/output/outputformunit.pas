@@ -60,6 +60,7 @@ TYPE
     OutputSynEdit: TSynEdit;
     outputHighlighter:TMnhOutputSyn;
     OutputPopupMenu: TPopupMenu;
+    PROCEDURE cbFreezeOutputClick(Sender: TObject);
     PROCEDURE cbShowOnOutputChange(Sender: TObject);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
     PROCEDURE FormCreate(Sender: TObject);
@@ -72,6 +73,7 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
+    caretBeforeFreeze:TPoint;
     PROCEDURE updateAfterSettingsRestore;
   public
     adapter:P_lazyInitializedOutAdapter;
@@ -168,6 +170,20 @@ PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
     adapter^.jumpToEnd:=cbShowOnOutput.checked;
   end;
 
+PROCEDURE TOutputForm.cbFreezeOutputClick(Sender: TObject);
+  begin
+    if cbFreezeOutput.checked
+    then begin
+      caretBeforeFreeze:=OutputSynEdit.CaretXY;
+      OutputSynEdit.color:=clBtnFace;
+      OutputSynEdit.enabled:=true;
+    end else begin
+      OutputSynEdit.color:=clWhite;
+      OutputSynEdit.enabled:=not(adapter^.directPrintFlag);
+      OutputSynEdit.CaretXY:=caretBeforeFreeze;
+    end;
+  end;
+
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icOutput;
@@ -200,9 +216,6 @@ PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: 
 PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   begin
     if not(isEvaluationRunning) then cbFreezeOutput.checked:=false;
-    if cbFreezeOutput.checked
-    then OutputSynEdit.color:=clBtnFace
-    else OutputSynEdit.color:=clWhite;
   end;
 
 PROCEDURE TOutputForm.performFastUpdate;
