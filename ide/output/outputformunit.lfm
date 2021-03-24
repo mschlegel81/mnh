@@ -527,6 +527,7 @@ object OutputForm: TOutputForm
     Align = alCustom
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Freeze output'
+    OnClick = cbFreezeOutputClick
     ParentFont = False
     PopupMenu = OutputPopupMenu
     TabOrder = 2
