@@ -192,51 +192,81 @@ FUNCTION operator_NotIn       intFuncSignature;
 
 {$define defaultLHScases:=
   lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,context,recycler));
-  lt_void:       exit(RHS^.rereferenced)}
+  lt_void:       exit(RHS^.rereferenced);
+  lt_map,lt_emptyMap: exit(nil)}
 {$define defaultRHSCases:=
   lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,context,recycler));
-  lt_void:       exit(LHS^.rereferenced)}
-{$define generic_recursions:=FUNCTION recurse_scalar_compound:P_literal;
+  lt_void:       exit(LHS^.rereferenced);
+  lt_map,lt_emptyMap: exit(nil)}
+{$define generic_recursions:=FUNCTION recurse_scalar_collection:P_literal;
     VAR rhsIt:T_arrayOfLiteral;
         rhsX :P_literal;
+        resultElement:P_literal;
     begin
       result:=P_collectionLiteral(RHS)^.newOfSameType(recycler,true);
       rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
-      for rhsX in rhsIt do
-        P_collectionLiteral(result)^.append(recycler,function_id(LHS,rhsX,tokenLocation,context,recycler),false);
+      for rhsX in rhsIt do begin
+        resultElement:=function_id(LHS,rhsX,tokenLocation,context,recycler);
+        if resultElement=nil then begin
+          recycler^.disposeLiteral(result);
+          exit(nil);
+        end;
+        P_collectionLiteral(result)^.append(recycler,resultElement,false);
+      end;
     end;
 
-  FUNCTION recurse_compound_scalar:P_literal;
+  FUNCTION recurse_collection_scalar:P_literal;
     VAR lhsIt:T_arrayOfLiteral;
         lhsX :P_literal;
+        resultElement:P_literal;
     begin
       result:=P_collectionLiteral(LHS)^.newOfSameType(recycler,true);
       lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
-      for lhsX in lhsIt do
-        P_collectionLiteral(result)^.append(recycler,function_id(lhsX,RHS,tokenLocation,context,recycler),false);
+      for lhsX in lhsIt do begin
+        resultElement:=function_id(lhsX,RHS,tokenLocation,context,recycler);
+        if resultElement=nil then begin
+          recycler^.disposeLiteral(result);
+          exit(nil);
+        end;
+        P_collectionLiteral(result)^.append(recycler,resultElement,false);
+      end;
     end;
 
   FUNCTION recurse_list_list:P_literal;
     VAR i:longint;
+        resultElement:P_literal;
     begin
-      if  (P_compoundLiteral(LHS)^.size=P_compoundLiteral(RHS)^.size) then begin
+      if  (P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size) then begin
         result:=recycler^.newListLiteral(P_listLiteral(LHS)^.size);
-        for i:=0 to P_listLiteral(LHS)^.size-1 do P_listLiteral(result)^.append(
-          recycler,
-          function_id(P_listLiteral(LHS)^.value[i],
-                      P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler),false);
+        for i:=0 to P_listLiteral(LHS)^.size-1 do begin
+          resultElement:=function_id(P_listLiteral(LHS)^.value[i],
+                                     P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler);
+          if resultElement=nil then begin
+            recycler^.disposeLiteral(result);
+            exit(nil);
+          end;
+          P_listLiteral(result)^.append(recycler,resultElement,false);
+        end;
       end else result:=nil;
     end;
 
   FUNCTION recurse_set_set:P_literal;
     VAR lhsIt,rhsIt:T_arrayOfLiteral;
         lhsX ,rhsX :P_literal;
+        resultElement:P_literal;
     begin
       if (LHS^.literalType in C_setTypes) and (RHS^.literalType in C_setTypes) then begin
         lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
         rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
         result:=newSetLiteral(length(lhsIt)+length(rhsIt));
-        for lhsX in lhsIt do for rhsX in rhsIt do P_setLiteral(result)^.append(recycler,function_id(lhsX,rhsX,tokenLocation,context,recycler),false);
+        for lhsX in lhsIt do for rhsX in rhsIt do begin
+          resultElement:=function_id(lhsX,rhsX,tokenLocation,context,recycler);
+          if resultElement=nil then begin
+            recycler^.disposeLiteral(result);
+            exit(nil);
+          end;
+          P_setLiteral(result)^.append(recycler,resultElement,false);
+        end;
       end else result:=nil;
     end}
 
@@ -250,16 +280,16 @@ FUNCTION function_id(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       lt_boolean..lt_string: case RHS^.literalType of
         defaultRHSCases;
         lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(newBoolLiteral(LHS^.isInRelationTo(op,RHS)));
-        lt_list..lt_emptySet : if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_scalar_compound);
+        lt_list..lt_emptySet : if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_scalar_collection);
       end;
       lt_list..lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_compound_scalar);
+        lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_collection_scalar);
         lt_list..lt_emptyList: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_list_list);
       end;
       lt_set..lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_compound_scalar);
+        lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_collection_scalar);
         lt_set..lt_emptySet :  if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(recurse_set_set);
       end;
     end;
@@ -317,48 +347,48 @@ comparator_implementation;
       lt_boolean: case RHS^.literalType of
         defaultRHSCases;
         lt_boolean: exit(newBoolLiteral(P_boolLiteral(LHS)^.value boolOp P_boolLiteral(RHS)^.value));
-        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_booleanList,lt_booleanSet: exit(recurse_scalar_compound);
+        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_booleanList,lt_booleanSet: exit(recurse_scalar_collection);
       end;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: exit(recycler^.newIntLiteral(P_smallIntLiteral(LHS)^.value boolOp P_smallIntLiteral(RHS)^.value));
         lt_bigint  : exit(recycler^.newIntLiteral(P_bigIntLiteral(RHS)^.value.bitOp(P_smallIntLiteral(LHS)^.value)));
-        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_scalar_compound);
+        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_intList,lt_intSet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: exit(recycler^.newIntLiteral   (P_bigIntLiteral(LHS)^.value.bitOp(P_smallIntLiteral(RHS)^.value)));
         lt_bigint:   exit(recycler^.newBigIntLiteral(P_bigIntLiteral(LHS)^.value.bitOp(P_bigIntLiteral  (RHS)^.value)));
-        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_scalar_compound);
+        lt_set,lt_emptySet,lt_list,lt_emptyList,lt_intList,lt_intSet: exit(recurse_scalar_collection);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean,lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_boolean,lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_emptyList,lt_booleanList,lt_intList: exit(recurse_list_list);
       end;
       lt_set ,lt_emptySet : case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean,lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_boolean,lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set,lt_emptySet,lt_booleanSet,lt_intSet: exit(recurse_set_set);
       end;
       lt_booleanList: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean: exit(recurse_compound_scalar);
+        lt_boolean: exit(recurse_collection_scalar);
         lt_list,lt_emptyList,lt_booleanList: exit(recurse_list_list);
       end;
       lt_booleanSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean: exit(recurse_compound_scalar);
+        lt_boolean: exit(recurse_collection_scalar);
         lt_set,lt_emptySet,lt_booleanSet: exit(recurse_set_set);
       end;
       lt_intList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_emptyList,lt_intList: exit(recurse_list_list);
       end;
       lt_intSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set,lt_emptySet,lt_intSet: exit(recurse_set_set);
       end;
     end;
@@ -429,7 +459,7 @@ FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_bigint:   exit(recycler^.newIntLiteral (            P_bigIntLiteral  (RHS)^.value +      P_smallIntLiteral(LHS)^.value));
         lt_real:     exit(recycler^.newRealLiteral(            P_smallIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -437,7 +467,7 @@ FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_bigint:   exit(recycler^.newIntLiteral (            P_bigIntLiteral(LHS)^.value+ P_bigIntLiteral  (RHS)^.value));
         lt_real:     exit(recycler^.newRealLiteral(            P_bigIntLiteral(LHS)^.floatValue+P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
@@ -445,42 +475,42 @@ FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value+P_abstractIntLiteral(RHS)^.floatValue));
         lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value+P_realLiteral       (RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_string: case RHS^.literalType of
         defaultRHSCases;
         lt_string: exit(recycler^.newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
         lt_list,lt_stringList,lt_emptyList,
-        lt_set ,lt_stringSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_stringSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList,lt_realList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
       end;
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_stringList: case RHS^.literalType of
         defaultRHSCases;
-        lt_string: exit(recurse_compound_scalar);
+        lt_string: exit(recurse_collection_scalar);
         lt_list,lt_stringList: exit(recurse_list_list);
       end;
       lt_stringSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_string: exit(recurse_compound_scalar);
+        lt_string: exit(recurse_collection_scalar);
         lt_set ,lt_stringSet , lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real,lt_string: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real,lt_string: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList,lt_stringList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real,lt_string: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real,lt_string: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_stringSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -502,7 +532,7 @@ FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocat
         lt_bigint:   exit(recycler^.newIntLiteral (             P_smallIntLiteral(LHS)^.value-P_bigIntLiteral(RHS)^.value));
         lt_real:     exit(recycler^.newRealLiteral(             P_smallIntLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -510,7 +540,7 @@ FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocat
         lt_bigint  : exit(recycler^.newIntLiteral (             P_bigIntLiteral(LHS)^.value        -P_bigIntLiteral  (RHS)^.value));
         lt_real    : exit(recycler^.newRealLiteral(             P_bigIntLiteral(LHS)^.value.toFloat-P_realLiteral    (RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
@@ -518,26 +548,26 @@ FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocat
         lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value-P_abstractIntLiteral(RHS)^.floatValue));
         lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList,lt_realList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
       end;
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -559,7 +589,7 @@ FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_bigint  : exit(recycler^.newIntLiteral( P_bigIntLiteral(RHS)^.value * P_smallIntLiteral(LHS)^.value));
         lt_real    : exit(recycler^.newRealLiteral(P_smallIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -567,33 +597,33 @@ FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_bigint  : exit(recycler^.newIntLiteral (P_bigIntLiteral(LHS)^.value*P_bigIntLiteral (RHS)^.value));
         lt_real    : exit(recycler^.newRealLiteral(P_bigIntLiteral(LHS)^.floatValue*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_abstractIntLiteral(RHS)^.floatValue));
         lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList,lt_realList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
       end;
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -614,33 +644,33 @@ FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoc
         lt_smallint,lt_bigint: exit(divideInts(recycler,P_abstractIntLiteral(LHS),P_abstractIntLiteral(RHS)));
         lt_real:   exit(recycler^.newRealLiteral(P_abstractIntLiteral(LHS)^.floatValue/P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint:    exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_abstractIntLiteral (RHS)^.floatValue));
         lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList,lt_realList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
       end;
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -665,7 +695,7 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
                      then exit(nanLit.rereferenced)
                      else exit(recycler^.newIntLiteral(bigint.divide(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -676,26 +706,26 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
                      then exit(nanLit.rereferenced)
                      else exit(recycler^.newIntLiteral(P_bigIntLiteral(LHS)^.value.divide(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_intList: exit(recurse_list_list);
       end;
       lt_intSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -720,7 +750,7 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                      then exit(nanLit.rereferenced)
                      else exit(recycler^.newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -731,26 +761,26 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                      then exit(nanLit.rereferenced)
                      else exit(recycler^.newIntLiteral(P_bigIntLiteral(LHS)^.value.modulus(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_intList: exit(recurse_list_list);
       end;
       lt_intSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -833,7 +863,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                    end;
         lt_real:   exit(recycler^.newRealLiteral(exp(ln(P_smallIntLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
@@ -846,7 +876,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                    end;
         lt_real:   exit(recycler^.newRealLiteral(exp(ln(P_bigIntLiteral(LHS)^.floatValue)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
@@ -859,26 +889,26 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
                    end;
         lt_real:   exit(recycler^.newRealLiteral(exp(ln(P_realLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_compound);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_intList,lt_realList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
       end;
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
       lt_list,lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: exit(recurse_list_list);
       end;
       lt_set,lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint,lt_real: exit(recurse_compound_scalar);
+        lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_set_set);
       end;
     end;
@@ -898,22 +928,22 @@ FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
         defaultRHSCases;
         lt_boolean..lt_real: exit(recycler^.newStringLiteral(P_stringLiteral(LHS)^.value+RHS^.toString));
         lt_string:           exit(recycler^.newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
-        lt_list..lt_emptySet:  exit(recurse_scalar_compound);
+        lt_list..lt_emptySet:  exit(recurse_scalar_collection);
       end;
       lt_boolean..lt_real: case RHS^.literalType of
         defaultRHSCases;
         lt_boolean..lt_real: exit(recycler^.newStringLiteral(LHS^.toString+RHS^.toString));
         lt_string:           exit(recycler^.newStringLiteral(LHS^.toString+P_stringLiteral(RHS)^.value));
-        lt_list..lt_emptySet:  exit(recurse_scalar_compound);
+        lt_list..lt_emptySet:  exit(recurse_scalar_collection);
       end;
       lt_list..lt_emptyList: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(recurse_compound_scalar);
+        lt_boolean..lt_string: exit(recurse_collection_scalar);
         lt_list..lt_emptyList:  exit(recurse_list_list);
       end;
       lt_set..lt_emptySet: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(recurse_compound_scalar);
+        lt_boolean..lt_string: exit(recurse_collection_scalar);
         lt_set..lt_emptySet:  exit(recurse_set_set);
       end;
     end;
@@ -956,9 +986,9 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         lt_boolean..lt_string: exit(recycler^.newListLiteral(P_listLiteral(LHS)^.size+1)^
                                     .appendAll(recycler,P_listLiteral(LHS))^
                                     .append   (recycler,RHS,true));
-        lt_list..lt_emptyMap:  exit(recycler^.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
+        lt_list..lt_emptySet:  exit(recycler^.newListLiteral(P_listLiteral(LHS)^.size+P_listLiteral(RHS)^.size)^
                                     .appendAll(recycler,P_listLiteral(LHS))^
-                                    .appendAll(recycler,P_compoundLiteral(RHS)));
+                                    .appendAll(recycler,P_setLiteral(RHS)));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
         defaultRHSCases;
@@ -968,18 +998,9 @@ FUNCTION perform_concat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
         lt_list..lt_emptyList: exit(recycler^.newListLiteral^
                                     .appendAll(recycler,P_setLiteral (LHS))^
                                     .appendAll(recycler,P_listLiteral(RHS)));
-        lt_set ..lt_emptyMap : exit(newSetLiteral(P_setLiteral(LHS)^.size+P_compoundLiteral(RHS)^.size)^
-                                    .appendAll(recycler,P_setLiteral  (LHS))^
-                                    .appendAll(recycler,P_compoundLiteral(RHS)));
-      end;
-      lt_map..lt_emptyMap: case RHS^.literalType of
-        defaultRHSCases;
-        lt_map..lt_emptyMap:  exit(newMapLiteral(P_mapLiteral(LHS)^.size)^
-                                   .putAll(recycler,P_mapLiteral(LHS))^
-                                   .putAll(recycler,P_mapLiteral(RHS)));
-        lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(recycler,true)^
-                                   .appendAll(recycler,P_mapLiteral(LHS))^
-                                   .appendAll(recycler,P_setLiteral(RHS)));
+        lt_set ..lt_emptySet : exit(newSetLiteral(P_setLiteral(LHS)^.size+P_setLiteral(RHS)^.size)^
+                                    .appendAll(recycler,P_setLiteral(LHS))^
+                                    .appendAll(recycler,P_setLiteral(RHS)));
       end;
     end;
     result:=nil;
