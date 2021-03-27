@@ -1023,7 +1023,7 @@ CONSTRUCTOR T_delegatorRule.create(CONST id:T_idString; CONST declaredInPackage:
     localRule:=nil;
     setLength(imported,0);
     intOperator:=tt_userRule;
-    for op in overridableOperators do if id=C_tokenDefaultId[op] then intOperator:=op;
+    for op in overridableOperators do if id=operatorName[op] then intOperator:=op;
     isUnary:=intOperator in unaryOperators;
     if (intOperator=tt_userRule) and not(builtinFunctionMap.containsFunctionForId(id,hiddenRule)) then hiddenRule:=nil;
   end;

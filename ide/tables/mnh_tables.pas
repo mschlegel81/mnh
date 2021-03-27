@@ -219,11 +219,13 @@ PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
   VAR recyler:P_recycler;
   begin
-    recyler:=newRecycler;
-    if literal<>nil then recyler^.disposeLiteral(literal);
-    freeRecycler(recyler);
+    if literal<>nil then begin
+      recyler:=newRecycler;
+      recyler^.disposeLiteral(literal);
+      freeRecycler(recyler);
+    end;
     unregisterFontControl(StringGrid);
-    inherited destroy;
+    if adapter<>nil then adapter^.childDestroyed(self);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
