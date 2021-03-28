@@ -903,6 +903,7 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
           exit(result);
         end;
       until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
+      result.literal:=newVoidLiteral;
     end;
   end;
 
