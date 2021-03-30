@@ -569,7 +569,9 @@ PROCEDURE TIdeMainForm.miRestoreClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   begin
+    ensureTimerSuspend;
     if runnerModel.canRunMain(true) then runnerModel.customRun(false);
+    timer.enabled:=true;
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
