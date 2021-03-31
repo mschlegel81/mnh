@@ -32,7 +32,7 @@ TYPE
 
   P_expression=^T_expression;
   T_expression=object(T_expressionLiteral)
-    private
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual; abstract;
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
@@ -88,10 +88,11 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
-      {Calling with intrinsicTuleId='' means the original is cloned}
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      {Calling with intrinsicTuleId='' means the original is cloned}
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION usedGlobalVariables:T_arrayOfPointer;
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -180,7 +181,7 @@ TYPE
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
-    private
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
@@ -217,8 +218,9 @@ T_builtinExpression=object(T_expression)
     id:T_idString;
     func:P_intFuncCallback;
     FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
-    FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
+  protected
+    FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
   public
     CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
     DESTRUCTOR destroy; virtual;
