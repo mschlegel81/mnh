@@ -32,7 +32,7 @@ TYPE
 
   P_expression=^T_expression;
   T_expression=object(T_expressionLiteral)
-    private
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual; abstract;
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
@@ -88,10 +88,11 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
-      {Calling with intrinsicTuleId='' means the original is cloned}
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      {Calling with intrinsicTuleId='' means the original is cloned}
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION usedGlobalVariables:T_arrayOfPointer;
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -180,7 +181,7 @@ TYPE
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
-    private
+    protected
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
@@ -217,8 +218,9 @@ T_builtinExpression=object(T_expression)
     id:T_idString;
     func:P_intFuncCallback;
     FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
-    FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
+  protected
+    FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
   public
     CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
     DESTRUCTOR destroy; virtual;
@@ -586,15 +588,68 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST ot
   end;
 
 FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler): boolean;
-  PROCEDURE updateBody;
-    VAR i:longint;
-        level:longint=1;
+
+  PROCEDURE evaluateExpressionWithSave;
+    PROCEDURE updateBody;
+      VAR i:longint;
+          level:longint=1;
+      begin
+        for i:=indexOfSave+2 to length(preparedBody)-1 do with preparedBody[i] do
+        case token.tokType of
+          tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
+          tt_beginBlock: inc(level);
+          tt_endBlock:   dec(level);
+        end;
+      end;
+
+    VAR firstCallOfResumable:boolean=false;
+        previousValueScope:P_valueScope;
+
     begin
-      for i:=indexOfSave+2 to length(preparedBody)-1 do with preparedBody[i] do
-      case token.tokType of
-        tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
-        tt_beginBlock: inc(level);
-        tt_endBlock:   dec(level);
+      enterCriticalSection(subruleCallCs);
+      if (indexOfSave>=0) and currentlyEvaluating then begin
+        recycler^.cascadeDisposeToken(output.first);
+        output.first:=nil;
+        output.last:=nil;
+        leaveCriticalSection(subruleCallCs);
+        context^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+      end else begin
+        try
+          currentlyEvaluating:=true;
+          if saveValueStore=nil then begin
+            saveValueStore:=recycler^.newValueScopeAsChildOf(context^.valueScope);
+            firstCallOfResumable:=true;
+          end else begin
+            saveValueStore^.attachParent(context^.valueScope);
+          end;
+          //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
+          previousValueScope:=context^.valueScope;
+          context^.valueScope:=saveValueStore;
+
+          output.first:=recycler^.disposeToken(output.first);
+
+          context^.reduceExpression(output.first,recycler);
+          if output.first=nil
+          then output.last:=nil
+          else output.last:=output.first^.last;
+          context^.valueScope:=previousValueScope;
+          if firstCallOfResumable then begin
+            if context^.messages^.continueEvaluation then begin
+              updateBody;
+              //We have to detach the parent after evaluation to resolve temporary cyclic referencing
+              saveValueStore^.detachParent;
+            end else begin
+              recycler^.disposeScope(saveValueStore);
+            end;
+          end else saveValueStore^.detachParent;
+          {$ifdef fullVersion}
+          context^.callStackPop(output.first);
+          {$endif}
+
+        finally
+          currentlyEvaluating:=false;
+          leaveCriticalSection(subruleCallCs);
+        end;
       end;
     end;
 
@@ -607,122 +662,78 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
         L:P_literal;
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
-        previousValueScope:P_valueScope;
-        firstCallOfResumable:boolean=false;
+
         {$ifdef fullVersion}
         parametersNode:P_variableTreeEntryCategoryNode=nil;
         {$endif}
     begin
-      enterCriticalSection(subruleCallCs);
       {$ifdef fullVersion}
       if tco_stackTrace in context^.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
-      if (indexOfSave>=0) and currentlyEvaluating then begin
-        output.first:=nil;
-        output.last:=nil;
-        leaveCriticalSection(subruleCallCs);
-        context^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+
+      blocking:=typ in C_subruleExpressionTypes;
+      output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
+      output.last:=output.first;
+
+      if (preparedBody[                     0].token.tokType=tt_beginBlock) and
+         (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
+         (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
+      then begin
+        firstRelevantToken:=1;
+        lastRelevantToken:=length(preparedBody)-3;
+        if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
       end else begin
-        try
-          currentlyEvaluating:=true;
+        firstRelevantToken:=0;
+        lastRelevantToken:=length(preparedBody)-1;
+      end;
 
-          if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
-          blocking:=typ in C_subruleExpressionTypes;
-          output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
-          output.last:=output.first;
+      {$ifdef fullVersion}
+      if parametersNode<>nil then begin
+        for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
+      end;
+      {$endif}
 
-          if (preparedBody[                     0].token.tokType=tt_beginBlock) and
-             (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
-             (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
-          then begin
-            firstRelevantToken:=1;
-            lastRelevantToken:=length(preparedBody)-3;
-            if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
-          end else begin
-            firstRelevantToken:=0;
-            lastRelevantToken:=length(preparedBody)-1;
-          end;
-
-          {$ifdef fullVersion}
-          if parametersNode<>nil then begin
-            for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
-          end;
-          {$endif}
-
-          for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
-            if parIdx>=0 then begin
-              if parIdx=ALL_PARAMETERS_PAR_IDX then begin
-                if allParams=nil then begin
-                  allParams:=recycler^.newListLiteral;
-                  if param<>nil then allParams^.appendAll(recycler,param);
-                  {$ifdef fullVersion}
-                  if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
-                  {$endif}
-                  allParams^.unreference;
-                end;
-                L:=allParams;
-              end else if parIdx=REMAINING_PARAMETERS_IDX then begin
-                if remaining=nil then begin
-                  if param=nil
-                  then remaining:=recycler^.newListLiteral
-                  else remaining:=param^.tail(recycler,pattern.arity);
-                  {$ifdef fullVersion}
-                  if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
-                  {$endif}
-                  remaining^.unreference;
-                end;
-                L:=remaining;
-              end else begin
-                L:=param^.value[parIdx];
-              end;
-              output.last^.next:=recycler^.newToken(token.location,'',tt_literal,L^.rereferenced);
-            end else output.last^.next:=recycler^.newToken(token);
-            output.last:=output.last^.next;
-          end;
-
-          {$ifdef fullVersion}
-          context^.callStackPush(callLocation,@self,parametersNode);
-          {$endif}
-          if indexOfSave>=0 then begin
-            if saveValueStore=nil then begin
-              saveValueStore:=recycler^.newValueScopeAsChildOf(context^.valueScope);
-              firstCallOfResumable:=true;
-            end else begin
-              saveValueStore^.attachParent(context^.valueScope);
+      for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
+        if parIdx>=0 then begin
+          if parIdx=ALL_PARAMETERS_PAR_IDX then begin
+            if allParams=nil then begin
+              allParams:=recycler^.newListLiteral;
+              if param<>nil then allParams^.appendAll(recycler,param);
+              {$ifdef fullVersion}
+              if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
+              {$endif}
+              allParams^.unreference;
             end;
-            //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
-            previousValueScope:=context^.valueScope;
-            context^.valueScope:=saveValueStore;
-
-            output.first:=recycler^.disposeToken(output.first);
-
-            context^.reduceExpression(output.first,recycler);
-            if output.first=nil
-            then output.last:=nil
-            else output.last:=output.first^.last;
-            context^.valueScope:=previousValueScope;
-            if firstCallOfResumable then begin
-              if context^.messages^.continueEvaluation then begin
-                updateBody;
-                //We have to detach the parent after evaluation to resolve temporary cyclic referencing
-                saveValueStore^.detachParent;
-              end else begin
-                recycler^.disposeScope(saveValueStore);
-              end;
-            end else saveValueStore^.detachParent;
-            {$ifdef fullVersion}
-            context^.callStackPop(output.first);
-            {$endif}
+            L:=allParams;
+          end else if parIdx=REMAINING_PARAMETERS_IDX then begin
+            if remaining=nil then begin
+              if param=nil
+              then remaining:=recycler^.newListLiteral
+              else remaining:=param^.tail(recycler,pattern.arity);
+              {$ifdef fullVersion}
+              if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
+              {$endif}
+              remaining^.unreference;
+            end;
+            L:=remaining;
           end else begin
-            output.last^.next:=recycler^.newToken(getLocation,'',tt_semicolon);
-            output.last:=output.last^.next;
-            output.last^.next:=recycler^.newToken(getLocation,'',endToken[blocking]);
-            output.last:=output.last^.next;
+            L:=param^.value[parIdx];
           end;
-          currentlyEvaluating:=false;
-        finally
-          leaveCriticalSection(subruleCallCs);
-        end;
+          output.last^.next:=recycler^.newToken(token.location,'',tt_literal,L^.rereferenced);
+        end else output.last^.next:=recycler^.newToken(token);
+        output.last:=output.last^.next;
+      end;
+
+      {$ifdef fullVersion}
+      context^.callStackPush(callLocation,@self,parametersNode);
+      {$endif}
+      if indexOfSave>=0
+      then evaluateExpressionWithSave
+      else begin
+        output.last^.next:=recycler^.newToken(getLocation,'',tt_semicolon);
+        output.last:=output.last^.next;
+        output.last^.next:=recycler^.newToken(getLocation,'',endToken[blocking]);
+        output.last:=output.last^.next;
       end;
     end;
 
@@ -730,6 +741,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     output.last:=nil;
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
+      if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
       prepareResult;
       result:=output.last<>nil;
     end else begin

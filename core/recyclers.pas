@@ -110,6 +110,7 @@ VAR recyclerPool:array of P_recycler;
 
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
   VAR i:longint;
+      j:longint=0;
   begin
     recycler^.cleanupIfPosted;
     recycler^.isFree:=true;
@@ -118,13 +119,14 @@ PROCEDURE freeRecycler(VAR recycler:P_recycler);
     if length(recyclerPool)*2>settings.cpuCount then begin
       enterCriticalSection(recyclerPoolCs);
       try
-        //Clear trailing free pools
-        i:=length(recyclerPool)-1;
-        while (i>=0) and (recyclerPool[i]^.isFree) do begin
-          dispose(recyclerPool[i],destroy);
-          dec(i);
-        end;
-        setLength(recyclerPool,i+1);
+        for i:=0 to length(recyclerPool)-1 do
+          if recyclerPool[i]^.isFree
+          then dispose(recyclerPool[i],destroy)
+          else begin
+            recyclerPool[j]:=recyclerPool[i];
+            inc(j);
+          end;
+        setLength(recyclerPool,j);
       finally
         leaveCriticalSection(recyclerPoolCs);
       end;
