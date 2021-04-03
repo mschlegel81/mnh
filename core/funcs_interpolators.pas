@@ -10,7 +10,7 @@ USES serializationUtil,
      litVar,subrules;
 
 TYPE
-  T_interpolator=object(T_expression)
+  T_interpolator=object(T_builtinExpression)
     protected
       underlyingValues:P_listLiteral;
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
