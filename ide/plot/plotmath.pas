@@ -1187,7 +1187,9 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
     tmp:=samplesToDistribute/tmp;
     //Note: initialize(result) leads to memory leak
     setLength(result,length(triangleHeights));
-    for k:=0 to length(result)-1 do result[k]:=round(triangleHeights[k]*tmp);
+    if isNan(tmp) or isInfinite(tmp)
+    then for k:=0 to length(result)-1 do result[k]:=1
+    else for k:=0 to length(result)-1 do result[k]:=round(triangleHeights[k]*tmp);
   end;
 
 FUNCTION T_scalingOptions.screenToReal(CONST x, y: integer): T_point;
