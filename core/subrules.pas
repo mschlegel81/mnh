@@ -160,6 +160,38 @@ TYPE
       PROPERTY isPublic:boolean read publicSubrule;
   end;
 
+  P_builtinExpression=^T_builtinExpression;
+  T_builtinExpression=object(T_expression)
+    protected
+      id:T_idString;
+      FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual; abstract;
+    public
+      CONSTRUCTOR create(CONST id_:T_idString; CONST expressionType:T_expressionType; CONST location:T_tokenLocation);
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION referencesAnyUserPackage:boolean; virtual;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
+  end;
+
+  P_builtinExpressionProxy=^T_builtinExpressionProxy;
+  T_builtinExpressionProxy=object(T_builtinExpression)
+    private
+      meta:P_builtinFunctionMetaData;
+      func:P_intFuncCallback;
+      CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
+    protected
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
+      FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
+    public
+      CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
+      FUNCTION arity:T_arityInfo; virtual;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION equals(CONST other:P_literal):boolean; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
+      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+    end;
+
   T_builtinGeneratorType=(bgt_future,
                           bgt_listIterator,
                           bgt_singleValueIterator,
@@ -209,31 +241,6 @@ IMPLEMENTATION
 USES sysutils,strutils,funcs_mnh,typinfo
      {$ifdef fullVersion},plotstyles{$endif}
      ;
-
-TYPE
-P_builtinExpression=^T_builtinExpression;
-T_builtinExpression=object(T_expression)
-  private
-    meta:P_builtinFunctionMetaData;
-    id:T_idString;
-    func:P_intFuncCallback;
-    FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression;
-    CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
-  protected
-    FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
-  public
-    CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
-    DESTRUCTOR destroy; virtual;
-    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
-    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-    FUNCTION arity:T_arityInfo; virtual;
-    FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
-    FUNCTION getId:T_idString; virtual;
-    FUNCTION equals(CONST other:P_literal):boolean; virtual;
-    FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-    FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
-    FUNCTION referencesAnyUserPackage:boolean; virtual;
-  end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST recycler:P_recycler);
   VAR t,prev,inlineRuleTokens:P_token;
@@ -558,7 +565,7 @@ DESTRUCTOR T_subruleExpression.destroy;
   end;
 
 FUNCTION T_inlineExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=pattern.canApplyToNumberOfParameters(parCount); end;
-FUNCTION T_builtinExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
+FUNCTION T_builtinExpressionProxy.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
   begin
     result:=(parCount>=C_arityKind[meta^.arityKind].fixedParameters) and
            ((parCount<=C_arityKind[meta^.arityKind].fixedParameters) or
@@ -890,11 +897,11 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if LHS<>nil then begin
       if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_builtinExpressionTypes)
-      then LHSinstead:=P_builtinExpression(LHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
+      then LHSinstead:=P_builtinExpressionProxy(LHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
       else LHSinstead:=LHS^.rereferenced;
     end else LHSinstead:=nil;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_builtinExpressionTypes)
-    then RHSinstead:=P_builtinExpression(RHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
+    then RHSinstead:=P_builtinExpressionProxy(RHS)^.getEquivalentInlineExpression(P_context(threadContext),recycler)
     else RHSinstead:=RHS^.rereferenced;
     new(newRule,createFromOp(recycler,LHSinstead,op,RHSinstead,tokenLocation));
     result:=newRule;
@@ -908,7 +915,7 @@ FUNCTION T_inlineExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; 
     new(P_inlineExpression(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation,P_recycler(recycler)));
   end;
 
-FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_expressionLiteral;
+FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation;CONST threadContext: P_abstractContext; CONST recycler: pointer): P_expressionLiteral;
   VAR temp:P_inlineExpression;
   begin
     temp:=getEquivalentInlineExpression(P_context(threadContext),P_recycler(recycler));
@@ -1026,7 +1033,7 @@ FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST e
     last:=last^.next;
   end;
 
-FUNCTION T_builtinExpression.getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler): P_inlineExpression;
+FUNCTION T_builtinExpressionProxy.getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler): P_inlineExpression;
   VAR first:P_token;
   begin
     first:=recycler^.newToken(getLocation,meta^.qualifiedId,tt_intrinsicRule,func);
@@ -1034,7 +1041,7 @@ FUNCTION T_builtinExpression.getEquivalentInlineExpression(CONST context:P_conte
     new(result,createFromInline(first,context,recycler));
   end;
 
-FUNCTION T_builtinExpression.getParameterNames(CONST literalRecycler:P_literalRecycler): P_listLiteral;
+FUNCTION T_builtinExpressionProxy.getParameterNames(CONST literalRecycler:P_literalRecycler): P_listLiteral;
   VAR i:longint;
   begin
     result:=literalRecycler^.newListLiteral(arity.minPatternLength);
@@ -1045,34 +1052,32 @@ FUNCTION T_builtinGeneratorExpression.getParameterNames(CONST literalRecycler:P_
 
 FUNCTION newBuiltinExpression(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
   begin
-    new(P_builtinExpression(result),create(meta));
+    new(P_builtinExpressionProxy(result),create(meta));
   end;
 
-CONSTRUCTOR T_builtinExpression.createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
+CONSTRUCTOR T_builtinExpressionProxy.createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
   VAR loc:T_tokenLocation;
   begin
     loc.package:=@MNH_PSEUDO_PACKAGE;
     loc.column:=1;
     loc.line:=internalId;
-    inherited create(et_builtin,loc);
+    inherited create(meta_^.qualifiedId,et_builtin,loc);
     meta:=meta_;
-    id  :=meta^.qualifiedId;
     func:=meta^.functionPointer;
   end;
 
-CONSTRUCTOR T_builtinExpression.create(CONST meta_:P_builtinFunctionMetaData);
+CONSTRUCTOR T_builtinExpressionProxy.create(CONST meta_:P_builtinFunctionMetaData);
   VAR loc:T_tokenLocation;
   begin
     loc.package:=@MNH_PSEUDO_PACKAGE;
     loc.column:=1;
     loc.line:=interLockedIncrement(identifiedInternalFunctionTally);
-    inherited create(et_builtin,loc);
+    inherited create(meta_^.qualifiedId,et_builtin,loc);
     meta:=meta_;
-    id  :=meta^.qualifiedId;
     func:=meta^.functionPointer;
   end;
 
-DESTRUCTOR T_builtinExpression.destroy;
+DESTRUCTOR T_builtinExpressionProxy.destroy;
   begin
     inherited destroy;
     id:='';
@@ -1082,6 +1087,12 @@ DESTRUCTOR T_builtinExpression.destroy;
 CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
   begin
     inherited create(et,location);
+  end;
+
+CONSTRUCTOR T_builtinExpression.create(CONST id_: T_idString; CONST expressionType: T_expressionType; CONST location: T_tokenLocation);
+  begin
+    inherited create(expressionType,location);
+    id:=id_;
   end;
 
 FUNCTION T_inlineExpression.toString(CONST lengthLimit: longint): ansistring;
@@ -1170,7 +1181,7 @@ FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; CONST
     end else result:=nil;
   end;
 
-FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_builtinExpressionProxy.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler:pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     {$ifdef fullVersion} P_context(context)^.callStackPush(location,@self,nil); {$endif}
     result.literal:=func(parameters,location,P_context(context),P_recycler(recycler));
@@ -1222,9 +1233,9 @@ FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:
     new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location,P_recycler(recycler)));
   end;
 
-FUNCTION T_builtinExpression.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
+FUNCTION T_builtinExpressionProxy.clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral;
   begin
-    new(P_builtinExpression(result),createSecondaryInstance(meta,getLocation.line));
+    new(P_builtinExpressionProxy(result),createSecondaryInstance(meta,getLocation.line));
   end;
 
 FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
@@ -1280,9 +1291,9 @@ FUNCTION T_builtinGeneratorExpression.getId: T_idString;
     result:=toString();
   end;
 
-FUNCTION T_builtinExpression.equals(CONST other: P_literal): boolean;
+FUNCTION T_builtinExpressionProxy.equals(CONST other: P_literal): boolean;
   begin
-    result:=(other^.literalType=lt_expression) and (P_expressionLiteral(other)^.typ=et_builtin) and (P_builtinExpression(other)^.func=func);
+    result:=(other^.literalType=lt_expression) and (P_expressionLiteral(other)^.typ=et_builtin) and (P_builtinExpressionProxy(other)^.func=func);
   end;
 
 FUNCTION T_inlineExpression.arity: T_arityInfo;
@@ -1293,7 +1304,7 @@ FUNCTION T_inlineExpression.arity: T_arityInfo;
     else result.maxPatternLength:=result.minPatternLength;
   end;
 
-FUNCTION T_builtinExpression.arity: T_arityInfo;
+FUNCTION T_builtinExpressionProxy.arity: T_arityInfo;
   begin
     result.minPatternLength:=C_arityKind[meta^.arityKind].fixedParameters;
     if C_arityKind[meta^.arityKind].variadic
@@ -1311,7 +1322,7 @@ FUNCTION T_inlineExpression.containsReturnToken: boolean;
     for p in preparedBody do if p.token.tokType=tt_return then exit(true);
   end;
 
-FUNCTION T_builtinExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_builtinExpressionProxy.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.writeByte(byte(typ));
     stream^.writeAnsiString(id);

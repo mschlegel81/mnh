@@ -15,8 +15,9 @@ TYPE
       underlyingValues:P_listLiteral;
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
+      FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
     public
-      CONSTRUCTOR createInterpolator(CONST values:P_listLiteral; CONST location:T_tokenLocation);
+      CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
 
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
@@ -27,7 +28,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit: longint=maxLongint): ansistring; virtual;
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
 
-      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_expressionLiteral; virtual;
       FUNCTION referencesAnyUserPackage: boolean; virtual;
       FUNCTION writeToStream(CONST literalRecycler: P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean; virtual;
   end;
@@ -39,9 +39,17 @@ FUNCTION T_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycl
     result:=P_listLiteral(literalRecycler^.newListLiteral^.appendString(literalRecycler,'i'));
   end;
 
-CONSTRUCTOR T_interpolator.createInterpolator(CONST values: P_listLiteral; CONST location: T_tokenLocation);
+FUNCTION T_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
+  VAR first:P_token;
   begin
-    inherited create(et_builtin,location);
+    first:=P_recycler(recycler)^.newToken(getLocation,getId,tt_literal,rereferenced);
+    first^.next:=getParametersForPseudoFuncPtr(1,false,getLocation,P_context(context),recycler);
+    new(result,createFromInline(first,P_context(context),recycler));
+  end;
+
+CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation);
+  begin
+    inherited create(id_,et_builtin,location);
     values^.rereference;
     underlyingValues:=values;
   end;
@@ -110,17 +118,6 @@ PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
     underlyingValues:=nil;
   end;
 
-FUNCTION T_interpolator.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_expressionLiteral;
-  VAR temp:P_inlineExpression;
-      first:P_token;
-  begin
-    first:=P_recycler(recycler)^.newToken(getLocation,getId,tt_literal,rereferenced);
-    first^.next:=getParametersForPseudoFuncPtr(1,false,getLocation,P_context(threadContext),recycler);
-    new(temp,createFromInline(first,P_context(threadContext),recycler));
-    new(P_inlineExpression(result),createFromInlineWithOp(temp,intrinsicRuleId,funcLocation,P_recycler(recycler)));
-    P_recycler(recycler)^.disposeLiteral(temp);
-  end;
-
 FUNCTION T_interpolator.referencesAnyUserPackage: boolean;
   begin
     result:=false;
@@ -144,7 +141,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
-      FUNCTION getId: T_idString; virtual;
   end;
 
 FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -163,7 +159,7 @@ FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double)
 CONSTRUCTOR T_linearInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation);
   VAR i:longint;
   begin
-    inherited createInterpolator(values,location);
+    inherited createInterpolator('linearInterpolator',values,location);
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
     setLength(value,values^.size);
     for i:=0 to values^.size-1 do value[i]:=P_numericLiteral(values^.value[i])^.floatValue;
@@ -173,11 +169,6 @@ PROCEDURE T_linearInterpolator.cleanup(CONST literalRecycler: P_literalRecycler)
   begin
     setLength(value,0);
     inherited;
-  end;
-
-FUNCTION T_linearInterpolator.getId: T_idString;
-  begin
-    result:='linearInterpolator';
   end;
 
 {$i func_defines.inc}
@@ -200,7 +191,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
-      FUNCTION getId: T_idString; virtual;
   end;
 
 FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -227,7 +217,7 @@ CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST loca
   VAR n,i:longint;
      C:T_arrayOfDouble;
   begin
-    inherited createInterpolator(values,location);
+    inherited createInterpolator('cSplineInterpolator',values,location);
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
     setLength(toInterpolate,values^.size);
     for i:=0 to values^.size-1 do toInterpolate[i]:=P_numericLiteral(values^.value[i])^.floatValue;
@@ -256,11 +246,6 @@ PROCEDURE T_cSplineInterpolator.cleanup(CONST literalRecycler: P_literalRecycler
     inherited;
   end;
 
-FUNCTION T_cSplineInterpolator.getId: T_idString;
-  begin
-    result:='cSplineInterpolator';
-  end;
-
 FUNCTION cSplineInterpolator_imp intFuncSignature;
   begin
     result:=nil;
@@ -278,7 +263,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
-      FUNCTION getId: T_idString; virtual;
   end;
 
 FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -304,7 +288,7 @@ FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double
 CONSTRUCTOR T_bSplineApproximator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation);
   VAR i:longint;
   begin
-    inherited createInterpolator(values,location);
+    inherited createInterpolator('bezierSpline',values,location);
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
     setLength(toInterpolate,values^.size);
     for i:=0 to values^.size-1 do toInterpolate[i]:=P_numericLiteral(values^.value[i])^.floatValue;
@@ -314,11 +298,6 @@ PROCEDURE T_bSplineApproximator.cleanup(CONST literalRecycler: P_literalRecycler
   begin
     setLength(toInterpolate,0);
     inherited;
-  end;
-
-FUNCTION T_bSplineApproximator.getId: T_idString;
-  begin
-    result:='bezierSpline';
   end;
 
 FUNCTION bSplineApproximator_imp intFuncSignature;
