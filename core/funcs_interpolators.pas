@@ -13,11 +13,15 @@ TYPE
   T_interpolator=object(T_builtinExpression)
     protected
       underlyingValues:P_listLiteral;
+      accessByIndex:boolean;
+      xValues,
+      yValues:T_arrayOfDouble;
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
+      FUNCTION findIndexForX(CONST x:double):longint;
     public
-      CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation);
+      CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context);
       DESTRUCTOR destroy; virtual;
 
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
@@ -33,7 +37,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES funcs,tokens,sysutils,math;
+USES funcs,tokens,sysutils,math,mnh_messages;
 FUNCTION T_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
   begin
     result:=P_listLiteral(literalRecycler^.newListLiteral^.appendString(literalRecycler,'i'));
@@ -47,11 +51,59 @@ FUNCTION T_interpolator.getEquivalentInlineExpression(CONST context: P_context; 
     new(result,createFromInline(first,P_context(context),recycler));
   end;
 
-CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation);
+FUNCTION T_interpolator.findIndexForX(CONST x:double):longint;
+  VAR i0,i1,ic:longint;
+  begin
+    if accessByIndex
+    then result:=floor(x)
+    else begin
+      i0:=0;
+      i1:=length(xValues)-1;
+      while i0<>i1 do begin
+        ic:=(i0+i1) shr 1;
+        if ic=i0 then exit(ic);
+        if   xValues[ic]<=x
+        then i0:=ic
+        else if xValues[ic]>x
+        then i1:=ic
+        else exit(i0);
+      end;
+      result:=i0;
+    end;
+  end;
+
+CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
+  VAR i:longint;
+      ok:boolean=true;
   begin
     inherited create(id_,et_builtin,location);
     values^.rereference;
     underlyingValues:=values;
+
+    if values^.literalType in [lt_numList,lt_realList,lt_intList] then begin
+      accessByIndex:=true;
+      setLength(xValues,0);
+      setLength(yValues,values^.size);
+      for i:=0 to values^.size-1 do yValues[i]:=P_numericLiteral(values^.value[i])^.floatValue;
+    end else if values^.literalType=lt_list then begin
+      accessByIndex:=false;
+      setLength(xValues,values^.size);
+      setLength(yValues,values^.size);
+      for i:=0 to values^.size-1 do if ok then begin
+        if (values^.value[i]^.literalType in [lt_numList,lt_realList,lt_intList])
+        and (P_listLiteral(values^.value[i])^.size=2) then begin
+          xValues[i]:=P_numericLiteral(P_listLiteral(values^.value[i])^.value[0])^.floatValue;
+          yValues[i]:=P_numericLiteral(P_listLiteral(values^.value[i])^.value[1])^.floatValue;
+        end else begin
+          context^.raiseError('All list entries must be pairs of numbers; entry is: '+P_listLiteral(values^.value[i])^.typeString,location);
+          ok:=false;
+        end;
+      end;
+      if ok then begin
+        for i:=1 to length(xValues)-1 do ok:=ok and (xValues[i]>xValues[i-1]);
+        if not(ok) then context^.raiseError('x-Values for interpolator must be sorted.',location);
+      end;
+    end else context^.raiseError('Cannot create interpolator based on '+values^.typeString,location);
   end;
 
 DESTRUCTOR T_interpolator.destroy;
@@ -115,6 +167,8 @@ FUNCTION T_interpolator.toString(CONST lengthLimit: longint): ansistring;
 PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
     if underlyingValues<>nil then literalRecycler^.disposeLiteral(underlyingValues);
+    setLength(xValues,0);
+    setLength(yValues,0);
     underlyingValues:=nil;
   end;
 
@@ -136,10 +190,9 @@ TYPE
   P_linearInterpolator=^T_linearInterpolator;
   T_linearInterpolator=object(T_interpolator)
     protected
-      value:T_arrayOfDouble;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
-      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
+      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
   end;
 
@@ -147,27 +200,33 @@ FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double)
   VAR i0:longint;
       rest:double;
   begin
-    i0:=trunc(floatIdx);
-    if (i0<0) then result:=value[0]
-    else if (i0>=length(value)-1) then result:=value[length(value)-1]
-    else begin
-      rest:=floatIdx-i0;
-      result:=value[i0]*(1-rest)+value[i0+1]*rest;
+    if accessByIndex then begin
+      i0:=trunc(floatIdx);
+      if (i0<0) then result:=yValues[0]
+      else if (i0>=length(yValues)-1) then result:=yValues[length(yValues)-1]
+      else begin
+        rest:=floatIdx-i0;
+        result:=yValues[i0]*(1-rest)+yValues[i0+1]*rest;
+      end;
+    end else begin
+      i0:=findIndexForX(floatIdx);
+      if (i0<0) then result:=yValues[0]
+      else if (i0>=length(yValues)-1) then result:=yValues[length(yValues)-1]
+      else result:=(floatIdx-xValues[i0])/
+                   (xValues[i0+1]-xValues[i0])*
+                   (yValues[i0+1]-yValues[i0])+yValues[i0];
     end;
   end;
 
-CONSTRUCTOR T_linearInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation);
-  VAR i:longint;
+CONSTRUCTOR T_linearInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   begin
-    inherited createInterpolator('linearInterpolator',values,location);
-    assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
-    setLength(value,values^.size);
-    for i:=0 to values^.size-1 do value[i]:=P_numericLiteral(values^.value[i])^.floatValue;
+    inherited createInterpolator('linearInterpolator',values,location,context);
+    if length(yValues)<=1 then accessByIndex:=True;
+    assert(values^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]);
   end;
 
 PROCEDURE T_linearInterpolator.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
-    setLength(value,0);
     inherited;
   end;
 
@@ -175,8 +234,8 @@ PROCEDURE T_linearInterpolator.cleanup(CONST literalRecycler: P_literalRecycler)
 FUNCTION linearInterpolator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList]) then begin
-      new(P_linearInterpolator(result),create(list0,tokenLocation));
+    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+      new(P_linearInterpolator(result),create(list0,tokenLocation,context));
     end;
   end;
 
@@ -184,12 +243,10 @@ TYPE
   P_cSplineInterpolator=^T_cSplineInterpolator;
   T_cSplineInterpolator=object(T_interpolator)
     protected
-      toInterpolate:T_arrayOfDouble;
       M:T_arrayOfDouble;
-
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
-      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
+      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
   end;
 
@@ -199,58 +256,117 @@ FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double
       cub1,
       off ,
       lin ,
-      rest:double;
+      t0,t1:double;
+      ih0:double;
   begin
-    i0:=trunc(floatIdx);
-    if (i0<0) then i0:=0
-    else if (i0>=length(M)-1) then i0:=length(M)-2;
-    rest:=floatIdx-i0;
-    cub0:=M[i0  ]*(1/6);
-    cub1:=M[i0+1]*(1/6);
-    off :=toInterpolate[i0]-M[i0]*(1/6);
-    lin :=toInterpolate[i0+1]-toInterpolate[i0]-(M[i0+1]-M[i0])*(1/6);
-    result:=off+(lin+cub1*sqr(  rest))*   rest+
-                     cub0*sqr(1-rest) *(1-rest);
+    if accessByIndex then begin
+      i0:=trunc(floatIdx);
+      if (i0<0) then i0:=0
+      else if (i0>=length(M)-1) then i0:=length(M)-2;
+      t0:=floatIdx-i0;
+      t1:=1-t0;
+      cub0:=M[i0  ];
+      cub1:=M[i0+1];
+      off :=yValues[i0]-M[i0];
+      lin :=yValues[i0+1]-yValues[i0]-(M[i0+1]-M[i0]);
+      result:=off+(lin+cub1*t0*t0)*t0+cub0*t1*t1*t1;
+    end else begin
+      i0:=findIndexForX(floatIdx);
+      if (i0>=length(M)-1) then i0:=length(M)-2;
+      t0:=floatIdx-xValues[i0];
+      t1:=xValues[i0+1]-floatIdx;
+      ih0:=1/(xValues[i0+1]-xValues[i0]);
+
+      cub0:=M[i0  ]*ih0;
+      cub1:=M[i0+1]*ih0;
+      off :=yValues[i0]-M[i0]*sqr(xValues[i0+1]-xValues[i0]);
+      lin :=(yValues[i0+1]-yValues[i0])*ih0-(M[i0+1]-M[i0])*(xValues[i0+1]-xValues[i0]);
+      result:=off+(lin+cub1*t0*t0)*t0+cub0*t1*t1*t1;
+    end;
   end;
 
-CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation);
+CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   VAR n,i:longint;
-     C:T_arrayOfDouble;
+      v:array of array[-1..1] of double;
+      factor:double;
   begin
-    inherited createInterpolator('cSplineInterpolator',values,location);
-    assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
-    setLength(toInterpolate,values^.size);
-    for i:=0 to values^.size-1 do toInterpolate[i]:=P_numericLiteral(values^.value[i])^.floatValue;
-    if length(toInterpolate)=1 then append(toInterpolate,toInterpolate[0]);
-    if length(toInterpolate)=2 then append(toInterpolate,toInterpolate[1]);
-    n:=length(toInterpolate);
+    inherited createInterpolator('cSplineInterpolator',values,location,context);
+    if length(yValues)=1 then append(yValues,yValues[0]);
+    if length(yValues)=2 then append(yValues,yValues[1]);
+    n:=length(yValues);
     setLength(M,n);
-    setLength(C,n);
     dec(n);
-    M[0]:=toInterpolate[0]*0.125;
-    M[n]:=toInterpolate[n]*(-0.5);
-    C[0]:=1/4;
-    for i:=1 to n-1 do begin
-      M[i]:=(toInterpolate[i-1]-toInterpolate[i]*2+toInterpolate[i+1])*6;
-      C[i]:=1/(4-C[i-1]);
-    end;
-    M[0]:=M[0]*0.25;
-    for i:=1 to n       do M[i]:=(M[i]-M[i-1])*C[i];
-    for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*C[i];
+    //To solve:
+    // With h[i]= x[i+1]-x[i]
+    // |   1                                         |   |M0|   | 0                       |
+    // | h0/6  (h0+h1)/3    h1/6                     |   |M1|   | (y2-y1)/h1 - (y1-y0)/h0 |
+    // |          h1/6   (h1+h2)/3    h2/6           | * |M2| = | (y3-y2)/h2 - (y2-y1)/h1 |
+    // |                    h2/6   (h2+h3)/3    h3/6 |   |M3|   | (y4-y3)/h3 - (y3-y2)/h2 |
+    // |                                          1  |   |M4|   | 0                       |
+    //---------------------------------------------------------------------------------------
+    //Fill matrix:---------------------------------------------//
+    // | v[0,0]=1                      | w[0]=0|               //
+    // | v[1,-1] v[1, 0] v[1,1]        | w[1]  |               //
+    // |         v[2,-1] v[2,0] v[2,1] | w[2]  |               //
+    // |                            ...| ...   |               //
+    //------------------------------------------               //
+    setLength(v,n+1);                                          //
+    v[0,-1]:=0; v[0,0]:=1; v[0,1]:=0; M[0]:=0;                 //
+    v[n,-1]:=0; v[n,0]:=1; v[n,1]:=0; M[n]:=0;                 //
+    if accessByIndex then begin                                //
+      for i:=1 to n-1 do begin                                 //
+        v[i,-1]:=1;                                            //
+        v[i, 0]:=4;                                            //
+        v[i, 1]:=1;                                            //
+        M[i]   :=((yValues[i+1]-yValues[i  ])-                 //
+                  (yValues[i  ]-yValues[i-1]))*6;              //
+      end;                                                     //
+    end else begin                                             //
+      for i:=1 to n-1 do begin                                 //
+        v[i,-1]:=(xValues[i  ]-xValues[i-1]);                  //
+        v[i, 0]:=(xValues[i+1]-xValues[i-1])*2;                //
+        v[i, 1]:=(xValues[i+1]-xValues[i  ]);                  //
+        M[i]   :=((yValues[i+1]-yValues[i  ])/                 //
+                  (xValues[i+1]-xValues[i  ])-                 //
+                  (yValues[i  ]-yValues[i-1])/                 //
+                  (xValues[i  ]-xValues[i-1]))*6;              //
+      end;                                                     //
+    end;                                                       //
+    //-----------------------------------------------:Fill matrix
+    //Eliminiate subdiagonal:------------//
+    // | 1                  | w'[0]=0|   //
+    // | 0 1 v[1,1]         | w'[1]  |   //
+    // |   0 1       v[2,1] | w'[2]  |   //
+    // |                 ...| ...    |   //
+    //--------------------------------   //
+    M[0]/=v[0,0];                        //
+    v[0,0]:=1;                           //
+    for i:=1 to n-1 do begin             //
+      factor:=v[i,-1];                   //
+      v[i,-1]:=0;                        //
+      v[i, 0]-=factor*v[i-1,1];          //
+      M[i]   -=factor*M[i-1];            //
+      factor:=1/v[i,0];                  //
+      v[i,0]:=1;                         //
+      v[i,1]*=factor;                    //
+      M[i]  *=factor;                    //
+    end;                                 //
+    //--------------:Eliminiate subdiagonal
+    for i:=n-1 downto 0 do M[i]:=M[i]-M[i+1]*v[i,1];
+    for i:=0 to n do M[i]*=1/6;
   end;
 
 PROCEDURE T_cSplineInterpolator.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
     setLength(M,0);
-    setLength(toInterpolate,0);
     inherited;
   end;
 
 FUNCTION cSplineInterpolator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList]) then begin
-      new(P_cSplineInterpolator(result),create(list0,tokenLocation));
+    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+      new(P_cSplineInterpolator(result),create(list0,tokenLocation,context));
     end;
   end;
 
@@ -258,11 +374,9 @@ TYPE
   P_bSplineApproximator=^T_bSplineApproximator;
   T_bSplineApproximator=object(T_interpolator)
     protected
-      toInterpolate:T_arrayOfDouble;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
-      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation);
-      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   end;
 
 FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -272,39 +386,30 @@ FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double
     begin
       if j<0
       then result:=0
-      else if j>=length(toInterpolate)
-           then result:=length(toInterpolate)-1
+      else if j>=length(yValues)
+           then result:=length(yValues)-1
            else result:=j;
     end;
 
   begin
     i:=floor(floatIdx); t:=floatIdx-i; it:=1-t;
-    result:=(toInterpolate[limitIdx(i-1)]*(it*it*it)
-            +toInterpolate[limitIdx(i  )]*((3*t*t*t)-(6*t*t)+4)
-            +toInterpolate[limitIdx(i+1)]*((-3*t*t*t)+(3*t*t)+(3*t)+1)
-            +toInterpolate[limitIdx(i+2)]*(t*t*t))/6;
+    result:=(yValues[limitIdx(i-1)]*(it*it*it)
+            +yValues[limitIdx(i  )]*((3*t*t*t)-(6*t*t)+4)
+            +yValues[limitIdx(i+1)]*((-3*t*t*t)+(3*t*t)+(3*t)+1)
+            +yValues[limitIdx(i+2)]*(t*t*t))/6;
   end;
 
-CONSTRUCTOR T_bSplineApproximator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation);
-  VAR i:longint;
+CONSTRUCTOR T_bSplineApproximator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   begin
-    inherited createInterpolator('bezierSpline',values,location);
+    inherited createInterpolator('bezierSpline',values,location,context);
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
-    setLength(toInterpolate,values^.size);
-    for i:=0 to values^.size-1 do toInterpolate[i]:=P_numericLiteral(values^.value[i])^.floatValue;
-  end;
-
-PROCEDURE T_bSplineApproximator.cleanup(CONST literalRecycler: P_literalRecycler);
-  begin
-    setLength(toInterpolate,0);
-    inherited;
   end;
 
 FUNCTION bSplineApproximator_imp intFuncSignature;
   begin
     result:=nil;
     if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList]) then begin
-      new(P_bSplineApproximator(result),create(list0,tokenLocation));
+      new(P_bSplineApproximator(result),create(list0,tokenLocation,context));
     end;
   end;
 
