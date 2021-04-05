@@ -221,7 +221,7 @@ FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double)
 CONSTRUCTOR T_linearInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   begin
     inherited createInterpolator('linearInterpolator',values,location,context);
-    if length(yValues)<=1 then accessByIndex:=True;
+    if length(yValues)<=1 then accessByIndex:=true;
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]);
   end;
 
@@ -236,6 +236,7 @@ FUNCTION linearInterpolator_imp intFuncSignature;
     result:=nil;
     if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_linearInterpolator(result),create(list0,tokenLocation,context));
+      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
   end;
 
@@ -291,8 +292,11 @@ CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST loca
       factor:double;
   begin
     inherited createInterpolator('cSplineInterpolator',values,location,context);
-    if length(yValues)=1 then append(yValues,yValues[0]);
-    if length(yValues)=2 then append(yValues,yValues[1]);
+    if length(yValues)<3 then begin
+      context^.raiseError('Spline interpolation requires at least 3 points!',location);
+      exit;
+    end;
+
     n:=length(yValues);
     setLength(M,n);
     dec(n);
@@ -367,6 +371,7 @@ FUNCTION cSplineInterpolator_imp intFuncSignature;
     result:=nil;
     if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_cSplineInterpolator(result),create(list0,tokenLocation,context));
+      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
   end;
 
@@ -380,7 +385,7 @@ TYPE
   end;
 
 FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double): double;
-  VAR i:longint;
+  VAR i,k:longint;
       t,it:double;
   FUNCTION limitIdx(CONST j:longint):longint; inline;
     begin
@@ -390,32 +395,52 @@ FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double
            then result:=length(yValues)-1
            else result:=j;
     end;
-
+  VAR X:array[-2..3] of double;
+      w0,w1:array[0..3] of double;
   begin
-    i:=floor(floatIdx); t:=floatIdx-i; it:=1-t;
-    result:=(yValues[limitIdx(i-1)]*(it*it*it)
-            +yValues[limitIdx(i  )]*((3*t*t*t)-(6*t*t)+4)
-            +yValues[limitIdx(i+1)]*((-3*t*t*t)+(3*t*t)+(3*t)+1)
-            +yValues[limitIdx(i+2)]*(t*t*t))/6;
+    if accessByIndex then begin
+      i:=floor(floatIdx); t:=floatIdx-i; it:=1-t;
+      result:=(yValues[limitIdx(i-1)]*(it*it*it)
+              +yValues[limitIdx(i  )]*((3*t*t*t)-(6*t*t)+4)
+              +yValues[limitIdx(i+1)]*((-3*t*t*t)+(3*t*t)+(3*t)+1)
+              +yValues[limitIdx(i+2)]*(t*t*t))/6;
+    end else begin
+      i:=findIndexForX(floatIdx);
+      for k:=-2 to 3 do begin
+        if i+k<0
+        then X[k]:=xValues[0]+(i+k)*(xValues[1]-xValues[0])
+        else if i+k>=length(xValues)
+        then X[k]:=xValues[length(xValues)-1]+(i+k)*(xValues[length(xValues)-1]-xValues[length(xValues)-2])
+        else X[k]:=xValues[i+k];
+      end;
+                                       it:=(floatIdx-X[  0])/(X[  1]-X[  0]); w0[0]:= 1-it;        w0[  1]:=it;
+      w1[0]:=0; for k:=0 to 1 do begin it:=(floatIdx-X[k-1])/(X[k+1]-X[k-1]); w1[k]+=(1-it)*w0[k]; w1[k+1]:=it*w0[k]; end;
+      w0[0]:=0; for k:=0 to 2 do begin it:=(floatIdx-X[k-2])/(X[k+1]-X[k-2]); w0[k]+=(1-it)*w1[k]; w0[k+1]:=it*w1[k]; end;
+      result:=yValues[limitIdx(i-1)]*w0[0]
+             +yValues[limitIdx(i  )]*w0[1]
+             +yValues[limitIdx(i+1)]*w0[2]
+             +yValues[limitIdx(i+2)]*w0[3];
+    end;
   end;
 
 CONSTRUCTOR T_bSplineApproximator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   begin
-    inherited createInterpolator('bezierSpline',values,location,context);
-    assert(values^.literalType in [lt_numList,lt_realList,lt_intList]);
+    inherited createInterpolator('bSpline',values,location,context);
+    if length(yValues)<2 then context^.raiseError('BSpline requires at least 2 points.',location);
   end;
 
 FUNCTION bSplineApproximator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList]) then begin
+    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_bSplineApproximator(result),create(list0,tokenLocation,context));
+      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
   end;
 
 INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary{$ifdef fullVersion},'linearInterpolator(L:NumericList);//returns an linear interpolator, which returns values out of L by their index'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary{$ifdef fullVersion},'newSplineInterpolator(L:NumericList);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBezierSpline'      ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:NumericList);//returns an Bezier approximator'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:NumericList);//returns an Bezier approximator'{$endif});
 
 end.
