@@ -11,7 +11,7 @@ main->begin
   ([0..20]/20).each(t,
     begin
       local a:=arcsin(t);
-      "%s\t%1.7f\t%1.7f\t%1.7f\t%1.7f".format@([t,a]|abs([SLin(t),SCub(t),Sbsp(t)]-a));
+      "%f\t%1.7f\t%1.7f\t%1.7f\t%1.7f".format@([t,a]|abs([SLin(t),SCub(t),Sbsp(t)]-a));
     end);
   print('               Absolute approximation errors');
   rows.join("\n").print;
