@@ -452,9 +452,48 @@ FUNCTION bSplineApproximator_imp intFuncSignature;
     end;
   end;
 
+TYPE
+  P_fourierSeries=^T_fourierSeries;
+  T_fourierSeries=object(T_interpolator)
+    protected
+      includeXcos,
+      includeYsin:boolean;
+      FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
+    public
+      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
+  end;
+
+FUNCTION T_fourierSeries.getSingleInterpolatedValue(CONST floatIdx: double): double;
+  VAR i:longint;
+  begin
+    result:=0;
+    if includeYsin then for i:=0 to length(yValues)-1 do result+=yValues[i]*sin(floatIdx*i);
+    if includeXcos then for i:=1 to length(xValues)-1 do result+=xValues[i]*cos(floatIdx*i);
+  end;
+
+CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context);
+  VAR i:longint;
+  begin
+    inherited createInterpolator('fourierSeries',values,location,context);
+    includeYsin:=false;
+    includeXcos:=false;
+    for i:=0 to length(yValues)-1 do includeYsin:=includeYsin or (yValues[i]<>0);
+    for i:=1 to length(xValues)-1 do includeXcos:=includeXcos or (xValues[i]<>0);
+  end;
+
+FUNCTION fourierSeries_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+      new(P_fourierSeries(result),create(list0,tokenLocation,context));
+      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+    end;
+  end;
+
 INITIALIZATION
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary{$ifdef fullVersion},'linearInterpolator(L:NumericList);//returns an linear interpolator, which returns values out of L by their index'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary{$ifdef fullVersion},'newSplineInterpolator(L:NumericList);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:NumericList);//returns an Bezier approximator'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary{$ifdef fullVersion},'linearInterpolator(L:List);//returns an linear interpolator, which returns values out of L by their index'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary{$ifdef fullVersion},'newSplineInterpolator(L:List);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:List);//returns an Bezier approximator'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary{$ifdef fullVersion},'newFourierSeries(L:List);//returns an Fourier Series with coefficients L=[[c0,s0],[c1,s1]...]'{$endif});
 
 end.
