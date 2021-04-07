@@ -21,7 +21,7 @@ TYPE
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
       FUNCTION findIndexForX(CONST x:double):longint;
     public
-      CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context);
+      CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
       DESTRUCTOR destroy; virtual;
 
       FUNCTION evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;  virtual;
@@ -73,7 +73,7 @@ FUNCTION T_interpolator.findIndexForX(CONST x:double):longint;
     end;
   end;
 
-CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
+CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
   VAR i:longint;
       ok:boolean=true;
   begin
@@ -100,7 +100,7 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
           ok:=false;
         end;
       end;
-      if ok then begin
+      if ok and not(allowUnordered) then begin
         for i:=1 to length(xValues)-1 do ok:=ok and (xValues[i]>xValues[i-1]);
         if not(ok) then context^.raiseError('x-Values for interpolator must be sorted.',location);
       end;
@@ -474,7 +474,7 @@ FUNCTION T_fourierSeries.getSingleInterpolatedValue(CONST floatIdx: double): dou
 CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context);
   VAR i:longint;
   begin
-    inherited createInterpolator('fourierSeries',values,location,context);
+    inherited createInterpolator('fourierSeries',values,location,context,true);
     includeYsin:=false;
     includeXcos:=false;
     for i:=0 to length(yValues)-1 do includeYsin:=includeYsin or (yValues[i]<>0);
