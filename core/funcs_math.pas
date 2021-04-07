@@ -1034,6 +1034,66 @@ FUNCTION euklideanNorm_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION integrate_impl intFuncSignature;
+  VAR f:P_expressionLiteral;
+      x0,x1,tolerance:double;
+      pointCount:int64;
+      floatResult:double=0;
+      i:longint;
+
+  FUNCTION evalF(CONST x:double):double; inline;
+    VAR l:P_literal;
+    begin
+      l:=recycler^.newRealLiteral(x);
+      result:=f^.evaluateToDouble(tokenLocation,context,recycler,true,l,nil);
+      recycler^.disposeLiteral(l);
+    end;
+
+  FUNCTION integrate_inner(CONST x0,dx,f0,f2,f4:double):double;
+    VAR simpson,f1,f3,errorEstimate:double;
+    begin
+      f1:=evalF(x0+dx*0.25);
+      f3:=evalF(x0+dx*0.75);
+      result:=dx*(f0*7/90+f1*32/90+f2*12/90+f3*32/90+f4*7/90);
+      if isNan(result) or (isInfinite(result)) then exit(result);
+      Simpson:=dx*(f0*1/6+f2*4/6+f4*1/6);
+      errorEstimate:=abs(Simpson-result)*sqr(dx)*1E-3;
+      if errorEstimate>tolerance then
+        result:=integrate_inner(x0       ,dx*0.5,f0,f1,f2)
+               +integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4);
+    end;
+
+  VAR dx,f0,f1:double;
+  begin
+    if (params<>nil) and (params^.size=4) and
+      (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
+      (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
+      (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and
+      (arg3^.literalType in [lt_smallint,lt_bigint,lt_real]) and (P_numericLiteral(arg3)^.floatValue>0)
+    then begin
+      f :=       P_expressionLiteral(arg0);
+      x0:=       P_numericLiteral(arg1)^.floatValue;
+      x1:=       P_numericLiteral(arg2)^.floatValue;
+      tolerance:=P_numericLiteral(arg3)^.floatValue;
+      //error (for smooth f) is ~ in O(dx^5) -> dx = exp(ln(tolerance*1E3)/5)
+      pointCount:=ceil64((x1-x0)/exp(ln(tolerance)/5));
+      if      pointCount>1000 then pointCount:=1000
+      else if pointCount<1    then pointCount:=1;
+      dx:=(x1-x0)/pointCount;
+      for i:=0 to longint(pointcount-1) do if context^.continueEvaluation then begin
+        if i>0
+        then f0:=f1
+        else f0:=evalF(x0+dx* i   );
+             f1:=evalF(x0+dx*(i+1));
+        floatResult+=integrate_inner(x0+dx*i,dx,
+                                     f0,
+                                     evalF(x0+dx*(i+0.5)),
+                                     f1);
+      end;
+      result:=recycler^.newRealLiteral(floatResult);
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary{$ifdef fullVersion},'sqrt(n);//Returns the square root of numeric or expression parameter n'{$endif});
@@ -1082,4 +1142,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary{$ifdef fullVersion},'bitShift(x:Int,bitsToShift:Int);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'divMod'        ,@divMod_impl        ,ak_binary{$ifdef fullVersion},'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'euklideanNorm' ,@euklideanNorm_impl ,ak_unary {$ifdef fullVersion},'euklideanNorm(v:NumericList);//returns the Euklidean norm of vector v'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,tolerance);//returns the numeric integral of f over interval [x0,x1]'{$endif});
 end.

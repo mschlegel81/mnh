@@ -1,4 +1,4 @@
 versionInfo:=
 ['MajorVersionNr'=>2,
  'MinorVersionNr'=>0,
- 'RevisionNr'=>7].toMap
+ 'RevisionNr'=>8].toMap

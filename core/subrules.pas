@@ -36,6 +36,7 @@ TYPE
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual; abstract;
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
+      FUNCTION evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;  virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       FUNCTION toString({$WARN 5024 OFF}CONST lengthLimit:longint=maxLongint): ansistring; virtual;
@@ -1134,6 +1135,28 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       if allowRaiseError then begin
         if evResult.reasonForStop=rr_patternMismatch then P_context(context)^.raiseCannotApplyError('filter expression '+toString(50),@parameterList,location)
         else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+      end;
+    end;
+    parameterList.cleanup(P_recycler(recycler));
+    parameterList.destroy;
+    if evResult.literal<>nil then P_recycler(recycler)^.disposeLiteral(evResult.literal);
+  end;
+
+FUNCTION T_expression.evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;
+  VAR evResult:T_evaluationResult;
+      parameterList:T_listLiteral;
+  begin
+    parameterList.create(2);
+    if a<>nil then parameterList.append(P_recycler(recycler),a,true);
+    if b<>nil then parameterList.append(P_recycler(recycler),b,true);
+    evResult:=evaluate(location,context,recycler,@parameterList);
+    if (evResult.literal<>nil) and (evResult.literal^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
+      result:=P_numericLiteral(evResult.literal)^.floatValue;
+    end else begin
+      result:=nanLit.floatValue;
+      if allowRaiseError then begin
+        if evResult.reasonForStop=rr_patternMismatch then P_context(context)^.raiseCannotApplyError('expression '+toString(50),@parameterList,location)
+        else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a numeric but a '+evResult.literal^.typeString,location);
       end;
     end;
     parameterList.cleanup(P_recycler(recycler));
