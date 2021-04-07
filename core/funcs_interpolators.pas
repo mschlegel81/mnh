@@ -24,6 +24,7 @@ TYPE
       CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context);
       DESTRUCTOR destroy; virtual;
 
+      FUNCTION evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;  virtual;
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
@@ -110,6 +111,19 @@ DESTRUCTOR T_interpolator.destroy;
   begin
     assert(underlyingValues=nil);
     inherited;
+  end;
+
+FUNCTION T_interpolator.evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;
+  VAR param:P_listLiteral;
+  begin
+    if a^.literalType in [lt_bigint,lt_smallint,lt_real]
+    then result:=getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue)
+    else begin
+      param:=P_recycler(recycler)^.newListLiteral(a,b);
+      P_context(context)^.raiseCannotApplyError('interpolator '+getId,param,location);
+      P_recycler(recycler)^.disposeLiteral(param);
+      result:=Nan;
+    end;
   end;
 
 FUNCTION T_interpolator.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST allowRaiseError: boolean; CONST a: P_literal; CONST b: P_literal): boolean;
