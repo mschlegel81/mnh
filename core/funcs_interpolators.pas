@@ -610,16 +610,49 @@ FUNCTION fourierSeries_imp intFuncSignature;
 
 FUNCTION calcFourierCoeff_im intFuncSignature;
   VAR spline:T_cSplineInterpolator;
+      maxWaveNumber:longint;
+  FUNCTION calculateDFT:P_listLiteral;
+    VAR k,i:longint;
+        x:T_arrayOfDouble;
+        iter:T_arrayOfLiteral;
+        h:double;
+        sinSum,cosSum:double;
+    begin
+      //Prepare input data
+      iter:=list0^.tempIteratableList;
+      setLength(x,length(iter));
+      for k:=0 to length(iter)-1 do x[k]:=P_numericLiteral(iter[k])^.floatValue;
+      setLength(iter,0);
+      h:=2*pi/length(x);
+      //calculate coefficients
+      result:=recycler^.newListLiteral(maxWaveNumber+1);
+      for k:=0 to maxWaveNumber do begin
+        sinSum:=0;
+        cosSum:=0;
+        for i:=0 to length(x)-1 do begin
+          sinSum+=x[i]*sin(h*i*k);
+          cosSum+=x[i]*cos(h*i*k);
+        end;
+        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,cosSum*2/length(x))^.appendReal(recycler,sinSum*2/length(x)),false);
+      end;
+      setLength(x,0);
+    end;
+
   begin
     result:=nil;
     if (params^.size=2) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
        and (arg1^.literalType=lt_smallint)
        and (int1^.intValue>=0)
     then begin
-      spline.create(list0,tokenLocation,context);
-      result:=spline.getFourierCoefficients(int1^.intValue,recycler);
-      spline.cleanup(recycler);
-      spline.destroy;
+      maxWaveNumber:=int1^.intValue;
+      if arg0^.literalType in [lt_numList,lt_realList,lt_intList]
+      then result:=calculateDFT
+      else begin
+        spline.create(list0,tokenLocation,context);
+        result:=spline.getFourierCoefficients(maxWaveNumber,recycler);
+        spline.cleanup(recycler);
+        spline.destroy;
+      end;
     end;
   end;
 
