@@ -78,7 +78,7 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
   VAR i:longint;
       ok:boolean=true;
   begin
-    inherited create(id_,et_builtin,location);
+    inherited create(id_,et_builtinStateful,location);
     values^.rereference;
     underlyingValues:=values;
 

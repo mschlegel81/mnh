@@ -19,12 +19,13 @@ TYPE T_expressionType=(et_builtin          ,
                        et_subruleStateful  ,
                        et_inlineStateful   ,
                        et_eachBody         ,
-                       et_whileBody        );
+                       et_whileBody        ,
+                       et_builtinStateful);
 
-CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIteratable,et_builtinAsyncOrFuture];
+CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture];
       C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
       C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
-      C_statefulExpressionTypes:set of T_expressionType=[et_builtinIteratable,et_builtinAsyncOrFuture,
+      C_statefulExpressionTypes:set of T_expressionType=[et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture,
                                                          et_subruleIteratable,et_subruleStateful,
                                                          et_inlineIteratable ,et_inlineStateful];
       C_iteratableExpressionTypes:set of T_expressionType=[et_builtinIteratable,
@@ -41,7 +42,8 @@ CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIte
         'subrule stateful',
         'inline stateful',
         'eachBody',
-        'whileBody');
+        'whileBody',
+        'builtin stateful');
 
 TYPE
   P_typedef=^T_typedef;
