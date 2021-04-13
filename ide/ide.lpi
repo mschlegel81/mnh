@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="101">
+    <Units Count="102">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -648,6 +648,10 @@
         <ResourceBaseClass Value="Frame"/>
         <UnitName Value="cmdLineFrames"/>
       </Unit100>
+      <Unit101>
+        <Filename Value="../core/funcs_interpolators.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit101>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
