@@ -37,6 +37,20 @@ TYPE
     FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
+  T_messagesAndLocations=object
+    dat:array of record message:string; location:T_searchTokenLocation; end;
+    fill:longint;
+    offset:longint;
+    maxSize:longint;
+
+    CONSTRUCTOR create(CONST maxSize_:longint);
+    DESTRUCTOR destroy;
+    PROCEDURE append(CONST message:string);
+    PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation);
+    procedure append(const message: T_arrayOfString; const location: T_searchTokenLocation);
+    procedure clear;
+  end;
+
   P_guiFormatter=^T_guiFormatter;
   T_guiFormatter=object(T_messageFormatProvider)
     private
@@ -49,6 +63,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
       FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
+      PROCEDURE formatMessageAndLocation(CONST message:P_storedMessage; VAR messagesAndLocations:T_messagesAndLocations);
   end;
 
   {$ifdef fullVersion}
@@ -99,6 +114,61 @@ FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation
   begin
     new(result,create(value,loc));
   end;
+
+constructor T_messagesAndLocations.create(const maxSize_: longint);
+  begin
+    maxSize:=maxSize_;
+    fill:=0;
+    offset:=0;
+    SetLength(dat,0);
+  end;
+
+procedure T_messagesAndLocations.clear;
+  begin
+    fill:=0;
+    offset:=0;
+  end;
+
+destructor T_messagesAndLocations.destroy;
+  begin
+    SetLength(dat,0);
+  end;
+
+PROCEDURE T_messagesAndLocations.append(CONST message:string);
+  CONST noLocation:T_searchTokenLocation=(filename:'';line:-1; column:-1);
+  begin
+    append(message,noLocation);
+  end;
+
+procedure T_messagesAndLocations.append(const message: string; const location: T_searchTokenLocation);
+  VAR i:longint;
+  begin
+    if fill>=length(dat) then begin
+      {$Q-}{$R-}
+      i:=length(dat) shl 1;
+      if (i<0) or (i<maxSize) then i:=maxSize;
+      {$Q+}{$R+}
+      setLength(dat,i);
+    end;
+    if fill>=maxSize then begin
+      dat[offset].message :=message;
+      dat[offset].location:=location;
+      inc(offset);
+      if offset>=maxSize then offset:=0;
+    end else begin
+      dat[fill].message :=message;
+      dat[fill].location:=location;
+      inc(fill);
+    end;
+  end;
+
+procedure T_messagesAndLocations.append(const message: T_arrayOfString; const location: T_searchTokenLocation);
+  VAR s:String;
+  begin
+    if fill+length(message)>length(dat) then setLength(dat,fill+length(message));
+    for s in message do append(s,location);
+  end;
+
 
 CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchTokenLocation);
   begin
@@ -259,7 +329,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     end;
   end;
 //------------------------------------------------------------------------------
-CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
+constructor T_guiFormatter.create(const forDemos: boolean);
   begin
     inherited create;
     formatterForDemos:=forDemos;
@@ -267,21 +337,99 @@ CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
     wrapEcho:=false;
   end;
 
-DESTRUCTOR T_guiFormatter.destroy; begin inherited; end;
+destructor T_guiFormatter.destroy; begin inherited; end;
 
-FUNCTION T_guiFormatter.getClonedInstance: P_messageFormatProvider;
+function T_guiFormatter.getClonedInstance: P_messageFormatProvider;
   begin
     new(P_guiFormatter(result),create(formatterForDemos));
     P_guiFormatter(result)^.preferredLineLength:=preferredLineLength;
     P_guiFormatter(result)^.wrapEcho           :=wrapEcho;
   end;
 
-FUNCTION T_guiFormatter.formatLocation(CONST location:T_searchTokenLocation):string;
+function T_guiFormatter.formatLocation(const location: T_searchTokenLocation): string;
   begin
-    if formatterForDemos then result:='' else result:=string(location);
+    if formatterForDemos then result:='' else begin
+      if (location.fileName='?') and (location.line=0) and (location.column=0) then exit('');
+      if location.column<0
+      then result:='@'+ExtractFileName(location.fileName)+':'+intToStr(location.line)+',1'
+      else result:='@'+ExtractFileName(location.fileName)+':'+intToStr(location.line)+','+intToStr(location.column);
+    end;
   end;
 
-FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+procedure T_guiFormatter.formatMessageAndLocation(const message: P_storedMessage; var messagesAndLocations: T_messagesAndLocations);
+  VAR locationPart:string='';
+      marker      :string='';
+      nextLine    :string='';
+      s           :string;
+      i           :longint;
+      messageLoc  :T_searchTokenLocation;
+      echo        :T_arrayOfString;
+  begin
+    if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit;
+    messageLoc:=message^.getLocation;
+    if not(formatterForDemos)
+    then locationPart:=formatLocation(messageLoc)+' ';
+
+    marker:=C_messageClassMeta[message^.messageClass].guiMarker;
+
+    case message^.messageClass of
+      mc_echo: case message^.messageType of
+        mt_echo_input,
+        mt_echo_declaration: begin
+          if message^.messageType=mt_echo_input
+          then nextLine:=C_echoInInfix
+          else nextLine:=C_echoDeclInfix;
+          for s in P_storedMessageWithText(message)^.txt do begin
+            if wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
+            then begin
+              messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
+              nextLine:=C_echoContdInfix+trimLeft(s);
+            end else nextLine+=s;
+          end;
+          messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
+        end;
+        mt_echo_output: begin
+          if wrapEcho
+          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
+          else echo:=P_echoOutMessage(message)^.literal^.toString();
+
+          echo[  0]:=marker+C_echoOutInfix+echo[0];
+          for i:=1 to length(echo)-1 do
+            echo[i]:=marker+C_echoContdInfix+echo[i];
+          messagesAndLocations.append(echo,messageLoc);
+        end;
+      end;
+      mc_timing: for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(marker+s,messageLoc);
+      mc_log    ,
+      mc_note   ,
+      mc_warning,
+      mc_error  ,
+      mc_fatal  : begin
+        if length(P_storedMessageWithText(message)^.txt)=1 then begin
+          if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
+          then messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0],messageLoc)
+          else begin
+            messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc);
+            messagesAndLocations.append(marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0],messageLoc);
+          end;
+        end else begin
+          messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc);
+          for s in P_storedMessageWithText(message)^.txt do
+            messagesAndLocations.append(marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s,messageLoc);
+        end;
+        if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
+          marker+=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);
+          for i:=0 to length(stacktrace)-1 do
+            messagesAndLocations.append(marker+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters,stacktrace[i].location);
+        end;
+      end
+      else begin
+        for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(s);
+      end;
+    end;
+  end;
+
+function T_guiFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
   VAR locationPart:string='';
       marker      :string='';
       nextLine    :string='';
