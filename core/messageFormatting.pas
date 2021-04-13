@@ -37,18 +37,27 @@ TYPE
     FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
-  T_messagesAndLocations=object
-    dat:array of record message:string; location:T_searchTokenLocation; end;
-    fill:longint;
-    offset:longint;
-    maxSize:longint;
+  { T_messagesAndLocations }
 
+  T_messagesAndLocations=object
+    private
+      dat:array of record message:string; location:T_searchTokenLocation; end;
+      fill:longint;
+      offset:longint;
+      maxSize:longint;
+      directPrinting:longint;
+    public
     CONSTRUCTOR create(CONST maxSize_:longint);
     DESTRUCTOR destroy;
     PROCEDURE append(CONST message:string);
     PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation);
-    procedure append(const message: T_arrayOfString; const location: T_searchTokenLocation);
-    procedure clear;
+    PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
+    PROCEDURE clear;
+    PROPERTY size:longint read fill;
+    FUNCTION text(CONST i:longint):string;
+    FUNCTION location(CONST i:longint):T_searchTokenLocation;
+    PROCEDURE processDirectPrint(CONST chars:string);
+
   end;
 
   P_guiFormatter=^T_guiFormatter;
@@ -115,32 +124,78 @@ FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation
     new(result,create(value,loc));
   end;
 
-constructor T_messagesAndLocations.create(const maxSize_: longint);
+CONSTRUCTOR T_messagesAndLocations.create(CONST maxSize_: longint);
   begin
     maxSize:=maxSize_;
     fill:=0;
     offset:=0;
-    SetLength(dat,0);
+    setLength(dat,0);
+    directPrinting:=-1;
   end;
 
-procedure T_messagesAndLocations.clear;
+PROCEDURE T_messagesAndLocations.clear;
   begin
     fill:=0;
     offset:=0;
+    directPrinting:=-1;
   end;
 
-destructor T_messagesAndLocations.destroy;
+FUNCTION T_messagesAndLocations.text(CONST i: longint): string;
   begin
-    SetLength(dat,0);
+    result:=dat[(i-offset+maxSize) mod maxSize].message;
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message:string);
-  CONST noLocation:T_searchTokenLocation=(filename:'';line:-1; column:-1);
+FUNCTION T_messagesAndLocations.location(CONST i: longint): T_searchTokenLocation;
+  begin
+    result:=dat[(i-offset+maxSize) mod maxSize].location;
+  end;
+
+PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
+  VAR c:char;
+      lineIndex:longint;
+      k:longint;
+  begin
+    if directPrinting<0 then begin
+      append('');
+      directPrinting:=0;
+    end;
+    if fill>=maxSize
+    then lineIndex:=(offset+maxSize-1) mod maxSize
+    else lineIndex:=fill-1;
+    for c in chars do case c of
+      #8 ://backspace
+      begin
+
+        //123456789
+        // ^
+
+        if directPrinting>0 then dat[lineIndex].message:=copy(dat[lineIndex].message,1,directPrinting+1)
+
+        k:=length(dat[lineIndex])-1;
+        if k>=0 then setLength(dat[lineIndex],k);
+      end;
+      #13:
+      #10: begin
+
+      end
+      else
+
+    end;
+
+  end;
+
+DESTRUCTOR T_messagesAndLocations.destroy;
+  begin
+    setLength(dat,0);
+  end;
+
+PROCEDURE T_messagesAndLocations.append(CONST message: string);
+  CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1; column:-1);
   begin
     append(message,noLocation);
   end;
 
-procedure T_messagesAndLocations.append(const message: string; const location: T_searchTokenLocation);
+PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST location: T_searchTokenLocation);
   VAR i:longint;
   begin
     if fill>=length(dat) then begin
@@ -150,6 +205,7 @@ procedure T_messagesAndLocations.append(const message: string; const location: T
       {$Q+}{$R+}
       setLength(dat,i);
     end;
+    directPrinting:=false;
     if fill>=maxSize then begin
       dat[offset].message :=message;
       dat[offset].location:=location;
@@ -162,13 +218,12 @@ procedure T_messagesAndLocations.append(const message: string; const location: T
     end;
   end;
 
-procedure T_messagesAndLocations.append(const message: T_arrayOfString; const location: T_searchTokenLocation);
-  VAR s:String;
+PROCEDURE T_messagesAndLocations.append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
+  VAR s:string;
   begin
     if fill+length(message)>length(dat) then setLength(dat,fill+length(message));
     for s in message do append(s,location);
   end;
-
 
 CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchTokenLocation);
   begin
@@ -329,7 +384,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     end;
   end;
 //------------------------------------------------------------------------------
-constructor T_guiFormatter.create(const forDemos: boolean);
+CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
   begin
     inherited create;
     formatterForDemos:=forDemos;
@@ -337,26 +392,26 @@ constructor T_guiFormatter.create(const forDemos: boolean);
     wrapEcho:=false;
   end;
 
-destructor T_guiFormatter.destroy; begin inherited; end;
+DESTRUCTOR T_guiFormatter.destroy; begin inherited; end;
 
-function T_guiFormatter.getClonedInstance: P_messageFormatProvider;
+FUNCTION T_guiFormatter.getClonedInstance: P_messageFormatProvider;
   begin
     new(P_guiFormatter(result),create(formatterForDemos));
     P_guiFormatter(result)^.preferredLineLength:=preferredLineLength;
     P_guiFormatter(result)^.wrapEcho           :=wrapEcho;
   end;
 
-function T_guiFormatter.formatLocation(const location: T_searchTokenLocation): string;
+FUNCTION T_guiFormatter.formatLocation(CONST location: T_searchTokenLocation): string;
   begin
     if formatterForDemos then result:='' else begin
       if (location.fileName='?') and (location.line=0) and (location.column=0) then exit('');
       if location.column<0
-      then result:='@'+ExtractFileName(location.fileName)+':'+intToStr(location.line)+',1'
-      else result:='@'+ExtractFileName(location.fileName)+':'+intToStr(location.line)+','+intToStr(location.column);
+      then result:='@'+extractFileName(location.fileName)+':'+intToStr(location.line)+',1'
+      else result:='@'+extractFileName(location.fileName)+':'+intToStr(location.line)+','+intToStr(location.column);
     end;
   end;
 
-procedure T_guiFormatter.formatMessageAndLocation(const message: P_storedMessage; var messagesAndLocations: T_messagesAndLocations);
+PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage; VAR messagesAndLocations: T_messagesAndLocations);
   VAR locationPart:string='';
       marker      :string='';
       nextLine    :string='';
@@ -429,7 +484,7 @@ procedure T_guiFormatter.formatMessageAndLocation(const message: P_storedMessage
     end;
   end;
 
-function T_guiFormatter.formatMessage(const message: P_storedMessage): T_arrayOfString;
+FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   VAR locationPart:string='';
       marker      :string='';
       nextLine    :string='';
