@@ -37,8 +37,6 @@ TYPE
     FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
-  { T_messagesAndLocations }
-
   T_messagesAndLocations=object
     private
       dat:array of record message:string; location:T_searchTokenLocation; end;
@@ -46,18 +44,22 @@ TYPE
       offset:longint;
       maxSize:longint;
       directPrinting:longint;
+      PROCEDURE setMaxSize(CONST newValue:longint);
     public
-    CONSTRUCTOR create(CONST maxSize_:longint);
-    DESTRUCTOR destroy;
-    PROCEDURE append(CONST message:string);
-    PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation);
-    PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
-    PROCEDURE clear;
-    PROPERTY size:longint read fill;
-    FUNCTION text(CONST i:longint):string;
-    FUNCTION location(CONST i:longint):T_searchTokenLocation;
-    PROCEDURE processDirectPrint(CONST chars:string);
-
+      CONSTRUCTOR create(CONST maxSize_:longint);
+      PROPERTY outputLinesLimit:longint read maxSize write setMaxSize;
+      DESTRUCTOR destroy;
+      PROCEDURE append(CONST message:string);
+      PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation);
+      PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
+      PROCEDURE clear;
+      PROPERTY size:longint read fill;
+      FUNCTION text(CONST i:longint):string;
+      FUNCTION text:T_arrayOfString;
+      FUNCTION location(CONST i:longint):T_searchTokenLocation;
+      FUNCTION locations:T_searchTokenLocations;
+      PROCEDURE processDirectPrint(CONST chars:string);
+      PROCEDURE cleanup;
   end;
 
   P_guiFormatter=^T_guiFormatter;
@@ -124,6 +126,32 @@ FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation
     new(result,create(value,loc));
   end;
 
+PROCEDURE T_messagesAndLocations.cleanup;
+  VAR tempLoc:T_searchTokenLocations;
+      tempTxt:T_arrayOfString;
+      i:longint;
+  begin
+    setLength(tempLoc,fill);
+    setLength(tempTxt,fill);
+    for i:=0 to length(tempTxt)-1 do tempTxt[i]:=text(i);
+    for i:=0 to length(tempLoc)-1 do tempLoc[i]:=location(i);
+    offset:=0;
+    for i:=0 to length(tempTxt)-1 do begin
+      dat[i].message :=tempTxt[i];
+      dat[i].location:=tempLoc[i];
+    end;
+    setLength(dat,fill);
+  end;
+
+PROCEDURE T_messagesAndLocations.setMaxSize(CONST newValue: longint);
+  begin
+    if maxSize=newValue then exit;
+    if (offset>0) and (fill>0) then cleanup;
+    maxSize:=newValue;
+    if length(dat)>maxSize then setLength(dat,maxSize);
+    if fill       >maxSize then fill:=maxSize;
+  end;
+
 CONSTRUCTOR T_messagesAndLocations.create(CONST maxSize_: longint);
   begin
     maxSize:=maxSize_;
@@ -142,18 +170,31 @@ PROCEDURE T_messagesAndLocations.clear;
 
 FUNCTION T_messagesAndLocations.text(CONST i: longint): string;
   begin
-    result:=dat[(i-offset+maxSize) mod maxSize].message;
+    result:=dat[(i+offset+maxSize) mod maxSize].message;
+  end;
+
+FUNCTION T_messagesAndLocations.text: T_arrayOfString;
+  VAR i:longint;
+  begin
+    setLength(result,fill);
+    for i:=0 to fill-1 do result[i]:=dat[(i+offset+maxSize) mod maxSize].message;
   end;
 
 FUNCTION T_messagesAndLocations.location(CONST i: longint): T_searchTokenLocation;
   begin
-    result:=dat[(i-offset+maxSize) mod maxSize].location;
+    result:=dat[(i+offset+maxSize) mod maxSize].location;
+  end;
+
+FUNCTION T_messagesAndLocations.locations:T_searchTokenLocations;
+  VAR i:longint;
+  begin
+    setLength(result,fill);
+    for i:=0 to fill-1 do result[i]:=dat[(i+offset+maxSize) mod maxSize].location;
   end;
 
 PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
   VAR c:char;
       lineIndex:longint;
-      k:longint;
   begin
     if directPrinting<0 then begin
       append('');
@@ -164,24 +205,34 @@ PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
     else lineIndex:=fill-1;
     for c in chars do case c of
       #8 ://backspace
-      begin
+        if directPrinting>=1 then begin
+          dat[lineIndex].message:=copy(dat[lineIndex].message,1,directPrinting-1)
+                                 +copy(dat[lineIndex].message,directPrinting+1,length(dat[lineIndex].message));
+          //e.g.: directPrinting=2
+          //123456789
+          // ^
+          //13456789
 
-        //123456789
-        // ^
-
-        if directPrinting>0 then dat[lineIndex].message:=copy(dat[lineIndex].message,1,directPrinting+1)
-
-        k:=length(dat[lineIndex])-1;
-        if k>=0 then setLength(dat[lineIndex],k);
+          //Finally: move cursor left
+          dec(directPrinting);
+        end;
+      #13: //carriage-return
+        directPrinting:=0;
+      #10: //new line
+        begin
+          append('');
+          directPrinting:=0;
+          if fill>=maxSize
+          then lineIndex:=(offset+maxSize-1) mod maxSize
+          else lineIndex:=fill-1;
+        end
+      else begin
+        if directPrinting>=length(dat[lineIndex].message)
+        then dat[lineIndex].message+=c
+        else dat[lineIndex].message[directPrinting+1]:=c;
+        inc(directPrinting);
       end;
-      #13:
-      #10: begin
-
-      end
-      else
-
     end;
-
   end;
 
 DESTRUCTOR T_messagesAndLocations.destroy;
@@ -195,17 +246,19 @@ PROCEDURE T_messagesAndLocations.append(CONST message: string);
     append(message,noLocation);
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST location: T_searchTokenLocation);
+PROCEDURE T_messagesAndLocations.append(CONST message: string;
+  CONST location: T_searchTokenLocation);
   VAR i:longint;
   begin
     if fill>=length(dat) then begin
       {$Q-}{$R-}
-      i:=length(dat) shl 1;
-      if (i<0) or (i<maxSize) then i:=maxSize;
+      i:=(length(dat) shl 1);
+      if i=0 then i:=32;
+      if (i<0) or (i>maxSize) then i:=maxSize;
       {$Q+}{$R+}
       setLength(dat,i);
     end;
-    directPrinting:=false;
+    directPrinting:=-1;
     if fill>=maxSize then begin
       dat[offset].message :=message;
       dat[offset].location:=location;
@@ -218,7 +271,8 @@ PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST location: T
     end;
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
+PROCEDURE T_messagesAndLocations.append(CONST message: T_arrayOfString;
+  CONST location: T_searchTokenLocation);
   VAR s:string;
   begin
     if fill+length(message)>length(dat) then setLength(dat,fill+length(message));
