@@ -40,6 +40,8 @@ TYPE
       FUNCTION ensureOutputForm:TOutputForm;
   end;
 
+  { TOutputForm }
+
   TOutputForm = class(T_mnhComponentForm)
     cbShowOnOutput: TCheckBox;
     cbFreezeOutput: TCheckBox;
@@ -69,18 +71,19 @@ TYPE
     PROCEDURE miEchoDeclarationsClick(Sender: TObject);
     PROCEDURE OutputSynEditKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
+    PROCEDURE OutputSynEditMouseDown(Sender: TObject; button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
-    caretBeforeFreeze:TPoint;
     PROCEDURE updateAfterSettingsRestore;
   public
     adapter:P_lazyInitializedOutAdapter;
   end;
 
 IMPLEMENTATION
-USES editorMeta;
+USES editorMeta,basicTypes;
 
 {$R *.lfm}
 
@@ -119,6 +122,7 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
       dockNewForm(outputForm);
       outputForm.updateAfterSettingsRestore;
       outputForm.showComponent(false);
+      preferredLineLength:=outputForm.OutputSynEdit.charsInWindow;
     end;
     result:=outputForm;
   end;
@@ -147,7 +151,7 @@ PROCEDURE TOutputForm.FormCreate(Sender: TObject);
     registerFontControl(OutputSynEdit,ctEditor);
     outputHighlighter:=TMnhOutputSyn.create(self);
     OutputSynEdit.highlighter:=outputHighlighter;
-    OutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
+
     initDockMenuItems(MainMenu1,miDockMainRoot);
     initDockMenuItems(OutputPopupMenu,nil);
   end;
@@ -173,15 +177,9 @@ PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
 PROCEDURE TOutputForm.cbFreezeOutputClick(Sender: TObject);
   begin
     if cbFreezeOutput.checked
-    then begin
-      caretBeforeFreeze:=OutputSynEdit.CaretXY;
-      OutputSynEdit.color:=clBtnFace;
-      OutputSynEdit.enabled:=true;
-    end else begin
-      OutputSynEdit.color:=clWhite;
-      OutputSynEdit.enabled:=not(adapter^.directPrintFlag);
-      OutputSynEdit.CaretXY:=caretBeforeFreeze;
-    end;
+    then OutputSynEdit.color:=clBtnFace
+    else OutputSynEdit.color:=clWhite;
+    OutputSynEdit.enabled:=true;
   end;
 
 FUNCTION TOutputForm.getIdeComponentType: T_ideComponent;
@@ -210,7 +208,17 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
 PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     tabNextKeyHandling(Sender,key,Shift);
-    workspace.keyUpForJumpToLocation(Sender,key,Shift);
+    if (key=13) and (ssCtrl in Shift) then begin
+      workspace.openLocation(adapter^.getLocationAtLine(OutputSynEdit.CaretY-1));
+      key:=0;
+    end;
+  end;
+
+PROCEDURE TOutputForm.OutputSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if (ssCtrl in Shift) and (button=mbLeft) then begin
+      workspace.openLocation(adapter^.getLocationAtLine(OutputSynEdit.PixelsToRowColumn(point(x,y)).Y-1));
+    end;
   end;
 
 PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
