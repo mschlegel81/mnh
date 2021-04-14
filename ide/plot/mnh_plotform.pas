@@ -44,6 +44,7 @@ TYPE
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
       FUNCTION plotFormForConnecting(CONST forDocking:boolean):TplotForm;
+      FUNCTION append(CONST message: P_storedMessage): boolean; virtual;
       PROCEDURE disconnect;
       PROCEDURE logPlotChanged;
   end;
@@ -180,6 +181,16 @@ FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_
     leaveCriticalSection(messageCs);
   end;
 
+FUNCTION T_guiPlotSystem.append(CONST message: P_storedMessage): boolean;
+  begin
+    if message^.messageType=mt_plot_queryClosedByUser then begin
+      P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser);
+      plotChangedSinceLastDisplay:=not(formWasClosedByUser);
+      formWasClosedByUser:=false;
+      result:=true;
+    end else result:=inherited;
+  end;
+
 PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
   begin
     case message^.messageType of
@@ -188,11 +199,6 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
         formWasClosedByUser:=false;
         plotChangedSinceLastDisplay:=false;
         inherited processMessage(message);
-      end;
-      mt_plot_queryClosedByUser: begin
-        P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser);
-        plotChangedSinceLastDisplay:=not(formWasClosedByUser);
-        formWasClosedByUser:=false;
       end;
       mt_endOfEvaluation:begin
         inherited processMessage(message);
