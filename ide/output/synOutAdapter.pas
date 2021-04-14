@@ -8,7 +8,8 @@ USES
   mnh_messages,
   mnh_settings,
   myGenerics,
-  out_adapters;
+  out_adapters,
+  messageFormatting;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
                                               mt_printline,
@@ -24,24 +25,31 @@ CONST
                                               mt_timing_info];
 TYPE
   P_abstractSynOutAdapter=^T_abstractSynOutAdapter;
+
+  { T_abstractSynOutAdapter }
+
   T_abstractSynOutAdapter=object(T_abstractGuiOutAdapter)
     private
-      lastWasDirectPrint:boolean;
       currentlyFlushing:boolean;
+      messageFormatter:T_guiFormatter;
+      guiIsUpToDate:boolean;
     protected
-      outputLinesLimit:longint;
+      locations:T_searchTokenLocations;
+      state:T_messagesAndLocations;
       FUNCTION getSynEdit:TSynEdit; virtual; abstract;
       FUNCTION getOwnerForm:TForm;  virtual; abstract;
     public
 
-      wrapEcho:boolean;
       jumpToEnd:boolean;
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
+      FUNCTION append(CONST message: P_storedMessage): boolean; virtual;
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
-      PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
       FUNCTION isDoneFlushing:boolean; virtual;
+      PROPERTY wrapEcho:boolean read messageFormatter.wrapEcho write messageFormatter.wrapEcho;
+      PROPERTY preferredLineLength:longint read messageFormatter.preferredLineLength write messageFormatter.preferredLineLength;
+      FUNCTION getLocationAtLine(CONST lineIndex:longint):T_searchTokenLocation;
   end;
 
   P_eagerInitializedOutAdapter=^T_eagerInitializedOutAdapter;
@@ -79,7 +87,7 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES ideLayoutUtil,messageFormatting;
+USES ideLayoutUtil;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -138,204 +146,95 @@ FUNCTION T_redirectionAwareConsoleOutAdapter.append(CONST message: P_storedMessa
     else result:=inherited append(message);
   end;
 
-CONSTRUCTOR T_abstractSynOutAdapter.create(CONST messageTypesToInc:T_messageTypeSet);
+CONSTRUCTOR T_abstractSynOutAdapter.create(CONST messageTypesToInc: T_messageTypeSet);
   begin
     inherited create(at_guiSynOutput,messageTypesToInc);
     currentlyFlushing:=false;
     autoflush:=true;
     jumpToEnd:=true;
-    wrapEcho:=false;
-    //----------------------
-    outputLinesLimit:=1000;
-    lastWasDirectPrint:=false;
+    messageFormatter.create(false);
+    messageFormatter.wrapEcho:=false;
+    guiIsUpToDate:=true;
+    state.create(maxLongint);
   end;
 
-FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
-  VAR linesToWrite:T_arrayOfString;
-      bufferOffset:longint;
-      hadDirectPrint:boolean;
-      wroteToSyn:boolean;
-      SynEdit:TSynEdit=nil;
-      messageFormatter:T_guiFormatter;
-
-  PROCEDURE startOutput;
-    begin
-      currentlyFlushing:=true;
-      setLength(linesToWrite,0);
-      outputLinesLimit:=ideSettings.outputLinesLimit;
-      bufferOffset:=0;
-      hadDirectPrint:=false;
-      wroteToSyn:=false;
-    end;
-
-  FUNCTION ensureSynEdit:TSynEdit; inline;
-    begin
-      if SynEdit=nil then begin
-        SynEdit:=getSynEdit;
-        SynEdit.BeginUpdate();
-      end;
-      result:=SynEdit;
-    end;
-
-  PROCEDURE flushBuffer;
-    VAR i:longint;
-        edit:TSynEdit;
-    begin
-      edit:=ensureSynEdit;
-      if length(linesToWrite)>=outputLinesLimit then edit.lines.clear
-      else while edit.lines.count+length(linesToWrite)>outputLinesLimit do edit.lines.delete(0);
-      for i:=bufferOffset to length(linesToWrite)-1+bufferOffset do edit.lines.append(linesToWrite[i mod outputLinesLimit]);
-      linesToWrite:=C_EMPTY_STRING_ARRAY;
-      bufferOffset:=0;
-    end;
-
-  PROCEDURE appendInternal(CONST s:string);
-    begin
-      if length(linesToWrite)>=outputLinesLimit then begin
-        linesToWrite[bufferOffset]:=s;
-        inc(bufferOffset);
-        if bufferOffset>=outputLinesLimit then bufferOffset:=0;
-      end else myGenerics.append(linesToWrite,s);
-      wroteToSyn:=true;
-    end;
-
-  FUNCTION singleMessageOut(CONST m: P_storedMessage):boolean;
-    PROCEDURE clearSynAndBuffer;
-      begin
-        linesToWrite:=C_EMPTY_STRING_ARRAY;
-        bufferOffset:=0;
-        ensureSynEdit.lines.clear;
-        wroteToSyn:=true;
-      end;
-
-    PROCEDURE processDirectPrint(CONST s:string);
-      VAR c:char;
-      begin
-        ensureSynEdit.readonly:=false;
-        for c in s do case c of
-          #8 : SynEdit.executeCommand(ecDeleteLastChar,c,nil);
-          #13: begin
-                 SynEdit.executeCommand(ecLineStart,c,nil);
-                 SynEdit.executeCommand(ecOverwriteMode,c,nil);
-               end
-          else SynEdit.executeCommand(ecChar,c,nil);
-        end;
-        SynEdit.readonly:=true;
-        hadDirectPrint:=true;
-      end;
-
-    VAR j:longint;
-        s:string;
-    begin
-      result:=true;
-      case m^.messageType of
-        mt_startOfEvaluation,
-        mt_clearConsole: clearSynAndBuffer;
-        mt_printline:
-          begin
-            if (length(P_storedMessageWithText(m)^.txt)>0) and (P_storedMessageWithText(m)^.txt[0]=C_formFeedChar) then begin
-              clearSynAndBuffer;
-              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
-            end else if lastWasDirectPrint then begin
-              if length(P_storedMessageWithText(m)^.txt)>0 then begin
-                processDirectPrint(P_storedMessageWithText(m)^.txt[0]);
-              end;
-              for j:=1 to length(P_storedMessageWithText(m)^.txt)-1 do appendInternal(P_storedMessageWithText(m)^.txt[j]);
-            end else for s in P_storedMessageWithText(m)^.txt do appendInternal(s);
-          end;
-        mt_printdirect:
-          begin
-            if wroteToSyn then begin
-              flushBuffer;
-              wroteToSyn:=false;
-              SynEdit.executeCommand(ecEditorBottom,' ',nil);
-              SynEdit.executeCommand(ecLineStart,' ',nil);
+FUNCTION T_abstractSynOutAdapter.append(CONST message: P_storedMessage): boolean;
+  VAR j:longint;
+      s:string;
+  begin
+    result:=message^.messageType in messageTypesToInclude;
+    if result then begin
+      system.enterCriticalSection(adapterCs);
+      try
+        state.outputLinesLimit:=ideSettings.outputLinesLimit;
+        case message^.messageType of
+          mt_startOfEvaluation,
+          mt_clearConsole: state.clear;
+          mt_printline:
+            begin
+              if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
+                state.clear;
+                for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j]);
+              end else for s in P_storedMessageWithText(message)^.txt do state.append(s);
+              guiIsUpToDate:=false;
             end;
-            if not(lastWasDirectPrint) then begin
-              ensureSynEdit.append('');
-              SynEdit.executeCommand(ecEditorBottom,' ',nil);
-              SynEdit.executeCommand(ecLineStart,' ',nil);
+          mt_printdirect:
+            begin
+              for s in P_storedMessageWithText(message)^.txt do state.processDirectPrint(s);
+              guiIsUpToDate:=false;
             end;
-            for s in P_storedMessageWithText(m)^.txt do processDirectPrint(s);
+          mt_log,
+          mt_el1_note,
+          mt_el1_userNote,
+          mt_el2_warning,
+          mt_el2_userWarning,
+          mt_el3_evalError,
+          mt_el3_noMatchingMain,
+          mt_el3_userDefined,
+          mt_el4_systemError,
+          mt_timing_info,
+          mt_echo_input,
+          mt_echo_declaration,
+          mt_echo_output: begin
+            messageFormatter.formatMessageAndLocation(message,state);
+            guiIsUpToDate:=false;
           end;
-        mt_log,
-        mt_el1_note,
-        mt_el1_userNote,
-        mt_el2_warning,
-        mt_el2_userWarning,
-        mt_el3_evalError,
-        mt_el3_noMatchingMain,
-        mt_el3_userDefined,
-        mt_el4_systemError,
-        mt_timing_info,
-        mt_echo_input,
-        mt_echo_declaration,
-        mt_echo_output: for s in messageFormatter.formatMessage(m) do appendInternal(s);
-        mt_endOfEvaluation: ensureSynEdit.enabled:=true;
-        else result:=false;
+          mt_endOfEvaluation: state.cleanup;
+          else result:=false;
+        end;
+      finally
+        system.leaveCriticalSection(adapterCs);
       end;
-      if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
     end;
+  end;
 
-  PROCEDURE doneOutput(CONST jumpDown:boolean);
-    VAR synOwnerForm:TForm;
-    begin
-      currentlyFlushing:=false;
-      if wroteToSyn then begin
-        flushBuffer;
-        synOwnerForm:=getOwnerForm;
-        if not(synOwnerForm.showing) or not(synOwnerForm.visible) then begin
-          synOwnerForm.Show;
-          synOwnerForm.visible:=true;
-        end;
-        if SynEdit<>nil then begin;
-          SynEdit.EndUpdate;
-          if jumpDown then begin
-            SynEdit.executeCommand(ecEditorBottom,' ',nil);
-            SynEdit.executeCommand(ecLineStart,' ',nil);
-          end;
-        end;
-      end else begin
-        if hadDirectPrint then begin
-          synOwnerForm:=getOwnerForm;
-          if (not(synOwnerForm.showing) or not(synOwnerForm.visible)) then begin
-            synOwnerForm.Show;
-            synOwnerForm.visible:=true;
-          end;
-        end;
-        if SynEdit<>nil then SynEdit.EndUpdate;
-      end;
-      if SynEdit<>nil then SynEdit.enabled:=not(lastWasDirectPrint);
-    end;
-
-  VAR i:longint;
-      toProcessInThisRun:T_storedMessages=();
+FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
+  VAR SynEdit:TSynEdit=nil;
+      synOwnerForm:TForm;
   begin
     if not(forceFlush or autoflush) then exit([]);
     enterCriticalSection(adapterCs);
-    removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
-    setLength(toProcessInThisRun,collectedFill);
-    for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
-    result:=[];
-    startOutput;
-    collectedFill:=0;
+    if not(guiIsUpToDate) then begin
+      SynEdit:=getSynEdit;
+      messageFormatter.preferredLineLength:=SynEdit.charsInWindow;
+      SynEdit.BeginUpdate();
+      SynEdit.lines.SetStrings(state.text);
+      SynEdit.EndUpdate;
+      locations:=state.locations;
+      guiIsUpToDate:=true;
+      synOwnerForm:=getOwnerForm;
+      if not(synOwnerForm.showing) or not(synOwnerForm.visible) then begin
+        synOwnerForm.Show;
+        synOwnerForm.visible:=true;
+      end;
+      if jumpToEnd then begin
+        SynEdit.executeCommand(ecEditorBottom,' ',nil);
+        SynEdit.executeCommand(ecLineStart,' ',nil);
+      end;
+      result:=[mt_printline];
+    end else result:=[];
     clear;
     leaveCriticalSection(adapterCs);
-    messageFormatter.create(false);
-
-    if length(toProcessInThisRun)>0 then begin
-      messageFormatter.preferredLineLength:=getSynEdit.charsInWindow;
-      messageFormatter.wrapEcho:=wrapEcho;
-    end;
-
-    for i:=0 to length(toProcessInThisRun)-1 do begin
-      include(result,toProcessInThisRun[i]^.messageType);
-      singleMessageOut(toProcessInThisRun[i]);
-      disposeMessage(toProcessInThisRun[i]);
-    end;
-    if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
-    doneOutput(jumpToEnd);
-    messageFormatter.destroy;
   end;
 
 PROCEDURE T_abstractSynOutAdapter.flushClear;
@@ -343,7 +242,6 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
   begin
     system.enterCriticalSection(adapterCs);
     try
-      lastWasDirectPrint:=false;
       clear;
       new(clearMessage,create(mt_clearConsole,C_nilSearchTokenLocation));
       append(clearMessage);
@@ -353,9 +251,19 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
     end;
   end;
 
-FUNCTION T_abstractSynOutAdapter.isDoneFlushing:boolean;
+FUNCTION T_abstractSynOutAdapter.isDoneFlushing: boolean;
   begin
-    result:=not(currentlyFlushing) and (collectedFill<=0);
+    result:=guiIsUpToDate;
+  end;
+
+FUNCTION T_abstractSynOutAdapter.getLocationAtLine(CONST lineIndex:longint):T_searchTokenLocation;
+  CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1;column:-1);
+  begin
+    if (lineIndex>=0) and (lineIndex<length(locations))
+    then result:=locations[lineIndex]
+    else result:=noLocation;
+    if (result.fileName='') or (result.fileName='?')
+    then result:=guessLocationFromString(getSynEdit.lines[lineIndex],false);
   end;
 
 INITIALIZATION

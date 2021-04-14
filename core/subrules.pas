@@ -2031,6 +2031,7 @@ FUNCTION readExpressionFromStream(CONST literalRecycler:P_literalRecycler; CONST
             stream^.logWrongTypeError;
           end;
         end;
+      //TODO: et_builtinStateful!
       et_builtinIteratable,
       et_builtinAsyncOrFuture    :
         result:=newGeneratorFromStreamCallback(literalRecycler,stream,location,adapters,typeMap);

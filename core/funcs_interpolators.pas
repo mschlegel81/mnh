@@ -10,6 +10,7 @@ USES serializationUtil,
      litVar,subrules;
 
 TYPE
+  //TODO Make interpolators serializable
   T_interpolator=object(T_builtinExpression)
     protected
       underlyingValues:P_listLiteral;
@@ -77,7 +78,7 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
   VAR i:longint;
       ok:boolean=true;
   begin
-    inherited create(id_,et_builtin,location);
+    inherited create(id_,et_builtinStateful,location);
     values^.rereference;
     underlyingValues:=values;
 
@@ -260,6 +261,7 @@ TYPE
     protected
       M:T_arrayOfDouble;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
+      FUNCTION getFourierCoefficients(CONST maxWaveNumber:longint; CONST literalRecycler: P_literalRecycler):P_listLiteral;
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
@@ -298,6 +300,122 @@ FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double
       lin :=(yValues[i0+1]-yValues[i0])*ih0-(M[i0+1]-M[i0])*(xValues[i0+1]-xValues[i0]);
       result:=off+(lin+cub1*t0*t0)*t0+cub0*t1*t1*t1;
     end;
+  end;
+
+FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longint; CONST literalRecycler: P_literalRecycler):P_listLiteral;
+  TYPE T_normalizedCoeff=record a0,a1,a2,a3:double; end;
+       T_fourierIntegralBasis=record s0,s1,s2,s3,
+                                     c0,c1,c2,c3:double; end;
+  VAR ik:array[1..3] of double;
+  FUNCTION calcFourierIntegralBasis(CONST x:double; CONST k:longint):T_fourierIntegralBasis;
+    VAR
+      kx, skx, ckx: double;
+      kx1, kx2: double;
+    begin
+      kx:=k*x;
+      skx:=sin(kx)*ik[1];
+      ckx:=cos(kx)*ik[1];
+      kx1:=sqr(kx)-2;
+      kx2:=sqr(kx)-6;
+      result.s0:=(-       ckx          )      ;
+      result.s1:=(-kx    *ckx+      skx)*ik[1];
+      result.s2:=(-   kx1*ckx+2*kx *skx)*ik[2];
+      result.s3:=(-kx*kx2*ckx+3*kx1*skx)*ik[3];
+      result.c0:=(        skx          )      ;
+      result.c1:=( kx    *skx+      ckx)*ik[1];
+      result.c2:=(    kx1*skx+2*kx *ckx)*ik[2];
+      result.c3:=( kx*kx2*skx+3*kx1*ckx)*ik[3];
+    end;
+
+  FUNCTION sectionIntegral(CONST coeff:T_normalizedCoeff; CONST t0,t1:double):double;
+    begin
+      result:=coeff.a0   *(    t1      -    t0)
+             +coeff.a1/2 *(sqr(t1)     -sqr(t0))
+             +coeff.a2/3 *(sqr(t1)*t1  -sqr(t0)*t0)
+             +coeff.a3/4 *(sqr(sqr(t1))-sqr(sqr(t0)));
+    end;
+
+  PROCEDURE sectionIntegral(CONST coeff:T_normalizedCoeff; CONST B0,B1:T_fourierIntegralBasis; VAR sinusTotal,cosinusTotal:double);
+    begin
+      sinusTotal  +=coeff.a0*(B1.s0-B0.s0)+
+                    coeff.a1*(B1.s1-B0.s1)+
+                    coeff.a2*(B1.s2-B0.s2)+
+                    coeff.a3*(B1.s3-B0.s3);
+      cosinusTotal+=coeff.a0*(B1.c0-B0.c0)+
+                    coeff.a1*(B1.c1-B0.c1)+
+                    coeff.a2*(B1.c2-B0.c2)+
+                    coeff.a3*(B1.c3-B0.c3);
+    end;
+
+  FUNCTION calcNormalizedCoeff(CONST sectionIndex:longint):T_normalizedCoeff;
+    VAR h, cub0, cub1, off, lin, x0, x1: double;
+    begin
+      //if (sectionIndex>=length(M)-1) then sectionIndex:=length(M)-2;
+      x0:=xValues[sectionIndex];
+      x1:=xValues[sectionIndex+1];
+      h:=1/(x1-x0);
+      cub0:=M[sectionIndex  ]*h;
+      cub1:=M[sectionIndex+1]*h;
+      off := yValues[sectionIndex]-M[sectionIndex]*sqr(x1-x0);
+      lin :=(yValues[sectionIndex+1]-yValues[sectionIndex])*h-(M[sectionIndex+1]-M[sectionIndex])*(x1-x0);
+
+      result.a0:= off-lin*x0-cub1*  x0*x0*x0+  cub0*x1*x1*x1;
+      result.a1:=(    lin   +cub1*3*x0*x0   -3*cub0*x1*x1);
+      result.a2:=(          -cub1*3*x0      +3*cub0*x1);
+      result.a3:=(           cub1           -  cub0);
+    end;
+
+  VAR normalizedCoeff:array of T_normalizedCoeff;
+      evaluationPoints:T_arrayOfDouble;
+      k:longint;
+      j:longint;
+      i0,i1:longint;
+
+      sinusTotal  :double=0;
+      cosinusTotal:double=0;
+      startBasis,endBasis:T_fourierIntegralBasis;
+  begin
+    if accessByIndex   then exit(nil);
+    if maxWaveNumber<0 then exit(literalRecycler^.newListLiteral(0));
+
+    //find first and last relevant section
+    i0:=0;                 while (i0<length(xValues)-2) and (xValues[i0+1]<0 ) do inc(i0);
+    i1:=length(xValues)-2; while (i1>0                ) and (xValues[i1]>2*pi) do dec(i1);
+    if i0>i1 then exit(nil);
+
+    //Prepare points in time
+    setLength(evaluationPoints,i1-i0+2);
+    for j:=0 to i1-i0+1 do evaluationPoints[j]:=xValues[i0+j];
+    evaluationPoints[0                         ]:=0;
+    evaluationPoints[length(evaluationPoints)-1]:=2*pi;
+
+    //Prepare normal form coefficients
+    setLength(normalizedCoeff,i1-i0+1);
+    for j:=0 to i1-i0 do normalizedCoeff[j]:=calcNormalizedCoeff(i0+j);
+
+    result:=literalRecycler^.newListLiteral;
+    //Prepare 0th integral
+    for j:=0 to length(normalizedCoeff)-1 do cosinusTotal+=sectionIntegral(normalizedCoeff[j],evaluationPoints[j],evaluationPoints[j+1]);
+
+    result^.append(literalRecycler,literalRecycler^.newListLiteral^.appendReal(literalRecycler,cosinusTotal/(2*pi))^.appendReal(literalRecycler,sinusTotal),false);
+    //prepare remaining integrals
+    for k:=1 to maxWaveNumber do begin
+      ik[1]:=1/k; ik[2]:=ik[1]*ik[1]; ik[3]:=ik[1]*ik[2];
+      endBasis:=calcFourierIntegralBasis(evaluationPoints[0],k);
+      sinusTotal  :=0;
+      cosinusTotal:=0;
+
+      for j:=0 to length(normalizedCoeff)-1 do begin
+        startBasis:=endBasis;
+        endBasis  :=calcFourierIntegralBasis(evaluationPoints[j+1],k);
+        sectionIntegral(normalizedCoeff[j],startBasis,endBasis,sinusTotal,cosinusTotal);
+      end;
+      result^.append(literalRecycler,literalRecycler^.newListLiteral^.appendReal(literalRecycler,cosinusTotal/pi)^.appendReal(literalRecycler,sinusTotal/pi),false);
+    end;
+
+    //cleanup
+    setLength(normalizedCoeff,0);
+    setLength(evaluationPoints,0);
   end;
 
 CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
@@ -490,10 +608,59 @@ FUNCTION fourierSeries_imp intFuncSignature;
     end;
   end;
 
+FUNCTION calcFourierCoeff_im intFuncSignature;
+  VAR spline:T_cSplineInterpolator;
+      maxWaveNumber:longint;
+  FUNCTION calculateDFT:P_listLiteral;
+    VAR k,i:longint;
+        x:T_arrayOfDouble;
+        iter:T_arrayOfLiteral;
+        h:double;
+        sinSum,cosSum:double;
+    begin
+      //Prepare input data
+      iter:=list0^.tempIteratableList;
+      setLength(x,length(iter));
+      for k:=0 to length(iter)-1 do x[k]:=P_numericLiteral(iter[k])^.floatValue;
+      setLength(iter,0);
+      h:=2*pi/length(x);
+      //calculate coefficients
+      result:=recycler^.newListLiteral(maxWaveNumber+1);
+      for k:=0 to maxWaveNumber do begin
+        sinSum:=0;
+        cosSum:=0;
+        for i:=0 to length(x)-1 do begin
+          sinSum+=x[i]*sin(h*i*k);
+          cosSum+=x[i]*cos(h*i*k);
+        end;
+        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,cosSum*2/length(x))^.appendReal(recycler,sinSum*2/length(x)),false);
+      end;
+      setLength(x,0);
+    end;
+
+  begin
+    result:=nil;
+    if (params^.size=2) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
+       and (arg1^.literalType=lt_smallint)
+       and (int1^.intValue>=0)
+    then begin
+      maxWaveNumber:=int1^.intValue;
+      if arg0^.literalType in [lt_numList,lt_realList,lt_intList]
+      then result:=calculateDFT
+      else begin
+        spline.create(list0,tokenLocation,context);
+        result:=spline.getFourierCoefficients(maxWaveNumber,recycler);
+        spline.cleanup(recycler);
+        spline.destroy;
+      end;
+    end;
+  end;
+
 INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary{$ifdef fullVersion},'linearInterpolator(L:List);//returns an linear interpolator, which returns values out of L by their index'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary{$ifdef fullVersion},'newSplineInterpolator(L:List);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:List);//returns an Bezier approximator'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary{$ifdef fullVersion},'newFourierSeries(L:List);//returns an Fourier Series with coefficients L=[[c0,s0],[c1,s1]...]'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'calculateFourierCoefficients',@calcFourierCoeff_im,ak_unary{$ifdef fullVersion},'calculateFourierCoefficients(L:List,maxWaveNumber>=0);//Calculates fourier coefficients for nonequidistant points in L given as [[t0,y0],[t1,y1],...]'{$endif});
 
 end.

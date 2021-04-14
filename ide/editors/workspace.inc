@@ -12,6 +12,17 @@ T_checkFilesThread=class(T_basicThread)
     CONSTRUCTOR create();
 end;
 
+//T_locationProvider=object
+//  linkedSynEdit:TSynEdit;
+//
+//  CONSTRUCTOR create(CONST synEdit:TSynEdit)
+//  PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
+//  PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+//  FUNCTION getLocationForCaret(CONST caretX,caretY:longint):T_searchTokenLocation; virtual;
+//end;
+
+F_getLocationForCaret=FUNCTION (CONST CaretX,CaretY:longint):T_searchTokenLocation of object;
+
 T_workspace=object(T_serializable)
   private
     workspaceCs:TRTLCriticalSection;
@@ -554,6 +565,7 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): P_edit
     end;
   end;
 
+//TODO: guessLocationFromString should just be a fallback
 PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR caller:TSynEdit;
   begin
@@ -564,6 +576,7 @@ PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shi
     end;
   end;
 
+//TODO: guessLocationFromString should just be a fallback
 PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR caller:TSynEdit;
   begin

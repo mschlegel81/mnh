@@ -34,6 +34,7 @@ object OutputForm: TOutputForm
     PopupMenu = OutputPopupMenu
     TabOrder = 0
     OnKeyUp = OutputSynEditKeyUp
+    OnMouseDown = OutputSynEditMouseDown
     Gutter.Width = 11
     Gutter.MouseActions = <>
     RightGutter.Width = 0

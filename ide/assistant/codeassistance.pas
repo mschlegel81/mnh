@@ -52,7 +52,7 @@ TYPE
       package:P_package;
       DESTRUCTOR destroy; virtual;
       PROPERTY  stateHash:T_hashInt read responseStateHash;
-      PROCEDURE getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false);
+      FUNCTION getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false):T_searchTokenLocations;
       //Highlighter related:
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       //Rename/Help:
@@ -775,9 +775,11 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
     if C_messageTypeMeta[m^.messageType].level=level then begin
       if m^.getLocation.fileName=package_^.getPath
       then begin
+        //TODO: Sort by location
         setLength(localErrors,length(localErrors)+1);
         localErrors[length(localErrors)-1]:=m^.rereferenced;
       end else begin
+        //TODO: Sort by location
         setLength(externalErrors,length(externalErrors)+1);
         externalErrors[length(externalErrors)-1]:=m^.rereferenced;
       end;
@@ -801,8 +803,9 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false);
+FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false):T_searchTokenLocations;
   VAR messageFormatter:T_guiFormatter;
+      messagesAndLocations:T_messagesAndLocations;
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR s:string;
@@ -811,28 +814,33 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
       for m in list do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level>2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[m^.messageType].level=2);
-        for s in messageFormatter.formatMessage(m) do edit.lines.append(s);
+        messageFormatter.formatMessageAndLocation(m,messagesAndLocations);
       end;
     end;
 
   begin
     messageFormatter.create(false);
     enterCriticalSection(messageCs);
+    messagesAndLocations.create(maxLongint);
+    messageFormatter.preferredLineLength:=edit.charsInWindow;
+    messageFormatter.wrapEcho:=true;
+    hasErrors:=false;
+    hasWarnings:=false;
     try
-      if not(appendMode) then begin
-        edit.clearAll;
-        edit.lines.clear;
-      end;
-      messageFormatter.preferredLineLength:=edit.charsInWindow;
-      messageFormatter.wrapEcho:=true;
-      hasErrors:=false;
-      hasWarnings:=false;
       addErrors(localErrors);
       addErrors(externalErrors);
     finally
       leaveCriticalSection(messageCs);
       messageFormatter.destroy;
     end;
+
+    if not(appendMode) then begin
+      edit.clearAll;
+      edit.lines.clear;
+    end;
+    edit.lines.SetStrings(messagesAndLocations.text);
+    result:=messagesAndLocations.locations;
+    messagesAndLocations.destroy;
   end;
 
 PROCEDURE finalizeCodeAssistance;
