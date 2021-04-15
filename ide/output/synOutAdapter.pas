@@ -25,14 +25,10 @@ CONST
                                               mt_timing_info];
 TYPE
   P_abstractSynOutAdapter=^T_abstractSynOutAdapter;
-
-  { T_abstractSynOutAdapter }
-
   T_abstractSynOutAdapter=object(T_abstractGuiOutAdapter)
     private
       currentlyFlushing:boolean;
       messageFormatter:T_guiFormatter;
-      guiIsUpToDate:boolean;
     protected
       locations:T_searchTokenLocations;
       state:T_messagesAndLocations;
@@ -43,7 +39,6 @@ TYPE
       jumpToEnd:boolean;
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
-      FUNCTION append(CONST message: P_storedMessage): boolean; virtual;
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROCEDURE flushClear;
       FUNCTION isDoneFlushing:boolean; virtual;
@@ -154,74 +149,80 @@ CONSTRUCTOR T_abstractSynOutAdapter.create(CONST messageTypesToInc: T_messageTyp
     jumpToEnd:=true;
     messageFormatter.create(false);
     messageFormatter.wrapEcho:=false;
-    guiIsUpToDate:=true;
     state.create(maxLongint);
-  end;
-
-FUNCTION T_abstractSynOutAdapter.append(CONST message: P_storedMessage): boolean;
-  VAR j:longint;
-      s:string;
-  begin
-    result:=message^.messageType in messageTypesToInclude;
-    if result then begin
-      system.enterCriticalSection(adapterCs);
-      try
-        state.outputLinesLimit:=ideSettings.outputLinesLimit;
-        case message^.messageType of
-          mt_startOfEvaluation,
-          mt_clearConsole: state.clear;
-          mt_printline:
-            begin
-              if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
-                state.clear;
-                for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j]);
-              end else for s in P_storedMessageWithText(message)^.txt do state.append(s);
-              guiIsUpToDate:=false;
-            end;
-          mt_printdirect:
-            begin
-              for s in P_storedMessageWithText(message)^.txt do state.processDirectPrint(s);
-              guiIsUpToDate:=false;
-            end;
-          mt_log,
-          mt_el1_note,
-          mt_el1_userNote,
-          mt_el2_warning,
-          mt_el2_userWarning,
-          mt_el3_evalError,
-          mt_el3_noMatchingMain,
-          mt_el3_userDefined,
-          mt_el4_systemError,
-          mt_timing_info,
-          mt_echo_input,
-          mt_echo_declaration,
-          mt_echo_output: begin
-            messageFormatter.formatMessageAndLocation(message,state);
-            guiIsUpToDate:=false;
-          end;
-          mt_endOfEvaluation: state.cleanup;
-          else result:=false;
-        end;
-      finally
-        system.leaveCriticalSection(adapterCs);
-      end;
-    end;
   end;
 
 FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
   VAR SynEdit:TSynEdit=nil;
       synOwnerForm:TForm;
+      toProcessInThisRun:T_storedMessages;
+      i: longint;
+
+  PROCEDURE processMessage(CONST message: P_storedMessage);
+    VAR j:longint;
+        s:string;
+    begin
+      case message^.messageType of
+        mt_startOfEvaluation,
+        mt_clearConsole: state.clear;
+        mt_printline:
+          begin
+            if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
+              state.clear;
+              for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j]);
+            end else for s in P_storedMessageWithText(message)^.txt do state.append(s);
+          end;
+        mt_printdirect:
+          begin
+            for s in P_storedMessageWithText(message)^.txt do state.processDirectPrint(s);
+          end;
+        mt_log,
+        mt_el1_note,
+        mt_el1_userNote,
+        mt_el2_warning,
+        mt_el2_userWarning,
+        mt_el3_evalError,
+        mt_el3_noMatchingMain,
+        mt_el3_userDefined,
+        mt_el4_systemError,
+        mt_timing_info,
+        mt_echo_input,
+        mt_echo_declaration,
+        mt_echo_output: begin
+          messageFormatter.formatMessageAndLocation(message,state);
+        end;
+        mt_endOfEvaluation: state.cleanup;
+      end;
+    end;
+
   begin
     if not(forceFlush or autoflush) then exit([]);
+
     enterCriticalSection(adapterCs);
-    if not(guiIsUpToDate) then begin
+    currentlyFlushing:=true;
+    removeDuplicateStoredMessages([mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+    setLength(toProcessInThisRun,collectedFill);
+    for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
+    result:=[];
+    collectedFill:=0;
+    leaveCriticalSection(adapterCs);
+
+    if length(toProcessInThisRun)>0 then begin
       SynEdit:=getSynEdit;
       messageFormatter.preferredLineLength:=SynEdit.charsInWindow;
+      state.outputLinesLimit:=ideSettings.outputLinesLimit;
+
+      result:=[];
+      for i:=0 to length(toProcessInThisRun)-1 do begin
+        include(result,toProcessInThisRun[i]^.messageType);
+        processMessage(toProcessInThisRun[i]);
+        disposeMessage(toProcessInThisRun[i]);
+      end;
+
       SynEdit.BeginUpdate();
       SynEdit.lines.SetStrings(state.text);
       SynEdit.EndUpdate;
       locations:=state.locations;
-      guiIsUpToDate:=true;
       synOwnerForm:=getOwnerForm;
       if not(synOwnerForm.showing) or not(synOwnerForm.visible) then begin
         synOwnerForm.Show;
@@ -231,10 +232,8 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
         SynEdit.executeCommand(ecEditorBottom,' ',nil);
         SynEdit.executeCommand(ecLineStart,' ',nil);
       end;
-      result:=[mt_printline];
     end else result:=[];
-    clear;
-    leaveCriticalSection(adapterCs);
+    currentlyFlushing:=false;
   end;
 
 PROCEDURE T_abstractSynOutAdapter.flushClear;
@@ -253,7 +252,7 @@ PROCEDURE T_abstractSynOutAdapter.flushClear;
 
 FUNCTION T_abstractSynOutAdapter.isDoneFlushing: boolean;
   begin
-    result:=guiIsUpToDate;
+    result:=not(currentlyFlushing) and (collectedFill<=0);
   end;
 
 FUNCTION T_abstractSynOutAdapter.getLocationAtLine(CONST lineIndex:longint):T_searchTokenLocation;
