@@ -30,7 +30,6 @@ TYPE
       currentlyFlushing:boolean;
       messageFormatter:T_guiFormatter;
     protected
-      locations:T_searchTokenLocations;
       state:T_messagesAndLocations;
       FUNCTION getSynEdit:TSynEdit; virtual; abstract;
       FUNCTION getOwnerForm:TForm;  virtual; abstract;
@@ -156,7 +155,8 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
   VAR SynEdit:TSynEdit=nil;
       synOwnerForm:TForm;
       toProcessInThisRun:T_storedMessages;
-      i: longint;
+      i,i0: longint;
+      fullUpdateRequired:boolean=false;
 
   PROCEDURE processMessage(CONST message: P_storedMessage);
     VAR j:longint;
@@ -164,16 +164,21 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
     begin
       case message^.messageType of
         mt_startOfEvaluation,
-        mt_clearConsole: state.clear;
+        mt_clearConsole: begin
+          state.clear;
+          fullUpdateRequired:=true;
+        end;
         mt_printline:
           begin
             if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
               state.clear;
+              fullUpdateRequired:=true;
               for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j]);
             end else for s in P_storedMessageWithText(message)^.txt do state.append(s);
           end;
         mt_printdirect:
           begin
+            fullUpdateRequired:=true;
             for s in P_storedMessageWithText(message)^.txt do state.processDirectPrint(s);
           end;
         mt_log,
@@ -208,9 +213,13 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
     leaveCriticalSection(adapterCs);
 
     if length(toProcessInThisRun)>0 then begin
+      if state.size=0 then fullUpdateRequired:=true;
+
       SynEdit:=getSynEdit;
       messageFormatter.preferredLineLength:=SynEdit.charsInWindow;
       state.outputLinesLimit:=ideSettings.outputLinesLimit;
+
+      i0:=SynEdit.lines.count;
 
       result:=[];
       for i:=0 to length(toProcessInThisRun)-1 do begin
@@ -218,11 +227,13 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
         processMessage(toProcessInThisRun[i]);
         disposeMessage(toProcessInThisRun[i]);
       end;
+      fullUpdateRequired:=fullUpdateRequired or (state.size=state.outputLinesLimit);
 
       SynEdit.BeginUpdate();
-      SynEdit.lines.SetStrings(state.text);
+      if fullUpdateRequired then SynEdit.lines.SetStrings(state.text)
+      else for i:=i0 to state.size-1 do SynEdit.lines.add(state.text(i));
       SynEdit.EndUpdate;
-      locations:=state.locations;
+
       synOwnerForm:=getOwnerForm;
       if not(synOwnerForm.showing) or not(synOwnerForm.visible) then begin
         synOwnerForm.Show;
@@ -258,8 +269,8 @@ FUNCTION T_abstractSynOutAdapter.isDoneFlushing: boolean;
 FUNCTION T_abstractSynOutAdapter.getLocationAtLine(CONST lineIndex:longint):T_searchTokenLocation;
   CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1;column:-1);
   begin
-    if (lineIndex>=0) and (lineIndex<length(locations))
-    then result:=locations[lineIndex]
+    if (lineIndex>=0) and (lineIndex<state.size)
+    then result:=state.location(lineIndex)
     else result:=noLocation;
     if (result.fileName='') or (result.fileName='?')
     then result:=guessLocationFromString(getSynEdit.lines[lineIndex],false);
