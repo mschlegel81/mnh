@@ -743,25 +743,24 @@ FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation; CONST a
       lines:T_arrayOfString;
       hasResult:boolean=false;
       lineIndex:longint;
+      loc:T_searchTokenLocation;
   begin
+    loc:=location;
+    result.create(maxLongint);
     enterCriticalSection(workspaceCs);
     try
-      result.create(maxlongint);
       for meta in metas do if not(hasResult) and (meta^.pseudoName=location.fileName) then begin
         lines:=meta^.getLines;
-        for lineIndex:=location.line-1-additionalLinesBefore;
-
-
-        if (location.line>=1) and (location.line<=length(lines))
-        then result:=lines[location.line-1]
-        else result:='';
         hasResult:=true;
       end;
-      if not(hasResult) then begin
-        lines:=fileLines(location.fileName,hasResult);
-        if hasResult and (location.line>=1) and (location.line<=length(lines))
-        then result:=lines[location.line-1]
-        else result:='';
+      if not(hasResult) then lines:=fileLines(location.fileName,hasResult);
+      if hasResult then
+      for lineIndex:=location.line-1-additionalLinesBefore
+                  to location.line-1+additionalLinesAfter do
+      if (lineIndex>=0) and (lineIndex<length(lines)) then begin
+        loc.column:=1;
+        loc.line:=lineIndex+1;
+        result.append(lines[lineIndex],loc);
       end;
     finally
       leaveCriticalSection(workspaceCs);

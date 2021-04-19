@@ -32,8 +32,8 @@ TYPE
     PROCEDURE performSlowUpdate(CONST isEvaluationRunning:boolean); override;
     PROCEDURE performFastUpdate; override;
     PROCEDURE SynEdit1KeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
-    procedure SynEdit1MouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
+    PROCEDURE SynEdit1MouseDown(Sender: TObject; button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE UpdateToggleBoxChange(Sender: TObject);
     PROCEDURE dockChanged; override;
   private
@@ -47,7 +47,7 @@ TYPE
 
 PROCEDURE ensureHelpForm;
 IMPLEMENTATION
-USES editorMetaBase, lclintf,ComCtrls,Graphics,mnh_messages,myStringUtil,myGenerics;
+USES editorMetaBase, lclintf,ComCtrls,Graphics,mnh_messages,myStringUtil,myGenerics,messageFormatting;
 CONST H_LINE=#226#148#128;
 
 PROCEDURE ensureHelpForm;
@@ -79,7 +79,7 @@ PROCEDURE ensureHelpForm;
 
 {$R *.lfm}
 
-procedure THelpForm.FormCreate(Sender: TObject);
+PROCEDURE THelpForm.FormCreate(Sender: TObject);
   begin
     caption:=getCaption;
     registerFontControl(SynEdit1,ctEditor);
@@ -92,28 +92,28 @@ procedure THelpForm.FormCreate(Sender: TObject);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
 
-procedure THelpForm.FormDestroy(Sender: TObject);
+PROCEDURE THelpForm.FormDestroy(Sender: TObject);
   begin
     unregisterFontControl(SynEdit1);
     unregisterFontControl(self);
   end;
 
-function THelpForm.getIdeComponentType: T_ideComponent;
+FUNCTION THelpForm.getIdeComponentType: T_ideComponent;
   begin
     result:=icHelp;
   end;
 
-procedure THelpForm.openHtmlButtonClick(Sender: TObject);
+PROCEDURE THelpForm.openHtmlButtonClick(Sender: TObject);
   begin
     OpenURL(currentLink);
   end;
 
-procedure THelpForm.performSlowUpdate(const isEvaluationRunning: boolean);
+PROCEDURE THelpForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
   begin
 
   end;
 
-procedure THelpForm.performFastUpdate;
+PROCEDURE THelpForm.performFastUpdate;
   CONST noLocation:T_searchTokenLocation=(fileName: ''; line:-1; column: -1);
   VAR meta:P_editorMeta;
       info:T_tokenInfo;
@@ -156,8 +156,7 @@ procedure THelpForm.performFastUpdate;
 
       for ruleInfo in info.userDefRuleInfo do begin
         for line in split(ruleInfo.comment,C_lineBreakChar) do appendLAL(line,ruleInfo.location);
-       // appendLAL(ruleInfo.location,ruleInfo.location);
-        appendLAL(ECHO_MARKER+ruleInfo.idAndSignature+'->'+ruleInfo.body,ruleInfo.location);
+        appendLAL(ECHO_MARKER+copy(ruleInfo.idAndSignature+'->'+ruleInfo.body,1,SynEdit1.charsInWindow-2),ruleInfo.location);
       end;
     end;
 
@@ -179,13 +178,20 @@ procedure THelpForm.performFastUpdate;
 
   PROCEDURE addReferencedSection;
     VAR loc:T_searchTokenLocation;
+        first:boolean=true;
+        source:T_messagesAndLocations;
+        i:longint;
     begin
       if length(info.referencedAt)=0 then exit;
       writeSectionHeader('References:');
       for loc in info.referencedAt do begin
-        //appendLAL(string(loc),loc);
-        //TODO increase number of context lines?
-        appendLAL(ECHO_MARKER+workspace.getSourceLine(loc),loc);
+        source:=workspace.getSourceLine(loc,1,2);
+        if source.size>0 then begin
+          if first then first:=false else appendLAL('',noLocation);
+          appendLAL(loc,loc);
+          for i:=0 to source.size do appendLAL(ECHO_MARKER+source.text(i),source.location(i));
+        end;
+        source.destroy;
       end;
     end;
 
@@ -220,7 +226,7 @@ procedure THelpForm.performFastUpdate;
     end;
   end;
 
-procedure THelpForm.SynEdit1KeyUp(Sender: TObject; var key: word;
+PROCEDURE THelpForm.SynEdit1KeyUp(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
     tabNextKeyHandling(Sender,key,Shift);
@@ -230,30 +236,30 @@ procedure THelpForm.SynEdit1KeyUp(Sender: TObject; var key: word;
     end;
   end;
 
-procedure THelpForm.SynEdit1MouseDown(Sender: TObject; Button: TMouseButton;Shift: TShiftState; X, Y: Integer);
+PROCEDURE THelpForm.SynEdit1MouseDown(Sender: TObject; button: TMouseButton;Shift: TShiftState; X, Y: integer);
   begin
     if (ssCtrl in Shift) and (button=mbLeft) then begin
       openLocationForLine(SynEdit1.PixelsToRowColumn(point(x,y)).Y-1);
     end;
   end;
 
-procedure THelpForm.UpdateToggleBoxChange(Sender: TObject);
+PROCEDURE THelpForm.UpdateToggleBoxChange(Sender: TObject);
   begin
     toggleUpdate(true,UpdateToggleBox.checked);
   end;
 
-procedure THelpForm.dockChanged;
+PROCEDURE THelpForm.dockChanged;
   begin
   end;
 
-procedure THelpForm.toggleUpdate(const force: boolean; const enable: boolean);
+PROCEDURE THelpForm.toggleUpdate(CONST force: boolean; CONST enable: boolean);
   begin
     if force
     then UpdateToggleBox.checked:=enable
     else UpdateToggleBox.checked:=not(UpdateToggleBox.checked);
   end;
 
-procedure THelpForm.openLocationForLine(const lineIndex: longint);
+PROCEDURE THelpForm.openLocationForLine(CONST lineIndex: longint);
   begin
     if (lineIndex<0) or (lineIndex>=length(lineLocations)) then exit;
     workspace.openLocation(lineLocations[lineIndex]);
