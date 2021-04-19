@@ -12,15 +12,6 @@ T_checkFilesThread=class(T_basicThread)
     CONSTRUCTOR create();
 end;
 
-//T_locationProvider=object
-//  linkedSynEdit:TSynEdit;
-//
-//  CONSTRUCTOR create(CONST synEdit:TSynEdit)
-//  PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
-//  PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-//  FUNCTION getLocationForCaret(CONST caretX,caretY:longint):T_searchTokenLocation; virtual;
-//end;
-
 F_getLocationForCaret=FUNCTION (CONST CaretX,CaretY:longint):T_searchTokenLocation of object;
 
 T_workspace=object(T_serializable)
@@ -81,9 +72,6 @@ T_workspace=object(T_serializable)
     PROCEDURE clearOldBookmark(CONST index:T_bookmarkIndex);
     PROCEDURE openBookmarkLocation(CONST index:T_bookmarkIndex);
     FUNCTION openLocation(CONST location:T_searchTokenLocation):P_editorMeta;
-    PROCEDURE keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
-    PROCEDURE mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-
     PROCEDURE updateEditorsByGuiStatus;
 
     FUNCTION getAllBreakpoints:T_searchTokenLocations;
@@ -96,7 +84,7 @@ T_workspace=object(T_serializable)
     PROCEDURE openDependenciesForCurrentScript(CONST openMask:byte);
     PROCEDURE exportCurrentFileToHtml;
     PROCEDURE renameWordUnderCursor;
-    FUNCTION getSourceLine(CONST location:T_searchTokenLocation):string;
+    FUNCTION getSourceLine(CONST location:T_searchTokenLocation; CONST additionalLinesBefore:longint=0; CONST additionalLinesAfter:longint=0):T_messagesAndLocations;
 
     FUNCTION getMainFormCaption:string;
 
@@ -565,27 +553,6 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): P_edit
     end;
   end;
 
-//TODO: guessLocationFromString should just be a fallback
-PROCEDURE T_workspace.keyUpForJumpToLocation(Sender: TObject; VAR key: word; Shift: TShiftState);
-  VAR caller:TSynEdit;
-  begin
-    if (key=13) and (ssCtrl in Shift) then begin
-      caller:=TSynEdit(Sender);
-      openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
-      key:=0;
-    end;
-  end;
-
-//TODO: guessLocationFromString should just be a fallback
-PROCEDURE T_workspace.mouseDownForJumpToLocation(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  VAR caller:TSynEdit;
-  begin
-    if (ssCtrl in Shift) and (button=mbLeft) then begin
-      caller:=TSynEdit(Sender);
-      openLocation(guessLocationFromString(caller.lines[caller.PixelsToRowColumn(point(x,y)).y-1],false));
-    end;
-  end;
-
 PROCEDURE T_workspace.updateEditorsByGuiStatus;
   VAR m:P_editorMeta;
   begin
@@ -771,15 +738,20 @@ PROCEDURE T_workspace.renameWordUnderCursor;
     end;
   end;
 
-FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation):string;
+FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation; CONST additionalLinesBefore:longint=0; CONST additionalLinesAfter:longint=0):T_messagesAndLocations;
   VAR meta:P_editorMeta;
       lines:T_arrayOfString;
       hasResult:boolean=false;
+      lineIndex:longint;
   begin
     enterCriticalSection(workspaceCs);
     try
+      result.create(maxlongint);
       for meta in metas do if not(hasResult) and (meta^.pseudoName=location.fileName) then begin
         lines:=meta^.getLines;
+        for lineIndex:=location.line-1-additionalLinesBefore;
+
+
         if (location.line>=1) and (location.line<=length(lines))
         then result:=lines[location.line-1]
         else result:='';

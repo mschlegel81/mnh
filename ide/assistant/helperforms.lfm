@@ -125,6 +125,7 @@ object HelpForm: THelpForm
       TabOrder = 1
       TabStop = False
       OnKeyUp = SynEdit1KeyUp
+      OnMouseDown = SynEdit1MouseDown
       Gutter.Visible = False
       Gutter.Width = 57
       Gutter.MouseActions = <>

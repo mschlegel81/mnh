@@ -30,7 +30,8 @@ USES  //basic classes
   menuUtil,
   mnh_messages,
   commandLineParameters,
-  mySys;
+  mySys,
+  messageFormatting;
 
 TYPE
 P_editorMeta=^T_editorMeta;
