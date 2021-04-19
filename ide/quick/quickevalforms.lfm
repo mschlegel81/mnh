@@ -543,6 +543,7 @@ object QuickEvalForm: TQuickEvalForm
     PopupMenu = OutputPopupMenu
     TabOrder = 1
     OnKeyUp = quickOutputSynEditKeyUp
+    OnMouseDown = quickOutputSynEditMouseDown
     Gutter.Width = 51
     Gutter.MouseActions = <>
     RightGutter.Width = 0
