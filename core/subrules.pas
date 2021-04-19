@@ -1287,7 +1287,7 @@ FUNCTION T_subruleExpression.getStructuredInfo: T_structuredRuleInfo;
     then result.idAndSignature:=PRIVATE_TEXT+' '
     else result.idAndSignature:='';
     result.idAndSignature+=getId;
-    result.body:=bodyToString(50);
+    result.body:=bodyToString(200);
     result.location:=getLocation;
   end;
 

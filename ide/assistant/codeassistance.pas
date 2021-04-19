@@ -808,8 +808,7 @@ FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors
       messagesAndLocations:T_messagesAndLocations;
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
-    VAR s:string;
-        m:P_storedMessage;
+    VAR m:P_storedMessage;
     begin
       for m in list do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level>2);

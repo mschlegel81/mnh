@@ -11,6 +11,9 @@ USES
   evalThread,codeAssistance,basicTypes,synOutAdapter,mnh_messages;
 
 TYPE
+
+  { TQuickEvalForm }
+
   TQuickEvalForm = class(T_mnhComponentForm)
     cbEvaluateInCurrentPackage: TCheckBox;
     miDockMenuInMain: TMenuItem;
@@ -41,11 +44,14 @@ TYPE
     PROCEDURE quickInputEditChange(Sender: TObject);
     PROCEDURE dockChanged; override;
     PROCEDURE quickOutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE quickOutputSynEditMouseDown(Sender: TObject;
+      button: TMouseButton; Shift: TShiftState; X, Y: integer);
   private
     evaluatedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
     quickEvaluation:T_quickEvaluation;
     quickOutput:T_eagerInitializedOutAdapter;
+    PROCEDURE openLocationForLine(CONST lineIndex:longint);
     FUNCTION stateHash:T_hashInt;
   public
 
@@ -110,7 +116,6 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     inputMeta.editor.OnKeyUp:=@tabNextKeyHandling;
     quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(quickOutputSynEdit,self,ideSettings.quickOutputBehavior);
-    quickOutputSynEdit.OnMouseDown:=@workspace.mouseDownForJumpToLocation;
     quickEvaluation.create(@quickOutput);
     with ideSettings.quickOutputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;
@@ -138,7 +143,7 @@ PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
     quickOutput.destroy;
   end;
 
-PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
+PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
   begin
   end;
 
@@ -179,10 +184,31 @@ PROCEDURE TQuickEvalForm.dockChanged;
     else moveAllItems(miOutputMenuInMain,OutputPopupMenu.items);
   end;
 
-PROCEDURE TQuickEvalForm.quickOutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TQuickEvalForm.quickOutputSynEditKeyUp(Sender: TObject;
+  VAR key: word; Shift: TShiftState);
   begin
     tabNextKeyHandling(Sender,key,Shift);
-    workspace.keyUpForJumpToLocation(Sender,key,Shift)
+    if (key=13) and (ssCtrl in Shift) then begin
+      openLocationForLine(quickOutputSynEdit.CaretY-1);
+      key:=0;
+    end;
+  end;
+
+PROCEDURE TQuickEvalForm.quickOutputSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if (ssCtrl in Shift) and (button=mbLeft) then begin
+      openLocationForLine(quickOutputSynEdit.PixelsToRowColumn(point(x,y)).Y-1);
+    end;
+  end;
+
+PROCEDURE TQuickEvalForm.openLocationForLine(CONST lineIndex: longint);
+  VAR location: T_searchTokenLocation;
+  begin
+    location:=quickOutput.getLocationAtLine(lineIndex);
+    if location.fileName=C_QuickEvalPseudoPackageName then begin
+      quickInputSynEdit.SetFocus;
+      inputMeta.setCaret(location);
+    end else workspace.openLocation(location);
   end;
 
 FUNCTION TQuickEvalForm.stateHash: T_hashInt;

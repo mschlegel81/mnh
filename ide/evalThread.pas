@@ -30,6 +30,7 @@ TYPE
   T_evaluationState= (es_pending, es_running,es_debugRunning,es_debugHalted,es_finished,es_stoppedByUser);
 
 CONST
+  C_QuickEvalPseudoPackageName='<quick>';
   C_evaluationState:array [T_evaluationState] of record
     txt: string;
     showTime: byte; //0: no, 1: yes, difference, 2: yes, absolute
@@ -470,7 +471,7 @@ PROCEDURE T_quickEvaluation.execute(CONST recycler: P_recycler);
       stmt :T_enhancedStatement;
   begin
     if parentProvider=nil then begin
-      package.replaceCodeProvider(newVirtualFileCodeProvider('<quick>',toEvaluate));
+      package.replaceCodeProvider(newVirtualFileCodeProvider(C_QuickEvalPseudoPackageName,toEvaluate));
       globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
       globals.afterEvaluation(recycler,packageTokenLocation(@package));

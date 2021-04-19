@@ -388,7 +388,6 @@ PROCEDURE T_mapTask.evaluate(CONST recycler:P_recycler);
 
 DESTRUCTOR T_mapTask.destroy;
   begin
-    //TODO: We probably need a cleanup method
     assert(mapPayload.mapParameter=nil);
     inherited destroy;
   end;
