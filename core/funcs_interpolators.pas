@@ -585,8 +585,8 @@ FUNCTION T_fourierSeries.getSingleInterpolatedValue(CONST floatIdx: double): dou
   VAR i:longint;
   begin
     result:=0;
-    if includeYsin then for i:=0 to length(yValues)-1 do result+=yValues[i]*sin(floatIdx*i);
-    if includeXcos then for i:=1 to length(xValues)-1 do result+=xValues[i]*cos(floatIdx*i);
+    if includeYsin then for i:=1 to length(yValues)-1 do result+=yValues[i]*sin(floatIdx*i);
+    if includeXcos then for i:=0 to length(xValues)-1 do result+=xValues[i]*cos(floatIdx*i);
   end;
 
 CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context);
@@ -610,7 +610,7 @@ FUNCTION fourierSeries_imp intFuncSignature;
 
 FUNCTION calcFourierCoeff_im intFuncSignature;
   VAR spline:T_cSplineInterpolator;
-      maxWaveNumber:longint;
+      maxWaveNumber:longint=-1;
   FUNCTION calculateDFT:P_listLiteral;
     VAR k,i:longint;
         x:T_arrayOfDouble;
@@ -633,21 +633,23 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
           sinSum+=x[i]*sin(h*i*k);
           cosSum+=x[i]*cos(h*i*k);
         end;
-        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,cosSum*2/length(x))^.appendReal(recycler,sinSum*2/length(x)),false);
+        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,cosSum/length(x))^.appendReal(recycler,sinSum/length(x)),false);
       end;
       setLength(x,0);
     end;
 
   begin
     result:=nil;
-    if (params^.size=2) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
-       and (arg1^.literalType=lt_smallint)
-       and (int1^.intValue>=0)
+    if (params^.size>=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
     then begin
-      maxWaveNumber:=int1^.intValue;
+      if (params^.size=2) and (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) then maxWaveNumber:=int1^.intValue;
       if arg0^.literalType in [lt_numList,lt_realList,lt_intList]
-      then result:=calculateDFT
+      then begin
+        if maxWaveNumber=-1 then maxWaveNumber:=list0^.size-list0^.size div 2;
+        result:=calculateDFT;
+      end
       else begin
+        if maxWaveNumber=-1 then exit(nil);
         spline.create(list0,tokenLocation,context);
         result:=spline.getFourierCoefficients(maxWaveNumber,recycler);
         spline.cleanup(recycler);
