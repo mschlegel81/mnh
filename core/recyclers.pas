@@ -82,6 +82,7 @@ TYPE
 FUNCTION newRecycler:P_recycler;
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
+PROCEDURE cleanupRecyclerPools;
 IMPLEMENTATION
 USES mySys,mnh_settings;
 VAR recyclerPool:array of P_recycler;
