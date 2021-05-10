@@ -1,6 +1,16 @@
 type Key(k:IntList(2))->(k[0]>0) and (k[1]>0);
 
-compositeSeed(...)->([getEnv,systime,time]|...).serialize.sha256;
+compositeSeed(...)->([getEnv,systime,scriptTime]|...).serialize.sha256;
+
+private constructKeyPairFrom(p>2,q!=p)->begin
+  local lambda:=(p-1)*(q-1) div gcd(p-1,q-1);
+  local e:=65537;//intRandomGenerator(intRandom(2^64),2^17).filter({gcd(lambda,$e)==1}).head(1)[0];
+  local d:=modularInverse(e,lambda);
+  local keyPair:=[[p*q,d].toKey,[p*q,e].toKey];
+  cryptoWorks@keyPair
+  ?           keyPair
+  : void;
+end;
 
 @SuppressUnusedWarning
 //*Returns a list: [private key,public key] to be used with function crypt
@@ -22,16 +32,6 @@ cryptoWorks(privateKey:Key,publicKey:Key)->privateKey[0]==publicKey[0] AND begin
   local pt:=intRandom(privateKey[0],100);
   pt==pt.pMap({publicKey .rsaCrypt(privateKey.rsaCrypt($x))})
     ==pt.pMap({privateKey.rsaCrypt(publicKey .rsaCrypt($x))});
-end;
-
-private constructKeyPairFrom(p>2,q!=p)->begin
-  local lambda:=(p-1)*(q-1) div gcd(p-1,q-1);
-  local e:=65537;//intRandomGenerator(intRandom(2^64),2^17).filter({gcd(lambda,$e)==1}).head(1)[0];
-  local d:=modularInverse(e,lambda);
-  local keyPair:=[[p*q,d].toKey,[p*q,e].toKey];
-  cryptoWorks@keyPair
-  ?           keyPair
-  : void;
 end;
 
 rsaCrypt(key:Key,message>=0)->

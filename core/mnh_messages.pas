@@ -437,7 +437,7 @@ FUNCTION T_storedMessage.unreference: boolean;
     try
       result:=interlockedDecrement(refCount)<=0;
     except
-      writeln('?!?!?!?');
+      raise Exception.create('Error when trying to unreference message!');
     end;
   end;
 

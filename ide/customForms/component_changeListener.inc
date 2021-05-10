@@ -70,8 +70,8 @@ FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; CONST co
 
       if state_changeTriggered then begin
         if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
-        then tmp:=config_onChange^.evaluateToLiteral(location,@context,recycler,state_onChangeParam,nil).literal
-        else tmp:=config_onChange^.evaluateToLiteral(location,@context,recycler,nil                ,nil).literal;
+        then tmp:=config_onChange^.evaluateToLiteral(location,context,recycler,state_onChangeParam,nil).literal
+        else tmp:=config_onChange^.evaluateToLiteral(location,context,recycler,nil                ,nil).literal;
         if state_onChangeParam<>nil then recycler^.disposeLiteral(state_onChangeParam);
         if tmp<>nil then recycler^.disposeLiteral(tmp);
         state_changeTriggered:=false;
