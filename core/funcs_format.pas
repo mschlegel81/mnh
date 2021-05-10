@@ -447,6 +447,7 @@ FUNCTION format_imp intFuncSignature;
 {$ifdef fullVersion}VAR printfLoc:P_intFuncCallback;{$endif}
 FUNCTION printf_imp intFuncSignature;
   VAR preparedStatement:P_preparedFormatStatement;
+      textToPost: T_arrayOfString;
   begin
     result:=nil;
     if not(context^.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
@@ -459,7 +460,8 @@ FUNCTION printf_imp intFuncSignature;
         {$ifdef fullVersion}context^.callStackPop(nil);{$endif}
         exit(nil);
       end;
-      context^.messages^.postTextMessage(mt_printline,tokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler))));
+      textToPost:=formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler)));
+      context^.messages^.postTextMessage(mt_printline,tokenLocation,textToPost);
       dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context^.callStackPop(nil);{$endif}

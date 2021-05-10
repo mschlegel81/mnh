@@ -70,8 +70,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; CONST cont
       result:=inherited evaluate(location,context,recycler);
       if plotState.mouseMovedParam<>nil then begin
         if plotConfig.mouseMoved^.canApplyToNumberOfParameters(2)
-        then tmp:=plotConfig.mouseMoved^.evaluate(location,@context,recycler,plotState.mouseMovedParam).literal
-        else tmp:=plotConfig.mouseMoved^.evaluate(location,@context,recycler,nil).literal;
+        then tmp:=plotConfig.mouseMoved^.evaluate(location,context,recycler,plotState.mouseMovedParam).literal
+        else tmp:=plotConfig.mouseMoved^.evaluate(location,context,recycler,nil).literal;
         if tmp<>nil then recycler^.disposeLiteral(tmp);
         recycler^.disposeLiteral(plotState.mouseMovedParam);
         result:=true;
@@ -79,8 +79,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; CONST cont
 
       if plotState.mouseClickedParam<>nil then begin
         if plotConfig.mouseClicked^.canApplyToNumberOfParameters(2)
-        then tmp:=plotConfig.mouseClicked^.evaluate(location,@context,recycler,plotState.mouseClickedParam).literal
-        else tmp:=plotConfig.mouseClicked^.evaluate(location,@context,recycler,nil).literal;
+        then tmp:=plotConfig.mouseClicked^.evaluate(location,context,recycler,plotState.mouseClickedParam).literal
+        else tmp:=plotConfig.mouseClicked^.evaluate(location,context,recycler,nil).literal;
         if tmp<>nil then recycler^.disposeLiteral(tmp);
         recycler^.disposeLiteral(plotState.mouseClickedParam);
         result:=true;
