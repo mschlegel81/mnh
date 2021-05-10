@@ -13,3 +13,34 @@ circleIntersection(c0:Vector2d,r0,
   local Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
   [X+Y,X-Y];
 end;
+
+//*Returns true if the lines intersect, false otherwise
+linesIntersect(a0:NumericList(2),a1:NumericList(2),
+               b0:NumericList(2),b1:NumericList(2))->begin
+  local Q:=a1-a0; Q:=[-Q[1],Q[0]];
+  local P:=b0-a0;
+  local R:=b1-a0;
+  (Q*P).agg(+)*(Q*R).agg(+)<0 AND begin
+     Q:=b1-b0; Q:=[-Q[1],Q[0]];
+     P:=a0-b0;
+     R:=a1-b0;
+     (Q*P).agg(+)*(Q*R).agg(+)<0;
+  end;
+end;
+
+//*Returns the convex hull of the given set of points
+convexHull(points:List)->begin
+  local rest:=points.sort;
+  local P:=rest.head(1);
+
+  while(rest.size>0,begin
+    local dp:=P.size==1 ? [0,-1] : -P.trailing(2).agg(-); dp/=dp.euklideanNorm;
+    local q:=P.trailing;
+    local i:=rest.map((p)->begin local delta:=p-q; (delta/delta.euklideanNorm*dp).agg(+); end).argMax;
+    P||=rest[i];
+    i==0
+    ? return P
+    : rest[i]:=void;
+  end);
+  P;
+end;
