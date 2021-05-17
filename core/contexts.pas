@@ -523,6 +523,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers(CONST recycler:P_recycler);
   VAR timeout:double;
   begin
     timeout:=now+TIME_OUT_AFTER;
+    globalMessages^.setStopFlag;
     primaryContext.messages^.setStopFlag;
     while (now<timeout) and ((primaryContext.related.childCount>0) or (length(taskQueue.subQueue)>0)) do begin
       while (now<timeout) and taskQueue.activeDeqeue(recycler) do begin end;

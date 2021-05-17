@@ -1137,6 +1137,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
 FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler):boolean;
   VAR i:longint;
   begin
+    //TODO : writeDataStores must be transactional! (All or none)
     result:=ruleMap.writeBackDatastores(messages,literalRecycler);
     if recurse then for i:=0 to length(packageUses)-1 do if packageUses[i].pack^.writeDataStores(messages,recurse,literalRecycler) then result:=true;
   end;
