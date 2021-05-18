@@ -498,7 +498,6 @@ FUNCTION cross_impl intFuncSignature;
     end;
   end;
 
-{$ifdef fullVersion}VAR groupLoc:P_intFuncCallback;{$endif}
 FUNCTION group_imp intFuncSignature;
   VAR listToGroup:P_listLiteral;
       keyList:T_arrayOfLiteral;
@@ -564,27 +563,20 @@ FUNCTION group_imp intFuncSignature;
       ((params^.size=2) or (arg2^.literalType=lt_expression))
     then begin
       listToGroup:=P_listLiteral(arg0);
-
+      if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
+                          else aggregator:=nil;
       if arg1^.literalType in [lt_smallint,lt_bigint]
       then begin
         initialize(keyList);
         makeKeysByIndex(int1^.intValue);
       end else keyList:=list1^.forcedIteratableList(recycler);
 
-      if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
-                          else aggregator:=nil;
-      {$ifdef fullVersion}
-      if (aggregator<>nil) then context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(groupLoc,false),nil);
-      {$endif}
       result:=newMapLiteral(0);
       groupMap:=P_mapLiteral(result)^.underlyingMap;
       for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       recycler^.disposeLiteral(keyList);
       P_mapLiteral(result)^.ensureType;
-      {$ifdef fullVersion}
-      if aggregator<>nil then context^.callStackPop(nil);
-      {$endif}
     end;
   end;
 
@@ -621,8 +613,11 @@ FUNCTION groupToList_imp intFuncSignature;
       end;
 
       for i:=0 to length(valueList)-1 do if allOkay then begin
-        key:=P_abstractIntLiteral(keyList[i])^.intValue;
-        if (key>=0) and (key<maxLongint) then begin
+        if keyList[i]^.literalType<>lt_smallint then begin
+          allOkay:=false;
+          key:=-1;
+        end else key:=P_smallIntLiteral(keyList[i])^.intValue;
+        if key>=0 then begin
           if key>=length(resultValues) then begin
             j0:=length(resultValues);
             setLength(resultValues,key+1);
@@ -702,7 +697,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2{$ifdef fullVersion},'getInner(L:List,index);'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     {$ifdef fullVersion},'indexOf(B:BooleanList);//Returns the indexes for which B is true.'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2{$ifdef fullVersion},'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)'{$endif});
-  {$ifdef fullVersion}groupLoc:={$endif}
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
                               'group',  @group_imp ,ak_variadic_2{$ifdef fullVersion},'group(list,grouping);//Re-groups list to a map by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif});
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
