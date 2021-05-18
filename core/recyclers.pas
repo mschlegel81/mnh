@@ -235,9 +235,7 @@ PROCEDURE T_recycler.cascadeDisposeToken(VAR p: P_token);
     while p<>nil do p:=disposeToken(p);
   end;
 
-FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation;
-  CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer
-  ): P_token;
+FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
