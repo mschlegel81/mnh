@@ -221,6 +221,7 @@ TYPE
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
       FUNCTION flushToGui(CONST forceFlush:boolean):T_messageTypeSet; virtual;
       PROCEDURE logPlotDone;
+      FUNCTION canStartGuiInteraction:boolean;
       PROCEDURE startGuiInteraction;
       PROCEDURE doneGuiInteraction;
       FUNCTION getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
@@ -1766,6 +1767,11 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
     end;
     plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
     if (message^.messageType=mt_plot_renderRequest) and (gui_started<>ide) then plotChangedSinceLastDisplay:=false;
+  end;
+
+FUNCTION T_plotSystem.canStartGuiInteraction:boolean;
+  begin
+    result:=tryEnterCriticalsection(adapterCs)<>0;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;

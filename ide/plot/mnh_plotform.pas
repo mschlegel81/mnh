@@ -140,7 +140,7 @@ TYPE
 
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
 IMPLEMENTATION
-USES sysutils, FileUtil,
+USES sysutils, FileUtil, myStringUtil,
      mnh_constants, basicTypes,
      recyclers,
      mnh_settings, litVar, funcs,
@@ -534,9 +534,12 @@ FUNCTION TplotForm.getIdeComponentType: T_ideComponent;
   end;
 
 PROCEDURE TplotForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
+  VAR start:double;
   begin
+    start:=now;
     if relatedPlot=nil then exit;
     if relatedPlot^.isPlotChanged then doPlot;
+    if (now-start)>ONE_SECOND then postIdeMessage('Slow update of plot took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE TplotForm.performFastUpdate;
@@ -545,9 +548,11 @@ PROCEDURE TplotForm.performFastUpdate;
     begin
       result:=intendedSecPerFrame[animationSpeedTrackbar.position];
     end;
+  VAR start:double;
   begin
+    start:=now;
     if relatedPlot=nil then exit;
-    relatedPlot^.startGuiInteraction;
+    if relatedPlot^.canStartGuiInteraction then
     try
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
@@ -580,6 +585,7 @@ PROCEDURE TplotForm.performFastUpdate;
     finally
       relatedPlot^.doneGuiInteraction;
     end;
+    if (now-start)>ONE_SECOND then postIdeMessage('Fast update of plot took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE TplotForm.dockChanged;

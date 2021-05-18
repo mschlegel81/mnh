@@ -701,6 +701,11 @@ PROCEDURE TIdeMainForm.onEndOfEvaluation;
   end;
 
 PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
+  VAR startOfTask:double;
+  PROCEDURE taskDone(name:string);
+    begin
+      if now-startOfTask>ONE_SECOND then postIdeMessage(name+' took a long time: '+myTimeToStr(now-startOfTask),true);
+    end;
 
   PROCEDURE slowUpdates;
     PROCEDURE drawMemoryUsage;
@@ -721,15 +726,25 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       if slowUpdating then exit;
       try
         slowUpdating:=true;
+        startOfTask:=now;
         if workspace.savingRequested then begin
           postIdeMessage('Saving settings',false);
           saveIdeSettings;
         end;
+        taskDone('Saving settings');
+
+        startOfTask:=now;
         performSlowUpdates(runnerModel.anyRunning(false));
+        taskDone('performSlowUpdates');
+
         drawMemoryUsage;
 
         FormDropFiles(Sender,ipcModel.getFilesToOpen);
+
+        startOfTask:=now;
         evaluationStateLabel.caption:=runnerModel.getStateLabel+BoolToStr(quitPosted,' QUIT POSTED','');
+        taskDone('Update evaluation state label');
+
         if quitPosted and not(anyEvaluationRunning) then begin
           OnCloseQuery:=nil;
           slowUpdating:=false;
@@ -763,9 +778,16 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
       if fastUpdating then exit;
       try
         fastUpdating:=true;
-        performFastUpdates;
-        runnerModel.flushMessages;
 
+        startOfTask:=now;
+        performFastUpdates;
+        taskDone('performFastUpdates');
+
+        startOfTask:=now;
+        runnerModel.flushMessages;
+        taskDone('Flush messages');
+
+        startOfTask:=now;
         edit:=workspace.currentEditor;
         if (edit<>nil) then begin
           openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
@@ -777,6 +799,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
           openRelatedSubmenu.enabled:=false;
         end;
+        taskDone('Process workspace messages');
 
         if Assigned(ActiveControl) and ActiveControl.ClassNameIs('TSynEdit') then EditLocationLabel.caption:=caretLabel(TSynEdit(ActiveControl));
 
