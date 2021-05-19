@@ -607,7 +607,6 @@ PROCEDURE T_abstractEvaluation.postHalt;
     recycler:=newRecycler;
     system.enterCriticalSection(evaluationCs);
     try
-      globals.primaryContext.messages^.setStopFlag;
       if eco_debugging in globals.options then globals.stepper^.haltEvaluation;
       globals.stopWorkers(recycler);
       stoppedByUser:=true;

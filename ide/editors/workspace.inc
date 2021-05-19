@@ -651,8 +651,9 @@ PROCEDURE T_workspace.closeCurrentFile;
   end;
 
 FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta:P_editorMeta=nil): boolean;
-  VAR toSave:P_editorMeta;
-      newName:string='';
+  VAR toSave       :P_editorMeta;
+      otherMeta    :P_editorMeta=nil;
+      newName      :string='';
       path,name,ext:string;
   begin
     if meta=nil
@@ -677,12 +678,19 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
       newName:=safeCallback(path,name,ext);
       if newName=''
       then exit(false)
-      else toSave^.fileInfo.filePath:=expandFileName(newName);
+      else begin
+        //It is possible that after saving we have two editors for the same file
+        otherMeta:=getExistingEditorForPath(newName);
+        toSave^.fileInfo.filePath:=expandFileName(newName);
+      end;
     end;
     enterCriticalSection(workspaceCs);
     try
+      if otherMeta<>nil then closeQuietly(otherMeta);
       toSave^.saveFile(newName);
       fileHistory.fileClosed(newName);
+      //If we closed another file, we may have switched tabs; so reactivate:
+      toSave^.activate;
     finally
       leaveCriticalSection(workspaceCs);
     end;
