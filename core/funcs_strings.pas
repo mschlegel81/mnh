@@ -72,13 +72,24 @@ FUNCTION bytes_internal(CONST literalRecycler:P_literalRecycler; CONST input:P_l
   end;
 
 FUNCTION chars_internal(CONST literalRecycler:P_literalRecycler; CONST input:P_literal):P_listLiteral;
-  VAR sub:ansistring;
+  VAR charIndex,
+      byteIndex:longint;
+      i:longint;
+      sub:string[8];
       literalValue:ansistring;
   begin
     if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(literalRecycler,input));
     literalValue:=P_stringLiteral(input)^.value;
     result:=literalRecycler^.newListLiteral;
-    for sub in literalValue do result^.appendString(literalRecycler,sub);
+    byteIndex:=1;
+    for charIndex:=1 to UTF8Length(literalValue) do begin
+      sub:='';
+      for i:=0 to UTF8CodepointSize(@(literalValue[byteIndex]))-1 do begin
+        sub+=P_stringLiteral(input)^.value[byteIndex];
+        inc(byteIndex)
+      end;
+      result^.appendString(literalRecycler,sub);
+    end;
   end;
 
 FUNCTION chars_imp intFuncSignature;
