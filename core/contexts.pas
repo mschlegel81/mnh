@@ -862,7 +862,6 @@ PROCEDURE T_workerThread.execute;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
-            not(primaryContext.messages^.continueEvaluation) or //error ocurred
             (getGlobalRunningThreads>settings.cpuCount);
       {$ifdef fullVersion}
       if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
