@@ -581,12 +581,13 @@ FUNCTION group_imp intFuncSignature;
 
 FUNCTION groupToList_imp intFuncSignature;
   VAR valueList   :T_arrayOfLiteral;
-      keyList     :T_arrayOfLiteral;
+      keyList     :array of longint;
       defaultValue:P_literal;
       aggregator  :P_expressionLiteral;
 
       temp        :P_literal;
       resultValues:T_arrayOfLiteral;
+      resultValueCount:longint=0;
       i,j0,j,key  :longint;
       allOkay     :boolean=true;
   begin
@@ -600,44 +601,50 @@ FUNCTION groupToList_imp intFuncSignature;
     then begin
 
       valueList   :=list0^.tempIteratableList;
-      keyList     :=list1^.tempIteratableList;
       defaultValue:=arg2;
       aggregator  :=P_expressionLiteral(arg3);
-
       if params^.size<=4
-      then setLength(resultValues,0)
-      else begin
-        setLength(resultValues,P_smallIntLiteral(params^.value[4])^.value);
-        for i:=0 to length(resultValues)-1 do resultValues[i]:=nil;
+      then resultValueCount:=0
+      else resultValueCount:=P_smallIntLiteral(params^.value[4])^.value;
+
+      setLength(keyList,list1^.size);
+      for i:=0 to list1^.size-1 do begin
+        temp:=list1^.value[i];
+        if (temp^.literalType=lt_bigint) then begin
+          allOkay:=false;
+          context^.raiseError('Index out of bounds in groupToList: '+temp^.toString,tokenLocation);
+        end else begin
+          key:=P_smallIntLiteral(temp)^.value;
+          keyList[i]:=key;
+          if key>resultValueCount then resultValueCount:=key;
+          if key<0 then begin
+            allOkay:=false;
+            context^.raiseError('Index out of bounds in groupToList: '+temp^.toString,tokenLocation);
+          end;
+        end;
+      end;
+      if not(allOkay) then begin
+        setLength(keyList,0);
+        setLength(valueList,0);
+        exit(nil);
       end;
 
+      setLength(resultValues,resultValueCount);
+      for i:=0 to length(resultValues)-1 do resultValues[i]:=nil;
+
       for i:=0 to length(valueList)-1 do if allOkay then begin
-        if keyList[i]^.literalType<>lt_smallint then begin
-          allOkay:=false;
-          key:=-1;
-        end else key:=P_smallIntLiteral(keyList[i])^.intValue;
-        if key>=0 then begin
-          if key>=length(resultValues) then begin
-            j0:=length(resultValues);
-            setLength(resultValues,key+1);
-            for j:=j0 to key-1 do resultValues[j]:=nil;
-            resultValues[key]:=valueList[i]^.rereferenced;
+        key:=keyList[i];
+        if resultValues[key]=nil
+        then resultValues[key]:=valueList[i]^.rereferenced
+        else begin
+          temp:=aggregator^.evaluateToLiteral(tokenLocation,context,recycler,resultValues[key],valueList[i]).literal;
+          if temp<>nil then begin
+            recycler^.disposeLiteral(resultValues[key]);
+            resultValues[key]:=temp;
           end else begin
-            if resultValues[key]=nil then resultValues[key]:=valueList[i]^.rereferenced
-            else begin
-              temp:=aggregator^.evaluateToLiteral(tokenLocation,context,recycler,resultValues[key],valueList[i]).literal;
-              if temp<>nil then begin
-                recycler^.disposeLiteral(resultValues[key]);
-                resultValues[key]:=temp;
-              end else begin
-                context^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
-                allOkay:=false;
-              end;
-            end;
+            context^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            allOkay:=false;
           end;
-        end else begin
-          context^.raiseError('Index out of bounds in groupToList: '+keyList[i]^.toString,tokenLocation);
-          allOkay:=false;
         end;
       end;
       if allOkay then begin
@@ -647,6 +654,8 @@ FUNCTION groupToList_imp intFuncSignature;
           then listResult^.append(recycler,defaultValue,true)
           else listResult^.append(recycler,temp,false);
       end;
+      setLength(keyList,0);
+      setLength(valueList,0);
       setLength(resultValues,0);
     end;
   end;
