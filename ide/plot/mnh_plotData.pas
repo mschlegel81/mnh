@@ -1953,6 +1953,7 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       m:P_storedMessage;
       start:double;
   begin
+    if collectedFill=0 then exit([]);
     start:=now;
     enterCriticalSection(adapterCs);
     setLength(toProcessInThisRun,collectedFill);

@@ -230,7 +230,7 @@ PROCEDURE T_guiPlotSystem.ensureForm(CONST dockToMain:boolean);
       if dockToMain
       then dockNewForm(myPlotForm)
       else myPlotForm.Show;
-    end else if dockToMain and myPlotForm.isDocked then myPlotForm.showComponent(true);
+    end else if dockToMain and myPlotForm.isDocked and not(myPlotForm.showing) then myPlotForm.showComponent(true);
   end;
 
 CONSTRUCTOR T_guiPlotSystem.create(CONST plotFormCaption: string);

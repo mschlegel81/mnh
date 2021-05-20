@@ -744,6 +744,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
   begin
     start:=now;
     result:=[];
+    if collectedFill=0 then exit([]);
     enterCriticalSection(adapterCs);
     recycler:=newRecycler;
     try
