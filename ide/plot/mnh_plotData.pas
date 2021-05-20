@@ -181,7 +181,6 @@ TYPE
       frame:array of P_plot;
       framesWithImagesAllocated:array[0..7] of P_plot;
       seriesCs:TRTLCriticalSection;
-      weHadAMemoryPanic:boolean;
       volatile:boolean;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
@@ -714,7 +713,6 @@ PROCEDURE T_plotSeries.clear(CONST isVolatile:boolean=false);
       setLength(frame,0);
       for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
       volatile:=isVolatile;
-      weHadAMemoryPanic:=false;
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -744,12 +742,9 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
-      if ideSettings.cacheAnimationFrames then begin
-        if not(memoryCleaner.isMemoryInComfortZone) then weHadAMemoryPanic:=true;
-        if weHadAMemoryPanic
-        then cacheMode:=fcm_inMemoryPng
-        else cacheMode:=fcm_retainImage;
-      end else cacheMode:=fcm_none;
+      if ideSettings.cacheAnimationFrames
+      then cacheMode:=fcm_retainImage
+      else cacheMode:=fcm_none;
       if (framesWithImagesAllocated[k]<>nil) then framesWithImagesAllocated[k]^.doneImage(cacheMode);
       //shift
       move(framesWithImagesAllocated[0],
@@ -862,7 +857,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifdef enable_render_threads}
         if result then begin
-          if not(weHadAMemoryPanic) and memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
+          if memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin
@@ -1711,7 +1706,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         else currentPlot.clear;
         animation.clear;
         if pullSettingsToGui<>nil then pullSettingsToGui();
-        animation.weHadAMemoryPanic:=false;
       end;
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);

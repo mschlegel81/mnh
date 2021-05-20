@@ -997,7 +997,7 @@ DESTRUCTOR T_subQueue.destroy;
 FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):longint;
   begin
     inc(queuedCount);
-    result:=0;
+    result:=1;
     if first=nil
     then first:=task
     else last^.nextToEvaluate:=task;
@@ -1076,6 +1076,10 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
       end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
         dec(queued);
+        if queued<0 then begin
+          postIdeMessage('QUEUE COUNT BELOW ZERO!',true);
+          queued:=0;
+        end;
       end;
     finally
       system.leaveCriticalSection(cs);
