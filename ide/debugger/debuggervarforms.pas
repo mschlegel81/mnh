@@ -35,7 +35,7 @@ VAR
 
 PROCEDURE ensureDebuggerVarForm;
 IMPLEMENTATION
-USES mnh_settings,basicTypes,editorMeta;
+USES mnh_settings,basicTypes,editorMeta,mnh_constants,contexts,myStringUtil;
 
 PROCEDURE ensureDebuggerVarForm;
   begin
@@ -70,6 +70,7 @@ PROCEDURE TDebuggerVarForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   end;
 
 PROCEDURE TDebuggerVarForm.performFastUpdate;
+  VAR start:double;
   PROCEDURE cleanup;
     begin
       VariablesTree.items.clear;
@@ -97,11 +98,13 @@ PROCEDURE TDebuggerVarForm.performFastUpdate;
     end;
 
   begin
+    start:=now;
     if debuggerVarFormIsDirty and (currentSnapshot<>nil) then begin
       updateWithCurrentSnapshot;
       debuggerVarFormIsDirty:=false;
     end else if (currentSnapshot=nil) and (VariablesTree.items.count>0) then
       cleanup;
+    if now-start>ONE_SECOND then postIdeMessage('Update of debugger variable form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE TDebuggerVarForm.StackGridDblClick(Sender: TObject);

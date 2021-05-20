@@ -61,6 +61,7 @@ PROCEDURE ensureQuickEvalForm;
 FUNCTION isQuickEvaluationRunning:boolean;
 PROCEDURE stopQuickEvaluation;
 IMPLEMENTATION
+USES mnh_constants,contexts,myStringUtil;
 PROCEDURE ensureQuickEvalForm;
   begin
     if not(hasFormOfType(icQuickEval,true)) then dockNewForm(TQuickEvalForm.create(Application));
@@ -151,7 +152,9 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
   VAR meta:P_editorMeta;
       proxy:P_editorMetaProxy;
       assistanceData:P_codeAssistanceResponse;
+      startTime:double;
   begin
+    startTime:=now;
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
     if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
@@ -171,6 +174,7 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
                                       inputMeta.getLines);
       evaluatedFor:=stateHash;
     end;
+    if now-startTime>ONE_SECOND then postIdeMessage('Update of quick-evaluation form took a long time: '+myTimeToStr(now-startTime),true);
   end;
 
 PROCEDURE TQuickEvalForm.quickInputEditChange(Sender: TObject);

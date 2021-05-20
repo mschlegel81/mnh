@@ -54,7 +54,7 @@ TYPE
 //TODO: Using the "halt evaluation" button/shortcut during debugging does not work as expected.
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot=nil);
 IMPLEMENTATION
-USES editorMeta,myGenerics,mnh_settings,mnh_messages;
+USES editorMeta,myGenerics,mnh_settings,mnh_messages,mnh_constants,contexts,myStringUtil;
 
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
@@ -120,20 +120,22 @@ PROCEDURE TDebuggerForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 PROCEDURE TDebuggerForm.performFastUpdate;
   VAR running:boolean;
       halted:boolean;
+      startTime:double;
 
-   PROCEDURE handleButton(VAR button:TBitBtn; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways,focusOnEnable:boolean);
-     VAR wasEnabledBefore:boolean;
-     begin
-       wasEnabledBefore:=button.enabled;
-       button.enabled:=enabled or enableAlways;
-       if enabled then button.ImageIndex:=enabledImageIndex
-                  else button.ImageIndex:=enabledImageIndex+1;
-       if button.enabled and not(wasEnabledBefore) and focusOnEnable and CanFocus then begin
-         button.SetFocus;
-       end;
+ PROCEDURE handleButton(VAR button:TBitBtn; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways,focusOnEnable:boolean);
+   VAR wasEnabledBefore:boolean;
+   begin
+     wasEnabledBefore:=button.enabled;
+     button.enabled:=enabled or enableAlways;
+     if enabled then button.ImageIndex:=enabledImageIndex
+                else button.ImageIndex:=enabledImageIndex+1;
+     if button.enabled and not(wasEnabledBefore) and focusOnEnable and CanFocus then begin
+       button.SetFocus;
      end;
+   end;
 
  begin
+   startTime:=now;
    running  :=runnerModel.anyRunning(false);
    halted   :=runnerModel.isMainEvaluationPaused and (currentSnapshot<>nil);
    handleButton(bbHalt       ,halted or running, 2           ,false,lastClickedButton=dontBreakAtAll);
@@ -144,6 +146,7 @@ PROCEDURE TDebuggerForm.performFastUpdate;
    handleButton(bbMicroStep  ,halted ,10                     ,false,lastClickedButton=breakSoonest);
 
    if not(running) and not(halted) and (inlineVariablesTreeView.items.count>0) then updateWithCurrentSnapshot;
+   if now-startTime>ONE_SECOND then postIdeMessage('Update of debugger form took a long time: '+myTimeToStr(now-startTime),true);
  end;
 
 PROCEDURE TDebuggerForm.tbHaltClick(Sender: TObject);
@@ -221,7 +224,7 @@ PROCEDURE TDebuggerForm.updateWithCurrentSnapshot;
         firstInLine:=false;
       end;
       currentExpressionEdit.lines.append(txt);
-      writeln('Ex: ',txt);
+      {$ifdef debugMode} writeln('Ex: ',txt); {$endif}
     end;
     setLength(tokens,0);
   end;

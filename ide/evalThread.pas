@@ -545,7 +545,7 @@ FUNCTION T_abstractEvaluation.isRunning: boolean;
 
 FUNCTION T_abstractEvaluation.flushMessages:T_messageTypeSet;
   begin
-    enterCriticalSection(evaluationCs);
+    if tryEnterCriticalsection(evaluationCs)<>0 then
     try
       result:=messages.flushToGui;
     finally

@@ -1940,7 +1940,9 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       i:longint;
       toProcessInThisRun:T_storedMessages=();
       m:P_storedMessage;
+      start:double;
   begin
+    start:=now;
     enterCriticalSection(adapterCs);
     setLength(toProcessInThisRun,collectedFill);
     for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
@@ -1965,6 +1967,7 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       end else processMessage(m);
       disposeMessage(m);
     end;
+    if now-start>ONE_SECOND then postIdeMessage('Flush of plot adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE T_plotSystem.logPlotDone;

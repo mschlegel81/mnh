@@ -136,7 +136,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES synOutAdapter,mnh_settings,ComCtrls;
+USES synOutAdapter,mnh_settings,ComCtrls,myStringUtil;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -499,7 +499,9 @@ PROCEDURE TscriptedForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 
 PROCEDURE TscriptedForm.performFastUpdate;
   VAR metaPointer:pointer;
+      startTime:double;
   begin
+    startTime:=now;
     if markedForCleanup or (tryEnterCriticalsection(lock)=0) then exit;
     try
       if processingEvents
@@ -510,6 +512,7 @@ PROCEDURE TscriptedForm.performFastUpdate;
     finally
       leaveCriticalSection(lock);
     end;
+    if now-startTime>ONE_SECOND then postIdeMessage('Update of scripted form took a long time: '+myTimeToStr(now-startTime),true);
   end;
 
 PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocation: T_tokenLocation; CONST setupContext: P_context; CONST recycler:P_literalRecycler; CONST relatedPlotAdapter: P_guiPlotSystem);

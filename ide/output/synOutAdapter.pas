@@ -81,7 +81,7 @@ TYPE
 PROCEDURE registerRedirector(CONST syn:P_eagerInitializedOutAdapter);
 PROCEDURE unregisterRedirector(CONST syn:P_eagerInitializedOutAdapter);
 IMPLEMENTATION
-USES ideLayoutUtil;
+USES ideLayoutUtil,contexts;
 VAR redirectors:array of P_eagerInitializedOutAdapter;
     redirected:T_messageTypeSet=[];
 
@@ -157,6 +157,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
       toProcessInThisRun:T_storedMessages;
       i,i0: longint;
       fullUpdateRequired:boolean=false;
+      start:double;
 
   PROCEDURE processMessage(CONST message: P_storedMessage);
     VAR j:longint;
@@ -201,6 +202,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
     end;
 
   begin
+    start:=now;
     if not(forceFlush or autoflush) then exit([]);
 
     enterCriticalSection(adapterCs);
@@ -245,6 +247,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
       end;
     end else result:=[];
     currentlyFlushing:=false;
+    if now-start>ONE_SECOND then postIdeMessage('Flush of output adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE T_abstractSynOutAdapter.flushClear;

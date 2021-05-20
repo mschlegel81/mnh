@@ -69,7 +69,7 @@ TYPE
 
 PROCEDURE ensureOutlineForm;
 IMPLEMENTATION
-USES tokenArray, mnh_messages;
+USES tokenArray, mnh_messages,contexts,myStringUtil;
 PROCEDURE ensureOutlineForm;
   begin
     if not(hasFormOfType(icOutline,true)) then dockNewForm(TOutlineForm.create(nil));
@@ -342,7 +342,9 @@ PROCEDURE TOutlineForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
 
 PROCEDURE TOutlineForm.performFastUpdate;
   VAR codeAssistanceResponse:P_codeAssistanceResponse;
+      startTime:double;
   begin
+    startTime:=now;
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
     if (codeAssistanceResponse<>caResponse) then begin
       if caResponse<>nil then disposeMessage(caResponse);
@@ -350,6 +352,7 @@ PROCEDURE TOutlineForm.performFastUpdate;
       updateOutlineTree;
     end else if codeAssistanceResponse<>nil then disposeMessage(codeAssistanceResponse);
     setComponentFormVisible(caResponse<>nil);
+    if now-startTime>ONE_SECOND then postIdeMessage('Update of outline form took a long time: '+myTimeToStr(now-startTime),true);
   end;
 
 PROCEDURE TOutlineForm.dockChanged;
