@@ -61,7 +61,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES editorMeta,mnh_settings;
+USES editorMeta,mnh_settings,mnh_constants,contexts,myStringUtil;
 {$R *.lfm}
 VAR myProfilingForm:TprofilingOutputForm=nil;
 FUNCTION ensureProfileView:TprofilingOutputForm;
@@ -82,7 +82,9 @@ CONSTRUCTOR T_profileAdapter.create(CONST fullIdeMode:boolean);
 
 FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSet;
   VAR i:longint;
+      start:double;
   begin
+    start:=now;
     result:=[];
     enterCriticalSection(adapterCs);
     try
@@ -103,6 +105,7 @@ FUNCTION T_profileAdapter.flushToGui(CONST forceFlush: boolean): T_messageTypeSe
     finally
       leaveCriticalSection(adapterCs);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of profiling adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid2HeaderClick(Sender: TObject;

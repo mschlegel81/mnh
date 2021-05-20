@@ -19,6 +19,7 @@ TYPE
   end;
 
 IMPLEMENTATION
+USES sysutils,contexts,myStringUtil;
 CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
   begin
     inherited create(at_guiEventsCollector,
@@ -31,7 +32,9 @@ CONSTRUCTOR T_guiEventsAdapter.create(CONST guiForm: T_mnhIdeForm);
 
 FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR i:longint;
+      start:double;
   begin
+    start:=now;
     system.enterCriticalSection(adapterCs);
     try
       result:=[];
@@ -48,6 +51,7 @@ FUNCTION T_guiEventsAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeS
     finally
       system.leaveCriticalSection(adapterCs);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of IDE adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 end.

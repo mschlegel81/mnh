@@ -149,7 +149,9 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR i:longint;
       tab:TtableForm;
       caption:string;
+      start:double;
   begin
+    start:=now;
     result:=[];
     enterCriticalSection(adapterCs);
     try
@@ -178,6 +180,7 @@ FUNCTION T_tableAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
     finally
       leaveCriticalSection(adapterCs);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of table adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 FUNCTION T_tableDisplayRequest.internalType: shortstring;

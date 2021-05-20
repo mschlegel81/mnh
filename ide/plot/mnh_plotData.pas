@@ -1978,7 +1978,7 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       end else processMessage(m);
       disposeMessage(m);
     end;
-    if now-start>ONE_SECOND then postIdeMessage('Flush of plot adapter form took a long time: '+myTimeToStr(now-start),true);
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of plot adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE T_plotSystem.logPlotDone;

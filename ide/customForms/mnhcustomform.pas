@@ -740,7 +740,9 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
   VAR i,k:longint;
       newForm:TscriptedForm;
       recycler:P_recycler;
+      start:double;
   begin
+    start:=now;
     result:=[];
     enterCriticalSection(adapterCs);
     recycler:=newRecycler;
@@ -775,6 +777,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
       leaveCriticalSection(adapterCs);
       freeRecycler(recycler);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of custom form adapter took a long time: '+myTimeToStr(now-start),true);
   end;
 
 DESTRUCTOR T_customFormAdapter.destroy;

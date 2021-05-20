@@ -247,7 +247,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
       end;
     end else result:=[];
     currentlyFlushing:=false;
-    if now-start>ONE_SECOND then postIdeMessage('Flush of output adapter form took a long time: '+myTimeToStr(now-start),true);
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of output adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE T_abstractSynOutAdapter.flushClear;
