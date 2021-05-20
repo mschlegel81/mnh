@@ -1050,7 +1050,7 @@ FUNCTION integrate_impl intFuncSignature;
     end;
 
   FUNCTION integrate_inner(CONST x0,dx,f0,f2,f4:double):double;
-    VAR simpson,f1,f3,errorEstimate:double;
+    VAR Simpson,f1,f3,errorEstimate:double;
     begin
       f1:=evalF(x0+dx*0.25);
       f3:=evalF(x0+dx*0.75);
@@ -1080,7 +1080,7 @@ FUNCTION integrate_impl intFuncSignature;
       if      pointCount>1000 then pointCount:=1000
       else if pointCount<1    then pointCount:=1;
       dx:=(x1-x0)/pointCount;
-      for i:=0 to longint(pointcount-1) do if context^.continueEvaluation then begin
+      for i:=0 to longint(pointCount-1) do if context^.continueEvaluation then begin
         if i>0
         then f0:=f1
         else f0:=evalF(x0+dx* i   );

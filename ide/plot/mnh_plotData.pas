@@ -1771,17 +1771,34 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
 
 FUNCTION T_plotSystem.canStartGuiInteraction:boolean;
   begin
-    result:=tryEnterCriticalsection(adapterCs)<>0;
+    if tryEnterCriticalsection(adapterCs)<>0 then begin
+      if tryEnterCriticalsection(animation.seriesCs)<>0 then begin
+        if tryEnterCriticalsection(currentPlot.cs)<>0 then begin
+          result:=true;
+        end else begin
+          leaveCriticalSection(animation.seriesCs);
+          leaveCriticalSection(adapterCs);
+          result:=false;
+        end;
+      end else begin
+        leaveCriticalSection(adapterCs);
+        result:=false;
+      end;
+    end else result:=false;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;
   begin
     enterCriticalSection(adapterCs);
+    enterCriticalSection(animation.seriesCs);
+    enterCriticalSection(currentPlot.cs);
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
     leaveCriticalSection(adapterCs);
+    leaveCriticalSection(animation.seriesCs);
+    leaveCriticalSection(currentPlot.cs);
   end;
 
 FUNCTION T_plotSystem.isEmpty:boolean;
