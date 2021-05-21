@@ -295,8 +295,11 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
+    BUILTIN_WRITE_DATA_STORES,
+    BUILTIN_WRITE_ALL_DATA_STORES,
+    BUILTIN_INSPECT:P_intFuncCallback;
 IMPLEMENTATION
-USES sysutils,{$ifdef fullVersion}strutils,messageFormatting,{$endif}math,subrules,profiling,typinfo,patterns;
+USES sysutils,{$ifdef fullVersion}strutils,messageFormatting,{$endif}math,subrules,profiling,typinfo,patterns,funcs_ipc;
 
 TYPE
 T_scopeType=(sc_block,sc_each,sc_bracketOnly);
@@ -1652,7 +1655,11 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
     begin
       if (tok<>nil) and
          (tok^.tokType=tt_intrinsicRule) and
-         (tok^.data=pointer(BUILTIN_MYPATH))
+         ((tok^.data=pointer(BUILTIN_MYPATH)) or
+          (tok^.data=pointer(BUILTIN_ASSERTUNIQUEINSTANCE)) or
+          (tok^.data=pointer(BUILTIN_INSPECT)) or
+          (tok^.data=pointer(BUILTIN_WRITE_ALL_DATA_STORES)) or
+          (tok^.data=pointer(BUILTIN_WRITE_DATA_STORES)))
       then tok^.location.package:=associatedPackage;
       tokenQueue.append(tok);
     end;

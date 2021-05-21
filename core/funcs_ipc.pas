@@ -1,6 +1,7 @@
 UNIT funcs_ipc;
 INTERFACE
-USES basicTypes;
+USES basicTypes,funcs;
+VAR BUILTIN_ASSERTUNIQUEINSTANCE:P_intFuncCallback;
 IMPLEMENTATION
 USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil,
@@ -11,8 +12,7 @@ USES sysutils, Classes, simpleipc, //RTL
      litVar,
      contexts,
      tokenArray,
-     recyclers,
-     funcs;
+     recyclers;
 TYPE
   T_myIpcServer=class(T_detachedEvaluationPart)
     private
@@ -457,6 +457,7 @@ INITIALIZATION
   initialize(localServerCs);
   initCriticalSection(localServerCs);
   localServers.create();
+  BUILTIN_ASSERTUNIQUEINSTANCE:=
   builtinFunctionMap.registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   {$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});
   builtinFunctionMap.registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary    {$ifdef fullVersion},'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server'{$endif});
   builtinFunctionMap.registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary    {$ifdef fullVersion},'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server'{$endif});
