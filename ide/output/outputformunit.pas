@@ -83,7 +83,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES editorMeta,basicTypes;
+USES editorMeta,basicTypes,myStringUtil,mnh_constants,contexts;
 
 {$R *.lfm}
 
@@ -227,13 +227,16 @@ PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
   end;
 
 PROCEDURE TOutputForm.performFastUpdate;
+  VAR startTime:double;
   begin
+    startTime:=now;
     adapter^.jumpToEnd:=cbShowOnOutput.checked;
     if not(cbFreezeOutput.checked) then begin
       if (adapter^.flushToGui(true)<>[])
       and (cbShowOnOutput.checked)
       then showComponent(true);
     end;
+    if now-startTime>ONE_SECOND then postIdeMessage('Update of output form took a long time: '+myTimeToStr(now-startTime),true);
   end;
 
 PROCEDURE TOutputForm.dockChanged;

@@ -181,7 +181,6 @@ TYPE
       frame:array of P_plot;
       framesWithImagesAllocated:array[0..7] of P_plot;
       seriesCs:TRTLCriticalSection;
-      weHadAMemoryPanic:boolean;
       volatile:boolean;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
@@ -714,7 +713,6 @@ PROCEDURE T_plotSeries.clear(CONST isVolatile:boolean=false);
       setLength(frame,0);
       for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
       volatile:=isVolatile;
-      weHadAMemoryPanic:=false;
     finally
       leaveCriticalSection(seriesCs);
     end;
@@ -744,12 +742,9 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one
       k:=length(framesWithImagesAllocated)-1;
-      if ideSettings.cacheAnimationFrames then begin
-        if not(memoryCleaner.isMemoryInComfortZone) then weHadAMemoryPanic:=true;
-        if weHadAMemoryPanic
-        then cacheMode:=fcm_inMemoryPng
-        else cacheMode:=fcm_retainImage;
-      end else cacheMode:=fcm_none;
+      if ideSettings.cacheAnimationFrames
+      then cacheMode:=fcm_retainImage
+      else cacheMode:=fcm_none;
       if (framesWithImagesAllocated[k]<>nil) then framesWithImagesAllocated[k]^.doneImage(cacheMode);
       //shift
       move(framesWithImagesAllocated[0],
@@ -862,7 +857,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifdef enable_render_threads}
         if result then begin
-          if not(weHadAMemoryPanic) and memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
+          if memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
             if cycle then lastToPrepare:=frameIndex+length(frame)-1
                      else lastToPrepare:=           length(frame)-1;
           end else begin
@@ -1711,7 +1706,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         else currentPlot.clear;
         animation.clear;
         if pullSettingsToGui<>nil then pullSettingsToGui();
-        animation.weHadAMemoryPanic:=false;
       end;
       mt_plot_addText:
         currentPlot.addCustomText(P_addTextMessage(message)^.customText);
@@ -1771,17 +1765,34 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
 
 FUNCTION T_plotSystem.canStartGuiInteraction:boolean;
   begin
-    result:=tryEnterCriticalsection(adapterCs)<>0;
+    if tryEnterCriticalsection(adapterCs)<>0 then begin
+      if tryEnterCriticalsection(animation.seriesCs)<>0 then begin
+        if tryEnterCriticalsection(currentPlot.cs)<>0 then begin
+          result:=true;
+        end else begin
+          leaveCriticalSection(animation.seriesCs);
+          leaveCriticalSection(adapterCs);
+          result:=false;
+        end;
+      end else begin
+        leaveCriticalSection(adapterCs);
+        result:=false;
+      end;
+    end else result:=false;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;
   begin
     enterCriticalSection(adapterCs);
+    enterCriticalSection(animation.seriesCs);
+    enterCriticalSection(currentPlot.cs);
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
     leaveCriticalSection(adapterCs);
+    leaveCriticalSection(animation.seriesCs);
+    leaveCriticalSection(currentPlot.cs);
   end;
 
 FUNCTION T_plotSystem.isEmpty:boolean;
@@ -1940,7 +1951,10 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       i:longint;
       toProcessInThisRun:T_storedMessages=();
       m:P_storedMessage;
+      start:double;
   begin
+    if collectedFill=0 then exit([]);
+    start:=now;
     enterCriticalSection(adapterCs);
     setLength(toProcessInThisRun,collectedFill);
     for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
@@ -1965,6 +1979,7 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
       end else processMessage(m);
       disposeMessage(m);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of plot adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 PROCEDURE T_plotSystem.logPlotDone;

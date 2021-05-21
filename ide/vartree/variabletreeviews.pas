@@ -53,7 +53,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES recyclers;
+USES recyclers,myStringUtil;
 {$R *.lfm}
 
 FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
@@ -88,7 +88,9 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR tree:TVarTreeViewForm;
       caption:string;
       i:longint;
+      start:double;
   begin
+    start:=now;
     result:=[];
     enterCriticalSection(adapterCs);
     try
@@ -116,6 +118,7 @@ FUNCTION T_treeAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
     finally
       leaveCriticalSection(adapterCs);
     end;
+    if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of tree-view adapter form took a long time: '+myTimeToStr(now-start),true);
   end;
 
 FUNCTION T_treeDisplayRequest.internalType: shortstring;

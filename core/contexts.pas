@@ -847,8 +847,10 @@ PROCEDURE T_workerThread.execute;
       repeat
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
+          if (getGlobalRunningThreads>settings.cpuCount)
+          then threadSleepMillis(10)
+          else sleep(1);
           inc(sleepCount);
-          sleep(1);
         end else begin
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
@@ -862,8 +864,7 @@ PROCEDURE T_workerThread.execute;
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
-            not(primaryContext.messages^.continueEvaluation) or //error ocurred
-            (getGlobalRunningThreads>settings.cpuCount);
+            (taskQueue.poolThreadsRunning>settings.cpuCount);
       {$ifdef fullVersion}
       if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
       {$endif}
@@ -998,7 +999,7 @@ DESTRUCTOR T_subQueue.destroy;
 FUNCTION T_subQueue.enqueue(CONST task: P_queueTask):longint;
   begin
     inc(queuedCount);
-    result:=0;
+    result:=1;
     if first=nil
     then first:=task
     else last^.nextToEvaluate:=task;
@@ -1021,14 +1022,14 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
 PROCEDURE T_taskQueue.ensurePoolThreads();
   VAR spawnCount:longint=0;
   begin
-    while (getGlobalRunningThreads<settings.cpuCount) and
+    while (poolThreadsRunning<settings.cpuCount) and
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
       spawnCount+=1;
       T_workerThread.create(parent);
     end;
-    {$ifdef fullVersion} {$ifdef debugMode}
+    {$ifdef fullVersion}
     if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false);
-    {$endif} {$endif}
+    {$endif}
   end;
 
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
@@ -1056,6 +1057,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     try
       queued+=ensureQueue^.enqueue(task);
       ensurePoolThreads();
+      if queued>500 then postIdeMessage('High queued count: '+intToStr(queued),queued>1000);
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -1077,6 +1079,10 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
       end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
         dec(queued);
+        if queued<0 then begin
+          postIdeMessage('QUEUE COUNT BELOW ZERO!',true);
+          queued:=0;
+        end;
       end;
     finally
       system.leaveCriticalSection(cs);
