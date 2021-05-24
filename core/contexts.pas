@@ -1057,7 +1057,9 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     try
       queued+=ensureQueue^.enqueue(task);
       ensurePoolThreads();
+      {$ifdef fullVersion}
       if queued>500 then postIdeMessage('High queued count: '+intToStr(queued),queued>1000);
+      {$endif}
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -1080,7 +1082,9 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
         result:=subQueue[k]^.dequeue(emptyAfter);
         dec(queued);
         if queued<0 then begin
+          {$ifdef fullVersion}
           postIdeMessage('QUEUE COUNT BELOW ZERO!',true);
+          {$endif}
           queued:=0;
         end;
       end;
