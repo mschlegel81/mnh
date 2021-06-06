@@ -846,10 +846,13 @@ PROCEDURE T_workerThread.execute;
     with globals^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
+        if (getGlobalRunningThreads>settings.cpuCount)
+        then begin
+          threadSleepMillis(10);
+          inc(sleepCount,10);
+        end;
         if currentTask=nil then begin
-          if (getGlobalRunningThreads>settings.cpuCount)
-          then threadSleepMillis(10)
-          else sleep(1);
+          sleep(1);
           inc(sleepCount);
         end else begin
           if currentTask^.isVolatile then begin

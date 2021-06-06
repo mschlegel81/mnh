@@ -1,11 +1,12 @@
 object plotForm: TplotForm
   Left = 348
-  Height = 301
+  Height = 376
   Top = 189
-  Width = 467
+  Width = 584
   Caption = 'MNH plot'
-  ClientHeight = 281
-  ClientWidth = 467
+  ClientHeight = 351
+  ClientWidth = 584
+  DesignTimePPI = 120
   Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate
@@ -20,9 +21,9 @@ object plotForm: TplotForm
   object plotImage: TImage
     Cursor = crCross
     Left = 0
-    Height = 213
-    Top = 45
-    Width = 467
+    Height = 266
+    Top = 56
+    Width = 584
     Align = alClient
     OnMouseDown = plotImageMouseDown
     OnMouseMove = plotImageMouseMove
@@ -31,33 +32,33 @@ object plotForm: TplotForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 258
-    Width = 467
+    Height = 29
+    Top = 322
+    Width = 584
     Panels = <>
     ParentFont = False
     PopupMenu = PopupMenu1
   end
   object AnimationGroupBox: TGroupBox
     Left = 0
-    Height = 45
+    Height = 56
     Top = 0
-    Width = 467
+    Width = 584
     Align = alTop
     Anchors = []
     AutoSize = True
     Caption = 'Animation'
-    ClientHeight = 25
-    ClientWidth = 463
+    ClientHeight = 31
+    ClientWidth = 580
     ParentFont = False
     PopupMenu = PopupMenu1
     TabOrder = 1
     OnKeyUp = tabNextKeyHandling
     object animateCheckBox: TCheckBox
       Left = 0
-      Height = 25
+      Height = 31
       Top = 0
-      Width = 63
+      Width = 78
       Align = alLeft
       Caption = 'animate'
       OnKeyUp = tabNextKeyHandling
@@ -66,10 +67,10 @@ object plotForm: TplotForm
       TabOrder = 0
     end
     object animationSpeedTrackbar: TTrackBar
-      Left = 110
-      Height = 25
+      Left = 135
+      Height = 31
       Top = 0
-      Width = 67
+      Width = 84
       Position = 6
       Align = alLeft
       OnKeyUp = tabNextKeyHandling
@@ -78,10 +79,10 @@ object plotForm: TplotForm
       TabOrder = 2
     end
     object animationFPSLabel: TLabel
-      Left = 177
-      Height = 25
+      Left = 219
+      Height = 31
       Top = 0
-      Width = 15
+      Width = 20
       Align = alLeft
       Caption = '     '
       ParentColor = False
@@ -89,10 +90,10 @@ object plotForm: TplotForm
       PopupMenu = PopupMenu1
     end
     object frameTrackBar: TTrackBar
-      Left = 192
-      Height = 25
+      Left = 239
+      Height = 31
       Top = 0
-      Width = 265
+      Width = 333
       Frequency = 5
       OnChange = frameTrackBarChange
       Position = 0
@@ -103,10 +104,10 @@ object plotForm: TplotForm
       TabOrder = 3
     end
     object cycleCheckbox: TCheckBox
-      Left = 63
-      Height = 25
+      Left = 78
+      Height = 31
       Top = 0
-      Width = 47
+      Width = 57
       Align = alLeft
       Caption = 'cycle'
       OnKeyUp = tabNextKeyHandling
@@ -115,10 +116,10 @@ object plotForm: TplotForm
       TabOrder = 1
     end
     object frameIndexLabel: TLabel
-      Left = 457
-      Height = 25
+      Left = 572
+      Height = 31
       Top = 0
-      Width = 6
+      Width = 8
       Align = alRight
       Caption = '0'
       ParentColor = False
@@ -127,8 +128,8 @@ object plotForm: TplotForm
     end
   end
   object MainMenu: TMainMenu
-    Left = 27
-    Top = 21
+    Left = 34
+    Top = 26
     object MenuItem6: TMenuItem
       Caption = '&Plot'
       object miAutoReset: TMenuItem
@@ -216,7 +217,7 @@ object plotForm: TplotForm
     end
   end
   object PopupMenu1: TPopupMenu
-    Left = 143
-    Top = 82
+    Left = 179
+    Top = 103
   end
 end
