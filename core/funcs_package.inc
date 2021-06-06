@@ -272,16 +272,24 @@ FUNCTION inspectAll_imp intFuncSignature;
   end;
 
 FUNCTION writeAllDataStores_imp intFuncSignature;
+  VAR flush:T_datastoreFlush;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler));
+      flush.create;
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler,flush));
+      flush.finalize(context^.messages,recycler);
+      flush.destroy;
     end else result:=nil;
   end;
 
 FUNCTION writeDataStores_imp intFuncSignature;
+  VAR flush:T_datastoreFlush;
   begin
     if (params=nil) or (params^.size=0) then begin
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler));
+      flush.create;
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler,flush));
+      flush.finalize(context^.messages,recycler);
+      flush.destroy;
     end else result:=nil;
   end;
 

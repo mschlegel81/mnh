@@ -206,7 +206,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; VAR meta_:T_ruleMetaData; CONST datastorePackage:P_objectWithPath; CONST isPrivate:boolean; CONST variableType:T_variableType);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal; virtual;
-      FUNCTION writeBack(CONST adapters:P_messages; CONST literalRecycler:P_literalRecycler):boolean;
+      FUNCTION writeBackToTemp(CONST adapters:P_messages; VAR flush:T_datastoreFlush):boolean;
       PROCEDURE memoryCleanup;
       FUNCTION getValue(CONST context:P_context; CONST recycler:P_recycler):P_literal; virtual;
   end;
@@ -249,7 +249,7 @@ TYPE
       FUNCTION getLocalMain:P_rule;
       FUNCTION getAllLocalRules:T_ruleList;
       PROCEDURE executeAfterRules(CONST context:P_context; CONST recycler:P_recycler);
-      FUNCTION writeBackDatastores(CONST messages:P_messages; CONST literalRecycler:P_literalRecycler):boolean;
+      FUNCTION writeBackDatastores(CONST messages:P_messages; CONST literalRecycler:P_literalRecycler; VAR flush:T_datastoreFlush):boolean;
       FUNCTION getTypeMap:T_typeMap;
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION inspect(CONST context:P_context; CONST recycler:P_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
@@ -710,14 +710,14 @@ PROCEDURE T_ruleMap.executeAfterRules(CONST context:P_context;
     for s in afterRules do s^.evaluate(packageTokenLocation(localPackage),context,recycler,nil);
   end;
 
-FUNCTION T_ruleMap.writeBackDatastores(CONST messages: P_messages; CONST literalRecycler:P_literalRecycler):boolean;
+FUNCTION T_ruleMap.writeBackDatastores(CONST messages: P_messages; CONST literalRecycler:P_literalRecycler; VAR flush:T_datastoreFlush):boolean;
   VAR entry:T_ruleMapEntry;
   begin
     result:=false;
     for entry in valueSet do
     if not(entry.isImported) and (entry.entryType=tt_globalVariable) and (P_variable(entry.value)^.varType in [vt_datastore,vt_plainDatastore])
     then begin
-      if P_datastore(entry.value)^.writeBack(messages,literalRecycler) then result:=true;
+      if P_datastore(entry.value)^.writeBackToTemp(messages,flush) then result:=true;
     end;
   end;
 
@@ -1695,13 +1695,12 @@ FUNCTION T_datastore.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_lite
     result:=inherited mutateInline(mutation,RHS,location,context,recycler);
   end;
 
-FUNCTION T_datastore.writeBack(CONST adapters:P_messages; CONST literalRecycler:P_literalRecycler):boolean;
+FUNCTION T_datastore.writeBackToTemp(CONST adapters:P_messages; VAR flush:T_datastoreFlush):boolean;
   VAR L:P_literal;
   begin
     if adapters^.continueEvaluation and (state=vs_modified) then begin
       L:=namedValue.getValue;
-      dataStoreMeta.writeValue(L,getLocation,adapters,varType=vt_plainDatastore,literalRecycler);
-      literalRecycler^.disposeLiteral(L);
+      flush.addStoreToFlush(@dataStoreMeta,L,getLocation,varType=vt_plainDatastore);
       state:=vs_inSyncWithFile;
       result:=true;
     end else result:=false;

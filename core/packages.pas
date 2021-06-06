@@ -30,6 +30,7 @@ USES //my utilities:
      subrules,
      rules,
      recyclers,
+     datastores,
      tokenArray;
 
 {$define include_interface}
@@ -73,7 +74,7 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       {$endif}
-      FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler):boolean;
+      FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler; VAR flush:T_datastoreFlush):boolean;
       public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
       private
@@ -1134,20 +1135,25 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     readyForUsecase:=lu_NONE;
   end;
 
-FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler):boolean;
+FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler; VAR flush:T_datastoreFlush):boolean;
   VAR i:longint;
   begin
-    //TODO : writeDataStores must be transactional! (All or none)
-    result:=ruleMap.writeBackDatastores(messages,literalRecycler);
-    if recurse then for i:=0 to length(packageUses)-1 do if packageUses[i].pack^.writeDataStores(messages,recurse,literalRecycler) then result:=true;
+    result:=ruleMap.writeBackDatastores(messages,literalRecycler,flush);
+    if recurse then for i:=0 to length(packageUses)-1 do if packageUses[i].pack^.writeDataStores(messages,recurse,literalRecycler,flush) then result:=true;
   end;
 
 PROCEDURE T_package.finalize(CONST context:P_context; CONST recycler:P_recycler);
   VAR i:longint;
+      flush:T_datastoreFlush;
   begin
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
     ruleMap.executeAfterRules(context,recycler);
-    ruleMap.writeBackDatastores(context^.messages,recycler);
+    if isMain then begin
+      flush.create;
+      writeDataStores(context^.messages,true,recycler,flush);
+      flush.finalize(context^.messages,recycler);
+      flush.destroy;
+    end;
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string;

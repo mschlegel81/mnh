@@ -121,7 +121,7 @@ TYPE
     fpsSamplingStart:TimerData;
     secondsPerFrameOverhead:double;
     secondsPerFrame:double;
-    eTimer:TEpikTimer;
+    framesTimer:TEpikTimer;
 
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
@@ -313,11 +313,11 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
-    eTimer:=TEpikTimer.create(self);
-    eTimer.clear;
-    eTimer.start;
-    eTimer.clear(fpsSamplingStart);
-    eTimer.start(fpsSamplingStart);
+    framesTimer:=TEpikTimer.create(self);
+    framesTimer.clear;
+    framesTimer.start;
+    framesTimer.clear(fpsSamplingStart);
+    framesTimer.start(fpsSamplingStart);
     initDockMenuItems(MainMenu,nil);
     initDockMenuItems(PopupMenu1,nil);
     registerFontControl(StatusBar,ctGeneral);
@@ -548,6 +548,17 @@ PROCEDURE TplotForm.performFastUpdate;
     begin
       result:=intendedSecPerFrame[animationSpeedTrackbar.position];
     end;
+
+  PROCEDURE updateSecondsPerFrame;
+    CONST weights:array[0..10] of double=(0.0,0.17328679513998632,0.40235947810852507,0.57564627324851136,0.6770125502755525,0.7489330683884977,0.8047189562170501,0.85029934541553887,0.92221986352848406,0.97800575135703649,0.97800575135703649);
+    VAR w:double;
+    begin
+      w:=weights[animationSpeedTrackbar.position];
+      secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9+0.1*(framesTimer.elapsed(fpsSamplingStart)-frameInterval);
+      if secondsPerFrameOverhead<0 then secondsPerFrameOverhead:=0;
+      secondsPerFrame:=secondsPerFrame*w+(1-w)*(framesTimer.elapsed(fpsSamplingStart));
+    end;
+
   VAR start:double;
   begin
     start:=now;
@@ -557,19 +568,17 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
-          (frameInterval-eTimer.elapsed-secondsPerFrameOverhead<0.05) and
+          (frameInterval-framesTimer.elapsed-secondsPerFrameOverhead<0.05) and
           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(eTimer,frameInterval-secondsPerFrameOverhead));
-          eTimer.clear;
-          eTimer.start;
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead));
+          framesTimer.clear;
+          framesTimer.start;
           //FPS label:
-          secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9+0.1*(eTimer.elapsed(fpsSamplingStart)-frameInterval);
-          secondsPerFrame        :=secondsPerFrame        *0.9+0.1*(eTimer.elapsed(fpsSamplingStart));
-          if secondsPerFrameOverhead<0 then secondsPerFrameOverhead:=0;
-          eTimer.clear(fpsSamplingStart);
-          eTimer.start(fpsSamplingStart);
-          animationFPSLabel.caption:=formatFloat('#0.00',1/secondsPerFrame)+'fps';
+          updateSecondsPerFrame;
+          framesTimer.clear(fpsSamplingStart);
+          framesTimer.start(fpsSamplingStart);
+          animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
           //:FPS label
         end;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
