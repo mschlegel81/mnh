@@ -10,6 +10,30 @@ USES sysutils,
      tokenArray,contexts;
 TYPE
   P_datastoreMeta=^T_datastoreMeta;
+  T_writeTempRequest=record
+    meta:P_datastoreMeta;
+    L: P_literal;
+    location: T_tokenLocation;
+    writePlainText:boolean;
+  end;
+
+  T_writeTempResult=record
+    useTempFile,finishedOk:boolean;
+    tempFileName,fileName:string;
+  end;
+
+  { T_datastoreFlush }
+
+  T_datastoreFlush=object
+    private
+      pendingWrites:array of T_writeTempRequest;
+    public
+      CONSTRUCTOR create;
+      PROCEDURE addStoreToFlush(CONST meta:P_datastoreMeta; CONST L: P_literal; CONST location: T_tokenLocation; CONST writePlainText:boolean);
+      PROCEDURE finalize(CONST threadLocalMessages: P_messages; CONST recycler:P_literalRecycler);
+      DESTRUCTOR destroy;
+  end;
+
   T_datastoreMeta=object
     private
       fileHasBinaryFormat:boolean;
@@ -19,6 +43,7 @@ TYPE
       FUNCTION newStoreName:string;
       {Returns true if new name is returned}
       FUNCTION tryObtainName(CONST createIfMissing:boolean; CONST enforcedName:string=''):boolean;
+      FUNCTION writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
     public
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
@@ -26,7 +51,6 @@ TYPE
       FUNCTION fileExists:boolean;
       FUNCTION readFromSpecificFileIncludingId(CONST fname:string; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
       FUNCTION readValue(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
-      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler);
   end;
 
 {$ifdef fullVersion}
@@ -70,14 +94,20 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
   end;
 {$endif}
 
-FUNCTION T_datastoreMeta.newStoreName:string;
-  VAR i:longint;
+{ T_datastoreFlush }
+
+CONSTRUCTOR T_datastoreFlush.create;
   begin
-    i:=0;
-    repeat
-      result:=ChangeFileExt(packagePath,'.datastore'+intToStr(i));
-      inc(i);
-    until not(sysutils.fileExists(result));
+    setLength(pendingWrites,0);
+  end;
+
+PROCEDURE T_datastoreFlush.addStoreToFlush(CONST meta: P_datastoreMeta; CONST L: P_literal; CONST location: T_tokenLocation; CONST writePlainText: boolean);
+  begin
+    setLength(pendingWrites,length(pendingWrites)+1);
+    pendingWrites[length(pendingWrites)-1].meta:=meta;
+    pendingWrites[length(pendingWrites)-1].L:=L;
+    pendingWrites[length(pendingWrites)-1].location:=location;
+    pendingWrites[length(pendingWrites)-1].writePlainText:=writePlainText;
   end;
 
 PROCEDURE moveSafely(CONST source,dest:string);
@@ -87,6 +117,50 @@ PROCEDURE moveSafely(CONST source,dest:string);
       if CopyFile(source,dest,[cffOverwriteFile,cffPreserveTime],false)
       then DeleteFile(source);
     end;
+  end;
+
+PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages;
+  CONST recycler: P_literalRecycler);
+  VAR i:longint;
+      rename:T_writeTempResult;
+      pendingRenames:array of T_writeTempResult;
+      allOk:boolean=true;
+  begin
+    enterCriticalSection(globalDatastoreCs);
+    try
+      setLength(pendingRenames,length(pendingWrites));
+      for i:=0 to length(pendingWrites)-1 do with pendingWrites[i] do begin
+        if threadLocalMessages^.continueEvaluation
+        then begin
+          pendingRenames[i]:=meta^.writeValue(L,location,threadLocalMessages,writePlainText,recycler);
+          allOk:=allOk and pendingRenames[i].finishedOk;
+        end
+        else pendingRenames[i].tempFileName:='';
+        recycler^.disposeLiteral(L);
+      end;
+      if allOk then begin
+        for rename in pendingRenames do if rename.useTempFile then moveSafely(rename.tempFileName,rename.fileName);
+      end else begin
+        for rename in pendingRenames do if rename.tempFileName<>'' then DeleteFile(rename.tempFileName);
+      end;
+    finally
+      leaveCriticalSection(globalDatastoreCs);
+    end;
+  end;
+
+DESTRUCTOR T_datastoreFlush.destroy;
+  begin
+    setLength(pendingWrites,0);
+  end;
+
+FUNCTION T_datastoreMeta.newStoreName:string;
+  VAR i:longint;
+  begin
+    i:=0;
+    repeat
+      result:=ChangeFileExt(packagePath,'.datastore'+intToStr(i));
+      inc(i);
+    until not(sysutils.fileExists(result));
   end;
 
 FUNCTION T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean; CONST enforcedName:string):boolean;
@@ -235,37 +309,28 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
     end else result:=newVoidLiteral;
   end;
 
-PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler);
+FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
-      tempFileName:string;
-      useTempFile:boolean;
-      finishedOk :boolean;
   begin
-    useTempFile:=not(tryObtainName(true));
-    if useTempFile
-    then tempFileName:=fileName+TEMP_FILE_SUFFIX
-    else tempFileName:=fileName;
+    result.useTempFile:=not(tryObtainName(true));
+    if result.useTempFile
+    then result.tempFileName:=fileName+TEMP_FILE_SUFFIX
+    else result.tempFileName:=fileName;
+    result.fileName:=fileName;
 
-    enterCriticalSection(globalDatastoreCs);
     if writePlainText then begin
       plainText:=ruleId+':=';
       append(plainText,serializeToStringList(L,location,threadLocalMessages));
-      writeFileLines(tempFileName,plainText,C_lineBreakChar,false);
-      finishedOk:=threadLocalMessages^.continueEvaluation;
+      writeFileLines(result.tempFileName,plainText,C_lineBreakChar,false);
+      result.finishedOk:=threadLocalMessages^.continueEvaluation;
     end else begin
-      wrapper.createToWriteToFile(tempFileName);
+      wrapper.createToWriteToFile(result.tempFileName);
       wrapper.writeAnsiString(ruleId);
       writeLiteralToStream(recycler,L,@wrapper,location,threadLocalMessages);
-      finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
+      result.finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;
-    leaveCriticalSection(globalDatastoreCs);
-
-    if finishedOk then begin
-      if useTempFile
-      then moveSafely(tempFileName,fileName);
-    end else DeleteFile(tempFileName);
   end;
 
 INITIALIZATION
