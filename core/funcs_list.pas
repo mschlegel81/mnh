@@ -580,8 +580,7 @@ FUNCTION group_imp intFuncSignature;
   end;
 
 FUNCTION groupToList_imp intFuncSignature;
-  VAR valueList   :T_arrayOfLiteral;
-      keyList     :array of longint;
+  VAR keyList     :array of longint;
       defaultValue:P_literal;
       aggregator  :P_expressionLiteral;
 
@@ -599,8 +598,6 @@ FUNCTION groupToList_imp intFuncSignature;
        (arg3^.literalType=lt_expression) and
        ((params^.size=4) or (params^.value[4]^.literalType=lt_smallint) and (P_smallIntLiteral(params^.value[4])^.value>=0))
     then begin
-
-      valueList   :=list0^.tempIteratableList;
       defaultValue:=arg2;
       aggregator  :=P_expressionLiteral(arg3);
       if params^.size<=4
@@ -625,19 +622,18 @@ FUNCTION groupToList_imp intFuncSignature;
       end;
       if not(allOkay) then begin
         setLength(keyList,0);
-        setLength(valueList,0);
         exit(nil);
       end;
 
       setLength(resultValues,resultValueCount);
       for i:=0 to length(resultValues)-1 do resultValues[i]:=nil;
 
-      for i:=0 to length(valueList)-1 do if allOkay then begin
+      for i:=0 to list0^.size-1 do if allOkay then begin
         key:=keyList[i];
         if resultValues[key]=nil
-        then resultValues[key]:=valueList[i]^.rereferenced
+        then resultValues[key]:=list0^.value[i]^.rereferenced
         else begin
-          temp:=aggregator^.evaluateToLiteral(tokenLocation,context,recycler,resultValues[key],valueList[i]).literal;
+          temp:=aggregator^.evaluateToLiteral(tokenLocation,context,recycler,resultValues[key],list0^.value[i]).literal;
           if temp<>nil then begin
             recycler^.disposeLiteral(resultValues[key]);
             resultValues[key]:=temp;
@@ -655,7 +651,6 @@ FUNCTION groupToList_imp intFuncSignature;
           else listResult^.append(recycler,temp,false);
       end;
       setLength(keyList,0);
-      setLength(valueList,0);
       setLength(resultValues,0);
     end;
   end;
