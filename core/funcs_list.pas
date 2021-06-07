@@ -587,7 +587,7 @@ FUNCTION groupToList_imp intFuncSignature;
       temp        :P_literal;
       resultValues:T_arrayOfLiteral;
       resultValueCount:longint=0;
-      i,j0,j,key  :longint;
+      i,key       :longint;
       allOkay     :boolean=true;
   begin
     result:=nil;
