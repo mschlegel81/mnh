@@ -839,6 +839,7 @@ TYPE
 PROCEDURE T_workerThread.execute;
   CONST MS_IDLE_BEFORE_QUIT=1000;
   VAR sleepCount:longint=0;
+      blockedCount:longint=0;
       currentTask:P_queueTask;
       recycler:P_recycler;
   begin
@@ -848,9 +849,10 @@ PROCEDURE T_workerThread.execute;
         currentTask:=taskQueue.dequeue;
         if (getGlobalRunningThreads>settings.cpuCount)
         then begin
-          threadSleepMillis(10);
-          inc(sleepCount,10);
-        end;
+          inc(blockedCount);
+          threadSleepMillis(10*blockedCount);
+          inc(sleepCount,10*blockedCount);
+        end else blockedCount:=0;
         if currentTask=nil then begin
           sleep(1);
           inc(sleepCount);
