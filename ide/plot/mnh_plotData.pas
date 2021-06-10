@@ -1603,7 +1603,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
   begin
     enterCriticalSection(cs);
-    if not(forceThreadAndDestroyAfterwards) and (backgroundProcessing.backgroundPreparationRunning or (preparationThreadsRunning>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
+    if not(forceThreadAndDestroyAfterwards) and (backgroundProcessing.backgroundPreparationRunning or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(cs);
       exit;
