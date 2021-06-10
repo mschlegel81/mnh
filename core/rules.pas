@@ -207,7 +207,6 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal; virtual;
       FUNCTION writeBackToTemp(CONST adapters:P_messages; VAR flush:T_datastoreFlush):boolean;
-      PROCEDURE memoryCleanup;
       FUNCTION getValue(CONST context:P_context; CONST recycler:P_recycler):P_literal; virtual;
   end;
 
@@ -1070,7 +1069,6 @@ CONSTRUCTOR T_datastore.create(CONST ruleId: T_idString; CONST startAt:T_tokenLo
   begin
     inherited create(ruleId,startAt,meta_,isPrivate,variableType);
     dataStoreMeta.create(datastorePackage^.getPath,ruleId);
-    memoryCleaner.registerObjectForCleanup(@memoryCleanup);
   end;
 
 DESTRUCTOR T_ruleWithSubrules.destroy;
@@ -1110,7 +1108,6 @@ DESTRUCTOR T_variable.destroy;
 DESTRUCTOR T_datastore.destroy;
   begin
     dataStoreMeta.destroy;
-    memoryCleaner.unregisterObjectForCleanup(@memoryCleanup);
     inherited destroy;
   end;
 
@@ -1704,24 +1701,6 @@ FUNCTION T_datastore.writeBackToTemp(CONST adapters:P_messages; VAR flush:T_data
       state:=vs_inSyncWithFile;
       result:=true;
     end else result:=false;
-  end;
-
-PROCEDURE T_datastore.memoryCleanup;
-  VAR recycler:P_recycler;
-  begin
-    recycler:=newRecycler;
-    enterCriticalSection(namedValue.varCs);
-    try
-      if (state in [vs_inSyncWithFile,vs_readFromFile]) //The store has been read but not modified
-         and (dataStoreMeta.fileExists)               //and the store can be re-read
-      then begin
-        namedValue.setValue(recycler,newVoidLiteral);
-        state:=vs_uninitialized;
-      end;
-    finally
-      leaveCriticalSection(namedValue.varCs);
-      freeRecycler(recycler);
-    end;
   end;
 
 PROCEDURE T_memoizedRule.clearCache;
