@@ -973,6 +973,7 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     destructionPending:=false;
     setLength(subQueue,0);
     queued:=0;
+    poolThreadsRunning:=0;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
