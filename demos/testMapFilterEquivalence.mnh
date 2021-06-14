@@ -7,14 +7,18 @@ testAndCompare(includeTiming:Boolean)->begin
   print('gen.pFilter.toList') orElse time({rangeGenerator(0,1000)       .pFilter(::accept      ).toList}),
   print('gen.map.toList')     orElse time({rangeGenerator(0,1000)       .    map(::acceptOrVoid).toList}),
   print('gen.pMap.toList')    orElse time({rangeGenerator(0,1000)       .   pMap(::acceptOrVoid).toList}),
+  print('gen.each')           orElse time({rangeGenerator(0,1000)       .each (x,acceptOrVoid(x))      }),
+  print('gen.pEach')          orElse time({rangeGenerator(0,1000)       .pEach(x,acceptOrVoid(x))      }),
   print('gen.toList.filter')  orElse time({rangeGenerator(0,1000).toList. filter(::accept      )       }),
   print('gen.toList.pFilter') orElse time({rangeGenerator(0,1000).toList.pFilter(::accept      )       }),
   print('gen.toList.map')     orElse time({rangeGenerator(0,1000).toList.    map(::acceptOrVoid)       }),
-  print('gen.toList.pMap')    orElse time({rangeGenerator(0,1000).toList.   pMap(::acceptOrVoid)       })];
+  print('gen.toList.pMap')    orElse time({rangeGenerator(0,1000).toList.   pMap(::acceptOrVoid)       }),
+  print('gen.toList.each')    orElse time({rangeGenerator(0,1000).toList.each (x,acceptOrVoid(x))      }),
+  print('gen.toList.pEach')   orElse time({rangeGenerator(0,1000).toList.pEach(x,acceptOrVoid(x))      })];
 
   includeTiming
   ? begin
-      local timedInfo:=results.map({$r.getAll(['time','expression'])}).sort;
+      local timedInfo:=results.map({$r.getAll(['time','expression'])});
       printf("%8.3f\vms\t%s",
         timedInfo.getInner(0)*1000,
         timedInfo.getInner(1));

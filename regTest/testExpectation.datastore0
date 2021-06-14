@@ -5725,8 +5725,8 @@ expectations:=
   '     equals: false','',"Test serialization of fileLineIterator('demos/testExpressionSerialization.mnh')",
   'el3_evalError: Cannot serialize builtin generator expression.'],
  'testMapFilterEquivalence'=>
- ['gen.filter.toList','gen.pFilter.toList','gen.map.toList','gen.pMap.toList','gen.toList.filter','gen.toList.pFilter',
-  'gen.toList.map','gen.toList.pMap','All is good'],
+ ['gen.filter.toList','gen.pFilter.toList','gen.map.toList','gen.pMap.toList','gen.each','gen.pEach','gen.toList.filter',
+  'gen.toList.pFilter','gen.toList.map','gen.toList.pMap','gen.toList.each','gen.toList.pEach','All is good'],
  'testPackages'=>
  ['FDLinux'=>
   ['Package statistics','  mean(X:NumericList)              = -0.052631578947368423975',

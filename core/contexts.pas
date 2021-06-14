@@ -44,7 +44,7 @@ TYPE
   T_contextRecycler=object
     private
       recyclerCS:TRTLCriticalSection;
-      contexts:array[0..127] of P_context;
+      contexts:array[0..1023] of P_context;
       fill:longint;
     public
       CONSTRUCTOR create;
@@ -870,9 +870,6 @@ PROCEDURE T_workerThread.execute;
             (Terminated) or
             (taskQueue.destructionPending) or
             (taskQueue.poolThreadsRunning>settings.cpuCount);
-      {$ifdef fullVersion}
-      if Terminated then postIdeMessage('Worker thread stopped because of memory panic',false);
-      {$endif}
     end;
     freeRecycler(recycler);
     Terminate;
@@ -1033,9 +1030,9 @@ PROCEDURE T_taskQueue.ensurePoolThreads();
       spawnCount+=1;
       T_workerThread.create(parent);
     end;
-    {$ifdef fullVersion}
+    {$ifdef fullVersion} {$ifdef debugMode}
     if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false);
-    {$endif}
+    {$endif} {$endif}
   end;
 
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
@@ -1063,9 +1060,6 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     try
       queued+=ensureQueue^.enqueue(task);
       ensurePoolThreads();
-      {$ifdef fullVersion}
-      if queued>500 then postIdeMessage('High queued count: '+intToStr(queued),queued>1000);
-      {$endif}
     finally
       system.leaveCriticalSection(cs);
     end;

@@ -733,9 +733,9 @@ TYPE
       end;
       outputQueue : specialize G_queue<P_literal>;
       myQueuedTasks:longint;
-      tasksToQueue :longint;
-      PROCEDURE canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler);
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
+      FUNCTION canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler):longint;
+      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+      FUNCTION nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_chainTask; virtual;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -750,7 +750,7 @@ TYPE
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
   T_parallelFilterGenerator=object(T_parallelMapGenerator)
     private
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
+      FUNCTION nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_chainTask; virtual;
     public
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -770,8 +770,6 @@ CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiter
     firstToAggregate:=nil;
     lastToAggregate:=nil;
     myQueuedTasks:=0;
-    tasksToQueue:=settings.cpuCount*TASKS_TO_QUEUE_PER_CPU;
-    if tasksToQueue=0 then tasksToQueue:=16;
   end;
 
 CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -779,9 +777,10 @@ CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressio
     inherited create(source,filterEx,loc);
   end;
 
-PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler);
+FUNCTION T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler):longint;
   VAR toAggregate:P_chainTask;
   begin
+    result:=0;
     if forceAggregate and (firstToAggregate<>nil) and not(firstToAggregate^.canGetResult)
     then begin
       if not(context^.getGlobals^.taskQueue.activeDeqeue(recycler)) then sleep(1);
@@ -791,6 +790,7 @@ PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONS
       assert(firstToAggregate^.getContext^.valueScope=nil,'valueScope must be nil at this point');
       toAggregate:=firstToAggregate;
       dec(myQueuedTasks);
+      inc(result);
       firstToAggregate:=firstToAggregate^.nextToAggregate;
       if P_mapTask(toAggregate)^.mapTaskResult<>nil then begin
         if P_mapTask(toAggregate)^.mapTaskResult^.literalType=lt_void
@@ -806,92 +806,72 @@ PROCEDURE T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONS
     end;
   end;
 
-PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
-  VAR nextUnmapped:P_literal=nil;
-      task        :P_mapTask=nil;
-      doneQueuing :boolean=false;
-      taskChain   :T_taskChain;
-      startTime   :double;
+FUNCTION T_parallelMapGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation;  CONST context:P_context; CONST recycler:P_recycler):P_chainTask;
+  VAR task:P_mapTask=nil;
   begin
-    canAggregate(doneFetching,context,recycler);
-    if doneFetching or not(context^.continueEvaluation) then exit;
-    if myQueuedTasks=0 then begin
-      tasksToQueue:=round(1+tasksToQueue*1.2);
-      if (tasksToQueue<0) or (tasksToQueue>10000) then tasksToQueue:=10000;
-    end else if (myQueuedTasks>settings.cpuCount) and (tasksToQueue>settings.cpuCount) then begin
-      dec(tasksToQueue);
+    if isExpressionNullary
+    then recycler^.disposeLiteral(nextUnmapped);
+    with recycling do if fill>0 then begin
+      dec(fill);
+      task:=P_mapTask(dat[fill]);
+      task^.reattach(recycler);
+    end else new(task,createMapTask(context^.getFutureEnvironment(recycler),mapExpression));
+    inc(myQueuedTasks);
+    if firstToAggregate=nil then begin
+      firstToAggregate:=task;
+      lastToAggregate:=task;
+    end else begin
+      lastToAggregate^.nextToAggregate:=task;
+      lastToAggregate:=task;
     end;
-    taskChain.create(tasksToQueue,context^);
-    startTime:=now;
-    if taskChain.handDownThreshold>0 then repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
-      if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
-        doneFetching:=true;
-        taskChain.flush;
-      end else begin
-        if isExpressionNullary
-        then recycler^.disposeLiteral(nextUnmapped);
-        with recycling do if fill>0 then begin
-          dec(fill);
-          task:=P_mapTask(dat[fill]);
-          task^.reattach(recycler);
-        end else new(task,createMapTask(context^.getFutureEnvironment(recycler),mapExpression));
-        inc(myQueuedTasks);
-        if firstToAggregate=nil then begin
-          firstToAggregate:=task;
-          lastToAggregate:=task;
-        end else begin
-          lastToAggregate^.nextToAggregate:=task;
-          lastToAggregate:=task;
-        end;
-        if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true
-        else if (now-startTime>ONE_SECOND) then begin
-          tasksToQueue:=taskChain.getQueuedCount;
-          taskChain.flush;
-          doneQueuing:=true;
-        end;
-      end;
-    until doneFetching or doneQueuing or not(context^.continueEvaluation);
-    taskChain.destroy;
+    result:=task^.define(nextUnmapped,loc);
   end;
 
-PROCEDURE T_parallelFilterGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+FUNCTION T_parallelFilterGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation;  CONST context:P_context; CONST recycler:P_recycler):P_chainTask;
+  VAR task:P_filterTask=nil;
+  begin
+    with recycling do if fill>0 then begin
+      dec(fill);
+      task:=P_filterTask(dat[fill]);
+      task^.reattach(recycler);
+    end else new(task,createFilterTask(context^.getFutureEnvironment(recycler),mapExpression));
+    inc(myQueuedTasks);
+    if firstToAggregate=nil then begin
+      firstToAggregate:=task;
+      lastToAggregate:=task;
+    end else begin
+      lastToAggregate^.nextToAggregate:=task;
+      lastToAggregate:=task;
+    end;
+    result:=task^.define(nextUnmapped,loc);
+  end;
+
+PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
   VAR nextUnmapped:P_literal=nil;
-      task        :P_filterTask=nil;
       doneQueuing :boolean=false;
       taskChain   :T_taskChain;
       startTime   :double;
+      tasksToQueue:longint;
+      toQueue:longint;
   begin
     canAggregate(doneFetching,context,recycler);
-    if doneFetching or not(context^.continueEvaluation) then exit;
-    if myQueuedTasks=0 then begin
-      tasksToQueue:=round(1+tasksToQueue*1.2);
-      if (tasksToQueue<0) or (tasksToQueue>10000) then tasksToQueue:=10000;
-    end else if (myQueuedTasks>settings.cpuCount) and (tasksToQueue>settings.cpuCount) then begin
-      dec(tasksToQueue);
-    end;
+    toQueue:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
+    tasksToQueue:=toQueue-myQueuedTasks;
+    if tasksToQueue<0 then tasksToQueue:=0;
+    //enqueue extra tasks if output queue is empty
+    if outputQueue.fill=0 then tasksToQueue+=toQueue;
+
+    if doneFetching or (tasksToQueue<=0) or not(context^.continueEvaluation) then exit;
     taskChain.create(tasksToQueue,context^);
     startTime:=now;
-    if taskChain.handDownThreshold>0 then repeat
+    repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
       if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
         doneFetching:=true;
         taskChain.flush;
       end else begin
-        with recycling do if fill>0 then begin
-          dec(fill);
-          task:=P_filterTask(dat[fill]);
-          task^.reattach(recycler);
-        end else new(task,createFilterTask(context^.getFutureEnvironment(recycler),mapExpression));
-        inc(myQueuedTasks);
-        if firstToAggregate=nil then begin
-          firstToAggregate:=task;
-          lastToAggregate:=task;
-        end else begin
-          lastToAggregate^.nextToAggregate:=task;
-          lastToAggregate:=task;
-        end;
-        if taskChain.enqueueOrExecute(task^.define(nextUnmapped,loc),recycler) then doneQueuing:=true
+        if taskChain.enqueueOrExecute(nextTask(nextUnmapped,loc,context,recycler),recycler)
+        then doneQueuing:=true
         else if (now-startTime>ONE_SECOND) then begin
           tasksToQueue:=taskChain.getQueuedCount;
           taskChain.flush;
@@ -930,8 +910,7 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
       then begin
         result.literal:=newVoidLiteral;
       end else repeat
-        if (firstToAggregate=nil) then doEnqueueTasks(location,P_context(context),P_recycler(recycler))
-                                  else canAggregate(true      ,P_context(context),P_recycler(recycler));
+        doEnqueueTasks(location,P_context(context),P_recycler(recycler));
         if outputQueue.hasNext then begin
           result.literal:=outputQueue.next;
           exit(result);
