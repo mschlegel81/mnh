@@ -733,6 +733,7 @@ TYPE
       end;
       outputQueue : specialize G_queue<P_literal>;
       myQueuedTasks:longint;
+      slowProducer :boolean;
       FUNCTION canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler):longint;
       PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       FUNCTION nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_chainTask; virtual;
@@ -852,17 +853,13 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONS
       taskChain   :T_taskChain;
       startTime   :double;
       tasksToQueue:longint;
-      toQueue:longint;
   begin
     canAggregate(doneFetching,context,recycler);
-    toQueue:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
-    tasksToQueue:=toQueue-myQueuedTasks;
-    if tasksToQueue<0 then tasksToQueue:=0;
-    //enqueue extra tasks if output queue is empty
-    if outputQueue.fill=0 then tasksToQueue+=toQueue;
+    tasksToQueue:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-myQueuedTasks;
 
     if doneFetching or (tasksToQueue<=0) or not(context^.continueEvaluation) then exit;
     taskChain.create(tasksToQueue,context^);
+    slowProducer:=false;
     startTime:=now;
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(loc,context,recycler,nil,nil).literal;
@@ -876,6 +873,7 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONS
           tasksToQueue:=taskChain.getQueuedCount;
           taskChain.flush;
           doneQueuing:=true;
+          slowProducer:=true;
         end;
       end;
     until doneFetching or doneQueuing or not(context^.continueEvaluation);
@@ -902,7 +900,8 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
   begin
     result.reasonForStop:=rr_ok;
     result.literal:=nil;
-    if (firstToAggregate=nil) and (outputQueue.fill<settings.cpuCount*TASKS_TO_QUEUE_PER_CPU) then doEnqueueTasks(location,P_context(context),P_recycler(recycler));
+    if (    slowProducer  and (outputQueue.fill=0                                       )) or
+       (not(slowProducer) and (outputQueue.fill<settings.cpuCount*TASKS_TO_QUEUE_PER_CPU)) then doEnqueueTasks(location,P_context(context),P_recycler(recycler));
     if outputQueue.hasNext
     then result.literal:=outputQueue.next
     else begin
