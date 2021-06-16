@@ -173,10 +173,10 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
     end;
 
   VAR processed:longint=0;
+      toQueueLimit:longint;
   PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR nextToEnqueue:T_eachPayload;
         newTask:P_eachTask;
-        limit:longint;
     begin
       with nextToEnqueue do begin
         eachIndex    :=idx;
@@ -194,10 +194,9 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       else lastToAggregate^.nextToAggregate:=newTask;
       lastToAggregate:=newTask;
       if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then begin
-        taskChain.handDownThreshold:=round(canAggregate*1.2);
-        limit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-context^.getGlobals^.taskQueue.queuedCount;
-        if limit<1 then limit:=1;
-        if taskChain.handDownThreshold>limit then taskChain.handDownThreshold:=limit;
+        taskChain     .handDownThreshold:=round(canAggregate*1.2);
+        if   taskChain.handDownThreshold> toQueueLimit
+        then taskChain.handDownThreshold:=toQueueLimit;
       end;
     end;
 
@@ -218,7 +217,9 @@ end}
 
   begin
     recycling.fill:=0;
-    taskChain.create(4*settings.cpuCount,context^);
+    toQueueLimit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
+    if toQueueLimit<4 then toQueueLimit:=4;
+    taskChain.create(toQueueLimit,context^);
     processed:=0;
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
