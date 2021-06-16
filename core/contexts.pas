@@ -846,13 +846,14 @@ PROCEDURE T_workerThread.execute;
     recycler:=newRecycler;
     with globals^ do begin
       repeat
-        currentTask:=taskQueue.dequeue;
         if (getGlobalRunningThreads>settings.cpuCount)
         then begin
           inc(blockedCount);
           threadSleepMillis(10*blockedCount);
           inc(sleepCount,10*blockedCount);
         end else blockedCount:=0;
+
+        currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
           sleep(1);
           inc(sleepCount);
@@ -1040,7 +1041,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     VAR i:longint;
         s:P_subQueue;
     begin
-      for i:=0 to length(subQueue)-1 do if subQueue[i]^.depth=context^.callDepth then exit(subQueue[i]);
+      for i:=length(subQueue)-1 downto 0 do if subQueue[i]^.depth=context^.callDepth then exit(subQueue[i]);
       //create new sub-queue
       i:=length(subQueue);
       setLength(subQueue,i+1);
