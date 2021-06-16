@@ -3352,6 +3352,7 @@ FUNCTION mutateVariable(CONST literalRecycler:P_literalRecycler; VAR toMutate:P_
                   lt_string:  inc(P_listLiteral(toMutate)^.strings);
                   else        inc(P_listLiteral(toMutate)^.others);
                 end;
+                P_listLiteral(toMutate)^.myHash:=0;
                 if P_listLiteral(toMutate)^.fill=0 then P_listLiteral(toMutate)^.literalType:=lt_emptyList
                 else if P_listLiteral(toMutate)^.others>0 then P_listLiteral(toMutate)^.literalType:=lt_list
                 else P_listLiteral(toMutate)^.literalType:=C_listType[P_listLiteral(toMutate)^.booleans>0,P_listLiteral(toMutate)^.ints>0,P_listLiteral(toMutate)^.reals>0,P_listLiteral(toMutate)^.strings>0];
