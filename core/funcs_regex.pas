@@ -345,7 +345,7 @@ INITIALIZATION
   initialize(regexCacheCs);
   initCriticalSection(regexCacheCs);
   regexCache.create(@disposeRegex);
-  memoryCleaner.registerCleanupMethod(@cleanRegexCache);
+  memoryCleaner.registerCleanupMethod(0,@cleanRegexCache);
 FINALIZATION
   regexCache.overrideDisposer(@hardDisposeRegex);
   try regexCache.destroy; except end;

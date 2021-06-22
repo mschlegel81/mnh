@@ -369,7 +369,7 @@ INITIALIZATION
   initialize(styleCS);
   initCriticalSection(styleCS);
   styleMap.create(@disposeStyle);
-  memoryCleaner.registerCleanupMethod(@clearStyles);
+  memoryCleaner.registerCleanupMethod(1,@clearStyles);
 FINALIZATION
   enterCriticalSection(styleCS);
   styleMap.destroy;

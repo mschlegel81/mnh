@@ -168,7 +168,6 @@ TYPE
       destructionPending:boolean;
       poolThreadsRunning:longint;
       parent:P_evaluationGlobals;
-      queued:longint;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
@@ -177,7 +176,6 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(CONST recycler:P_recycler):boolean;
       PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_context);
-      PROPERTY queuedCount:longint read queued;
   end;
 
   T_detachedEvaluationPart=class(T_basicThread)
@@ -304,7 +302,7 @@ CONSTRUCTOR T_contextRecycler.create;
     initCriticalSection(recyclerCS);
     fill:=0;
     initialize(contexts);
-    memoryCleaner.registerObjectForCleanup(@cleanup);
+    memoryCleaner.registerObjectForCleanup(1,@cleanup);
   end;
 
 PROCEDURE T_contextRecycler.cleanup;
@@ -880,7 +878,7 @@ CONSTRUCTOR T_workerThread.create(evaluationGlobals:P_evaluationGlobals);
   begin
     globals:=evaluationGlobals;
     interLockedIncrement(globals^.taskQueue.poolThreadsRunning);
-    memoryCleaner.registerObjectForCleanup(@Terminate);
+    memoryCleaner.registerObjectForCleanup(2,@Terminate);
     inherited create();
   end;
 
@@ -966,11 +964,10 @@ DESTRUCTOR T_queueTask.destroy;
 CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
   begin
     system.initCriticalSection(cs);
-    memoryCleaner.registerObjectForCleanup(@cleanupQueues);
+    memoryCleaner.registerObjectForCleanup(5,@cleanupQueues);
     parent:=parent_;
     destructionPending:=false;
     setLength(subQueue,0);
-    queued:=0;
     poolThreadsRunning:=0;
   end;
 
@@ -1059,7 +1056,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
   begin
     system.enterCriticalSection(cs);
     try
-      queued+=ensureQueue^.enqueue(task);
+      ensureQueue^.enqueue(task);
       ensurePoolThreads();
     finally
       system.leaveCriticalSection(cs);
@@ -1081,13 +1078,6 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
         setLength(subQueue,0);
       end else begin
         result:=subQueue[k]^.dequeue(emptyAfter);
-        dec(queued);
-        if queued<0 then begin
-          {$ifdef fullVersion}
-          postIdeMessage('QUEUE COUNT BELOW ZERO!',true);
-          {$endif}
-          queued:=0;
-        end;
       end;
     finally
       system.leaveCriticalSection(cs);
@@ -1120,7 +1110,6 @@ PROCEDURE T_taskQueue.cleanupQueues;
         dispose(subQueue[k],destroy);
         setLength(subQueue,k);
       end;
-      queued:=0;
     finally
       system.leaveCriticalSection(cs);
     end;
@@ -1133,7 +1122,7 @@ PROCEDURE cleanupContextPool;
 
 INITIALIZATION
   contextPool.create;
-  memoryCleaner.registerCleanupMethod(@cleanupContextPool);
+  memoryCleaner.registerCleanupMethod(1,@cleanupContextPool);
 FINALIZATION
   contextPool.destroy;
 
