@@ -81,7 +81,7 @@ PROCEDURE TreevaluationForm.FormCreate(Sender: TObject);
     {$endif}
     fastUpdating:=false;
     slowUpdating:=false;
-    memoryCleaner.registerCleanupMethod(@finalizeFunctionDocMap);
+    memoryCleaner.registerCleanupMethod(0,@finalizeFunctionDocMap);
 
     initializePlotForm(nil);
     setupEditorMetaBase(nil);

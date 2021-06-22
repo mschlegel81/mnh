@@ -694,7 +694,7 @@ CONSTRUCTOR T_plotSeries.create;
     setLength(frame,0);
     initCriticalSection(seriesCs);
     clear;
-    memoryCleaner.registerObjectForCleanup(@flushFramesToDisk);
+    memoryCleaner.registerObjectForCleanup(4,@flushFramesToDisk);
   end;
 
 DESTRUCTOR T_plotSeries.destroy;

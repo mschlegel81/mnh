@@ -84,17 +84,28 @@ PROCEDURE ensureEventsForm;
     eventsFormSingleton.showComponent(false);
   end;
 
-PROCEDURE memoryCleanerCallback;
+PROCEDURE memoryCleanerCallback0;
   VAR dummy:double;
   begin
-    postIdeMessage('Cleaning memory; '+memoryCleaner.getMemoryUsedAsString(dummy)+' used = '+intToStr(round(dummy*100))+'% of threshold value',dummy>1);
+    postIdeMessage('Cleaning memory L0; '+memoryCleaner.getMemoryUsedAsString(dummy)+' used = '+intToStr(round(dummy*100))+'% of threshold value',dummy>1);
   end;
+
+PROCEDURE memoryCleanerCallback1; begin postIdeMessage('Cleaning memory L1',true); end;
+PROCEDURE memoryCleanerCallback2; begin postIdeMessage('Cleaning memory L2',true); end;
+PROCEDURE memoryCleanerCallback3; begin postIdeMessage('Cleaning memory L3',true); end;
+PROCEDURE memoryCleanerCallback4; begin postIdeMessage('Cleaning memory L4',true); end;
+PROCEDURE memoryCleanerCallback5; begin postIdeMessage('Cleaning memory L5',true); end;
 
 PROCEDURE setupEventsComponentOnIdeStartup;
   begin
     if eventsAdapterSingleton=nil then begin
       new(eventsAdapterSingleton,create);
-      memoryCleaner.registerCleanupMethod(@memoryCleanerCallback);
+      memoryCleaner.registerCleanupMethod(0,@memoryCleanerCallback0);
+      memoryCleaner.registerCleanupMethod(1,@memoryCleanerCallback1);
+      memoryCleaner.registerCleanupMethod(2,@memoryCleanerCallback2);
+      memoryCleaner.registerCleanupMethod(3,@memoryCleanerCallback3);
+      memoryCleaner.registerCleanupMethod(4,@memoryCleanerCallback4);
+      memoryCleaner.registerCleanupMethod(5,@memoryCleanerCallback5);
     end;
   end;
 

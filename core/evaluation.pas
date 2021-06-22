@@ -1410,7 +1410,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
             except
               on e:Exception do begin
                 context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'Error on thread start: '+e.message+'; cleaning memory and retrying once...');
-                memoryCleaner.callCleanupMethods;
+                memoryCleaner.callCleanupMethods(3);
                 recycler^.cleanupIfPosted;
                 task.start;
               end;
@@ -1427,7 +1427,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
       except
         on e:EOutOfMemory do begin
           context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
-          memoryCleaner.callCleanupMethods;
+          memoryCleaner.callCleanupMethods(high(T_cleanupLevel));
           recycler^.cleanupIfPosted;
         end;
         on e:Exception do begin
