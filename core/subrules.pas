@@ -683,6 +683,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
       output.last:=output.first;
 
+      //TODO Additional embracing tokens are not always necessary.
+      //Some cases of tt_beginBlock/tt_endBlock could be omitted, some be simplified to brackets
       if (preparedBody[                     0].token.tokType=tt_beginBlock) and
          (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
          (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )

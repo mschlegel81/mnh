@@ -41,7 +41,7 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
     fill := 0;
     useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
-    memoryCleaner.registerObjectForCleanup(@polish);
+    memoryCleaner.registerObjectForCleanup(2,@polish);
   end;
 
 DESTRUCTOR T_cache.destroy;

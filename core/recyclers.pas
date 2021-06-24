@@ -398,7 +398,7 @@ FUNCTION T_abstractRule.getInlineValue: P_literal;
 INITIALIZATION
   initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
-  memoryCleaner.registerCleanupMethod(@cleanupRecyclerPools);
+  memoryCleaner.registerCleanupMethod(0,@cleanupRecyclerPools);
 FINALIZATION
   finalizeRecyclerPools;
 

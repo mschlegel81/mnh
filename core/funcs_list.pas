@@ -448,7 +448,6 @@ FUNCTION cross_impl intFuncSignature;
       resultSize:longint=1;
       allCompound:boolean=true;
       resultList:P_listLiteral;
-      memoryPanic:boolean=false;
 
   PROCEDURE recurseBuild(CONST index:longint; CONST lit:T_arrayOfLiteral);
     VAR iter:T_arrayOfLiteral;
@@ -457,11 +456,6 @@ FUNCTION cross_impl intFuncSignature;
         l:P_literal;
         k:longint;
     begin
-      if not(memoryCleaner.isMemoryInComfortZone) or memoryPanic then begin
-        memoryPanic:=true;
-        recycler^.disposeLiteral(resultList);
-        exit;
-      end;
       if index>=params^.size then begin
         resultElement:=recycler^.newListLiteral(length(lit));
         for l in lit do resultElement^.append(recycler,l,true);
@@ -472,7 +466,7 @@ FUNCTION cross_impl intFuncSignature;
         k:=length(lit);
 
         iter:=P_compoundLiteral(params^.value[index])^.forcedIteratableList(recycler);
-        for l in iter do if not(memoryPanic) then begin
+        for l in iter do begin //if not(memoryPanic) then begin
           subLit[k]:=l;
           recurseBuild(index+1,subLit);
         end;
