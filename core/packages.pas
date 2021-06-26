@@ -108,7 +108,6 @@ TYPE
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION usedAndExtendedPackages:T_arrayOfString;
       FUNCTION isExecutable:boolean;
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
     end;
 CONST
@@ -796,7 +795,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         exit;
       end;
       rulePattern.create;
-      if statement.token.first^.tokType=tt_startOfPattern then rulePattern.parse(statement.token.first,ruleDeclarationStart,@globals.primaryContext,recycler);
+      if statement.token.first^.tokType=tt_startOfPattern then rulePattern.parse(statement.token.first,ruleDeclarationStart,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
       {$ifdef fullVersion}
       if (callAndIdInfos<>nil) and (ruleBody<>nil) then begin
         ruleDeclarationEnd:=ruleBody^.last^.location;
@@ -1404,7 +1403,6 @@ FUNCTION T_package.declaredRules(CONST ruleSorting:T_ruleSorting):T_ruleMapEntri
           tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
         end;
     end;
-
   end;
 
 FUNCTION T_package.getImport(CONST idOrPath: string): P_abstractPackage;
@@ -1437,12 +1435,6 @@ FUNCTION T_package.isExecutable: boolean;
   begin
     result:=isPlainScript or ruleMap.containsKey(MAIN_RULE_ID);
   end;
-
-PROCEDURE T_package.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_callAndIdInfos);
-  begin
-    ruleMap.markTypeAsUsed(token,functionCallInfos);
-  end;
-
 {$endif}
 
 {$undef include_implementation}

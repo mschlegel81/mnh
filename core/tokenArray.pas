@@ -77,7 +77,6 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
       {$endif}
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
   end;
@@ -91,9 +90,6 @@ TYPE
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages); virtual;
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
-      {$ifdef fullVersion}
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos); virtual;
-      {$endif}
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -140,6 +136,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE add(CONST token:P_token);
+      PROCEDURE addAll(CONST token:P_token);
       PROCEDURE cleanup;
       FUNCTION  calledBuiltinFunctions:T_builtinFunctionMetaDatas;
       FUNCTION  getBuiltinSideEffects:T_sideEffects;
@@ -885,7 +882,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           end;
         tt_startOfPattern:begin
           new(pattern,create);
-          pattern^.parse(t,t^.location,context,recycler,true);
+          pattern^.parse(t,t^.location,context,recycler,{$ifdef fullVersion}callAndIdInfos,{$endif}true);
           if context^.continueEvaluation
           then prepareLambdaBody
           else begin
@@ -975,6 +972,16 @@ PROCEDURE T_callAndIdInfos.add(CONST token: P_token);
       usageInfos[usageInfoFill].referencedAt:=token^.location;
       usageInfos[usageInfoFill].targetLocation:=P_objectWithIdAndLocation(token^.data)^.getLocation;
       inc(usageInfoFill);
+    end;
+  end;
+
+PROCEDURE T_callAndIdInfos.addAll(CONST token:P_token);
+  VAR t:P_token;
+  begin
+    t:=token;
+    while t<>nil do begin
+      add(t);
+      t:=t^.next;
     end;
   end;
 
@@ -1138,16 +1145,6 @@ FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_abstractPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_callAndIdInfos);
-  begin
-    //no op
-  end;
-
-PROCEDURE T_extendedPackage.markTypeAsUsed(CONST token: P_token; CONST functionCallInfos: P_callAndIdInfos);
-  begin
-    if extender<>nil then extender^.markTypeAsUsed(token,functionCallInfos);
-  end;
-
 PROCEDURE T_enhancedTokens.add(CONST tok: P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package: P_abstractPackage);
   VAR i:longint;
   begin
@@ -1682,9 +1679,6 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
             else nextToken^.tokType:=tt_customTypeCheck;
             nextToken^.txt    :=n[1]^.txt;
             nextToken^.data   :=n[1]^.data;
-            {$ifdef fullVersion}
-            associatedPackage^.markTypeAsUsed(nextToken,callAndIdInfos);
-            {$endif}
             recycler^.disposeToken(n[1]);
           end else begin
             appendToken(nextToken);
