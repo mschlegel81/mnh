@@ -253,7 +253,6 @@ TYPE
       PROCEDURE resolveRuleIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
       FUNCTION inspect(CONST context:P_context; CONST recycler:P_recycler; CONST includeFunctionPointer:boolean):P_mapLiteral;
       {$ifdef fullVersion}
-      PROCEDURE markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos);
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_callAndIdInfos);
       PROCEDURE fillCallInfos(CONST functionCallInfos:P_callAndIdInfos);
@@ -750,12 +749,6 @@ FUNCTION T_ruleMap.inspect(CONST context:P_context; CONST recycler:P_recycler; C
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_ruleMap.markTypeAsUsed(CONST token:P_token; CONST functionCallInfos:P_callAndIdInfos);
-  begin
-    if (token=nil) or not(token^.tokType in [tt_customType,tt_customTypeCheck]) then exit;
-    if functionCallInfos<>nil then functionCallInfos^.add(token);
-  end;
-
 PROCEDURE T_ruleMap.updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
   VAR entry:KEY_VALUE_PAIR;
   begin
