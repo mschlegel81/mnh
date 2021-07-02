@@ -235,7 +235,6 @@ TYPE
 
 CONST TASKS_TO_QUEUE_PER_CPU=16;
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; CONST context:P_context; CONST recycler:P_recycler):T_reduceResult;
-    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
     {$ifdef fullVersion}

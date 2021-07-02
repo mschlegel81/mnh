@@ -51,7 +51,6 @@ TYPE
 
   end;
 
-//TODO: Using the "halt evaluation" button/shortcut during debugging does not work as expected.
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot=nil);
 IMPLEMENTATION
 USES editorMeta,myGenerics,mnh_settings,mnh_messages,mnh_constants,contexts,myStringUtil;
