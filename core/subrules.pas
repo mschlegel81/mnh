@@ -761,11 +761,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     end;
   end;
 
-FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT output:T_tokenRange; CONST context:P_context; CONST recycler:P_recycler):boolean;
-  begin
-    result:=P_subruleExpression(subrulePointer)^.matchesPatternAndReplaces(param,callLocation,output,context,recycler);
-  end;
-
 CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecycler; CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
   VAR i:longint;
       r:P_inlineExpression;
@@ -2096,7 +2091,6 @@ INITIALIZATION
   {$endif}
   litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
-  subruleReplacesCallback   :=@subruleReplaces;
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary
     {$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif});
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary
