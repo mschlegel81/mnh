@@ -254,7 +254,7 @@ T_plotPreparationThread=class(T_basicThread)
 CONSTRUCTOR T_plotPreparationThread.create(CONST plot_: P_plot);
   begin
     plot:=plot_;
-    inherited create(tpHigher);
+    inherited create;
     interLockedIncrement(preparationThreadsRunning);
   end;
 
@@ -470,11 +470,9 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
 
 FUNCTION T_plot.isImagePreparedForResolution(CONST width,height:longint):boolean;
   begin
-    enterCriticalSection(cs);
     result:=(cachedImage.renderedWidth=width) and
             (cachedImage.renderedHeight=height) and
             (cachedImage.image<>nil);
-    leaveCriticalSection(cs);
   end;
 
 FUNCTION T_plot.hasResolution(CONST width,height:longint):boolean;
@@ -857,15 +855,12 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifdef enable_render_threads}
         if result then begin
-          if memoryCleaner.isMemoryInComfortZone and (ideSettings.cacheAnimationFrames and not(volatile)) then begin
-            if cycle then lastToPrepare:=frameIndex+length(frame)-1
-                     else lastToPrepare:=           length(frame)-1;
-          end else begin
-            lastToPrepare:=frameIndex+settings.cpuCount;
-            if (lastToPrepare>=length(frame)) and not(cycle) then lastToPrepare:=length(frame)-1;
+          toPrepare:=frameIndex+1;
+          while (toPrepare<length(frame)) and (preparationThreadsRunning*2<settings.cpuCount) and (memoryCleaner.isMemoryInComfortZone) do begin
+            frame[toPrepare]^.postPreparation(width,height);
+            inc(toPrepare);
+            if cycle then toPrepare:=toPrepare mod length(frame);
           end;
-          for toPrepare:=frameIndex+1 to lastToPrepare do
-            if (preparationThreadsRunning<settings.cpuCount) then frame[toPrepare mod length(frame)]^.postPreparation(width,height);
         end;
         {$endif}
       end;
