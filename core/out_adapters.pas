@@ -332,6 +332,7 @@ PROCEDURE T_fileFlushThread.execute;
   VAR messageConnector:P_messagesDistributor;
       k   :longint=0;
   begin
+    threadStartsSleeping;
     while not(Terminated) do begin
       if k>=10 then begin
         enterCriticalSection(globalAdaptersCs);
@@ -341,6 +342,7 @@ PROCEDURE T_fileFlushThread.execute;
       end else inc(k);
       sleep(10);
     end;
+    threadStopsSleeping;
     Terminate;
   end;
 

@@ -1022,7 +1022,7 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
 PROCEDURE T_taskQueue.ensurePoolThreads();
   VAR spawnCount:longint=0;
   begin
-    while (poolThreadsRunning<settings.cpuCount) and
+    while (poolThreadsRunning<settings.cpuCount-1) and //one main thread is active!
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
       spawnCount+=1;
       T_workerThread.create(parent);
