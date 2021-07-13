@@ -607,7 +607,7 @@ FUNCTION groupToList_imp intFuncSignature;
         end else begin
           key:=P_smallIntLiteral(temp)^.value;
           keyList[i]:=key;
-          if key>resultValueCount then resultValueCount:=key;
+          if key>=resultValueCount then resultValueCount:=key+1;
           if key<0 then begin
             allOkay:=false;
             context^.raiseError('Index out of bounds in groupToList: '+temp^.toString,tokenLocation);
