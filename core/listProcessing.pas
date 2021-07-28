@@ -148,6 +148,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
   VAR taskChain:T_taskChain;
       firstToAggregate:P_chainTask=nil;
       lastToAggregate:P_chainTask=nil;
+      myQueuedTasks:longint=0;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_chainTask;
         fill:longint;
@@ -163,6 +164,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
         inc(result);
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
+        dec(myQueuedTasks);
         aggregator^.addToAggregation(P_eachTask(toAggregate)^.evaluationResult,true,eachLocation,context,recycler);
         with recycling do if fill<length(dat) then begin
           toAggregate^.nextToAggregate:=nil;
@@ -194,7 +196,9 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       else lastToAggregate^.nextToAggregate:=newTask;
       lastToAggregate:=newTask;
       if taskChain.enqueueOrExecute(newTask^.define(nextToEnqueue),recycler) then begin
-        taskChain     .handDownThreshold:=round(canAggregate*1.2);
+        myQueuedTasks+=taskChain.handDownThreshold;
+        canAggregate;
+        taskChain     .handDownThreshold:=toQueueLimit-myQueuedTasks;;
         if   taskChain.handDownThreshold> toQueueLimit
         then taskChain.handDownThreshold:=toQueueLimit;
       end;

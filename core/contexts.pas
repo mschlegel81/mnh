@@ -839,13 +839,37 @@ PROCEDURE T_workerThread.execute;
       blockedCount:longint=0;
       currentTask:P_queueTask;
       recycler:P_recycler;
+
+  {$ifdef workerThreadLogging}
+      log_last_out  :double =0;
+      log_busy_count:longint=0;
+      log_idle_count:longint=0;
+      log_blocked_count:longint=0;
+      log_blocked_ms:longint=0;
+
+  PROCEDURE doLog(CONST stopping:boolean);
+    begin
+      writeln(stdErr,'Worker ',IntToHex(ThreadID,4),' busy/idle: ',log_busy_count,'/',log_idle_count,'; blocked x',log_blocked_count,', ',log_blocked_ms,'ms',BoolToStr(stopping,' - STOPPING',''));
+      log_last_out     :=now;
+      log_busy_count   :=0;
+      log_idle_count   :=0;
+      log_blocked_count:=0;
+      log_blocked_ms   :=0;
+    end;
+  {$endif}
+
   begin
+    {$ifdef workerThreadLogging} log_last_out:=now; {$endif}
     recycler:=newRecycler;
     with globals^ do begin
       repeat
         if (getGlobalRunningThreads>settings.cpuCount)
         then begin
           inc(blockedCount);
+          {$ifdef workerThreadLogging}
+          inc(log_blocked_count);
+          inc(log_blocked_ms,10*blockedCount);
+          {$endif}
           threadSleepMillis(10*blockedCount);
           inc(sleepCount,10*blockedCount);
         end else blockedCount:=0;
@@ -854,7 +878,13 @@ PROCEDURE T_workerThread.execute;
         if currentTask=nil then begin
           sleep(1);
           inc(sleepCount);
+          {$ifdef workerThreadLogging}
+          inc(log_idle_count);
+          {$endif}
         end else begin
+          {$ifdef workerThreadLogging}
+          inc(log_busy_count);
+          {$endif}
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
             dispose(currentTask,destroy);
@@ -864,12 +894,19 @@ PROCEDURE T_workerThread.execute;
           sleepCount:=0;
         end;
         recycler^.cleanupIfPosted;
+
+        {$ifdef workerThreadLogging}
+        if (now>log_last_out+ONE_MINUTE) then doLog(false);
+        {$endif}
       until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
             (taskQueue.poolThreadsRunning>settings.cpuCount);
     end;
     freeRecycler(recycler);
+    {$ifdef workerThreadLogging}
+    doLog(true);
+    {$endif}
     Terminate;
   end;
 
