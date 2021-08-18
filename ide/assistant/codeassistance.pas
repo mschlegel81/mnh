@@ -632,7 +632,7 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       fileName:=baseDir+DEFAULT_FILES[index,0];
       if overwriteExisting or not(fileExists(fileName)) then begin
         fileContent:=decompressString(DEFAULT_FILES[index,1]);
-        writeFile(fileName,fileContent);
+        fileWrappers.writeFile(fileName,fileContent);
       end;
     end;
 
