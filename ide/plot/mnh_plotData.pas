@@ -109,7 +109,7 @@ TYPE
   P_plot =^T_plot;
   T_plot = object
     private
-      cs: TRTLCriticalSection;
+      plotCs: TRTLCriticalSection;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
       virtualRowIndex:longint;
@@ -334,7 +334,7 @@ PROCEDURE T_timedPlotExecution.wait;
 
 PROCEDURE T_plot.doneImage(CONST cacheMode:T_frameCacheMode);
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     try
       with cachedImage do case cacheMode of
         fcm_none       : begin
@@ -378,14 +378,14 @@ PROCEDURE T_plot.doneImage(CONST cacheMode:T_frameCacheMode);
         end;
       end;
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
     end;
   end;
 
 PROCEDURE T_plot.prepareImage(CONST width,height:longint);
   VAR imageIsPrepared:boolean=false;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     try
       if (cachedImage.renderedWidth  =width  ) and
          (cachedImage.renderedHeight =height ) then begin
@@ -413,7 +413,7 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
         cachedImage.renderedWidth  :=width;
       end;
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -422,7 +422,7 @@ PROCEDURE T_plotPreparationThread.execute;
   VAR destroyPlot:boolean;
   begin
     try
-      enterCriticalSection(plot^.cs);
+      enterCriticalSection(plot^.plotCs);
     except
       plot^.backgroundProcessing.backgroundPreparationRunning:=false;
       Terminate;
@@ -439,7 +439,7 @@ PROCEDURE T_plotPreparationThread.execute;
       end;
     finally
       plot^.backgroundProcessing.backgroundPreparationRunning:=false;
-      leaveCriticalSection(plot^.cs);
+      leaveCriticalSection(plot^.plotCs);
     end;
     if destroyPlot then dispose(plot,destroy);
     Terminate;
@@ -448,9 +448,9 @@ PROCEDURE T_plotPreparationThread.execute;
 PROCEDURE T_plot.postPreparation(CONST width,height:longint);
   begin
     if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then exit;
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then begin
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
       exit;
     end;
     try
@@ -463,7 +463,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
       end;
       T_plotPreparationThread.create(@self);
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
     end;
   end;
 {$endif}
@@ -477,21 +477,21 @@ FUNCTION T_plot.isImagePreparedForResolution(CONST width,height:longint):boolean
 
 FUNCTION T_plot.hasResolution(CONST width,height:longint):boolean;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     result:=(cachedImage.renderedWidth=width) and
             (cachedImage.renderedHeight=height);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(plotCs);
   end;
 
 PROCEDURE T_plot.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     try
       prepareImage(target.width,target.height);
       timing.wait;
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -883,7 +883,7 @@ PROCEDURE T_plotSeries.resolutionChanged(CONST newWidth,newHeight:longint);
 
 CONSTRUCTOR T_plot.createWithDefaults;
   begin
-    system.initCriticalSection(cs);
+    system.initCriticalSection(plotCs);
     setDefaults;
 
     with cachedImage do begin
@@ -899,32 +899,32 @@ CONSTRUCTOR T_plot.createWithDefaults;
 
 PROCEDURE T_plot.setDefaults;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       scalingOptions.setDefaults;
       clear;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
 DESTRUCTOR T_plot.destroy;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       doneImage(fcm_none);
       if cachedImage.dumpName<>'' then DeleteFile(cachedImage.dumpName);
       clear;
     finally
-      system.leaveCriticalSection(cs);
-      doneCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
+      doneCriticalSection(plotCs);
     end;
   end;
 
 PROCEDURE T_plot.clear;
   VAR i: longint;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       for i:=0 to length(row)-1 do row[i].destroy;
       setLength(row, 0);
@@ -932,7 +932,7 @@ PROCEDURE T_plot.clear;
       for i:=0 to length(customText)-1 do dispose(customText[i],destroy);
       setLength(customText,0);
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -942,7 +942,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       firstRow:boolean=true;
       clonedData:T_dataRow;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       for style in getStyles(virtualRowIndex,styleOptions) do begin
         index:=length(row);
@@ -957,7 +957,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
       end;
       virtualRowIndex+=1;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -965,7 +965,7 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
   VAR i0,i:longint;
   begin
     if numberOfRowsToRemove<=0 then exit;
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       virtualRowIndex-=numberOfRowsToRemove;
       i0:=-1;
@@ -975,18 +975,18 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
       end;
       setLength(row,i0);
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
 PROCEDURE T_plot.addCustomText(CONST text: P_customText);
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       setLength(customText,length(customText)+1);
       customText[length(customText)-1]:=text;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -994,36 +994,36 @@ PROCEDURE T_plot.removeCustomText(CONST numberOfEntriesToRemove:longint);
   VAR i0,i:longint;
   begin
     if numberOfEntriesToRemove<=0 then exit;
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       i0:=length(customText)-numberOfEntriesToRemove; if i0<0 then i0:=0;
       for i:=i0 to length(customText)-1 do dispose(customText[i],destroy);
       setLength(customText,i0);
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
 PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     if not(scalingOptions.equals(value)) then doneImage(fcm_none);
     scalingOptions:=value;
-    system.leaveCriticalSection(cs);
+    system.leaveCriticalSection(plotCs);
   end;
 
 FUNCTION T_plot.getScalingOptions: T_scalingOptions;
   begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     result:=scalingOptions;
-    system.leaveCriticalSection(cs);
+    system.leaveCriticalSection(plotCs);
   end;
 
 PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
   CONST factor: double; VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       scalingOptions.axisTrafo['x'].zoom(pixelX,factor);
       scalingOptions.axisTrafo['y'].zoom(pixelY,factor);
@@ -1040,7 +1040,7 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
 
       plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end; end;
 
@@ -1048,7 +1048,7 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
   VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       scalingOptions.axisTrafo['x'].pan(pixelDX);
       scalingOptions.axisTrafo['y'].pan(pixelDY);
@@ -1064,7 +1064,7 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
 
       plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end; end;
 
@@ -1546,7 +1546,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   VAR bgrabmp:TBGRABitmap;
   begin
     if (plotImage.width<5) or (plotImage.height<5) then exit;
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       if (length(row)=0) and (length(customText)=0) then begin
         plotImage.Canvas.clear;
@@ -1568,7 +1568,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
         bgrabmp.free;
       end;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -1597,10 +1597,10 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 {$ifdef enable_render_threads}
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(plotCs);
     if not(forceThreadAndDestroyAfterwards) and (backgroundProcessing.backgroundPreparationRunning or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
       renderToFile(fileName,width,height);
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
       exit;
     end;
     try
@@ -1614,7 +1614,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
       end;
       T_plotPreparationThread.create(@self);
     finally
-      leaveCriticalSection(cs);
+      leaveCriticalSection(plotCs);
     end;
   end;
 {$endif}
@@ -1636,8 +1636,8 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
       clonedSample:T_dataRow;
   begin
-    system.enterCriticalSection(cs);
-    system.enterCriticalSection(p.cs);
+    system.enterCriticalSection(plotCs);
+    system.enterCriticalSection(p.plotCs);
     try
       scalingOptions:=p.scalingOptions;
       //copy rows:
@@ -1653,8 +1653,8 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
       setLength(customText,length(p.customText));
       for i:=0 to length(customText)-1 do customText[i]:=p.customText[i]^.clone;
     finally
-      system.leaveCriticalSection(p.cs);
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(p.plotCs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -1664,7 +1664,7 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST liter
   begin
     if haltExport^ then exit;
     initialize(result);
-    system.enterCriticalSection(cs);
+    system.enterCriticalSection(plotCs);
     try
       opt:=scalingOptions.getOptionDiffString(prevOptions);
       Application.ProcessMessages;
@@ -1679,7 +1679,7 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST liter
         progress.position:=progress.position+1;
       end;
     finally
-      system.leaveCriticalSection(cs);
+      system.leaveCriticalSection(plotCs);
     end;
   end;
 
@@ -1762,7 +1762,7 @@ FUNCTION T_plotSystem.canStartGuiInteraction:boolean;
   begin
     if tryEnterCriticalsection(adapterCs)<>0 then begin
       if tryEnterCriticalsection(animation.seriesCs)<>0 then begin
-        if tryEnterCriticalsection(currentPlot.cs)<>0 then begin
+        if tryEnterCriticalsection(currentPlot.plotCs)<>0 then begin
           result:=true;
         end else begin
           leaveCriticalSection(animation.seriesCs);
@@ -1780,14 +1780,14 @@ PROCEDURE T_plotSystem.startGuiInteraction;
   begin
     enterCriticalSection(adapterCs);
     enterCriticalSection(animation.seriesCs);
-    enterCriticalSection(currentPlot.cs);
+    enterCriticalSection(currentPlot.plotCs);
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
   begin
     leaveCriticalSection(adapterCs);
     leaveCriticalSection(animation.seriesCs);
-    leaveCriticalSection(currentPlot.cs);
+    leaveCriticalSection(currentPlot.plotCs);
   end;
 
 FUNCTION T_plotSystem.isEmpty:boolean;

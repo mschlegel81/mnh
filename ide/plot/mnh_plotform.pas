@@ -727,7 +727,7 @@ PROCEDURE TplotForm.updateInteractiveSection;
 PROCEDURE TplotForm.doPlot;
   begin
     if relatedPlot=nil then exit;
-    relatedPlot^.startGuiInteraction;
+    if relatedPlot^.canStartGuiInteraction then
     try
       if relatedPlot^.isPlotChanged then begin
         updateInteractiveSection;
