@@ -1210,10 +1210,22 @@ FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
   end;
 
 FUNCTION T_scalingOptions.getOptionString:string;
-  VAR defaults:T_scalingOptions;
   begin
-    defaults.setDefaults;
-    result:=getOptionDiffString(defaults);
+    result:='';
+    result:=                            '"x0"=>'+numToString(axisTrafo['x'].worldMin);
+    result+=BoolToStr(result='','',',')+'"x1"=>'+numToString(axisTrafo['x'].worldMax);
+    result+=BoolToStr(result='','',',')+'"y0"=>'+numToString(axisTrafo['y'].worldMin);
+    result+=BoolToStr(result='','',',')+'"y1"=>'+numToString(axisTrafo['y'].worldMax);
+    result+=BoolToStr(result='','',',')+'"fontsize"=>'+numToString(relativeFontSize);
+    result+=BoolToStr(result='','',',')+'"preserveAspect"=>'+boolLit[preserveAspect].toString;
+    result+=BoolToStr(result='','',',')+'"autoscaleX"=>'+boolLit[axisTrafo['x'].autoscale].toString;
+    result+=BoolToStr(result='','',',')+'"autoscaleY"=>'+boolLit[axisTrafo['y'].autoscale].toString;
+    result+=BoolToStr(result='','',',')+'"logscaleX"=>' +boolLit[axisTrafo['x'].logscale ].toString;
+    result+=BoolToStr(result='','',',')+'"logscaleY"=>' +boolLit[axisTrafo['y'].logscale ].toString;
+    result+=BoolToStr(result='','',',')+'"autoscaleFactor"=>'+numToString(autoscaleFactor);
+    result+=BoolToStr(result='','',',')+'"axisStyleX"=>'+intToStr(byte(axisStyle['x']));
+    result+=BoolToStr(result='','',',')+'"axisStyleY"=>'+intToStr(byte(axisStyle['y']));
+    if result<>'' then result:='setOptions(['+result+'].toMap);';
   end;
 
 FUNCTION T_scalingOptions.getOptionDiffString(CONST before:T_scalingOptions):string;
