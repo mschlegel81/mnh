@@ -953,6 +953,7 @@ FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
 genericOuter;
 {$define genericOuter:=FUNCTION outerFunc_id intFuncSignature;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context,recycler);
