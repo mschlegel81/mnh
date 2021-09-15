@@ -105,6 +105,7 @@ TYPE
   end;
 
   T_frameCacheMode=(fcm_none,fcm_retainImage,fcm_inMemoryPng,fcm_tempFile);
+  T_backgroundProcessingState=(bps_none,bps_pending,bps_running);
 
   P_plot =^T_plot;
   T_plot = object
@@ -125,7 +126,7 @@ TYPE
       end;
 
       backgroundProcessing:record
-        backgroundPreparationRunning:boolean;
+        state:T_backgroundProcessingState;
         postedWidth  ,
         postedHeight :longint;
         postedFileName:string;
@@ -407,10 +408,11 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
       end;
       if not(imageIsPrepared) then begin
         if cachedImage.image<>nil then FreeAndNil(cachedImage.image);
+        if cachedImage.inMemoryDump<>nil then FreeAndNil(cachedImage.inMemoryDump);
         cachedImage.image:=obtainPlot(width,height);
         cachedImage.dumpIsUpToDate:=false;
-        cachedImage.renderedHeight :=height;
-        cachedImage.renderedWidth  :=width;
+        cachedImage.renderedHeight:=height;
+        cachedImage.renderedWidth :=width;
       end;
     finally
       leaveCriticalSection(plotCs);
@@ -424,12 +426,13 @@ PROCEDURE T_plotPreparationThread.execute;
     try
       enterCriticalSection(plot^.plotCs);
     except
-      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      plot^.backgroundProcessing.state:=bps_none;
       Terminate;
       exit;
     end;
     try
       with plot^.backgroundProcessing do begin
+        state:=bps_running;
         plot^.prepareImage(postedWidth,postedHeight);
         if renderToFilePosted then begin
           destroyPlot:=destroyAfterwardsPosted;
@@ -438,7 +441,7 @@ PROCEDURE T_plotPreparationThread.execute;
         end;
       end;
     finally
-      plot^.backgroundProcessing.backgroundPreparationRunning:=false;
+      plot^.backgroundProcessing.state:=bps_none;
       leaveCriticalSection(plot^.plotCs);
     end;
     if destroyPlot then dispose(plot,destroy);
@@ -447,15 +450,15 @@ PROCEDURE T_plotPreparationThread.execute;
 
 PROCEDURE T_plot.postPreparation(CONST width,height:longint);
   begin
-    if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then exit;
+    if (backgroundProcessing.state<>bps_none) or isImagePreparedForResolution(width,height) then exit;
     enterCriticalSection(plotCs);
-    if backgroundProcessing.backgroundPreparationRunning or isImagePreparedForResolution(width,height) then begin
+    if (backgroundProcessing.state<>bps_none) or isImagePreparedForResolution(width,height) then begin
       leaveCriticalSection(plotCs);
       exit;
     end;
     try
       with backgroundProcessing do begin
-        backgroundPreparationRunning:=true;
+        state:=bps_pending;
         postedHeight:=height;
         postedWidth:=width;
         renderToFilePosted:=false;
@@ -487,6 +490,7 @@ PROCEDURE T_plot.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecuti
   begin
     enterCriticalSection(plotCs);
     try
+      if not isImagePreparedForResolution(target.width,target.height) then
       prepareImage(target.width,target.height);
       timing.wait;
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
@@ -855,8 +859,9 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifdef enable_render_threads}
         if result then begin
+          lastToPrepare:=frameIndex;
           toPrepare:=frameIndex+1;
-          while (toPrepare<length(frame)) and (preparationThreadsRunning*2<settings.cpuCount) and (memoryCleaner.isMemoryInComfortZone) do begin
+          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryCleaner.isMemoryInComfortZone) do begin
             frame[toPrepare]^.postPreparation(width,height);
             inc(toPrepare);
             if cycle then toPrepare:=toPrepare mod length(frame);
@@ -894,7 +899,7 @@ CONSTRUCTOR T_plot.createWithDefaults;
       renderedWidth :=-1;
       renderedHeight:=-1;
     end;
-    backgroundProcessing.backgroundPreparationRunning:=false;
+    backgroundProcessing.state:=bps_none;
   end;
 
 PROCEDURE T_plot.setDefaults;
@@ -1598,14 +1603,14 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
 PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
   begin
     enterCriticalSection(plotCs);
-    if not(forceThreadAndDestroyAfterwards) and (backgroundProcessing.backgroundPreparationRunning or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
+    if not(forceThreadAndDestroyAfterwards) and ((backgroundProcessing.state<>bps_none) or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
       renderToFile(fileName,width,height);
       leaveCriticalSection(plotCs);
       exit;
     end;
     try
       with backgroundProcessing do begin
-        backgroundPreparationRunning:=true;
+        state:=bps_pending;
         postedHeight:=height;
         postedWidth:=width;
         renderToFilePosted:=true;
