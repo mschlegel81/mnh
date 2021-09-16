@@ -706,37 +706,55 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="10">
+    <Exceptions Count="12">
       <Item1>
         <Name Value="EAbort"/>
+        <Enabled Value="False"/>
       </Item1>
       <Item2>
         <Name Value="ECodetoolError"/>
+        <Enabled Value="False"/>
       </Item2>
       <Item3>
         <Name Value="EFOpenError"/>
+        <Enabled Value="False"/>
       </Item3>
       <Item4>
         <Name Value="EInvalidOperation"/>
+        <Enabled Value="False"/>
       </Item4>
       <Item5>
         <Name Value="EAbstractError"/>
+        <Enabled Value="False"/>
       </Item5>
       <Item6>
         <Name Value="ERegExpr"/>
+        <Enabled Value="False"/>
       </Item6>
       <Item7>
         <Name Value="RunError(210)"/>
+        <Enabled Value="False"/>
       </Item7>
       <Item8>
         <Name Value="ERangeError"/>
+        <Enabled Value="False"/>
       </Item8>
       <Item9>
         <Name Value="RunError(201)"/>
+        <Enabled Value="False"/>
       </Item9>
       <Item10>
         <Name Value="Exception"/>
+        <Enabled Value="False"/>
       </Item10>
+      <Item11>
+        <Name Value="EIntOverflow"/>
+        <Enabled Value="False"/>
+      </Item11>
+      <Item12>
+        <Name Value="RunError(215)"/>
+        <Enabled Value="False"/>
+      </Item12>
     </Exceptions>
   </Debugging>
 </CONFIG>

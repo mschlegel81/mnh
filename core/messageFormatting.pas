@@ -177,7 +177,7 @@ FUNCTION T_messagesAndLocations.text: T_arrayOfString;
   VAR i:longint;
   begin
     setLength(result,fill);
-    for i:=0 to fill-1 do result[i]:=dat[(i+offset+maxSize) mod maxSize].message;
+    for i:=0 to fill-1 do result[i]:=dat[longint((int64(i)+offset+maxSize) mod maxSize)].message;
   end;
 
 FUNCTION T_messagesAndLocations.location(CONST i: longint): T_searchTokenLocation;
@@ -189,7 +189,7 @@ FUNCTION T_messagesAndLocations.locations:T_searchTokenLocations;
   VAR i:longint;
   begin
     setLength(result,fill);
-    for i:=0 to fill-1 do result[i]:=dat[(i+offset+maxSize) mod maxSize].location;
+    for i:=0 to fill-1 do result[i]:=dat[longint((int64(i)+offset+maxSize) mod maxSize)].location;
   end;
 
 PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
