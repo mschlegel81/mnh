@@ -59,7 +59,8 @@ T_editorMeta=object(T_basicEditorMeta)
       filePath:ansistring;
       fileAccessAge:double;
       isChanged:boolean;
-      ignoreDeleted:boolean;
+      ignoreDeleted,
+      ignoreChanged:boolean;
     end;
     strictlyReadOnly:boolean;
     tabsheet    : TTabSheet;
@@ -244,6 +245,7 @@ CONSTRUCTOR T_editorMeta.create(CONST mIdx: longint);
       fileAccessAge:=0;
       filePath     :='';
       ignoreDeleted:=false;
+      ignoreChanged:=false;
     end;
     editor.clearAll;
     editor.modified:=false;
@@ -269,6 +271,7 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
       strictlyReadOnly:=stream.readBoolean; //#3
       if isChanged then fileAccessAge:=stream.readDouble;  //#4
       ignoreDeleted:=false;
+      ignoreChanged:=false;
     end;
     {$ifdef debugMode}
     writeln('Read file info. ok=',stream.allOkay);
@@ -503,6 +506,7 @@ FUNCTION T_editorMeta.setFile(CONST fileName: string):boolean;
     result:=true;
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
+    fileInfo.ignoreChanged:=false;
     editor.clearAll;
     if fileName<>'' then try
       strictlyReadOnly:=false;
