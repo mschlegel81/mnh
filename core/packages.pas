@@ -733,6 +733,16 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end else result:=true;
     end;
 
+  PROCEDURE assertThatAllIdsCanBeResolved(token:P_token);
+    VAR t:P_token;
+    begin
+      t:=token;
+      while t<>nil do begin
+        if t^.tokType=tt_identifier then resolveId(t^,globals.primaryContext.messages);
+        t:=t^.next;
+      end;
+    end;
+
   PROCEDURE parseRule;
     VAR p:P_token; //iterator
         ruleDeclarationStart:T_tokenLocation;
@@ -764,7 +774,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         include(ruleModifiers,statement.token.first^.getModifier);
         statement.token.first:=recycler^.disposeToken(statement.token.first);
       end;
-      evaluateBody:=(evaluateBody or (modifier_mutable in ruleModifiers)) and not(C_packageLoadUsecaseMeta[usecase].assistanceRun);
+      evaluateBody:=(evaluateBody or (modifier_mutable in ruleModifiers));
       if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
       if not(statement.token.first^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.token.first^.location);
@@ -814,7 +824,11 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       rulePattern.toParameterIds(ruleBody);
 
       if evaluateBody and (globals.primaryContext.continueEvaluation)
-      then globals.primaryContext.reduceExpression(ruleBody,recycler);
+      then begin
+        if (C_packageLoadUsecaseMeta[usecase].assistanceRun)
+        then assertThatAllIdsCanBeResolved(ruleBody)
+        else globals.primaryContext.reduceExpression(ruleBody,recycler);
+      end;
 
       if globals.primaryContext.continueEvaluation then begin
         metaData.create;
@@ -860,7 +874,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.token.first=nil then exit;
-    if C_packageLoadUsecaseMeta[usecase].assistanceRun then globals.primaryContext.messages^.clearFlags;
 
     if not(C_packageLoadUsecaseMeta[usecase].assistanceRun) and not(globals.primaryContext.continueEvaluation) then begin
       recycler^.cascadeDisposeToken(statement.token.first);
@@ -893,10 +906,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           globals.primaryContext.messages^.raiseSimpleError('Missing rule body',assignmentToken^.location);
           recycler^.cascadeDisposeToken(statement.token.first);
           exit;
-        end;
-        if C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
-          //check, but ignore result
-          globals.primaryContext.messages^.clearFlags;
         end;
         predigest(assignmentToken^.next,@self,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
@@ -956,7 +965,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     end;
     if statement.token.first<>nil then recycler^.cascadeDisposeToken(statement.token.first);
     statement.token.first:=nil;
-    if C_packageLoadUsecaseMeta[usecase].assistanceRun then globals.primaryContext.messages^.clearFlags;
   end;
 
 PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters: T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});

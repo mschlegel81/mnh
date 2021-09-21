@@ -112,6 +112,11 @@ FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
 FUNCTION newFixatedFileProxy(CONST fileName:string):P_editorMetaProxy;
 {$endif}
 {$ifdef includeImplementation}
+FUNCTION equals_fileChangedMessage(CONST x,y:T_fileChangedMessage):boolean;
+  begin
+    result:=(x.filePath=y.filePath) and (x.deleted=y.deleted) and (x.modified=y.modified);
+  end;
+
 FUNCTION newFileProxy(CONST fileName:string):P_codeProvider;
   VAR proxy:P_editorMetaProxy;
   begin
@@ -172,11 +177,12 @@ PROCEDURE T_checkFilesThread.execute;
           message.filePath:=fileInfo.filePath;
           message.deleted :=true;
           message.modified:=false;
-          workspace.changedFilesQueue.append(message);
-        end else if fileIsModifiedOnFileSystem then begin
+          workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+        end else if fileIsModifiedOnFileSystem and not(fileInfo.ignoreChanged) then begin
           message.filePath:=fileInfo.filePath;
           message.modified:=true;
           message.deleted :=false;
+          workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
         end;
         inc(metaIndex);
       end;
@@ -891,7 +897,10 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
             end;
             cda_ignoreChanges: begin
               if not(saveCurrentFile(false,meta))
-              then meta^.fileInfo.isChanged:=true;
+              then begin
+                meta^.fileInfo.isChanged:=true;
+                meta^.fileInfo.ignoreDeleted:=true;
+              end;
             end;
             cda_overwrite    : begin
               meta^.fileInfo.ignoreDeleted:=true;
@@ -903,8 +912,10 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
           case closeDialogForm.showOnOutOfSync(meta^.fileInfo.filePath) of
             cda_reload:
               meta^.reloadFile();
-            cda_ignoreChanges:
+            cda_ignoreChanges: begin
               meta^.fileInfo.isChanged:=true;
+              meta^.fileInfo.ignoreChanged:=true;
+            end;
             cda_overwrite:
               if not(saveCurrentFile(false,meta)) then meta^.fileInfo.isChanged:=true;
           end;
