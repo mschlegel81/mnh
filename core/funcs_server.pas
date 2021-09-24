@@ -195,6 +195,7 @@ DESTRUCTOR T_microserverRequest.destroy;
 
 CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_context);
   begin
+    inherited create(context_^.getGlobals,feedbackLocation_,true);
     with log do begin
       creationTime:=context_^.wallclockTime;
       execTime:=0;
@@ -202,7 +203,6 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
       requestCount:=0;
     end;
     initCriticalSection(serverCs);
-    inherited create(context_^.getGlobals,feedbackLocation_,true);
     ip:=cleanIp(ip_);
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
     then timeout:=0
