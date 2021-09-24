@@ -86,7 +86,7 @@ main('files')->begin
            allFiles('core','*.inc')).minus(['core/res_version.inc','ide/res_toDeleteOnUninstall.inc'])
     .sort;
 
-  newList.escape.each(s,s,index mod 4=3 ? ",\n\v" : ",\t").leading.join
+  group(newList.escape,newList.extractFileDirectory).sort.getInner(1).each(chunk,chunk.sort.each(s,s,index mod 4=3 ? ",\n\v" : ",\t").leading.join).join(",\n\v")
   .{print("hashFiles:=[\v",$s,'];')};
   newList==hashFiles
   ? print('List is up to date')
