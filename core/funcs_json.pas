@@ -91,6 +91,7 @@ FUNCTION formatJson_impl intFuncSignature;
             entryList[i].key^.unreference;
             entryList[i].value^.unreference;
           end;
+          result:='{'+join(parts,',')+'}';
         end
         else result:='';
       end;
