@@ -982,7 +982,7 @@ FUNCTION T_literalRecycler.newListLiteral(CONST initialSize: longint): P_listLit
       dec(fill);
       result:=dat[fill];
       result^.numberOfReferences:=1;
-      setLength(result^.dat,initialSize);
+      if length(result^.dat)<initialSize then setLength(result^.dat,initialSize);
       result^.fill:=0;
     end else begin
       new(result,create(initialSize));
@@ -997,7 +997,7 @@ FUNCTION T_literalRecycler.newListLiteral(CONST a: P_literal; CONST b: P_literal
       dec(fill);
       result:=dat[fill];
       result^.numberOfReferences:=1;
-      setLength(result^.dat,initialSize);
+      if length(result^.dat)<initialSize then setLength(result^.dat,initialSize);
       result^.fill:=0;
     end else begin
       new(result,create(initialSize));
@@ -1459,14 +1459,13 @@ DESTRUCTOR T_bigIntLiteral.destroy; begin end;
 DESTRUCTOR T_stringLiteral.destroy; begin end;
 DESTRUCTOR T_listLiteral.destroy;
   begin
-    assert(length(dat)=0);
+    setLength(dat,0);
   end;
 
 PROCEDURE T_listLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR i:longint;
   begin
     for i:=0 to fill-1 do literalRecycler^.disposeLiteral(dat[i]);
-    setLength(dat,0);
     fill    :=0;
     myHash  :=0;
     ints    :=0;
