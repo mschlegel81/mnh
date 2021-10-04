@@ -58,6 +58,8 @@ TYPE
   P_plotRenderRequest=^T_plotRenderRequest;
   T_plotRenderRequest=object(T_payloadMessage)
     private
+      feedbackLocation:T_searchTokenLocation;
+      feedbackMessages:P_messages;
       targetIsString,renderInBackground:boolean;
       fileName:string;
       width,height:longint;
@@ -65,8 +67,8 @@ TYPE
       outputString:string;
     public
       FUNCTION internalType:shortstring; virtual;
-      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean);
-      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint);
+      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
       PROCEDURE setString(CONST s:string);
       FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
       PROPERTY isRenderToStringRequest:boolean read targetIsString;
@@ -157,7 +159,7 @@ TYPE
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
       PROCEDURE renderPlot(VAR plotImage: TImage);
-      PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint);
+      PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
@@ -169,7 +171,7 @@ TYPE
       PROCEDURE prepareImage(CONST width,height:longint);
 
       {$ifdef enable_render_threads}
-      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
+      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
       PROCEDURE postPreparation(CONST width,height:longint);
       {$endif}
 
@@ -246,15 +248,19 @@ TYPE
 T_plotPreparationThread=class(T_basicThread)
   protected
     plot:P_plot;
+    feedbackLocation:T_searchTokenLocation;
+    messages:P_messages;
     PROCEDURE execute; override;
   public
-    CONSTRUCTOR create(CONST plot_:P_plot);
+    CONSTRUCTOR create(CONST plot_:P_plot; CONST feedbackLocation_:T_searchTokenLocation; CONST messages_:P_messages);
     DESTRUCTOR destroy; override;
   end;
 
-CONSTRUCTOR T_plotPreparationThread.create(CONST plot_: P_plot);
+CONSTRUCTOR T_plotPreparationThread.create(CONST plot_:P_plot; CONST feedbackLocation_:T_searchTokenLocation; CONST messages_:P_messages);
   begin
     plot:=plot_;
+    feedbackLocation:=feedbackLocation_;
+    messages:=messages_;
     inherited create;
     interLockedIncrement(preparationThreadsRunning);
   end;
@@ -422,6 +428,7 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
 {$ifdef enable_render_threads}
 PROCEDURE T_plotPreparationThread.execute;
   VAR destroyPlot:boolean;
+      errorText:string='';
   begin
     try
       enterCriticalSection(plot^.plotCs);
@@ -436,14 +443,22 @@ PROCEDURE T_plotPreparationThread.execute;
         plot^.prepareImage(postedWidth,postedHeight);
         if renderToFilePosted then begin
           destroyPlot:=destroyAfterwardsPosted;
-          plot^.renderToFile(postedFileName,postedWidth,postedHeight);
+          plot^.renderToFile(postedFileName,postedWidth,postedHeight,feedbackLocation,messages);
           plot^.doneImage(fcm_none);
         end;
       end;
-    finally
-      plot^.backgroundProcessing.state:=bps_none;
-      leaveCriticalSection(plot^.plotCs);
+    except
+      if messages<>nil then begin
+        if plot^.backgroundProcessing.renderToFilePosted
+        then errorText:='Rendering to file '+plot^.backgroundProcessing.postedFileName
+        else errorText:='Background plot preparation';
+        errorText+=' @'+intToStr(plot^.backgroundProcessing.postedWidth)+'x'+intToStr(plot^.backgroundProcessing.postedHeight)+' failed.';
+        messages^.raiseSimpleError(errorText,feedbackLocation);
+      end;
     end;
+    plot^.backgroundProcessing.state:=bps_none;
+    leaveCriticalSection(plot^.plotCs);
+
     if destroyPlot then dispose(plot,destroy);
     Terminate;
   end;
@@ -464,7 +479,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         renderToFilePosted:=false;
         destroyAfterwardsPosted:=false;
       end;
-      T_plotPreparationThread.create(@self);
+      T_plotPreparationThread.create(@self,C_nilSearchTokenLocation,nil);
     finally
       leaveCriticalSection(plotCs);
     end;
@@ -556,9 +571,11 @@ FUNCTION T_plotRenderRequest.internalType: shortstring;
     result:='T_plotRenderRequest';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_: longint; CONST backgroundRendering:boolean);
+CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_: longint; CONST backgroundRendering:boolean; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
   begin
     inherited create(mt_plot_renderRequest);
+    feedbackLocation:=feedbackLocation_;
+    feedbackMessages:=feedbackMessages_;
     targetIsString:=false;
     renderInBackground:=backgroundRendering;
     fileName:=filename_;
@@ -568,9 +585,11 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: strin
     outputString:='';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint);
+CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
   begin
     inherited create(mt_plot_renderRequest);
+    feedbackLocation:=feedbackLocation_;
+    feedbackMessages:=feedbackMessages_;
     targetIsString:=true;
     fileName:='';
     width:=width_;
@@ -773,7 +792,6 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
   VAR storeImage:TImage;
-      message:ansistring;
   begin
     enterCriticalSection(seriesCs);
     if (index<0) or (index>=length(frame)) then begin
@@ -783,7 +801,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     try
       {$ifdef enable_render_threads}
       if exportingAll
-      then frame[index]^.postRenderToFile(fileName,width,height,false)
+      then frame[index]^.postRenderToFile(fileName,width,height,false,C_nilSearchTokenLocation,nil)
       else begin
       {$endif}
         storeImage:=TImage.create(nil);
@@ -792,9 +810,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
         try
           storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
         except
-          beep;
-          message:='Could not access file '+fileName;
-          Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+          postIdeMessage('Export to PNG failed for: '+fileName,true);
         end;
         storeImage.destroy;
         frame[index]^.doneImage(fcm_none);
@@ -1584,7 +1600,7 @@ FUNCTION T_plot.obtainPlot(CONST width, height: longint): TImage;
     renderPlot(result);
   end;
 
-PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longint);
+PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longint; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
   VAR storeImage:TImage;
       message:ansistring;
   begin
@@ -1592,19 +1608,20 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
     try
       storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     except
-      beep;
-      message:='Could not access file '+fileName;
-      Application.MessageBox('Export to png failed',PChar(message),MB_ICONERROR+MB_OK);
+      message:='Export to PNG failed for: '+fileName;
+      if feedbackMessages<>nil
+      then feedbackMessages^.raiseSimpleError(message,feedbackLocation)
+      else postIdeMessage(message,true);
     end;
     storeImage.destroy;
   end;
 
 {$ifdef enable_render_threads}
-PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean);
+PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
   begin
     enterCriticalSection(plotCs);
     if not(forceThreadAndDestroyAfterwards) and ((backgroundProcessing.state<>bps_none) or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
-      renderToFile(fileName,width,height);
+      renderToFile(fileName,width,height,feedbackLocation,feedbackMessages);
       leaveCriticalSection(plotCs);
       exit;
     end;
@@ -1617,7 +1634,7 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         destroyAfterwardsPosted:=forceThreadAndDestroyAfterwards;
         postedFileName:=fileName;
       end;
-      T_plotPreparationThread.create(@self);
+      T_plotPreparationThread.create(@self,feedbackLocation,feedbackMessages);
     finally
       leaveCriticalSection(plotCs);
     end;
@@ -1729,10 +1746,10 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
           if renderInBackground then begin
             new(clonedPlot,createWithDefaults);
             clonedPlot^.copyFrom(currentPlot);
-            clonedPlot^.postRenderToFile(fileName,width,height,true);
+            clonedPlot^.postRenderToFile(fileName,width,height,true,feedbackLocation,feedbackMessages);
           end else
           {$endif}
-          currentPlot.renderToFile(fileName,   width,height);
+          currentPlot.renderToFile(fileName,   width,height,feedbackLocation,feedbackMessages);
         end;
         P_plotRenderRequest(message)^.fileName:='';
       end;

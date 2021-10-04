@@ -266,7 +266,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       if params^.size=4 then backgroundRendering:=bool3^.value;
       try
         fileName:=ChangeFileExt(str0^.value,'.png');
-        new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering));
+        new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering,tokenLocation,context^.messages));
         context^.messages^.postCustomMessage(renderRequest,true);
       except
         on e:Exception do begin
@@ -291,7 +291,7 @@ FUNCTION renderToString_impl intFuncSignature;
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      new(renderRequest,createRenderToStringRequest(width,height));
+      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages));
       context^.messages^.postCustomMessage(renderRequest^.rereferenced,true);
       result:=recycler^.newStringLiteral(renderRequest^.getStringWaiting(context^.messages));
       renderRequest^.setString('');

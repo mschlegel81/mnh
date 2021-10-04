@@ -7,6 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls, EditBtn, ComCtrls,
+  basicTypes,
   mnh_plotData;
 
 CONST EXECUTE_BUTTON_CAPTION:array[false..true] of string=('Create Script','Render to file(s)');
@@ -107,7 +108,7 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
         else psys^.currentPlot.renderToFile(
                OutputFileNameEdit.caption,
                renderWidth,
-               renderHeight);
+               renderHeight,C_nilSearchTokenLocation,nil);
         ProgressBar1.position:=1;
         Application.ProcessMessages;
       end;
