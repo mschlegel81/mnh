@@ -1,6 +1,6 @@
 UNIT funcs_json;
 INTERFACE
-USES jsonparser,fpjson,jsonscanner,
+USES JSONParser,fpjson,jsonscanner,
      myGenerics,
      basicTypes,mnh_constants,
      litVar,
