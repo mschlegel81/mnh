@@ -505,7 +505,7 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      new(renderRequest,createRenderToStringRequest(width,height));
+      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages));
       context^.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
