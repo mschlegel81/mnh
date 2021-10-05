@@ -22,6 +22,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(HTTP_NAMESPACE,'formatHtmlPage',   @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addAnimationFrame',@requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot',          @requireGui ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',  @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'clearAnimation',   @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'display',          @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',         @requireGui ,ak_variadic);

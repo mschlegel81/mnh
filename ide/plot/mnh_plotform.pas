@@ -211,6 +211,7 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
         anyPlotMessage:=anyPlotMessage or
          (message^.messageType in [mt_plot_addText,
                                    mt_plot_addRow,
+                                   mt_plot_rasterImage,
                                    mt_plot_dropRow]);
         inherited processMessage(message);
       end;

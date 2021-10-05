@@ -34,11 +34,22 @@ TYPE
       CONSTRUCTOR create(CONST styleOptions_: string; CONST rowData_:T_dataRow);
   end;
 
+  P_rasterImageMessage=^T_rasterImageMessage;
+  T_rasterImageMessage=object(T_payloadMessage)
+    public
+      colors:array of T_color;
+      width:longint;
+      FUNCTION internalType:shortstring; virtual;
+      CONSTRUCTOR create(CONST width_:longint);
+      FUNCTION canAddColor(CONST literal:P_literal):boolean;
+      DESTRUCTOR destroy; virtual;
+  end;
+
   P_addTextMessage=^T_addTextMessage;
   T_addTextMessage=object(T_payloadMessage)
-      customText:P_customText;
-      FUNCTION internalType:shortstring; virtual;
-      CONSTRUCTOR create(CONST cText:P_customText);
+    customText:P_customText;
+    FUNCTION internalType:shortstring; virtual;
+    CONSTRUCTOR create(CONST cText:P_customText);
   end;
 
   P_plotOptionsMessage=^T_plotOptionsMessage;
@@ -144,6 +155,7 @@ TYPE
       FUNCTION  obtainPlot(CONST width,height:longint):TImage;
 
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
+      PROCEDURE addSingleBox(CONST color:T_color; CONST x,y:longint);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
       PROCEDURE removeCustomText(CONST numberOfEntriesToRemove:longint);
@@ -254,6 +266,45 @@ T_plotPreparationThread=class(T_basicThread)
   public
     CONSTRUCTOR create(CONST plot_:P_plot; CONST feedbackLocation_:T_searchTokenLocation; CONST messages_:P_messages);
     DESTRUCTOR destroy; override;
+  end;
+
+FUNCTION T_rasterImageMessage.internalType: shortstring;
+  begin
+    result:='P_rasterImageMessage';
+  end;
+
+CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint);
+  begin
+    inherited create(mt_plot_rasterImage);
+    width:=width_;
+    setLength(colors,0);
+  end;
+
+FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
+  VAR i:longint;
+  begin
+    i:=length(colors);
+    if literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
+      setLength(colors,i+1);
+      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
+      colors[i,cc_green]:=colors[i,cc_red  ];
+      colors[i,cc_blue ]:=colors[i,cc_red  ];
+      colors[i,cc_alpha]:=255;
+      result:=true;
+    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
+      setLength(colors,i+1);
+      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
+      colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
+      colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
+      colors[i,cc_alpha]:=255;
+      result:=true;
+    end else result:=false;
+  end;
+
+DESTRUCTOR T_rasterImageMessage.destroy;
+  begin
+    setLength(colors,0);
+    inherited destroy;
   end;
 
 CONSTRUCTOR T_plotPreparationThread.create(CONST plot_:P_plot; CONST feedbackLocation_:T_searchTokenLocation; CONST messages_:P_messages);
@@ -980,6 +1031,24 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     finally
       system.leaveCriticalSection(plotCs);
     end;
+  end;
+
+PROCEDURE T_plot.addSingleBox(CONST color:T_color; CONST x,y:longint);
+  VAR style:T_style;
+      index:longint;
+      dataRow:T_dataRow;
+  begin
+    style.color:=color;
+    style.styleModifier:=0;
+    style.style:=[ps_box,ps_fillSolid];
+    dataRow.init(2);
+    dataRow.point[0]:=pointOf(x,y);
+    dataRow.point[1]:=pointOf(x+1,y+1);
+    index:=length(row);
+    setLength(row,index+1);
+    row[index].create(dataRow);
+    row[index].style:=style;
+    row[index].pseudoIndex:=virtualRowIndex;
   end;
 
 PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
@@ -1723,6 +1792,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       {$ifdef enable_render_threads}
       clonedPlot:P_plot;
       {$endif}
+      ix,iy,i:longint;
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
@@ -1746,6 +1816,27 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         if P_plotDropRowRequest(message)^.dropRows
         then currentPlot.removeRows      (P_plotDropRowRequest(message)^.count)
         else currentPlot.removeCustomText(P_plotDropRowRequest(message)^.count);
+      mt_plot_rasterImage: with P_rasterImageMessage(message)^ do begin
+        enterCriticalSection(currentPlot.plotCs);
+        try
+          currentPlot.clear;
+          currentPlot.scalingOptions.axisStyle['x']:=[];
+          currentPlot.scalingOptions.axisStyle['y']:=[];
+          iy:=0;
+          ix:=0;
+          for i:=0 to length(colors)-1 do begin
+            currentPlot.addSingleBox(colors[i],ix,iy);
+            inc(ix);
+            if ix>=width then begin
+              ix:=0;
+              inc(iy);
+            end;
+          end;
+          inc(currentPlot.virtualRowIndex);
+        finally
+          leaveCriticalSection(currentPlot.plotCs);
+        end;
+      end;
       mt_plot_renderRequest: begin
         with P_plotRenderRequest(message)^ do if isRenderToStringRequest
         then setString(currentPlot.renderToString(width,height))
@@ -1784,7 +1875,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         displayImmediate:=false;
       end;
     end;
-    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_rasterImage,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
     if (message^.messageType=mt_plot_renderRequest) and (gui_started<>ide) then plotChangedSinceLastDisplay:=false;
   end;
 
@@ -1941,6 +2032,7 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         mt_plot_addText,
         mt_plot_addRow,
         mt_plot_dropRow,
+        mt_plot_rasterImage,
         mt_plot_setOptions,
         mt_plot_clear,
         mt_plot_clearAnimation,
