@@ -69,7 +69,7 @@ FUNCTION plotRasterImage intFuncSignature;
       new(message,create(int1^.intValue));
       iter:=list0^.tempIteratableList;
       for c in iter do if not(message^.canAddColor(c)) then begin
-        dispose(message,destroy);
+        disposeMessage(message);
         exit(nil);
       end;
       context^.messages^.postCustomMessage(message,true);
