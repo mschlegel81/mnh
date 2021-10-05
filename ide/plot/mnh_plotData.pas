@@ -1682,7 +1682,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
 
 FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR opt:string;
-      i:longint;
+      i,k0,k1:longint;
   begin
     if haltExport^ then exit;
     initialize(result);
@@ -1691,9 +1691,17 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST liter
       opt:=scalingOptions.getOptionDiffString(prevOptions);
       Application.ProcessMessages;
       if opt='' then setLength(result,0) else result:=opt;
-      for i:=0 to length(row)-1 do if not(haltExport^) then begin
-        append(result,row[i].toPlotStatement(i=0,literalRecycler,globalRowData));
-        progress.position:=progress.position+1;
+      if length(row)<4 then begin
+        for i:=0 to length(row)-1 do if not(haltExport^) then begin
+          append(result,row[i].toPlotStatement(i=0,literalRecycler,globalRowData));
+          progress.position:=progress.position+1;
+        end;
+      end else begin
+        append(result,row[0].toPlotStatement(true,literalRecycler,globalRowData));
+        k0:=globalRowData.size;
+        for i:=1 to length(row)-1 do row[i].toPlotStatement(false,literalRecycler,globalRowData);
+        k1:=globalRowData.size-1;
+        append(result,'map(ROW[['+intToStr(k0)+'..'+intToStr(k1)+']],{addPlot@$0});');
       end;
       Application.ProcessMessages;
       for i:=0 to length(customText)-1 do if not(haltExport^) then begin
@@ -1832,9 +1840,9 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
     recycler:=newRecycler;
     try
       globalRowData:=recycler^.newListLiteral();
-      result:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
-      myGenerics.append(result,'plain script;');
-
+      setLength(result,2);
+      result[0]:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
+      result[1]:='plain script;';
       commands:='resetOptions;';
       myGenerics.append(commands,'clearAnimation;');
       prevOptions.setDefaults;
