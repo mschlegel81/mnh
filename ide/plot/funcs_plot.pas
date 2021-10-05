@@ -56,6 +56,27 @@ FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
     end;
   end;
 
+FUNCTION plotRasterImage intFuncSignature;
+  VAR message:P_rasterImageMessage;
+      iter:T_arrayOfLiteral;
+      c:P_literal;
+  begin
+    if not(context^.checkSideEffects('plotRasterImage',tokenLocation,[se_alterGuiState])) then exit(nil);
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList]) and (arg1^.literalType = lt_smallint)
+    then begin
+      if int1^.intValue<1 then exit(nil);
+      new(message,create(int1^.intValue));
+      iter:=list0^.tempIteratableList;
+      for c in iter do if not(message^.canAddColor(c)) then begin
+        dispose(message,destroy);
+        exit(nil);
+      end;
+      context^.messages^.postCustomMessage(message,true);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
@@ -422,6 +443,8 @@ INITIALIZATION
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',@plotRasterImage,ak_binary,
+    'plotRasterImage(colors:List;width>=1);//Plots a raster image given by a 1D-List of colors');
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
     'getOptions;//returns plot options as a key-value-list.',[se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,

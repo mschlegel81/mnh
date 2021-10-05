@@ -374,7 +374,9 @@ PROCEDURE T_commandLineParameters.initFromCommandLine;
           fileOrCommandToInterpret:=paramStr(i);
           if not(mnhExecutionOptions.executeCommand) then begin
             if fileExists(fileOrCommandToInterpret) then begin
-              mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState);
+              if i=1 //If the script is the first parameter, then no parameters were given by the command line and parameters from shebang must be taken into account
+              then mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState)
+              else if parsingState.parsingState=pst_initial then parsingState.parsingState:=pst_parsingScriptParameters;
               fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
               if parsingState.parsingState=pst_parsingFileToEdit then begin
                 {$ifdef fullVersion}
