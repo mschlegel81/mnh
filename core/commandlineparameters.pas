@@ -506,7 +506,7 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
 
     if requires*C_sideEffectsRequiringGui<>[] then include(flags,clf_GUI);
     if se_sound in requires then Exclude(flags,clf_SILENT);
-    if se_input in requires then Exclude(flags,clf_HEADLESS);
+    if (se_input in requires) or (clf_GUI in flags) then Exclude(flags,clf_HEADLESS);
     setCallLightFlavour(not((clf_GUI in flags) or
                             (requires*C_sideEffectsRequiringGui<>[]) or
                             (executor=settings.fullFlavourLocation)));

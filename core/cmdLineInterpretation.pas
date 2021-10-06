@@ -67,6 +67,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       dispose(package,destroy);
       if (FlagGUINeeded in globals.primaryContext.messages^.getFlags) then begin
         include(commandLine.mnhExecutionOptions.flags,clf_GUI);
+        Exclude(commandLine.mnhExecutionOptions.flags,clf_HEADLESS);
         globals.destroy;
         freeRecycler(recycler);
         exit;
