@@ -358,6 +358,8 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
       if (fileName='') or not(fileExists(fileName)) then begin
         callerContext^.messages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
+        fileName:='';
+        enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
         exit(nil);
       end;
     end;
@@ -380,6 +382,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
       result:=messagesToLiteralForSandbox(recycler,messages.storedMessages(false),C_textMessages,messages.getExitCode);
       messages.clear(true);
+      fileName:='';
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;

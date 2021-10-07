@@ -427,7 +427,10 @@ PROCEDURE TCmdLineParametersFrame.initFromExecOptions(
 
 PROCEDURE TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
   begin
-    if guiFlagCb.checked then fullVersionRb.checked:=true;
+    if guiFlagCb.checked then begin
+      fullVersionRb.checked:=true;
+      headlessFlagCb.checked:=false;
+    end;
   end;
 
 PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
@@ -495,6 +498,7 @@ PROCEDURE TCmdLineParametersFrame.forceStdOutCbClick(Sender: TObject);
 PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
   begin
     if headlessFlagCb.checked then begin
+      guiFlagCb.checked:=false;
       pauseFlagCb.checked:=false;
       pauseOnErrorFlagCb.checked:=false;
     end;
