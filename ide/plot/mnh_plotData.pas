@@ -184,7 +184,7 @@ TYPE
 
       {$ifdef enable_render_threads}
       PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
-      PROCEDURE postPreparation(CONST width,height:longint);
+      FUNCTION postPreparation(CONST width,height:longint):boolean;
       {$endif}
 
       FUNCTION isImagePreparedForResolution(CONST width,height:longint):boolean;
@@ -514,13 +514,13 @@ PROCEDURE T_plotPreparationThread.execute;
     Terminate;
   end;
 
-PROCEDURE T_plot.postPreparation(CONST width,height:longint);
+FUNCTION T_plot.postPreparation(CONST width,height:longint):boolean;
   begin
-    if (backgroundProcessing.state<>bps_none) or isImagePreparedForResolution(width,height) then exit;
+    if (backgroundProcessing.state<>bps_none) or isImagePreparedForResolution(width,height) then exit(false);
     enterCriticalSection(plotCs);
     if (backgroundProcessing.state<>bps_none) or isImagePreparedForResolution(width,height) then begin
       leaveCriticalSection(plotCs);
-      exit;
+      exit(false);
     end;
     try
       with backgroundProcessing do begin
@@ -531,6 +531,7 @@ PROCEDURE T_plot.postPreparation(CONST width,height:longint);
         destroyAfterwardsPosted:=false;
       end;
       T_plotPreparationThread.create(@self,C_nilSearchTokenLocation,nil);
+      result:=true;
     finally
       leaveCriticalSection(plotCs);
     end;
@@ -893,6 +894,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
       lastToPrepare:longint;
   {$endif}
   VAR i,j,k:longint;
+      memoryRemaining:int64;
   begin
     enterCriticalSection(seriesCs);
     try
@@ -928,8 +930,11 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         if result then begin
           lastToPrepare:=frameIndex;
           toPrepare:=frameIndex+1;
-          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryCleaner.isMemoryInComfortZone) do begin
-            frame[toPrepare]^.postPreparation(width,height);
+          memoryRemaining:=memoryCleaner.memoryComfortThreshold-memoryCleaner.getMemoryUsedInBytes;
+
+          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryRemaining>0) do begin
+            //image size approx: 4 bytes * width * height
+            if frame[toPrepare]^.postPreparation(width,height) then dec(memoryRemaining,width*height*4);
             inc(toPrepare);
             if cycle then toPrepare:=toPrepare mod length(frame);
           end;
