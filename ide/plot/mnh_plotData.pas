@@ -889,12 +889,13 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height:longint):boolean;
-  {$ifndef unix}
+  {$ifdef enable_render_threads}
   VAR toPrepare,
       lastToPrepare:longint;
+      memoryRemaining,
+      imageSizeEstimate:int64;
   {$endif}
   VAR i,j,k:longint;
-      memoryRemaining:int64;
   begin
     enterCriticalSection(seriesCs);
     try
@@ -930,11 +931,12 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         if result then begin
           lastToPrepare:=frameIndex;
           toPrepare:=frameIndex+1;
-          memoryRemaining:=memoryCleaner.memoryComfortThreshold-memoryCleaner.getMemoryUsedInBytes;
+          imageSizeEstimate:=(width+4)*height*5+8192; //conservative estimate
 
-          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryRemaining>0) do begin
-            //image size approx: 4 bytes * width * height
-            if frame[toPrepare]^.postPreparation(width,height) then dec(memoryRemaining,width*height*4);
+          memoryRemaining:=memoryCleaner.memoryComfortThreshold-memoryCleaner.getMemoryUsedInBytes-imageSizeEstimate*8; //assume, that those have not been taken into account yet
+
+          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryRemaining>imageSizeEstimate) do begin
+            if frame[toPrepare]^.postPreparation(width,height) then dec(memoryRemaining,imageSizeEstimate);
             inc(toPrepare);
             if cycle then toPrepare:=toPrepare mod length(frame);
           end;
