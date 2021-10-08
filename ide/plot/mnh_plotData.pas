@@ -929,7 +929,11 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
         end;
         {$ifdef enable_render_threads}
         if result then begin
-          lastToPrepare:=frameIndex;
+          lastToPrepare:=frameIndex+settings.cpuCount;
+          if cycle
+          then lastToPrepare:=lastToPrepare mod length(frame)
+          else if lastToPrepare>=length(frame) then lastToPrepare:=length(frame)-1;
+
           toPrepare:=frameIndex+1;
           imageSizeEstimate:=(width+4)*height*5+8192; //conservative estimate
 
