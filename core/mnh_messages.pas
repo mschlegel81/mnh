@@ -100,6 +100,7 @@ TYPE
     mt_image_replaceImage,    //dedicated type
     mt_image_close,           //signal
     mt_image_obtainImageData, //dedicated type
+    mt_image_queryClosedByUser,
     mt_image_obtainDimensions,//dedicated type
     mt_displayVariableTree,
     mt_displayCustomForm,
@@ -176,6 +177,7 @@ CONST
 {mt_image_replaceImage}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_close}         (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_obtainImage...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_queryClosed...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_image_obtainDim...}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),

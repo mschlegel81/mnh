@@ -1,12 +1,11 @@
 object DisplayImageForm: TDisplayImageForm
   Left = 342
-  Height = 300
+  Height = 240
   Top = 242
-  Width = 400
+  Width = 320
   Caption = 'MNH Image'
-  ClientHeight = 300
-  ClientWidth = 400
-  DesignTimePPI = 120
+  ClientHeight = 220
+  ClientWidth = 320
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
@@ -14,20 +13,34 @@ object DisplayImageForm: TDisplayImageForm
   OnResize = FormResize
   PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.10.0'
   object displayImage: TImage
     Left = 0
-    Height = 2500
+    Height = 2000
     Top = 0
-    Width = 3750
+    Width = 3000
     PopupMenu = PopupMenu1
   end
   object MainMenu1: TMainMenu
-    left = 113
-    top = 70
+    Left = 90
+    Top = 56
+    object miDisplay: TMenuItem
+      Caption = 'Display'
+      object miShrinkLarge: TMenuItem
+        AutoCheck = True
+        Caption = 'Shrink large images'
+        Checked = True
+        OnClick = miShrinkLargeClick
+      end
+      object miEnlargeSmall: TMenuItem
+        AutoCheck = True
+        Caption = 'Enlarge small images'
+        OnClick = miShrinkLargeClick
+      end
+    end
   end
   object PopupMenu1: TPopupMenu
-    left = 180
-    top = 101
+    Left = 144
+    Top = 81
   end
 end

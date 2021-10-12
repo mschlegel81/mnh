@@ -16,11 +16,24 @@ CONST
   WORKFLOW_START_INTERVAL_MILLISECONDS=1100;
 
 TYPE
+  P_queryImigClosedMessage=^T_queryImigClosedMessage;
+  T_queryImigClosedMessage=object(T_payloadMessage)
+    private
+      response:boolean;
+      retrieved:boolean;
+      plotWidth,plotHeight:longint;
+    public
+      FUNCTION internalType:shortstring; virtual;
+      CONSTRUCTOR createRetrieveRequest;
+      PROCEDURE setResponse(CONST r:boolean; CONST plotWidth_,plotHeight_:longint);
+      FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages; OUT plotWidth_,plotHeight_:longint):boolean;
+  end;
+
   P_imageSystem=^T_imageSystem;
   T_imageSystem=object(T_abstractGuiOutAdapter)
-    private
+    protected
       renderCommand:F_execPlotCallback;
-      PROCEDURE processMessage(CONST message:P_storedMessage);
+      PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     public
       currentImage :P_rawImage;
       CONSTRUCTOR create(CONST renderCallback:F_execPlotCallback);
@@ -56,6 +69,41 @@ FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
 {$i func_defines.inc}
 IMPLEMENTATION
 USES myParams,generationBasics,imageContexts;
+FUNCTION T_queryImigClosedMessage.internalType: shortstring;
+begin
+  result:='T_queryImigClosedMessage';
+end;
+
+CONSTRUCTOR T_queryImigClosedMessage.createRetrieveRequest;
+  begin
+    inherited create(mt_image_queryClosedByUser);
+    retrieved:=false;
+  end;
+
+PROCEDURE T_queryImigClosedMessage.setResponse(CONST r: boolean; CONST plotWidth_,plotHeight_:longint);
+  begin
+    enterCriticalSection(messageCs);
+    retrieved:=true;
+    response:=r;
+    plotWidth:=plotWidth_;
+    plotHeight:=plotHeight_;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_queryImigClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_messages; OUT plotWidth_,plotHeight_:longint): boolean;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=response;
+    plotWidth_:=plotWidth;
+    plotHeight_:=plotHeight;
+    leaveCriticalSection(messageCs);
+  end;
+
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
   begin new(result,create(nil)); end;
 
@@ -638,7 +686,9 @@ FUNCTION T_imageSystem.append(CONST message: P_storedMessage): boolean;
     enterCriticalSection(adapterCs);
     try
       case message^.messageType of
+        mt_image_queryClosedByUser,
         mt_image_postDisplay : result:=inherited append(message);
+        mt_startOfEvaluation,
         mt_image_replaceImage,
         mt_image_close,
         mt_image_obtainImageData,
