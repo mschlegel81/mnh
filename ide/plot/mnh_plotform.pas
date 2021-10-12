@@ -20,11 +20,12 @@ TYPE
     private
       response:boolean;
       retrieved:boolean;
+      plotWidth,plotHeight:longint;
     public
       FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR createRetrieveRequest;
-      PROCEDURE setResponse(CONST r:boolean);
-      FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages):boolean;
+      PROCEDURE setResponse(CONST r:boolean; CONST plotWidth_,plotHeight_:longint);
+      FUNCTION getResponseWaiting(CONST errorFlagProvider:P_messages; OUT plotWidth_,plotHeight_:longint):boolean;
   end;
 
   P_guiPlotSystem= ^T_guiPlotSystem;
@@ -161,15 +162,17 @@ CONSTRUCTOR T_queryPlotClosedMessage.createRetrieveRequest;
     retrieved:=false;
   end;
 
-PROCEDURE T_queryPlotClosedMessage.setResponse(CONST r: boolean);
+PROCEDURE T_queryPlotClosedMessage.setResponse(CONST r: boolean; CONST plotWidth_,plotHeight_:longint);
   begin
     enterCriticalSection(messageCs);
     retrieved:=true;
     response:=r;
+    plotWidth:=plotWidth_;
+    plotHeight:=plotHeight_;
     leaveCriticalSection(messageCs);
   end;
 
-FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_messages): boolean;
+FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_messages; OUT plotWidth_,plotHeight_:longint): boolean;
   begin
     enterCriticalSection(messageCs);
     while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
@@ -178,13 +181,21 @@ FUNCTION T_queryPlotClosedMessage.getResponseWaiting(CONST errorFlagProvider: P_
       enterCriticalSection(messageCs);
     end;
     result:=response;
+    plotWidth_:=plotWidth;
+    plotHeight_:=plotHeight;
     leaveCriticalSection(messageCs);
   end;
 
 FUNCTION T_guiPlotSystem.append(CONST message: P_storedMessage): boolean;
+  VAR width :longint=-1;
+      height:longint=-1;
   begin
     if message^.messageType=mt_plot_queryClosedByUser then begin
-      P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser);
+      if myPlotForm<>nil then begin
+        width :=myPlotForm.plotImage.width;
+        height:=myPlotForm.plotImage.height;
+      end;
+      P_queryPlotClosedMessage(message)^.setResponse(formWasClosedByUser,width,height);
       plotChangedSinceLastDisplay:=not(formWasClosedByUser);
       formWasClosedByUser:=false;
       result:=true;
@@ -749,12 +760,14 @@ PROCEDURE TplotForm.doPlot;
 {$i func_defines.inc}
 FUNCTION plotClosedByUser_impl intFuncSignature;
   VAR closedRequest:P_queryPlotClosedMessage;
+      dummyWidth,
+      dummyHeight: longint;
   begin if (params=nil) or (params^.size=0) then begin
     if (gui_started=NO) then context^.messages^.logGuiNeeded;
-    if not(se_input in context^.sideEffectWhitelist) then exit(newBoolLiteral(false));
+    if not(se_readGuiState in context^.sideEffectWhitelist) then exit(newBoolLiteral(false));
     new(closedRequest,createRetrieveRequest);
     context^.messages^.postCustomMessage(closedRequest);
-    result:=newBoolLiteral(closedRequest^.getResponseWaiting(context^.messages));
+    result:=newBoolLiteral(closedRequest^.getResponseWaiting(context^.messages,dummyWidth,dummyHeight));
     disposeMessage(closedRequest);
   end else result:=nil; end;
 
@@ -818,6 +831,20 @@ FUNCTION postdisplay_imp intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION plotImageSize_imp intFuncSignature;
+  VAR closedRequest:P_queryPlotClosedMessage;
+      plotWidth,
+      plotHeight: longint;
+  begin if (params=nil) or (params^.size=0) then begin
+    if (gui_started=NO) then context^.messages^.logGuiNeeded;
+    if not(se_readGuiState in context^.sideEffectWhitelist) then exit(newBoolLiteral(false));
+    new(closedRequest,createRetrieveRequest);
+    context^.messages^.postCustomMessage(closedRequest);
+    closedRequest^.getResponseWaiting(context^.messages,plotWidth,plotHeight);
+    result:=recycler^.newListLiteral()^.appendInt(recycler,plotWidth)^.appendInt(recycler,plotHeight);
+    disposeMessage(closedRequest);
+  end else result:=nil; end;
+
 PROCEDURE initializePlotForm(CONST coordLabel:TLabel);
   begin
     mainFormCoordinatesLabel:=coordLabel;
@@ -829,6 +856,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation',[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution',[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      ,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately',[se_alterGuiState]);
-
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize'    ,@plotImageSize_imp    ,ak_nullary,'plotImageSize;//Returns the plot image size or [-1,-1] if not initialized',[se_readGuiState]);
 end.
 

@@ -268,45 +268,6 @@ T_plotPreparationThread=class(T_basicThread)
     DESTRUCTOR destroy; override;
   end;
 
-FUNCTION T_rasterImageMessage.internalType: shortstring;
-  begin
-    result:='P_rasterImageMessage';
-  end;
-
-CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint);
-  begin
-    inherited create(mt_plot_rasterImage);
-    width:=width_;
-    setLength(colors,0);
-  end;
-
-FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
-  VAR i:longint;
-  begin
-    i:=length(colors);
-    if literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
-      setLength(colors,i+1);
-      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
-      colors[i,cc_green]:=colors[i,cc_red  ];
-      colors[i,cc_blue ]:=colors[i,cc_red  ];
-      colors[i,cc_alpha]:=255;
-      result:=true;
-    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
-      setLength(colors,i+1);
-      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
-      colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
-      colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
-      colors[i,cc_alpha]:=255;
-      result:=true;
-    end else result:=false;
-  end;
-
-DESTRUCTOR T_rasterImageMessage.destroy;
-  begin
-    setLength(colors,0);
-    inherited destroy;
-  end;
-
 CONSTRUCTOR T_plotPreparationThread.create(CONST plot_:P_plot; CONST feedbackLocation_:T_searchTokenLocation; CONST messages_:P_messages);
   begin
     plot:=plot_;
@@ -593,6 +554,45 @@ PROCEDURE T_plotDisplayRequest.markExecuted;
     enterCriticalSection(messageCs);
     displayExecuted:=true;
     leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_rasterImageMessage.internalType: shortstring;
+  begin
+    result:='P_rasterImageMessage';
+  end;
+
+CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint);
+  begin
+    inherited create(mt_plot_rasterImage);
+    width:=width_;
+    setLength(colors,0);
+  end;
+
+FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
+  VAR i:longint;
+  begin
+    i:=length(colors);
+    if literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
+      setLength(colors,i+1);
+      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
+      colors[i,cc_green]:=colors[i,cc_red  ];
+      colors[i,cc_blue ]:=colors[i,cc_red  ];
+      colors[i,cc_alpha]:=255;
+      result:=true;
+    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
+      setLength(colors,i+1);
+      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
+      colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
+      colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
+      colors[i,cc_alpha]:=255;
+      result:=true;
+    end else result:=false;
+  end;
+
+DESTRUCTOR T_rasterImageMessage.destroy;
+  begin
+    setLength(colors,0);
+    inherited destroy;
   end;
 
 FUNCTION T_addTextMessage.internalType: shortstring;
