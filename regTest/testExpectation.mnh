@@ -21,7 +21,6 @@ private flavourDependentScripts:=
    'grep',
    'heart',
    'printfUsageDemo',
-   'rk4',
    'relevantDigitsTest',
    'rotatingCube',
    'root',

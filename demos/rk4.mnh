@@ -14,12 +14,12 @@ main->begin
   CashCarpSolution:=CashCarpSolution(); //resolve future
   local CashCarpError   :=abs(CashCarpSolution.getInner(1)-exactSolutions);
 
-  print('     | RK4                 | Cash-Carp, tol. 1E-9',
-      "\ntime | approx.    error    | approx.    error");
-  printf("%4.1f | %10.6f %1.1e | %10.6f %1.1e",
+  print('     | RK4                   | Cash-Carp, tol. 1E-9',
+      "\ntime | approx.    error*1E3  | approx.    error*1E3");
+  printf("%4.1f | %10.6f %10.6f | %10.6f %10.6f",
          pointsInTime,
          RK4solution.getInner(1),
-         RK4Error,
+         RK4Error*1E3,
          CashCarpSolution.getInner(1),
-         CashCarpError);
+         CashCarpError*1E3);
 end;
