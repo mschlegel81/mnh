@@ -31,6 +31,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot',             @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotClosed',       @returnFalse,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'postDisplay',      @requireGui ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize',    @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',       @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removeText',       @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile',     @requireGui ,ak_variadic);
@@ -46,6 +47,8 @@ INITIALIZATION
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageJpgRawData'         ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageSize'               ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'listManipulations'       ,@requireGui,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplaySize'        ,@requireGui,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplayClosedByUser',@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'loadImage'               ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'randomIfs'               ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@requireGui,ak_variadic);
