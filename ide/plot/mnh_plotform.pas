@@ -85,6 +85,7 @@ TYPE
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
+    PROCEDURE animateCheckBoxClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
@@ -336,6 +337,13 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     registerFontControl(AnimationGroupBox,ctGeneral);
   end;
 
+PROCEDURE TplotForm.animateCheckBoxClick(Sender: TObject);
+  begin
+    framesTimer.clear(fpsSamplingStart);
+    framesTimer.start(fpsSamplingStart);
+    secondsPerFrameOverhead:=0;
+  end;
+
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
   begin
     if relatedPlot<>nil then relatedPlot^.formDestroyed;
@@ -566,7 +574,9 @@ PROCEDURE TplotForm.performFastUpdate;
     VAR w:double;
     begin
       w:=weights[animationSpeedTrackbar.position];
-      secondsPerFrameOverhead:=secondsPerFrameOverhead*0.9+0.1*(framesTimer.elapsed(fpsSamplingStart)-frameInterval);
+      if secondsPerFrameOverhead<=0
+      then secondsPerFrameOverhead:=                                 framesTimer.elapsed(fpsSamplingStart)-frameInterval
+      else secondsPerFrameOverhead:=secondsPerFrameOverhead*0.8+0.2*(framesTimer.elapsed(fpsSamplingStart)-frameInterval);
       if secondsPerFrameOverhead<0 then secondsPerFrameOverhead:=0;
       secondsPerFrame:=secondsPerFrame*w+(1-w)*(framesTimer.elapsed(fpsSamplingStart));
     end;
