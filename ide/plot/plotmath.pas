@@ -98,16 +98,9 @@ TYPE
       FUNCTION equals(CONST other:T_axisTrafo):boolean;
   end;
 
-  T_sampleRow = object
-    style: T_style;
-    sample: T_dataRow;
-    pseudoIndex:longint;
-    CONSTRUCTOR create(CONST row:T_dataRow);
-    DESTRUCTOR destroy;
-    FUNCTION toPlotStatement(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string;
-  end;
+  P_plotPrimitive=^T_plotPrimitive;
+  T_plotPrimitiveList=array of P_plotPrimitive;
 
-  T_allSamples=array of T_sampleRow;
   T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY,soe_strict);
   T_scalingOptionElements=set of T_scalingOptionElement;
   T_scalingOptions=object
@@ -119,7 +112,7 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE setDefaults;
-    PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST samples:T_allSamples; VAR grid:T_ticInfos);
+    PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST primitives:T_plotPrimitiveList; VAR grid:T_ticInfos);
     FUNCTION transformRow(CONST row:T_dataRow; CONST styles:T_plotStyles):T_rowToPaint;
     FUNCTION getRefinementSteps(CONST row:T_dataRow; CONST samplesToDistribute:longint):T_arrayOfLongint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
@@ -131,12 +124,36 @@ TYPE
     FUNCTION equals(CONST other:T_scalingOptions):boolean;
   end;
 
+  T_plotPrimitive=object
+    pseudoIndex:longint;
+    PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual; abstract;
+    PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual; abstract;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual; abstract;
+    FUNCTION getFullClone:P_plotPrimitive; virtual; abstract;
+    DESTRUCTOR destroy; virtual; abstract;
+  end;
+
+  P_sampleRow=^T_sampleRow;
+  T_sampleRow = object(T_plotPrimitive)
+    style: T_style;
+    sample: T_dataRow;
+    CONSTRUCTOR create(CONST row:T_dataRow);
+
+    PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
+    PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
   T_customTextAnchor=(cta_topLeft   ,cta_top   ,cta_topRight   ,
                       cta_centerLeft,cta_center,cta_centerRight,
                       cta_bottomLeft,cta_bottom,cta_bottomRight);
 
   P_customText=^T_customText;
-  T_customText=object
+
+  { T_customText }
+
+  T_customText=object(T_plotPrimitive)
     text      :T_arrayOfString;
     fontName  :string;
     fontSize  :double;
@@ -149,20 +166,39 @@ TYPE
 
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
     FUNCTION clone:P_customText;
-    DESTRUCTOR destroy;
-    PROCEDURE renderText(CONST opt:T_scalingOptions; CONST target:TBGRACanvas);
     PROCEDURE setAnchor(CONST s:string);
     PROCEDURE setForeground(CONST r,g,b:double);
     PROCEDURE setBackground(CONST r,g,b:double);
-    FUNCTION toTextStatement:string;
+
+    PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
+    PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
+    DESTRUCTOR destroy; virtual;
   end;
 
   OPERATOR *(CONST x:T_point; CONST y:double):T_point;
   OPERATOR +(CONST x,y:T_point):T_point;
   OPERATOR -(CONST x,y:T_point):T_point;
+
+  FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
+
 VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
+FUNCTION intersect(CONST b1,b2:T_boundingBox):boolean;
+  begin
+    result:=(max(b1['x',0],b2['x',0])<=min(b1['x',1],b2['x',1])) and
+            (max(b1['y',0],b2['y',0])<=min(b1['y',1],b2['y',1]));
+  end;
+
+FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
+  begin
+    result['x',0]:=min(x0,x1);
+    result['x',1]:=max(x0,x1);
+    result['y',0]:=min(y0,y1);
+    result['y',1]:=max(y0,y1);
+  end;
+
 TYPE P_nonSkippingLineBuilder=^T_nonSkippingLineBuilder;
      T_nonSkippingLineBuilder=object
        row:T_rowToPaint;
@@ -610,7 +646,7 @@ CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
     absolutePosition:=false;
   end;
 
-FUNCTION T_customText.clone:P_customText;
+FUNCTION T_customText.clone: P_customText;
   VAR clonedText:T_arrayOfString=();
       i:longint;
   begin
@@ -639,7 +675,7 @@ FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint
     result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/500);
   end;
 
-PROCEDURE T_customText.renderText(CONST opt: T_scalingOptions; CONST target: TBGRACanvas);
+PROCEDURE T_customText.render(CONST opt: T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target: TBGRACanvas);
   VAR screenLoc:T_point;
       x,y,
       i,k,
@@ -759,7 +795,12 @@ PROCEDURE T_customText.setBackground(CONST r, g, b: double);
     background[cc_blue ]:=round(255*max(0,min(1,b)));
   end;
 
-FUNCTION T_customText.toTextStatement:string;
+PROCEDURE T_customText.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
+  begin
+    //TODO Maybe custom text with relative positions must influence the bounding box...
+  end;
+
+FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
   CONST anchorText:array[T_customTextAnchor] of string=('"TL"','"T"','"TR"','"L"','"C"','"R"','"BL"','"B"','"BR"');
   VAR dummy:boolean;
   begin
@@ -801,12 +842,12 @@ PROCEDURE T_scalingOptions.setDefaults;
     strictInput:=false;
   end;
 
-PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST samples: T_allSamples; VAR grid: T_ticInfos);
+PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primitives:T_plotPrimitiveList; VAR grid: T_ticInfos);
 
   VAR validSampleCount:longint=0;
   FUNCTION getSamplesBoundingBox:T_boundingBox;
     VAR axis:char;
-        row:T_sampleRow;
+        primitive:P_plotPrimitive;
         point:T_point;
         x,y:double;
         i:longint;
@@ -819,16 +860,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST sample
         result[axis,0]:=axisTrafo[axis].rangeByUser[0];
         result[axis,1]:=axisTrafo[axis].rangeByUser[1];
       end;
-      for row in samples do for i:=0 to row.sample.size-1 do begin
-        point:=row.sample[i];
-        x:=point[0]; if (x<MIN_VALUE_FOR[axisTrafo['x'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['x'].logs]) then continue;
-        y:=point[1]; if (y<MIN_VALUE_FOR[axisTrafo['y'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['y'].logs]) then continue;
-        if not(axisTrafo['x'].autoscale) and not(axisTrafo['x'].sampleIsInRange(x)) or
-           not(axisTrafo['y'].autoscale) and not(axisTrafo['y'].sampleIsInRange(y)) then continue;
-        if (x<result['x',0]) then result['x',0]:=x;
-        if (x>result['x',1]) then result['x',1]:=x;
-        if (y<result['y',0]) then result['y',0]:=y;
-        if (y>result['y',1]) then result['y',1]:=y;
+      for primitive in primitives do begin
+        primitive^.updateBoundingBox(self,result);
         inc(validSampleCount);
       end;
     end;
@@ -1283,12 +1316,375 @@ CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
     sample:=row;
   end;
 
+PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
+  VAR i: longint;
+      point: T_point;
+      x,y:double;
+  begin
+    for i:=0 to sample.size-1 do begin
+      point:=sample[i];
+      x:=point[0]; if (x<MIN_VALUE_FOR[scaling.axisTrafo['x'].logs]) or (x>MAX_VALUE_FOR[scaling.axisTrafo['x'].logs]) then continue;
+      y:=point[1]; if (y<MIN_VALUE_FOR[scaling.axisTrafo['y'].logs]) or (x>MAX_VALUE_FOR[scaling.axisTrafo['y'].logs]) then continue;
+      if not(scaling.axisTrafo['x'].autoscale) and not(scaling.axisTrafo['x'].sampleIsInRange(x)) or
+         not(scaling.axisTrafo['y'].autoscale) and not(scaling.axisTrafo['y'].sampleIsInRange(y)) then continue;
+      if (x<boundingBox['x',0]) then boundingBox['x',0]:=x;
+      if (x>boundingBox['x',1]) then boundingBox['x',1]:=x;
+      if (y<boundingBox['y',0]) then boundingBox['y',0]:=y;
+      if (y>boundingBox['y',1]) then boundingBox['y',1]:=y;
+    end;
+  end;
+
+PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target: TBGRACanvas);
+  VAR scaleAndColor:T_scaleAndColor;
+      screenRow:T_rowToPaint;
+  PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
+    VAR points:array[0..4] of TPoint;
+    begin
+      if (scaleAndColor.solidStyle=bsClear) and not(withBorder) then exit;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      points[0].x:=x0; points[0].y:=y0;
+      points[1].x:=x1; points[1].y:=y1;
+      points[2].x:=x2; points[2].y:=y2;
+      points[3].x:=x3; points[3].y:=y3;
+      points[4].x:=x0; points[4].y:=y0;
+      if not(withBorder) then target.Pen.style:=psClear;
+      target.Polygon(points);
+      if not(withBorder) then target.Pen.style:=psSolid;
+    end;
+
+  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
+    begin
+      drawCustomQuad(x0,y0,
+                     x0,yBaseLine,
+                     x1,yBaseLine,
+                     x1,y1,withBorder);
+    end;
+
+  PROCEDURE drawStraightLines;
+    VAR i:longint;
+        last:TPoint=(x:0;y:0);
+        lastWasValid:boolean;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo  (screenRow[i].point);
+            drawPatternRect(last.x, last.y, screenRow[i].point.x, screenRow[i].point.y,false);
+          end else
+            target.MoveTo(screenRow[i].point);
+          last:=screenRow[i].point;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawStepsLeft;
+    VAR i:longint;
+        last:TPoint=(x:0;y:0);
+        lastWasValid:boolean;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo(last.x, screenRow[i].point.y);
+            target.LineTo(screenRow[i].point);
+            drawPatternRect(last.x, screenRow[i].point.y, screenRow[i].point.x, screenRow[i].point.y,false);
+          end else target.MoveTo(screenRow[i].point);
+          last:=screenRow[i].point;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawStepsRight;
+    VAR i:longint;
+        last:TPoint=(x:0;y:0);
+        lastWasValid:boolean;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then begin
+            target.LineTo(screenRow[i].point.x, last.y);
+            target.LineTo(screenRow[i].point);
+            drawPatternRect(last.x, last.y, screenRow[i].point.x, last.y,false);
+          end else target.MoveTo(screenRow[i].point);
+          last:=screenRow[i].point;
+        end;
+        lastWasValid:=screenRow[i].valid;
+      end;
+    end;
+
+  PROCEDURE drawBars;
+    VAR i:longint;
+        last:TPoint=(x:0;y:0);
+        lastWasValid:boolean;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      lastWasValid:=false;
+      for i:=0 to length(screenRow)-1 do begin
+        if screenRow[i].valid then begin
+          if lastWasValid then
+            drawPatternRect(round(last.x*0.95+screenRow[i].point.x*0.05), last.Y,
+                            round(last.x*0.05+screenRow[i].point.x*0.95), last.Y,scaleAndColor.lineWidth>0);
+          last:=screenRow[i].point;
+          lastWasValid:=screenRow[i].valid;
+        end;
+      end;
+    end;
+
+  PROCEDURE drawBoxes;
+    VAR i:longint;
+    begin
+      if scaleAndColor.lineWidth<=0
+      then target.Pen.style:=psClear
+      else begin
+        target.Pen.style:=psSolid;
+        target.Pen.BGRAColor:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+      end;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      i:=0;
+      while i+1<length(screenRow) do begin
+        if screenRow[i  ].valid and
+           screenRow[i+1].valid and
+           intersect(screenBox,boundingBoxOf(screenRow[i].point.x, screenRow[i].point.y,screenRow[i+1].point.x, screenRow[i+1].point.y)) then begin
+          if scaleAndColor.lineWidth<=0
+          then target.FillRect (screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y)
+          else target.Rectangle(screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y);
+        end;
+        inc(i, 2);
+      end;
+    end;
+
+  PROCEDURE drawEllipses;
+    PROCEDURE drawEllipse(CONST x0,y0,x1,y1:longint);
+      VAR points:array[0..100] of TPoint;
+          cx,cy,rx,ry:double;
+          i:longint;
+      begin
+        if not(intersect(screenBox,boundingBoxOf(x0,y0,x1,y1))) or ((scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<1)) then exit;
+        if (abs(x1-x0)>target.width) or (abs(y1-y0)>target.height) then begin
+          cx:=(x0+x1)*0.5; rx:=(x1-x0)*0.5;
+          cy:=(y0+y1)*0.5; ry:=(y1-y0)*0.5;
+          for i:=0 to 100 do begin
+            points[i].x:=round(cx+rx*cos(0.02*pi*i));
+            points[i].y:=round(cy+ry*sin(0.02*pi*i));
+          end;
+          target.Polygon(points);
+        end else begin
+          target.Ellipse(x0,y0,x1,y1);
+        end;
+      end;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      i:=0;
+      while i+1<length(screenRow) do begin
+        if screenRow[i  ].valid and
+           screenRow[i+1].valid then
+          drawEllipse(screenRow[i  ].point.x, screenRow[i  ].point.y,
+                      screenRow[i+1].point.x, screenRow[i+1].point.y);
+        inc(i, 2);
+      end;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
+    end;
+
+  PROCEDURE drawTubes;
+    VAR i :longint=0;
+        k :longint=0;
+        polyBetween:array of TPoint=();
+        lastWasValid:boolean=false;
+    begin
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      target.Pen.style:=psClear;
+      if scaleAndColor.solidStyle<>bsClear then begin
+        setLength(polyBetween,length(screenRow));
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+          polyBetween[k]:=screenRow[i].point;
+          inc(k);
+        end;
+        setLength(polyBetween,k);
+        target.Polygon(polyBetween);
+      end;
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      if scaleAndColor.lineWidth>0 then begin
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+          if lastWasValid then target.LineTo(screenRow[i].point)
+                          else target.MoveTo(screenRow[i].point);
+          lastWasValid:=true;
+        end else lastWasValid:=false;
+      end;
+    end;
+
+  PROCEDURE drawPolygons;
+    VAR points:array of TPoint;
+    PROCEDURE screenRowPoly(CONST i0,i1:longint); inline;
+      VAR i:longint;
+      begin
+        if (i0<0) or (i1<i0+1) then exit;
+        if scaleAndColor.solidStyle=bsClear then begin
+                             target.MoveTo(screenRow[i1].point);
+          for i:=i0 to i1 do target.LineTo(screenRow[i].point);
+        end else begin
+          setLength(points,i1-i0+1);
+          for i:=0 to i1-i0 do begin
+            points[i].x:=screenRow[i0+i].point.x;
+            points[i].y:=screenRow[i0+i].point.y;
+          end;
+          target.Polygon(points);
+        end;
+      end;
+
+    VAR i,j:longint;
+    begin
+      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecRound;
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      j:=-1;
+      for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
+        if j>=0 then screenRowPoly(j,i-1);
+        j:=-1;
+      end else if j<0 then j:=i;
+      i:=length(screenRow)-1;
+      if j>=0 then screenRowPoly(j,i);
+      setLength(points,0);
+      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
+    end;
+
+  PROCEDURE drawPluses;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecSquare;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+        target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolWidth,
+                      screenRow[i].point.y);
+        target.LineTo(screenRow[i].point.x+scaleAndColor.symbolWidth,
+                      screenRow[i].point.y);
+        target.MoveTo(screenRow[i].point.x,
+                      screenRow[i].point.y-scaleAndColor.symbolWidth);
+        target.LineTo(screenRow[i].point.x,
+                      screenRow[i].point.y+scaleAndColor.symbolWidth);
+      end;
+    end;
+
+  PROCEDURE drawCrosses;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
+      target.Pen.EndCap:=pecSquare;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+        target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolRadius,
+                      screenRow[i].point.y-scaleAndColor.symbolRadius);
+        target.LineTo(screenRow[i].point.x+scaleAndColor.symbolRadius,
+                      screenRow[i].point.y+scaleAndColor.symbolRadius);
+        target.MoveTo(screenRow[i].point.x+scaleAndColor.symbolRadius,
+                      screenRow[i].point.y-scaleAndColor.symbolRadius);
+        target.LineTo(screenRow[i].point.x-scaleAndColor.symbolRadius,
+                      screenRow[i].point.y+scaleAndColor.symbolRadius);
+      end;
+    end;
+
+  PROCEDURE drawDots;
+    VAR i:longint;
+    begin
+      target.Pen.style:=psClear;
+      target.Brush.style:=bsSolid;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      if scaleAndColor.symbolWidth>=1 then begin
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+          target.Ellipse(screenRow[i].point.x-scaleAndColor.symbolWidth,
+                         screenRow[i].point.y-scaleAndColor.symbolWidth,
+                         screenRow[i].point.x+scaleAndColor.symbolWidth,
+                         screenRow[i].point.y+scaleAndColor.symbolWidth);
+      end else begin
+        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
+          target.Pixels[screenRow[i].point.x,
+                        screenRow[i].point.y]:=scaleAndColor.lineColor;
+      end;
+    end;
+
+  PROCEDURE drawImpulses;
+    VAR i:longint;
+    begin
+      target.Pen.style     :=psSolid;
+      target.Pen.BGRAColor:=scaleAndColor.lineColor;
+      target.Pen.width    :=scaleAndColor.lineWidth;
+      target.Pen.EndCap   :=pecSquare;
+      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
+        target.MoveTo(screenRow[i].point.x, yBaseLine     );
+        target.LineTo(screenRow[i].point);
+      end;
+    end;
+
+  begin
+    screenRow:=opt.transformRow(sample,style.style);
+    scaleAndColor:=style.getLineScaleAndColor(target.width,target.height);
+    if ps_stepLeft  in style.style then drawStepsLeft;
+    if ps_stepRight in style.style then drawStepsRight;
+    if ps_bar       in style.style then drawBars;
+    if ps_box       in style.style then drawBoxes;
+    if ps_ellipse   in style.style then drawEllipses;
+    if ps_tube      in style.style then drawTubes;
+    if ps_polygon   in style.style then drawPolygons;
+    if ps_dot       in style.style then drawDots;
+    if ps_plus      in style.style then drawPluses;
+    if ps_cross     in style.style then drawCrosses;
+    if ps_impulse   in style.style then drawImpulses;
+    if (ps_bspline   in style.style) or
+       (ps_cosspline in style.style) or
+       (ps_straight  in style.style) then drawStraightLines;
+
+  end;
+
 DESTRUCTOR T_sampleRow.destroy;
   begin
     sample.free;
   end;
 
-FUNCTION T_sampleRow.toPlotStatement(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string;
+FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;
+  CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral
+  ): string;
   VAR myRowIndex:longint;
   begin
     myRowIndex:=globalRowData.size;
