@@ -69,6 +69,7 @@ TYPE
     PROCEDURE logFilenameEditEditingDone(Sender: TObject);
     PROCEDURE logLocationLengthEditEditingDone(Sender: TObject);
     PROCEDURE outFileVerbosityEditEditingDone(Sender: TObject);
+    PROCEDURE outputFileComboBoxSelect(Sender: TObject);
     PROCEDURE pauseFlagCbClick(Sender: TObject);
     PROCEDURE pauseOnErrorFlagCbClick(Sender: TObject);
     PROCEDURE profileFlagCbClick(Sender: TObject);
@@ -162,6 +163,11 @@ PROCEDURE TCmdLineParametersFrame.outFileVerbosityEditEditingDone(
       updateLogPreview;
       updateShebangPreview;
     end;
+  end;
+
+PROCEDURE TCmdLineParametersFrame.outputFileComboBoxSelect(Sender: TObject);
+  begin
+    updateLogSection;
   end;
 
 PROCEDURE TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
