@@ -524,15 +524,24 @@ FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
   end;
 
 FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
+  VAR customLogLocationLength_:longint=maxLongint;
+      customDateFormat_:string='';
+
   PROCEDURE appendAdapterSpecification(CONST s:T_textFileAdapterSpecification);
     begin
       if s.useLogFormatter then begin
-        append(result,MARK_DATE_FMT);
-        if s.logDateFormat=''
-        then append(result,'""')
-        else append(result,s.logDateFormat);
-        append(result,MARK_LOCLEN);
-        append(result,intToStr(s.logLocationLen));
+        if s.logDateFormat<>customDateFormat_ then begin
+          append(result,MARK_DATE_FMT);
+          if s.logDateFormat=''
+          then append(result,'""')
+          else append(result,s.logDateFormat);
+          customDateFormat_:=s.logDateFormat;
+        end;
+        if s.logLocationLen<>customLogLocationLength_ then begin
+          append(result,MARK_LOCLEN);
+          append(result,intToStr(s.logLocationLen));
+          customLogLocationLength_:=s.logLocationLen;
+        end;
         if s.forceNewFile
         then append(result,MARK_LOG_REWRITE)
         else append(result,MARK_LOG_APPEND);

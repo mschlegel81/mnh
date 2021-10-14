@@ -15,10 +15,10 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
     Height = 351
     Top = 0
     Width = 457
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     Align = alClient
     ParentFont = False
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object TabSheet1: TTabSheet
       AnchorSideTop.Control = TabSheet2
@@ -634,6 +634,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         ItemHeight = 15
+        OnSelect = outputFileComboBoxSelect
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
