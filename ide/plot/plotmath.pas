@@ -142,6 +142,7 @@ TYPE
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
     FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION getFullClone:P_plotPrimitive; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -150,9 +151,6 @@ TYPE
                       cta_bottomLeft,cta_bottom,cta_bottomRight);
 
   P_customText=^T_customText;
-
-  { T_customText }
-
   T_customText=object(T_plotPrimitive)
     text      :T_arrayOfString;
     fontName  :string;
@@ -165,7 +163,6 @@ TYPE
     absolutePosition:boolean;
 
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
-    FUNCTION clone:P_customText;
     PROCEDURE setAnchor(CONST s:string);
     PROCEDURE setForeground(CONST r,g,b:double);
     PROCEDURE setBackground(CONST r,g,b:double);
@@ -173,6 +170,19 @@ TYPE
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
     FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION getFullClone:P_plotPrimitive; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+  P_rasterImage=^T_rasterImage;
+  T_rasterImage= object(T_plotPrimitive)
+    colors:array of T_color;
+    width:longint;
+    CONSTRUCTOR create();
+    PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
+    PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION getFullClone:P_plotPrimitive; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -270,6 +280,111 @@ OPERATOR -(CONST x,y:T_point):T_point;
   begin
     result[0]:=x[0]-y[0];
     result[1]:=x[1]-y[1];
+  end;
+
+CONSTRUCTOR T_rasterImage.create();
+  begin
+    setLength(colors,0);
+    width:=1;
+  end;
+
+PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
+  VAR r0,r1:longint;
+  begin
+    if (scaling.axisTrafo['x'].autoscale) then begin
+      if scaling.axisTrafo['x'].logs then r0:=1 else r0:=0; r1:=width;
+      if r0<boundingBox['x',0] then boundingBox['x',0]:=r0;
+      if r1>boundingBox['x',1] then boundingBox['x',1]:=r1;
+    end;
+    if (scaling.axisTrafo['y'].autoscale) then begin
+      if scaling.axisTrafo['y'].logs then r0:=1 else r0:=0;
+      r1:=length(colors) div width;
+      if length(colors)>r1*width then inc(r1);
+      if r0<boundingBox['y',0] then boundingBox['y',0]:=r0;
+      if r1>boundingBox['y',1] then boundingBox['y',1]:=r1;
+    end;
+  end;
+
+PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_boundingBox; CONST yBaseLine: longint; CONST target: TBGRACanvas);
+  VAR i,jx,jy:longint;
+      xGrid:array of longint;
+      yGrid:array of longint;
+  begin
+    //Init X-Coordinates
+    setLength(xGrid,width+1);
+    for i:=0 to width do xGrid[i]:=round(opt.axisTrafo['x'].apply(i));
+    //Init Y-Coordinates
+    setLength(yGrid,length(colors) div width);
+    if width*length(yGrid)<length(colors)
+    then setLength(yGrid,length(yGrid)+2)
+    else setLength(yGrid,length(yGrid)+1);
+    for i:=0 to length(yGrid)-1 do yGrid[i]:=round(opt.axisTrafo['y'].apply(i));
+
+    //Draw
+    target.Pen.style:=psClear;
+    target.Brush.style:=bsSolid;
+    jx:=0;
+    jy:=0;
+    for i:=0 to length(colors)-1 do begin
+      if intersect(screenBox,boundingBoxOf(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1])) then begin
+        target.Brush.BGRAColor:=colors[i];
+        target.FillRect(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1]);
+      end;
+      inc(jx);
+      if jx>=width then begin
+        jx:=0;
+        inc(jy);
+      end;
+    end;
+  end;
+
+FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
+  VAR myRowIndex:longint;
+      i:longint;
+      data:P_listLiteral;
+      c:T_color;
+      valueTable:array[0..255] of P_realLiteral;
+  FUNCTION getValue(CONST b:byte):P_realLiteral;
+    begin
+      if valueTable[b]=nil then begin
+        valueTable[b]:=literalRecycler^.newRealLiteral(round(b/255*1000)/1000);
+        result:=valueTable[b];
+      end else result:=P_realLiteral(valueTable[b]^.rereferenced);
+    end;
+
+  begin
+    for i:=0 to 255 do valueTable[i]:=nil;
+    myRowIndex:=globalRowData.size;
+    result:='plotRasterImage(ROW['+intToStr(myRowIndex)+'],'+intToStr(width)+');';
+    data:=literalRecycler^.newListLiteral(length(colors));
+    for i:=0 to length(colors)-1 do begin
+      c:=colors[i];
+      if (c[cc_red]=c[cc_green]) and (c[cc_red]=c[cc_blue])
+      then data^.append(literalRecycler,getValue(c[cc_red]),false)
+      else data^.append(literalRecycler,literalRecycler^.newListLiteral(3)^
+                       .append(literalRecycler,getValue(c[cc_red  ]),false)^
+                       .append(literalRecycler,getValue(c[cc_green]),false)^
+                       .append(literalRecycler,getValue(c[cc_blue ]),false),false);
+    end;
+    globalRowData.append(literalRecycler,data,false);
+  end;
+
+FUNCTION T_rasterImage.getFullClone: P_plotPrimitive;
+  VAR rasterImage:P_rasterImage;
+      i:longint;
+  begin
+    new(rasterImage,create);
+    rasterImage^.width:=width;
+    rasterImage^.pseudoIndex:=pseudoIndex;
+    setLength(rasterImage^.colors,length(colors));
+    for i:=0 to length(colors)-1 do rasterImage^.colors[i]:=colors[i];
+
+    result:=rasterImage;
+  end;
+
+DESTRUCTOR T_rasterImage.destroy;
+  begin
+    setLength(colors,0);
   end;
 
 PROCEDURE T_bSplineBuilder.flush;
@@ -646,22 +761,6 @@ CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
     absolutePosition:=false;
   end;
 
-FUNCTION T_customText.clone: P_customText;
-  VAR clonedText:T_arrayOfString=();
-      i:longint;
-  begin
-    setLength(clonedText,length(text));
-    for i:=0 to length(clonedText)-1 do clonedText[i]:=text[i];
-    new(result,create(p[0],p[1],clonedText));
-    result^.fontName             :=fontName;
-    result^.anchor               :=anchor;
-    result^.fontSize             :=fontSize;
-    result^.foreground           :=foreground;
-    result^.background           :=background;
-    result^.transparentBackground:=transparentBackground;
-    result^.absolutePosition     :=absolutePosition;
-  end;
-
 DESTRUCTOR T_customText.destroy;
   VAR i:longint;
   begin
@@ -675,7 +774,9 @@ FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint
     result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/500);
   end;
 
-PROCEDURE T_customText.render(CONST opt: T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target: TBGRACanvas);
+PROCEDURE T_customText.render(CONST opt: T_scalingOptions;
+  CONST screenBox: T_boundingBox; CONST yBaseLine: longint;
+  CONST target: TBGRACanvas);
   VAR screenLoc:T_point;
       x,y,
       i,k,
@@ -795,12 +896,15 @@ PROCEDURE T_customText.setBackground(CONST r, g, b: double);
     background[cc_blue ]:=round(255*max(0,min(1,b)));
   end;
 
-PROCEDURE T_customText.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
+PROCEDURE T_customText.updateBoundingBox(CONST scaling: T_scalingOptions;
+  VAR boundingBox: T_boundingBox);
   begin
     //TODO Maybe custom text with relative positions must influence the bounding box...
   end;
 
-FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
+FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean;
+  CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral
+  ): string;
   CONST anchorText:array[T_customTextAnchor] of string=('"TL"','"T"','"TR"','"L"','"C"','"R"','"BL"','"B"','"BR"');
   VAR dummy:boolean;
   begin
@@ -829,6 +933,25 @@ FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean; CONST litera
     result+=');';
   end;
 
+FUNCTION T_customText.getFullClone: P_plotPrimitive;
+  VAR clonedText:T_arrayOfString=();
+      i:longint;
+      customText:P_customText;
+  begin
+    setLength(clonedText,length(text));
+    for i:=0 to length(clonedText)-1 do clonedText[i]:=text[i];
+    new(customText,create(p[0],p[1],clonedText));
+    customText^.fontName             :=fontName;
+    customText^.anchor               :=anchor;
+    customText^.fontSize             :=fontSize;
+    customText^.foreground           :=foreground;
+    customText^.background           :=background;
+    customText^.transparentBackground:=transparentBackground;
+    customText^.absolutePosition     :=absolutePosition;
+    customText^.pseudoIndex          :=pseudoIndex;
+    result:=customText;
+  end;
+
 PROCEDURE T_scalingOptions.setDefaults;
   VAR axis:char;
   begin
@@ -848,9 +971,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
   FUNCTION getSamplesBoundingBox:T_boundingBox;
     VAR axis:char;
         primitive:P_plotPrimitive;
-        point:T_point;
-        x,y:double;
-        i:longint;
     begin
       for axis:='x' to 'y' do
       if axisTrafo[axis].autoscale then begin
@@ -1316,7 +1436,8 @@ CONSTRUCTOR T_sampleRow.create(CONST row: T_dataRow);
     sample:=row;
   end;
 
-PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
+PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions;
+  VAR boundingBox: T_boundingBox);
   VAR i: longint;
       point: T_point;
       x,y:double;
@@ -1334,7 +1455,9 @@ PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions; VAR bou
     end;
   end;
 
-PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target: TBGRACanvas);
+PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
+  CONST screenBox: T_boundingBox; CONST yBaseLine: longint;
+  CONST target: TBGRACanvas);
   VAR scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
   PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
@@ -1682,9 +1805,7 @@ DESTRUCTOR T_sampleRow.destroy;
     sample.free;
   end;
 
-FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;
-  CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral
-  ): string;
+FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
   VAR myRowIndex:longint;
   begin
     myRowIndex:=globalRowData.size;
@@ -1694,6 +1815,17 @@ FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;
                          literalRecycler^.newListLiteral(2)^
                                .append      (literalRecycler,sample.toNewLiteralForExport(literalRecycler),false)^
                                .appendString(literalRecycler,style.toString),false);
+  end;
+
+FUNCTION T_sampleRow.getFullClone: P_plotPrimitive;
+  VAR sampleRow:P_sampleRow;
+      row:T_dataRow;
+  begin
+    sample.cloneTo(row);
+    new(sampleRow,create(row));
+    sampleRow^.style:=style;
+    sampleRow^.pseudoIndex:=pseudoIndex;
+    result:=sampleRow;
   end;
 
 PROCEDURE T_axisTrafo.prepare;

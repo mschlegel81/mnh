@@ -37,12 +37,10 @@ TYPE
   P_rasterImageMessage=^T_rasterImageMessage;
   T_rasterImageMessage=object(T_payloadMessage)
     public
-      colors:array of T_color;
-      width:longint;
+      primitive:P_rasterImage;
       FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST width_:longint);
       FUNCTION canAddColor(CONST literal:P_literal):boolean;
-      DESTRUCTOR destroy; virtual;
   end;
 
   P_addTextMessage=^T_addTextMessage;
@@ -153,7 +151,6 @@ TYPE
       FUNCTION  obtainPlot(CONST width,height:longint):TImage;
 
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
-      PROCEDURE addSingleBox(CONST color:T_color; CONST x,y:longint);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
       PROCEDURE addCustomText(CONST text:P_customText);
     public
@@ -548,35 +545,29 @@ FUNCTION T_rasterImageMessage.internalType: shortstring;
 CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint);
   begin
     inherited create(mt_plot_rasterImage);
-    width:=width_;
-    setLength(colors,0);
+    new(primitive,create);
+    primitive^.width:=width_;
   end;
 
 FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
   VAR i:longint;
   begin
-    i:=length(colors);
+    i:=length(primitive^.colors);
     if literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
-      setLength(colors,i+1);
-      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
-      colors[i,cc_green]:=colors[i,cc_red  ];
-      colors[i,cc_blue ]:=colors[i,cc_red  ];
-      colors[i,cc_alpha]:=255;
+      setLength(primitive^.colors,i+1);
+      primitive^.colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
+      primitive^.colors[i,cc_green]:=primitive^.colors[i,cc_red  ];
+      primitive^.colors[i,cc_blue ]:=primitive^.colors[i,cc_red  ];
+      primitive^.colors[i,cc_alpha]:=255;
       result:=true;
     end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
-      setLength(colors,i+1);
-      colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
-      colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
-      colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
-      colors[i,cc_alpha]:=255;
+      setLength(primitive^.colors,i+1);
+      primitive^.colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
+      primitive^.colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
+      primitive^.colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
+      primitive^.colors[i,cc_alpha]:=255;
       result:=true;
     end else result:=false;
-  end;
-
-DESTRUCTOR T_rasterImageMessage.destroy;
-  begin
-    setLength(colors,0);
-    inherited destroy;
   end;
 
 FUNCTION T_addTextMessage.internalType: shortstring;
@@ -1025,24 +1016,6 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     end;
   end;
 
-PROCEDURE T_plot.addSingleBox(CONST color:T_color; CONST x,y:longint);
-  VAR style:T_style;
-      index:longint;
-      dataRow:T_dataRow;
-  begin
-    style.color:=color;
-    style.styleModifier:=0;
-    style.style:=[ps_box,ps_fillSolid];
-    dataRow.init(2);
-    dataRow.point[0]:=pointOf(x,y);
-    dataRow.point[1]:=pointOf(x+1,y+1);
-    index:=length(row);
-    setLength(row,index+1);
-    new(P_sampleRow(row[index]),create(dataRow));
-    P_sampleRow(row[index])^.style:=style;
-    P_sampleRow(row[index])^.pseudoIndex:=virtualRowIndex;
-  end;
-
 PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
   VAR i0,i:longint;
   begin
@@ -1140,7 +1113,6 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
 
 PROCEDURE T_plot.drawGridAndRows(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos);
   VAR scaleAndColor:T_scaleAndColor;
-      screenRow:T_rowToPaint;
       screenBox:T_boundingBox;
   VAR yBaseLine:longint;
 
@@ -1360,7 +1332,6 @@ FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
 
 PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
-      clonedSample:T_dataRow;
   begin
     system.enterCriticalSection(plotCs);
     system.enterCriticalSection(p.plotCs);
@@ -1415,7 +1386,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       {$ifdef enable_render_threads}
       clonedPlot:P_plot;
       {$endif}
-      ix,iy,i:longint;
   begin
     case message^.messageType of
       mt_startOfEvaluation: begin
@@ -1443,16 +1413,9 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
           currentPlot.clear;
           currentPlot.scalingOptions.axisStyle['x']:=[];
           currentPlot.scalingOptions.axisStyle['y']:=[];
-          iy:=0;
-          ix:=0;
-          for i:=0 to length(colors)-1 do begin
-            currentPlot.addSingleBox(colors[i],ix,iy);
-            inc(ix);
-            if ix>=width then begin
-              ix:=0;
-              inc(iy);
-            end;
-          end;
+          setLength(currentPlot.row,1);
+          currentPlot.row[0]:=primitive;
+          primitive^.pseudoIndex:=currentPlot.virtualRowIndex;
           inc(currentPlot.virtualRowIndex);
         finally
           leaveCriticalSection(currentPlot.plotCs);
