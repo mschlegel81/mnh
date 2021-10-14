@@ -328,21 +328,7 @@ FUNCTION removePlot_imp intFuncSignature;
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
-      new(dropPlotMessage,create(toDrop,true));
-      context^.messages^.postCustomMessage(dropPlotMessage,true);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
-FUNCTION removeText_imp intFuncSignature;
-  VAR toDrop:longint=1;
-      dropPlotMessage:P_plotDropRowRequest;
-  begin
-    if not(context^.checkSideEffects('removeText',tokenLocation,[se_alterGuiState])) then exit(nil);
-    if (params=nil) or (params^.size=0) or
-       (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
-      if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
-      new(dropPlotMessage,create(toDrop,false));
+      new(dropPlotMessage,create(toDrop));
       context^.messages^.postCustomMessage(dropPlotMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
@@ -458,8 +444,6 @@ INITIALIZATION
     'renderToString(width,height);//Renders the current plot to a string.',[se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removeText',@removeText_imp, ak_variadic,
-    'removeText;//Removes the last custom text from the plot#removeText(n>=1);//Removed the last n custom texts from the plot',[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
     'drawText(x,y,text);//Draws custom text#'+
     'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);

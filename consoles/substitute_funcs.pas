@@ -30,10 +30,10 @@ INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',       @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot',             @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotClosed',       @returnFalse,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize',    @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'postDisplay',      @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize',    @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',       @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removeText',       @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile',     @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString',   @requireGui ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',     @requireGui ,ak_variadic);
