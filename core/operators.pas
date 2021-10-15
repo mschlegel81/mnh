@@ -117,12 +117,24 @@ FUNCTION arithmeticNegationOf_impl intFuncSignature;
 
 FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   VAR rule   :P_abstractRule =nil;
+      {$ifdef fullVersion}
+      wrapped:P_expressionLiteral;
+      {$endif}
   begin
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,operand,nil,recycler,context);
-    if result=nil then
-    result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
+    if result=nil then begin
+      {$ifdef fullVersion}
+      if (tco_stackTrace in P_context(context)^.threadOptions)
+        and builtinFunctionMap.canGetIntrinsicRuleAsExpression(operatorName[op], wrapped) then begin
+        P_context(context)^.callStackPush(tokenLocation,wrapped,nil);
+        result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
+        P_context(context)^.callStackPop(nil);
+      end else
+      {$endif}
+      result:=UN_IMPL[op](operand,tokenLocation,context,recycler);
+    end;
     if result=nil then begin
       context^.raiseError('Incompatible operand '+operand^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
@@ -135,7 +147,16 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then result:=rule^.evaluateToLiteral(tokenLocation,LHS,RHS,P_recycler(recycler),context);
-    if result=nil then result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context),P_recycler(recycler));
+    if result=nil then begin
+      {$ifdef fullVersion}
+      if tco_stackTrace in P_context(context)^.threadOptions then begin
+        P_context(context)^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(intFuncForOperator[op],false),nil);
+        result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context),P_recycler(recycler));
+        P_context(context)^.callStackPop(nil);
+      end else
+      {$endif}
+      result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_context(context),P_recycler(recycler));
+    end;
     if result=nil then begin
       P_context(context)^.raiseError('Incompatible operands '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenDefaultId[op],tokenLocation);
       result:=newVoidLiteral;
