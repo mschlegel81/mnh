@@ -776,7 +776,7 @@ CONST
                 'ipc',
                 'executing external');
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
-  C_sideEffectsForCodeAssistance=[se_readPackageState,se_alterPackageState];
+  C_sideEffectsForCodeAssistance=[se_readPackageState,se_alterPackageState,se_output];
   C_sideEffectsForFormatting=[se_input,se_readPackageState,se_alterPackageState,se_readContextState,se_alterContextState,se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState,se_readFile,se_accessHttp,se_accessIpc,se_executingExternal];
   C_sideEffectsRequiringGui=[se_readGuiState,se_alterGuiState,se_readIdeState,se_alterIdeState];
   C_sideEffectProfile:array [0..3] of record
