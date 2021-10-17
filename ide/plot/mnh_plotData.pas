@@ -124,7 +124,6 @@ TYPE
       scalingOptions:T_scalingOptions;
       row: T_plotPrimitiveList;
       virtualRowIndex:longint;
-      //customText:array of P_customText;
 
       cachedImage:record
         image:TImage;

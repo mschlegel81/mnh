@@ -349,7 +349,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
          [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif},mt_el1_note..mt_el2_userWarning],
          [mt_clearConsole,mt_printline,mt_printdirect{$ifdef fullVersion},mt_displayTable..mt_displayCustomForm{$endif},mt_el1_note..mt_el2_userWarning,mt_el3_evalError..mt_el4_systemError]);
 
-  VAR fileName:string='';
+  VAR fileName:string;
       callContextType:T_evaluationContextType;
   begin
     if length(scriptSource)=0 then begin
@@ -382,7 +382,6 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
       result:=messagesToLiteralForSandbox(recycler,messages.storedMessages(false),C_textMessages,messages.getExitCode);
       messages.clear(true);
-      fileName:='';
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
