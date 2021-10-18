@@ -913,7 +913,7 @@ FUNCTION T_parallelMapGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
         if outputQueue.hasNext then begin
           result.literal:=outputQueue.next;
           exit(result);
-        end;
+        end else P_context(context)^.getGlobals^.taskQueue.activeDeqeue(recycler);
       until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
       result.literal:=newVoidLiteral;
     end;
