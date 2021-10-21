@@ -168,6 +168,7 @@ TYPE
       destructionPending:boolean;
       poolThreadsRunning:longint;
       parent:P_evaluationGlobals;
+      enqueueEvent:PRTLEvent;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
@@ -876,7 +877,8 @@ PROCEDURE T_workerThread.execute;
 
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
-          sleep(1);
+          RTLEventResetEvent(taskQueue.enqueueEvent);
+          RTLEventWaitFor(taskQueue.enqueueEvent);
           inc(sleepCount);
           {$ifdef workerThreadLogging}
           inc(log_idle_count);
@@ -1003,6 +1005,7 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     memoryCleaner.registerObjectForCleanup(5,@cleanupQueues);
     parent:=parent_;
     destructionPending:=false;
+    enqueueEvent:=RTLEventCreate;
     setLength(subQueue,0);
     poolThreadsRunning:=0;
   end;
@@ -1014,10 +1017,12 @@ DESTRUCTOR T_taskQueue.destroy;
     timeout:=now+1/(24*60*60);
     while (now<timeout) and (poolThreadsRunning>0) do begin
       destructionPending:=true;
+      RTLEventSetEvent(enqueueEvent);
       sleep(1);
       ThreadSwitch;
     end;
     cleanupQueues;
+    RTLEventDestroy(enqueueEvent);
     system.doneCriticalSection(cs);
   end;
 
@@ -1089,13 +1094,19 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
       end;
     end;
 
+  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     try
-      ensureQueue^.enqueue(task);
+      i:=ensureQueue^.enqueue(task);
       ensurePoolThreads();
+      if i>poolThreadsRunning then i:=poolThreadsRunning;;
     finally
       system.leaveCriticalSection(cs);
+      while i>0 do begin
+        RTLEventSetEvent(enqueueEvent);
+        dec(i);
+      end;
     end;
   end;
 
