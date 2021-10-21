@@ -343,28 +343,19 @@ FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST liter
       i:longint;
       data:P_listLiteral;
       c:T_color;
-      valueTable:array[0..255] of P_realLiteral;
-  FUNCTION getValue(CONST b:byte):P_realLiteral;
-    begin
-      if valueTable[b]=nil then begin
-        valueTable[b]:=literalRecycler^.newRealLiteral(round(b/255*1000)/1000);
-        result:=valueTable[b];
-      end else result:=P_realLiteral(valueTable[b]^.rereferenced);
-    end;
 
   begin
-    for i:=0 to 255 do valueTable[i]:=nil;
     myRowIndex:=globalRowData.size;
-    result:='plotRasterImage(ROW['+intToStr(myRowIndex)+'],'+intToStr(width)+');';
+    result:='plotRasterImage(ROW['+intToStr(myRowIndex)+']/255,'+intToStr(width)+');';
     data:=literalRecycler^.newListLiteral(length(colors));
     for i:=0 to length(colors)-1 do begin
       c:=colors[i];
       if (c[cc_red]=c[cc_green]) and (c[cc_red]=c[cc_blue])
-      then data^.append(literalRecycler,getValue(c[cc_red]),false)
+      then data^.appendInt(literalRecycler,c[cc_red])
       else data^.append(literalRecycler,literalRecycler^.newListLiteral(3)^
-                       .append(literalRecycler,getValue(c[cc_red  ]),false)^
-                       .append(literalRecycler,getValue(c[cc_green]),false)^
-                       .append(literalRecycler,getValue(c[cc_blue ]),false),false);
+                       .appendInt(literalRecycler,c[cc_red  ])^
+                       .appendInt(literalRecycler,c[cc_green])^
+                       .appendInt(literalRecycler,c[cc_blue ]),false);
     end;
     globalRowData.append(literalRecycler,data,false);
   end;
