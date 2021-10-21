@@ -523,6 +523,10 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
     nanLit,
     infLit,
     negInfLit     : T_realLiteral;
+
+    newLiteralRecycler: FUNCTION :P_literalRecycler;
+    freeLiteralRecycler: PROCEDURE(VAR recycler:P_literalRecycler);
+
 CONST maxSingletonInt=1000;
 IMPLEMENTATION
 USES sysutils, math,
@@ -2448,25 +2452,39 @@ FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
   end;
 
 FUNCTION T_setLiteral.leqForSorting(CONST other: P_literal): boolean;
+  VAR thisList,otherList:P_listLiteral;
+      recycler:P_literalRecycler;
   begin
     if (other^.literalType in C_setTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
       else begin
-        result:=false;
-        //TODO: Is there a nice solution?
+        recycler:=newLiteralRecycler();
+        thisList :=                     toList(recycler); thisList ^.sort;
+        otherList:=P_setLiteral(other)^.toList(recycler); otherList^.sort;
+        result:=thisList^.leqForSorting(otherList);
+        recycler^.disposeLiteral(thisList);
+        recycler^.disposeLiteral(otherList);
+        freeLiteralRecycler(recycler);
       end;
     end else result:=literalType<=other^.literalType;
   end;
 
 FUNCTION T_mapLiteral.leqForSorting(CONST other: P_literal): boolean;
+  VAR thisList,otherList:P_listLiteral;
+      recycler:P_literalRecycler;
   begin
     if (other^.literalType in C_mapTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
       else begin
-        result:=false;
-        //TODO: Is there a nice solution?
+        recycler:=newLiteralRecycler();
+        thisList :=                     toList(recycler); thisList ^.sort;
+        otherList:=P_mapLiteral(other)^.toList(recycler); otherList^.sort;
+        result:=thisList^.leqForSorting(otherList);
+        recycler^.disposeLiteral(thisList);
+        recycler^.disposeLiteral(otherList);
+        freeLiteralRecycler(recycler);
       end;
     end else result:=literalType<=other^.literalType;
   end;
