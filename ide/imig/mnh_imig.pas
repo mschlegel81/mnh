@@ -300,6 +300,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           end;
         end;
         if isValid and thisWorkflow.isValid then begin
+          maxImageManipulationThreads:=settings.cpuCount;
           thisWorkflow.executeWorkflowInBackground(false);
           if source<>''
           then doOutput('Executing workflow with input="'+source+'", output="'+dest+'"',false,tokenLocation,context,recycler,outputMethod)
@@ -345,6 +346,7 @@ FUNCTION executeTodo_imp intFuncSignature;
       if thisWorkflow.readFromFile(str0^.value,false) then begin
         enterCriticalSection(workflowCs);
         inc(workflowsActive);
+        maxImageManipulationThreads:=settings.cpuCount;
         thisWorkflow.executeAsTodo;
         leaveCriticalSection(workflowCs);
         while thisWorkflow.executing and (context^.messages^.continueEvaluation) do begin
