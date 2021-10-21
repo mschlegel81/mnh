@@ -89,25 +89,25 @@ VAR recyclerPool:array of P_recycler;
     recyclerPoolCs:TRTLCriticalSection;
     recyclerPoolsFinalized:boolean=false;
 
- FUNCTION newRecycler:P_recycler;
-   VAR r:P_recycler;
-   begin
-     result:=nil;
-     enterCriticalSection(recyclerPoolCs);
-     try
-       for r in recyclerPool do if (result=nil) and r^.isFree then begin
-         r^.isFree:=false;
-         result:=r;
-       end;
-       if result=nil then begin
-         setLength(recyclerPool,length(recyclerPool)+1);
-         new(result,create);
-         recyclerPool[length(recyclerPool)-1]:=result;
-       end;
-     finally
-       leaveCriticalSection(recyclerPoolCs);
-     end;
-   end;
+FUNCTION newRecycler:P_recycler;
+  VAR r:P_recycler;
+  begin
+    result:=nil;
+    enterCriticalSection(recyclerPoolCs);
+    try
+      for r in recyclerPool do if (result=nil) and r^.isFree then begin
+        r^.isFree:=false;
+        result:=r;
+      end;
+      if result=nil then begin
+        setLength(recyclerPool,length(recyclerPool)+1);
+        new(result,create);
+        recyclerPool[length(recyclerPool)-1]:=result;
+      end;
+    finally
+      leaveCriticalSection(recyclerPoolCs);
+    end;
+  end;
 
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
   VAR i:longint;
@@ -395,10 +395,25 @@ FUNCTION T_abstractRule.getTypedef: P_typedef;
 FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
 
+FUNCTION newLiteralRecycler:P_literalRecycler;
+  begin
+    result:=newRecycler;
+  end;
+
+PROCEDURE freeLiteralRecycler(VAR recycler:P_literalRecycler);
+  VAR r:P_recycler;
+  begin
+    r:=P_recycler(recycler);
+    freeRecycler(r);
+    recycler:=nil;
+  end;
+
 INITIALIZATION
   initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
   memoryCleaner.registerCleanupMethod(0,@cleanupRecyclerPools);
+  litVar.newLiteralRecycler:=@newLiteralRecycler;
+  litVar.freeLiteralRecycler:=@freeLiteralRecycler;
 FINALIZATION
   finalizeRecyclerPools;
 
