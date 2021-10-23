@@ -167,12 +167,13 @@ TYPE
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
+      poolThreadsIdle   :longint;
       parent:P_evaluationGlobals;
       enqueueEvent:PRTLEvent;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
-      PROCEDURE ensurePoolThreads();
+      PROCEDURE ensurePoolThreads(CONST numberToEnsure:longint=256);
       CONSTRUCTOR create(CONST parent_:P_evaluationGlobals);
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(CONST recycler:P_recycler):boolean;
@@ -835,80 +836,45 @@ TYPE
   end;
 
 PROCEDURE T_workerThread.execute;
-  CONST MS_IDLE_BEFORE_QUIT=1000;
-  VAR sleepCount:longint=0;
-      blockedCount:longint=0;
+  CONST DAYS_IDLE_BEFORE_QUIT=10/(24*60*60); //= 10 seconds
+  VAR blockedCount:longint=0;
       currentTask:P_queueTask;
       recycler:P_recycler;
-
-  {$ifdef workerThreadLogging}
-      log_last_out  :double =0;
-      log_busy_count:longint=0;
-      log_idle_count:longint=0;
-      log_blocked_count:longint=0;
-      log_blocked_ms:longint=0;
-
-  PROCEDURE doLog(CONST stopping:boolean);
-    begin
-      writeln(stdErr,'Worker ',IntToHex(ThreadID,4),' busy/idle: ',log_busy_count,'/',log_idle_count,'; blocked x',log_blocked_count,', ',log_blocked_ms,'ms',BoolToStr(stopping,' - STOPPING',''));
-      log_last_out     :=now;
-      log_busy_count   :=0;
-      log_idle_count   :=0;
-      log_blocked_count:=0;
-      log_blocked_ms   :=0;
-    end;
-  {$endif}
+      idleSince:double;
 
   begin
-    {$ifdef workerThreadLogging} log_last_out:=now; {$endif}
     recycler:=newRecycler;
     with globals^ do begin
       repeat
         if (getGlobalRunningThreads>settings.cpuCount)
         then begin
           inc(blockedCount);
-          {$ifdef workerThreadLogging}
-          inc(log_blocked_count);
-          inc(log_blocked_ms,10*blockedCount);
-          {$endif}
           threadSleepMillis(10*blockedCount);
-          inc(sleepCount,10*blockedCount);
         end else blockedCount:=0;
 
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
+          idleSince:=now;
+          interLockedIncrement(taskQueue.poolThreadsRunning);
           RTLEventResetEvent(taskQueue.enqueueEvent);
-          RTLEventWaitFor(taskQueue.enqueueEvent);
-          inc(sleepCount);
-          {$ifdef workerThreadLogging}
-          inc(log_idle_count);
-          {$endif}
+          RTLEventWaitFor(taskQueue.enqueueEvent,1000);
+          interlockedDecrement(taskQueue.poolThreadsRunning);
         end else begin
-          {$ifdef workerThreadLogging}
-          inc(log_busy_count);
-          {$endif}
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
             dispose(currentTask,destroy);
           end else begin
             currentTask^.evaluate(recycler);
           end;
-          sleepCount:=0;
+          idleSince:=now;
         end;
         recycler^.cleanupIfPosted;
-
-        {$ifdef workerThreadLogging}
-        if (now>log_last_out+ONE_MINUTE) then doLog(false);
-        {$endif}
-      until (sleepCount>=MS_IDLE_BEFORE_QUIT) or    //nothing to do
+      until (now-idleSince>=DAYS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or
             (taskQueue.poolThreadsRunning>settings.cpuCount);
     end;
     freeRecycler(recycler);
-    {$ifdef workerThreadLogging}
-    doLog(true);
-    {$endif}
     Terminate;
   end;
 
@@ -1008,6 +974,7 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     enqueueEvent:=RTLEventCreate;
     setLength(subQueue,0);
     poolThreadsRunning:=0;
+    poolThreadsIdle:=0;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
@@ -1061,10 +1028,11 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
     isEmptyAfter:=(queuedCount=0) or (first=nil);
   end;
 
-PROCEDURE T_taskQueue.ensurePoolThreads();
+PROCEDURE T_taskQueue.ensurePoolThreads(CONST numberToEnsure:longint=256);
   VAR spawnCount:longint=0;
   begin
     while (poolThreadsRunning<settings.cpuCount-1) and //one main thread is active!
+          (spawnCount<numberToEnsure) and
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
       spawnCount+=1;
       T_workerThread.create(parent);
@@ -1099,7 +1067,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
     system.enterCriticalSection(cs);
     try
       i:=ensureQueue^.enqueue(task);
-      ensurePoolThreads();
+      ensurePoolThreads(i-poolThreadsIdle);
       if i>poolThreadsRunning then i:=poolThreadsRunning;;
     finally
       system.leaveCriticalSection(cs);
