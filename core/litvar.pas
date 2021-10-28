@@ -9,6 +9,7 @@ USES myGenerics, myStringUtil, serializationUtil, bigint,
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=1.5;
       HASH_SHRINK_THRESHOLD_FACTOR=1.2/HASH_GROWTH_THRESHOLD_FACTOR;
+      MAX_DEAD_LIST_SIZE=10240;
 TYPE T_expressionType=(et_builtin          ,
                        et_builtinIteratable,
                        et_builtinAsyncOrFuture    ,
@@ -1470,6 +1471,7 @@ PROCEDURE T_listLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR i:longint;
   begin
     for i:=0 to fill-1 do literalRecycler^.disposeLiteral(dat[i]);
+    if length(dat)>MAX_DEAD_LIST_SIZE then setLength(dat,MAX_DEAD_LIST_SIZE);
     fill    :=0;
     myHash  :=0;
     ints    :=0;
