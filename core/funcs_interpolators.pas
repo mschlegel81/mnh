@@ -633,7 +633,7 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
           sinSum+=x[i]*sin(h*i*k);
           cosSum+=x[i]*cos(h*i*k);
         end;
-        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,cosSum/length(x))^.appendReal(recycler,sinSum/length(x)),false);
+        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,2*cosSum/length(x))^.appendReal(recycler,2*sinSum/length(x)),false);
       end;
       setLength(x,0);
     end;
