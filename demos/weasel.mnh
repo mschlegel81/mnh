@@ -6,7 +6,7 @@ private randomCharacter->CHARSET.get(intRandom(size(CHARSET)));
 
 private multiplyAndSelect(parent:String,offspringCount, mutateProb)->
    ([parent]|map([1..offspringCount],{parent.bytes.each(c,random<mutateProb ? randomCharacter : c).join}))
-   .pMap({[$i,fitness($i)]})
+   .map({[$i,fitness($i)]})
    .sort(1)
    .head.head;
 
