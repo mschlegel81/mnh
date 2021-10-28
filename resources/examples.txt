@@ -26,6 +26,8 @@ parameterNames({3});
 //#mnh.parameterNames
 parameterNames({sin($x)/$x});
 
+groupToList([1,2,3,4,5,6],[1,2,3,1,2,3],Nan,::*);
+
 //#mnh.parameterNames
 //For variadic functions only the non-optional parameters are counted:
 parameterNames({printf("%s%s", $a, ...)});
@@ -1218,3 +1220,12 @@ expandedFileName('/home/user/file.ext');
 
 ln(3);
 
+//#math.calculateFourierCoefficients
+([0..99]/100*2*pi).map((x)->sin(x)+cos(2*x)).calculateFourierCoefficients(8); //Straight forward DFT
+
+//#math.calculateFourierCoefficients
+(random(100).sort*2*pi).map((t)->[t,sin(t)+cos(2*t)]).calculateFourierCoefficients(8); //Nonequidistant Fourier transform
+//Use the function's output to feed math.newFourierSeries
+
+//#math.integrate
+integrate((x)->sin(x)²,0,2,1E-8)
