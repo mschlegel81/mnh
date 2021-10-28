@@ -334,7 +334,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;
-      result:=newSetLiteral(length(setIter));
+      result:=recycler^.newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
@@ -481,7 +481,7 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    result:=recycler^.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
     for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(recycler,meta^.qualifiedId);
   end;
 

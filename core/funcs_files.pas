@@ -465,7 +465,7 @@ FUNCTION fileInfo_imp intFuncSignature;
       VAR a:P_setLiteral;
           att:T_fileAttrib;
       begin
-        a:=newSetLiteral(4);
+        a:=recycler^.newSetLiteral(4);
         for att in info.attributes do a^.appendString(recycler,C_fileAttribName[att]);
         result:=newMapLiteral(4)^
                 .put(recycler,'path'      ,info.filePath)^
@@ -495,7 +495,7 @@ FUNCTION fileInfo_imp intFuncSignature;
         for sub in iter do collResult^.append(recycler,infoForSearch(P_stringLiteral(sub)^.value),false);
       end;
       lt_emptyList: result:=recycler^.newListLiteral(0);
-      lt_emptySet : result:=newSetLiteral(0);
+      lt_emptySet : result:=recycler^.newSetLiteral(0);
     end;
   end; //fileInfo_imp
 
