@@ -133,7 +133,7 @@ FUNCTION ord_imp intFuncSignature;
         end else begin
           if x^.literalType in C_listTypes
           then result:=recycler^.newListLiteral(P_compoundLiteral(x)^.size)
-          else result:=newSetLiteral (P_compoundLiteral(x)^.size);
+          else result:=recycler^.newSetLiteral (P_compoundLiteral(x)^.size);
           iter:=P_listLiteral(x)^.tempIteratableList;
           for sub in iter do if context^.messages^.continueEvaluation then
             collResult^.append(recycler,recurse(sub),false);

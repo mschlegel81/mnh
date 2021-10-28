@@ -199,7 +199,7 @@ CONSTRUCTOR T_concatAltAggregator.create(CONST literalRecycler:P_literalRecycler
 CONSTRUCTOR T_headAggregator     .create;                                        begin inherited create(nil);            end;
 CONSTRUCTOR T_minAggregator      .create;                                        begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_maxAggregator      .create;                                        begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_setAggregator      .create(CONST literalRecycler:P_literalRecycler); begin inherited create(newSetLiteral(0));  end;
+CONSTRUCTOR T_setAggregator      .create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newSetLiteral(0));  end;
 CONSTRUCTOR T_elementFrequencyAggregator.create;
   begin
     inherited create(nil);

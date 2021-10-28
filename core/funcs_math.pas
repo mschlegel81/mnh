@@ -418,7 +418,7 @@ FUNCTION subSets_impl intFuncSignature;
       end else begin
         if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
         if arg0^.literalType in C_setTypes
-        then newSet:=newSetLiteral (length(mustContain))
+        then newSet:=recycler^.newSetLiteral (length(mustContain))
         else newSet:=recycler^.newListLiteral(length(mustContain));
         for i:=0 to length(mustContain)-1 do newSet^.append(recycler,mustContain[i],true);
         resultSets^.append(recycler,newSet,false);
@@ -528,7 +528,7 @@ FUNCTION permutations_impl intFuncSignature;
       iter:=collection0^.tempIteratableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
-      result:=newSetLiteral(length(iter));
+      result:=recycler^.newSetLiteral(length(iter));
       recurseBuildPermutations(mustContain,mightContain);
       if memoryPanic then begin
         recycler^.disposeLiteral(result);

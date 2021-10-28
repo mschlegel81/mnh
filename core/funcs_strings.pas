@@ -138,12 +138,12 @@ FUNCTION charSet_imp intFuncSignature;
       if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
         for sub in input^.value do charSetUtf8.put(sub);
-        result:=newSetLiteral(charSetUtf8.size);
+        result:=recycler^.newSetLiteral(charSetUtf8.size);
         for sub in charSetUtf8.values do result^.appendString(recycler,sub);
         charSetUtf8.destroy;
       end else begin
         for c in input^.value do include(byteSet,c);
-        result:=newSetLiteral(100);
+        result:=recycler^.newSetLiteral(100);
         for c in byteSet do result^.appendString(recycler,c);
       end;
     end;
@@ -461,7 +461,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         end;
         lt_stringSet,lt_emptySet: begin
           iter:=set0^.tempIteratableList;
-          result:=newSetLiteral(length(iter));
+          result:=recycler^.newSetLiteral(length(iter));
           for l in iter do
             setResult^.appendString(recycler,innerClean(P_stringLiteral(l)^.value));
         end;

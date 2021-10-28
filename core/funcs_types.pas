@@ -166,7 +166,7 @@ FUNCTION toSet_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
-        result:=newSetLiteral(1);
+        result:=recycler^.newSetLiteral(1);
         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
           setResult^.append(recycler,valueToAppend,false);
@@ -174,7 +174,7 @@ FUNCTION toSet_imp intFuncSignature;
         end;
       end else
       if arg0^.literalType in C_scalarTypes
-      then result:=newSetLiteral(1)^.append(recycler,arg0,true)
+      then result:=recycler^.newSetLiteral(1)^.append(recycler,arg0,true)
       else result:=compound0^.toSet(recycler);
     end;
   end;
