@@ -193,6 +193,20 @@ TYPE
       FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
     end;
 
+  {$ifdef fullVersion}
+  P_structureMarker=^T_structureMarker;
+  T_structureMarker=object(T_objectWithIdAndLocation)
+    private
+      id:T_idString;
+      location:T_tokenLocation;
+    public
+      CONSTRUCTOR create(CONST identifier:T_idString);
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getLocation:T_tokenLocation; virtual;
+      DESTRUCTOR destroy;
+  end;
+  {$endif}
+
   T_builtinGeneratorType=(bgt_future,
                           bgt_listIterator,
                           bgt_singleValueIterator,
@@ -234,6 +248,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
+
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
     newGeneratorFromStreamCallback: FUNCTION(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
@@ -1074,7 +1089,18 @@ CONSTRUCTOR T_builtinExpressionProxy.create(CONST meta_:P_builtinFunctionMetaDat
     meta:=meta_;
     func:=meta^.functionPointer;
   end;
-
+{$ifdef fullVersion}
+CONSTRUCTOR T_structureMarker.create(CONST identifier:T_idString);
+  begin
+    id:=identifier;
+    location.package:=@MNH_PSEUDO_PACKAGE;
+    location.column:=1;
+    location.line:=interLockedIncrement(identifiedInternalFunctionTally);
+  end;
+FUNCTION T_structureMarker.getId:T_idString; begin result:=id; end;
+FUNCTION T_structureMarker.getLocation:T_tokenLocation; begin result:=location; end;
+DESTRUCTOR T_structureMarker.destroy; begin end; //pro forma
+{$endif}
 DESTRUCTOR T_builtinExpressionProxy.destroy;
   begin
     inherited destroy;

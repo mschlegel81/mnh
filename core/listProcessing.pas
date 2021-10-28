@@ -80,6 +80,11 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; CONST context:P_contex
 VAR newIterator:FUNCTION (CONST literalRecycler:P_literalRecycler; CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
 IMPLEMENTATION
 USES mySys,tokenArray;
+{$ifdef fullVersion}
+VAR eachStructureMarker :T_structureMarker;
+    pEachStructureMarker:T_structureMarker;
+    aggStructureMarker  :T_structureMarker;
+{$endif}
 TYPE
   T_eachPayload=record
     eachIndex:longint;
@@ -126,6 +131,10 @@ end}
       x:P_literal;
       proceed:boolean=true;
   begin
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPush(eachLocation,@eachStructureMarker,nil);
+    {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
@@ -142,6 +151,10 @@ end}
       x:=input;
       processX;
     end;
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPop(nil);
+    {$endif}
   end;
 
 PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -220,6 +233,10 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
 end}
 
   begin
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPush(eachLocation,@pEachStructureMarker,nil);
+    {$endif}
     recycling.fill:=0;
     toQueueLimit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
     if toQueueLimit<4 then toQueueLimit:=4;
@@ -251,6 +268,10 @@ end}
       dec(fill);
       dispose(dat[fill],destroy);
     end;
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPop(nil);
+    {$endif}
   end;
 
 FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
@@ -314,6 +335,10 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
   VAR x:T_evaluationResult;
       iter:T_arrayOfLiteral;
   begin
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPush(location,@aggStructureMarker,nil);
+    {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(location,context,recycler,nil,nil);
       while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context^.messages^.continueEvaluation and not(aggregator^.earlyAbort) do begin
@@ -333,6 +358,10 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       x.literal:=input;
       aggregator^.addToAggregation(x,false,location,context,recycler);
     end;
+    {$ifdef fullVersion}
+    if tco_stackTrace in context^.threadOptions
+    then context^.callStackPop(nil);
+    {$endif}
   end;
 
 PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; CONST context:P_context; CONST recycler:P_recycler);
@@ -546,5 +575,16 @@ FUNCTION T_futureLiteral.isDone:boolean;
     leaveCriticalSection(criticalSection);
   end;
 
+{$ifdef fullVersion}
+INITIALIZATION
+  eachStructureMarker .create('each');
+  pEachStructureMarker.create('pEach');
+  aggStructureMarker  .create('agg');
+
+FINALIZATION
+  eachStructureMarker .destroy;
+  pEachStructureMarker.destroy;
+  aggStructureMarker  .destroy;
+{$endif}
 end.
 
