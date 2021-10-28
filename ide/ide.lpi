@@ -733,7 +733,6 @@
       </Item5>
       <Item6>
         <Name Value="ERegExpr"/>
-        <Enabled Value="False"/>
       </Item6>
       <Item7>
         <Name Value="RunError(210)"/>
