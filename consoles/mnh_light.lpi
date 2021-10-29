@@ -21,8 +21,8 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
       <MinorVersionNr Value="2"/>
-      <RevisionNr Value="0"/>
-      <BuildNr Value="433"/>
+      <RevisionNr Value="1"/>
+      <BuildNr Value="434"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 light interpreter" InternalName="mnh5_light" LegalCopyright="LGPL" OriginalFilename="mnh_light" ProductName="MNH5"/>
     </VersionInfo>
@@ -115,7 +115,7 @@
         <PackageName Value="LazUtils"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="47">
+    <Units Count="48">
       <Unit0>
         <Filename Value="mnh_light.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -305,6 +305,10 @@
         <Filename Value="..\common\myStringUtil.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit46>
+      <Unit47>
+        <Filename Value="substitute_funcs.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit47>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -25,8 +25,8 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
       <MinorVersionNr Value="2"/>
-      <RevisionNr Value="0"/>
-      <BuildNr Value="433"/>
+      <RevisionNr Value="1"/>
+      <BuildNr Value="434"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
@@ -40,7 +40,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core;customForms"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -80,7 +80,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="../core;customForms"/>
-            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
+            <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
             <UnitOutputDirectory Value="compilates"/>
           </SearchPaths>
           <Parsing>
@@ -649,7 +649,7 @@
         <UnitName Value="cmdLineFrames"/>
       </Unit100>
       <Unit101>
-        <Filename Value="../core/funcs_interpolators.pas"/>
+        <Filename Value="imig/mnh_imig.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit101>
       <Unit102>
@@ -665,7 +665,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="../core;customForms"/>
-      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling"/>
+      <OtherUnitFiles Value="settings;../common;../core;../3rd_party;plot;editors;assistant;close;tables;vartree;outline;output;customForms;ask;debugger;splash;quick;profiling;imig;../igSrc"/>
       <UnitOutputDirectory Value="compilates"/>
     </SearchPaths>
     <Parsing>
