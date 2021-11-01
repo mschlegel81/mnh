@@ -353,6 +353,7 @@ TYPE
     FUNCTION appendReal  (CONST literalRecycler:P_literalRecycler; CONST r:T_myFloat ):P_collectionLiteral;
     FUNCTION tempIteratableList:T_arrayOfLiteral; virtual; abstract;
     FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
+    PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual; abstract;
   end;
 
   T_listLiteral=object(T_collectionLiteral)
@@ -380,6 +381,8 @@ TYPE
       FUNCTION append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
       FUNCTION tempIteratableList:T_arrayOfLiteral; virtual;
+
+      PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual;
 
       PROCEDURE sort;
       PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; CONST context:P_abstractContext);
@@ -424,6 +427,7 @@ TYPE
       FUNCTION tempIteratableList:T_arrayOfLiteral; virtual;
       PROCEDURE drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
+      PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual;
     end;
 
   T_mapLiteral=object(T_compoundLiteral)
@@ -2281,7 +2285,8 @@ FUNCTION T_setLiteral.isKeyValueCollection: boolean;
 
 FUNCTION T_listLiteral.get(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal;
   VAR i,j:longint;
-      iter:T_arrayOfLiteral;
+      k:longint=0;
+      iter,resultElements:T_arrayOfLiteral;
       idx:P_literal;
   begin
     result:=nil;
@@ -2292,25 +2297,40 @@ FUNCTION T_listLiteral.get(CONST literalRecycler:P_literalRecycler; CONST access
         else exit(newVoidLiteral);
       end;
       lt_intList, lt_emptyList: begin
-        result:=literalRecycler^.newListLiteral(P_listLiteral(accessor)^.fill);
-        for j:=0 to P_listLiteral(accessor)^.fill-1 do begin
-          if                                                     P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.isBetween(0,fill-1)
-          then P_listLiteral(result)^.append(literalRecycler,dat[P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.intValue],true);
+        setLength(resultElements,P_listLiteral(accessor)^.fill);
+        for j:=0 to P_listLiteral(accessor)^.fill-1 do
+        if P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.isBetween(0,fill-1)
+        then begin
+          resultElements[k]:=dat[P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.intValue]^.rereferenced;
+          inc(k);
         end;
+        setLength(resultElements,k);
+        result:=literalRecycler^.newListLiteral(0);
+        P_listLiteral(result)^.setContents(resultElements,literalRecycler);
         exit(result);
       end;
       lt_intSet, lt_emptySet: begin
-        result:=literalRecycler^.newSetLiteral(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.tempIteratableList;
-        for idx in iter do begin
-          if                                                    P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
-          then P_setLiteral(result)^.append(literalRecycler,dat[P_abstractIntLiteral(idx)^.intValue],true);
+        setLength(resultElements,length(iter));
+        for idx in iter do if P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
+        then begin
+          resultElements[k]:=dat[P_abstractIntLiteral(idx)^.intValue]^.rereferenced;
+          inc(k);
         end;
+        setLength(resultElements,k);
+        result:=literalRecycler^.newSetLiteral(0);
+        P_setLiteral(result)^.setContents(resultElements,literalRecycler);
         exit(result);
       end;
       lt_booleanList: if (P_listLiteral(accessor)^.fill=fill) then begin
-        result:=literalRecycler^.newListLiteral(fill);
-        for i:=0 to fill-1 do if P_boolLiteral(P_listLiteral(accessor)^.dat[i])^.val then P_listLiteral(result)^.append(literalRecycler,dat[i],true);
+        setLength(resultElements,fill);
+        for i:=0 to fill-1 do if P_boolLiteral(P_listLiteral(accessor)^.dat[i])^.val then begin
+          resultElements[k]:=dat[i]^.rereferenced;
+          inc(k);
+        end;
+        setLength(resultElements,k);
+        result:=literalRecycler^.newListLiteral(0);
+        P_listLiteral(result)^.setContents(resultElements,literalRecycler);
         exit(result);
       end;
     end;
@@ -2700,6 +2720,52 @@ FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycle
       literalType:=lt_list;
       context^.raiseError('Invalid range expression '+last^.toString+'..'+L^.toString, location);
     end;
+  end;
+
+PROCEDURE T_listLiteral.setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler);
+  VAR x:P_literal;
+  begin
+    setLength(dat,0);
+    dat:=literals;
+    fill:=length(literals);
+    for x in dat do case x^.literalType of
+      lt_boolean   : inc(booleans);
+      lt_bigint,
+      lt_smallint  : inc(ints);
+      lt_real      : inc(reals);
+      lt_string    : inc(strings);
+      else           inc(others);
+    end;
+    if others>0
+    then literalType:=lt_list
+    else literalType:=C_listType[booleans>0,ints>0,reals>0,strings>0];
+    myHash:=0;
+  end;
+
+PROCEDURE T_setLiteral.setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler);
+  VAR i:longint;
+      prevBool:boolean;
+      x,temp:P_literal;
+  begin
+    for x in literals do if x^.literalType<>lt_void then begin
+      if dat.putNew(x,true,prevBool) then begin
+        case x^.literalType of
+          lt_boolean   : inc(booleans);
+          lt_bigint,
+          lt_smallint  : inc(ints);
+          lt_real      : inc(reals);
+          lt_string    : inc(strings);
+          else           inc(others);
+        end;
+      end else begin
+        temp:=x;
+        literalRecycler^.disposeLiteral(temp);
+      end;
+    end;
+    if others>0
+    then literalType:=lt_set
+    else literalType:=C_setType[booleans>0,ints>0,reals>0,strings>0];
+    myHash:=0;
   end;
 
 FUNCTION T_listLiteral.append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
