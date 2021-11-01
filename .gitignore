@@ -32,3 +32,5 @@ versions/*.zip
 /*/wpoData*
 *.lps
 
+
+/unixdict*.txt
