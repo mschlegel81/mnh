@@ -10,5 +10,14 @@ private vanDerCorputPi(sampleSize>0)->randomsToPi(vanDerCorputGenerator(2).head(
 
 @demo_for=math/monte carlo
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
-main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
-      printf("n=%{$0}7d pi approximated as %{monteCarloPi($0)}-9.7g (random) and as %{vanDerCorputPi($0)}-9.7g (Van der Corput generator)",10^[1..6]);
+main->begin
+  print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
+  local sampleSizes:=10^[1..6];
+  local vanDerCorput:=future({sampleSizes.pMap(::vanDerCorputPi)});
+  local monteCarlo  :=sampleSizes.pMap(::monteCarloPi);
+
+  printf("n=%7d pi approximated as %-9.7g (random) and as %-9.7g (Van der Corput generator)",
+          sampleSizes,
+          monteCarlo,
+          vanDerCorput());
+end;

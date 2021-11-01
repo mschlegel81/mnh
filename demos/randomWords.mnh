@@ -37,5 +37,8 @@ end;
 main(count)->begin
   local cnt:=toInt(count);
   assert(cnt>0,'count must be >0');
-  [1..cnt].each(w,randomWord.print);
+  print(randomWord); //One "simple" execution to give memoized functions time to initialize
+  cnt>1
+  ? [2..cnt].pMap(()->randomWord).each(w,w.print)
+  : void;
 end;

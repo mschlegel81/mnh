@@ -1,19 +1,22 @@
+memoized primesBelow(threshold)->primes(threshold).toSet;
+
 @SuppressUnusedWarning=used in format
-safePrimesBelow(threshold)->begin
-  local P:=primes(threshold).toSet;
+memoized safePrimesBelow(threshold)->begin
+  local P:=primesBelow(threshold);
   intersect(P,(P-1) div 2).size;
 end;
 @SuppressUnusedWarning=used in format
 unsafePrimesBelow(threshold)->begin
-  local P:=primes(threshold).toSet;
-  P.minus(intersect(P,(P-1) div 2)).size;
+  local P:=primesBelow(threshold);
+  P.size-safePrimesBelow(threshold);
 end;
 
-safePrimeGenerator  ->primeGenerator.filter({ isPrime(($x-1) div 2)});
-unsafePrimeGenerator->primeGenerator.filter({!isPrime(($x-1) div 2)});
+safePrimeGenerator  ->primeGenerator.pFilter((n)-> isPrime((n-1) div 2));
+unsafePrimeGenerator->primeGenerator.pFilter((n)->!isPrime((n-1) div 2));
 
-main->
+main->begin
   print("The first 35 safe primes are: \n  ",safePrimeGenerator.head(35).join(" "),
-      "\nThe first 40 unsafe primes are: \n  ",unsafePrimeGenerator.head(35).join(" ")) orElse
-  printf("There are\t{safePrimesBelow($0)}\tsafe primes below\t{$0}",[1000000,10000000]) orElse
+      "\nThe first 40 unsafe primes are: \n  ",unsafePrimeGenerator.head(35).join(" "));
+  printf("There are\t{safePrimesBelow($0)}\tsafe primes below\t{$0}",[1000000,10000000]);
   printf("There are\t{unsafePrimesBelow($0)}\tunsafe primes below\t{$0}",[1000000,10000000]);
+end;
