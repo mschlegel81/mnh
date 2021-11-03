@@ -375,8 +375,20 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
                                               fReal(P_listLiteral(params^.value[i])^.value[2]))
                       else begin
                         txt^.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
-                                          fReal(P_listLiteral(params^.value[i])^.value[1]),
-                                          fReal(P_listLiteral(params^.value[i])^.value[2]));
+                                           fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[2]));
+                        hasCol:=true;
+                      end;
+          end else if P_listLiteral(params^.value[i])^.size=4 then begin
+            if hasCol then txt^.setBackground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[2]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[3]))
+                      else begin
+                        txt^.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[2]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[3]));
                         hasCol:=true;
                       end;
           end else begin

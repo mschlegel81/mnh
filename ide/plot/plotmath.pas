@@ -164,8 +164,8 @@ TYPE
 
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
     PROCEDURE setAnchor(CONST s:string);
-    PROCEDURE setForeground(CONST r,g,b:double);
-    PROCEDURE setBackground(CONST r,g,b:double);
+    PROCEDURE setForeground(CONST r,g,b:double; CONST alpha:double=1);
+    PROCEDURE setBackground(CONST r,g,b:double; CONST alpha:double=1);
 
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
@@ -872,19 +872,21 @@ PROCEDURE T_customText.setAnchor(CONST s: string);
     end;
   end;
 
-PROCEDURE T_customText.setForeground(CONST r, g, b: double);
+PROCEDURE T_customText.setForeground(CONST r, g, b: double; CONST alpha:double=1);
   begin
     foreground[cc_red  ]:=round(255*max(0,min(1,r)));
     foreground[cc_green]:=round(255*max(0,min(1,g)));
     foreground[cc_blue ]:=round(255*max(0,min(1,b)));
+    foreground[cc_alpha]:=round(255*max(0,min(1,alpha)));
   end;
 
-PROCEDURE T_customText.setBackground(CONST r, g, b: double);
+PROCEDURE T_customText.setBackground(CONST r, g, b: double; CONST alpha:double=1);
   begin
     transparentBackground:=false;
     background[cc_red  ]:=round(255*max(0,min(1,r)));
     background[cc_green]:=round(255*max(0,min(1,g)));
     background[cc_blue ]:=round(255*max(0,min(1,b)));
+    background[cc_alpha]:=round(255*max(0,min(1,alpha)));
   end;
 
 PROCEDURE T_customText.updateBoundingBox(CONST scaling: T_scalingOptions;
