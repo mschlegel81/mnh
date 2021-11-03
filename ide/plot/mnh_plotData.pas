@@ -214,9 +214,9 @@ TYPE
     protected
       pullSettingsToGui:F_pullSettingsToGuiCallback;
       plotChangedSinceLastDisplay:boolean;
+      displayImmediate           :boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
-      displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       sandboxed:boolean;
     public
