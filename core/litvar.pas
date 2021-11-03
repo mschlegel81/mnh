@@ -2723,18 +2723,20 @@ FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycle
   end;
 
 PROCEDURE T_listLiteral.setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler);
-  VAR x:P_literal;
+  VAR i:longint;
   begin
-    setLength(dat,0);
-    dat:=literals;
+    setLength(dat,length(literals));
     fill:=length(literals);
-    for x in dat do case x^.literalType of
-      lt_boolean   : inc(booleans);
-      lt_bigint,
-      lt_smallint  : inc(ints);
-      lt_real      : inc(reals);
-      lt_string    : inc(strings);
-      else           inc(others);
+    for i:=0 to length(dat)-1 do begin
+      dat[i]:=literals[i];
+      case dat[i]^.literalType of
+        lt_boolean   : inc(booleans);
+        lt_bigint,
+        lt_smallint  : inc(ints);
+        lt_real      : inc(reals);
+        lt_string    : inc(strings);
+        else           inc(others);
+      end;
     end;
     if others>0
     then literalType:=lt_list
