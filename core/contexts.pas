@@ -590,7 +590,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
       recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
-    primaryContext.messages^.awaitAllFlushed(0.2);
+    primaryContext.messages^.awaitAllFlushed(0.7);
   end;
 
 {$ifdef fullVersion}
