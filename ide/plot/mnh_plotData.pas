@@ -1544,12 +1544,10 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
         myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
-                   compressString(
                      serialize(recycler,
                                globalRowData,
                                dummyLocation,
-                               nil),
-                     [C_compression_gzip]));
+                               nil));
       myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
       dsOffset:=152;
       progress.max:=(length(DataString) div 160)*2;
@@ -1564,9 +1562,6 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       if length(result[length(result)-1])<151
       then result[length(result)-1]+='.base92decode'
       else myGenerics.append(result, '.base92decode');
-      if length(result[length(result)-1])<153
-      then result[length(result)-1]+='.decompress'
-      else myGenerics.append(result, '.decompress');
       if length(result[length(result)-1])<151
       then result[length(result)-1]+='.deserialize;'
       else myGenerics.append(result, '.deserialize;');
