@@ -833,7 +833,9 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
         storeImage.SetInitialBounds(0,0,width,height);
         frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
         try
-          storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+          if lowercase(extractFileExt(fileName))='.bmp'
+          then storeImage.picture.Bitmap.saveToFile(fileName)
+          else storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
         except
           postIdeMessage('Export to PNG failed for: '+fileName,true);
         end;
@@ -1281,9 +1283,11 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
   begin
     storeImage:=obtainPlot(width,height);
     try
-      storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      if lowercase(extractFileExt(fileName))='.bmp'
+      then storeImage.picture.Bitmap.saveToFile(fileName)
+      else storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     except
-      message:='Export to PNG failed for: '+fileName;
+      message:='Export to file failed for: '+fileName;
       if feedbackMessages<>nil
       then feedbackMessages^.raiseSimpleError(message,feedbackLocation)
       else postIdeMessage(message,true);
@@ -1434,6 +1438,7 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
           end else
           {$endif}
           currentPlot.renderToFile(fileName,   width,height,feedbackLocation,feedbackMessages);
+          P_plotRenderRequest(message)^.setString('');
         end;
         P_plotRenderRequest(message)^.fileName:='';
       end;

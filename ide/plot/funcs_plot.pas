@@ -286,9 +286,11 @@ FUNCTION renderToFile_impl intFuncSignature;
       height:=int2^.intValue;
       if params^.size=4 then backgroundRendering:=bool3^.value;
       try
-        fileName:=ChangeFileExt(str0^.value,'.png');
+        fileName:=str0^.value;
         new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering,tokenLocation,context^.messages));
-        context^.messages^.postCustomMessage(renderRequest,true);
+        context^.messages^.postCustomMessage(renderRequest,false);
+        renderRequest^.getStringWaiting(context^.messages);
+        disposeMessage(renderRequest);
       except
         on e:Exception do begin
           context^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
