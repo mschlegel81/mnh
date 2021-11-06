@@ -735,7 +735,7 @@ TYPE
       myQueuedTasks:longint;
       slowProducer :boolean;
       FUNCTION canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler):longint;
-      PROCEDURE doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+      FUNCTION doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_chainTask; virtual;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -847,13 +847,14 @@ FUNCTION T_parallelFilterGenerator.nextTask(VAR nextUnmapped:P_literal; CONST lo
     result:=task^.define(nextUnmapped,loc);
   end;
 
-PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+FUNCTION T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
   VAR nextUnmapped:P_literal=nil;
       doneQueuing :boolean=false;
       taskChain   :T_taskChain;
       startTime   :double;
       tasksToQueue:longint;
   begin
+    result:=false;
     canAggregate(doneFetching,context,recycler);
     tasksToQueue:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-myQueuedTasks;
 
@@ -867,6 +868,7 @@ PROCEDURE T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONS
         doneFetching:=true;
         taskChain.flush;
       end else begin
+        result:=true;
         if taskChain.enqueueOrExecute(nextTask(nextUnmapped,loc,context,recycler),recycler)
         then doneQueuing:=true
         else if (now-startTime>ONE_SECOND) then begin
@@ -925,9 +927,13 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
     repeat
       if outputQueue.hasNext
       then container^.append(recycler,outputQueue.next,false)
-      else doEnqueueTasks(loc,context,recycler);
-    until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
-    while firstToAggregate<>nil do canAggregate(true,context,recycler);
+      else begin
+        if not(doEnqueueTasks(loc,context,recycler))
+        then context^.getGlobals^.taskQueue.activeDeqeue(recycler)
+      end;
+    until doneFetching or not(context^.continueEvaluation);
+    while (firstToAggregate<>nil) and context^.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate(true,context,recycler);
+    while (firstToAggregate<>nil)                                                           do canAggregate(true,context,recycler);
 
     if context^.continueEvaluation
     then while outputQueue.hasNext do container^.append(recycler,outputQueue.next,false)
@@ -1016,7 +1022,7 @@ FUNCTION pMap_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
-      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
+      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(mapGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         mapGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
@@ -1035,7 +1041,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
-      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone
+      if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(filterGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         filterGenerator^.doEnqueueTasks(tokenLocation,context,recycler);

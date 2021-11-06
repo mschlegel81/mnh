@@ -310,9 +310,11 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     end;
 
   VAR i:longint;
+      k:longint=0;
       p :P_listLiteral;
       fp:P_literal;
       f :P_intFuncCallback;
+      resultElements:T_arrayOfLiteral;
   begin
     if params=nil then exit(nil);
     if (params^.size=1) and (arg0^.literalType=lt_expression) then
@@ -321,7 +323,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     if not(allOkay) or not(anyList xor (firstSet>=0)) then exit(nil);
     if not(builtinFunctionMap.containsFunctionForId(functionId,f)) then raise Exception.create('genericVectorization cannot be applied to unknown function "'+functionId+'"');
     if anyList then begin
-      result:=recycler^.newListLiteral(consensusLength);
+      setLength(resultElements,consensusLength);
       for i:=0 to consensusLength-1 do if allOkay then begin
         p:=getListSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
@@ -330,7 +332,18 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         else if not(context^.continueEvaluation) then begin
           allOkay:=false;
           recycler^.disposeLiteral(fp);
-        end else P_listLiteral(result)^.append(recycler,fp,false);
+        end else begin
+          resultElements[k]:=fp;
+          inc(k);
+        end;
+      end;
+      if allOkay then begin
+        setLength(resultElements,k);
+        result:=recycler^.newListLiteral(0);
+        P_listLiteral(result)^.setContents(resultElements,recycler);
+      end else begin
+        result:=nil;
+        recycler^.disposeLiteral(resultElements);
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;
@@ -349,8 +362,8 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
             P_setLiteral(result)^.appendAll(recycler,P_collectionLiteral(fp));
             recycler^.disposeLiteral(fp);
           end else P_setLiteral(result)^.append(recycler,fp,false);
+          end;
         end;
-      end;
     end else result:=nil;
     if not(allOkay) then begin
       recycler^.disposeLiteral(result);

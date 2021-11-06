@@ -286,9 +286,11 @@ FUNCTION renderToFile_impl intFuncSignature;
       height:=int2^.intValue;
       if params^.size=4 then backgroundRendering:=bool3^.value;
       try
-        fileName:=ChangeFileExt(str0^.value,'.png');
+        fileName:=str0^.value;
         new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering,tokenLocation,context^.messages));
-        context^.messages^.postCustomMessage(renderRequest,true);
+        context^.messages^.postCustomMessage(renderRequest,false);
+        renderRequest^.getStringWaiting(context^.messages);
+        disposeMessage(renderRequest);
       except
         on e:Exception do begin
           context^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
@@ -375,8 +377,20 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
                                               fReal(P_listLiteral(params^.value[i])^.value[2]))
                       else begin
                         txt^.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
-                                          fReal(P_listLiteral(params^.value[i])^.value[1]),
-                                          fReal(P_listLiteral(params^.value[i])^.value[2]));
+                                           fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[2]));
+                        hasCol:=true;
+                      end;
+          end else if P_listLiteral(params^.value[i])^.size=4 then begin
+            if hasCol then txt^.setBackground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[2]),
+                                              fReal(P_listLiteral(params^.value[i])^.value[3]))
+                      else begin
+                        txt^.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[2]),
+                                           fReal(P_listLiteral(params^.value[i])^.value[3]));
                         hasCol:=true;
                       end;
           end else begin

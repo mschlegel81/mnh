@@ -590,7 +590,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
       recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
-    primaryContext.messages^.awaitAllFlushed(0.2);
+    primaryContext.messages^.awaitAllFlushed(0.7);
   end;
 
 {$ifdef fullVersion}
@@ -841,12 +841,12 @@ PROCEDURE T_workerThread.execute;
       currentTask:P_queueTask;
       recycler:P_recycler;
       idleSince:double;
-
+      justWokenUp:boolean=true;
   begin
     recycler:=newRecycler;
     with globals^ do begin
       repeat
-        if (getGlobalRunningThreads>settings.cpuCount)
+        if (getGlobalRunningThreads>settings.cpuCount) and not(justWokenUp)
         then begin
           inc(blockedCount);
           threadSleepMillis(10*blockedCount);
@@ -854,11 +854,13 @@ PROCEDURE T_workerThread.execute;
 
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
+          recycler^.cleanupIfPosted;
           idleSince:=now;
-          interLockedIncrement(taskQueue.poolThreadsRunning);
+          interLockedIncrement(taskQueue.poolThreadsIdle);
           RTLEventResetEvent(taskQueue.enqueueEvent);
           RTLEventWaitFor(taskQueue.enqueueEvent,1000);
-          interlockedDecrement(taskQueue.poolThreadsRunning);
+          interlockedDecrement(taskQueue.poolThreadsIdle);
+          justWokenUp:=true;
         end else begin
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
@@ -866,9 +868,10 @@ PROCEDURE T_workerThread.execute;
           end else begin
             currentTask^.evaluate(recycler);
           end;
+          recycler^.cleanupIfPosted;
           idleSince:=now;
+          justWokenUp:=false;
         end;
-        recycler^.cleanupIfPosted;
       until (now-idleSince>=DAYS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
             (taskQueue.destructionPending) or

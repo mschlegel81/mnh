@@ -37,5 +37,5 @@ end;
 main(count)->begin
   local cnt:=toInt(count);
   assert(cnt>0,'count must be >0');
-  [1..cnt].each(w,randomWord.print);
+  [1..cnt].map(()->print(randomWord));
 end;

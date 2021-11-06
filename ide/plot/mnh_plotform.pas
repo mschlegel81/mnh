@@ -213,11 +213,11 @@ PROCEDURE T_guiPlotSystem.processMessage(CONST message: P_storedMessage);
         inherited processMessage(message);
       end;
       mt_endOfEvaluation:begin
-        inherited processMessage(message);
         if not(anyPlotMessage) then begin
           if myPlotForm<>nil then myPlotForm.close;
           myPlotForm:=nil;
-        end;
+        end else if plotChangedSinceLastDisplay and not(formWasClosedByUser) then doPlot();
+        displayImmediate:=false;
       end;
       else begin
         anyPlotMessage:=anyPlotMessage or

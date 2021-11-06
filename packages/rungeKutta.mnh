@@ -44,22 +44,28 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   local errorEstimate:=Inf;
   local y:=y0_;
   while(errorEstimate>1,begin
-    errorEstimate:=0;
     y:=y0_;
     local dtSub:=dt_/subSteps;
+    errorEstimate:=
     [1..subSteps].each(step,begin
       local y_:=microStep(y,dtSub);
-      errorEstimate:=max(errorEstimate,y_[1]);
+      y_[1]>1
+      ? begin
+          local dtMicro:=dtSub/(local microSteps:=ceil(y_[1]));
+          local microError:=
+          [1..microSteps].each(ms,begin
+            y_:=microStep(y,dtMicro);
+            y:=y_[0];
+            y_[1];
+          end,max);
+          y_[1]:=microError*microSteps;
+        end
+      : void;
       y:=y_[0];
-    end);
-    errorEstimate>1
-    ? subSteps:=ceil(errorEstimate*1.1*subSteps)
-    : void;
+      y_[1];
+    end,max);
+    subSteps:=ceil(errorEstimate*subSteps).max(1);
   end);
-
-  (errorEstimate<0.6*(subSteps-1)/subSteps)
-  ? subSteps-=1
-  : void;
   y; end;~].flatten;
   code.toExpression;
 end;

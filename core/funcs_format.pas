@@ -422,12 +422,8 @@ FUNCTION format_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      {$ifdef fullVersion}
-      context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(formatLoc,false),nil);
-      {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context^.messages^.continueEvaluation) then begin
-        {$ifdef fullVersion}context^.callStackPop(nil);{$endif}
         try dispose(preparedStatement,destroy); except end;
         exit(nil);
       end;
@@ -438,9 +434,6 @@ FUNCTION format_imp intFuncSignature;
         result:=recycler^.newListLiteral;
         for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(recycler,txt[i]);
       end;
-      {$ifdef fullVersion}
-      context^.callStackPop(nil);
-      {$endif}
     end;
   end;
 
@@ -452,19 +445,14 @@ FUNCTION printf_imp intFuncSignature;
     result:=nil;
     if not(context^.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      {$ifdef fullVersion}
-      context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(printfLoc,false),nil);
-      {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context^.messages^.continueEvaluation) then begin
-        {$ifdef fullVersion}context^.callStackPop(nil);{$endif}
         exit(nil);
       end;
       textToPost:=formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler)));
       context^.messages^.postTextMessage(mt_printline,tokenLocation,textToPost);
       dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
-      {$ifdef fullVersion}context^.callStackPop(nil);{$endif}
     end;
   end;
 

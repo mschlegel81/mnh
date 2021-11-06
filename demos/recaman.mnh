@@ -5,7 +5,7 @@ recamanGenerator->{begin
   local k:=-1;
 save;
   k+=1;
-  i-k>0 AND !((i-k) in visited) ? i:=i-k : i:=i+k;
+  (local i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
   visited|=i;
   i;
 end}.toIteratableExpression;
@@ -18,7 +18,7 @@ recamanDuplicatesGenerator->{begin
 save;
   while(true,begin
     k+=1;
-    i-k>0 AND !((i-k) in visited) ? i:=i-k : i:=i+k;
+    (local i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
     i in visited ? return i : void;
     visited|=i;
   end);

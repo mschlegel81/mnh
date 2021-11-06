@@ -13,11 +13,11 @@ removeDoubleBlanks(s:StringList)->s.trimRight.join("\n").replace("\n\n\n","\n\n"
 sortLines(s:StringList)->s.unique.sort;
 
 unifiedDiff(aName:String,bName:String,aLines:StringList,bLines:StringList,additionalLines>=0)->begin
-  local edit:=diff(aLines,bLines,true)['edit'].each(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
-                                                               : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
+  local edit:=diff(aLines,bLines,true)['edit'].pEach(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
+                                                                : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
   local runs:=
   begin
-    local indexes:=edit.each(e,e[0]<>' ' ? [index-additionalLines..index+additionalLines] : void,|) //add additional lines to each run and concatenate all
+    local indexes:=edit.pEach(e,e[0]<>' ' ? [index-additionalLines..index+additionalLines] : void,|) //add additional lines to each run and concatenate all
                        .unique //remove duplicate lines and sort
                        .each(i,i>=edit.size or i<0 ? void : i);
     local splits:=(indexes.tail<>indexes.leading+1);

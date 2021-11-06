@@ -1,22 +1,6 @@
 type RegularContinuedFraction(x:IntList)->x.size>=1;
 type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
 
-decomposeDouble(d:Real)->begin
-  local bits:=d.serialize.bytes.tail(2).ord.each(byte,(2^[0..7] and byte)>0,|);
-  local signum  :=bits[63] ? -1 : 1;
-  local exponent:=bits[[62..62-10]].ord.composeDigits(2)-1023;
-  local rawMantissa:=bits.head(52).ord.reverseList;//;
-
-  ['signum'  =>signum  ,
-   'exponent'=>exponent,
-   'mantissa'=>rawMantissa.composeDigits(2,52)+1,
-   'raw mantissa'=>rawMantissa,
-   'rational'=>exponent<=52
-               ? [ rawMantissa.composeDigits(2)+2^52                 ,2^(52-exponent)]
-               : [(rawMantissa.composeDigits(2)+2^52)*2^(exponent-52),1              ]
-   ].toMap;
-end;
-
 //*Returns rational number r in canonical form or as integer
 @SuppressUnusedWarning=all
 shortenRational(r:IntList)->begin
@@ -52,11 +36,21 @@ end;
 @Override
 //*Converts continued fraction f to a rational number
 toRational(x:Real)->begin
-  local cf:=x.decomposeDouble['rational'].toRational.toRegularContinuedFraction;
-  //Try to pick a simpler representation still returning the same real value
-  local i:=cf.size-1;
-  while(i>1 AND cf.head(i-1).toRegularContinuedFraction.toReal=x,i-=1);
-  cf.head(i).toRegularContinuedFraction.toRational;
+  assert(!x.isNan and !x.isInfinite);
+  local negative:=x<0;
+  local rest:=x.abs;
+  local integerPart:=floor(rest);
+  rest-=integerPart;
+  local A:=[0,1];
+  local B:=[1,1];
+  A:=[1..100].each(step,begin
+    local N:=A+B;
+    N[0]>rest*N[1]
+    ? B:=N
+    : A:=N;
+    [abs(N[1]*rest-N[0]),N];
+  end,min)[1];
+  [(A[0]+A[1]*integerPart)*(negative ? -1 : 1),A[1]].toRational;
 end;
 
 @Override

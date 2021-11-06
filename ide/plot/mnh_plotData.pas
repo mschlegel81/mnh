@@ -176,7 +176,7 @@ TYPE
       PROCEDURE prepareImage(CONST width,height:longint);
 
       {$ifdef enable_render_threads}
-      PROCEDURE postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
+      FUNCTION canRenderToFileInBackground(CONST fileName:string; CONST width,height:longint; CONST allowThreadCreation,destroyImageInThread:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages):boolean;
       FUNCTION postPreparation(CONST width,height:longint):boolean;
       {$endif}
 
@@ -214,9 +214,9 @@ TYPE
     protected
       pullSettingsToGui:F_pullSettingsToGuiCallback;
       plotChangedSinceLastDisplay:boolean;
+      displayImmediate           :boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage); virtual;
     private
-      displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       sandboxed:boolean;
     public
@@ -826,14 +826,16 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     try
       {$ifdef enable_render_threads}
       if exportingAll
-      then frame[index]^.postRenderToFile(fileName,width,height,false,C_nilSearchTokenLocation,nil)
+      then frame[index]^.canRenderToFileInBackground(fileName,width,height,true,false,C_nilSearchTokenLocation,nil)
       else begin
       {$endif}
         storeImage:=TImage.create(nil);
         storeImage.SetInitialBounds(0,0,width,height);
         frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
         try
-          storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+          if lowercase(extractFileExt(fileName))='.bmp'
+          then storeImage.picture.Bitmap.saveToFile(fileName)
+          else storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
         except
           postIdeMessage('Export to PNG failed for: '+fileName,true);
         end;
@@ -1281,9 +1283,11 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
   begin
     storeImage:=obtainPlot(width,height);
     try
-      storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      if lowercase(extractFileExt(fileName))='.bmp'
+      then storeImage.picture.Bitmap.saveToFile(fileName)
+      else storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     except
-      message:='Export to PNG failed for: '+fileName;
+      message:='Export to file failed for: '+fileName;
       if feedbackMessages<>nil
       then feedbackMessages^.raiseSimpleError(message,feedbackLocation)
       else postIdeMessage(message,true);
@@ -1292,13 +1296,13 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
   end;
 
 {$ifdef enable_render_threads}
-PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:longint; CONST forceThreadAndDestroyAfterwards:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
+FUNCTION T_plot.canRenderToFileInBackground(CONST fileName:string; CONST width,height:longint; CONST allowThreadCreation,destroyImageInThread:boolean; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages):boolean;
   begin
     enterCriticalSection(plotCs);
-    if not(forceThreadAndDestroyAfterwards) and ((backgroundProcessing.state<>bps_none) or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height)) then begin
+    if not(allowThreadCreation) or (backgroundProcessing.state<>bps_none) or (getGlobalRunningThreads>=settings.cpuCount) or isImagePreparedForResolution(width,height) then begin
       renderToFile(fileName,width,height,feedbackLocation,feedbackMessages);
       leaveCriticalSection(plotCs);
-      exit;
+      exit(false);
     end;
     try
       with backgroundProcessing do begin
@@ -1306,13 +1310,14 @@ PROCEDURE T_plot.postRenderToFile(CONST fileName:string; CONST width,height:long
         postedHeight:=height;
         postedWidth:=width;
         renderToFilePosted:=true;
-        destroyAfterwardsPosted:=forceThreadAndDestroyAfterwards;
+        destroyAfterwardsPosted:=destroyImageInThread;
         postedFileName:=fileName;
       end;
       T_plotPreparationThread.create(@self,feedbackLocation,feedbackMessages);
     finally
       leaveCriticalSection(plotCs);
     end;
+    result:=true;
   end;
 {$endif}
 
@@ -1428,10 +1433,12 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
           if renderInBackground then begin
             new(clonedPlot,createWithDefaults);
             clonedPlot^.copyFrom(currentPlot);
-            clonedPlot^.postRenderToFile(fileName,width,height,true,feedbackLocation,feedbackMessages);
+            if not(clonedPlot^.canRenderToFileInBackground(fileName,width,height,true,true,feedbackLocation,feedbackMessages))
+            then dispose(clonedPlot,destroy);
           end else
           {$endif}
           currentPlot.renderToFile(fileName,   width,height,feedbackLocation,feedbackMessages);
+          P_plotRenderRequest(message)^.setString('');
         end;
         P_plotRenderRequest(message)^.fileName:='';
       end;
@@ -1542,12 +1549,10 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
         myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
-                   compressString(
                      serialize(recycler,
                                globalRowData,
                                dummyLocation,
-                               nil),
-                     [C_compression_gzip]));
+                               nil));
       myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
       dsOffset:=152;
       progress.max:=(length(DataString) div 160)*2;
@@ -1562,9 +1567,6 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       if length(result[length(result)-1])<151
       then result[length(result)-1]+='.base92decode'
       else myGenerics.append(result, '.base92decode');
-      if length(result[length(result)-1])<153
-      then result[length(result)-1]+='.decompress'
-      else myGenerics.append(result, '.decompress');
       if length(result[length(result)-1])<151
       then result[length(result)-1]+='.deserialize;'
       else myGenerics.append(result, '.deserialize;');
@@ -1695,4 +1697,9 @@ PROCEDURE T_plotSystem.logPlotDone;
 INITIALIZATION
   MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2; MAJOR_TIC_STYLE.defaults:=[];
   MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1; MAJOR_TIC_STYLE.defaults:=[];
+{$ifdef enable_render_threads}
+FINALIZATION
+  while preparationThreadsRunning>0 do sleep(100);
+{$endif}
+
 end.
