@@ -10,9 +10,11 @@ tagsAfterIntroductionOfFPC3:=begin
   result;
 end;
 
-checkout(commitHash)->
-  note('Checking out ',commitHash) orElse
+checkout(commitHash)->begin
+  note('Checking out ',commitHash);
   exec('git',['checkout','-f',commitHash]).assertOkAndGet.map(::print);
+  exec('git',['submodule','update','--init','--recursive'])[0].map(::print);
+end;
 
 buildAndTest->
   note('Testing...') orElse
