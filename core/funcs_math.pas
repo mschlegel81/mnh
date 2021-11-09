@@ -1094,6 +1094,97 @@ FUNCTION integrate_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION firstOrderUpwind2D_imp intFuncSignature;
+  VAR c,vx,vy,delta:T_arrayOfDouble;
+      sysWidth,sysHeight:longint;
+      periodicBoundaryConditions:boolean;
+
+      c_,vx_,vy_:double;
+
+      ix,iy,k,kRight,kLeft,kUp,kDown:longint;
+
+      resultElements:T_arrayOfLiteral;
+
+  PROCEDURE copyValues(CONST source:P_listLiteral; VAR target:T_arrayOfDouble);
+    VAR i:longint;
+    begin
+      setLength(target,source^.size);
+      for i:=0 to length(target)-1 do target[i]:=P_numericLiteral(source^.value[i])^.floatValue;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=5) and
+       (arg0^.literalType in [lt_realList,lt_numList,lt_intList]) and
+       (arg1^.literalType in [lt_realList,lt_numList,lt_intList]) and (list1^.size=list0^.size) and
+       (arg2^.literalType in [lt_realList,lt_numList,lt_intList]) and (list2^.size=list0^.size) and
+       (arg3^.literalType = lt_smallint) and (int3^.intValue>0) and (int3^.intValue<=list0^.size) and
+       (params^.value[4]^.literalType=lt_boolean) then begin
+
+       copyValues(list0,c );
+       copyValues(list1,vx);
+       copyValues(list2,vy);
+       setLength(delta,length(c));
+       for k:=0 to length(delta)-1 do delta[k]:=0;
+
+       sysWidth:=int3^.intValue;
+       sysHeight:=list0^.size div sysWidth;
+
+       periodicBoundaryConditions:=P_boolLiteral(params^.value[4])^.value;
+
+       k:=0;
+       for iy:=0 to sysHeight-1 do
+       for ix:=0 to sysWidth -1 do begin
+         k     := ix                         +iy*sysWidth;
+         kRight:=(ix         +1) mod sysWidth+iy*sysWidth;
+         kLeft :=(ix+sysWidth-1) mod sysWidth+iy*sysWidth;
+         kUp   := ix + ((iy          +1) mod sysHeight)*sysWidth;
+         kDown := ix + ((iy+sysHeight-1) mod sysHeight)*sysWidth;
+
+         c_ :=c [k];
+
+         vx_:=vx[k];
+         if (vx_>0) and ((ix<sysWidth-1) or periodicBoundaryConditions) then begin
+           vx_*=c_;
+           delta[k     ]-=vx_;
+           delta[kRight]+=vx_;
+         end;
+
+         vx_:=vx[kLeft];
+         if (vx_<0) and ((ix>0) or periodicBoundaryConditions) then begin
+           vx_*=c_;
+           delta[k    ]+=vx_;
+           delta[kLeft]-=vx_;
+         end;
+
+         vy_:=vy[k];
+         if (vy_>0) and ((iy<sysHeight-1) or periodicBoundaryConditions) then begin
+           vy_*=c_;
+           delta[k  ]-=vy_;
+           delta[kUp]+=vy_;
+         end;
+
+         vy_:=vy[kDown];
+         if (vy_<0) and ((iy>0) or periodicBoundaryConditions) then begin
+           vy_*=c_;
+           delta[k  ]+=vy_;
+           delta[kDown]-=vy_;
+         end;
+
+       end;
+
+       setLength(resultElements,length(delta));
+       for k:=0 to length(delta)-1 do resultElements[k]:=recycler^.newRealLiteral(delta[k]);
+       result:=recycler^.newListLiteral(length(delta));
+       P_listLiteral(result)^.setContents(resultElements,recycler);
+
+       setLength(c,0);
+       setLength(vx,0);
+       setLength(vy,0);
+    end;
+
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary{$ifdef fullVersion},'sqrt(n);//Returns the square root of numeric or expression parameter n'{$endif});
@@ -1143,4 +1234,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'divMod'        ,@divMod_impl        ,ak_binary{$ifdef fullVersion},'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'euklideanNorm' ,@euklideanNorm_impl ,ak_unary {$ifdef fullVersion},'euklideanNorm(v:NumericList);//returns the Euklidean norm of vector v'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,tolerance);//returns the numeric integral of f over interval [x0,x1]'{$endif});
+
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'firstOrderUpwind2D',@firstOrderUpwind2D_imp,ak_variadic{$ifdef fullVersion},'firstOrderUpwind2D(c,vx,vy,width:Int,periodicBoundary:Boolean);'{$endif});
 end.
