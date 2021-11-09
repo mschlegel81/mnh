@@ -191,6 +191,7 @@ PROCEDURE TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
     logFilenameEdit.enabled:=true;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_file;
+    updateLogComboBox(outputFileComboBox.ItemIndex);
     updateShebangPreview;
   end;
 
@@ -200,6 +201,7 @@ PROCEDURE TCmdLineParametersFrame.rbOutputToStderrClick(Sender: TObject);
     logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stderr;
+    updateLogComboBox(outputFileComboBox.ItemIndex);
     updateShebangPreview;
   end;
 
@@ -209,6 +211,7 @@ PROCEDURE TCmdLineParametersFrame.rbOutputToStdoutClick(Sender: TObject);
     logFilenameEdit.enabled:=false;
     a:=currentAdapterSpecification;
     if a<>nil then a^.textFileCase:=tfc_stdout;
+    updateLogComboBox(outputFileComboBox.ItemIndex);
     updateShebangPreview;
   end;
 

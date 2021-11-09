@@ -890,7 +890,7 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
       for i:=0 to length(metas)-1 do if not(Assigned) and (metas[i]^.getPath=fileChange.filePath) then begin
         meta:=metas[i];
         Assigned:=true;
-        if fileChange.deleted then begin
+        if fileChange.deleted and not(meta^.fileInfo.ignoreDeleted) then begin
           case closeDialogForm.showOnDeleted(fileChange.filePath) of
             cda_close        : begin
               closeQuietly(meta);
@@ -908,7 +908,7 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
               meta^.updateSheetCaption;
             end;
           end;
-        end else if fileChange.modified then begin
+        end else if fileChange.modified and not(meta^.fileInfo.ignoreChanged) then begin
           case closeDialogForm.showOnOutOfSync(meta^.fileInfo.filePath) of
             cda_reload:
               meta^.reloadFile();
