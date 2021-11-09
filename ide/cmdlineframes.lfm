@@ -15,10 +15,10 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
     Height = 351
     Top = 0
     Width = 457
-    ActivePage = TabSheet2
+    ActivePage = TabSheet1
     Align = alClient
     ParentFont = False
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 0
     object TabSheet1: TTabSheet
       AnchorSideTop.Control = TabSheet2
@@ -229,6 +229,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Top = 57
           Width = 251
           Align = alCustom
+          Alignment = taRightJustify
           Anchors = [akTop, akLeft, akRight]
           BorderSpacing.Left = 5
           OnChange = anyPage1Change
