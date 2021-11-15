@@ -259,6 +259,7 @@ TYPE
       {$endif}
   end;
 
+FUNCTION isIdOfAnyOverloadableOperator(CONST id:T_idString):boolean;
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; CONST context:P_context):P_expressionLiteral;
 IMPLEMENTATION
 USES mySys, operators,fileWrappers;
@@ -405,6 +406,14 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
         end;
       end;
     end;
+  end;
+
+FUNCTION isIdOfAnyOverloadableOperator(CONST id:T_idString):boolean;
+  var op: T_tokenType;
+  begin
+    for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do
+    if id=operatorName[op] then exit(true);
+    result:=false;
   end;
 
 FUNCTION T_ruleMap.getOperators: T_customOperatorArray;

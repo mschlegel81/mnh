@@ -46,4 +46,3 @@ main->tagsAfterIntroductionOfFPC3.each(tagAndRevision,begin
   TARGETS.filter(::fileExists).map(::deleteFile);
   build(tag);
 end);
-
