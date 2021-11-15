@@ -409,7 +409,7 @@ FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
   end;
 
 FUNCTION isIdOfAnyOverloadableOperator(CONST id:T_idString):boolean;
-  var op: T_tokenType;
+  VAR op: T_tokenType;
   begin
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do
     if id=operatorName[op] then exit(true);
