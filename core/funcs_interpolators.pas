@@ -216,7 +216,9 @@ FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double)
       rest:double;
   begin
     if accessByIndex then begin
-      i0:=trunc(floatIdx);
+      if floatIdx>maxLongint then i0:=length(yValues)-1
+      else if floatIdx<0     then i0:=0
+      else                        i0:=trunc(floatIdx);
       if (i0<0) then result:=yValues[0]
       else if (i0>=length(yValues)-1) then result:=yValues[length(yValues)-1]
       else begin
@@ -277,6 +279,9 @@ FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double
       ih0:double;
   begin
     if accessByIndex then begin
+      if floatIdx>maxLongint then i0:=length(M)-2
+      else if floatIdx<0     then i0:=0
+      else                        i0:=trunc(floatIdx);
       i0:=trunc(floatIdx);
       if (i0<0) then i0:=0
       else if (i0>=length(M)-1) then i0:=length(M)-2;
@@ -531,6 +536,8 @@ FUNCTION T_bSplineApproximator.getSingleInterpolatedValue(CONST floatIdx: double
       w0,w1:array[0..3] of double;
   begin
     if accessByIndex then begin
+      if (floatIdx>maxLongint) or (floatIdx<1-maxLongint) then exit(Nan);
+
       i:=floor(floatIdx); t:=floatIdx-i; it:=1-t;
       result:=(yValues[limitIdx(i-1)]*(it*it*it)
               +yValues[limitIdx(i  )]*((3*t*t*t)-(6*t*t)+4)

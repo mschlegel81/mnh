@@ -839,6 +839,8 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         formatMetaData(metaData,ruleDeclarationStart,@globals.primaryContext,recycler);
         new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,@globals.primaryContext,recycler,metaData));
         ruleMap.declare(ruleId,ruleModifiers,ruleDeclarationStart,@globals.primaryContext,recycler,metaData,subRule);
+
+        if isIdOfAnyOverloadableOperator(ruleId) then customOperatorRules:=ruleMap.getOperators;
       end else recycler^.cascadeDisposeToken(ruleBody);
     end;
 

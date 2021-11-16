@@ -127,7 +127,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="103">
+    <Units Count="104">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -656,6 +656,10 @@
         <Filename Value="../core/funcs_json.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit102>
+      <Unit103>
+        <Filename Value="../core/funcs_interpolators.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit103>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

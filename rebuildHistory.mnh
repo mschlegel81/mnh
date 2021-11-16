@@ -1,0 +1,48 @@
+USE make_config;
+myBuilds:=BUILDS.filter((b)->b['canBuild'] AND b['flavour'] in ['LOWin64']);
+
+assertOkAndGet(execResult:List(2))->assert(execResult[1]==0) orElse execResult[0];
+
+tagsAfterIntroductionOfFPC3:=begin
+  local entries:=exec('git',['tag','--contains','6a9c9c19dbbfa4501368b6fa1e89ca45a3053a8e',
+                                   '--format="%(refname:short) %(objectname)"',
+                                   '--sort=committerdate']).assertOkAndGet.split(' ');
+  local result:=[];
+  //Filter out duplicates in e[1] while preserving order
+  entries.each(e,e[1] in result.getInner(1) ? void : result||=e);
+  result;
+end;
+
+checkout(commitHash)->begin
+  note('Checking out ',commitHash);
+  exec('git',['checkout','-f',commitHash]).assertOkAndGet.map(::print);
+  exec('git',['submodule','update','--init','--recursive'])[0].map(::print);
+end;
+
+build(tag)->begin
+  writeFileLines('core\res_version.inc',
+    ["CODE_HASH='x';",
+     'BUILD_NUMBER=1;',
+     "VERSION='"&tag&"';"]);
+  writeFileLines('core\code_hash.inc',["CODE_HASH='xxxxxxxx';"]);
+  writeFileLines('core\build_number.inc',['BUILD_NUMBER=0;']);
+  myBuilds.each(b,begin
+    fileExists(b['compilate']) ? deleteFile(b['compilate']) : void;
+    local buildResult:=exec@(b['compilerCall']);
+    buildResult[1]==0 ? void : warn('COMPILATION FAILED: ',"\n",buildResult[0].join("\n"));
+    moveFile(b['compilate'],
+             changeFileExt(b['targetDest'],'_'+tag+b['targetDest'].extractFileExt));
+  end);
+end;
+
+TARGETS:=('target/Win'&[32,64].toSet&'/mnh'&['','_light'].toSet&'.exe');
+
+main->tagsAfterIntroductionOfFPC3.each(tagAndRevision,begin
+  local tag:=tagAndRevision[0];
+  local rev:=tagAndRevision[1];
+  print;
+  print(formatTime(systime),' TAG: ',tag);
+  checkout(rev);
+  TARGETS.filter(::fileExists).map(::deleteFile);
+  build(tag);
+end);

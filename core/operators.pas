@@ -480,6 +480,10 @@ boolIntOperator;
 {$define op:=tt_operatorPlus}
 FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
+
+  VAR resultElements:T_arrayOfLiteral;
+      tmp:T_myFloat;
+      i:longint;
   begin
     case LHS^.literalType of
       defaultLHScases;
@@ -504,7 +508,15 @@ FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_smallint,
         lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value+P_abstractIntLiteral(RHS)^.floatValue));
         lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value+P_realLiteral       (RHS)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_intList,lt_realList,lt_numList: begin
+          setLength(resultElements,P_listLiteral(RHS)^.size);
+          tmp:=P_realLiteral(LHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(tmp+P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
       lt_string: case RHS^.literalType of
@@ -513,7 +525,26 @@ FUNCTION perform_plus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
         lt_list,lt_stringList,lt_emptyList,
         lt_set ,lt_stringSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
-      lt_intList,lt_realList,lt_numList: case RHS^.literalType of
+      lt_realList: case RHS^.literalType of
+        defaultRHSCases;
+        lt_smallint,lt_bigint,lt_real: begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          tmp:=P_numericLiteral(RHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value+tmp);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_intList,lt_realList,lt_numList: if P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size then begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value+P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list: exit(recurse_list_list);
+      end;
+      lt_intList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
@@ -553,6 +584,10 @@ genericOuter;
 {$define op:=tt_operatorMinus}
 FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
+
+  VAR resultElements:T_arrayOfLiteral;
+      tmp:T_myFloat;
+      i:longint;
   begin
     case LHS^.literalType of
       defaultLHScases;
@@ -576,11 +611,38 @@ FUNCTION perform_minus(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocat
         defaultRHSCases;
         lt_smallint,
         lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value-P_abstractIntLiteral(RHS)^.floatValue));
-        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value-P_realLiteral(RHS)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value-P_realLiteral       (RHS)^.value));
+        lt_intList,lt_realList,lt_numList: begin
+          setLength(resultElements,P_listLiteral(RHS)^.size);
+          tmp:=P_realLiteral(LHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(tmp-P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
-      lt_intList,lt_realList,lt_numList: case RHS^.literalType of
+      lt_realList: case RHS^.literalType of
+        defaultRHSCases;
+        lt_smallint,lt_bigint,lt_real: begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          tmp:=P_numericLiteral(RHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value-tmp);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_intList,lt_realList,lt_numList: if P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size then begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value-P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list: exit(recurse_list_list);
+      end;
+      lt_intList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
@@ -610,6 +672,10 @@ genericOuter;
 {$define op:=tt_operatorMult}
 FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
+
+  VAR resultElements:T_arrayOfLiteral;
+      tmp:T_myFloat;
+      i:longint;
   begin
     case LHS^.literalType of
       defaultLHScases;
@@ -631,12 +697,40 @@ FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_abstractIntLiteral(RHS)^.floatValue));
-        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_realLiteral(RHS)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_smallint,
+        lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_abstractIntLiteral(RHS)^.floatValue));
+        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value*P_realLiteral       (RHS)^.value));
+        lt_intList,lt_realList,lt_numList: begin
+          setLength(resultElements,P_listLiteral(RHS)^.size);
+          tmp:=P_realLiteral(LHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(tmp*P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
-      lt_intList,lt_realList,lt_numList: case RHS^.literalType of
+      lt_realList: case RHS^.literalType of
+        defaultRHSCases;
+        lt_smallint,lt_bigint,lt_real: begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          tmp:=P_numericLiteral(RHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value*tmp);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_intList,lt_realList,lt_numList: if P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size then begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value*P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list: exit(recurse_list_list);
+      end;
+      lt_intList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
@@ -666,6 +760,10 @@ genericOuter;
 {$define op:=tt_operatorDivReal}
 FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   generic_recursions;
+
+  VAR resultElements:T_arrayOfLiteral;
+    tmp:T_myFloat;
+    i:longint;
   begin
     case LHS^.literalType of
       defaultLHScases;
@@ -678,12 +776,40 @@ FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoc
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint:    exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_abstractIntLiteral (RHS)^.floatValue));
-        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_realLiteral(RHS)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_smallint,
+        lt_bigint: exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_abstractIntLiteral(RHS)^.floatValue));
+        lt_real:   exit(recycler^.newRealLiteral(P_realLiteral(LHS)^.value/P_realLiteral       (RHS)^.value));
+        lt_intList,lt_realList,lt_numList: begin
+          setLength(resultElements,P_listLiteral(RHS)^.size);
+          tmp:=P_realLiteral(LHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(tmp/P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_scalar_collection);
       end;
-      lt_intList,lt_realList,lt_numList: case RHS^.literalType of
+      lt_realList: case RHS^.literalType of
+        defaultRHSCases;
+        lt_smallint,lt_bigint,lt_real: begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          tmp:=P_numericLiteral(RHS)^.floatValue;
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value/tmp);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_intList,lt_realList,lt_numList: if P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size then begin
+          setLength(resultElements,P_listLiteral(LHS)^.size);
+          for i:=0 to length(resultElements)-1 do resultElements[i]:=recycler^.newRealLiteral(P_realLiteral(P_listLiteral(LHS)^.value[i])^.value/P_numericLiteral(P_listLiteral(RHS)^.value[i])^.floatValue);
+          result:=recycler^.newListLiteral(length(resultElements));
+          P_listLiteral(result)^.setContents(resultElements,recycler);
+          exit(result);
+        end;
+        lt_list: exit(recurse_list_list);
+      end;
+      lt_intList,lt_numList: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint,lt_bigint,lt_real: exit(recurse_collection_scalar);
         lt_list,lt_intList,lt_realList,lt_numList: exit(recurse_list_list);
