@@ -525,6 +525,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers(CONST recycler:P_recycler);
     globalMessages^.setStopFlag;
     primaryContext.messages^.setStopFlag;
     while (now<timeout) and ((primaryContext.related.childCount>0) or (length(taskQueue.subQueue)>0)) do begin
+      if taskQueue.poolThreadsRunning>0 then RTLEventSetEvent(taskQueue.enqueueEvent);
       while (now<timeout) and taskQueue.activeDeqeue(recycler) do begin end;
       ThreadSwitch;
       sleep(1);
