@@ -11,6 +11,7 @@ USES JSONParser,fpjson,jsonscanner,
      myStringUtil;
 
 IMPLEMENTATION
+USES sysutils;
 {$i func_defines.inc}
 
 FUNCTION parseJson_impl intFuncSignature;
@@ -53,11 +54,25 @@ FUNCTION parseJson_impl intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and (arg0^.literalType=lt_string) then begin
       if params^.size>1 then insteadOfNull:=arg1;
       JSONParser:=TJSONParser.create(str0^.value,[joUTF8,joIgnoreTrailingComma]);
-      jsonData:=JSONParser.parse;
-      result:=jsonToLiteral(jsonData);
+      try
+        jsonData:=JSONParser.parse;
+      except
+        on e:Exception do begin
+          context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,e.message);
+          JSONParser.free;
+          exit(newVoidLiteral);
+        end;
+      end;
+      if (jsonData=nil) then begin
+        result:=newVoidLiteral;
+      end else begin
+        result:=jsonToLiteral(jsonData);
+      end;
       jsonData.free;
       JSONParser.free;
-    end else result:=nil;
+    end else if (params=nil) or (params^.size=0)
+    then result:=newVoidLiteral
+    else result:=nil;
   end;
 
 FUNCTION formatJson_impl intFuncSignature;
