@@ -1,4 +1,4 @@
-USE generators;
+USE '../packages/generators.mnh';
 
 BITS:=2^[4..0];
 binary(i:Int)->ord((i and BITS)>0).join&'_2';
