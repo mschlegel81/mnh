@@ -46,7 +46,7 @@ main->begin
                   newTrailPlotter('green'),
                   newTrailPlotter('blue')];
 
-  local stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-6);
+  local stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-8);
   local stepCounter:=-1;
   clearAnimation(true);
   postDisplay;

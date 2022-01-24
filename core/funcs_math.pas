@@ -1038,32 +1038,69 @@ FUNCTION integrate_impl intFuncSignature;
   VAR f:P_expressionLiteral;
       x0,x1,tolerance:double;
       pointCount:int64;
-      floatResult:double=0;
+      floatResult:T_arrayOfDouble;
       i:longint;
+      returnType:T_literalType=lt_error;
 
-  FUNCTION evalF(CONST x:double):double; inline;
-    VAR l:P_literal;
+  FUNCTION evalF(CONST x:double):T_arrayOfDouble; inline;
+    VAR evResult:T_evaluationResult;
+        parameterList:T_listLiteral;
+        i:longint;
     begin
-      l:=recycler^.newRealLiteral(x);
-      result:=f^.evaluateToDouble(tokenLocation,context,recycler,true,l,nil);
-      recycler^.disposeLiteral(l);
+      parameterList.create(1);
+      parameterList.appendReal(recycler,x);
+
+      evResult:=f^.evaluate(tokenLocation,context,recycler,@parameterList);
+      if (evResult.literal<>nil) and (evResult.literal^.literalType in [lt_smallint,lt_bigint,lt_real,lt_numList,lt_realList,lt_intList]) then begin
+        returnType:=evResult.literal^.literalType;
+        if evResult.literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
+          result:=P_numericLiteral(evResult.literal)^.floatValue;
+        end else begin
+          setLength(result,P_listLiteral(evResult.literal)^.size);
+          for i:=0 to length(result)-1 do result[i]:=P_numericLiteral(P_listLiteral(evResult.literal)^.value[i])^.floatValue;
+        end;
+      end else begin
+        result:=nanLit.floatValue;
+        if evResult.reasonForStop=rr_patternMismatch then P_context(context)^.raiseCannotApplyError('expression '+f^.toString(50),@parameterList,tokenLocation)
+        else if (evResult.literal<>nil) then P_context(context)^.raiseError('Expression does not return a numeric but a '+evResult.literal^.typeString,tokenLocation);
+      end;
+      parameterList.cleanup(recycler);
+      parameterList.destroy;
+      if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
 
-  FUNCTION integrate_inner(CONST x0,dx,f0,f2,f4:double):double;
-    VAR Simpson,f1,f3,errorEstimate:double;
+  FUNCTION integrate_inner(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble):T_arrayOfDouble;
+    VAR errorEstimate:double;
+        Simpson,f1,f3:T_arrayOfDouble;
+        k:longint;
+        anyNan:boolean=false;
     begin
       f1:=evalF(x0+dx*0.25);
       f3:=evalF(x0+dx*0.75);
-      result:=dx*(f0*7/90+f1*32/90+f2*12/90+f3*32/90+f4*7/90);
-      if isNan(result) or (isInfinite(result)) then exit(result);
-      Simpson:=dx*(f0*1/6+f2*4/6+f4*1/6);
-      errorEstimate:=abs(Simpson-result)*sqr(dx)*1E-3;
-      if errorEstimate>tolerance then
-        result:=integrate_inner(x0       ,dx*0.5,f0,f1,f2)
-               +integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4);
+      setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
+      for k:=0 to length(result)-1 do begin
+        result[k]:=dx*(f0[k]*7/90+f1[k]*32/90+f2[k]*12/90+f3[k]*32/90+f4[k]*7/90);
+        anyNan:=anyNan or isNan(result[k]) or IsInfinite(result[k]);
+      end;
+      if anyNan then exit(result);
+      setLength(Simpson,length(result));
+      for k:=0 to length(Simpson)-1 do
+        Simpson[k]:=dx*(f0[k]*1/6+f2[k]*4/6+f4[k]*1/6);
+
+      errorEstimate:=0;
+      for k:=0 to length(simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx)*1E-3;
+
+      if errorEstimate>tolerance then begin
+        result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2);
+        Simpson:=integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4);
+        for k:=0 to length(result)-1 do result[k]+=Simpson[k];
+      end;
     end;
 
-  VAR dx,f0,f1:double;
+  VAR dx:double;
+      f0,f1:T_arrayOfDouble;
+      stepIntegral:T_arrayOfDouble;
+      k:longint;
   begin
     if (params<>nil) and (params^.size=4) and
       (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
@@ -1085,12 +1122,22 @@ FUNCTION integrate_impl intFuncSignature;
         then f0:=f1
         else f0:=evalF(x0+dx* i   );
              f1:=evalF(x0+dx*(i+1));
-        floatResult+=integrate_inner(x0+dx*i,dx,
-                                     f0,
-                                     evalF(x0+dx*(i+0.5)),
-                                     f1);
+        stepIntegral:=integrate_inner(x0+dx*i,dx,
+                                      f0,
+                                      evalF(x0+dx*(i+0.5)),
+                                      f1);
+        if i=0 then begin
+          setLength(floatResult,length(stepIntegral));
+          for k:=0 to length(floatResult)-1 do floatResult[k]:=stepIntegral[k];
+        end else
+          for k:=0 to length(floatResult)-1 do floatResult[k]+=stepIntegral[k];
       end;
-      result:=recycler^.newRealLiteral(floatResult);
+      if returnType in C_listTypes then begin
+        result:=recycler^.newListLiteral(length(floatResult));
+        for k:=0 to length(floatResult)-1 do listresult^.appendReal(recycler,floatResult[k]);
+      end else begin
+        result:=recycler^.newRealLiteral(floatResult[0]);
+      end;
     end else result:=nil;
   end;
 

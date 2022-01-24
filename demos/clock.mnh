@@ -41,7 +41,7 @@ asciiArtTime(t:Real)->asciiArtTime(formatTime('hhnnss',t));
 guessTimeOrInterval(TimeOrIntervalString:String)->
   begin
     local S:=TimeOrIntervalString.upper.clean(['0'..'9',':','H','M','S'],'');
-    (pos(['H','M','S'],S)>=0).agg(OR)
+    (pos(['H','M','S'],S)<Inf).agg(OR)
     ? interpret(S.replace(['H','M','S'],['/24+','/(24*60)+','/(24*60*60)+'])&'0')+systime
     : begin
         local R:=try({parseTime('hh:nn:ss',S)},
