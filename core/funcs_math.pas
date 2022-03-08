@@ -1080,7 +1080,7 @@ FUNCTION integrate_impl intFuncSignature;
       setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
       for k:=0 to length(result)-1 do begin
         result[k]:=dx*(f0[k]*7/90+f1[k]*32/90+f2[k]*12/90+f3[k]*32/90+f4[k]*7/90);
-        anyNan:=anyNan or isNan(result[k]) or IsInfinite(result[k]);
+        anyNan:=anyNan or isNan(result[k]) or isInfinite(result[k]);
       end;
       if anyNan then exit(result);
       setLength(Simpson,length(result));
@@ -1088,7 +1088,7 @@ FUNCTION integrate_impl intFuncSignature;
         Simpson[k]:=dx*(f0[k]*1/6+f2[k]*4/6+f4[k]*1/6);
 
       errorEstimate:=0;
-      for k:=0 to length(simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx)*1E-3;
+      for k:=0 to length(Simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx)*1E-3;
 
       if errorEstimate>tolerance then begin
         result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2);
@@ -1134,7 +1134,7 @@ FUNCTION integrate_impl intFuncSignature;
       end;
       if returnType in C_listTypes then begin
         result:=recycler^.newListLiteral(length(floatResult));
-        for k:=0 to length(floatResult)-1 do listresult^.appendReal(recycler,floatResult[k]);
+        for k:=0 to length(floatResult)-1 do listResult^.appendReal(recycler,floatResult[k]);
       end else begin
         result:=recycler^.newRealLiteral(floatResult[0]);
       end;

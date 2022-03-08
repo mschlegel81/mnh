@@ -500,8 +500,8 @@ PROCEDURE T_plot.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecuti
     try
       if not isImagePreparedForResolution(target.width,target.height) then
       prepareImage(target.width,target.height);
-      timing.wait;
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
+      timing.wait;
     finally
       leaveCriticalSection(plotCs);
     end;
