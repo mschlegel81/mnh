@@ -590,7 +590,7 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked and
-          (frameInterval-framesTimer.elapsed-secondsPerFrameOverhead<0.05) and
+          (frameInterval-framesTimer.elapsed-secondsPerFrameOverhead<0.1) and
           relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
         then begin
           relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead));
