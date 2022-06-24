@@ -441,7 +441,7 @@ FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean;
     wordUnderCursor:=editor.GetWordAtRowCol(caret);
     if updateMarker then begin
       for m in workspace.metas do m^.setMarkedWord(wordUnderCursor);
-      editor.Repaint;
+      editor.repaint;
     end;
     if forHelpOrJump and (currentAssistResponse<>nil)
     then with editor do result:=currentAssistResponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor)
@@ -682,7 +682,7 @@ PROCEDURE T_editorMeta.setNewAssistanceResponse(newOne:P_codeAssistanceResponse;
       if isActiveMeta then completionLogic.assignEditor(editor_,currentAssistResponse);
       currentAssistResponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
-      editor.Repaint;
+      editor.repaint;
     end;
   end;
 

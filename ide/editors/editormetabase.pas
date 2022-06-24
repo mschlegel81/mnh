@@ -294,7 +294,7 @@ PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST assistanceDataFro
         highlighter.highlightingData.clearLocalIdInfos; //local id infos are not applicable to quick evaluation editor
       end;
       editor.highlighter:=highlighter;
-      editor.Repaint;
+      editor.repaint;
     end;
   end;
 
