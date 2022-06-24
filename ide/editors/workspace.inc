@@ -431,7 +431,7 @@ FUNCTION T_workspace.openDebugLocation(CONST location: T_searchTokenLocation): b
     end else begin
       debugLine.editor:=meta^.editor;
       debugLine.line:=location.line;
-      meta^.editor.Repaint;
+      meta^.editor.repaint;
       result:=true;
     end;
   end;
