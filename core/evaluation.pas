@@ -1006,8 +1006,9 @@ end else begin
   didSubstitution:=true;
 end}
 
+  VAR cleanupCount:longint=0;
   {$ifdef fullVersion}
-  VAR debugRun:boolean=true;
+  debugRun:boolean=true;
   {$endif}
   begin
     result:=rr_ok;
@@ -1322,6 +1323,11 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
+      end;
+      inc(cleanupCount);
+      if cleanupCount>4096 then begin
+        recycler^.cleanupIfPosted;
+        cleanupCount:=0;
       end;
     until not(didSubstitution) or not(context^.continueEvaluation);
     {$ifdef useTryCatchBlocks}

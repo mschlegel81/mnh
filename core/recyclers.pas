@@ -24,7 +24,8 @@ TYPE
         dat:array[0..63] of P_valueScope;
       end;
       cleanupPosted:boolean;
-      PROCEDURE cleanup;
+      hardCleanupPosted:boolean;
+      PROCEDURE cleanup(CONST hard:boolean);
 
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -83,6 +84,7 @@ FUNCTION newRecycler:P_recycler;
 PROCEDURE freeRecycler(VAR recycler:P_recycler);
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);
 PROCEDURE cleanupRecyclerPools;
+PROCEDURE cleanupRecyclerPoolsHard;
 IMPLEMENTATION
 USES mySys,mnh_settings;
 VAR recyclerPool:array of P_recycler;
@@ -136,6 +138,18 @@ PROCEDURE freeRecycler(VAR recycler:P_recycler);
 
 PROCEDURE cleanupRecyclerPools;
   VAR i:longint;
+  begin
+    if recyclerPoolsFinalized then exit;
+    enterCriticalSection(recyclerPoolCs);
+    try
+      for i:=0 to length(recyclerPool)-1 do recyclerPool[i]^.cleanupPosted:=true;
+    finally
+      leaveCriticalSection(recyclerPoolCs);
+    end;
+  end;
+
+PROCEDURE cleanupRecyclerPoolsHard;
+  VAR i:longint;
       j:longint=0;
   begin
     if recyclerPoolsFinalized then exit;
@@ -146,7 +160,7 @@ PROCEDURE cleanupRecyclerPools;
         then dispose(recyclerPool[i],destroy)
         else begin
           recyclerPool[j]:=recyclerPool[i];
-          recyclerPool[i]^.cleanupPosted:=true;
+          recyclerPool[i]^.hardCleanupPosted:=true;
           inc(j);
         end;
       setLength(recyclerPool,j);
@@ -159,16 +173,16 @@ PROCEDURE finalizeRecyclerPools;
   begin
     assert(not(recyclerPoolsFinalized));
     enterCriticalSection(recyclerPoolCs);
-    cleanupRecyclerPools;
+    cleanupRecyclerPoolsHard;
     assert(length(recyclerPool)=0);
     recyclerPoolsFinalized:=true;
     leaveCriticalSection(recyclerPoolCs);
     doneCriticalSection(recyclerPoolCs);
   end;
 
-PROCEDURE T_recycler.cleanup;
+PROCEDURE T_recycler.cleanup(CONST hard:boolean);
   begin
-    with tokens do while fill>0 do begin
+    if hard then with tokens do while fill>0 do begin
       dec(fill);
       try
         dispose(dat[fill],destroy);
@@ -186,13 +200,14 @@ PROCEDURE T_recycler.cleanup;
         end;
       end;
     end;
-    inherited freeMemory(true);
+    inherited freeMemory(hard);
   end;
 
 CONSTRUCTOR T_recycler.create;
   begin
     isFree:=false;
     cleanupPosted:=false;
+    hardCleanupPosted:=false;
     tokens.fill:=0;
     scopeRecycler.fill:=0;
     inherited create;
@@ -200,14 +215,15 @@ CONSTRUCTOR T_recycler.create;
 
 DESTRUCTOR T_recycler.destroy;
   begin
-    cleanup;
+    cleanup(true);
     inherited destroy;
   end;
 
 PROCEDURE T_recycler.cleanupIfPosted;
   begin
-    if cleanupPosted then cleanup;
+    if cleanupPosted or hardCleanupPosted then cleanup(hardCleanupPosted);
     cleanupPosted:=false;
+    hardCleanupPosted:=false;
   end;
 
 FUNCTION T_recycler.disposeToken(p: P_token): P_token;
@@ -412,7 +428,8 @@ INITIALIZATION
   initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
   memoryCleaner.registerCleanupMethod(0,@cleanupRecyclerPools);
-  litVar.newLiteralRecycler:=@newLiteralRecycler;
+  memoryCleaner.registerCleanupMethod(1,@cleanupRecyclerPoolsHard);
+  litVar.newLiteralRecycler :=@newLiteralRecycler;
   litVar.freeLiteralRecycler:=@freeLiteralRecycler;
 FINALIZATION
   finalizeRecyclerPools;
