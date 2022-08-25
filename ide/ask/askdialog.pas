@@ -239,30 +239,29 @@ PROCEDURE initAskForm;
 
 FUNCTION ask_impl intFuncSignature;
   VAR opt: T_arrayOfString=();
-      i: longint;
+      i,k: longint;
+      visible, hasOptions: boolean;
+      iter: T_arrayOfLiteral;
   begin
     if not(context^.checkSideEffects('ask',tokenLocation,[se_input])) then exit(nil);
     threadStartsSleeping;
     result := nil;
-    if (params<>nil) and (params^.size = 1) and
-      (arg0^.literalType = lt_string) then begin
-      system.enterCriticalSection(cs);
-      try
-        askForm.initWithQuestion(str0^.value);
-        result := recycler^.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
-      finally
-        system.leaveCriticalSection(cs);
+    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
+      for i:=1 to params^.size-1 do case params^.value[i]^.literalType of
+        lt_boolean   : visible:=P_boolLiteral(params^.value[i])^.value;
+        lt_stringList: begin
+          hasOptions:=true;
+          iter:=P_listLiteral(params^.value[i])^.tempIteratableList;
+          setLength(opt,length(iter));
+          for k:=0 to length(opt)-1 do opt[k]:=P_stringLiteral(iter[k])^.value;
+        end;
+        else exit(nil);
       end;
-    end
-    else if (params<>nil) and (params^.size = 2) and
-      (arg0^.literalType = lt_string) and
-      (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
       try
-        setLength(opt, list1^.size);
-        for i := 0 to length(opt)-1 do
-          opt[i] := P_stringLiteral(list1^.value[i])^.value;
-        askForm.initWithQuestionAndOptions(str0^.value, opt);
+        if hasOptions
+        then askForm.initWithQuestionAndOptions(str0^.value, opt)
+        else askForm.initWithQuestion(str0^.value);
         result := recycler^.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
       finally
         system.leaveCriticalSection(cs);
