@@ -67,20 +67,22 @@ main('once')->asciiArtTime(systime-floor(systime)).printOnce;
 //*valid inputs are e.g.: "15:23" (sleep until 15:23)
 //*                       "1h 5m" (sleep for one hour and 5 minutes)
 //*                       "20s"   (sleep for 20 seconds)
-main(timeOrInterval)->main(timeOrInterval,'-beep');
+main(timeOrInterval)->main(timeOrInterval,'-none');
 
 AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkStation'])}],
                ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
                ['-restart' ,{execPipeless('Shutdown.exe',['-r','-t','00'])}],
                ['-shutdown',{execPipeless('Shutdown.exe',['-s','-t','00'])}],
-               ['-beep'    ,{while(true,begin beep; sleep(1); end)}]];
+               ['-beep'    ,{while(true,begin beep; sleep(1); end)}],
+               ['-none'    ,{begin void; end}]].toMap;
 
 //*As with time or interval but with custom action when timer is done
 //*after can be: -lock
 //*              -suspend
 //*              -restart
 //*              -shutdown
-//*              -beep      (default)
+//*              -beep
+//*              -none (default)
 main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
     local endTime:=guessTimeOrInterval(timeOrInterval);
