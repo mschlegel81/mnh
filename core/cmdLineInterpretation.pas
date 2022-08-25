@@ -1,6 +1,7 @@
 UNIT cmdLineInterpretation;
 INTERFACE
 USES sysutils,
+     {$ifdef Windows}windows,{$endif}
      myGenerics,mySys,
      mnh_constants,
      fileWrappers,
@@ -115,5 +116,20 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end else result:=false;
     consoleAdapters.destroy;
   end;
+
+{$ifdef Windows}
+CONST UTF8_Codepage=65001;
+VAR oldInputCodepage,oldOutputCodepage: UINT;
+
+INITIALIZATION
+  oldInputCodepage:=GetConsoleCP;
+  oldOutputCodepage:=GetConsoleOutputCP;
+  SetConsoleCP(UTF8_Codepage);
+  SetConsoleOutputCP(UTF8_Codepage);
+
+FINALIZATION
+  SetConsoleCP(oldInputCodepage);
+  SetConsoleOutputCP(oldOutputCodepage);
+{$endif}
 
 end.
