@@ -526,16 +526,18 @@ FUNCTION divideInts(CONST literalRecycler:P_literalRecycler; CONST LHS,RHS:P_abs
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
 
 VAR emptyStringSingleton: T_stringLiteral;
+CONST maxSingletonInt=1000;
 VAR boolLit       : array[false..true] of T_boolLiteral;
     charLit       : array[#0..#255] of T_stringLiteral;
     nanLit,
     infLit,
     negInfLit     : T_realLiteral;
+    intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
+    voidLit: T_voidLiteral;
 
     newLiteralRecycler: FUNCTION :P_literalRecycler;
     freeLiteralRecycler: PROCEDURE(VAR recycler:P_literalRecycler);
 
-CONST maxSingletonInt=1000;
 IMPLEMENTATION
 USES sysutils, math,
      zstream,
@@ -558,10 +560,6 @@ CONST C_setType:array[false..true,false..true,false..true,false..true] of T_lite
             (lt_set       ,lt_set      )),   //boolean       + real + string?
            ((lt_set       ,lt_set      ),    //boolean + int        + string?
             (lt_set       ,lt_set      )))); //boolean + int + real + string?
-
-VAR
-  intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
-  voidLit: T_voidLiteral;
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
   begin
@@ -1517,7 +1515,6 @@ PROCEDURE T_listLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR i:longint;
   begin
     for i:=0 to fill-1 do literalRecycler^.disposeLiteral(dat[i]);
-    setLength(dat,length(dat) shr 1);
     if length(dat)>MAX_DEAD_LIST_SIZE then setLength(dat,MAX_DEAD_LIST_SIZE);
     fill    :=0;
     myHash  :=0;

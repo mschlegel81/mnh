@@ -1199,6 +1199,153 @@ FUNCTION fileLineIterator intFuncSignature;
   end;
 
 TYPE
+  P_byteStreamIterator=^T_byteStreamIterator;
+
+  { T_byteStreamIterator }
+
+  T_byteStreamIterator=object(T_builtinGeneratorExpression)
+    private
+      queue       : specialize G_queue<P_listLiteral>;
+      bufferSize  : longint;
+      buffer      : P_listLiteral;
+      fileStream  : TStream;
+      fname:string;
+      stopAt,timeout:double;
+      initialized:boolean;
+      eofReached:boolean;
+      fileTruncated:boolean;
+      FUNCTION fillQueue(CONST recycler:P_literalRecycler):boolean;
+    public
+      CONSTRUCTOR create(CONST fileName:string; CONST chunkSize:longint; CONST recycler:P_literalRecycler; CONST fileChangeTimeoutInSeconds:double; CONST loc:T_tokenLocation; VAR context:T_context);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+  end;
+
+FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): boolean;
+  CONST READ_BYTES = 1024*1024; //=1MB
+  VAR k:longint;
+      k0:longint=0;
+      n:longint;
+      readBfrPtr:PByte;
+  begin
+    result:=false;
+    getMem(readBfrPtr,READ_BYTES);
+    n:=fileStream.read(readBfrPtr^,READ_BYTES);
+    if n>0 then begin
+      result:=true;
+      stopAt:=now+timeout;
+      for k:=0 to n-1 do begin
+        buffer^.append(recycler,intLit[longint(readBfrPtr[k])].rereferenced,false);
+        if buffer^.size>=bufferSize then begin
+          queue.append(buffer);
+          buffer:=recycler^.newListLiteral(bufferSize);
+        end;
+      end;
+      eofReached:=false;
+    end else begin
+      eofReached:=true;
+      queue.append(buffer);
+      if fileStream.position>fileStream.size then fileTruncated:=true;
+    end;
+    freeMem(readBfrPtr,READ_BYTES);
+  end;
+
+CONSTRUCTOR T_byteStreamIterator.create(CONST fileName: string;
+  CONST chunkSize: longint; CONST recycler: P_literalRecycler;
+  CONST fileChangeTimeoutInSeconds: double; CONST loc: T_tokenLocation;
+  VAR context: T_context);
+  begin
+    inherited create(loc);
+    try
+      eofReached:=false;
+      fileTruncated:=false;
+      queue.create;
+      fname:=fileName;
+      timeout:=fileChangeTimeoutInSeconds/(24*60*60);
+      fileStream := TFileStream.create(fileName, fmOpenRead or fmShareDenyNone);
+      fileStream.Seek(0, soFromBeginning);
+      bufferSize:=chunkSize;
+      buffer:=recycler^.newListLiteral(chunkSize);
+      fillQueue(recycler);
+      initialized:=true;
+    except
+      context.raiseError('Error when trying to open file: '+fileName,loc);
+      initialized:=false;
+    end;
+  end;
+
+FUNCTION T_byteStreamIterator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:='byteStreamIterator('''+fname+''')';
+  end;
+
+FUNCTION T_byteStreamIterator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  begin
+    result.reasonForStop:=rr_ok;
+    //The following call might block for "fileChangeTimeoutInSeconds" seconds = "timeout" days
+    while not(fileTruncated) and (not(eofReached) or (now<stopAt)) and not(queue.hasNext) do if not(fillQueue(recycler)) then begin
+      if context^.continueEvaluation then begin
+        if (timeout>0.0000011574074074074074) then sleep(100);
+      end else begin
+        result.literal:=newVoidLiteral;
+        exit;
+      end;
+    end;
+    if fileTruncated then P_context(context)^.messages^.postTextMessage(mt_el1_note,location,'File was (probably) truncated');
+    if queue.hasNext
+    then result.literal:=queue.next
+    else result.literal:=newVoidLiteral;
+  end;
+
+DESTRUCTOR T_byteStreamIterator.destroy;
+  begin
+    try
+      fileStream.free;
+      queue.destroy;
+    except
+    end;
+  end;
+
+PROCEDURE T_byteStreamIterator.cleanup(CONST literalRecycler: P_literalRecycler);
+  VAR l:P_literal;
+  begin
+    while queue.hasNext do begin
+      l:=queue.next;
+      literalRecycler^.disposeLiteral(l);
+    end;
+    inherited cleanup(literalRecycler);
+  end;
+
+FUNCTION byteStreamIterator intFuncSignature;
+  VAR timeout:double=-1;
+      chunkSize:longint;
+      fileName:string;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+       (arg0^.literalType=lt_string) and
+       (arg1^.literalType=lt_smallint) and
+       (int1^.intValue>0) and
+       context^.checkSideEffects('byteStreamIterator',tokenLocation,[se_readFile])
+    then begin
+      fileName :=str0^.value;
+      chunkSize:=int1^.intValue;
+      if (params^.size=3) then begin
+        if arg2^.literalType in [lt_real,lt_smallint,lt_bigint]
+        then timeout:=P_numericLiteral(arg2)^.floatValue
+        else exit(nil);
+      end;
+      new(P_byteStreamIterator(result),create(str0^.value,chunkSize,recycler,timeout,tokenLocation,context^));
+      if not(P_byteStreamIterator(result)^.initialized) then begin
+        dispose(result,destroy);
+        result:=nil;
+      end;
+    end;
+  end;
+
+TYPE
   P_primeGenerator=^T_primeGenerator;
   T_primeGenerator=object(T_builtinGeneratorExpression)
     private
@@ -1881,6 +2028,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'filter', @filter_imp,ak_binary{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,ak_binary{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif});
   builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_variadic_1{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif},[se_readFile]);
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'byteStreamIterator', @byteStreamIterator,ak_variadic_1{$ifdef fullVersion},'byteStreamIterator(filename:String,chunkSize>0);//returns an iterator over all lines in f#byteStreamIterator(...,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif},[se_readFile]);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif});
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary{$ifdef fullVersion},'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)'{$endif});
