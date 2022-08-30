@@ -1226,7 +1226,6 @@ TYPE
 FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): boolean;
   CONST READ_BYTES = 1024*1024; //=1MB
   VAR k:longint;
-      k0:longint=0;
       n:longint;
       readBfrPtr:PByte;
   begin
@@ -1246,7 +1245,11 @@ FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): bool
       eofReached:=false;
     end else begin
       eofReached:=true;
-      queue.append(buffer);
+      if buffer^.size>0
+      then begin
+        queue.append(buffer);
+        buffer:=nil;
+      end else recycler^.disposeLiteral(buffer);
       if fileStream.position>fileStream.size then fileTruncated:=true;
     end;
     freeMem(readBfrPtr,READ_BYTES);
@@ -1311,6 +1314,7 @@ DESTRUCTOR T_byteStreamIterator.destroy;
 PROCEDURE T_byteStreamIterator.cleanup(CONST literalRecycler: P_literalRecycler);
   VAR l:P_literal;
   begin
+    if buffer<>nil then literalRecycler^.disposeLiteral(buffer);
     while queue.hasNext do begin
       l:=queue.next;
       literalRecycler^.disposeLiteral(l);
