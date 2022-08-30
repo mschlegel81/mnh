@@ -1,0 +1,39 @@
+formatFourierCoefficients(c:List)->begin
+  local threeDigits:=(x)->begin
+    note(x);
+    local d:=ceil(2+ln(abs(x))/ln(0.1));
+    format('%0.'&d&'f',x);
+  end;
+
+  c.each(f,
+    f[0]=0 ? void : format('%s*cos(%s*t)',threeDigits(f[0]),index),
+    f[1]=0 ? void : format('%s*sin(%s*t)',threeDigits(f[1]),index)).join('+')
+   .replace('+-','-');
+end;
+
+main->begin
+  local C:=[[0,0],
+            [0,1],
+            [-0.5,0],
+            [0,0],
+            [0,0],
+            [0,0.1]];
+  local T:=random(1000).sort*2*pi;
+  //Construct X from the series + Noise
+  local X:=newFourierSeries(C)(T)+0.1*(random(1000)-0.5);
+
+  //The linear interpolator is the baseline for comparison
+  local F0   :=newLinearInterpolator([T,X].transpose);
+  //We can calculate many fourier coefficients, but more than input size/2 does not make any sense
+  local coeff:=calculateFourierCoefficients([T,X].transpose,X.size div 2);
+
+  //Now we try to minimize the square error by selecting the right number of coefficients
+  local bestCoeffCount:=
+  [1..coeff.size].pEach(h,begin
+    local G:=head(coeff,h).newFourierSeries;
+    [integrate((x)->sqr(G(x)-F0(x)), 0,2*pi,1E-6),h];
+  end,min)[1];
+
+  coeff:=coeff.head(bestCoeffCount);
+  log("Series\t",formatFourierCoefficients(C),"\nwas reconstructed as\t",coeff.formatFourierCoefficients);
+end;

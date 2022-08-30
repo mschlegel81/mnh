@@ -251,7 +251,7 @@ PROCEDURE T_linearInterpolator.cleanup(CONST literalRecycler: P_literalRecycler)
 FUNCTION linearInterpolator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_linearInterpolator(result),create(list0,tokenLocation,context));
       if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
@@ -506,7 +506,7 @@ PROCEDURE T_cSplineInterpolator.cleanup(CONST literalRecycler: P_literalRecycler
 FUNCTION cSplineInterpolator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_cSplineInterpolator(result),create(list0,tokenLocation,context));
       if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
@@ -571,7 +571,7 @@ CONSTRUCTOR T_bSplineApproximator.create(CONST values: P_listLiteral; CONST loca
 FUNCTION bSplineApproximator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_bSplineApproximator(result),create(list0,tokenLocation,context));
       if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
@@ -609,7 +609,7 @@ CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: 
 FUNCTION fourierSeries_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_fourierSeries(result),create(list0,tokenLocation,context));
       if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
     end;
@@ -647,7 +647,7 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
 
   begin
     result:=nil;
-    if (params^.size>=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list])
     then begin
       if (params^.size=2) and (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) then maxWaveNumber:=int1^.intValue;
       if arg0^.literalType in [lt_numList,lt_realList,lt_intList]

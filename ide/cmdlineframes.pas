@@ -366,13 +366,16 @@ FUNCTION TCmdLineParametersFrame.currentAdapterSpecification: P_textFileAdapterS
     else result:=nil;
   end;
 
-PROCEDURE TCmdLineParametersFrame.updateLogComboBox(
-  CONST preferredItemIndex: longint);
+PROCEDURE TCmdLineParametersFrame.updateLogComboBox(CONST preferredItemIndex: longint);
   VAR i:longint;
   begin
     outputFileComboBox.items.clear;
     for i:=0 to length(optionsToUpdate^.deferredAdapterCreations)-1 do begin
-      outputFileComboBox.items.add(intToStr(i+1)+': '+optionsToUpdate^.deferredAdapterCreations[i].fileName);
+      case optionsToUpdate^.deferredAdapterCreations[i].textFileCase of
+        tfc_stdout: outputFileComboBox.items.add(intToStr(i+1)+': STDOUT');
+        tfc_stderr: outputFileComboBox.items.add(intToStr(i+1)+': STDERR');
+        else        outputFileComboBox.items.add(intToStr(i+1)+': '+optionsToUpdate^.deferredAdapterCreations[i].fileName);
+      end;
     end;
     if length(optionsToUpdate^.deferredAdapterCreations)>0
     then begin

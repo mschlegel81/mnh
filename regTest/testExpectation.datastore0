@@ -3436,6 +3436,9 @@ expectations:=
   '  [6,4,1,5,2,3,7]','  [6,4,5,1,2,7,3]','  [7,2,6,1,3,5,4]','  [7,3,2,5,1,4,6]','The solutions for 3..9 (unique) are: ',
   '  [7,8,3,4,5,6,9]','  [8,7,3,5,4,6,9]','  [9,6,4,5,3,7,8]','  [9,6,5,4,3,8,7]',
   'The number of solutions for 0..9 (nonunique) is: 2860'],
+ 'fourierDemo'=>
+ ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+  'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
  'fractalPlant'=>
  ['png hash: B3336FDBE3E21181652B9F861EC1A2A6552FAB7C35202E62F5C3EF88BC4BA7'],
  'fractran'=>
