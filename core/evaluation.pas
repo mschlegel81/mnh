@@ -1398,7 +1398,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
       task        :T_asyncTask    =nil;
   begin
     result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
         context^.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
 
@@ -1464,7 +1464,7 @@ FUNCTION future_imp intFuncSignature;
       parameters:P_listLiteral=nil;
   begin
     result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       if params^.size=2 then parameters:=list1;
       new(future,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}true));
@@ -1479,7 +1479,7 @@ FUNCTION future_imp intFuncSignature;
 FUNCTION peekFuture_imp intFuncSignature;
   begin
     result:=nil;
-    if (params^.size=1) and
+    if (params<>nil) and (params^.size=1) and
        (arg0^.literalType=lt_expression) and
        (P_expressionLiteral(arg0)^.typ=et_builtinAsyncOrFuture) and
        (P_futureLiteral(arg0)^.isFuture) then begin

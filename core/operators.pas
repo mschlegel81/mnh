@@ -39,8 +39,9 @@ FUNCTION unaryNoOp(CONST x:P_literal;{$WARN 5024 OFF} CONST opLocation:T_tokenLo
 
 FUNCTION unaryNoOp_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=arg0^.rereferenced
-                      else result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=arg0^.rereferenced
+    else result:=nil;
   end;
 
 FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
@@ -74,8 +75,9 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
 
 FUNCTION logicalNegationOf_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=logicalNegationOf(arg0,tokenLocation,context,recycler)
-                      else result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=logicalNegationOf(arg0,tokenLocation,context,recycler)
+    else result:=nil;
   end;
 
 FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
@@ -111,8 +113,9 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
 
 FUNCTION arithmeticNegationOf_impl intFuncSignature;
   begin
-    if params^.size=1 then result:=arithmeticNegationOf(arg0,tokenLocation,context,recycler)
-                      else result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=arithmeticNegationOf(arg0,tokenLocation,context,recycler)
+    else result:=nil;
   end;
 
 FUNCTION resolveUnaryOperator(CONST op: T_tokenType; CONST operand: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
@@ -171,8 +174,9 @@ FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
 FUNCTION comparator_ListEq intFuncSignature;
   begin
     result:=nil;
-    if params^.size=2 then exit(newBoolLiteral(arg0^.isInRelationTo(tt_comparatorListEq,arg1)))
-                      else exit(newBoolLiteral(false));
+    if (params<>nil) and (params^.size=2)
+    then exit(newBoolLiteral(arg0^.isInRelationTo(tt_comparatorListEq,arg1)))
+    else exit(newBoolLiteral(false));
   end;
 
 FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
@@ -183,7 +187,8 @@ FUNCTION perform_OrElse(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
 FUNCTION operator_OrElse   intFuncSignature;
   begin
     result:=nil;
-    if params^.size=0 then exit(newVoidLiteral)
+    if (params=nil) or (params^.size=0)
+    then exit(newVoidLiteral)
     else exit(arg0^.rereferenced);
   end;
 
@@ -195,8 +200,9 @@ FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation
 FUNCTION operator_In       intFuncSignature;
   begin
     result:=nil;
-    if params^.size=2 then exit(newBoolLiteral(arg0^.isInRelationTo(tt_operatorIn,arg1)))
-                      else exit(newBoolLiteral(false));
+    if (params<>nil) and (params^.size=2)
+    then exit(newBoolLiteral(arg0^.isInRelationTo(tt_operatorIn,arg1)))
+    else exit(newBoolLiteral(false));
   end;
 
 FUNCTION perform_NotIn(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
@@ -207,8 +213,9 @@ FUNCTION perform_NotIn(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocat
 FUNCTION operator_NotIn       intFuncSignature;
   begin
     result:=nil;
-    if params^.size=2 then exit(newBoolLiteral(arg0^.isInRelationTo(tt_operatorNotIn,arg1)))
-                      else exit(newBoolLiteral(false));
+    if (params<>nil) and (params^.size=2)
+    then exit(newBoolLiteral(arg0^.isInRelationTo(tt_operatorNotIn,arg1)))
+    else exit(newBoolLiteral(false));
   end;
 
 {$define defaultLHScases:=
