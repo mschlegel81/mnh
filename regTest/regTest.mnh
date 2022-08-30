@@ -29,6 +29,7 @@ processSingleOutput('printline'  ,     location:String,output:String)->output;
 processSingleOutput('echo_output',     location:String,output:String)->'out> '&output.escape&';';
 processSingleOutput('echo_output',     location:String              )->'out> void;';
 processSingleOutput('echo_output',     location:String,output       )->'out> '&output.toString&';';
+processSingleOutput('log',             location:String,output       )->'log> '&output.toString&';';
 processSingleOutput(messageType in ['echo_input','echo_declaration'],
                                        location:String,output       )->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output.replace("\n","").join);
 processSingleOutput(messageType:String,location:String,output:String)->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output);
