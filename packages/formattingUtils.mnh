@@ -7,6 +7,10 @@ EQUALS_FRAME_FMT  :="#%{repeat('=',$0.length+2)}s#\n# %{$0}s #\n#%{repeat('=',$0
 ASTERISK_FRAME_FMT:="*%{repeat('*',$0.length+2)}s*\n* %{$0}s *\n*%{repeat('*',$0.length+2)}s*";
 #*Format for a pretty frame of diagonal outline; accepts one parameter
 SKEWED_FRAME_FMT:="   %{repeat('_',$0.length+3)}s\n  /%{repeat(' ',$0.length+2)}s/\n / %{$0}s /\n/%{repeat('_',$0.length+2)}s/";
+#*Format for a double box (UTF-8)
+DOUBLE_BOX_FRAME_FMT:="╔%{repeat('═',$0.length+2)}s╗\n║ %{$0}s ║\n╚%{repeat('═',$0.length+2)}s╝";
+#*Format for a single box (UTF-8)
+BOX_FRAME_FMT       :="┌%{repeat('─',$0.length+2)}s┐\n│ %{$0}s │\n└%{repeat('─',$0.length+2)}s┘";
 
 //*Formats a list as a table for printout. The result is a stringList
 formatTable(L:List)->begin
@@ -17,11 +21,11 @@ formatTable(L:List)->begin
   end)
   .{$L.head(1)|[[]]|$L.tail} //insert splitter row
   .each(row,row.size<columnCount ? row|([row.size+1..columnCount].each(i,'')) : row) //add columns where necessary
-  .each(row,row.join("\t|\t"))
+  .each(row,row.join("\t┃\t"))
   .join("\n")
   .formatTabs;
   columnCount:=txt.length.max;
-  txt.each(line,index=1 ? line.replace([' ','|'],['-','+'])&repeat('-',columnCount-line.length) : line);
+  txt.each(line,index=1 ? line.replace([' ','┃'],['━','╋'])&repeat('━',columnCount-line.length) : line);
 end;
 
 //*Formats a list as a table for printout. The result is a stringList
