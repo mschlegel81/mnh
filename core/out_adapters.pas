@@ -71,12 +71,7 @@ TYPE
     private
       messageFormatProvider:P_messageFormatProvider;
     public
-    {$ifdef Windows}
-    printHandle,
-    otherHandle:text;
-    {$else}
     mode:T_consoleOutMode;
-    {$endif}
     CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet; CONST consoleOutMode:T_consoleOutMode; CONST formatProvider:P_messageFormatProvider);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
@@ -1137,25 +1132,7 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
 
     assert(formatProvider<>nil);
     messageFormatProvider:=formatProvider^.getClonedInstance;
-
-    {$ifdef Windows}
-    case consoleOutMode of
-      com_stderr_only:begin
-        printHandle:=stdErr;
-        otherHandle:=stdErr;
-      end;
-      com_stdout_only:begin
-        printHandle:=StdOut;
-        otherHandle:=StdOut;
-      end;
-      else begin
-        printHandle:=StdOut;
-        otherHandle:=stdErr;
-      end;
-    end;
-    {$else}
     mode:=consoleOutMode;
-    {$endif}
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -1178,40 +1155,28 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
             for s in messageFormatProvider^.formatMessage(message) do begin
               if s=C_formFeedChar
               then mySys.clearConsole
-              {$ifdef Windows}
-              else writeln(printHandle,s);
-              {$else}
               else begin
                 if mode in [com_normal,com_stdout_only]
                 then writeln(       s)
                 else writeln(stdErr,s);
               end;
-              {$endif}
             end;
           end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
             for s in P_storedMessageWithText(message)^.txt do
-              {$ifdef Windows}
-              write(printHandle,s);
-              {$else}
               begin
                 if mode in [com_normal,com_stdout_only]
                 then write(       s)
                 else write(stdErr,s);
               end;
-              {$endif}
           end;
           else for s in messageFormatProvider^.formatMessage(message) do
-            {$ifdef Windows}
-            writeln(otherHandle,s);
-            {$else}
             begin
               if mode = com_stdout_only
               then writeln(       s)
               else writeln(stdErr,s);
             end;
-            {$endif}
         end;
       finally
         leaveCriticalSection(adapterCs);
