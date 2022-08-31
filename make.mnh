@@ -147,7 +147,7 @@ private showStatus->begin
      ];
   end).formatTable(['Flavour','Binary','CodeVersion','Compile time','Time for test']).join("\n").print;
   BUILDS.each(B,B['distro'] ? allTestsPassed(B['flavour'],currentCodeHash) AND B['targetDest'].systemSpecificFilename.fileExists : void,AND)
-  ? ASTERISK_FRAME_FMT.printf('READY FOR DISTRO')
+  ? DOUBLE_BOX_FRAME_FMT.printf('READY FOR DISTRO')
   : print;
 end;
 
@@ -225,6 +225,9 @@ end;
 //*Create FP-Doc
 main('doc')->make_config.makedoc;
 
+//*Display help
+main('-h')->print(helpOnMain);
+
 //*Build one specific target
 main(target:String)->begin
   local testAfterBuild:=false;
@@ -247,5 +250,5 @@ end;
 
 //*Several steps in succession
 main(...)->... .each(step,
-  printf(SKEWED_FRAME_FMT,step),
+  printf(BOX_FRAME_FMT,step),
   main(step));
