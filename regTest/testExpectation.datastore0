@@ -3437,8 +3437,30 @@ expectations:=
   '  [7,8,3,4,5,6,9]','  [8,7,3,5,4,6,9]','  [9,6,4,5,3,7,8]','  [9,6,5,4,3,8,7]',
   'The number of solutions for 0..9 (nonunique) is: 2860'],
  'fourierDemo'=>
- ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-  'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+ ['FDWin32'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
+  'FDWin64'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'FOWin32'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
+  'FOWin64'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'LDWin32'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
+  'LDWin64'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'LOWin32'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
+  'LOWin64'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);']].toMap,
  'fractalPlant'=>
  ['png hash: B3336FDBE3E21181652B9F861EC1A2A6552FAB7C35202E62F5C3EF88BC4BA7'],
  'fractran'=>
