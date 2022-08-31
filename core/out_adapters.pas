@@ -1143,6 +1143,7 @@ DESTRUCTOR T_consoleOutAdapter.destroy;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
   VAR s:string;
+      p:ansistring;
   begin
     result:=message^.messageType in messageTypesToInclude;
     if result then begin
@@ -1156,9 +1157,11 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
               if s=C_formFeedChar
               then mySys.clearConsole
               else begin
+                p:=s;
+                {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
                 if mode in [com_normal,com_stdout_only]
-                then writeln(       s)
-                else writeln(stdErr,s);
+                then writeln(       p)
+                else writeln(stdErr,p);
               end;
             end;
           end;
@@ -1166,16 +1169,20 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
             if not(mySys.isConsoleShowing) then mySys.showConsole;
             for s in P_storedMessageWithText(message)^.txt do
               begin
+                p:=s;
+                {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
                 if mode in [com_normal,com_stdout_only]
-                then write(       s)
-                else write(stdErr,s);
+                then write(       p)
+                else write(stdErr,p);
               end;
           end;
           else for s in messageFormatProvider^.formatMessage(message) do
             begin
+              p:=s;
+              {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
               if mode = com_stdout_only
-              then writeln(       s)
-              else writeln(stdErr,s);
+              then writeln(       p)
+              else writeln(stdErr,p);
             end;
         end;
       finally
